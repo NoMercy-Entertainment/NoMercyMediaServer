@@ -7,5 +7,5 @@ public class MediaFolder
     public DateTime Modified { get; set; }
     public DateTime Accessed { get; set; }
     public string Type { get; set; } = string.Empty;
-    public MovieFileExtend? Parsed { get; init; }
+    public MovieFileExtend Parsed { get; init; }
 }

@@ -1,10 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem;
+using NoMercy.Providers.TMDB.Client;
+using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercy.Providers.TMDB.Models.Shared;
+using NoMercy.Providers.TMDB.Models.TV;
 using Serilog.Events;
 
-namespace NoMercy.Providers.File;
+namespace NoMercy.MediaProcessing.Files;
 public class LibraryFileWatcher
 {
     // ReSharper disable once InconsistentNaming
@@ -16,6 +22,10 @@ public class LibraryFileWatcher
 
     private static readonly Dictionary<string, FileChangeGroup> FileChangeGroups = new();
     private static readonly object LockObject = new();
+
+    private static readonly JobDispatcher JobDispatcher = new();
+    private static readonly FileRepository FileRepository = new(MediaContext);
+    private static readonly FileManager FileManager = new(FileRepository, JobDispatcher);
 
     private const int Delay = 10;
 
@@ -34,7 +44,10 @@ public class LibraryFileWatcher
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .ToList();
 
-        foreach (Library library in libraries) AddLibraryWatcher(library);
+        foreach (Library library in libraries)
+        {
+            AddLibraryWatcher(library);
+        }
     }
 
     // ReSharper disable once MemberCanBePrivate.Global
@@ -43,7 +56,10 @@ public class LibraryFileWatcher
         List<string> paths = library.FolderLibraries.Select(folderLibrary => folderLibrary.Folder.Path).ToList();
         List<Action> disposers = [];
 
-        Task.Run(() => { disposers = Fs.Watch(paths); }).Wait();
+        Task.Run(() =>
+        {
+            disposers = Fs.Watch(paths);
+        }).Wait();
 
         return () =>
         {
@@ -74,12 +90,14 @@ public class LibraryFileWatcher
 
     private void _onError(FileWatcherEventArgs e)
     {
-        Logger.System(e, LogEventLevel.Verbose);
+        // Logger.System(e, LogEventLevel.Verbose);
     }
 
     private Library? GetLibraryByPath(string path)
     {
-        return MediaContext.Libraries
+
+        using MediaContext mediaContext = new(); // concurrent lock issue
+        return mediaContext.Libraries
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .FirstOrDefault(library => library.FolderLibraries
@@ -178,7 +196,7 @@ public class LibraryFileWatcher
         if (library.Type == "music")
             scan.DisableRegexFilter();
 
-        IEnumerable<MediaFolderExtend>? mediaFolder = await scan.Process(path);
+        IEnumerable<MediaFolderExtend> mediaFolder = await scan.Process(path);
 
         switch (library.Type)
         {
@@ -189,38 +207,55 @@ public class LibraryFileWatcher
                 await HandleTvFolder(library, mediaFolder.First());
                 break;
             case "music":
-                await HandleMusicFolder(library, mediaFolder.First());
+                HandleMusicFolder(library, mediaFolder.First());
                 break;
         }
     }
 
-    private async Task HandleMusicFolder(Library library, MediaFolderExtend path)
+    private void HandleMusicFolder(Library library, MediaFolderExtend path)
     {
         Logger.System($"Music {path.Path}: Processing");
 
-        // await using MusicLogic music = new(library, path);
-        // await music.Process();
-
-        await Task.CompletedTask;
+        JobDispatcher.DispatchJob<ProcessReleaseFolderJob>(path.Path, library.Id);
     }
 
     private async Task HandleTvFolder(Library library, MediaFolderExtend path)
     {
         Logger.System($"Tv Show {path.Path}: Processing");
 
-        // await using TvShowLogic tvShow = new(library, path);
-        // await tvShow.Process();
+        using TmdbSearchClient tmdbSearchClient = new();
+        TmdbPaginatedResponse<TmdbTvShow>? paginatedTvShowResponse =
+            await tmdbSearchClient.TvShow(path.Parsed.Title!, path.Parsed.Year);
 
-        await Task.CompletedTask;
+        if (paginatedTvShowResponse?.Results.Length <= 0) return;
+
+        IEnumerable<TmdbTvShow> res = paginatedTvShowResponse?.Results ?? [];
+        if (res.Count() is 0) return;
+
+        Logger.System($"Tv Show {res.First().Name}: Found {res.First().Name}");
+
+        await FileManager.FindFiles(res.First().Id, library);
+
+        // JobDispatcher.DispatchJob<AddShowJob>(res.First().Id, library);
     }
 
     private async Task HandleMovieFolder(Library library, MediaFolderExtend path)
     {
         Logger.System($"Movie {path.Path}: Processing");
 
-        // await using MovieLogic movie = new(library, path);
-        // await movie.Process();
+        using TmdbSearchClient tmdbSearchClient = new();
+        TmdbPaginatedResponse<TmdbMovie>? paginatedTvShowResponse =
+            await tmdbSearchClient.Movie(path.Parsed.Title!, path.Parsed.Year);
 
-        await Task.CompletedTask;
+        if (paginatedTvShowResponse?.Results.Length <= 0) return;
+
+        IEnumerable<TmdbMovie> res = paginatedTvShowResponse?.Results ?? [];
+        if (res.Count() is 0) return;
+
+        Logger.System($"Movie {res.First().Title}: Found {res.First().Title}");
+
+        await FileManager.FindFiles(res.First().Id, library);
+
+        // JobDispatcher.DispatchJob<AddMovieJob>(res.First().Id, library);
     }
 }

@@ -8,7 +8,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
 {
     public async Task<List<Collection>> GetCollectionsAsync(Guid userId, string language, int take, int page)
     {
-        IOrderedQueryable<Collection>? query = context.Collections
+        IOrderedQueryable<Collection> query = context.Collections
             .AsNoTracking()
             .Where(collection => collection.Library.LibraryUsers
                 .Any(u => u.UserId == userId)

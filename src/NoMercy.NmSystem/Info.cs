@@ -14,7 +14,7 @@ public class Info
     public static readonly string Os = RuntimeInformation.OSDescription;
     public static readonly string Platform = GetPlatform();
     public static readonly string Architecture = RuntimeInformation.ProcessArchitecture.ToString();
-    public static readonly string? Cpu = GetCpuFullName();
+    public static readonly string[] Cpu = GetCpuFullName();
     public static readonly string[] Gpu = GetGpuFullName();
     public static readonly string? Version = GetSystemVersion();
     public static readonly DateTime BootTime = GetBootTime();
@@ -24,10 +24,7 @@ public class Info
     private static Guid GetDeviceId()
     {
         string? generatedId = new DeviceIdBuilder()
-            .AddMachineName()
-            .AddOsVersion()
             .OnWindows(windows => windows
-                .AddProcessorId()
                 .AddMotherboardSerialNumber()
                 .AddSystemDriveSerialNumber())
             .OnLinux(linux => linux
@@ -77,28 +74,34 @@ public class Info
         return output.Trim().Split(':').LastOrDefault()?.Trim()?.Split('\n') ?? [];
     }
 
-    private static string? GetCpuFullName()
+    private static string[] GetCpuFullName()
     {
+        List<string> cpus = new();
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             ManagementObjectSearcher searcher = new("select Name from Win32_Processor");
             foreach (ManagementBaseObject? o in searcher.Get())
             {
                 ManagementObject? item = (ManagementObject)o;
-                return item["Name"].ToString()?.Trim();
+                if (item["Name"] is string cpuName)
+                {
+                    cpus.Add(cpuName.Trim());
+                }
             }
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            return "Unknown";
+            string output = ExecuteBashCommand("sysctl -n machdep.cpu.brand_string");
+            cpus.Add(output.Trim());
         }
         else
         {
             string output = ExecuteBashCommand("lscpu | grep 'Model name:'");
-            return output.Trim().Split(':')[1].Trim();
+            cpus.Add(output.Trim().Split(':')[1].Trim());
         }
 
-        return "Unknown";
+        return cpus.ToArray();
     }
 
     private static string? GetSystemVersion()

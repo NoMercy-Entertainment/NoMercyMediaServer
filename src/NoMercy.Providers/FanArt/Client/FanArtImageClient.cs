@@ -29,7 +29,7 @@ public class FanArtImageClient : FanArtBaseClient
     {
         string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName(url.LocalPath));
 
-        if (System.IO.File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
+        if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
 
         HttpClient httpClient = new();
         httpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
@@ -43,8 +43,8 @@ public class FanArtImageClient : FanArtBaseClient
 
         if (download is false) return Image.Load<Rgba32>(stream);
 
-        if (!System.IO.File.Exists(filePath))
-            await System.IO.File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());
+        if (!File.Exists(filePath))
+            await File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());
 
         return Image.Load<Rgba32>(stream);
     }

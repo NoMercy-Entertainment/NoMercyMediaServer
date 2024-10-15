@@ -18,4 +18,5 @@ public interface IPersonRepository
     public Task StoreAggregateCreditsAsync();
     public Task StoreAggregateCastAsync();
     public Task StoreAggregateCrewAsync();
+    List<int> GetIds();
 }

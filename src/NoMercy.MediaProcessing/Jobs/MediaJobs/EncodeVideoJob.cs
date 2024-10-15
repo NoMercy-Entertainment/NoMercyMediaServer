@@ -44,9 +44,9 @@ public class EncodeVideoJob : AbstractEncoderJob
             .ToList();
 
         if (profiles.Count == 0) return;
-        
-        if (await GetFileMetaData(folder, context) is not {success:true} values) return;
-        (_, string folderName, string title, string fileName, string basePath, int baseId) = values;
+
+        FileMetadata fileMetadata = await GetFileMetaData(folder, context);
+        if (!fileMetadata.Success) return;
 
         foreach (EncoderProfile profile in profiles)
         {
@@ -64,11 +64,13 @@ public class EncodeVideoJob : AbstractEncoderJob
             VideoAudioFile ffmpeg = new FfMpeg()
                 .Open(InputFile);
 
-            ffmpeg.SetBasePath(basePath);
-            ffmpeg.SetTitle(title);
-            ffmpeg.ToFile(fileName);
+            ffmpeg.SetBasePath(fileMetadata.Path);
+            ffmpeg.SetTitle(fileMetadata.Title);
+            ffmpeg.ToFile(fileMetadata.FileName);
 
             ffmpeg.AddContainer(container);
+
+            ffmpeg.Prioritize();
 
             ffmpeg.Build();
 
@@ -78,9 +80,9 @@ public class EncodeVideoJob : AbstractEncoderJob
             var progressMeta = new ProgressMeta
             {
                 Id = Id,
-                Title = title,
-                BaseFolder = basePath,
-                ShareBasePath = folder.Id + "/" + folderName,
+                Title = fileMetadata.Title,
+                BaseFolder = fileMetadata.Path,
+                ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
                 AudioStreams = container.AudioStreams.Select(x => $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}").ToList(),
                 VideoStreams = container.VideoStreams.Select(x => $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}").ToList(),
                 SubtitleStreams = container.SubtitleStreams.Select(x => $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}").ToList(),
@@ -89,7 +91,7 @@ public class EncodeVideoJob : AbstractEncoderJob
                 IsHDR = container.VideoStreams.Any(x => x.IsHdr)
             };
 
-            await ffmpeg.Run(fullCommand, basePath, progressMeta);
+            await ffmpeg.Run(fullCommand, fileMetadata.Path, progressMeta);
 
             await sprite.BuildSprite(progressMeta);
 
@@ -97,27 +99,20 @@ public class EncodeVideoJob : AbstractEncoderJob
 
             if (ffmpeg.ConvertSubtitle)
             {
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub",  new Progress
-                {
-                    Id = Id,
-                    Status = "running",
-                    Title = title,
-                    Message = "Converting subtitles",
-                });
-
-                Logger.Encoder($"Converting subtitle {ffmpeg.FileName}");
-                ffmpeg.ConvertSubtitles(ffmpeg.Container.SubtitleStreams.Where(x => x.ConvertSubtitle).ToList());
+                await ffmpeg.ConvertSubtitles(ffmpeg.Container.SubtitleStreams
+                    .Where(x => x.ConvertSubtitle)
+                    .ToList(), Id, fileMetadata.Title, fileMetadata.ImgPath);
             }
 
             Networking.Networking.SendToAll("encoder-progress", "dashboardHub",  new Progress
             {
                 Id = Id,
                 Status = "running",
-                Title = title,
+                Title = fileMetadata.Title,
                 Message = "Scanning files",
             });
 
-            await fileManager.FindFiles(baseId, folder.FolderLibraries.First().Library);
+            await fileManager.FindFiles(fileMetadata.Id, folder.FolderLibraries.First().Library);
 
             Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
             {
@@ -127,7 +122,7 @@ public class EncodeVideoJob : AbstractEncoderJob
         }
     }
     
-    private async Task<(bool success, string folderName, string title, string fileName, string basePath, int baseId)> GetFileMetaData(Folder folder, MediaContext context) {
+    private async Task<FileMetadata> GetFileMetaData(Folder folder, MediaContext context) {
         Movie? movie = folder.FolderLibraries.Any(x => x.Library.Type == "movie")
             ? await context.Movies
                 .FirstOrDefaultAsync(x => x.Id == Id)
@@ -141,19 +136,41 @@ public class EncodeVideoJob : AbstractEncoderJob
 
         if (movie is null && episode is null)
         {
-            return (false, string.Empty, string.Empty, string.Empty, string.Empty, 0);
+            return new FileMetadata
+            {
+                Success = false
+            };
         }
 
-        string folderName = (movie?.CreateFolderName().Replace("/", "")
-                ?? episode!.Tv.CreateFolderName().Replace("/", "") + episode.CreateFolderName())
-            .Replace("/", Path.DirectorySeparatorChar.ToString());
+        string folderName = movie?.CreateFolderName().Replace("/", "") ?? episode!.Tv.CreateFolderName().Replace("/", "") + episode.CreateFolderName();
 
         string title = movie?.CreateTitle() ?? episode!.CreateTitle();
         string fileName = movie?.CreateFileName() ?? episode!.CreateFileName();
         string basePath = Path.Combine(folder.Path, folderName);
         int baseId = movie?.Id ?? episode!.Tv.Id;
+        string? imgPath = movie?.Backdrop ?? episode!.Still;
 
-        return (true, folderName, title, fileName, basePath, baseId);
+        return new FileMetadata
+        {
+            Success = true,
+            FolderName = folderName,
+            Title = title,
+            FileName = fileName,
+            Path = basePath,
+            Id = baseId,
+            ImgPath = imgPath
+        };
+    }
+
+    public record FileMetadata
+    {
+        public bool Success { get; set; }
+        public string FolderName { get; set; }
+        public string Title { get; set; }
+        public string FileName { get; set; }
+        public string Path { get; set; }
+        public int Id { get; set; }
+        public string? ImgPath { get; set; }
     }
 
     private static void BuildVideoStreams(EncoderProfile? encoderProfile, ref BaseContainer container)

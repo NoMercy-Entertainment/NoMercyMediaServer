@@ -155,8 +155,9 @@ public class BaseSubtitle : Classes
 
                 streams.Add(newStream);
             }
-            Logger.Encoder($"Added {streams.Count} subtitle streams", LogEventLevel.Verbose);
         }
+
+        Logger.Encoder($"Added {streams.Count} subtitle streams", LogEventLevel.Verbose);
 
         return streams;
     }

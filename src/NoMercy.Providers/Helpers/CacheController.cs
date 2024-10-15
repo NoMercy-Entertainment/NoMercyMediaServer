@@ -24,7 +24,7 @@ public static class CacheController
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
         lock (fullname)
         {
-            if (System.IO.File.Exists(fullname) == false)
+            if (File.Exists(fullname) == false)
             {
                 value = default;
                 return false;
@@ -33,7 +33,7 @@ public static class CacheController
             T? data;
             try
             {
-                string d = System.IO.File.ReadAllTextAsync(fullname).Result;
+                string d = File.ReadAllTextAsync(fullname).Result;
                 data = xml ? d.FromXml<T>() : d.FromJson<T>();
             }
             catch (Exception)
@@ -65,7 +65,7 @@ public static class CacheController
 
         try
         {
-            await System.IO.File.WriteAllTextAsync(fullname, data);
+            await File.WriteAllTextAsync(fullname, data);
         }
         catch (Exception)
         {

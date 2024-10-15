@@ -9,6 +9,5 @@ public class Memory
     [JsonProperty("total")] public double Total { get; set; }
 
     [JsonProperty("percentage")]
-    public double Percentage =>
-        Use / Total * (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? 0.1 : 100);
+    public double Percentage => Use / (Available + Use) * 100;
 }

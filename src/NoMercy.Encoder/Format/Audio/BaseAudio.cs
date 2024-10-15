@@ -13,7 +13,13 @@ public abstract class BaseAudio : Classes
     protected internal AudioStream? AudioStream;
     internal List<AudioStream> AudioStreams { get; set; } = [];
 
-    public string Language => AudioStream?.Language ?? "und";
+    private string? _language;
+    public string Language
+    {
+        get => _language ?? AudioStream?.Language ?? "und";
+        set => _language = value;
+    }
+
     public int StreamIndex => AudioStream?.Index ?? -1;
 
     private long _bitRate = -1;
@@ -106,6 +112,9 @@ public abstract class BaseAudio : Classes
 
     public BaseAudio SetAudioChannels(int channels)
     {
+        if (channels is 0)
+            return this;
+
         if (channels < 1)
             throw new Exception("Wrong audio channels value");
 
@@ -185,13 +194,13 @@ public abstract class BaseAudio : Classes
     {
         List<BaseAudio> streams = [];
 
-        foreach (string allowedLanguage in AllowedLanguages)
+        foreach (string allowedLanguage in AllowedLanguages.Append("und"))
         {
-            if (AudioStreams.All(audioStream => audioStream.Language != allowedLanguage)) continue;
-
             foreach (var stream in AudioStreams.Where(audioStream => audioStream.Language == allowedLanguage))
             {
                 BaseAudio newStream = (BaseAudio)MemberwiseClone();
+
+                newStream.Language = newStream.Language == "und" ? "eng" : newStream.Language;
 
                 newStream.IsAudio = true;
 
@@ -241,6 +250,10 @@ public abstract class BaseAudio : Classes
         return profileCodec switch
         {
             "aac" => new Aac(),
+            "eac3" => new Eac3(),
+            "ac3" => new Ac3(),
+            "truehd" => new TrueHd(),
+
             "opus" => new Opus(),
             "mp3" => new Mp3(),
             "flac" => new Flac(),

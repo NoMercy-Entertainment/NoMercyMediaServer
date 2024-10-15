@@ -23,7 +23,7 @@ public class MovieManagerTests
 
     public MovieManagerTests()
     {
-        // TODO: not using the app files and api info
+        // TODO not using the app files and api info.
         AppFiles.CreateAppFolders().Wait();
         ApiInfo.RequestInfo().Wait();
         

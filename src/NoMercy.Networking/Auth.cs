@@ -17,8 +17,6 @@ public static class Auth
     private static readonly string TokenUrl = $"{BaseUrl}protocol/openid-connect/token";
 
     private static string? PublicKey { get; set; }
-    private static string? TokenClientId => Config.TokenClientId;
-    private static string? TokenClientSecret => Config.TokenClientSecret;
 
     private static string? RefreshToken { get; set; }
     public static string? AccessToken { get; private set; }
@@ -140,7 +138,7 @@ public static class Auth
         IEnumerable<string> query = new Dictionary<string, string>
         {
             ["redirect_uri"] = redirectUri,
-            ["client_id"] = "nomercy-server",
+            ["client_id"] = Config.TokenClientId,
             ["response_type"] = "code",
             ["scope"] = "openid offline_access email profile"
         }.Select(x => $"{x.Key}={x.Value}");
@@ -242,7 +240,7 @@ public static class Auth
 
     private static void TokenByPasswordGrant(string username, string password, string? otp = "")
     {
-        if (TokenClientId == null || TokenClientSecret == null)
+        if (Config.TokenClientId == null || Config.TokenClientSecret == null)
             throw new Exception("Auth keys not initialized");
 
         HttpClient client = new();
@@ -250,11 +248,11 @@ public static class Auth
 
         List<KeyValuePair<string, string>> body =
         [
-            new KeyValuePair<string, string>("grant_type", "password"),
-            new KeyValuePair<string, string>("client_id", TokenClientId),
-            new KeyValuePair<string, string>("client_secret", TokenClientSecret),
-            new KeyValuePair<string, string>("username", username),
-            new KeyValuePair<string, string>("password", password)
+            new("grant_type", "password"),
+            new("client_id", Config.TokenClientId),
+            new("client_secret", Config.TokenClientSecret),
+            new("username", username),
+            new("password", password)
         ];
 
         if (!string.IsNullOrEmpty(otp))
@@ -268,7 +266,7 @@ public static class Auth
 
     private static void TokenByRefreshGrand()
     {
-        if (TokenClientId == null || TokenClientSecret == null || RefreshToken == null || _jwtSecurityToken == null)
+        if (Config.TokenClientId == null || Config.TokenClientSecret == null || RefreshToken == null || _jwtSecurityToken == null)
             throw new Exception("Auth keys not initialized");
 
         int expiresInDays = _jwtSecurityToken.ValidTo.AddDays(-5).Subtract(DateTime.UtcNow).Days;
@@ -285,11 +283,11 @@ public static class Auth
 
         List<KeyValuePair<string, string>> body =
         [
-            new KeyValuePair<string, string>("grant_type", "refresh_token"),
-            new KeyValuePair<string, string>("client_id", TokenClientId),
-            new KeyValuePair<string, string>("client_secret", TokenClientSecret),
-            new KeyValuePair<string, string>("refresh_token", RefreshToken),
-            new KeyValuePair<string, string>("scope", "openid offline_access email profile")
+            new("grant_type", "refresh_token"),
+            new("client_id", Config.TokenClientId),
+            new("client_secret", Config.TokenClientSecret),
+            new("refresh_token", RefreshToken),
+            new("scope", "openid offline_access email profile")
         ];
 
         string response = client.PostAsync(TokenUrl, new FormUrlEncodedContent(body))
@@ -301,7 +299,7 @@ public static class Auth
     public static void TokenByAuthorizationCode(string code)
     {
         Logger?.Invoke("Auth", @"Getting token by authorization code");
-        if (TokenClientId == null || TokenClientSecret == null)
+        if (Config.TokenClientId == null || Config.TokenClientSecret == null)
             throw new Exception("Auth keys not initialized");
 
         HttpClient client = new();
@@ -309,13 +307,13 @@ public static class Auth
 
         List<KeyValuePair<string, string>> body =
         [
-            new KeyValuePair<string, string>("grant_type", "authorization_code"),
-            new KeyValuePair<string, string>("client_id", TokenClientId),
-            new KeyValuePair<string, string>("client_secret", TokenClientSecret),
-            new KeyValuePair<string, string>("scope", "openid offline_access email profile"),
-            new KeyValuePair<string, string>("redirect_uri",
+            new("grant_type", "authorization_code"),
+            new("client_id", Config.TokenClientId),
+            new("client_secret", Config.TokenClientSecret),
+            new("scope", "openid offline_access email profile"),
+            new("redirect_uri",
                 $"http://localhost:{Config.InternalServerPort}/sso-callback"),
-            new KeyValuePair<string, string>("code", code)
+            new("code", code)
         ];
 
         string response = client.PostAsync(TokenUrl, new FormUrlEncodedContent(body))
@@ -343,7 +341,7 @@ public static class Auth
 
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return false;
 
-        if (string.IsNullOrEmpty(NmSystem.Info.Gpu?.FirstOrDefault())) return false;
+        if (string.IsNullOrEmpty(Info.Gpu?.FirstOrDefault())) return false;
 
         return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY"));
     }

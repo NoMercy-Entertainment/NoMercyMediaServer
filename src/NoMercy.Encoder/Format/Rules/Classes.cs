@@ -1,5 +1,6 @@
 using NoMercy.Encoder.Format.Container;
 using NoMercy.NmSystem;
+using Serilog.Events;
 
 namespace NoMercy.Encoder.Format.Rules;
 
@@ -36,6 +37,59 @@ public class Classes
             if (IsVideo) return "video";
             return IsSubtitle ? "subtitle" : "unknown";
         }
+    }
+
+    internal string CropValue { get; set; } = "";
+
+    protected internal CropArea Crop
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(CropValue)) return new CropArea();
+            int[] parts = CropValue.Split(':')
+                .Select(int.Parse)
+                .ToArray();
+            return new CropArea(parts[0], parts[1], parts[2], parts[3]);
+        }
+        set => CropValue = $"crop={value.W}:{value.H}:{value.X}:{value.Y}";
+    }
+
+    internal double AspectRatioValue => Crop.H / Crop.W;
+
+    internal string ScaleValue = "";
+
+    public ScaleArea Scale
+    {
+        get
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(ScaleValue))
+                    return new ScaleArea { W = 0, H = 0 };
+
+                string[] scale = ScaleValue.Split(':');
+                int width = int.Parse(scale[0]);
+                int height = int.Parse(scale[1]);
+
+                if (height == -2)
+                {
+                    height = (int)(width * AspectRatioValue);
+                }
+
+                return new ScaleArea
+                {
+                    W = width,
+                    H = height
+                };
+            }
+            catch (Exception e)
+            {
+                Logger.Encoder(e, LogEventLevel.Error);
+                Logger.Encoder($"Error parsing scale value {ScaleValue}");
+                throw;
+            }
+        }
+        set => ScaleValue = $"{value.W}:{value.H}";
     }
 
     public class VideoQualityDto

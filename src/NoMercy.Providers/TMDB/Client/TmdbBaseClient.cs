@@ -38,11 +38,11 @@ public class TmdbBaseClient : IDisposable
         Id = id;
     }
 
-    private static Queue? _queue;
+    private static Helpers.Queue? _queue;
 
-    protected static Queue GetQueue()
+    protected static Helpers.Queue GetQueue()
     {
-        return _queue ??= new Queue(new QueueOptions { Concurrent = 50, Interval = 1000, Start = true });
+        return _queue ??= new Helpers.Queue(new QueueOptions { Concurrent = 50, Interval = 1000, Start = true });
     }
 
     private static int Max(int available, int wanted, int constraint)

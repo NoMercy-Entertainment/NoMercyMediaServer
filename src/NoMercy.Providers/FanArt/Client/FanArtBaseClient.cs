@@ -34,11 +34,11 @@ public class FanArtBaseClient : IDisposable
         Id = id;
     }
 
-    private static Queue? _queue;
+    private static Helpers.Queue? _queue;
 
-    private static Queue GetQueue()
+    private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new Queue(new QueueOptions { Concurrent = 3, Interval = 1000, Start = true });
+        return _queue ??= new Helpers.Queue(new QueueOptions { Concurrent = 3, Interval = 1000, Start = true });
     }
 
     protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false)

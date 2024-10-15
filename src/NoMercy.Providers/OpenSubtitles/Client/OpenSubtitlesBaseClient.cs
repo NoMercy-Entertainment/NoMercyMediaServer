@@ -24,11 +24,11 @@ public class OpenSubtitlesBaseClient : IDisposable
         _client.Timeout = TimeSpan.FromMinutes(5);
     }
 
-    private static Queue? _queue;
+    private static Helpers.Queue? _queue;
 
-    protected static Queue GetQueue()
+    protected static Helpers.Queue GetQueue()
     {
-        return _queue ??= new Queue(new QueueOptions { Concurrent = 1, Interval = 1000, Start = true });
+        return _queue ??= new Helpers.Queue(new QueueOptions { Concurrent = 1, Interval = 1000, Start = true });
     } 
     
     protected async Task<T2?> Post<T1, T2>(string url, T1 query, bool? priority = false)

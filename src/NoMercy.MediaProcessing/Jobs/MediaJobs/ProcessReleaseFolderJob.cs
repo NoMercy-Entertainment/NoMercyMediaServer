@@ -213,7 +213,6 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
         releaseType = match.Groups["releaseType"].Success ? match.Groups["releaseType"].Value : string.Empty;
         libraryFolder = (match.Groups["library_folder"].Success ? match.Groups["library_folder"].Value : null) ??
                         Regex.Split(folder.Path, pattern)?[0] ?? string.Empty;
-        // totalDuration = folder.Files.Select(f => f.FFprobe?.Duration ?? TimeSpan.Zero).Aggregate((a, b) => a + b);
     }
 
     private async Task<MusicBrainzRelease?> GetBestMatchedRelease(
@@ -346,7 +345,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
         List<MusicBrainzRelease> musicBrainzReleases = [];
 
         List<MusicBrainzRelease> matchedReleases = [];
-        // Logger.App("Fingerprinting: " + folder.Path);
+        
         foreach (MediaFile file in folder?.Files ?? [])
         {
             if (file.FFprobe is null) continue;
@@ -459,7 +458,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
             result = await musicBrainzReleaseClient.SearchReleases($"{query} artist:{artistName} date:{year}");
             if (result?.Releases != null)
             {
-                releases = result.Releases.Where(r => r.Title.ContainsSanitized(albumName))
+                releases = result.Releases.Where(r => r.Title.ContainsSanitized(albumName) || r.Score > 75)
                     .DistinctBy(r => r.Id).ToArray();
                 musicBrainzReleases.AddRange(releases);
             }
@@ -470,7 +469,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
             result = await musicBrainzReleaseClient.SearchReleases($"{query} artist:{artistName}");
             if (result?.Releases != null)
             {
-                releases = result.Releases.Where(r => r.Title.ContainsSanitized(albumName)).ToArray();
+                releases = result.Releases.Where(r => r.Title.ContainsSanitized(albumName) || r.Score > 75).ToArray();
                 musicBrainzReleases.AddRange(releases.DistinctBy(r => r.Id));
             }
         }
@@ -480,7 +479,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
             result = await musicBrainzReleaseClient.SearchReleases(query);
             if (result?.Releases != null)
             {
-                releases = result.Releases.Where(r => r.Title.ContainsSanitized(albumName)).ToArray();
+                releases = result.Releases.Where(r => r.Title.ContainsSanitized(albumName) || r.Score > 75).ToArray();
                 musicBrainzReleases.AddRange(releases.DistinctBy(r => r.Id));
             }
         }

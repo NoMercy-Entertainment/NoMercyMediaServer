@@ -43,9 +43,6 @@ public class UsersController : BaseController
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to create a user");
 
-        Logger.Access(
-            $"User {User.Email()} attempting to create a user, if this user is not your email then please contact support.");
-
         await using MediaContext mediaContext = new();
 
         Guid userId = User.UserId();
@@ -67,9 +64,16 @@ public class UsersController : BaseController
             Email = request.Email,
             Name = request.Name,
             Allowed = true,
-            AudioTranscoding = false,
-            VideoTranscoding = false,
-            NoTranscoding = true
+            AudioTranscoding = request.AudioTranscoding,
+            VideoTranscoding = request.VideoTranscoding,
+            NoTranscoding = true,
+            Manage = request.Manage,
+            Owner = request.Owner,
+            LibraryUser = request.Libraries?.Select(libraryId => new LibraryUser
+            {
+                LibraryId = libraryId,
+                UserId = userId
+            }).ToList() ?? []
         };
 
         mediaContext.Users.Add(newUser);
@@ -95,9 +99,6 @@ public class UsersController : BaseController
     {
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to delete a user");
-
-        Logger.Access(
-            $"User {User.Email()} attempting to delete a user, if this user is not your email then please contact support.");
 
         await using MediaContext mediaContext = new();
         User? user = await mediaContext.Users
@@ -160,7 +161,7 @@ public class UsersController : BaseController
         if (user == null)
             return NotFoundResponse("User not found");
 
-        // TODO Implement notification settings
+        // TODO Implement notification settings.
 
         return Ok(new StatusResponseDto<string>
         {
@@ -232,6 +233,8 @@ public class UsersController : BaseController
 
         await mediaContext.SaveChangesAsync();
 
+        ClaimsPrincipleExtensions.UpdateUser(user);
+
         return Ok(new StatusResponseDto<string>
         {
             Status = "success",
@@ -257,7 +260,7 @@ public class UsersController : BaseController
         if (user == null)
             return NotFoundResponse("User not found");
 
-        // TODO Implement notification settings
+        // TODO Implement notification settings.
 
         return Ok(new StatusResponseDto<string>
         {

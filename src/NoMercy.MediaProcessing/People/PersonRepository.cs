@@ -92,14 +92,14 @@ public class PersonRepository(MediaContext context) : IPersonRepository
         {
             c.RoleId = roles.First(r => r.CreditId == c.CreditId).Id;
             return c;
-        });
+        }).ToArray();
         
         UpsertCommandBuilder<Cast> query = type switch
         {
-            Type.Movie => context.Casts.UpsertRange(cast.ToArray()).On(c => new { c.CreditId, c.MovieId, c.RoleId }),
-            Type.TvShow => context.Casts.UpsertRange(cast.ToArray()).On(c => new { c.CreditId, c.TvId, c.RoleId }),
-            Type.Season => context.Casts.UpsertRange(cast.ToArray()).On(c => new { c.CreditId, c.SeasonId, c.RoleId }),
-            Type.Episode => context.Casts.UpsertRange(cast.ToArray()).On(c => new { c.CreditId, c.EpisodeId, c.RoleId }),
+            Type.Movie => context.Casts.UpsertRange(cast).On(c2 => new { c2.CreditId, c2.MovieId, c2.RoleId }),
+            Type.TvShow => context.Casts.UpsertRange(cast).On(c2 => new { c2.CreditId, c2.TvId, c2.RoleId }),
+            Type.Season => context.Casts.UpsertRange(cast).On(c2 => new { c2.CreditId, c2.SeasonId, c2.RoleId }),
+            Type.Episode => context.Casts.UpsertRange(cast).On(c2 => new { c2.CreditId, c2.EpisodeId, c2.RoleId }),
             _ => throw new ArgumentOutOfRangeException()
         };
 
@@ -116,7 +116,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
         .RunAsync();
     }
 
-    public Task StoreCrew(IEnumerable<Crew> crew, Type type)
+    public async Task StoreCrew(IEnumerable<Crew> crew, Type type)
     {
         Job[] jobs = context.Jobs
             .Where(job => crew.Select(c => c.CreditId)
@@ -127,28 +127,35 @@ public class PersonRepository(MediaContext context) : IPersonRepository
         {
             c.JobId = jobs.First(j => j.CreditId == c.CreditId).Id;
             return c;
-        });
-        
-        UpsertCommandBuilder<Crew> query = type switch
-        {
-            Type.Movie => context.Crews.UpsertRange(crew.ToArray()).On(c => new { c.CreditId, c.MovieId, c.JobId }),
-            Type.TvShow => context.Crews.UpsertRange(crew.ToArray()).On(c => new { c.CreditId, c.TvId, c.JobId }),
-            Type.Season => context.Crews.UpsertRange(crew.ToArray()).On(c => new { c.CreditId, c.SeasonId, c.JobId }),
-            Type.Episode => context.Crews.UpsertRange(crew.ToArray()).On(c => new { c.CreditId, c.EpisodeId, c.JobId }),
-            _ => throw new ArgumentOutOfRangeException()
-        };
+        }).ToArray();
 
-        return query.WhenMatched((cs, ci) => new Crew
+        try
         {
-            CreditId = ci.CreditId,
-            MovieId = ci.MovieId,
-            TvId = ci.TvId,
-            SeasonId = ci.SeasonId,
-            EpisodeId = ci.EpisodeId,
-            PersonId = ci.PersonId,
-            JobId = ci.JobId
-        })
-        .RunAsync();
+            UpsertCommandBuilder<Crew> query = type switch
+            {
+                Type.Movie => context.Crews.UpsertRange(crew).On(c2 => new { c2.CreditId, c2.MovieId, c2.JobId }),
+                Type.TvShow => context.Crews.UpsertRange(crew).On(c2 => new { c2.CreditId, c2.TvId, c2.JobId }),
+                Type.Season => context.Crews.UpsertRange(crew).On(c2 => new { c2.CreditId, c2.SeasonId, c2.JobId }),
+                Type.Episode => context.Crews.UpsertRange(crew).On(c2 => new { c2.CreditId, c2.EpisodeId, c2.JobId }),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            await query.WhenMatched((cs, ci) => new Crew
+                {
+                    CreditId = ci.CreditId,
+                    MovieId = ci.MovieId,
+                    TvId = ci.TvId,
+                    SeasonId = ci.SeasonId,
+                    EpisodeId = ci.EpisodeId,
+                    PersonId = ci.PersonId,
+                    JobId = ci.JobId
+                })
+                .RunAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
     }
 
     public Task StoreCreatorAsync(Creator creator)
@@ -218,5 +225,10 @@ public class PersonRepository(MediaContext context) : IPersonRepository
     public Task StoreAggregateCrewAsync()
     {
         throw new NotImplementedException();
+    }
+
+    public List<int> GetIds()
+    {
+        return context.People.Select(p => p.Id).ToList();
     }
 }

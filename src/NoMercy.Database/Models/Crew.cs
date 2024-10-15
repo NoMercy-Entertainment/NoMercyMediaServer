@@ -39,7 +39,7 @@ public class Crew
     [JsonProperty("episode_id")] public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
-    [JsonProperty("person_id")] public int? PersonId { get; set; }
+    [JsonProperty("person_id")] public int PersonId { get; set; }
     public Person Person { get; set; }
 
     [JsonProperty("job_id")] public int? JobId { get; set; }

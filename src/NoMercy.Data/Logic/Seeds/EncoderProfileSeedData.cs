@@ -124,7 +124,7 @@ public static class EncoderProfileSeedData
                     },
                     new IAudioProfile
                     {
-                        Codec = AudioCodecs.TrueHd.Value,
+                        Codec = AudioCodecs.Eac3.Value,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         AllowedLanguages = AllLanguages()

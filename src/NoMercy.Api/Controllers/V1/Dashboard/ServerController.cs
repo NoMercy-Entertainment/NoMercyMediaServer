@@ -16,6 +16,7 @@ using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers.Monitoring;
+using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
@@ -39,14 +40,9 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/server", Order = 10)]
-public class ServerController : BaseController
+public class ServerController(IHostApplicationLifetime appLifetime) : BaseController
 {
-    private IHostApplicationLifetime ApplicationLifetime { get; }
-
-    public ServerController(IHostApplicationLifetime appLifetime)
-    {
-        ApplicationLifetime = appLifetime;
-    }
+    private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
     [HttpGet]
     public IActionResult Index()
@@ -203,7 +199,9 @@ public class ServerController : BaseController
                     .Windows))
             {
                 DriveInfo[] driveInfo = DriveInfo.GetDrives();
-                array = driveInfo.Select(d => CreateDirectoryTreeDto("", d.RootDirectory.ToString())).ToList();
+                array = driveInfo.Select(d => CreateDirectoryTreeDto("", d.RootDirectory.ToString()))
+                    .OrderBy(file => file.Path)
+                    .ToList();
 
                 return Ok(new StatusResponseDto<List<DirectoryTreeDto>>
                 {
@@ -296,6 +294,8 @@ public class ServerController : BaseController
             {
                 Status = "ok",
                 Files = fileList
+                    .OrderBy(file => file.File)
+                    .ToList()
             }
         });
     }
@@ -312,9 +312,9 @@ public class ServerController : BaseController
 
         List<FileItemDto> fileList = new();
 
-        foreach (FileInfo file in files)
+        await Parallel.ForEachAsync(files, async (file, t) =>
         {
-            IMediaAnalysis mediaAnalysis = await FFProbe.AnalyseAsync(file.FullName);
+            IMediaAnalysis mediaAnalysis = await FFProbe.AnalyseAsync(file.FullName, cancellationToken: t);
 
             MovieDetector movieDetector = new();
             MovieFile parsed = movieDetector.GetInfo(Regex.Replace(file.FullName, @"\[.*?\]", ""));
@@ -331,9 +331,9 @@ public class ServerController : BaseController
             {
                 case "anime" or "tv":
                 {
-                    TmdbPaginatedResponse<TmdbTvShow>? shows = await searchClient.TvShow(parsed.Title, parsed.Year);
+                    TmdbPaginatedResponse<TmdbTvShow>? shows = await searchClient.TvShow(parsed.Title ?? "", parsed.Year);
                     TmdbTvShow? show = shows?.Results.FirstOrDefault();
-                    if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) continue;
+                    if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) return;
 
                     bool hasShow = mediaContext.Tvs
                         .Any(item => item.Id == show.Id);
@@ -368,7 +368,10 @@ public class ServerController : BaseController
                     {
                         TmdbEpisodeClient episodeClient = new(show.Id, parsed.Season.Value, parsed.Episode.Value);
                         TmdbEpisodeDetails? details = await episodeClient.Details();
-                        if (details == null) continue;
+                        if (details == null) return;
+
+                        Season? season = await mediaContext.Seasons
+                            .FirstOrDefaultAsync(season => season!.TvId == show.Id && season.SeasonNumber == details.SeasonNumber, cancellationToken: t);
 
                         episode = new Episode
                         {
@@ -378,8 +381,16 @@ public class ServerController : BaseController
                             EpisodeNumber = details.EpisodeNumber,
                             Title = details.Name,
                             Overview = details.Overview,
-                            Still = details.StillPath
+                            Still = details.StillPath,
+                            VoteAverage = details.VoteAverage,
+                            VoteCount = details.VoteCount,
+                            AirDate = details.AirDate,
+                            SeasonId = season?.Id ?? 0,
+                            _colorPalette = await MovieDbImageManager.ColorPalette("still", details.StillPath)
                         };
+
+                        mediaContext.Episodes.Add(episode);
+                        await mediaContext.SaveChangesAsync(t);
                     }
 
                     match = new MovieOrEpisodeDto
@@ -398,9 +409,9 @@ public class ServerController : BaseController
                 }
                 case "movie":
                 {
-                    TmdbPaginatedResponse<TmdbMovie>? movies = await searchClient.Movie(parsed.Title, parsed.Year);
+                    TmdbPaginatedResponse<TmdbMovie>? movies = await searchClient.Movie(parsed.Title ?? "", parsed.Year);
                     TmdbMovie? movie = movies?.Results.FirstOrDefault();
-                    if (movie == null) continue;
+                    if (movie == null) return;
 
                     Movie? movieItem = mediaContext.Movies
                         .FirstOrDefault(item => item.Id == movie.Id);
@@ -409,7 +420,7 @@ public class ServerController : BaseController
                     {
                         TmdbMovieClient movieClient = new(movie.Id);
                         TmdbMovieDetails? details = await movieClient.Details();
-                        if (details == null) continue;
+                        if (details == null) return;
 
                         bool hasMovie = mediaContext.Movies
                             .Any(item => item.Id == movie.Id);
@@ -417,7 +428,7 @@ public class ServerController : BaseController
                         Ulid libraryId = await mediaContext.Libraries
                             .Where(item => item.Type == type)
                             .Select(item => item.Id)
-                            .FirstOrDefaultAsync();
+                            .FirstOrDefaultAsync(cancellationToken: t);
 
                         if (!hasMovie)
                         {
@@ -494,9 +505,9 @@ public class ServerController : BaseController
                         })
                 }
             });
-        }
+        });
 
-        return fileList;
+        return fileList.OrderBy(file => file.Name).ToList();
     }
 
     [HttpGet]
@@ -536,9 +547,6 @@ public class ServerController : BaseController
         }
 
         List<ResourceMonitorDto> storage = StorageMonitor.Main();
-
-        if (resource == null)
-            return UnprocessableEntityResponse("Resource monitor could not be started");
 
         return Ok(new ResourceInfoDto
         {

@@ -7,10 +7,11 @@ using Microsoft.Net.Http.Headers;
 
 namespace NoMercy.Api.Middleware;
 
-public class DynamicStaticFilesMiddleware(RequestDelegate next) {
+public class DynamicStaticFilesMiddleware(RequestDelegate next)
+{
     private static readonly ConcurrentDictionary<Ulid, PhysicalFileProvider> Providers = new();
 
-    private static string? GetContentType(string? extension) => extension switch
+    private static string GetContentType(string? extension) => extension switch
     {
         ".txt" => "text/plain",
         ".html" => "text/html",
@@ -43,7 +44,8 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next) {
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!context.Request.Path.HasValue) {
+        if (!context.Request.Path.HasValue)
+        {
             await next(context);
             return;
         }
@@ -56,13 +58,16 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next) {
             return;
         }
 
-        try {
-            if (!Ulid.TryParse(rootPath, out Ulid share)) {
+        try
+        {
+            if (!Ulid.TryParse(rootPath, out Ulid share))
+            {
                 await next(context);
                 return;
             }
 
-            if (!Providers.TryGetValue(share, out PhysicalFileProvider? provider)) {
+            if (!Providers.TryGetValue(share, out PhysicalFileProvider? provider))
+            {
                 await next(context);
                 return;
             }
@@ -70,10 +75,12 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next) {
             string? relativePath = pathValue?[pathValue.IndexOf('/', 1)..];
             IFileInfo? file = relativePath != null ? provider.GetFileInfo(relativePath) : null;
 
-            if (file?.PhysicalPath != null) {
+            if (file?.PhysicalPath != null)
+            {
                 await ServeFile(context, file);
             }
-            else {
+            else
+            {
                 await next(context);
             }
         }
@@ -83,38 +90,54 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next) {
         }
     }
 
-    private async static Task ServeFile(HttpContext context, IFileInfo file)
+    private static async Task ServeFile(HttpContext context, IFileInfo file)
     {
-        if (file.PhysicalPath is not {} filePhysicalPath) return;
+        if (file.PhysicalPath is not { } filePhysicalPath) return;
+
         var fileInfo = new FileInfo(filePhysicalPath);
         long fileLength = fileInfo.Length;
+
         context.Response.ContentType = GetContentType(Path.GetExtension(file.PhysicalPath).ToLower());
-        
-        try {
-            if (!context.Request.Headers.TryGetValue("Range", out StringValues rangeValue)) return;
-            if (!RangeHeaderValue.TryParse(rangeValue.ToString(), out RangeHeaderValue? parsedValue)) return;
-            if (!Path.Exists(file.PhysicalPath)) return;
-            if (parsedValue.Ranges.Count == 0) return;
-            
-            RangeItemHeaderValue range = parsedValue.Ranges.First();
-            long start = range.From ?? 0;
-            long end = range.To ?? fileLength - 1;
-            long contentLength = end - start + 1;
-            
-            context.Response.StatusCode = (int)HttpStatusCode.PartialContent;
-            context.Response.Headers.ContentRange = new ContentRangeHeaderValue(start, end, fileLength).ToString();
-            context.Response.Headers.AcceptRanges = "bytes";
-            context.Response.ContentLength = contentLength;
-            
-            await using FileStream stream = File.OpenRead(file.PhysicalPath);
-            stream.Seek(start, SeekOrigin.Begin);
-            await stream.CopyToAsync(context.Response.Body, (int)contentLength);
-        }
-        
-        finally {
+
+        if (!context.Request.Headers.TryGetValue("Range", out StringValues rangeValue))
+        {
             await context.Response.SendFileAsync(file.PhysicalPath);
+            return;
         }
 
+        string?[] ranges = rangeValue.ToString()
+            .Replace("bytes=", "")
+            .Split('-')
+            .ToArray();
+
+        long end = fileLength - 1;
+        long start = Convert.ToInt64(ranges[0]);
+
+        if (ranges.Length > 1 && !string.IsNullOrEmpty(ranges[1]))
+        {
+            end = Convert.ToInt64(ranges[1]);
+        }
+
+        long length = end - start + 1;
+
+        context.Response.StatusCode = (int)HttpStatusCode.PartialContent;
+        context.Response.Headers.ContentRange = new ContentRangeHeaderValue(start, end, fileLength).ToString();
+        context.Response.Headers.AcceptRanges = "bytes";
+        context.Request.ContentLength = length;
+
+        await using (FileStream fs = File.OpenRead(file.PhysicalPath))
+        {
+            fs.Seek(start, SeekOrigin.Begin);
+            byte[] buffer = new byte[64 * 1024];
+            int bytesRead;
+            long bytesToRead = length;
+
+            while ((bytesRead = fs.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead))) > 0 && bytesToRead > 0)
+            {
+                await context.Response.Body.WriteAsync(buffer, 0, bytesRead);
+                bytesToRead -= bytesRead;
+            }
+        }
     }
 
     public static void AddPath(Ulid requestPath, string physicalPath)

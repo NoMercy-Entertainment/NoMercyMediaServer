@@ -78,7 +78,7 @@ public record ArtistResponseItemDto
             .ThenBy(artistTrack => artistTrack.Disc)
             .ThenBy(artistTrack => artistTrack.Track);
 
-        // :TODO this speaks for itself....
+        // TODO replace inner-query....
         MediaContext context = new();
         List<ArtistTrackDto> favorites = context.MusicPlays
             .AsNoTracking()

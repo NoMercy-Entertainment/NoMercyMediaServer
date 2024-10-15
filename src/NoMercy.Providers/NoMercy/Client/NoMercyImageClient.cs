@@ -26,7 +26,7 @@ public abstract class NoMercyImageClient : TmdbBaseClient
 
                 string filePath = Path.Join(folder, path.Replace("/", ""));
 
-                if (System.IO.File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
+                if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
 
                 using HttpClient httpClient = new();
                 httpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
@@ -42,8 +42,8 @@ public abstract class NoMercyImageClient : TmdbBaseClient
                 if (download is false)
                     return Image.Load<Rgba32>(await response.Content.ReadAsStreamAsync());
 
-                if (!System.IO.File.Exists(filePath))
-                    await System.IO.File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());
+                if (!File.Exists(filePath))
+                    await File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());
 
                 return Image.Load<Rgba32>(await response.Content.ReadAsStreamAsync());
             }

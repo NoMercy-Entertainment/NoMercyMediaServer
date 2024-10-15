@@ -1,5 +1,3 @@
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-
 using System.Collections.Concurrent;
 using NoMercy.NmSystem;
 using Serilog.Events;
@@ -18,8 +16,8 @@ public class Queue(QueueOptions options)
 
     private readonly Random _r = new();
 
-    public event EventHandler<QueueEventArgs> Resolve;
-    public event EventHandler<QueueEventArgs> Reject;
+    public event EventHandler<QueueEventArgs>? Resolve;
+    public event EventHandler<QueueEventArgs>? Reject;
     public event EventHandler? Start;
     public event EventHandler? Stop;
     public event EventHandler? End;

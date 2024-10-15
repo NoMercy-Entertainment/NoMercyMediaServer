@@ -5,13 +5,14 @@ using System.Text.RegularExpressions;
 using FFMpegCore;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem;
 
 namespace NoMercy.Encoder;
 [Serializable]
 public class FfMpeg : Classes
 {
-    internal string FfProbePath { get; set; } = NmSystem.AppFiles.FfProbePath;
-    internal string FfmpegPath { get; set; } = NmSystem.AppFiles.FfmpegPath;
+    internal string FfProbePath { get; set; } = AppFiles.FfProbePath;
+    internal string FfmpegPath { get; set; } = AppFiles.FfmpegPath;
 
     internal MediaAnalysis? MediaAnalysis;
 
@@ -57,6 +58,8 @@ public class FfMpeg : Classes
 
     public VideoAudioFile Open(string path)
     {
+        GlobalFFOptions.Configure(options => options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
+
         // first ffprobe the file check for streams
         MediaAnalysis = new MediaAnalysis(FFProbe.Analyse(path), path);
 
@@ -87,7 +90,7 @@ public class FfMpeg : Classes
         ffmpeg.StartInfo = new ProcessStartInfo
         {
             WindowStyle = ProcessWindowStyle.Hidden,
-            FileName = executable ?? NmSystem.AppFiles.FfmpegPath,
+            FileName = executable ?? AppFiles.FfmpegPath,
             WorkingDirectory = cwd,
             Arguments = args,
             RedirectStandardOutput = true,
@@ -114,7 +117,7 @@ public class FfMpeg : Classes
         ffmpeg.StartInfo = new ProcessStartInfo
         {
             WindowStyle = ProcessWindowStyle.Hidden,
-            FileName = NmSystem.AppFiles.FfmpegPath,
+            FileName = AppFiles.FfmpegPath,
             WorkingDirectory = cwd,
             Arguments = args,
             RedirectStandardOutput = true,
@@ -213,8 +216,11 @@ public class FfMpeg : Classes
                     string thumbnailFolder = "";
                     if (Directory.Exists(thumbFolder))
                     {
-                        thumbnail = Directory.GetFiles(thumbFolder).LastOrDefault() ?? "";
-                        thumbnail = Path.GetFileName(thumbnail);
+                        string file  = Directory.GetFiles(thumbFolder)
+                            .OrderByDescending(file => new FileInfo(file).LastWriteTimeUtc)
+                            .FirstOrDefault() ?? "";
+
+                        thumbnail = Path.GetFileName(file);
                         thumbnailFolder = Path.GetFileNameWithoutExtension(thumbnail).Split("-").FirstOrDefault() ?? "";
                     }
 
@@ -255,7 +261,7 @@ public class FfMpeg : Classes
                     }
                 }
             }
-            catch (Exception exception)
+            catch (Exception)
             {
                 //
             }

@@ -13,8 +13,8 @@ public static class ClaimsPrincipleExtensions
     public static readonly List<Ulid> FolderIds = MediaContext.Folders.Select(x => x.Id).ToList();
 
     private static readonly User Owner = Users.FirstOrDefault(u => u.Owner) ?? throw new InvalidOperationException();
-    private static List<User> _managerUsers = Users.Where(u => u.Manage).ToList();
-    private static List<User> _allowedUsers = Users.Where(u => u.Allowed).ToList();
+    private static List<User> ManagerUsers => Users.Where(u => u.Manage).ToList();
+    private static List<User> AllowedUsers => Users.Where(u => u.Allowed).ToList();
 
     public static Guid UserId(this ClaimsPrincipal? principal)
     {
@@ -69,12 +69,12 @@ public static class ClaimsPrincipleExtensions
 
     public static bool IsModerator(this ClaimsPrincipal? principal)
     {
-        return _managerUsers.Any(u => u.Id == principal.UserId()) || principal.IsOwner();
+        return ManagerUsers.Any(u => u.Id == principal.UserId()) || principal.IsOwner();
     }
 
     public static bool IsAllowed(this ClaimsPrincipal? principal)
     {
-        return _allowedUsers.Any(u => u.Id == principal.UserId()) || principal.IsOwner();
+        return AllowedUsers.Any(u => u.Id == principal.UserId()) || principal.IsOwner();
     }
 
     public static bool IsSelf(this ClaimsPrincipal? principal, Guid userId)
@@ -90,16 +90,21 @@ public static class ClaimsPrincipleExtensions
     public static void AddUser(User user)
     {
         Users.Add(user);
-
-        _allowedUsers = Users.Where(u => u.Allowed).ToList();
-        _managerUsers = Users.Where(u => u.Manage).ToList();
     }
 
     public static void RemoveUser(User user)
     {
         Users.Remove(user);
+    }
 
-        _allowedUsers = Users.Where(u => u.Allowed).ToList();
-        _managerUsers = Users.Where(u => u.Manage).ToList();
+    public static void UpdateUser(User user)
+    {
+        User? existingUser = Users.FirstOrDefault(u => u.Id == user.Id);
+
+        if (existingUser != null)
+        {
+            Users.Remove(existingUser);
+            Users.Add(user);
+        }
     }
 }

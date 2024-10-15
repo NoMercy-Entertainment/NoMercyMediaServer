@@ -1,6 +1,4 @@
-﻿#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -14,11 +12,13 @@ public class Folder
     [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty("path")] public string Path { get; set; }
+    [JsonProperty("path")]
+    public string Path { get; set; } = string.Empty;
     
     [JsonProperty("encoder_profile_folder")]
-    public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; }
+    public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; } =[];
     
-    [JsonProperty("folder_libraries")] public ICollection<FolderLibrary> FolderLibraries { get; set; }
+    [JsonProperty("folder_libraries")]
+    public ICollection<FolderLibrary> FolderLibraries { get; set; } = [];
 
 }

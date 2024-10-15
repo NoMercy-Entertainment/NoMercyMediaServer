@@ -101,13 +101,12 @@ public class Seed : IDisposable, IAsyncDisposable
         
         Logger.Setup($"Found {serverUsers.Length} users");
 
-        _users = serverUsers.ToList()
-            .ConvertAll<User>(serverUser => new User
+        _users = serverUsers.Select(serverUser => new User
             {
-                Id = serverUser.UserId,
+                Id = Guid.Parse(serverUser.UserId),
                 Email = serverUser.Email,
                 Name = serverUser.Name,
-                Allowed = serverUser.Enabled,
+                Allowed = true,
                 Manage = serverUser.Enabled,
                 AudioTranscoding = serverUser.Enabled,
                 NoTranscoding = serverUser.Enabled,

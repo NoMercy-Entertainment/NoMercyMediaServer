@@ -26,8 +26,17 @@ public class ImageController : Controller
             if (!Directory.Exists(folder)) return NotFound();
 
             string filePath = Path.Join(folder, path.Replace("/", ""));
-            if (!System.IO.File.Exists(filePath) && type == "original")
-                await TmdbImageClient.Download("/" + path);
+            try
+            {
+                if (!System.IO.File.Exists(filePath) && type == "original")
+                {
+                    await TmdbImageClient.Download("/" + path);
+                }
+            }
+            catch (Exception e)
+            {
+                //
+            }
 
             if (!System.IO.File.Exists(filePath)) return NotFound();
 
@@ -38,14 +47,14 @@ public class ImageController : Controller
             bool emptyArguments = request.Width is null && request.Type is null && request.Quality is 100;
 
             if (emptyArguments || path.Contains(".svg") ||
-                (originalFileSize < request.Width && originalMimeType == request.Format!.DefaultMimeType))
+                (originalFileSize < request.Width && originalMimeType == request.Format.DefaultMimeType))
                 return PhysicalFile(filePath, originalMimeType);
 
             string hashedUrl = CacheController.GenerateFileName(Request.GetEncodedUrl()) + "." +
-                               (request.Format?.FileExtensions.First() ?? fileInfo.Extension);
+                               request.Format.FileExtensions.First();
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
-            if (System.IO.File.Exists(cachedImagePath)) return PhysicalFile(cachedImagePath, request.Format!.DefaultMimeType);
+            if (System.IO.File.Exists(cachedImagePath)) return PhysicalFile(cachedImagePath, request.Format.DefaultMimeType);
 
             (byte[] magickImage, string mimeType) = Images.ResizeMagickNet(filePath, request);
             await System.IO.File.WriteAllBytesAsync(cachedImagePath, magickImage);

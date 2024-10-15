@@ -3,6 +3,7 @@ using FFMpegCore;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem;
+using Serilog.Events;
 
 namespace NoMercy.Encoder.Format.Image;
 
@@ -30,42 +31,6 @@ public class BaseImage : Classes
     internal int OutputWidth { get; set; }
     internal int? OutputHeight { get; set; }
     internal int FrameRate { get; set; }
-    internal string CropValue { get; set; } = "";
-
-    protected internal CropArea Crop
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(CropValue)) return new CropArea();
-            int[] parts = CropValue.Split(':')
-                .Select(int.Parse)
-                .ToArray();
-            return new CropArea(parts[0], parts[1], parts[2], parts[3]);
-        }
-        set => CropValue = $"crop={value.W}:{value.H}:{value.X}:{value.Y}";
-    }
-
-    internal double AspectRatioValue => Crop.H / Crop.W;
-
-    internal string ScaleValue = "";
-
-    public ScaleArea Scale
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(ScaleValue))
-                return new ScaleArea { W = 0, H = 0 };
-            string[] scale = ScaleValue.Split(':');
-            return new ScaleArea
-            {
-                W = scale[0].ToInt(),
-                H = int.IsNegative(scale[1].ToInt())
-                    ? Convert.ToInt32(scale[0].ToInt() * AspectRatioValue)
-                    : scale[1].ToInt()
-            };
-        }
-        set => ScaleValue = $"{value.W}:{value.H}";
-    }
 
     public bool IsHdr => VideoIsHdr();
 

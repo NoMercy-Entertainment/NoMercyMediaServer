@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Runtime.InteropServices;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
@@ -21,6 +22,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
+using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
@@ -39,15 +41,8 @@ using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
 
 namespace NoMercy.Server;
 
-public class Startup
+public class Startup(IApiVersionDescriptionProvider provider)
 {
-    private readonly IApiVersionDescriptionProvider _provider;
-
-    public Startup(IApiVersionDescriptionProvider provider)
-    {
-        _provider = provider;
-    }
-
     public void ConfigureServices(IServiceCollection services)
     {
         // Add Memory Cache
@@ -140,7 +135,7 @@ public class Startup
                 options.Authority = Config.AuthBaseUrl;
                 options.RequireHttpsMetadata = true;
                 options.Audience = "nomercy-ui";
-                options.Audience = "nomercy-server";
+                options.Audience = Config.TokenClientId;
                 options.Events = new JwtBearerEvents
                 {
                     OnMessageReceived = context =>
@@ -215,8 +210,11 @@ public class Startup
         services.AddResponseCompression(options => { options.EnableForHttps = true; });
 
         services.AddTransient<DynamicStaticFilesMiddleware>();
-        
-        // services.AddSingleton(LibraryFileWatcher.Instance);
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            services.AddSingleton(LibraryFileWatcher.Instance);
+        }
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -254,12 +252,12 @@ public class Startup
         {
             options.RoutePrefix = string.Empty;
             options.DocumentTitle = "NoMercy MediaServer API";
-            options.OAuthClientId("nomercy-server");
+            options.OAuthClientId(Config.TokenClientId);
             options.OAuthScopes("openid");
             options.EnablePersistAuthorization();
             options.EnableTryItOutByDefault();
 
-            IReadOnlyList<ApiVersionDescription> descriptions = _provider.ApiVersionDescriptions;
+            IReadOnlyList<ApiVersionDescription> descriptions = provider.ApiVersionDescriptions;
             foreach (ApiVersionDescription description in descriptions)
             {
                 string url = $"/swagger/{description.GroupName}/swagger.json";

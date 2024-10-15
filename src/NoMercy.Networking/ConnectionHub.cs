@@ -100,18 +100,16 @@ public class ConnectionHub : Hub
         Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
 
         client.CustomName = device?.CustomName;
-
+        
         if (device is not null)
         {
-            await mediaContext.ActivityLogs.AddAsync(new ActivityLog
+            await SaveActivityLog(mediaContext, new ActivityLog()
             {
                 DeviceId = device.Id,
                 Time = DateTime.Now,
                 Type = "Connected to server",
                 UserId = user.Id
             });
-
-            await mediaContext.SaveChangesAsync();
         }
 
         Networking.SocketClients.TryAdd(Context.ConnectionId, client);
@@ -129,25 +127,13 @@ public class ConnectionHub : Hub
             Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
             if (device is not null)
             {
-                ActivityLog log = new()
+                await SaveActivityLog(mediaContext, new ActivityLog()
                 {
                     DeviceId = device.Id,
                     Time = DateTime.Now,
                     Type = "Disconnected from server",
                     UserId = client.Sub
-                };
-                try
-                {
-                    await mediaContext.ActivityLogs.AddAsync(log);
-                    await mediaContext.SaveChangesAsync();
-                }
-                catch (Exception e)
-                {
-                   await Task.Delay(1000);
-
-                   await mediaContext.ActivityLogs.AddAsync(log);
-                   await mediaContext.SaveChangesAsync();
-                }
+                });
             }
 
             Networking.SocketClients.Remove(Context.ConnectionId, out _);
@@ -156,6 +142,23 @@ public class ConnectionHub : Hub
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+
+    private static async Task SaveActivityLog(MediaContext mediaContext, ActivityLog log, int count = 0)
+    {
+        try
+        {
+            await mediaContext.ActivityLogs.AddAsync(log);
+            await mediaContext.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            if (count > 2) return; // 3 times
+            
+            count += 1;
+            await Task.Delay(1000);
+            await SaveActivityLog(mediaContext, log, count);
+        }
     }
 
     private List<Device> Devices()

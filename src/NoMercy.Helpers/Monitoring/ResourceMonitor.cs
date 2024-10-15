@@ -114,7 +114,7 @@ public class ResourceMonitor
                                     case "Memory Used":
                                         resource.Memory.Use = sensor.Value ?? 0.0;
                                         break;
-                                    case "Memory":
+                                    // case "Memory":
                                     case "Virtual Memory":
                                         resource.Memory.Total = sensor.Value ?? 0.0;
                                         break;

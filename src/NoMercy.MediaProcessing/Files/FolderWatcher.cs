@@ -1,7 +1,7 @@
 using NoMercy.NmSystem;
 using Serilog.Events;
 
-namespace NoMercy.Providers.File;
+namespace NoMercy.MediaProcessing.Files;
 public class FolderWatcher : IDisposable
 {
     private static readonly List<FileSystemWatcher> Watchers = new();
@@ -38,14 +38,16 @@ public class FolderWatcher : IDisposable
         watcher.Path = folder;
         watcher.EnableRaisingEvents = false;
         watcher.IncludeSubdirectories = IncludeSubdirectories;
-        watcher.NotifyFilter = NotifyFilters.Attributes |
-                               // NotifyFilters.CreationTime |
-                               NotifyFilters.DirectoryName |
-                               NotifyFilters.FileName |
-                               // NotifyFilters.LastAccess |
-                               NotifyFilters.LastWrite |
-                               // NotifyFilters.Security |
-                               NotifyFilters.Size;
+        watcher.NotifyFilter =
+            // NotifyFilters.Attributes |
+           // NotifyFilters.CreationTime |
+           // NotifyFilters.DirectoryName |
+           // NotifyFilters.FileName |
+           // NotifyFilters.LastAccess |
+           NotifyFilters.LastWrite
+           // NotifyFilters.Security |
+           // NotifyFilters.Size
+           ;
         watcher.InternalBufferSize = 64 * 1024;
 
         watcher.Filter = "*.*";
@@ -67,7 +69,10 @@ public class FolderWatcher : IDisposable
 
         Logger.System($"Watching folder: {folder}");
 
-        return () => { watcher.Dispose(); };
+        return () =>
+        {
+            watcher.Dispose();
+        };
     }
 
     private static string _prevChanged = "";
@@ -135,7 +140,7 @@ public class FolderWatcher : IDisposable
 
         _instance?.OnError?.Invoke(fileWatcherEventArgs);
 
-        Logger.System($"Error: {e.GetException().Message}", LogEventLevel.Verbose);
+        // Logger.System($"FolderWatcher error:  {e.GetException().Message}", LogEventLevel.Error);
     }
 
     public void Dispose()

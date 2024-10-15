@@ -76,7 +76,7 @@ public class Networking
         if (localIp == null) return "";
 
         InternalAddress =
-            $"https://{Regex.Replace(localIp, "\\.", "-")}.{NmSystem.Info.DeviceId}.nomercy.tv:{Config.InternalServerPort}";
+            $"https://{Regex.Replace(localIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv:{Config.InternalServerPort}";
 
         return localIp;
     }
@@ -89,7 +89,7 @@ public class Networking
         string externalIp = client.GetStringAsync($"server/ip").Result.Replace("\"", "");
 
         ExternalAddress =
-            $"https://{Regex.Replace(externalIp, "\\.", "-")}.{NmSystem.Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
+            $"https://{Regex.Replace(externalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
 
         return externalIp;
     }
@@ -100,10 +100,19 @@ public class Networking
 
         try
         {
-            _device.CreatePortMap(new Mapping(Protocol.Tcp, Config.InternalServerPort, Config.ExternalServerPort, 9999999,
-                "NoMercy MediaServer (TCP)"));
-            _device.CreatePortMap(new Mapping(Protocol.Udp, Config.InternalServerPort, Config.ExternalServerPort, 9999999,
-                "NoMercy MediaServer (UDP)"));
+            _device.CreatePortMap(new Mapping(
+                protocol:Protocol.Tcp,
+                privatePort: Config.InternalServerPort,
+                publicPort: Config.ExternalServerPort,
+                lifetime: 0,
+                description: "NoMercy MediaServer (TCP)"));
+
+            _device.CreatePortMap(new Mapping(
+                protocol:Protocol.Udp,
+                privatePort: Config.InternalServerPort,
+                publicPort: Config.ExternalServerPort,
+                lifetime: 0,
+                description: "NoMercy MediaServer (UDP)"));
             
             ExternalIp = _device.GetExternalIP().ToString();
         }
@@ -114,9 +123,9 @@ public class Networking
         
         if (ExternalIp == "")
             ExternalIp = GetExternalIp();
-        else
-            ExternalAddress =
-                $"https://{Regex.Replace(ExternalIp, "\\.", "-")}.{NmSystem.Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
+
+        ExternalAddress =
+            $"https://{Regex.Replace(ExternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
     }
 
     public static IWebHost TempServer()
