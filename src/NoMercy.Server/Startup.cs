@@ -39,7 +39,7 @@ using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
 
 namespace NoMercy.Server;
 
-public class Startup(IApiVersionDescriptionProvider provider)
+public class aStartup(IApiVersionDescriptionProvider provider)
 {
     public void ConfigureServices(IServiceCollection services)
     {

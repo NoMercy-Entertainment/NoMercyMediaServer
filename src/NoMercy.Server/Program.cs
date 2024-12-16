@@ -14,6 +14,7 @@ using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.Queue;
 using NoMercy.Server.app.Helper;
+using NoMercy.Server.Startup;
 using AppFiles = NoMercy.NmSystem.AppFiles;
 
 namespace NoMercy.Server;
@@ -23,49 +24,49 @@ public static class Program
     
     public static Task Main(string[] args)
     {
-        AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
-        {
-            Exception exception = (Exception)eventArgs.ExceptionObject;
-            Logger.App("UnhandledException " + exception);
-        };
-
-        Console.CancelKeyPress += (_, _) =>
-        {
-            Shutdown().Wait();
-            Environment.Exit(0);
-        };
-
-        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
-        {
-            Logger.App("SIGTERM received, shutting down.");
-            Shutdown().Wait();
-        };
-
-        return Parser.Default.ParseArguments<StartupOptions>(args)
-            .MapResult(Start, ErrorParsingArguments);
-
-        static Task ErrorParsingArguments(IEnumerable<Error> errors)
-        {
-            Environment.ExitCode = 1;
-            return Task.CompletedTask;
-        }
+        // AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+        // {
+        //     Exception exception = (Exception)eventArgs.ExceptionObject;
+        //     Logger.App("UnhandledException " + exception);
+        // };
+        //
+        // Console.CancelKeyPress += (_, _) =>
+        // {
+        //     Shutdown().Wait();
+        //     Environment.Exit(0);
+        // };
+        //
+        // AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        // {
+        //     Logger.App("SIGTERM received, shutting down.");
+        //     Shutdown().Wait();
+        // };
+        //
+        // return Parser.Default.ParseArguments<StartupOptions>(args)
+        //     .MapResult(Start, ErrorParsingArguments);
+        //
+        // static Task ErrorParsingArguments(IEnumerable<Error> errors)
+        // {
+        //     Environment.ExitCode = 1;
+        //     return Task.CompletedTask;
+        // }
     }
 
     private static async Task Start(StartupOptions options)
     {
-        Console.Clear();
-        Console.Title = "NoMercy Server";
+        // Console.Clear();
+        // Console.Title = "NoMercy Server";
 
-        options.ApplySettings(out bool shouldSeedMarvel);
-        ShouldSeedMarvel = shouldSeedMarvel;
+        // options.ApplySettings(out bool shouldSeedMarvel);
+        // ShouldSeedMarvel = shouldSeedMarvel;
 
-        Stopwatch stopWatch = new();
-        stopWatch.Start();
+        // Stopwatch stopWatch = new();
+        // stopWatch.Start();
 
-        Databases.QueueContext = new QueueContext();
-        Databases.MediaContext = new MediaContext();
-
-        await Init();
+        // Databases.QueueContext = new QueueContext();
+        // Databases.MediaContext = new MediaContext();
+        //
+        // await Init();
 
         IWebHost app = CreateWebHostBuilder(new WebHostBuilder()).Build();
 
@@ -104,101 +105,93 @@ public static class Program
 
     private static IWebHostBuilder CreateWebHostBuilder(this IWebHostBuilder _)
     {
-        UriBuilder localhostIPv4Url = new()
-        {
-            Host = IPAddress.Any.ToString(),
-            Port = Config.InternalServerPort,
-            Scheme = Uri.UriSchemeHttps
-        };
-
-        List<string>? urls = new List<string>
-        {
-            localhostIPv4Url.ToString()
-        };
-
         return WebHost.CreateDefaultBuilder([])
             .ConfigureKestrel(Certificate.KestrelConfig)
-            .UseUrls(urls.ToArray())
-            .UseKestrel(options =>
-            {
-                options.AddServerHeader = false;
-                options.Limits.MaxRequestBodySize = null;
-                options.Limits.MaxRequestBufferSize = null;
-                options.Limits.MaxConcurrentConnections = null;
-                options.Limits.MaxConcurrentUpgradedConnections = null;
-            })
-            .UseQuic()
-            .UseSockets()
-            .ConfigureServices(services =>
-            {
-                services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
-                services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
-            })
-            .UseStartup<Startup>();
+            // .UseUrls(new UriBuilder
+            //     {
+            //         Host = IPAddress.Any.ToString(),
+            //         Port = Config.InternalServerPort,
+            //         Scheme = Uri.UriSchemeHttps
+            //     }.ToString()
+            // )
+            // .UseKestrel(options =>
+            // {
+            //     options.AddServerHeader = false;
+            //     options.Limits.MaxRequestBodySize = null;
+            //     options.Limits.MaxRequestBufferSize = null;
+            //     options.Limits.MaxConcurrentConnections = null;
+            //     options.Limits.MaxConcurrentUpgradedConnections = null;
+            // })
+            // .UseQuic()
+            // .UseSockets()
+            // .ConfigureServices(services =>
+            // {
+            //     services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
+            //     services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
+            // })
+            .UseStartup<aStartup>();
     }
 
-    private static async Task Init()
-    {
-        await ApiInfo.RequestInfo();
+    // private static async Task Init()
+    // {
+    //     await ApiInfo.RequestInfo();
+    //
+    //     if (UserSettings.TryGetUserSettings(out Dictionary<string, string>? settings))
+    //     {
+    //         UserSettings.ApplySettings(settings);
+    //     }
+    //
+    //     List<TaskDelegate> startupTasks =
+    //     [
+    //         new (ConsoleMessages.Logo),
+    //         new (AppFiles.CreateAppFolders),
+    //         new (Networking.Networking.Discover),
+    //         new (Auth.Init),
+    //         new (() => Seed.Init(ShouldSeedMarvel)),
+    //         new (Register.Init),
+    //         new (Binaries.DownloadAll),
+    //         // new (AniDbBaseClient.Init),
+    //         new (TrayIcon.Make),
+    //         new (StorageMonitor.UpdateStorage),
+    //     ];
+    //
+    //     // AppDomain.CurrentDomain.ProcessExit += (_, _) => { AniDbBaseClient.Dispose(); };
+    //
+    //     Thread queues = new(new Task(() => QueueRunner.Initialize().Wait()).Start)
+    //     {
+    //         Name = "Queue workers",
+    //         Priority = ThreadPriority.Lowest,
+    //         IsBackground = true
+    //     };
+    //     queues.Start();
+    //
+    //     Thread fileWatcher = new(new Task(() => _ = new LibraryFileWatcher()).Start)
+    //     {
+    //         Name = "Library File Watcher",
+    //         Priority = ThreadPriority.Lowest,
+    //         IsBackground = true
+    //     };
+    //     fileWatcher.Start();
+    //     
+    //     Thread storageMonitor = new(new Task(() =>
+    //     {
+    //         StorageJob storageJob = new(StorageMonitor.Storage);
+    //         storageJob.Handle().Wait();
+    //         // JobDispatcher.Dispatch(storageJob, "data", 1000);
+    //     }).Start)
+    //     {
+    //         Name = "Storage Watcher",
+    //         Priority = ThreadPriority.Lowest,
+    //         IsBackground = true
+    //     };
+    //     storageMonitor.Start();
+    // }
 
-        if (UserSettings.TryGetUserSettings(out Dictionary<string, string>? settings))
-        {
-            UserSettings.ApplySettings(settings);
-        }
-
-        List<TaskDelegate> startupTasks =
-        [
-            new (ConsoleMessages.Logo),
-            new (AppFiles.CreateAppFolders),
-            new (Networking.Networking.Discover),
-            new (Auth.Init),
-            new (() => Seed.Init(ShouldSeedMarvel)),
-            new (Register.Init),
-            new (Binaries.DownloadAll),
-            // new (AniDbBaseClient.Init),
-            new (TrayIcon.Make),
-            new (StorageMonitor.UpdateStorage),
-        ];
-
-        // AppDomain.CurrentDomain.ProcessExit += (_, _) => { AniDbBaseClient.Dispose(); };
-
-        await RunStartup(startupTasks);
-
-        Thread queues = new(new Task(() => QueueRunner.Initialize().Wait()).Start)
-        {
-            Name = "Queue workers",
-            Priority = ThreadPriority.Lowest,
-            IsBackground = true
-        };
-        queues.Start();
-
-        Thread fileWatcher = new(new Task(() => _ = new LibraryFileWatcher()).Start)
-        {
-            Name = "Library File Watcher",
-            Priority = ThreadPriority.Lowest,
-            IsBackground = true
-        };
-        fileWatcher.Start();
-        
-        Thread storageMonitor = new(new Task(() =>
-        {
-            StorageJob storageJob = new(StorageMonitor.Storage);
-            storageJob.Handle().Wait();
-            // JobDispatcher.Dispatch(storageJob, "data", 1000);
-        }).Start)
-        {
-            Name = "Storage Watcher",
-            Priority = ThreadPriority.Lowest,
-            IsBackground = true
-        };
-        storageMonitor.Start();
-    }
-
-    private static async Task RunStartup(List<TaskDelegate> startupTasks)
-    {
-        foreach (TaskDelegate task in startupTasks)
-        {
-            await task.Invoke();
-        }
-    }
+    // private static async Task RunStartup(List<TaskDelegate> startupTasks)
+    // {
+    //     foreach (TaskDelegate task in startupTasks)
+    //     {
+    //         await task.Invoke();
+    //     }
+    // }
 }
