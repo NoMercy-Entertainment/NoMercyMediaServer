@@ -1,10 +1,10 @@
 using CommandLine;
 using Serilog.Events;
 
-namespace NoMercy.Server.Startup;
+namespace NoMercy.Server.Cli;
 
 // ReSharper disable once ClassNeverInstantiated.Global
-public class StartupOptions
+public class CliOptions
 {
     #region CLI Options
     [Option('d', "dev", Required = false, HelpText = "Run the server in development mode.")]

@@ -32,7 +32,7 @@ using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.Queue;
 using NoMercy.Server.app.Helper;
-using NoMercy.Server.Startup;
+using NoMercy.Server.Cli;
 using NoMercy.Server.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Diagnostics;
@@ -53,7 +53,7 @@ public static class Program
         // Initialization
         // -----------------------------------------------------------------------------------------------------------------
         SetExitHandling();
-        StartupOptions cliOptions = new StartupOptionsParser(args).ParseAndApply();
+        CliOptions cliOptions = new CliOptionsParser(args).ParseAndApply();
         
         Console.Clear();
         Console.Title = "NoMercy Server";

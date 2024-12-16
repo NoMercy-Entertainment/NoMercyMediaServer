@@ -1,15 +1,14 @@
 using CommandLine;
-using NoMercy.Data.Logic;
 using NoMercy.NmSystem;
 using Serilog.Events;
 
-namespace NoMercy.Server.Startup;
+namespace NoMercy.Server.Cli;
 
-public class StartupOptionsParser(string[] args)
+public class CliOptionsParser(string[] args)
 {
-    public StartupOptions Options { get; private set; } = null!;
+    public CliOptions Options { get; private set; } = null!;
 
-    public StartupOptions ParseAndApply()
+    public CliOptions ParseAndApply()
     {
         ParseArguments();
         ApplySettings();
@@ -18,8 +17,8 @@ public class StartupOptionsParser(string[] args)
 
     private void ParseArguments()
     {
-        ParserResult<StartupOptions>? result = Parser.Default.ParseArguments<StartupOptions>(args);
-        if (result is Parsed<StartupOptions> parsed)
+        ParserResult<CliOptions>? result = Parser.Default.ParseArguments<CliOptions>(args);
+        if (result is Parsed<CliOptions> parsed)
         {
             Options = parsed.Value;
             return;
