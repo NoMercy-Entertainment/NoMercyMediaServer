@@ -364,7 +364,7 @@ public static class Program
             options.EnablePersistAuthorization();
             options.EnableTryItOutByDefault();
 
-            // TODO how to get IApiVersionDescriptionProvider provider here?
+            var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
             IReadOnlyList<ApiVersionDescription> descriptions = provider.ApiVersionDescriptions;
             foreach (ApiVersionDescription description in descriptions)
             {
