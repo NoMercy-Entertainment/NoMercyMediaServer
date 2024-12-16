@@ -71,7 +71,7 @@ public static class Program
         }
 
         // startup tasks
-        #region Spawn worker Tasks
+        #region Worker Initialization - Tasks
         await Task.WhenAll([
             ConsoleMessages.Logo(),
             AppFiles.CreateAppFolders(),
@@ -85,7 +85,7 @@ public static class Program
             StorageMonitor.UpdateStorage()
         ]);
         #endregion
-        #region Spawn worker threads
+        #region Worker Initialization - Threads
         Thread queues = new(new Task(() => QueueRunner.Initialize().Wait()).Start)
         {
             Name = "Queue workers",
@@ -143,8 +143,8 @@ public static class Program
         builder.WebHost.UseQuic();
 
         builder.WebHost.UseSockets();
-        #endregion
-        #region Database & Caching 
+        #endregion 
+        #region Database & Caching
         builder.Services.AddMemoryCache();
         
         // TODO look into DbContextFactories ?
@@ -302,19 +302,19 @@ public static class Program
                 o.MaximumReceiveMessageSize = 1024 * 1000 * 100;
             })
             .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings = JsonHelper.Settings; });
-
         
         builder.Services.AddSingleton<JobQueue>();
         builder.Services.AddSingleton<ResourceMonitor>();
         builder.Services.AddSingleton<Networking.Networking>();
         builder.Services.AddSingleton<StorageMonitor>();
         builder.Services.AddTransient<DynamicStaticFilesMiddleware>();
-        
+
         // -----------------------------------------------------------------------------------------------------------------
         // Application
         // -----------------------------------------------------------------------------------------------------------------
         WebApplication app = builder.Build();
         
+        #region Localization Configuration
         string[] supportedCultures = ["en-US", "nl-NL"]; // Add other supported locales
         RequestLocalizationOptions localizationOptions = new RequestLocalizationOptions()
             .SetDefaultCulture(supportedCultures[0])
@@ -325,34 +325,33 @@ public static class Program
         localizationOptions.FallBackToParentUICultures = true;
 
         app.UseRequestLocalization(localizationOptions);
+        #endregion
 
         app.UseRouting();
         app.UseCors("AllowNoMercyOrigins");
 
-        // Security Middleware
+        #region Security
         app.UseHsts();
         app.UseHttpsRedirection();
-
-        // Performance Middleware
+        #endregion
+        #region Performance
         app.UseResponseCompression();
         app.UseRequestLocalization();
-        // app.UseResponseCaching();
+        #endregion
+        
+        app.UseRequestLocalization();
 
-        // Custom Middleware
         app.UseMiddleware<LocalizationMiddleware>();
         app.UseMiddleware<TokenParamAuthMiddleware>();
-
-        // Authentication and Authorization
+        
         app.UseAuthentication();
         app.UseAuthorization();
-
-        // Logging Middleware
+        
         app.UseMiddleware<AccessLogMiddleware>();
-
-        // Static Files Middleware
+        
         app.UseMiddleware<DynamicStaticFilesMiddleware>();
-
-        // Development Tools
+        
+        #region Development Tools
         app.UseDeveloperExceptionPage();
         app.UseSwagger();
         app.UseSwaggerUI(ModernStyle.Dark, options =>
@@ -373,11 +372,11 @@ public static class Program
                 options.SwaggerEndpoint(url, name);
             }
         });
+        #endregion
 
-        // MVC
         app.UseMvcWithDefaultRoute();
-
-        // WebSockets
+        
+        #region SignalR and WebSocket Configuration
         app.UseWebSockets()
             .UseEndpoints(endpoints =>
             {
@@ -393,8 +392,8 @@ public static class Program
                     options.CloseOnAuthenticationExpiration = true;
                 });
             });
-
-        // Static Files
+        #endregion
+        #region Static Files
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
@@ -415,9 +414,9 @@ public static class Program
 
         foreach (Folder folder in folderLibraries.Where(folder => Directory.Exists(folder.Path)))
             DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
-
+        #endregion
         // -----------------------------------------------------------------------------------------------------------------
-        // Post Initialization
+        // Post-Initialization
         // -----------------------------------------------------------------------------------------------------------------
         if (app.Services.GetService<IHostApplicationLifetime>() is { } applicationLifetime)
         {
@@ -438,7 +437,6 @@ public static class Program
                 });
             });
         }
-
         new Thread(() => app.RunAsync()).Start();
         new Thread(Dev.Run).Start();
     }
