@@ -172,15 +172,15 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
         StringBuilder command = new();
 
-        // command.Append(" -hide_banner -probesize 4092M -analyzeduration 9999M");
-        // if (Priority)
-        // {
-        //     command.Append($" -threads {Math.Floor(threadCount * 2.0)} ");
-        // }
-        // else
-        // {
-        //     command.Append($" -threads {Math.Floor(threadCount * 0.8)} ");
-        // }
+        command.Append(" -hide_banner -probesize 4092M -analyzeduration 9999M");
+        if (Priority)
+        {
+            command.Append($" -threads {Math.Floor(threadCount * 2.0)} ");
+        }
+        else
+        {
+            command.Append($" -threads {Math.Floor(threadCount * 0.8)} ");
+        }
 
         if (HasGpu) command.Append(" -extra_hw_frames 3 -init_hw_device opencl=ocl ");
 
