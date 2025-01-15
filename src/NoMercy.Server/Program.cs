@@ -111,12 +111,14 @@ public static class Program
             Scheme = Uri.UriSchemeHttps
         };
 
-        List<string>? urls = new List<string>
-        {
-            localhostIPv4Url.ToString()
-        };
+        List<string> urls = [localhostIPv4Url.ToString()];
 
         return WebHost.CreateDefaultBuilder([])
+            .ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddFilter("Microsoft", LogLevel.None);
+            })
             .ConfigureKestrel(Certificate.KestrelConfig)
             .UseUrls(urls.ToArray())
             .UseKestrel(options =>
