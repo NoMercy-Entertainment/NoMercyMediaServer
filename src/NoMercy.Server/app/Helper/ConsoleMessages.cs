@@ -62,21 +62,10 @@ public abstract class ConsoleMessages
         DateTime today = DateTime.Today;
         int currentYear = today.Year;
 
-        DateTime xmasBeginDate;
-        DateTime xmasEndDate;
-
-        if (today >= new DateTime(currentYear, 6, 1))
-        {
-            xmasBeginDate = new DateTime(currentYear, 12, 7);
-            xmasEndDate = new DateTime(currentYear + 1, 1, 5);
-        }
-        else
-        {
-            xmasBeginDate = new DateTime(currentYear - 1, 12, 7);
-            xmasEndDate = new DateTime(currentYear, 1, 5);
-        }
-
-        return today >= xmasBeginDate && today <= xmasEndDate;
+        long xmasBeginDate = new DateTime(currentYear, 12, 7).Ticks;
+        long xmasEndDate = new DateTime(currentYear + 1, 1, 5).Ticks;
+        
+        return today.Ticks > xmasBeginDate && xmasEndDate < today.Ticks;
     }
 
     public static Task Logo()
@@ -85,10 +74,12 @@ public abstract class ConsoleMessages
         string outputString = "║  NoMercy MediaServer  ║";
         int totalWidth = 0;
         
-        Dictionary<string, List<string>> letters = IsXmasTime() 
+        bool isXmas = IsXmasTime();
+        
+        Dictionary<string, List<string>> letters = isXmas 
             ? ConsoleLetters.ColossalXmas 
             : ConsoleLetters.Colossal;
-
+        
         for (int i = 0; i < letters.FirstOrDefault().Value.Count - 1; i++)
         {
             foreach (char letter in outputString)
