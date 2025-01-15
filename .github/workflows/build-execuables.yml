@@ -70,6 +70,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get Short SHA
+        id: get_short_sha
+        run: echo "::set-output name=short_sha::${GITHUB_SHA::7}"
+
       # Upload Windows Release Asset
       - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1
@@ -78,7 +82,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./output/NoMercyMediaServer.exe
-          asset_name: NoMercyMediaServer.exe
+          asset_name: NoMercyMediaServer-${{ steps.get_short_sha.outputs.short_sha }}.exe
           asset_content_type: application/vnd.microsoft.portable-executable
 
       # Upload macOS Release Asset
@@ -89,7 +93,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./output/NoMercyMediaServer-macos-x64
-          asset_name: NoMercyMediaServer-macos-x64
+          asset_name: NoMercyMediaServer-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}
           asset_content_type: application/x-apple-diskimage
 
       # Upload Linux Release Asset
@@ -100,5 +104,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./output/NoMercyMediaServer-linux-x64
-          asset_name: NoMercyMediaServer-linux-x64
+          asset_name: NoMercyMediaServer-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}
           asset_content_type: application/x-executable

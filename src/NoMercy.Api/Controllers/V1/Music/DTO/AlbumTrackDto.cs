@@ -10,6 +10,7 @@ public record AlbumTrackDto
     [JsonProperty("name")] public string Name { get; set; }
     [JsonProperty("cover")] public string? Cover { get; set; }
     [JsonProperty("path")] public string Path { get; set; }
+    [JsonProperty("link")] public Uri Link { get; set; }
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("date")] public DateTime? Date { get; set; }
     [JsonProperty("disc")] public int? Disc { get; set; }
@@ -38,6 +39,7 @@ public record AlbumTrackDto
         Quality = albumTrack.Track.Quality;
         Track = albumTrack.Track.TrackNumber;
         Lyrics = albumTrack.Track.Lyrics;
+        Link = new Uri($"/music/track/{Id}", UriKind.Relative);
 
         using MediaContext mediaContext = new();
         List<ArtistTrack> artists = mediaContext.ArtistTrack
