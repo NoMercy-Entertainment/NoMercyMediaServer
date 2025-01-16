@@ -60,9 +60,13 @@ public static class Logger
             .WriteTo.Logger(lc => lc
                 .SinkFile(Path.Join(AppFiles.LogPath, "log.txt"))
             )
-            .WriteTo.Logger(lc => lc
-                .SinkConsole()
-            );
+            .WriteTo.Logger(lc =>
+            { 
+                if (!Console.IsOutputRedirected)
+                {
+                    lc.SinkConsole();
+                }
+            });
     }
 
     public static void SetLogLevel(LogEventLevel level)
@@ -380,8 +384,7 @@ public static class Logger
 
     private static void Log(LogEventLevel level, string message, string type = "server")
     {
-        if (!ShouldLog(level))
-            return;
+        if (!ShouldLog(level) || Console.IsOutputRedirected) return;
 
         Color color = GetColor(type);
 

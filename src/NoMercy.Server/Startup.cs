@@ -1,4 +1,5 @@
-﻿using Asp.Versioning.ApiExplorer;
+﻿using System.ComponentModel;
+using Asp.Versioning.ApiExplorer;
 using Asp.Versioning;
 using AspNetCore.Swagger.Themes;
 using I18N.DotNet;
@@ -33,6 +34,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using NoMercy.Helpers.Monitoring;
+using NoMercy.MediaProcessing.Files;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
@@ -228,10 +230,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
 
         services.AddTransient<DynamicStaticFilesMiddleware>();
 
-        // if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        // {
-            // services.AddSingleton(LibraryFileWatcher.Instance);
-        // }
+        services.AddSingleton(LibraryFileWatcher.Instance);
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

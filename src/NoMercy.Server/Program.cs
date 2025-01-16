@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Net;
-using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
@@ -19,6 +19,23 @@ using AppFiles = NoMercy.NmSystem.AppFiles;
 namespace NoMercy.Server;
 public static class Program
 {
+    [DllImport("Kernel32.dll")]
+    private static extern IntPtr GetConsoleWindow();
+    [DllImport("User32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int cmdShow);
+    
+    public static int ConsoleVisible { get; set; } = 1;
+
+    internal static void VsConsoleWindow(int i)
+    {
+        IntPtr hWnd = GetConsoleWindow();
+        if (hWnd != IntPtr.Zero)
+        {
+            ConsoleVisible = i;
+            ShowWindow(hWnd, i);
+        }
+    }
+    
     private static bool ShouldSeedMarvel { get; set; }
     
     public static Task Main(string[] args)
@@ -43,7 +60,7 @@ public static class Program
 
         return Parser.Default.ParseArguments<StartupOptions>(args)
             .MapResult(Start, ErrorParsingArguments);
-
+        
         static Task ErrorParsingArguments(IEnumerable<Error> errors)
         {
             Environment.ExitCode = 1;
@@ -53,8 +70,11 @@ public static class Program
 
     private static async Task Start(StartupOptions options)
     {
-        Console.Clear();
-        Console.Title = "NoMercy Server";
+        if (!Console.IsOutputRedirected)
+        {
+            Console.Clear();
+            Console.Title = "NoMercy Server";
+        }
 
         options.ApplySettings(out bool shouldSeedMarvel);
         ShouldSeedMarvel = shouldSeedMarvel;
@@ -80,14 +100,16 @@ public static class Program
                 Logger.App($"Internal Address: {Networking.Networking.InternalAddress}");
                 Logger.App($"External Address: {Networking.Networking.ExternalAddress}");
 
-                ConsoleMessages.ServerRunning();
-
+                if (!Console.IsOutputRedirected)
+                {
+                    ConsoleMessages.ServerRunning();
+                }
+                
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
             });
         });
 
         new Thread(() => app.RunAsync()).Start();
-        // new Thread(Dev.Run).Start();
         
         await Task.Delay(-1);
     }
@@ -119,6 +141,12 @@ public static class Program
                 logging.ClearProviders();
                 logging.AddFilter("Microsoft", LogLevel.None);
             })
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
+                services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
+                services.AddHostedService<BackgroundWorker>();
+            })
             .ConfigureKestrel(Certificate.KestrelConfig)
             .UseUrls(urls.ToArray())
             .UseKestrel(options =>
@@ -131,11 +159,6 @@ public static class Program
             })
             .UseQuic()
             .UseSockets()
-            .ConfigureServices(services =>
-            {
-                services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
-                services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
-            })
             .UseStartup<Startup>();
     }
 
@@ -194,6 +217,10 @@ public static class Program
             IsBackground = true
         };
         storageMonitor.Start();
+        
+        Logger.App("Your server is ready and we will hide the console window in 10 seconds\n you can show it again by right-clicking the tray icon");
+        await Task.Delay(10000)
+            .ContinueWith(_ => VsConsoleWindow(0));
     }
 
     private static async Task RunStartup(List<TaskDelegate> startupTasks)

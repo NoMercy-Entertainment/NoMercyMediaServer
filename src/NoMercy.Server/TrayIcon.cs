@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using H.NotifyIcon.Core;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace NoMercy.Server;
 
@@ -37,23 +38,53 @@ public class TrayIcon
         {
             Items =
             {
-                new PopupMenuItem("Show App", (_, _) => Show()),
+                new PopupMenuItem("Show App", (_, _) => Toggle()),
+                new PopupMenuItem("Hide App", (_, _) => Toggle()),
                 new PopupMenuSeparator(),
                 new PopupMenuItem("Pause Server", (_, _) => Pause()),
                 new PopupMenuItem("Restart Server", (_, _) => Restart()),
                 new PopupMenuItem("Shutdown", (_, _) => Shutdown())
             }
         };
+        
+        if (_trayIcon.ContextMenu?.Items.ElementAt(1) is not null)
+        {
+            _trayIcon.ContextMenu.Items.ElementAt(0).Visible = true;
+            _trayIcon.ContextMenu.Items.ElementAt(1).Visible = false;
+        }
 
         _trayIcon.Create();
     }
-
+    
     private static void Pause()
     {
     }
 
     private static void Show()
     {
+        Program.VsConsoleWindow(1);
+    }
+
+    private static void Hide()
+    {
+        Program.VsConsoleWindow(0);
+    }
+    
+    private void Toggle()
+    {
+        Program.VsConsoleWindow(Program.ConsoleVisible == 1 ? 0 : 1);
+
+        if (Program.ConsoleVisible == 1 && _trayIcon.ContextMenu?.Items.ElementAt(1) is not null)
+        {
+            _trayIcon.ContextMenu.Items.ElementAt(0).Visible = false;
+            _trayIcon.ContextMenu.Items.ElementAt(1).Visible = true;
+        }
+        else if (_trayIcon.ContextMenu?.Items.ElementAt(1) is not null)
+        {
+            _trayIcon.ContextMenu.Items.ElementAt(0).Visible = true;
+            _trayIcon.ContextMenu.Items.ElementAt(1).Visible = false;
+        }
+
     }
 
     private static void Restart()

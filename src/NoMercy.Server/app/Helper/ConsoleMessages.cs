@@ -13,6 +13,8 @@ public abstract class ConsoleMessages
 
     public static Task ServerRunning()
     {
+        if (Console.IsOutputRedirected) return Task.CompletedTask;
+        
         ConsoleExtensions.Enable();
 
         Console.WriteLine(("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"));
@@ -20,8 +22,18 @@ public abstract class ConsoleMessages
                           "Secure Server running: on port:".Pastel("#5ffa71") +
                           $" {Config.InternalServerPort}     ".Pastel("#ffffff") +
                           $"{_("#00a10d")}".Pastel("#00a10d"));
-        Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"      " + "  visit:".Pastel("#cccccc") +
-                          $"  {Config.AppBaseUrl}       ".Pastel("#ffffff") + $"{_("#00a10d")}".Pastel("#00a10d"));
+        
+        if (Config.IsDev)
+        {
+            Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"      " + "  visit:".Pastel("#cccccc") +
+                              $"  {Config.AppBaseUrl}   ".Pastel("#ffffff") + $"{_("#00a10d")}".Pastel("#00a10d"));
+        }
+        else
+        {
+            Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"      " + "  visit:".Pastel("#cccccc") +
+                              $"  {Config.AppBaseUrl}       ".Pastel("#ffffff") + $"{_("#00a10d")}".Pastel("#00a10d"));
+        }
+
         Console.WriteLine(("╚" + Repeat("═", 46) + "╝").Pastel("#00a10d"));
 
         return Task.CompletedTask;
@@ -70,6 +82,8 @@ public abstract class ConsoleMessages
 
     public static Task Logo()
     {
+        if (Console.IsOutputRedirected) return Task.CompletedTask;
+
         StringBuilder builder = new();
         string outputString = "║  NoMercy MediaServer  ║";
         int totalWidth = 0;
@@ -119,6 +133,8 @@ public abstract class ConsoleMessages
 
     public static Task Welcome()
     {
+        if (!Console.IsOutputRedirected) return Task.CompletedTask;
+        
         Console.WriteLine(("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"));
         Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"     " +
                           "Welcome to NoMercy MediaServer".Pastel("#5ffa71") +

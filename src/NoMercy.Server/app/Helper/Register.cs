@@ -11,7 +11,7 @@ namespace NoMercy.Server.app.Helper;
 
 public static class Register
 {
-    public static string DeviceName()
+    private static string DeviceName()
     {
         MediaContext mediaContext = new();
         Configuration? device = mediaContext.Configuration.FirstOrDefault(device => device.Key == "serverName");
@@ -65,12 +65,12 @@ public static class Register
         client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Auth.AccessToken);
         
-        string? content = client
+        string content = client
             .PostAsync("assign", new FormUrlEncodedContent(serverData))
             .Result.Content.ReadAsStringAsync().Result;
-
-        Logger.Register(serverData, LogEventLevel.Verbose);
         
+        Logger.Register(content, LogEventLevel.Verbose);
+
         ServerRegisterResponse? data = JsonConvert.DeserializeObject<ServerRegisterResponse>(content);
 
         if (data is null || data.Status == "error")
@@ -79,7 +79,7 @@ public static class Register
             throw new Exception("Failed to assign Server");
         }
 
-        User newUser = new()
+        User user = new()
         {
             Id = data.User.Id,
             Name = data.User.Name,
@@ -95,7 +95,7 @@ public static class Register
         };
 
         using MediaContext mediaContext = new();
-        mediaContext.Users.Upsert(newUser)
+        mediaContext.Users.Upsert(user)
             .On(x => x.Id)
             .WhenMatched((oldUser, newUser) => new User
             {
@@ -112,7 +112,7 @@ public static class Register
             })
             .Run();
 
-        ClaimsPrincipleExtensions.AddUser(newUser);
+        ClaimsPrincipleExtensions.AddUser(user);
 
         Logger.Register("Server assigned successfully");
 
