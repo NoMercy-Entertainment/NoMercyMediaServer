@@ -134,13 +134,14 @@ public static class Auth
     {
         Uri baseUrl = new($"{BaseUrl}protocol/openid-connect/auth");
         string redirectUri = HttpUtility.UrlEncode($"http://localhost:{Config.InternalServerPort}/sso-callback");
+        string scope = HttpUtility.UrlEncode("openid offline_access email profile");
 
         IEnumerable<string> query = new Dictionary<string, string>
         {
             ["redirect_uri"] = redirectUri,
             ["client_id"] = Config.TokenClientId,
             ["response_type"] = "code",
-            ["scope"] = "openid offline_access email profile"
+            ["scope"] = scope
         }.Select(x => $"{x.Key}={x.Value}");
 
         string url = new Uri($"{baseUrl}?{string.Join("&", query)}").ToString();

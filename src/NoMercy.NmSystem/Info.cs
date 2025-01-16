@@ -67,6 +67,28 @@ public class Info
             }
 
             return gpus.ToArray();
+        } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            // Use system_profiler to get GPU details on macOS
+            // This might not be the most efficient way to get GPU info on macOS, but it works
+            string systemProfilerOutput = ExecuteBashCommand("system_profiler SPDisplaysDataType");
+            // Parse the output for GPU names; typically the “Chipset Model” field contains the GPU info
+            var lines = systemProfilerOutput.Split('\n');
+            List<string> gpus = [];
+            foreach (var line in lines)
+            {
+                const string marker = "Chipset Model:";
+                if (line.TrimStart().StartsWith(marker))
+                {
+                    // Extract the GPU name after the marker
+                    string gpuName = line.Substring(line.IndexOf(marker) + marker.Length).Trim();
+                    if (!string.IsNullOrEmpty(gpuName))
+                    {
+                        gpus.Add(gpuName);
+                    }
+                }
+            }
+            return gpus.ToArray();
         }
 
         string output = ExecuteBashCommand("lspci | grep 'VGA'");

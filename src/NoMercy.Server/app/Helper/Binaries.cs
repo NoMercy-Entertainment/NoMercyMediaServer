@@ -80,7 +80,7 @@ public static class Binaries
             if (sourceArchiveFileName.EndsWith(".zip"))
                 ZipFile.ExtractToDirectory(sourceArchiveFileName, destinationDirectoryName);
             else if (sourceArchiveFileName.EndsWith(".tar.xz") || sourceArchiveFileName.EndsWith(".tar.gz"))
-                await Shell.Exec("tar", $"xf {sourceArchiveFileName} -C {destinationDirectoryName}");
+                await Shell.Exec("tar", $"xf \"{sourceArchiveFileName}\" -C \"{destinationDirectoryName}\"");
             else
                 throw new NotSupportedException("Unsupported archive format");
 
