@@ -145,7 +145,6 @@ public static class Program
             {
                 services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
                 services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
-                services.AddHostedService<BackgroundWorker>();
             })
             .ConfigureKestrel(Certificate.KestrelConfig)
             .UseUrls(urls.ToArray())
