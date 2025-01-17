@@ -35,7 +35,7 @@ public static class Register
 
         HttpClient client = new();
         client.BaseAddress = new(Config.ApiServerBaseUrl);
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         string content = client.PostAsync("register",
                 new FormUrlEncodedContent(serverData))
@@ -43,7 +43,7 @@ public static class Register
 
         object? data = JsonConvert.DeserializeObject(content);
         
-        if (data == null) throw new Exception("Failed to register Server");
+        if (data == null) throw new("Failed to register Server");
 
         Logger.Register("Server registered successfully");
 
@@ -60,10 +60,10 @@ public static class Register
         };
 
         HttpClient client = new();
-        client.BaseAddress = new Uri(Config.ApiServerBaseUrl);
+        client.BaseAddress = new(Config.ApiServerBaseUrl);
         client.DefaultRequestHeaders.Add("Accept", "application/json");
         client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Auth.AccessToken);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", Auth.AccessToken);
         
         string content = client
             .PostAsync("assign", new FormUrlEncodedContent(serverData))
@@ -76,7 +76,7 @@ public static class Register
         if (data is null || data.Status == "error")
         {
             Logger.Register(data, LogEventLevel.Error);
-            throw new Exception("Failed to assign Server");
+            throw new("Failed to assign Server");
         }
 
         User user = new()
@@ -97,7 +97,7 @@ public static class Register
         using MediaContext mediaContext = new();
         mediaContext.Users.Upsert(user)
             .On(x => x.Id)
-            .WhenMatched((oldUser, newUser) => new User
+            .WhenMatched((oldUser, newUser) => new()
             {
                 Id = newUser.Id,
                 Name = newUser.Name,

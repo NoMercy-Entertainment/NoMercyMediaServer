@@ -256,4 +256,8 @@
     <Key>Priority updated</Key>
     <Value lang="nl">Priority updated</Value>
   </Entry>
+  <Entry>
+    <Key>User {0} created successfully</Key>
+    <Value lang="nl">User {0} created successfully</Value>
+  </Entry>
 </I18N>

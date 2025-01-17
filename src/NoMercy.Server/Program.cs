@@ -82,8 +82,8 @@ public static class Program
         Stopwatch stopWatch = new();
         stopWatch.Start();
 
-        Databases.QueueContext = new QueueContext();
-        Databases.MediaContext = new MediaContext();
+        Databases.QueueContext = new();
+        Databases.MediaContext = new();
 
         await Init();
 

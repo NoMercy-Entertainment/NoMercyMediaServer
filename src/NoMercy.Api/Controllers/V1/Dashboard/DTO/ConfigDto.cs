@@ -19,4 +19,5 @@ public class ConfigDtoData
     [JsonProperty("data_workers")] public int? DataWorkers { get; set; }
     [JsonProperty("image_workers")] public int? ImageWorkers { get; set; }
     [JsonProperty("request_workers")] public int? RequestWorkers { get; set; }
+    [JsonProperty("swagger")] public bool? Swagger { get; set; }
 }

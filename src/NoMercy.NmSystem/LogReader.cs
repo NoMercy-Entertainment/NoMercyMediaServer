@@ -13,7 +13,7 @@ public static class LogReader
             throw new DirectoryNotFoundException($"Log directory not found: {logDirectoryPath}");
 
         IOrderedEnumerable<FileInfo> logFiles = GetLogFilesSortedByDate(logDirectoryPath);
-        List<LogEntry> logEntries = new List<LogEntry>();
+        List<LogEntry> logEntries = new();
         
         IEnumerable<Task<IEnumerable<LogEntry>>> tasks = logFiles.Select(fileInfo => ProcessFileAsync(fileInfo.FullName, limit, filter));
         IEnumerable<LogEntry>[] results = await Task.WhenAll(tasks);
@@ -39,8 +39,8 @@ public static class LogReader
         int limit,
         Func<LogEntry, bool>? filter)
     {
-        List<LogEntry> logEntries = new List<LogEntry>();
-        FileInfo fileInfo = new FileInfo(filePath);
+        List<LogEntry> logEntries = new();
+        FileInfo fileInfo = new(filePath);
 
         if (!fileInfo.Exists)
         {
@@ -57,8 +57,8 @@ public static class LogReader
                 return cachedEntries.Where(entry => filter == null || filter(entry)).Take(limit);
             }
 
-            await using FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using StreamReader reader = new StreamReader(fileStream);
+            await using FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using StreamReader reader = new(fileStream);
 
             while (await reader.ReadLineAsync() is { } line && logEntries.Count < limit)
             {

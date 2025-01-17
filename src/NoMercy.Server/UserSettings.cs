@@ -9,7 +9,7 @@ namespace NoMercy.Server
     {
         public static bool TryGetUserSettings(out Dictionary<string, string> settings)
         {
-            settings = new Dictionary<string, string>();
+            settings = new();
 
             try
             {
@@ -59,6 +59,9 @@ namespace NoMercy.Server
                         break;
                     case "requestRunners":
                         Config.RequestWorkers = new(Config.RequestWorkers.Key, setting.Value.ToInt());
+                        break;
+                    case "swagger":
+                        Config.Swagger = setting.Value.ToBoolean();
                         break;
                 }
             }

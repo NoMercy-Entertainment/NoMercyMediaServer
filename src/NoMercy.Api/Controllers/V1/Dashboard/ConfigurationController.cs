@@ -30,7 +30,7 @@ public class ConfigurationController : BaseController
 
         return Ok(new ConfigDto
         {
-            Data = new ConfigDtoData
+            Data = new()
             {
                 InternalServerPort = Config.InternalServerPort,
                 ExternalServerPort = Config.ExternalServerPort,
@@ -40,7 +40,8 @@ public class ConfigurationController : BaseController
                 DataWorkers = Config.DataWorkers.Value,
                 ImageWorkers = Config.ImageWorkers.Value,
                 RequestWorkers = Config.RequestWorkers.Value,
-                ServerName = DeviceName()
+                ServerName = DeviceName(),
+                Swagger = Config.Swagger,
             }
         });
     }
@@ -72,19 +73,19 @@ public class ConfigurationController : BaseController
             return UnauthorizedResponse("You do not have permission to update configuration");
 
         Guid userId = User.UserId();
+        await using MediaContext mediaContext = new();
         
         if (request.InternalServerPort != 0)
         {
             Config.InternalServerPort = request.InternalServerPort;
-            MediaContext mediaContext = new();
-            await mediaContext.Configuration.Upsert(new Configuration
+            await mediaContext.Configuration.Upsert(new()
                 {
                     Key = "InternalServerPort",
                     Value = request.InternalServerPort.ToString(),
                     ModifiedBy = userId
                 })
                 .On(e => e.Key)
-                .WhenMatched((o, n) =>new Configuration
+                .WhenMatched((o, n) =>new()
                 {
                     Id = o.Id,
                     Value = n.Value,
@@ -97,15 +98,14 @@ public class ConfigurationController : BaseController
         if (request.ExternalServerPort != 0)
         {
             Config.ExternalServerPort = request.ExternalServerPort;
-            MediaContext mediaContext = new();
-            await mediaContext.Configuration.Upsert(new Configuration
+            await mediaContext.Configuration.Upsert(new()
                 {
                     Key = "ExternalServerPort",
                     Value = request.ExternalServerPort.ToString(),
                     ModifiedBy = userId
                 })
                 .On(e => e.Key)
-                .WhenMatched((o, n) =>new Configuration
+                .WhenMatched((o, n) =>new()
                 {
                     Id = o.Id,
                     Value = n.Value,
@@ -145,19 +145,38 @@ public class ConfigurationController : BaseController
             Config.RequestWorkers = new(Config.RequestWorkers.Key, (int)request.RequestWorkers);
             await QueueRunner.SetWorkerCount(Config.RequestWorkers.Key, (int)request.RequestWorkers, userId);
         }
+
+        if (request.Swagger is not null)
+        {
+            Config.Swagger = (bool)request.Swagger;
+            await mediaContext.Configuration.Upsert(new()
+                {
+                    Key = "swagger",
+                    Value = Config.Swagger.ToString(),
+                    ModifiedBy = User.UserId()
+                })
+                .On(e => e.Key)
+                .WhenMatched((o, n) =>new()
+                {
+                    Id = o.Id,
+                    Value = Config.Swagger.ToString(),
+                    ModifiedBy = n.ModifiedBy,
+                    UpdatedAt = n.UpdatedAt
+                })
+                .RunAsync();
+        }
         
         if (request.ServerName is not null)
         {
-            MediaContext mediaContext = new();
-            await mediaContext.Configuration.Upsert(new Configuration
-            {
+            await mediaContext.Configuration.Upsert(new()
+                {
                 Key = "serverName",
                 Value = request.ServerName,
                 ModifiedBy = User.UserId()
             })
             .On(e => e.Key)
-            .WhenMatched((o, n) =>new Configuration
-            {
+            .WhenMatched((o, n) =>new()
+                {
                 Id = o.Id,
                 Value = request.ServerName,
                 ModifiedBy = n.ModifiedBy,

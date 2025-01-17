@@ -113,14 +113,14 @@ public class Networking
 
         try
         {
-            _device.CreatePortMap(new Mapping(
+            _device.CreatePortMap(new(
                 protocol:Protocol.Tcp,
                 privatePort: Config.InternalServerPort,
                 publicPort: Config.ExternalServerPort,
                 lifetime: 0,
                 description: "NoMercy MediaServer (TCP)"));
 
-            _device.CreatePortMap(new Mapping(
+            _device.CreatePortMap(new(
                 protocol:Protocol.Udp,
                 privatePort: Config.InternalServerPort,
                 publicPort: Config.ExternalServerPort,

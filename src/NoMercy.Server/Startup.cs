@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-using Asp.Versioning.ApiExplorer;
-using Asp.Versioning;
+﻿using Asp.Versioning.ApiExplorer;
 using AspNetCore.Swagger.Themes;
 using I18N.DotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -43,6 +41,9 @@ namespace NoMercy.Server;
 
 public class Startup(IApiVersionDescriptionProvider provider)
 {
+    private static readonly MediaContext MediaContext = new();
+    private static readonly List<Folder> FolderLibraries = MediaContext.Folders.ToList();
+    
     public void ConfigureServices(IServiceCollection services)
     {
         // Add Memory Cache
@@ -67,10 +68,6 @@ public class Startup(IApiVersionDescriptionProvider provider)
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
         });
         services.AddTransient<MediaContext>();
-        
-        using(MediaContext context = new()){
-            context.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
-        }
 
         // Add Repositories
         services.AddScoped<EncoderRepository>();
@@ -98,13 +95,6 @@ public class Startup(IApiVersionDescriptionProvider provider)
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();
-        // services.Configure<RequestLocalizationOptions>(options =>
-        // {
-        //     var supportedCultures = new[] {  "en-US", "nl-NL"  };
-        //     options.SetDefaultCulture(supportedCultures[0])
-        //         .AddSupportedCultures(supportedCultures)
-        //         .AddSupportedUICultures(supportedCultures);
-        // });
 
         // Add Controllers and JSON Options
         services.AddControllers()
@@ -154,7 +144,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
                 options.RequireHttpsMetadata = true;
                 options.Audience = "nomercy-ui";
                 options.Audience = Config.TokenClientId;
-                options.Events = new JwtBearerEvents
+                options.Events = new()
                 {
                     OnMessageReceived = context =>
                     {
@@ -180,20 +170,19 @@ public class Startup(IApiVersionDescriptionProvider provider)
             {
                 config.ReportApiVersions = true;
                 config.AssumeDefaultVersionWhenUnspecified = true;
-                config.DefaultApiVersion = new ApiVersion(1, 0);
+                config.DefaultApiVersion = new(1, 0);
                 config.UnsupportedApiVersionStatusCode = 418;
             })
             .AddApiExplorer(options =>
             {
                 options.GroupNameFormat = "VV";
                 options.SubstituteApiVersionInUrl = true;
-                options.DefaultApiVersion = new ApiVersion(1, 0);
+                options.DefaultApiVersion = new(1, 0);
             });
 
         // Add Swagger
         services.AddSwaggerGen(options => { options.OperationFilter<SwaggerDefaultValues>(); });
         services.AddSwaggerGenNewtonsoftSupport();
-
         services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
         services.AddHttpContextAccessor();
@@ -204,6 +193,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
             })
             .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings = JsonHelper.Settings; });
 
+        // Configure CORS
         services.AddCors(options =>
         {
             options.AddPolicy("AllowNoMercyOrigins",
@@ -214,7 +204,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
                         .WithOrigins("https://*.nomercy.tv")
                         .WithOrigins("https://hlsjs.video-dev.org")
                         .WithOrigins("http://192.168.2.201:5501")
-                        .WithOrigins("http://192.168.2.201:*")
+                        .WithOrigins("http://192.168.2.201:5502")
                         .WithOrigins("http://localhost")
                         .WithOrigins("https://localhost")
                         .AllowAnyMethod()
@@ -271,8 +261,20 @@ public class Startup(IApiVersionDescriptionProvider provider)
 
         // Static Files Middleware
         app.UseMiddleware<DynamicStaticFilesMiddleware>();
+        
+        // Swagger Middleware
+        app.Use(async (context, next) =>
+        {
+            if (!Config.Swagger && (context.Request.Path.StartsWithSegments("/swagger") ||
+                                    context.Request.Path.StartsWithSegments("/index.html")))
+            {
+                context.Response.StatusCode = StatusCodes.Status410Gone;
+                await context.Response.WriteAsync("Swagger is disabled.");
+                return;
+            }
 
-        // Development Tools
+            await next();
+        });
         app.UseDeveloperExceptionPage();
         app.UseSwagger();
         app.UseSwaggerUI(ModernStyle.Dark, options =>
@@ -317,7 +319,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-            RequestPath = new PathString("/transcode"),
+            RequestPath = new("/transcode"),
             ServeUnknownFileTypes = true,
             HttpsCompression = HttpsCompressionMode.Compress
         });
@@ -325,14 +327,10 @@ public class Startup(IApiVersionDescriptionProvider provider)
         app.UseDirectoryBrowser(new DirectoryBrowserOptions
         {
             FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-            RequestPath = new PathString("/transcode")
+            RequestPath = new("/transcode")
         });
 
-        // Initialize Dynamic Static Files Middleware
-        MediaContext mediaContext = new();
-        List<Folder> folderLibraries = mediaContext.Folders.ToList();
-
-        foreach (Folder folder in folderLibraries.Where(folder => Directory.Exists(folder.Path)))
+        foreach (Folder folder in FolderLibraries.Where(folder => Directory.Exists(folder.Path)))
             DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
 
     }

@@ -35,16 +35,16 @@ public class TracksController : BaseController
 
         await using MediaContext mediaContext = new();
         await foreach (TrackUser track in TracksResponseDto.GetTracks(mediaContext, userId))
-            tracks.Add(new ArtistTrackDto(track.Track, language));
+            tracks.Add(new(track.Track, language));
 
         if (tracks.Count == 0)
             return NotFoundResponse("Tracks not found");
 
         return Ok(new TracksResponseDto
         {
-            Data = new TracksResponseItemDto
+            Data = new()
             {
-                ColorPalette = new IColorPalettes(),
+                ColorPalette = new(),
                 Tracks = tracks
             }
         });
@@ -78,9 +78,9 @@ public class TracksController : BaseController
         if (track.TrackUser.Count == 0)
         {
             await mediaContext.TrackUser
-                .Upsert(new TrackUser(track.Id, userId))
+                .Upsert(new(track.Id, userId))
                 .On(m => new { m.TrackId, m.UserId })
-                .WhenMatched(m => new TrackUser
+                .WhenMatched(m => new()
                 {
                     TrackId = m.TrackId,
                     UserId = m.UserId
@@ -233,7 +233,7 @@ public class TracksController : BaseController
             return NotFoundResponse("Track not found");
 
         await mediaContext.MusicPlays
-            .AddAsync(new MusicPlay(userId, track.Id));
+            .AddAsync(new(userId, track.Id));
 
         await mediaContext.SaveChangesAsync();
 

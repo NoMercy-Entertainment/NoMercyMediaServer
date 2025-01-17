@@ -64,7 +64,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
     {
         if (file.PhysicalPath is not { } filePhysicalPath) return;
 
-        FileInfo? fileInfo = new FileInfo(filePhysicalPath);
+        FileInfo? fileInfo = new(filePhysicalPath);
         long fileLength = fileInfo.Length;
 
         context.Response.ContentType = MimeTypes.GetMimeTypeFromFile(file.PhysicalPath);
@@ -112,7 +112,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
     public static void AddPath(Ulid requestPath, string physicalPath)
     {
-        Providers[requestPath] = new PhysicalFileProvider(physicalPath);
+        Providers[requestPath] = new(physicalPath);
     }
 
     public static void RemovePath(Ulid requestPath)

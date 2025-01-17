@@ -81,6 +81,12 @@ public static partial class Str
     {
         return Convert.ToInt32(value);
     }
+    
+    public static bool ToBoolean(this string value)
+    {
+        if (string.IsNullOrEmpty(value)) return false;
+        return bool.Parse(value);
+    }
 
     public static string Spacer(string text, int padding, bool begin = false)
     {
