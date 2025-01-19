@@ -44,7 +44,7 @@ public class CoverArtImageManagerManager(
             {
                 if (!coverItem.CoverArtThumbnails.Large.HasSuccessStatus("image/*")) continue;
 
-                return new CoverPalette
+                return new()
                 {
                     Palette = await ColorPalette("cover", coverItem.CoverArtThumbnails.Large),
                     Url = coverItem.CoverArtThumbnails.Large

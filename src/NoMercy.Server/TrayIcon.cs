@@ -7,20 +7,20 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace NoMercy.Server;
 
+[SupportedOSPlatform("windows10.0.18362")]
 public class TrayIcon
 {
-#pragma warning disable CA1416
     private static Icon LoadIcon()
     {
         Assembly assembly = Assembly.GetExecutingAssembly();
         string resourceName = "NoMercy.Server.Assets.icon.ico";
 
-        using Stream stream = assembly.GetManifestResourceStream(resourceName);
+        using Stream? stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null)
         {
             throw new FileNotFoundException("Icon resource not found.");
         }
-        return new Icon(stream);
+        return new(stream);
     }
     
     private static readonly Icon Icon = LoadIcon();
@@ -31,7 +31,6 @@ public class TrayIcon
         ToolTip = "NoMercy MediaServer C#"
     };
 
-    [SupportedOSPlatform("windows10.0.18362")]
     private TrayIcon()
     {
         _trayIcon.ContextMenu = new PopupMenu

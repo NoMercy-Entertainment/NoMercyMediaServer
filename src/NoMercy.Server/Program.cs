@@ -180,7 +180,13 @@ public static class Program
             new (Register.Init),
             new (Binaries.DownloadAll),
             // new (AniDbBaseClient.Init),
-            new (TrayIcon.Make),
+            new (delegate
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
+                    && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
+                    return TrayIcon.Make();
+                return Task.CompletedTask;
+            }),
             new (StorageMonitor.UpdateStorage),
         ];
 

@@ -43,7 +43,7 @@ public abstract class TmdbImageClient : TmdbBaseClient
 
                 using HttpClient httpClient = new();
                 httpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
-                httpClient.BaseAddress = new Uri("https://image.tmdb.org/t/p/");
+                httpClient.BaseAddress = new("https://image.tmdb.org/t/p/");
                 httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
                 httpClient.Timeout = TimeSpan.FromMinutes(5);
 

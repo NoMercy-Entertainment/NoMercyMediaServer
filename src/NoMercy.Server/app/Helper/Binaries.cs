@@ -89,7 +89,7 @@ public static class Binaries
         catch (Exception ex)
         {
             Logger.Setup($"Failed to extract {program.Name}: {ex.Message}", LogEventLevel.Error);
-            throw new Exception($"Failed to extract {program.Name}", ex);
+            throw new($"Failed to extract {program.Name}", ex);
         }
 
         await Task.Delay(0);
