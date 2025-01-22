@@ -24,8 +24,6 @@ public class ChromeCast
         {
             Logger.Ping(chromecast.Name);
         }
-        
-        await SelectChromecast(_chromecastReceivers.FirstOrDefault());
     }
     
     public static string[] GetChromeCasts()
