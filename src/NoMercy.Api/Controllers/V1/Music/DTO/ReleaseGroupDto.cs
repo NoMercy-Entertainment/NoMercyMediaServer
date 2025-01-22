@@ -36,6 +36,6 @@ public record ReleaseGroupDto
         Origin = Info.DeviceId;
         Type = "release_groups";
         Year = artistReleaseGroup.ReleaseGroup.Year;
-        Link = new Uri($"/music/release_groups/{Id}", UriKind.Relative);
+        Link = new($"/music/release_groups/{Id}", UriKind.Relative);
     }
 }

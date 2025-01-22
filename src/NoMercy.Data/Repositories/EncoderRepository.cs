@@ -22,7 +22,7 @@ public class EncoderRepository(MediaContext context)
     {
         return context.EncoderProfiles.Upsert(profile)
             .On(l => new { l.Id })
-            .WhenMatched((ls, li) => new EncoderProfile
+            .WhenMatched((ls, li) => new()
             {
                 Id = li.Id,
                 Name = li.Name,

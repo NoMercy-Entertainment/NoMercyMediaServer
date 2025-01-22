@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
-using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Web;
@@ -12,7 +11,6 @@ namespace NoMercy.Networking;
 
 public static class Auth
 {
-    public static Action<string, string> Logger;
     private static string BaseUrl => Config.AuthBaseUrl;
     private static readonly string TokenUrl = $"{BaseUrl}protocol/openid-connect/token";
 
@@ -30,7 +28,10 @@ public static class Auth
 
     public static Task Init()
     {
-        if (!File.Exists(Config.TokenFile)) File.WriteAllText(Config.TokenFile, "{}");
+        if (!File.Exists(Config.TokenFile))
+        {
+            File.WriteAllText(Config.TokenFile, "{}");
+        }
 
         AuthKeys();
 
@@ -51,21 +52,21 @@ public static class Auth
         int expiresInDays = _jwtSecurityToken.ValidTo.AddDays(-5).Subtract(DateTime.UtcNow).Days;
 
         bool expired = NotBefore == null && expiresInDays >= 0;
-
+        
         if (!expired)
             TokenByRefreshGrand();
         else
             TokenByBrowserOrPassword();
 
         if (AccessToken == null || RefreshToken == null || ExpiresIn == null)
-            throw new Exception("Failed to get tokens");
+            throw new("Failed to get tokens");
 
         return Task.CompletedTask;
     }
 
     private static void TokenByBrowserOrPassword()
     {
-        Logger?.Invoke("Auth", "Trying to authenticate by browser or password");
+        Logger.Auth("Trying to authenticate by browser or password");
         while (true)
         {
             if (IsDesktopEnvironment())
@@ -170,7 +171,7 @@ public static class Auth
     private static void SetTokens(string response)
     {
         dynamic data = JsonConvert.DeserializeObject(response)
-                       ?? throw new Exception("Failed to deserialize JSON");
+                       ?? throw new("Failed to deserialize JSON");
 
         if (data.access_token == null || data.refresh_token == null || data.expires_in == null)
         {
@@ -185,7 +186,7 @@ public static class Auth
         tmp.Write(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(data, Formatting.Indented)));
         tmp.Close();
 
-        Logger?.Invoke("Auth", @"Tokens refreshed");
+        Logger.Auth("Tokens refreshed");
 
         AccessToken = data.access_token;
         RefreshToken = data.refresh_token;
@@ -196,7 +197,7 @@ public static class Auth
     private static dynamic TokenData()
     {
         return JsonConvert.DeserializeObject(File.ReadAllText(Config.TokenFile))
-               ?? throw new Exception("Failed to deserialize JSON");
+               ?? throw new("Failed to deserialize JSON");
     }
 
     private static string? GetAccessToken()
@@ -226,15 +227,15 @@ public static class Auth
 
     private static void AuthKeys()
     {
-        Logger?.Invoke("Auth", @"Getting auth keys");
+        Logger.Auth("Getting auth keys");
 
         HttpClient client = new();
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         string response = client.GetStringAsync(BaseUrl).Result;
 
         dynamic data = JsonConvert.DeserializeObject(response)
-                       ?? throw new Exception("Failed to deserialize JSON");
+                       ?? throw new("Failed to deserialize JSON");
 
         PublicKey = data.public_key;
     }
@@ -242,10 +243,10 @@ public static class Auth
     private static void TokenByPasswordGrant(string username, string password, string? otp = "")
     {
         if (Config.TokenClientId == null || Config.TokenClientSecret == null)
-            throw new Exception("Auth keys not initialized");
+            throw new("Auth keys not initialized");
 
         HttpClient client = new();
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         List<KeyValuePair<string, string>> body =
         [
@@ -257,7 +258,7 @@ public static class Auth
         ];
 
         if (!string.IsNullOrEmpty(otp))
-            body.Add(new KeyValuePair<string, string>("totp", otp));
+            body.Add(new("totp", otp));
 
         string response = client.PostAsync(TokenUrl, new FormUrlEncodedContent(body))
             .Result.Content.ReadAsStringAsync().Result;
@@ -268,19 +269,12 @@ public static class Auth
     private static void TokenByRefreshGrand()
     {
         if (Config.TokenClientId == null || Config.TokenClientSecret == null || RefreshToken == null || _jwtSecurityToken == null)
-            throw new Exception("Auth keys not initialized");
+            throw new("Auth keys not initialized");
 
-        int expiresInDays = _jwtSecurityToken.ValidTo.AddDays(-5).Subtract(DateTime.UtcNow).Days;
-        if (expiresInDays >= 0)
-        {
-            Logger?.Invoke("Auth", $"Token is still valid for {expiresInDays} day{(expiresInDays == 1 ? "" : "s")}");
-            return;
-        }
-
-        Logger?.Invoke("Auth", @"Refreshing token");
+        Logger.Auth("Refreshing token");
 
         HttpClient client = new();
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         List<KeyValuePair<string, string>> body =
         [
@@ -299,12 +293,12 @@ public static class Auth
 
     public static void TokenByAuthorizationCode(string code)
     {
-        Logger?.Invoke("Auth", @"Getting token by authorization code");
+        Logger.Auth(@"Getting token by authorization code");
         if (Config.TokenClientId == null || Config.TokenClientSecret == null)
-            throw new Exception("Auth keys not initialized");
+            throw new("Auth keys not initialized");
 
         HttpClient client = new();
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         List<KeyValuePair<string, string>> body =
         [
@@ -332,7 +326,7 @@ public static class Auth
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             Process.Start("open", url); // Not tested
         else
-            throw new Exception("Unsupported OS");
+            throw new("Unsupported OS");
     }
 
     private static bool IsDesktopEnvironment()

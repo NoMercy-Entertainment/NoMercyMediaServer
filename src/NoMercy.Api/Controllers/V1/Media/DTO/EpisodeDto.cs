@@ -39,7 +39,7 @@ public record EpisodeDto
             : episode.Overview;
         EpisodeNumber = episode.EpisodeNumber;
         SeasonNumber = episode.SeasonNumber;
-        Link = new Uri($"/tv/{episode.TvId}/watch?season={episode.SeasonNumber}&episode={episode.EpisodeNumber}", UriKind.Relative);
+        Link = new($"/tv/{episode.TvId}/watch?season={episode.SeasonNumber}&episode={episode.EpisodeNumber}", UriKind.Relative);
         AirDate = episode.AirDate;
         Still = episode.Still;
         ColorPalette = episode.ColorPalette;
@@ -78,9 +78,9 @@ public record EpisodeDto
         SeasonNumber = episodeData.SeasonNumber;
         AirDate = episodeData.AirDate;
         Still = episodeData.StillPath;
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
         Available = false;
-        Link = new Uri($"/tv/{tvId}/watch?season={seasonNumber}&episode={episodeNumber}", UriKind.Relative);
+        Link = new($"/tv/{tvId}/watch?season={seasonNumber}&episode={episodeNumber}", UriKind.Relative);
 
         Translations = episodeData.Translations.Translations
             .Select(translation => new TranslationDto(translation));

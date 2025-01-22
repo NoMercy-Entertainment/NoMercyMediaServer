@@ -90,9 +90,9 @@ public class MovieRepository(MediaContext context)
 
             if (like)
             {
-                await context.MovieUser.Upsert(new MovieUser(id, userId))
+                await context.MovieUser.Upsert(new(id, userId))
                     .On(m => new { m.MovieId, m.UserId })
-                    .WhenMatched(m => new MovieUser
+                    .WhenMatched(m => new()
                     {
                         MovieId = m.MovieId,
                         UserId = m.UserId

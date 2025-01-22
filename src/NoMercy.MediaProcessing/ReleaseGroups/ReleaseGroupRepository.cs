@@ -10,7 +10,7 @@ public class ReleaseGroupRepository(MediaContext context) : IReleaseGroupReposit
     {
         return context.ReleaseGroups.Upsert(releaseGroup)
             .On(e => new { e.Id })
-            .WhenMatched((s, i) => new ReleaseGroup
+            .WhenMatched((s, i) => new()
             {
                 Id = i.Id,
                 Title = i.Title,

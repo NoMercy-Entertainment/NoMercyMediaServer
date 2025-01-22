@@ -84,7 +84,7 @@ public class FolderWatcher : IDisposable
         if (e.ChangeType != WatcherChangeTypes.Changed || _prevChanged == current) return;
         _prevChanged = current;
 
-        _instance?.OnChanged?.Invoke(new FileWatcherEventArgs(sender as FileSystemWatcher, e));
+        _instance?.OnChanged?.Invoke(new(sender as FileSystemWatcher, e));
 
         Logger.System($"File Changed: {e.FullPath}", LogEventLevel.Verbose);
     }
@@ -98,7 +98,7 @@ public class FolderWatcher : IDisposable
         if (e.ChangeType != WatcherChangeTypes.Created || _prevCreated == current) return;
         _prevCreated = current;
 
-        _instance?.OnCreated?.Invoke(new FileWatcherEventArgs(sender as FileSystemWatcher, e));
+        _instance?.OnCreated?.Invoke(new(sender as FileSystemWatcher, e));
 
         Logger.System($"File Created: {e.FullPath}", LogEventLevel.Verbose);
     }
@@ -112,7 +112,7 @@ public class FolderWatcher : IDisposable
         if (e.ChangeType != WatcherChangeTypes.Deleted || _prevDeleted == current) return;
         _prevDeleted = current;
 
-        _instance?.OnDeleted?.Invoke(new FileWatcherEventArgs(sender as FileSystemWatcher, e));
+        _instance?.OnDeleted?.Invoke(new(sender as FileSystemWatcher, e));
 
         Logger.System($"File Deleted: {e.FullPath}", LogEventLevel.Verbose);
     }
@@ -126,7 +126,7 @@ public class FolderWatcher : IDisposable
         if (e.ChangeType != WatcherChangeTypes.Renamed || _prevRenamed == current) return;
         _prevRenamed = current;
 
-        _instance?.OnRenamed?.Invoke(new FileWatcherEventArgs(sender as FileSystemWatcher, e));
+        _instance?.OnRenamed?.Invoke(new(sender as FileSystemWatcher, e));
 
         Logger.System($"File Renamed from {e.OldFullPath} to {e.FullPath}", LogEventLevel.Verbose);
     }
@@ -134,7 +134,7 @@ public class FolderWatcher : IDisposable
     private static void _onError(object sender, ErrorEventArgs e)
     {
         FileWatcherEventArgs? fileWatcherEventArgs = new(sender as FileSystemWatcher,
-            new FileSystemEventArgs(WatcherChangeTypes.All, "", ""));
+            new(WatcherChangeTypes.All, "", ""));
 
         fileWatcherEventArgs.ErrorEventArgs = e;
 

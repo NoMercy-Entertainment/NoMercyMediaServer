@@ -143,7 +143,7 @@ public static class HlsPlaylistGenerator
     {
         Process process = new()
         {
-            StartInfo = new ProcessStartInfo
+            StartInfo = new()
             {
                 FileName = command,
                 Arguments = arguments,

@@ -29,7 +29,7 @@ public class FanArtImageManager(
         try
         {
             List<Image> thumbs = fanArtArtistDetails.Thumbs.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "thumb",
@@ -40,7 +40,7 @@ public class FanArtImageManager(
                     _colorPalette = ColorPalette("image", image.Url).Result
                 });
             List<Image> logos = fanArtArtistDetails.Logos.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "logo",
@@ -51,7 +51,7 @@ public class FanArtImageManager(
                     _colorPalette = ColorPalette("image", image.Url).Result
                 });
             List<Image> banners = fanArtArtistDetails.Banners.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "banner",
@@ -62,7 +62,7 @@ public class FanArtImageManager(
                     _colorPalette = ColorPalette("image", image.Url).Result
                 });
             List<Image> hdLogos = fanArtArtistDetails.HdLogos.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "hdLogo",
@@ -73,7 +73,7 @@ public class FanArtImageManager(
                     _colorPalette = ColorPalette("image", image.Url).Result
                 });
             List<Image> artistBackgrounds = fanArtArtistDetails.Backgrounds.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "background",

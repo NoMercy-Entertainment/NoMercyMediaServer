@@ -22,7 +22,7 @@ public record ScreensaverDataDto
         AspectRatio = image.AspectRatio;
         Src = image.FilePath;
         ColorPalette = image.ColorPalette;
-        Meta = new Meta
+        Meta = new()
         {
             Logo = logo != null
                 ? new Logo

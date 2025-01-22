@@ -29,7 +29,7 @@ public class AlbumsController : BaseController
 
         await using MediaContext mediaContext = new();
         await foreach (Album album in AlbumsResponseDto.GetAlbums(mediaContext, userId, letter))
-            albums.Add(new AlbumsResponseItemDto(album, language));
+            albums.Add(new(album, language));
 
         List<AlbumTrack> tracks = mediaContext.AlbumTrack
             .Where(albumTrack => albums.Select(a => a.Id).Contains(albumTrack.AlbumId))
@@ -66,7 +66,7 @@ public class AlbumsController : BaseController
 
         return Ok(new AlbumResponseDto
         {
-            Data = new AlbumResponseItemDto(album, language)
+            Data = new(album, language)
         });
     }
 
@@ -90,9 +90,9 @@ public class AlbumsController : BaseController
         if (request.Value)
         {
             await mediaContext.AlbumUser
-                .Upsert(new AlbumUser(album.Id, userId))
+                .Upsert(new(album.Id, userId))
                 .On(m => new { m.AlbumId, m.UserId })
-                .WhenMatched(m => new AlbumUser
+                .WhenMatched(m => new()
                 {
                     AlbumId = m.AlbumId,
                     UserId = m.UserId

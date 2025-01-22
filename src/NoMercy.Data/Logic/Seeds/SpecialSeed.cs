@@ -55,7 +55,7 @@ public static class SpecialSeed
             await context.Specials
                 .Upsert(special)
                 .On(v => new { v.Id })
-                .WhenMatched((si, su) => new Special
+                .WhenMatched((si, su) => new()
                 {
                     Id = su.Id,
                     Title = su.Title,
@@ -119,7 +119,7 @@ public static class SpecialSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-        specialItems.Add(new SpecialItem
+        specialItems.Add(new()
         {
             SpecialId = Mcu.Special.Id,
             MovieId = movie.Id,
@@ -169,7 +169,7 @@ public static class SpecialSeed
 
             if (episode is null) continue;
 
-            specialItems.Add(new SpecialItem
+            specialItems.Add(new()
             {
                 SpecialId = Mcu.Special.Id,
                 EpisodeId = episode.Id,
@@ -191,7 +191,7 @@ public static class SpecialSeed
             {
                 await context.SpecialItems.Upsert(movie)
                     .On(x => new { x.SpecialId, x.MovieId })
-                    .WhenMatched((old, @new) => new SpecialItem
+                    .WhenMatched((old, @new) => new()
                     {
                         SpecialId = @new.SpecialId,
                         MovieId = @new.MovieId,
@@ -214,7 +214,7 @@ public static class SpecialSeed
             {
                 await context.SpecialItems.Upsert(episode)
                     .On(x => new { x.SpecialId, x.EpisodeId })
-                    .WhenMatched((old, @new) => new SpecialItem
+                    .WhenMatched((old, @new) => new()
                     {
                         SpecialId = @new.SpecialId,
                         EpisodeId = @new.EpisodeId,

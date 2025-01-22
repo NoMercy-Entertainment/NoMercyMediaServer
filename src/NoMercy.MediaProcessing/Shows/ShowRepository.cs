@@ -15,7 +15,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.Tvs.Upsert(tv)
             .On(v => new { v.Id })
-            .WhenMatched((ts, ti) => new Tv
+            .WhenMatched((ts, ti) => new()
             {
                 Id = ti.Id,
                 Backdrop = ti.Backdrop,
@@ -53,9 +53,9 @@ public class ShowRepository(MediaContext context) : IShowRepository
 
     public Task LinkToLibrary(Library library, Tv tv)
     {
-        return context.LibraryTv.Upsert(new LibraryTv(library.Id, tv.Id))
+        return context.LibraryTv.Upsert(new(library.Id, tv.Id))
             .On(v => new { v.LibraryId, v.TvId })
-            .WhenMatched((lts, lti) => new LibraryTv
+            .WhenMatched((lts, lti) => new()
             {
                 LibraryId = lti.LibraryId,
                 TvId = lti.TvId
@@ -67,7 +67,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.AlternativeTitles.UpsertRange(alternativeTitles.ToArray())
             .On(a => new { a.Title, a.TvId })
-            .WhenMatched((ats, ati) => new AlternativeTitle
+            .WhenMatched((ats, ati) => new()
             {
                 Title = ati.Title,
                 Iso31661 = ati.Iso31661,
@@ -80,7 +80,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.Translations.UpsertRange(translations.ToArray())
             .On(t => new { t.Iso31661, t.Iso6391, t.TvId })
-            .WhenMatched((ts, ti) => new Translation
+            .WhenMatched((ts, ti) => new()
             {
                 Iso31661 = ti.Iso31661,
                 Iso6391 = ti.Iso6391,
@@ -119,7 +119,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.CertificationTv.UpsertRange(certifications.ToArray())
             .On(v => new { v.CertificationId, v.TvId })
-            .WhenMatched((ts, ti) => new CertificationTv
+            .WhenMatched((ts, ti) => new()
             {
                 CertificationId = ti.CertificationId,
                 TvId = ti.TvId
@@ -131,7 +131,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.Similar.UpsertRange(similar.ToArray())
             .On(v => new { v.MediaId, v.TvFromId })
-            .WhenMatched((ts, ti) => new Similar
+            .WhenMatched((ts, ti) => new()
             {
                 TvToId = ti.TvToId,
                 TvFromId = ti.TvFromId,
@@ -149,7 +149,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.Recommendations.UpsertRange(recommendations.ToArray())
             .On(v => new { v.MediaId, v.TvFromId })
-            .WhenMatched((ts, ti) => new Recommendation
+            .WhenMatched((ts, ti) => new()
             {
                 TvToId = ti.TvToId,
                 TvFromId = ti.TvFromId,
@@ -167,7 +167,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.Medias.UpsertRange(videos.ToArray())
             .On(v => new { v.Src, v.TvId })
-            .WhenMatched((ts, ti) => new Media
+            .WhenMatched((ts, ti) => new()
             {
                 Src = ti.Src,
                 Iso6391 = ti.Iso6391,
@@ -185,7 +185,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.Images.UpsertRange(images.ToArray())
             .On(v => new { v.FilePath, v.TvId })
-            .WhenMatched((ts, ti) => new Image
+            .WhenMatched((ts, ti) => new()
             {
                 AspectRatio = ti.AspectRatio,
                 FilePath = ti.FilePath,
@@ -206,7 +206,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.Keywords.UpsertRange(keywords.ToArray())
             .On(v => new { v.Id })
-            .WhenMatched((ts, ti) => new Keyword
+            .WhenMatched((ts, ti) => new()
             {
                 Id = ti.Id,
                 Name = ti.Name
@@ -218,7 +218,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.KeywordTv.UpsertRange(keywordTvs.ToArray())
             .On(v => new { v.KeywordId, v.TvId })
-            .WhenMatched((ts, ti) => new KeywordTv()
+            .WhenMatched((ts, ti) => new()
             {
                 KeywordId = ti.KeywordId,
                 TvId = ti.TvId
@@ -230,7 +230,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         return context.GenreTv.UpsertRange(genreTvs.ToArray())
             .On(v => new { v.GenreId, v.TvId })
-            .WhenMatched((ts, ti) => new GenreTv
+            .WhenMatched((ts, ti) => new()
             {
                 GenreId = ti.GenreId,
                 TvId = ti.TvId

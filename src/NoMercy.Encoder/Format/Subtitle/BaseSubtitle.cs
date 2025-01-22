@@ -69,7 +69,7 @@ public class BaseSubtitle : Classes
     {
         CodecDto[] availableCodecs = AvailableCodecs;
         if (availableCodecs.All(codec => codec.Value != subtitleCodec))
-            throw new Exception(
+            throw new(
                 $"Wrong subtitle codec value for {subtitleCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}");
 
         SubtitleCodec = availableCodecs.First(codec => codec.Value == subtitleCodec);
@@ -224,7 +224,7 @@ public class BaseSubtitle : Classes
         
         if (!IsoLanguageMapper.IsoToLanguage.TryGetValue(Language, out string? language))
         {
-            throw new Exception($"Language {Language} is not supported");
+            throw new($"Language {Language} is not supported");
         }
         commandDictionary[$"-metadata:s:s:{index}"] = $"title=\"{language}\"";
         commandDictionary[$"-metadata:s:s:{index}"] = $"language=\"{Language}\"";
@@ -255,7 +255,7 @@ public class BaseSubtitle : Classes
             "webvtt" => new Vtt(),
             "srt" => new Srt(),
             "ass" => new Ass(),
-            "_" => throw new Exception($"Subtitle {profileCodec} is not supported"),
+            "_" => throw new($"Subtitle {profileCodec} is not supported"),
             _ => throw new ArgumentOutOfRangeException(nameof(profileCodec), profileCodec, null)
         };
     }

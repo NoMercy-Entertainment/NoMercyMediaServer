@@ -25,7 +25,7 @@ public static class Fonts
         List<Attachment> attachments = [];
         foreach (string file in files)
         {
-            attachments.Add(new Attachment
+            attachments.Add(new()
             {
                 Filename = Path.GetFileName(file),
                 MimeType = MimeTypes.GetMimeTypeFromFile(file)

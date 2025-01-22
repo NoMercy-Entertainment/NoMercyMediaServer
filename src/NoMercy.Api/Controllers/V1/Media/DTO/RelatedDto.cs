@@ -32,7 +32,7 @@ public record RelatedDto
         TitleSort = recommendation.TitleSort;
         MediaType = type;
         ColorPalette = recommendation.ColorPalette;
-        Link = new Uri($"/{type}/{recommendation.MediaId}", UriKind.Relative);
+        Link = new($"/{type}/{recommendation.MediaId}", UriKind.Relative);
         NumberOfItems = type == "tv"
             ? recommendations?.FirstOrDefault(t => t.Id == recommendation.MediaId)?.NumberOfEpisodes
             : null;
@@ -54,7 +54,7 @@ public record RelatedDto
         TitleSort = similar.TitleSort;
         MediaType = type;
         ColorPalette = similar.ColorPalette;
-        Link = new Uri($"/{type}/{similar.MediaId}", UriKind.Relative);
+        Link = new($"/{type}/{similar.MediaId}", UriKind.Relative);
         NumberOfItems = type == "tv" ? similars?.FirstOrDefault(s => s.Id == similar.MediaId)?.NumberOfEpisodes : null;
         HaveItems = type == "tv"
             ? similars?.FirstOrDefault(t => t.Id == similar.MediaId)?.Episodes
@@ -73,8 +73,8 @@ public record RelatedDto
         Title = tmdbSimilar.Title;
         TitleSort = tmdbSimilar.Title.TitleSort(tmdbSimilar.ReleaseDate);
         MediaType = type;
-        Link = new Uri($"/{type}/{tmdbSimilar.Id}", UriKind.Relative);
-        ColorPalette = new IColorPalettes();
+        Link = new($"/{type}/{tmdbSimilar.Id}", UriKind.Relative);
+        ColorPalette = new();
         NumberOfItems = 0;
         HaveItems = 0;
     }
@@ -88,8 +88,8 @@ public record RelatedDto
         Title = recommendation.Name;
         TitleSort = recommendation.Name.TitleSort();
         MediaType = type;
-        Link = new Uri($"/{type}/{recommendation.Id}", UriKind.Relative);
-        ColorPalette = new IColorPalettes();
+        Link = new($"/{type}/{recommendation.Id}", UriKind.Relative);
+        ColorPalette = new();
         NumberOfItems = 0;
         HaveItems = 0;
     }

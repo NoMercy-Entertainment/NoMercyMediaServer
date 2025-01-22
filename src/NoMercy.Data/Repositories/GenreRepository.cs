@@ -65,7 +65,7 @@ public class GenreRepository(MediaContext context)
                     .Where(gm => gm.Movie.VideoFiles.Any(vf => vf.Folder != null))
                     .Select(gm => new GenreMovie
                     {
-                        Movie = new Movie
+                        Movie = new()
                         {
                             Id = gm.Movie.Id,
                             Title = gm.Movie.Title,
@@ -90,7 +90,7 @@ public class GenreRepository(MediaContext context)
                     .Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any(vf => vf.Folder != null)))
                     .Select(gt => new GenreTv
                     {
-                        Tv = new Tv
+                        Tv = new()
                         {
                             Id = gt.Tv.Id,
                             Title = gt.Tv.Title,

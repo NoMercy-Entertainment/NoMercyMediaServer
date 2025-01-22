@@ -12,7 +12,7 @@ public static class KitsuIo
 
         HttpClient client = new();
         client.DefaultRequestHeaders.UserAgent.ParseAdd(ApiInfo.UserAgent);
-        client.BaseAddress = new Uri("https://kitsu.io/api/edge/");
+        client.BaseAddress = new("https://kitsu.io/api/edge/");
 
         HttpResponseMessage response = await client.GetAsync($"anime?filter[text]={title}&filter[year]={year}");
         string content = await response.Content.ReadAsStringAsync();

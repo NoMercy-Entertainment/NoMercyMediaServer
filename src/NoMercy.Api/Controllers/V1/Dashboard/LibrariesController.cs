@@ -106,7 +106,7 @@ public class LibrariesController(
             {
                 Language? language = languages.FirstOrDefault(l => l.Iso6391 == subtitle);
                 if (language is null) continue;
-                library.LanguageLibraries.Add(new LanguageLibrary { LibraryId = library.Id, LanguageId = language.Id });
+                library.LanguageLibraries.Add(new() { LibraryId = library.Id, LanguageId = language.Id });
             }
 
             await libraryRepository.UpdateLibraryAsync(library);

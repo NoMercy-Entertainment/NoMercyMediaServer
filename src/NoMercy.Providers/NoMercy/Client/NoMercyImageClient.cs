@@ -30,7 +30,7 @@ public abstract class NoMercyImageClient : TmdbBaseClient
 
                 using HttpClient httpClient = new();
                 httpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
-                httpClient.BaseAddress = new Uri("https://image.nomercy.tv/");
+                httpClient.BaseAddress = new("https://image.nomercy.tv/");
                 httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
                 httpClient.Timeout = TimeSpan.FromMinutes(5);
 

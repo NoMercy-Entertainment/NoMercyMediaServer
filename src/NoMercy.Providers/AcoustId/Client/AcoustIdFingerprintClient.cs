@@ -46,9 +46,9 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
 
         FingerPrintData? fingerprintData = output.FromJson<FingerPrintData>();
 
-        if (fingerprintData == null) throw new Exception("Fingerprint data is null");
+        if (fingerprintData == null) throw new("Fingerprint data is null");
 
-        return new ValueTask<AcoustIdFingerprint?>(WithFingerprint([
+        return new(WithFingerprint([
             "recordings",
             "releases",
             "tracks",

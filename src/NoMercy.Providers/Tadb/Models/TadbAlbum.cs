@@ -73,35 +73,35 @@ public class TadbAlbum
         {
             List<TadbLanguageDescription> descriptions = new();
             if (StrDescriptionCN != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "CN", Description = StrDescriptionCN });
+                descriptions.Add(new() { Iso31661 = "CN", Description = StrDescriptionCN });
             if (StrDescriptionDE != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "DE", Description = StrDescriptionDE });
+                descriptions.Add(new() { Iso31661 = "DE", Description = StrDescriptionDE });
             if (StrDescriptionEN != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "EN", Description = StrDescriptionEN });
+                descriptions.Add(new() { Iso31661 = "EN", Description = StrDescriptionEN });
             if (StrDescriptionES != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "ES", Description = StrDescriptionES });
+                descriptions.Add(new() { Iso31661 = "ES", Description = StrDescriptionES });
             if (StrDescriptionFR != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "FR", Description = StrDescriptionFR });
+                descriptions.Add(new() { Iso31661 = "FR", Description = StrDescriptionFR });
             if (StrDescriptionHU != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "HU", Description = StrDescriptionHU });
+                descriptions.Add(new() { Iso31661 = "HU", Description = StrDescriptionHU });
             if (StrDescriptionIL != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "IL", Description = StrDescriptionIL });
+                descriptions.Add(new() { Iso31661 = "IL", Description = StrDescriptionIL });
             if (StrDescriptionIT != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "IT", Description = StrDescriptionIT });
+                descriptions.Add(new() { Iso31661 = "IT", Description = StrDescriptionIT });
             if (StrDescriptionJP != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "JP", Description = StrDescriptionJP });
+                descriptions.Add(new() { Iso31661 = "JP", Description = StrDescriptionJP });
             if (StrDescriptionNL != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "NL", Description = StrDescriptionNL });
+                descriptions.Add(new() { Iso31661 = "NL", Description = StrDescriptionNL });
             if (StrDescriptionNO != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "NO", Description = StrDescriptionNO });
+                descriptions.Add(new() { Iso31661 = "NO", Description = StrDescriptionNO });
             if (StrDescriptionPL != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "PL", Description = StrDescriptionPL });
+                descriptions.Add(new() { Iso31661 = "PL", Description = StrDescriptionPL });
             if (StrDescriptionPT != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "PT", Description = StrDescriptionPT });
+                descriptions.Add(new() { Iso31661 = "PT", Description = StrDescriptionPT });
             if (StrDescriptionRU != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "RU", Description = StrDescriptionRU });
+                descriptions.Add(new() { Iso31661 = "RU", Description = StrDescriptionRU });
             if (StrDescriptionSE != null)
-                descriptions.Add(new TadbLanguageDescription { Iso31661 = "SE", Description = StrDescriptionSE });
+                descriptions.Add(new() { Iso31661 = "SE", Description = StrDescriptionSE });
 
             return descriptions;
         }

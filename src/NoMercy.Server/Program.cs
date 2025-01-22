@@ -179,6 +179,8 @@ public static class Program
             new (() => Seed.Init(ShouldSeedMarvel)),
             new (Register.Init),
             new (Binaries.DownloadAll),
+            new (Dev.Run),
+            new (ChromeCast.Init),
             // new (AniDbBaseClient.Init),
             new (delegate
             {
@@ -201,7 +203,7 @@ public static class Program
             IsBackground = true
         };
         queues.Start();
-
+        
         Thread fileWatcher = new(new Task(() => _ = new LibraryFileWatcher()).Start)
         {
             Name = "Library File Watcher",
@@ -210,19 +212,6 @@ public static class Program
         };
         fileWatcher.Start();
         
-        Thread storageMonitor = new(new Task(() =>
-        {
-            StorageJob storageJob = new(StorageMonitor.Storage);
-            storageJob.Handle().Wait();
-            // JobDispatcher.Dispatch(storageJob, "data", 1000);
-        }).Start)
-        {
-            Name = "Storage Watcher",
-            Priority = ThreadPriority.Lowest,
-            IsBackground = true
-        };
-        storageMonitor.Start();
-
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
         {
             Logger.App(

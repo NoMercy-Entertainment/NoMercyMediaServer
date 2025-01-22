@@ -48,7 +48,7 @@ public record CollectionsResponseItemDto
             .FirstOrDefault(media => media.Type == "logo")
             ?.FilePath;
         MediaType = "collectionMovie";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         Year = collectionMovie.Movie.ReleaseDate.ParseYear();
         ColorPalette = collectionMovie.Movie.ColorPalette;
         Poster = collectionMovie.Movie.Poster;
@@ -79,7 +79,7 @@ public record CollectionsResponseItemDto
         Backdrop = collection.Backdrop;
         Logo = collection.Images
             .FirstOrDefault(media => media.Type == "logo")?.FilePath;
-        Link = new Uri($"/collection/{Id}", UriKind.Relative);
+        Link = new($"/collection/{Id}", UriKind.Relative);
         Year = collection.CollectionMovies
             .MinBy(collectionMovie => collectionMovie.Movie.ReleaseDate)
             ?.Movie.ReleaseDate.ParseYear();

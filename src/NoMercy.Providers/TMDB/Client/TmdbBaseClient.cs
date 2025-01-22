@@ -18,7 +18,7 @@ public class TmdbBaseClient : IDisposable
     {
         _client.BaseAddress = _baseUrl;
         _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
         _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
@@ -26,12 +26,12 @@ public class TmdbBaseClient : IDisposable
 
     protected TmdbBaseClient(int id)
     {
-        _client = new HttpClient
+        _client = new()
         {
             BaseAddress = _baseUrl
         };
         _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
         _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
@@ -42,7 +42,7 @@ public class TmdbBaseClient : IDisposable
 
     protected static Helpers.Queue GetQueue()
     {
-        return _queue ??= new Helpers.Queue(new QueueOptions { Concurrent = 50, Interval = 1000, Start = true });
+        return _queue ??= new(new() { Concurrent = 50, Interval = 1000, Start = true });
     }
 
     private static int Max(int available, int wanted, int constraint)
@@ -59,7 +59,7 @@ public class TmdbBaseClient : IDisposable
     protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false)
         where T : class
     {
-        query ??= new Dictionary<string, string>();
+        query ??= new();
 
         string newUrl = QueryHelpers.AddQueryString(url, query!);
 
@@ -86,7 +86,7 @@ public class TmdbBaseClient : IDisposable
         if (limit > 1)
             await Parallel.ForAsync(2, Max(firstPage?.TotalPages ?? 0, limit, 500), async (i, _) =>
             {
-                TmdbPaginatedResponse<T>? page = await Get<TmdbPaginatedResponse<T>>(url, new Dictionary<string, string>
+                TmdbPaginatedResponse<T>? page = await Get<TmdbPaginatedResponse<T>>(url, new()
                 {
                     ["page"] = i.ToString()
                 });

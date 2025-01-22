@@ -31,7 +31,7 @@ public record PlaylistTrackDto
         Cover = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}", UriKind.Relative).ToString();
-        Link = new Uri($"/music/artist/{artistTrack.ArtistId}", UriKind.Relative);
+        Link = new($"/music/artist/{artistTrack.ArtistId}", UriKind.Relative);
         
         ColorPalette = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
         Date = artistTrack.Track.Date;

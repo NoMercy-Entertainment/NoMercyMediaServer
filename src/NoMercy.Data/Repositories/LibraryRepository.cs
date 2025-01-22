@@ -215,7 +215,7 @@ public class LibraryRepository(MediaContext context)
     {
         await context.Libraries.Upsert(library)
             .On(l => new { l.Id })
-            .WhenMatched((ls, li) => new Library
+            .WhenMatched((ls, li) => new()
             {
                 Title = li.Title,
                 AutoRefreshInterval = li.AutoRefreshInterval,
@@ -231,13 +231,13 @@ public class LibraryRepository(MediaContext context)
             })
             .RunAsync();
 
-        await context.LibraryUser.Upsert(new LibraryUser
+        await context.LibraryUser.Upsert(new()
             {
                 LibraryId = library.Id,
                 UserId = userId
             })
             .On(lu => new { lu.LibraryId, lu.UserId })
-            .WhenMatched((lus, lui) => new LibraryUser
+            .WhenMatched((lus, lui) => new()
             {
                 LibraryId = lui.LibraryId,
                 UserId = lui.UserId
@@ -271,7 +271,7 @@ public class LibraryRepository(MediaContext context)
     {
         return context.EncoderProfileFolder.Upsert(encoderProfileFolder)
             .On(epf => new { epf.FolderId, epf.EncoderProfileId })
-            .WhenMatched((source, input) => new EncoderProfileFolder()
+            .WhenMatched((source, input) => new()
             {
                 FolderId = input.FolderId,
                 EncoderProfileId = input.EncoderProfileId
@@ -283,7 +283,7 @@ public class LibraryRepository(MediaContext context)
     {
         return context.EncoderProfileFolder.UpsertRange(encoderProfileFolders)
             .On(epl => new { epl.FolderId, epl.EncoderProfileId })
-            .WhenMatched((epls, epli) => new EncoderProfileFolder()
+            .WhenMatched((epls, epli) => new()
             {
                 FolderId = epli.FolderId,
                 EncoderProfileId = epli.EncoderProfileId
@@ -295,7 +295,7 @@ public class LibraryRepository(MediaContext context)
     {
         return context.EncoderProfileFolder.UpsertRange(encoderProfileFolders)
             .On(epf => new { epf.FolderId, epf.EncoderProfileId })
-            .WhenMatched((source, input) => new EncoderProfileFolder()
+            .WhenMatched((source, input) => new()
             {
                 FolderId = input.FolderId,
                 EncoderProfileId = input.EncoderProfileId
@@ -307,7 +307,7 @@ public class LibraryRepository(MediaContext context)
     {
         return context.LanguageLibrary.UpsertRange(languageLibraries)
             .On(ll => new { ll.LibraryId, ll.LanguageId })
-            .WhenMatched((lls, lli) => new LanguageLibrary
+            .WhenMatched((lls, lli) => new()
             {
                 LibraryId = lli.LibraryId,
                 LanguageId = lli.LanguageId

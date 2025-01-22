@@ -80,7 +80,7 @@ public class BaseContainer : Classes
     {
         ContainerDto[] availableCodecs = AvailableContainers;
         if (availableCodecs.All(container => container.Name != videoContainer))
-            throw new Exception(
+            throw new(
                 $"Wrong video container value for {videoContainer}, available formats are {string.Join(", ", AvailableContainers.Select(container => container.Name))}");
 
         ContainerDto = availableCodecs.First(container => container.Name == videoContainer);

@@ -45,7 +45,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
             GenreRowDto<GenreRowItemDto> genreRowDto = new()
             {
                 Title = name,
-                MoreLink = new Uri($"/genres/{genre.Id}", UriKind.Relative),
+                MoreLink = new($"/genres/{genre.Id}", UriKind.Relative),
                 Id = genre.Id.ToString(),
 
                 Source = genre.GenreMovies.Select(movie => new HomeSourceDto(movie.MovieId, "movie"))
@@ -148,7 +148,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
             GenreRowDto<GenreRowItemDto> genreRowDto = new()
             {
                 Title = name,
-                MoreLink = new Uri($"/genres/{genre.Id}", UriKind.Relative),
+                MoreLink = new($"/genres/{genre.Id}", UriKind.Relative),
                 Id = genre.Id.ToString(),
                 Source = movies
                     .Concat(tvs)
@@ -227,7 +227,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     Update =
                     {
                         When = "pageLoad",
-                        Link = new Uri("/home/card", UriKind.Relative),
+                        Link = new("/home/card", UriKind.Relative),
                     },
                     Props =
                     {
@@ -241,7 +241,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     Update =
                     {
                         When = "pageLoad",
-                        Link = new Uri("/home/continue", UriKind.Relative),
+                        Link = new("/home/continue", UriKind.Relative),
                     },
                     Props =
                     {
@@ -253,11 +253,11 @@ public class HomeController(MediaContext mediaContext) : BaseController
                                 Component = "NMCard",
                                 Props =
                                 {
-                                    Data = new ContinueWatchingItemDto(item, country),
+                                    Data = new(item, country),
                                     Watch = true,
                                     ContextMenuItems =
                                     [
-                                        new Dictionary<string, object>
+                                        new()
                                         {
                                             {"label", "Remove from watchlist".Localize()},
                                             {"icon", "mooooom-trash"},
@@ -342,10 +342,10 @@ public class HomeController(MediaContext mediaContext) : BaseController
 
         List<GenreRowItemDto> genres = [];
         if (tv != null)
-            genres.Add(new GenreRowItemDto(tv, language));
+            genres.Add(new(tv, language));
 
         if (movie != null)
-            genres.Add(new GenreRowItemDto(movie, language));
+            genres.Add(new(movie, language));
 
         GenreRowItemDto? homeCardItem = genres.Where(g => !string.IsNullOrWhiteSpace(g.Title))
             .Randomize().FirstOrDefault();
@@ -361,7 +361,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     Update =
                     {
                         When = "pageLoad",
-                        Link = new Uri("/home/card", UriKind.Relative),
+                        Link = new("/home/card", UriKind.Relative),
                     },
                     Props =
                     {
@@ -395,7 +395,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     Update =
                     {
                         When = "pageLoad",
-                        Link = new Uri("/home/continue", UriKind.Relative),
+                        Link = new("/home/continue", UriKind.Relative),
                     },
                     Props =
                     {
@@ -407,11 +407,11 @@ public class HomeController(MediaContext mediaContext) : BaseController
                                 Component = "NMCard",
                                 Props =
                                 {
-                                    Data = new ContinueWatchingItemDto(item, country),
+                                    Data = new(item, country),
                                     Watch = true,
                                     ContextMenuItems =
                                     [
-                                        new Dictionary<string, object>
+                                        new()
                                         {
                                             {"label", "Remove from watchlist".Localize()},
                                             {"icon", "mooooom-trash"},
@@ -469,7 +469,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
             GenreRowDto<GenreRowItemDto> genreRowDto = new()
             {
                 Title = name,
-                MoreLink = new Uri($"/genres/{genre.Id}", UriKind.Relative),
+                MoreLink = new($"/genres/{genre.Id}", UriKind.Relative),
                 Id = genre.Id.ToString(),
                 Source = movies
                     .Concat(tvs)
@@ -542,7 +542,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     Update =
                     {
                         When = "pageLoad",
-                        Link = new Uri("/home/card", UriKind.Relative),
+                        Link = new("/home/card", UriKind.Relative),
                     },
                     Props =
                     {
@@ -556,7 +556,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     Update =
                     {
                         When = "pageLoad",
-                        Link = new Uri("/home/continue", UriKind.Relative),
+                        Link = new("/home/continue", UriKind.Relative),
                     },
                     Props =
                     {
@@ -568,11 +568,11 @@ public class HomeController(MediaContext mediaContext) : BaseController
                                 Component = "NMCard",
                                 Props =
                                 {
-                                    Data = new ContinueWatchingItemDto(item, country),
+                                    Data = new(item, country),
                                     Watch = true,
                                     ContextMenuItems =
                                     [
-                                        new Dictionary<string, object>
+                                        new()
                                         {
                                             {"label", "Remove from watchlist".Localize()},
                                             {"icon", "mooooom-trash"},

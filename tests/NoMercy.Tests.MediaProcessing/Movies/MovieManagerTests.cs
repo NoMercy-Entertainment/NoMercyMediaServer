@@ -28,12 +28,12 @@ public class MovieManagerTests
         Mock<JobDispatcher> jobDispatcherMock = new();
         MovieResponseMocks mockDataProvider = new();
 
-        _movieRepositoryMock = new Mock<IMovieRepository>();
-        _movieClientMock = new Mock<ITmdbMovieClient>();
+        _movieRepositoryMock = new();
+        _movieClientMock = new();
 
-        _movieManager = new MovieManager(_movieRepositoryMock.Object, jobDispatcherMock.Object);
+        _movieManager = new(_movieRepositoryMock.Object, jobDispatcherMock.Object);
         _movieAppends = mockDataProvider.MockMovieAppendsResponse()!;
-        _library = new Library { Id = new Ulid(), Title = "Test Library" };
+        _library = new() { Id = new(), Title = "Test Library" };
         _movieId = 1771;
     }
 

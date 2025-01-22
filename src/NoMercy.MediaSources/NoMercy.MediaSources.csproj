@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
+      <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
+      <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
+      <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+      <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj" />
+      <ProjectReference Include="..\NoMercy.Queue\NoMercy.Queue.csproj" />
+    </ItemGroup>
+
+</Project>

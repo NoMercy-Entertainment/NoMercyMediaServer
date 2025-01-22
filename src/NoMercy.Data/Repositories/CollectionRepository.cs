@@ -273,9 +273,9 @@ public class CollectionRepository(MediaContext context)
 
         if (like)
         {
-            await context.CollectionUser.Upsert(new CollectionUser(collection.Id, userId))
+            await context.CollectionUser.Upsert(new(collection.Id, userId))
                 .On(m => new { m.CollectionId, m.UserId })
-                .WhenMatched(m => new CollectionUser
+                .WhenMatched(m => new()
                 {
                     CollectionId = m.CollectionId,
                     UserId = m.UserId

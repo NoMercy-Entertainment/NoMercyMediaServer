@@ -58,7 +58,7 @@ public record LibrariesResponseItemDto
             {
                 FolderId = folderLibrary.FolderId,
                 LibraryId = folderLibrary.LibraryId,
-                Folder = new FolderDto
+                Folder = new()
                 {
                     Id = folderLibrary.Folder.Id,
                     Path = folderLibrary.Folder.Path,

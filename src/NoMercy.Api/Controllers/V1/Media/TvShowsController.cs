@@ -41,7 +41,7 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
         if (tv is not null)
             return Ok(new InfoResponseDto
             {
-                Data = new InfoResponseItemDto(tv, language)
+                Data = new(tv, language)
             });
 
         TmdbTvClient tmdbTvClient = new(id);
@@ -54,7 +54,7 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
 
         return Ok(new InfoResponseDto
         {
-            Data = new InfoResponseItemDto(tvShowAppends, language)
+            Data = new(tvShowAppends, language)
         });
     }
 

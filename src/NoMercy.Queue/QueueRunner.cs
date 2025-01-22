@@ -12,16 +12,16 @@ public static class QueueRunner
         Dictionary<string, (int count, List<Worker> workerInstances, CancellationTokenSource _cancellationTokenSource)>
         Workers = new()
         {
-            [Config.QueueWorkers.Key] = (Config.QueueWorkers.Value, [], new CancellationTokenSource()),
-            [Config.EncoderWorkers.Key] = (Config.EncoderWorkers.Value, [], new CancellationTokenSource()),
-            [Config.CronWorkers.Key] = (Config.CronWorkers.Value, [], new CancellationTokenSource()),
-            [Config.DataWorkers.Key] = (Config.DataWorkers.Value, [], new CancellationTokenSource()),
-            [Config.ImageWorkers.Key] = (Config.ImageWorkers.Value, [], new CancellationTokenSource())
+            [Config.QueueWorkers.Key] = (Config.QueueWorkers.Value, [], new()),
+            [Config.EncoderWorkers.Key] = (Config.EncoderWorkers.Value, [], new()),
+            [Config.CronWorkers.Key] = (Config.CronWorkers.Value, [], new()),
+            [Config.DataWorkers.Key] = (Config.DataWorkers.Value, [], new()),
+            [Config.ImageWorkers.Key] = (Config.ImageWorkers.Value, [], new())
             //[Config.RequestRunners.Key] = (Config.RequestRunners.Value, [], new CancellationTokenSource()),
         };
 
     private static bool _isInitialized;
-    private static readonly JobQueue JobQueue = new(new QueueContext());
+    private static readonly JobQueue JobQueue = new(new());
     private static bool _isUpdating;
 
     public static async Task Initialize()
@@ -158,14 +158,14 @@ public static class QueueRunner
         
         await using MediaContext context = new();
         await context.Configuration
-            .Upsert(new Configuration()
+            .Upsert(new()
             {
                 Key = $"{name}Runners",
                 ModifiedBy = userId,
                 Value = max.ToString()
             })
             .On(x => x.Key)
-            .WhenMatched((s, i) => new Configuration
+            .WhenMatched((s, i) => new()
             {
                 Value = max.ToString(),
                 ModifiedBy = i.ModifiedBy,
@@ -180,7 +180,7 @@ public static class QueueRunner
         (int count, List<Worker> workerInstances, CancellationTokenSource _cancellationTokenSource) valueTuple =
             Workers[name];
         valueTuple.count = max;
-        valueTuple._cancellationTokenSource = new CancellationTokenSource();
+        valueTuple._cancellationTokenSource = new();
         Workers[name] = valueTuple;
 
         await Task.Run(() =>

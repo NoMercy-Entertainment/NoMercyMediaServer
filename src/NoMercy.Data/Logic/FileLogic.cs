@@ -130,7 +130,7 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
                 if (match.Groups["type"].Value != "sign" && match.Groups["type"].Value != "song" &&
                     match.Groups["type"].Value != "full") continue;
 
-                subtitles.Add(new Subtitle
+                subtitles.Add(new()
                 {
                     Language = match.Groups["lang"].Value,
                     Type = match.Groups["type"].Value,
@@ -169,7 +169,7 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
 
             await _mediaContext.VideoFiles.Upsert(videoFile)
                 .On(vf => vf.Filename)
-                .WhenMatched((vs, vi) => new VideoFile
+                .WhenMatched((vs, vi) => new()
                 {
                     Id = vi.Id,
                     EpisodeId = vi.EpisodeId,
@@ -261,7 +261,7 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
             string path = Path.Combine(rootFolder.Path, folder);
 
             if (Directory.Exists(path))
-                Folders.Add(new Folder
+                Folders.Add(new()
                 {
                     Path = path,
                     Id = rootFolder.Id

@@ -88,7 +88,7 @@ public class BaseAudio : Classes
     public BaseAudio SetAudioKiloBitrate(int kiloBitrate)
     {
         if (kiloBitrate < 1)
-            throw new Exception("Wrong kilo bitrate value");
+            throw new("Wrong kilo bitrate value");
 
         _bitRate = kiloBitrate;
 
@@ -98,7 +98,7 @@ public class BaseAudio : Classes
     protected virtual BaseAudio SetAudioQuality(int qualityLevel)
     {
         if (qualityLevel is < 0 or > 9)
-            throw new Exception("Wrong quality level value");
+            throw new("Wrong quality level value");
 
         AudioQualityLevel = qualityLevel;
 
@@ -108,7 +108,7 @@ public class BaseAudio : Classes
     protected BaseAudio SetAudioCodec(string audioCodec)
     {
         if (AvailableCodecs.All(codec => codec.Value != audioCodec))
-            throw new Exception(
+            throw new(
                 $"Wrong audio codec value for {audioCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}");
 
         AudioCodec = AvailableCodecs.First(codec => codec.Value == audioCodec);
@@ -126,7 +126,7 @@ public class BaseAudio : Classes
             return this;
 
         if (channels < 1)
-            throw new Exception("Wrong audio channels value");
+            throw new("Wrong audio channels value");
 
         AudioChannels = channels;
 
@@ -237,7 +237,7 @@ public class BaseAudio : Classes
 
         if (!IsoLanguageMapper.IsoToLanguage.TryGetValue(Language, out string? language))
         {
-            throw new Exception($"Language {Language} is not supported");
+            throw new($"Language {Language} is not supported");
         }
         commandDictionary[$"-metadata:s:a:{index}"] = $"title=\"{language} {AudioChannels}-{AudioCodec.SimpleValue}\"";
         commandDictionary[$"-metadata:s:a:{index}"] = $"language=\"{Language}\"";
@@ -270,7 +270,7 @@ public class BaseAudio : Classes
             "mp3" => new Mp3(),
             "flac" => new Flac(),
             "vorbis" => new Vorbis(),
-            _ => throw new Exception($"Audio codec {profileCodec} is not supported")
+            _ => throw new($"Audio codec {profileCodec} is not supported")
         };
     }
 }

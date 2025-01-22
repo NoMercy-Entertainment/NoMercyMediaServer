@@ -13,7 +13,7 @@ public static class ResourceMonitor
         if (_broadcasting) return;
         Logger.Socket("Starting resource monitoring broadcast");
         _broadcasting = true;
-        _cancellationTokenSource = new CancellationTokenSource();
+        _cancellationTokenSource = new();
         Task.Run(() => BroadcastLoop(_cancellationTokenSource.Token));
     }
 

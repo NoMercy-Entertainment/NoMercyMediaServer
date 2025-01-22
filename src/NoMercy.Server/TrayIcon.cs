@@ -33,7 +33,7 @@ public class TrayIcon
 
     private TrayIcon()
     {
-        _trayIcon.ContextMenu = new PopupMenu
+        _trayIcon.ContextMenu = new()
         {
             Items =
             {

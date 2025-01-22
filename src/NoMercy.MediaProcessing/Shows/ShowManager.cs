@@ -31,8 +31,8 @@ public class ShowManager(
 
         string colorPalette = await MovieDbImageManager
             .MultiColorPalette([
-                new BaseImageManager.MultiStringType("poster", showAppends.PosterPath),
-                new BaseImageManager.MultiStringType("backdrop", showAppends.BackdropPath)
+                new("poster", showAppends.PosterPath),
+                new("backdrop", showAppends.BackdropPath)
             ]);
 
         Tv show = new()

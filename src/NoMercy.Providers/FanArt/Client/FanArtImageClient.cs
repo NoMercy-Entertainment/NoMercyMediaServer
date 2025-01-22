@@ -34,7 +34,7 @@ public class FanArtImageClient : FanArtBaseClient
         HttpClient httpClient = new();
         httpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
         httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
-        httpClient.BaseAddress = new Uri("https://assets.fanart.tv");
+        httpClient.BaseAddress = new("https://assets.fanart.tv");
 
         HttpResponseMessage response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return null;

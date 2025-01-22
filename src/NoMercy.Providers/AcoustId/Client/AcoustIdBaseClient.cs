@@ -18,18 +18,18 @@ public class AcoustIdBaseClient : IDisposable
     {
         _client.BaseAddress = _baseUrl;
         _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
     }
 
     protected AcoustIdBaseClient(Guid id)
     {
-        _client = new HttpClient
+        _client = new()
         {
             BaseAddress = _baseUrl
         };
         _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
         Id = id;
     }
@@ -38,7 +38,7 @@ public class AcoustIdBaseClient : IDisposable
 
     private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new Helpers.Queue(new QueueOptions { Concurrent = 3, Interval = 1000, Start = true });
+        return _queue ??= new(new() { Concurrent = 3, Interval = 1000, Start = true });
     }
 
     protected Guid Id { get; private set; }
@@ -46,7 +46,7 @@ public class AcoustIdBaseClient : IDisposable
     protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = default, bool? priority = false)
         where T : class
     {
-        query ??= new Dictionary<string, string?>();
+        query ??= new();
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 

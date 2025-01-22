@@ -193,7 +193,7 @@ public class UsersController : BaseController
 
         return Ok(new DataResponseDto<UserPermissionRequest>
         {
-            Data = new UserPermissionRequest(user)
+            Data = new(user)
         });
     }
 
@@ -225,7 +225,7 @@ public class UsersController : BaseController
         user.LibraryUser.Clear();
 
         foreach (Ulid libraryId in request.Libraries)
-            user.LibraryUser.Add(new LibraryUser
+            user.LibraryUser.Add(new()
             {
                 LibraryId = libraryId,
                 UserId = userId

@@ -48,6 +48,6 @@ public record SpecialItemDto
         HaveItems = item.HaveItems;
         VideoId = item.VideoId;
         Duration = item.Duration;
-        Link = new Uri($"/{item.MediaType}/{item.Id}", UriKind.Relative);
+        Link = new($"/{item.MediaType}/{item.Id}", UriKind.Relative);
     }
 }

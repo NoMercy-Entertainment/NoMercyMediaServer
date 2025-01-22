@@ -28,6 +28,6 @@ public record PlaylistResponseItemDto
         UpdatedAt = playlist.UpdatedAt;
         Tracks = playlist.Tracks;
         Type = "playlists";
-        Link = new Uri($"/music/playlists/{Id}", UriKind.Relative);
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
     }
 }

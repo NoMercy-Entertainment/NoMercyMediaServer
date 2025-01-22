@@ -27,7 +27,7 @@ public record ArtistDto
         Cover = albumArtist.Artist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
-        Link = new Uri($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artist/{Id}", UriKind.Relative);
         Type = "artists";
         Description = !string.IsNullOrEmpty(description)
             ? description
@@ -43,7 +43,7 @@ public record ArtistDto
         Disambiguation = artistTrack.Artist.Disambiguation;
         Cover = artistTrack.Artist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
-        Link = new Uri($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artist/{Id}", UriKind.Relative);
         Description = artistTrack.Artist.Description;
         Type = "artists";
         Disambiguation = artistTrack.Artist.Disambiguation;

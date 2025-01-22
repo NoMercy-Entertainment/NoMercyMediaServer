@@ -52,7 +52,7 @@ public class FanArtImagesJob : IShouldQueue
             if (fanArt is null) return;
 
             List<Image> thumbs = fanArt.Thumbs.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "thumb",
@@ -64,7 +64,7 @@ public class FanArtImagesJob : IShouldQueue
                 });
 
             List<Image> logos = fanArt.Logos.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "logo",
@@ -75,7 +75,7 @@ public class FanArtImagesJob : IShouldQueue
                     _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                 });
             List<Image> banners = fanArt.Banners.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "banner",
@@ -86,7 +86,7 @@ public class FanArtImagesJob : IShouldQueue
                     _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                 });
             List<Image> hdLogos = fanArt.HdLogos.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "hdLogo",
@@ -97,7 +97,7 @@ public class FanArtImagesJob : IShouldQueue
                     _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                 });
             List<Image> artistBackgrounds = fanArt.Backgrounds.ToList()
-                .ConvertAll<Image>(image => new Image
+                .ConvertAll<Image>(image => new()
                 {
                     AspectRatio = 1,
                     Type = "background",
@@ -129,7 +129,7 @@ public class FanArtImagesJob : IShouldQueue
 
             await mediaContext.Images.UpsertRange(images)
                 .On(v => new { v.FilePath, v.ArtistId })
-                .WhenMatched((s, i) => new Image
+                .WhenMatched((s, i) => new()
                 {
                     Id = i.Id,
                     AspectRatio = i.AspectRatio,
@@ -219,7 +219,7 @@ public class FanArtImagesJob : IShouldQueue
 
             await mediaContext.Images.UpsertRange(images)
                 .On(v => new { v.FilePath, v.AlbumId })
-                .WhenMatched((s, i) => new Image
+                .WhenMatched((s, i) => new()
                 {
                     Id = i.Id,
                     AspectRatio = i.AspectRatio,

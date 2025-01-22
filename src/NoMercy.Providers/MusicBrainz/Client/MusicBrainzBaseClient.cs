@@ -16,18 +16,18 @@ public class MusicBrainzBaseClient : IDisposable
     {
         _client.BaseAddress = _baseUrl;
         _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
     }
 
     protected MusicBrainzBaseClient(Guid id)
     {
-        _client = new HttpClient
+        _client = new()
         {
             BaseAddress = _baseUrl
         };
         _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
         Id = id;
     }
@@ -36,7 +36,7 @@ public class MusicBrainzBaseClient : IDisposable
 
     private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new Helpers.Queue(new QueueOptions { Concurrent = 20, Interval = 1000, Start = true });
+        return _queue ??= new(new() { Concurrent = 20, Interval = 1000, Start = true });
     }
 
     protected Guid Id { get; private set; }
@@ -45,7 +45,7 @@ public class MusicBrainzBaseClient : IDisposable
         int iteration = 0)
         where T : class
     {
-        query ??= new Dictionary<string, string>();
+        query ??= new();
 
         string newUrl = url.ToQueryUri(query!);
 
@@ -77,7 +77,7 @@ public class MusicBrainzBaseClient : IDisposable
             return await Get<T>(url, query, priority, iteration + 1);
         }
 
-        return data ?? throw new Exception($"Failed to parse {response}");
+        return data ?? throw new($"Failed to parse {response}");
     }
 
     public void Dispose()

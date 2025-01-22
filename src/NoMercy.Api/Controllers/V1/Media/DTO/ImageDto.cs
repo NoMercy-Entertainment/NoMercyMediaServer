@@ -37,7 +37,7 @@ public record ImageDto
         Iso6391 = media.Iso6391;
         VoteAverage = media.VoteAverage;
         VoteCount = media.VoteCount;
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
     }
 
     public ImageDto(TmdbProfile image)
@@ -48,6 +48,6 @@ public record ImageDto
         Iso6391 = image.Iso6391;
         VoteAverage = 0;
         VoteCount = 0;
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
     }
 }

@@ -12,7 +12,7 @@ public record HomeSourceDto
     {
         Id = id;
         MediaType = type;
-        Link = new Uri($"/{type}/{id}", UriKind.Relative);
+        Link = new($"/{type}/{id}", UriKind.Relative);
     }
 
 }

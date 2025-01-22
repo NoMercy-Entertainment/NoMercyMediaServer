@@ -19,7 +19,7 @@ public class ParseJwtStringConverter : JsonConverter
 
         if (long.TryParse(value, out long l)) return l;
 
-        throw new Exception("Cannot unmarshal type long");
+        throw new("Cannot unmarshal type long");
     }
 
     public override void WriteJson(JsonWriter writer, object? untypedValue, JsonSerializer serializer)

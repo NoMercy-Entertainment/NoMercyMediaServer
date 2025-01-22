@@ -36,7 +36,7 @@ public record AlbumsResponseItemDto
         Id = album.Id;
         Name = album.Name;
         Type = "albums";
-        Link = new Uri($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack?
             .Select(albumTrack => albumTrack.Track)

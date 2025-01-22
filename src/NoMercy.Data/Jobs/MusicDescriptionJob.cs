@@ -69,7 +69,7 @@ public class MusicDescriptionJob : IShouldQueue
 
             await context.Translations.UpsertRange(translations)
                 .On(x => new { x.ArtistId, x.Iso31661 })
-                .WhenMatched((s, i) => new Translation
+                .WhenMatched((s, i) => new()
                 {
                     ArtistId = s.ArtistId,
                     Iso31661 = s.Iso31661,
@@ -119,7 +119,7 @@ public class MusicDescriptionJob : IShouldQueue
 
             await context.Translations.UpsertRange(translations)
                 .On(x => new { x.ReleaseGroupId, x.Iso31661 })
-                .WhenMatched((s, i) => new Translation
+                .WhenMatched((s, i) => new()
                 {
                     ReleaseGroupId = s.ReleaseGroupId,
                     Iso31661 = s.Iso31661,

@@ -51,7 +51,7 @@ public class PeopleController : BaseController
 
         return Ok(new PersonResponseDto
         {
-            Data = new PersonResponseItemDto(personAppends, country)
+            Data = new(personAppends, country)
         });
     }
 }

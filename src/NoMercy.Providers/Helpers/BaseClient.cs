@@ -21,7 +21,7 @@ public class BaseClient : IDisposable
     protected BaseClient()
     {
         _instance ??= this;
-        Client = new HttpClient()
+        Client = new()
         {
             BaseAddress = _instance.BaseUrl,
             DefaultRequestHeaders =
@@ -40,7 +40,7 @@ public class BaseClient : IDisposable
     {
         Id = id;
         _instance ??= this;
-        Client = new HttpClient()
+        Client = new()
         {
             BaseAddress = _instance.BaseUrl,
             DefaultRequestHeaders =
@@ -59,7 +59,7 @@ public class BaseClient : IDisposable
 
     protected static Queue Queue()
     {
-        return _queue ??= new Queue(new QueueOptions
+        return _queue ??= new(new()
         {
             Concurrent = _instance?.ConcurrentRequests ?? 1,
             Interval = _instance?.Interval ?? 1000,
@@ -70,7 +70,7 @@ public class BaseClient : IDisposable
     protected virtual async Task<T?> Get<T>(string url, Dictionary<string, string?>? query, bool? priority = false)
         where T : class
     {
-        query ??= new Dictionary<string, string?>();
+        query ??= new();
 
         foreach (KeyValuePair<string, string> queryParam in QueryParams) query.Add(queryParam.Key, queryParam.Value);
 

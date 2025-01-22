@@ -57,7 +57,7 @@ public record SpecialsResponseItemDto
         Poster = item.Movie.Poster;
         TitleSort = item.Movie.Title.TitleSort(item.Movie.ReleaseDate);
         Type = "item";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         Genres = item.Movie.GenreMovies
             .Select(genreMovie => new GenreDto(genreMovie))
             .ToArray();
@@ -77,7 +77,7 @@ public record SpecialsResponseItemDto
         Logo = special.Logo;
 
         MediaType = "specials";
-        Link = new Uri($"/specials/{Id}", UriKind.Relative);
+        Link = new($"/specials/{Id}", UriKind.Relative);
         Year = special.CreatedAt.ParseYear();
 
         ColorPalette = special.ColorPalette;

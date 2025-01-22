@@ -37,7 +37,7 @@ public class Info
 
         byte[] hash = MD5.HashData(Encoding.UTF8.GetBytes(generatedId));
 
-        return new Guid(hash);
+        return new(hash);
     }
 
     private static string GetPlatform()
@@ -49,7 +49,7 @@ public class Info
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             return "linux";
 
-        throw new Exception("Unknown platform");
+        throw new("Unknown platform");
     }
 
     private static string[] GetGpuFullName()
@@ -176,7 +176,7 @@ public class Info
         command = command.Replace("\"", "\\\"");
         Process process = new()
         {
-            StartInfo = new ProcessStartInfo
+            StartInfo = new()
             {
                 FileName = "/bin/bash",
                 Arguments = $"-c \"{command}\"",

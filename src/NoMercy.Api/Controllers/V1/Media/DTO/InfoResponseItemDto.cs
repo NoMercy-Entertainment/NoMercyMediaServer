@@ -58,7 +58,7 @@ public record InfoResponseItemDto
             : movie.Overview;
         Type = "movie";
         MediaType = "movie";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         Watched = movie.VideoFiles
             .Any(videoFile => videoFile.UserData.Any());
 
@@ -80,7 +80,7 @@ public record InfoResponseItemDto
         //          movie.Poster;
         Poster = movie.Poster;
 
-        ExternalIds = new ExternalIds
+        ExternalIds = new()
         {
             ImdbId = movie.ImdbId
         };
@@ -166,7 +166,7 @@ public record InfoResponseItemDto
             : tmdbMovie.Overview;
         Type = "movie";
         MediaType = "movie";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         Watched = false;
 
         Favorite = false;
@@ -178,11 +178,11 @@ public record InfoResponseItemDto
         Year = tmdbMovie.ReleaseDate.ParseYear();
         VoteAverage = tmdbMovie.VoteAverage;
 
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
         Backdrop = tmdbMovie.BackdropPath;
         Poster = tmdbMovie.PosterPath;
 
-        ExternalIds = new ExternalIds
+        ExternalIds = new()
         {
             ImdbId = tmdbMovie.ImdbId
         };
@@ -265,7 +265,7 @@ public record InfoResponseItemDto
             : tv.Overview;
         Type = tv.Type ?? "tv";
         MediaType = "tv";
-        Link = new Uri($"/tv/{Id}", UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
         Watched = tv.Episodes
             .Any(episode => episode.VideoFiles
                 .Any(videoFile => videoFile.UserData.Any()));
@@ -295,7 +295,7 @@ public record InfoResponseItemDto
         // Poster = tv.Images.FirstOrDefault(image => image is { Type: "poster", Iso6391: null })?.FilePath ?? tv.Poster;
         Poster = tv.Poster;
 
-        ExternalIds = new ExternalIds
+        ExternalIds = new()
         {
             ImdbId = tv.ImdbId,
             TvdbId = tv.TvdbId
@@ -332,7 +332,7 @@ public record InfoResponseItemDto
         Genres = tv.GenreTvs
             .Select(genreTv => new GenreDto(genreTv));
 
-        ExternalIds = new ExternalIds
+        ExternalIds = new()
         {
             ImdbId = tv.ImdbId,
             TvdbId = tv.TvdbId
@@ -356,7 +356,7 @@ public record InfoResponseItemDto
 
         Cast = cast;
         Crew = crew;
-        Link = new Uri($"/tv/{Id}", UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
         Director = crew.FirstOrDefault(people => people.Job == "Director");
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
         // Directors = tv.Crew
@@ -416,7 +416,7 @@ public record InfoResponseItemDto
             : tmdbTv.Overview;
         Type = tmdbTv.Type ?? "tv";
         MediaType = "tv";
-        Link = new Uri($"/tv/{Id}", UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
         Watched = false;
         Favorite = false;
 
@@ -442,7 +442,7 @@ public record InfoResponseItemDto
             tmdbTv.Images.Posters.FirstOrDefault()?.FilePath;
 
 
-        ExternalIds = new ExternalIds
+        ExternalIds = new()
         {
             ImdbId = tmdbTv.ExternalIds.ImdbId,
             TvdbId = tmdbTv.ExternalIds.TvdbId
@@ -531,7 +531,7 @@ public record InfoResponseItemDto
             : collection.Overview;
         Type = "collection";
         MediaType = "collection";
-        Link = new Uri($"/collection/{Id}", UriKind.Relative);
+        Link = new($"/collection/{Id}", UriKind.Relative);
         // Watched = tv.Watched;
         // Favorite = tv.Favorite;
         TitleSort = collection.Title

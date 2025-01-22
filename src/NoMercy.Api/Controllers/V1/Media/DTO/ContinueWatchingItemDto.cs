@@ -48,7 +48,7 @@ public record ContinueWatchingItemDto
             Overview = item.Movie.Overview;
             MediaType = "movie";
             Type = "movie";
-            Link = new Uri($"/movie/{Id}/watch", UriKind.Relative);
+            Link = new($"/movie/{Id}/watch", UriKind.Relative);
 
             NumberOfItems = 1;
             HaveItems = item.Movie.VideoFiles.Count(v => v.Folder != null);
@@ -80,7 +80,7 @@ public record ContinueWatchingItemDto
 
             MediaType = "tv";
             Type = "tv";
-            Link = new Uri($"/tv/{Id}/watch", UriKind.Relative);
+            Link = new($"/tv/{Id}/watch", UriKind.Relative);
 
             NumberOfItems = item.Tv.NumberOfEpisodes;
             HaveItems = item.Tv.Episodes
@@ -110,7 +110,7 @@ public record ContinueWatchingItemDto
 
             MediaType = "specials";
             Type = "specials";
-            Link = new Uri($"/specials/{Id}/watch", UriKind.Relative);
+            Link = new($"/specials/{Id}/watch", UriKind.Relative);
 
             NumberOfItems = item.Special.Items.Count;
             HaveItems = item.Special.Items
@@ -156,7 +156,7 @@ public record ContinueWatchingItemDto
 
             MediaType = "collection";
             Type = "collection";
-            Link = new Uri($"/collection/{Id}/watch", UriKind.Relative);
+            Link = new($"/collection/{Id}/watch", UriKind.Relative);
 
             NumberOfItems = item.Collection.CollectionMovies.Count;
             HaveItems = item.Collection.CollectionMovies

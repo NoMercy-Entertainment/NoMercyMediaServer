@@ -83,10 +83,10 @@ public class Seed : IDisposable, IAsyncDisposable
         Logger.Setup("Adding Users");
 
         HttpClient client = new();
-        client.BaseAddress = new Uri(Config.ApiServerBaseUrl);
+        client.BaseAddress = new(Config.ApiServerBaseUrl);
         client.DefaultRequestHeaders.Add("Accept", "application/json");
         client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Auth.AccessToken);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", Auth.AccessToken);
 
         IDictionary<string, string?> query = new Dictionary<string, string?>();
         query.Add("server_id", Info.DeviceId.ToString());
@@ -96,7 +96,7 @@ public class Seed : IDisposable, IAsyncDisposable
         HttpResponseMessage response = await client.GetAsync(newUrl);
         string? content = await response.Content.ReadAsStringAsync();
 
-        if (content == null) throw new Exception("Failed to get Server info");
+        if (content == null) throw new("Failed to get Server info");
 
         ServerUserDto[] serverUsers = content.FromJson<ServerUserDto[]>() ?? [];
 
@@ -120,7 +120,7 @@ public class Seed : IDisposable, IAsyncDisposable
         await MediaContext.Users
             .UpsertRange(_users)
             .On(v => new { v.Id })
-            .WhenMatched((us, ui) => new User
+            .WhenMatched((us, ui) => new()
             {
                 Id = ui.Id,
                 Email = ui.Email,
@@ -144,7 +144,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
         foreach (User user in _users.ToList())
         foreach (Library library in libraries.ToList())
-            libraryUsers.Add(new LibraryUser
+            libraryUsers.Add(new()
             {
                 LibraryId = library.Id,
                 UserId = user.Id
@@ -153,7 +153,7 @@ public class Seed : IDisposable, IAsyncDisposable
         await MediaContext.LibraryUser
             .UpsertRange(libraryUsers)
             .On(v => new { v.LibraryId, v.UserId })
-            .WhenMatched((lus, lui) => new LibraryUser
+            .WhenMatched((lus, lui) => new()
             {
                 LibraryId = lui.LibraryId,
                 UserId = lui.UserId
@@ -189,7 +189,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
         await MediaContext.Genres.UpsertRange(genres)
             .On(v => new { v.Id })
-            .WhenMatched(v => new Genre
+            .WhenMatched(v => new()
             {
                 Id = v.Id,
                 Name = v.Name
@@ -231,7 +231,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
         await MediaContext.Translations.UpsertRange(translations.Where(genre => genre.Name != null))
             .On(v => new { v.GenreId, v.Iso6391 })
-            .WhenMatched(v => new Translation
+            .WhenMatched(v => new()
             {
                 GenreId = v.GenreId,
                 Name = v.Name,
@@ -252,7 +252,7 @@ public class Seed : IDisposable, IAsyncDisposable
         foreach ((string key, TmdbMovieCertification[] value) in (await TmdbMovieClient.Certifications())
                  ?.Certifications ?? [])
         foreach (TmdbMovieCertification certification in value)
-            certifications.Add(new Certification
+            certifications.Add(new()
             {
                 Iso31661 = key,
                 Rating = certification.Rating,
@@ -263,7 +263,7 @@ public class Seed : IDisposable, IAsyncDisposable
         foreach ((string key, TmdbTvShowCertification[] value) in (await TmdbTvClient.Certifications())
                  ?.Certifications ?? [])
         foreach (TmdbTvShowCertification certification in value)
-            certifications.Add(new Certification
+            certifications.Add(new()
             {
                 Iso31661 = key,
                 Rating = certification.Rating,
@@ -273,7 +273,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
         await MediaContext.Certifications.UpsertRange(certifications)
             .On(v => new { v.Iso31661, v.Rating })
-            .WhenMatched(v => new Certification
+            .WhenMatched(v => new()
             {
                 Iso31661 = v.Iso31661,
                 Rating = v.Rating,
@@ -291,7 +291,7 @@ public class Seed : IDisposable, IAsyncDisposable
         Logger.Setup("Adding Languages");
 
         _languages = (await TmdbConfigClient.Languages())?.ToList()
-            .ConvertAll<Language>(language => new Language
+            .ConvertAll<Language>(language => new()
             {
                 Iso6391 = language.Iso6391,
                 EnglishName = language.EnglishName,
@@ -300,7 +300,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
         await MediaContext.Languages.UpsertRange(_languages)
             .On(v => new { v.Iso6391 })
-            .WhenMatched(v => new Language
+            .WhenMatched(v => new()
             {
                 Iso6391 = v.Iso6391,
                 Name = v.Name,
@@ -317,7 +317,7 @@ public class Seed : IDisposable, IAsyncDisposable
         Logger.Setup("Adding Countries");
 
         Country[] countries = (await TmdbConfigClient.Countries())?.ToList()
-            .ConvertAll<Country>(country => new Country
+            .ConvertAll<Country>(country => new()
             {
                 Iso31661 = country.Iso31661,
                 EnglishName = country.EnglishName,
@@ -326,7 +326,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
         await MediaContext.Countries.UpsertRange(countries)
             .On(v => new { v.Iso31661 })
-            .WhenMatched(v => new Country
+            .WhenMatched(v => new()
             {
                 Iso31661 = v.Iso31661,
                 NativeName = v.NativeName,
@@ -345,7 +345,7 @@ public class Seed : IDisposable, IAsyncDisposable
         MusicBrainzGenreClient musicBrainzGenreClient = new();
 
         MusicGenre[] genres = (await musicBrainzGenreClient.All()).ToList()
-            .ConvertAll<MusicGenre>(genre => new MusicGenre
+            .ConvertAll<MusicGenre>(genre => new()
             {
                 Id = genre.Id,
                 Name = genre.Name
@@ -353,7 +353,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
         await MediaContext.MusicGenres.UpsertRange(genres)
             .On(v => new { v.Id })
-            .WhenMatched(v => new MusicGenre
+            .WhenMatched(v => new()
             {
                 Id = v.Id,
                 Name = v.Name
@@ -382,7 +382,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
         await MediaContext.EncoderProfiles.UpsertRange(encoderProfiles)
             .On(v => new { v.Id })
-            .WhenMatched((vs, vi) => new EncoderProfile
+            .WhenMatched((vs, vi) => new()
             {
                 Id = vi.Id,
                 Name = vi.Name,
@@ -409,7 +409,7 @@ public class Seed : IDisposable, IAsyncDisposable
         await MediaContext.EncoderProfileFolder
             .UpsertRange(encoderProfileFolders)
             .On(v => new { v.FolderId, v.EncoderProfileId })
-            .WhenMatched((vs, vi) => new EncoderProfileFolder
+            .WhenMatched((vs, vi) => new()
             {
                 FolderId = vi.FolderId,
                 EncoderProfileId = vi.EncoderProfileId
@@ -430,7 +430,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
             await MediaContext.Folders.UpsertRange(_folders)
                 .On(v => new { v.Id })
-                .WhenMatched((vs, vi) => new Folder()
+                .WhenMatched((vs, vi) => new()
                 {
                     Id = vi.Id,
                     Path = vi.Path
@@ -472,7 +472,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
             await MediaContext.Libraries.UpsertRange(libraries)
                 .On(v => new { v.Id })
-                .WhenMatched((vs, vi) => new Library()
+                .WhenMatched((vs, vi) => new()
                 {
                     Id = vi.Id,
                     AutoRefreshInterval = vi.AutoRefreshInterval,
@@ -493,12 +493,12 @@ public class Seed : IDisposable, IAsyncDisposable
 
             foreach (LibrarySeedDto library in librarySeed.ToList())
             foreach (FolderDto folder in library.Folders.ToList())
-                libraryFolders.Add(new FolderLibrary(folder.Id, library.Id));
+                libraryFolders.Add(new(folder.Id, library.Id));
 
             await MediaContext.FolderLibrary
                 .UpsertRange(libraryFolders)
                 .On(v => new { v.FolderId, v.LibraryId })
-                .WhenMatched((vs, vi) => new FolderLibrary()
+                .WhenMatched((vs, vi) => new()
                 {
                     FolderId = vi.FolderId,
                     LibraryId = vi.LibraryId

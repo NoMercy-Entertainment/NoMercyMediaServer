@@ -49,7 +49,7 @@ public record LibraryResponseItemDto
         TitleSort = movie.Movie.Title
             .TitleSort(movie.Movie.ReleaseDate);
         Type = "movie";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         Genres = movie.Movie.GenreMovies
             .Select(genreMovie => new GenreDto(genreMovie))
             .ToArray();
@@ -76,7 +76,7 @@ public record LibraryResponseItemDto
 
         Type = "tv";
         MediaType = "tv";
-        Link = new Uri($"/tv/{Id}", UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.Tv.NumberOfEpisodes;
         HaveItems = tv.Tv.Episodes
             .Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
@@ -107,7 +107,7 @@ public record LibraryResponseItemDto
         TitleSort = movie.Title
             .TitleSort(movie.ReleaseDate);
         Type = "movie";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         HaveItems = movie.VideoFiles
             .Count(v => v.Folder != null);
         NumberOfItems = 1;
@@ -138,7 +138,7 @@ public record LibraryResponseItemDto
 
         Type = "tv";
         MediaType = "tv";
-        Link = new Uri($"/tv/{Id}", UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
 
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.Episodes
@@ -170,7 +170,7 @@ public record LibraryResponseItemDto
         TitleSort = movie.Movie.Title
             .TitleSort(movie.Movie.ReleaseDate);
         Type = "movie";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         HaveItems = movie.Movie.VideoFiles
             .Count(v => v.Folder != null);
         NumberOfItems = 1;
@@ -213,7 +213,7 @@ public record LibraryResponseItemDto
 
         Type = "specials";
         MediaType = "specials";
-        Link = new Uri($"/collection/{Id}", UriKind.Relative);
+        Link = new($"/collection/{Id}", UriKind.Relative);
 
         NumberOfItems = collection.Parts;
         HaveItems = collection.CollectionMovies
@@ -242,7 +242,7 @@ public record LibraryResponseItemDto
         Overview = overview;
         Backdrop = special.Backdrop;
         MediaType = "specials";
-        Link = new Uri($"/specials/{Id}", UriKind.Relative);
+        Link = new($"/specials/{Id}", UriKind.Relative);
 
         ColorPalette = special.ColorPalette;
         Poster = special.Poster;
@@ -265,7 +265,7 @@ public record LibraryResponseItemDto
 
         MediaType = "person";
         Type = "person";
-        Link = new Uri($"/person/{Id}", UriKind.Relative);
+        Link = new($"/person/{Id}", UriKind.Relative);
 
         TitleSort = person.Name;
         ColorPalette = person.ColorPalette;

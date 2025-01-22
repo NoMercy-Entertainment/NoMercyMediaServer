@@ -10,7 +10,7 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
     {
         return context.Episodes.UpsertRange(episodes.ToArray())
             .On(e => new { e.Id })
-            .WhenMatched((es, ei) => new Episode
+            .WhenMatched((es, ei) => new()
             {
                 Id = ei.Id,
                 Title = ei.Title,
@@ -31,7 +31,7 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
     {
         return context.Translations.UpsertRange(translations.ToArray())
             .On(t => new { t.Iso31661, t.Iso6391, t.EpisodeId })
-            .WhenMatched((ts, ti) => new Translation
+            .WhenMatched((ts, ti) => new()
             {
                 Iso31661 = ti.Iso31661,
                 Iso6391 = ti.Iso6391,
@@ -56,7 +56,7 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
     {
         return context.Images.UpsertRange(images.ToArray())
             .On(v => new { v.FilePath, v.EpisodeId })
-            .WhenMatched((ts, ti) => new Image
+            .WhenMatched((ts, ti) => new()
             {
                 AspectRatio = ti.AspectRatio,
                 FilePath = ti.FilePath,

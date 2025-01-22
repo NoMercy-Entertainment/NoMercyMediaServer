@@ -33,8 +33,8 @@ public class RecommendationPaletteJob : AbstractPaletteJob<Recommendation>
         foreach (Recommendation recommendation in recommendations)
             recommendation._colorPalette = await MovieDbImageManager
                 .MultiColorPalette([
-                    new BaseImageManager.MultiStringType("poster", recommendation.Poster),
-                    new BaseImageManager.MultiStringType("backdrop", recommendation.Backdrop)
+                    new("poster", recommendation.Poster),
+                    new("backdrop", recommendation.Backdrop)
                 ]);
 
         try

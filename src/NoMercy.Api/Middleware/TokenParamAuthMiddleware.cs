@@ -35,7 +35,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
                 return;
             }
 
-            context.Request.Headers.Authorization = new StringValues("Bearer " + jwt);
+            context.Request.Headers.Authorization = new("Bearer " + jwt);
         }
         else
         {

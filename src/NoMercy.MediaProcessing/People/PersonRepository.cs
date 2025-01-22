@@ -13,7 +13,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
     {
         return context.People.UpsertRange(people.ToArray())
             .On(p => new { p.Id })
-            .WhenMatched((ps, pi) => new Person
+            .WhenMatched((ps, pi) => new()
             {
                 Id = pi.Id,
                 Adult = pi.Adult,
@@ -41,7 +41,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
         return context.Translations
             .UpsertRange(translations.ToArray())
             .On(t => new { t.Iso31661, t.Iso6391, t.PersonId })
-            .WhenMatched((ts, ti) => new Translation
+            .WhenMatched((ts, ti) => new()
             {
                 Iso31661 = ti.Iso31661,
                 Iso6391 = ti.Iso6391,
@@ -66,7 +66,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
     {
         return context.Images.UpsertRange(images.ToArray())
             .On(v => new { v.FilePath, v.PersonId })
-            .WhenMatched((ts, ti) => new Image
+            .WhenMatched((ts, ti) => new()
             {
                 AspectRatio = ti.AspectRatio,
                 FilePath = ti.FilePath,
@@ -105,8 +105,8 @@ public class PersonRepository(MediaContext context) : IPersonRepository
             _ => throw new ArgumentOutOfRangeException()
         };
 
-        return query.WhenMatched((cs, ci) => new Cast
-        {
+        return query.WhenMatched((cs, ci) => new()
+            {
             CreditId = ci.CreditId,
             MovieId = ci.MovieId,
             TvId = ci.TvId,
@@ -142,7 +142,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-            await query.WhenMatched((cs, ci) => new Crew
+            await query.WhenMatched((cs, ci) => new()
                 {
                     CreditId = ci.CreditId,
                     MovieId = ci.MovieId,
@@ -164,7 +164,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
     {
         return context.Creators.Upsert(creator)
             .On(c => new { c.TvId, c.PersonId })
-            .WhenMatched((cs, ci) => new Creator
+            .WhenMatched((cs, ci) => new()
             {
                 TvId = ci.TvId,
                 PersonId = ci.PersonId
@@ -176,7 +176,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
     {
         return context.GuestStars.UpsertRange(guestStars.ToArray())
             .On(c => new { c.CreditId, c.EpisodeId })
-            .WhenMatched((cs, ci) => new GuestStar
+            .WhenMatched((cs, ci) => new()
             {
                 Id = ci.Id,
                 CreditId = ci.CreditId,
@@ -190,7 +190,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
     {
         return context.Roles.UpsertRange(roles.ToArray())
             .On(p => new { p.CreditId })
-            .WhenMatched((rs, ri) => new Role
+            .WhenMatched((rs, ri) => new()
             {
                 EpisodeCount = ri.EpisodeCount,
                 Character = ri.Character,
@@ -204,7 +204,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
     {
         return context.Jobs.UpsertRange(jobs.ToArray())
             .On(p => new { p.CreditId })
-            .WhenMatched((js, ji) => new Job
+            .WhenMatched((js, ji) => new()
             {
                 Task = ji.Task,
                 CreditId = ji.CreditId,

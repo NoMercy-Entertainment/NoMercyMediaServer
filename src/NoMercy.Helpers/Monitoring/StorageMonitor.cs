@@ -61,7 +61,7 @@ public class StorageMonitor
                 StorageDto movieStorageDto = new()
                 {
                     Path = folderLibrary.Folder.Path,
-                    Data = new Usage
+                    Data = new()
                     {
                         Movies = 0,
                         Shows = 0,
@@ -76,7 +76,7 @@ public class StorageMonitor
                 StorageDto tvStorageDto = new()
                 {
                     Path = folderLibrary.Folder.Path,
-                    Data = new Usage
+                    Data = new()
                     {
                         Movies = 0,
                         Shows = 0,
@@ -91,7 +91,7 @@ public class StorageMonitor
                 StorageDto musicStorageDto = new()
                 {
                     Path = folderLibrary.Folder.Path,
-                    Data = new Usage
+                    Data = new()
                     {
                         Movies = 0,
                         Shows = 0,

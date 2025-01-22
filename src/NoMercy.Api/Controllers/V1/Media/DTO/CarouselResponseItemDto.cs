@@ -138,7 +138,7 @@ public record CarouselResponseItemDto
         LibraryId = artist.LibraryId ?? Ulid.Empty;
         Name = artist.Name;
         Type = "artists";
-        Link = new Uri($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack
             .Where(artistTrack => artistTrack.Track.Duration != null)
@@ -158,7 +158,7 @@ public record CarouselResponseItemDto
         LibraryId = album.LibraryId ?? Ulid.Empty;
         Name = album.Name;
         Type = "albums";
-        Link = new Uri($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack
             .Where(albumTrack => albumTrack.Track.Duration != null)
@@ -179,7 +179,7 @@ public record CarouselResponseItemDto
         LibraryId = playlist.Artist.LibraryId ?? Ulid.Empty;
         Name = playlist.Artist.Name;
         Type = "artists";
-        Link = new Uri($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = playlist.Artist.ArtistTrack
             .Where(artistTrack => artistTrack.Track.Duration != null)
@@ -199,7 +199,7 @@ public record CarouselResponseItemDto
         LibraryId = playlist.Album.LibraryId ?? Ulid.Empty;
         Name = playlist.Album.Name;
         Type = "albums";
-        Link = new Uri($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = playlist.Album.AlbumTrack
             .Where(albumTrack => albumTrack.Track.Duration != null)
@@ -216,7 +216,7 @@ public record CarouselResponseItemDto
         Id = playlist.Id.ToString();
         Name = playlist.Name;
         Type = "playlists";
-        Link = new Uri($"/music/playlist/{Id}", UriKind.Relative);
+        Link = new($"/music/playlist/{Id}", UriKind.Relative);
 
         Tracks = playlist.Tracks
             .Where(playlistTrack => playlistTrack.Track.Duration != null)
@@ -233,6 +233,6 @@ public record CarouselResponseItemDto
         Id = track.Id.ToString();
         Name = track.Name;
         Type = "tracks";
-        Link = new Uri($"/music/track/{Id}", UriKind.Relative);
+        Link = new($"/music/track/{Id}", UriKind.Relative);
     }
 }

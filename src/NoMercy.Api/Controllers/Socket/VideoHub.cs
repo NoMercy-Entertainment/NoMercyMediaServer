@@ -45,7 +45,7 @@ public class VideoHub : ConnectionHub
         await using MediaContext mediaContext = new();
         await mediaContext.UserData.Upsert(userdata)
             .On(x => new { x.UserId, x.VideoFileId })
-            .WhenMatched((uds, udi) => new UserData
+            .WhenMatched((uds, udi) => new()
             {
                 Id = uds.Id,
                 Type = udi.Type,
@@ -165,7 +165,7 @@ public class VideoHub : ConnectionHub
         if (user is null)
         {
             Logger.Socket("Creating new player state");
-            return new PlayerState();
+            return new();
         }
 
         PlayerState? playerState = PlayerState.FirstOrDefault(p => p.Key == user.Id).Value;
@@ -177,7 +177,7 @@ public class VideoHub : ConnectionHub
         }
 
         Logger.Socket("Creating new player state");
-        playerState = new PlayerState();
+        playerState = new();
 
         PlayerState.TryAdd(user.Id, playerState);
 

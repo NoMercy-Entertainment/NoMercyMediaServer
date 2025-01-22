@@ -132,7 +132,7 @@ public class StorageJob : IShouldQueue
         
         await Parallel.ForEachAsync(folders, ct,(folder, _) =>
         {
-            long size = GetDirectorySize(new DirectoryInfo(folder));
+            long size = GetDirectorySize(new(folder));
 
             switch (library)
             {

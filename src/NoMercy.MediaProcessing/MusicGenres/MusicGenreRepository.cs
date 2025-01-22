@@ -11,7 +11,7 @@ public class MusicGenreRepository(MediaContext context) : IMusicGenreRepository
     {
         return context.MusicGenres.Upsert(genre)
             .On(v => new { v.Id })
-            .WhenMatched(v => new MusicGenre
+            .WhenMatched(v => new()
             {
                 Id = v.Id,
                 Name = v.Name
@@ -23,7 +23,7 @@ public class MusicGenreRepository(MediaContext context) : IMusicGenreRepository
     {
         return context.MusicGenreReleaseGroup.Upsert(genreReleaseGroup)
             .On(e => new { e.GenreId, e.ReleaseGroupId })
-            .WhenMatched((s, i) => new MusicGenreReleaseGroup
+            .WhenMatched((s, i) => new()
             {
                 GenreId = i.GenreId,
                 ReleaseGroupId = i.ReleaseGroupId
@@ -35,7 +35,7 @@ public class MusicGenreRepository(MediaContext context) : IMusicGenreRepository
     {
         return context.ArtistMusicGenre.UpsertRange(genreArtists)
             .On(e => new { e.MusicGenreId, e.ArtistId })
-            .WhenMatched((s, i) => new ArtistMusicGenre
+            .WhenMatched((s, i) => new()
             {
                 MusicGenreId = i.MusicGenreId,
                 ArtistId = i.ArtistId
@@ -47,7 +47,7 @@ public class MusicGenreRepository(MediaContext context) : IMusicGenreRepository
     {
         return context.AlbumMusicGenre.UpsertRange(genreReleases)
             .On(e => new { e.MusicGenreId, e.AlbumId })
-            .WhenMatched((s, i) => new AlbumMusicGenre
+            .WhenMatched((s, i) => new()
             {
                 MusicGenreId = i.MusicGenreId,
                 AlbumId = i.AlbumId
@@ -59,7 +59,7 @@ public class MusicGenreRepository(MediaContext context) : IMusicGenreRepository
     {
         return context.MusicGenreTrack.UpsertRange(genreRecordings)
             .On(e => new { e.GenreId, e.TrackId })
-            .WhenMatched((s, i) => new MusicGenreTrack
+            .WhenMatched((s, i) => new()
             {
                 GenreId = i.GenreId,
                 TrackId = i.TrackId

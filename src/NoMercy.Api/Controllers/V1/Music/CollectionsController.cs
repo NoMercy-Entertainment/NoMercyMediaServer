@@ -33,16 +33,16 @@ public class CollectionsController : BaseController
 
         await using MediaContext mediaContext = new();
         await foreach (TrackUser track in TracksResponseDto.GetTracks(mediaContext, userId))
-            tracks.Add(new ArtistTrackDto(track.Track, language));
+            tracks.Add(new(track.Track, language));
 
         if (tracks.Count == 0)
             return NotFoundResponse("Tracks not found");
 
         return Ok(new TracksResponseDto
         {
-            Data = new TracksResponseItemDto
+            Data = new()
             {
-                ColorPalette = new IColorPalettes(),
+                ColorPalette = new(),
                 Tracks = tracks
             }
         });
@@ -60,7 +60,7 @@ public class CollectionsController : BaseController
 
         await using MediaContext mediaContext = new();
         await foreach (Artist artist in ArtistsResponseDto.GetArtists(mediaContext, userId, request.Letter!))
-            artists.Add(new ArtistsResponseItemDto(artist));
+            artists.Add(new(artist));
 
         if (artists.Count == 0)
             return NotFoundResponse("Artists not found");
@@ -96,7 +96,7 @@ public class CollectionsController : BaseController
 
         await using MediaContext mediaContext = new();
         await foreach (Album album in AlbumsResponseDto.GetAlbums(mediaContext, userId, request.Letter!))
-            albums.Add(new AlbumsResponseItemDto(album));
+            albums.Add(new(album));
 
         if (albums.Count == 0)
             return NotFoundResponse("Albums not found");
@@ -132,7 +132,7 @@ public class CollectionsController : BaseController
 
         await using MediaContext mediaContext = new();
         await foreach (Playlist playlist in PlaylistResponseDto.GetPlaylists(mediaContext, userId))
-            playlists.Add(new PlaylistResponseItemDto(playlist));
+            playlists.Add(new(playlist));
 
         if (playlists.Count == 0)
             return NotFoundResponse("Playlists not found");

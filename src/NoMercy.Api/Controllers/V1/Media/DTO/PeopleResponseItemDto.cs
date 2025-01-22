@@ -54,6 +54,6 @@ public record PeopleResponseItemDto
         UpdatedAt = person.UpdatedAt;
         MediaType = "person";
         Type = "person";
-        Link = new Uri($"/person/{Id}", UriKind.Relative);
+        Link = new($"/person/{Id}", UriKind.Relative);
     }
 }

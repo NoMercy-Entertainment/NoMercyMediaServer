@@ -4,12 +4,12 @@ public class MusixMatchTrackSearchParameters
 {
     public static Dictionary<MusixMatchSortStrategy, KeyValuePair<string, string>> StrategyDecryptions = new()
     {
-        [MusixMatchSortStrategy.TrackRatingAsc] = new KeyValuePair<string, string>("s_track_rating", "asc"),
-        [MusixMatchSortStrategy.TrackRatingDesc] = new KeyValuePair<string, string>("s_track_rating", "desc"),
-        [MusixMatchSortStrategy.ArtistRatingAsc] = new KeyValuePair<string, string>("s_artist_rating", "asc"),
-        [MusixMatchSortStrategy.ArtistRatingDesc] = new KeyValuePair<string, string>("s_artist_rating", "desc"),
-        [MusixMatchSortStrategy.ReleaseDateAsc] = new KeyValuePair<string, string>("s_track_release_date", "asc"),
-        [MusixMatchSortStrategy.ReleaseDateDesc] = new KeyValuePair<string, string>("s_track_release_date", "desc")
+        [MusixMatchSortStrategy.TrackRatingAsc] = new("s_track_rating", "asc"),
+        [MusixMatchSortStrategy.TrackRatingDesc] = new("s_track_rating", "desc"),
+        [MusixMatchSortStrategy.ArtistRatingAsc] = new("s_artist_rating", "asc"),
+        [MusixMatchSortStrategy.ArtistRatingDesc] = new("s_artist_rating", "desc"),
+        [MusixMatchSortStrategy.ReleaseDateAsc] = new("s_track_release_date", "asc"),
+        [MusixMatchSortStrategy.ReleaseDateDesc] = new("s_track_release_date", "desc")
     };
 
     public string? Query { get; set; } = "";

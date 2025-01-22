@@ -30,8 +30,8 @@ public class CollectionManager(
 
         string colorPalette = await MovieDbImageManager
             .MultiColorPalette([
-                new BaseImageManager.MultiStringType("poster", collectionAppends.PosterPath),
-                new BaseImageManager.MultiStringType("backdrop", collectionAppends.BackdropPath)
+                new("poster", collectionAppends.PosterPath),
+                new("backdrop", collectionAppends.BackdropPath)
             ]);
 
         Collection collection = new()

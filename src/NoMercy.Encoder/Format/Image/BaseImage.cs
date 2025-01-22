@@ -68,7 +68,7 @@ public class BaseImage : Classes
     {
         CodecDto[] availableCodecs = AvailableCodecs;
         if (availableCodecs.All(codec => codec.Value != imageCodec))
-            throw new Exception(
+            throw new(
                 $"Wrong image codec value for {imageCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}");
 
         ImageCodec = availableCodecs.First(codec => codec.Value == imageCodec);

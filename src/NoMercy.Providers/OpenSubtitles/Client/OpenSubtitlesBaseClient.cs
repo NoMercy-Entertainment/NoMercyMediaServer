@@ -19,7 +19,7 @@ public class OpenSubtitlesBaseClient : IDisposable
     {
         _client.BaseAddress = _baseUrl;
         _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));
+        _client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
         _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
     }
@@ -28,7 +28,7 @@ public class OpenSubtitlesBaseClient : IDisposable
 
     protected static Helpers.Queue GetQueue()
     {
-        return _queue ??= new Helpers.Queue(new QueueOptions { Concurrent = 1, Interval = 1000, Start = true });
+        return _queue ??= new(new() { Concurrent = 1, Interval = 1000, Start = true });
     } 
     
     protected async Task<T2?> Post<T1, T2>(string url, T1 query, bool? priority = false)

@@ -21,6 +21,6 @@ public record DirectorDto
     {
         Id = tmdbCrew.Id;
         Name = tmdbCrew.Name;
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
     }
 }

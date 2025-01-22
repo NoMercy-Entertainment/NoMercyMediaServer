@@ -10,7 +10,7 @@ public class ArtistRepository(MediaContext context) : IArtistRepository
     {
         return context.Artists.Upsert(artist)
             .On(e => new { e.Id })
-            .WhenMatched((s, i) => new Artist
+            .WhenMatched((s, i) => new()
             {
                 Id = i.Id,
                 Name = i.Name,
@@ -30,7 +30,7 @@ public class ArtistRepository(MediaContext context) : IArtistRepository
     {
         return context.ArtistLibrary.Upsert(artistLibrary)
             .On(e => new { e.ArtistId, e.LibraryId })
-            .WhenMatched((s, i) => new ArtistLibrary
+            .WhenMatched((s, i) => new()
             {
                 ArtistId = i.ArtistId,
                 LibraryId = i.LibraryId
@@ -42,7 +42,7 @@ public class ArtistRepository(MediaContext context) : IArtistRepository
     {
         return context.ArtistReleaseGroup.Upsert(artistReleaseGroup)
             .On(e => new { e.ArtistId, e.ReleaseGroupId })
-            .WhenMatched((s, i) => new ArtistReleaseGroup
+            .WhenMatched((s, i) => new()
             {
                 ArtistId = i.ArtistId,
                 ReleaseGroupId = i.ReleaseGroupId
@@ -54,7 +54,7 @@ public class ArtistRepository(MediaContext context) : IArtistRepository
     {
         return context.AlbumArtist.Upsert(artistRelease)
             .On(e => new { e.AlbumId, e.ArtistId })
-            .WhenMatched((s, i) => new AlbumArtist
+            .WhenMatched((s, i) => new()
             {
                 AlbumId = i.AlbumId,
                 ArtistId = i.ArtistId
@@ -66,7 +66,7 @@ public class ArtistRepository(MediaContext context) : IArtistRepository
     {
         return context.ArtistTrack.Upsert(artistRecording)
             .On(e => new { e.ArtistId, e.TrackId })
-            .WhenMatched((s, i) => new ArtistTrack
+            .WhenMatched((s, i) => new()
             {
                 ArtistId = i.ArtistId,
                 TrackId = i.TrackId

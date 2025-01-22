@@ -410,7 +410,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
                         || matchedReleases.Any(r => r.Id == fingerprintRelease.Id)
                     ) continue;
 
-                    matchedReleases.Add(new MusicBrainzRelease
+                    matchedReleases.Add(new()
                     {
                         Id = fingerprintRelease.Id,
                         Title = fingerprintRelease.Title ?? albumName,

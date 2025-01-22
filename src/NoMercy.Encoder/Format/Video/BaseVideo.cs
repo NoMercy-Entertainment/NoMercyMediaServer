@@ -98,7 +98,7 @@ public abstract class BaseVideo : Classes
         if (kiloBitrate is null) return this;
 
         if (kiloBitrate < 0)
-            throw new Exception("Wrong bitrate value");
+            throw new("Wrong bitrate value");
 
         Bitrate = kiloBitrate.Value;
 
@@ -114,7 +114,7 @@ public abstract class BaseVideo : Classes
     {
         CodecDto[] availableCodecs = AvailableCodecs;
         if (availableCodecs.All(codec => codec.Value != videoCodec))
-            throw new Exception(
+            throw new(
                 $"Wrong video codec value for {videoCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}");
 
         VideoCodec = availableCodecs.First(codec => codec.Value == videoCodec);
@@ -198,7 +198,7 @@ public abstract class BaseVideo : Classes
     public BaseVideo SetConstantRateFactor(int value)
     {
         if (value < 0 || value > 51)
-            throw new Exception("Wrong constant rate factor value");
+            throw new("Wrong constant rate factor value");
         ConstantRateFactor = value;
         return this;
     }
@@ -218,7 +218,7 @@ public abstract class BaseVideo : Classes
     public BaseVideo SetPreset(string value)
     {
         if (!AvailablePresets.Contains(value))
-            throw new Exception($"Wrong preset value for {value}, available formats are {string.Join(", ", AvailablePresets)}");
+            throw new($"Wrong preset value for {value}, available formats are {string.Join(", ", AvailablePresets)}");
         Preset = value;
         return this;
     }
@@ -226,7 +226,7 @@ public abstract class BaseVideo : Classes
     public BaseVideo SetProfile(string value)
     {
         if (!AvailableProfiles.Contains(value))
-            throw new Exception($"Wrong profile value for {value}, available formats are {string.Join(", ", AvailableProfiles)}");
+            throw new($"Wrong profile value for {value}, available formats are {string.Join(", ", AvailableProfiles)}");
         Profile = value;
         return this;
     }
@@ -234,7 +234,7 @@ public abstract class BaseVideo : Classes
     public BaseVideo SetTune(string value)
     {
         if (!AvailableTune.Contains(value))
-            throw new Exception($"Wrong tune value for {value}, available formats are {string.Join(", ", AvailableTune)}");
+            throw new($"Wrong tune value for {value}, available formats are {string.Join(", ", AvailableTune)}");
         Tune = value;
         return this;
     }
@@ -368,7 +368,7 @@ public abstract class BaseVideo : Classes
             "libx264" or "h264_nvenc" => new X264(profileCodec),
             "libx265" or "h265_nvenc" => new X265(profileCodec),
             "vp9" or "libvpx-vp9" => new Vp9(profileCodec),
-            _ => throw new Exception($"Video codec {profileCodec} is not supported")
+            _ => throw new($"Video codec {profileCodec} is not supported")
         };
     }
 }

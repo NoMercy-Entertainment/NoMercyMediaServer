@@ -55,15 +55,15 @@ public class ResourceMonitor
 
     public static Resource Monitor()
     {
-        if (Computer is null) return new Resource();
+        if (Computer is null) return new();
         Resource resource = new()
         {
-            Cpu = new Cpu
+            Cpu = new()
             {
                 Core = []
             },
-            _gpu = new Dictionary<Identifier, Gpu>(),
-            Memory = new Memory()
+            _gpu = new(),
+            Memory = new()
         };
         
         try
@@ -96,7 +96,7 @@ public class ResourceMonitor
                                         resource.Cpu.Max = sensor.Value ?? 0.0;
                                         break;
                                     default:
-                                        resource.Cpu.Core.Add(new Core
+                                        resource.Cpu.Core.Add(new()
                                         {
                                             Index = sensor.Index - 1,
                                             Utilization = sensor.Value ?? 0.0
@@ -131,7 +131,7 @@ public class ResourceMonitor
                                         if (gpu.Value is not null)
                                             gpu.Value.Core = sensor.Value ?? 0;
                                         else
-                                            resource._gpu[sensor.Hardware.Identifier] = new Gpu
+                                            resource._gpu[sensor.Hardware.Identifier] = new()
                                             {
                                                 Core = sensor.Value ?? 0,
                                                 Identifier = sensor.Hardware.Identifier
@@ -141,7 +141,7 @@ public class ResourceMonitor
                                         if (gpu.Value is not null)
                                             gpu.Value.Decode = sensor.Value ?? 0;
                                         else
-                                            resource._gpu[sensor.Hardware.Identifier] = new Gpu
+                                            resource._gpu[sensor.Hardware.Identifier] = new()
                                             {
                                                 Decode = sensor.Value ?? 0,
                                                 Identifier = sensor.Hardware.Identifier
@@ -151,7 +151,7 @@ public class ResourceMonitor
                                         if (gpu.Value is not null)
                                             gpu.Value.Encode = sensor.Value ?? 0;
                                         else
-                                            resource._gpu[sensor.Hardware.Identifier] = new Gpu
+                                            resource._gpu[sensor.Hardware.Identifier] = new()
                                             {
                                                 Encode = sensor.Value ?? 0,
                                                 Identifier = sensor.Hardware.Identifier
@@ -161,7 +161,7 @@ public class ResourceMonitor
                                         if (gpu.Value is not null)
                                             gpu.Value.D3D = sensor.Value ?? 0;
                                         else
-                                            resource._gpu[sensor.Hardware.Identifier] = new Gpu
+                                            resource._gpu[sensor.Hardware.Identifier] = new()
                                             {
                                                 D3D = sensor.Value ?? 0,
                                                 Identifier = sensor.Hardware.Identifier
@@ -171,7 +171,7 @@ public class ResourceMonitor
                                         if (gpu.Value is not null)
                                             gpu.Value.Memory = sensor.Value ?? 0;
                                         else
-                                            resource._gpu[sensor.Hardware.Identifier] = new Gpu
+                                            resource._gpu[sensor.Hardware.Identifier] = new()
                                             {
                                                 Memory = sensor.Value ?? 0,
                                                 Identifier = sensor.Hardware.Identifier
@@ -181,7 +181,7 @@ public class ResourceMonitor
                                         if (gpu.Value is not null)
                                             gpu.Value.Power = sensor.Value ?? 0;
                                         else
-                                            resource._gpu[sensor.Hardware.Identifier] = new Gpu
+                                            resource._gpu[sensor.Hardware.Identifier] = new()
                                             {
                                                 Power = sensor.Value ?? 0,
                                                 Identifier = sensor.Hardware.Identifier
@@ -217,7 +217,7 @@ public class ResourceMonitor
                 }
                 catch
                 {
-                    throw new Exception("Error while monitoring hardware");
+                    throw new("Error while monitoring hardware");
                 }
             }
         }

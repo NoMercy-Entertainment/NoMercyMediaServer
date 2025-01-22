@@ -17,12 +17,12 @@ public static class EncoderProfileSeedData
                 Container = VideoContainers.Hls,
                 EncoderProfileFolder =
                 [
-                    new EncoderProfileFolder
+                    new()
                     {
                         FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8"),
                         EncoderProfileId = Ulid.Parse("01HQ6298ZSZYKJT83WDWTPG4G8")
                     },
-                    new EncoderProfileFolder
+                    new()
                     {
                         FolderId = Ulid.Parse("01J8T6PDZYCR8JQ8EVQDGCFK8W"),
                         EncoderProfileId = Ulid.Parse("01HQ6298ZSZYKJT83WDWTPG4G8")
@@ -30,7 +30,7 @@ public static class EncoderProfileSeedData
                 ],
                 VideoProfiles =
                 [
-                    new IVideoProfile
+                    new()
                     {
                         Codec = VideoCodecs.H264Nvenc.Value,
                         Width = FrameSizes._1080p.Width,
@@ -51,7 +51,7 @@ public static class EncoderProfileSeedData
                             }
                         ]
                     },
-                    new IVideoProfile
+                    new()
                     {
                         Codec = VideoCodecs.H264Nvenc.Value,
                         Width = FrameSizes._1080p.Width,
@@ -71,7 +71,7 @@ public static class EncoderProfileSeedData
                             }
                         ]
                     },
-                    new IVideoProfile
+                    new()
                     {
                         Codec = VideoCodecs.H264Nvenc.Value,
                         Width = FrameSizes._4k.Width,
@@ -91,7 +91,7 @@ public static class EncoderProfileSeedData
                             }
                         ]
                     },
-                    new IVideoProfile
+                    new()
                     {
                         Codec = VideoCodecs.H264Nvenc.Value,
                         Width = FrameSizes._4k.Width,
@@ -114,7 +114,7 @@ public static class EncoderProfileSeedData
                 ],
                 AudioProfiles =
                 [
-                    new IAudioProfile
+                    new()
                     {
                         Codec = AudioCodecs.Aac.Value,
                         Channels = 2,
@@ -122,7 +122,7 @@ public static class EncoderProfileSeedData
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         AllowedLanguages = AllLanguages()
                     },
-                    new IAudioProfile
+                    new()
                     {
                         Codec = AudioCodecs.Eac3.Value,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
@@ -132,13 +132,13 @@ public static class EncoderProfileSeedData
                 ],
                 SubtitleProfiles =
                 [
-                    new ISubtitleProfile
+                    new()
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
                         AllowedLanguages = AllLanguages(),
                     },
-                    new ISubtitleProfile
+                    new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
@@ -152,17 +152,17 @@ public static class EncoderProfileSeedData
                 Name = "1080p high",
                 Container = VideoContainers.Hls,
                 EncoderProfileFolder = [
-                    new EncoderProfileFolder
+                    new()
                     {
                         FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8"),
                     },
-                    new EncoderProfileFolder
+                    new()
                     {
                         FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8"),
                     }
                 ],
                 VideoProfiles = [
-                    new IVideoProfile
+                    new()
                     {
                         Codec = VideoCodecs.H264Nvenc.Value,
                         Width = FrameSizes._1080p.Width,
@@ -183,7 +183,7 @@ public static class EncoderProfileSeedData
                     }
                 ],
                 AudioProfiles = [
-                    new IAudioProfile
+                    new()
                     {
                         Codec = AudioCodecs.Aac.Value,
                         Channels = 2,
@@ -193,7 +193,7 @@ public static class EncoderProfileSeedData
                     },
                 ],
                 SubtitleProfiles = [
-                    new ISubtitleProfile
+                    new()
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
@@ -208,12 +208,12 @@ public static class EncoderProfileSeedData
                 Container = VideoContainers.Hls,
                 EncoderProfileFolder =
                 [
-                    new EncoderProfileFolder
+                    new()
                     {
                         FolderId = Ulid.Parse("01HQ5W78J5ADPV6K0SBZRBGWE3"),
                         EncoderProfileId = Ulid.Parse("01HQ629SJ32FTV2Q46NX3H1CK9")
                     },
-                    new EncoderProfileFolder
+                    new()
                     {
                         FolderId = Ulid.Parse("01HQ5W67GRBPHJKNAZMDYKMVXA"),
                         EncoderProfileId = Ulid.Parse("01HQ629SJ32FTV2Q46NX3H1CK9")
@@ -221,7 +221,7 @@ public static class EncoderProfileSeedData
                 ],
                 VideoProfiles =
                 [
-                    new IVideoProfile
+                    new()
                     {
                         Codec = VideoCodecs.H264Nvenc.Value,
                         Width = FrameSizes._1080p.Width,
@@ -244,7 +244,7 @@ public static class EncoderProfileSeedData
                 ],
                 AudioProfiles =
                 [
-                    new IAudioProfile
+                    new()
                     {
                         Codec = AudioCodecs.Aac.Value,
                         Channels = 2,
@@ -255,13 +255,13 @@ public static class EncoderProfileSeedData
                 ],
                 SubtitleProfiles =
                 [
-                    new ISubtitleProfile
+                    new()
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
                         AllowedLanguages = AllLanguages(),
                     },
-                    new ISubtitleProfile
+                    new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
@@ -277,7 +277,7 @@ public static class EncoderProfileSeedData
                 Container = VideoContainers.Hls,
                 EncoderProfileFolder =
                 [
-                    new EncoderProfileFolder
+                    new()
                     {
                         FolderId = Ulid.Parse("01HQ5W4Y1ZHYZKS87P0AG24ERE"),
                         EncoderProfileId = Ulid.Parse("01HR360AKTW47XC6ZQ2V9DF024")
@@ -285,7 +285,7 @@ public static class EncoderProfileSeedData
                 ],
                 VideoProfiles =
                 [
-                    new IVideoProfile
+                    new()
                     {
                         Codec = VideoCodecs.H264Nvenc.Value,
                         Width = FrameSizes._1080p.Width,
@@ -308,7 +308,7 @@ public static class EncoderProfileSeedData
                 ],
                 AudioProfiles =
                 [
-                    new IAudioProfile
+                    new()
                     {
                         Codec = AudioCodecs.Aac.Value,
                         Channels = 2,
@@ -319,13 +319,13 @@ public static class EncoderProfileSeedData
                 ],
                 SubtitleProfiles =
                 [
-                    new ISubtitleProfile
+                    new()
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
                         AllowedLanguages = AllLanguages()
                     },
-                    new ISubtitleProfile
+                    new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",

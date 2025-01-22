@@ -64,7 +64,7 @@ public class FfMpeg : Classes
         GlobalFFOptions.Configure(options => options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
 
         // first ffprobe the file check for streams
-        MediaAnalysis = new MediaAnalysis(FFProbe.Analyse(path), path);
+        MediaAnalysis = new(FFProbe.Analyse(path), path);
 
         if (MediaAnalysis.VideoStreams.Count > 0)
             return new VideoFile(MediaAnalysis, FfmpegPath);
@@ -72,7 +72,7 @@ public class FfMpeg : Classes
         if (MediaAnalysis.AudioStreams.Count > 0)
             return new AudioFile(MediaAnalysis, FfmpegPath);
 
-        throw new Exception("No streams found");
+        throw new("No streams found");
     }
 
     public class FolderAndFile
@@ -91,7 +91,7 @@ public class FfMpeg : Classes
     {
         Process ffmpeg = new();
 
-        ffmpeg.StartInfo = new ProcessStartInfo
+        ffmpeg.StartInfo = new()
         {
             WindowStyle = ProcessWindowStyle.Hidden,
             FileName = executable ?? AppFiles.FfmpegPath,
@@ -120,7 +120,7 @@ public class FfMpeg : Classes
     public static async Task<string> Ffprobe(string args, string? cwd = null, string? executable = null)
     {
         Process ffprobe = new();
-        ffprobe.StartInfo = new ProcessStartInfo
+        ffprobe.StartInfo = new()
         {
             WindowStyle = ProcessWindowStyle.Hidden,
             FileName = executable ?? AppFiles.FfProbePath,
@@ -146,7 +146,7 @@ public class FfMpeg : Classes
     {
         Process ffmpeg = new();
 
-        ffmpeg.StartInfo = new ProcessStartInfo
+        ffmpeg.StartInfo = new()
         {
             WindowStyle = ProcessWindowStyle.Hidden,
             FileName = AppFiles.FfmpegPath,
@@ -192,7 +192,7 @@ public class FfMpeg : Classes
                         int seconds = int.Parse(durationMatch.Groups[3].Value);
                         int milliseconds = int.Parse(durationMatch.Groups[4].Value);
 
-                        totalDuration = new TimeSpan(0, hours, minutes, seconds, milliseconds * 10);
+                        totalDuration = new(0, hours, minutes, seconds, milliseconds * 10);
                         durationFound = true;
                         // Logger.Encoder($"Total Duration: {totalDuration}");
                     }
@@ -232,7 +232,7 @@ public class FfMpeg : Classes
                         int seconds = int.Parse(progressMatch.Groups[3].Value, CultureInfo.InvariantCulture);
                         int milliseconds = int.Parse(progressMatch.Groups[4].Value, CultureInfo.InvariantCulture);
 
-                        currentTime = new TimeSpan(0, hours, minutes, seconds, milliseconds / 100);
+                        currentTime = new(0, hours, minutes, seconds, milliseconds / 100);
                         progressPercentage = currentTime.TotalMilliseconds / totalDuration.TotalMilliseconds * 100;
                     }
 
@@ -294,7 +294,7 @@ public class FfMpeg : Classes
                             .ToArray();
 
                         Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progress);
-                        output2 = new StringBuilder();
+                        output2 = new();
                     }
                 }
             }

@@ -176,7 +176,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
                 if (failedJob == null) return;
 
                 Context.FailedJobs.Remove(failedJob);
-                Context.QueueJobs.Add(new QueueJob
+                Context.QueueJobs.Add(new()
                 {
                     Queue = failedJob.Queue,
                     Payload = failedJob.Payload,

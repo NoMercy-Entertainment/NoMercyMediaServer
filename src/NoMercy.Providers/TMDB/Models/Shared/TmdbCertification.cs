@@ -14,7 +14,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Au.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Au[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -28,7 +28,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Bg.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Bg[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -42,7 +42,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Br.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Br[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -56,7 +56,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Caqc.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Caqc[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -70,7 +70,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Ca.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Ca[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -84,7 +84,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.De.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.De[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -98,7 +98,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Dk.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Dk[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -112,7 +112,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Es.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Es[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -126,7 +126,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Fi.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Fi[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -140,7 +140,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Fr.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Fr[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -154,7 +154,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Gb.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Gb[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -168,7 +168,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Hu.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Hu[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -182,7 +182,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.In.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.In[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -196,7 +196,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.It.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.It[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -210,7 +210,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Kr.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Kr[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -224,7 +224,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Lt.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Lt[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -238,7 +238,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.My.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.My[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -252,7 +252,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Nl.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Nl[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -266,7 +266,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.No.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.No[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -280,7 +280,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Nz.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Nz[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -294,7 +294,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Ph.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Ph[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -308,7 +308,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Pt.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Pt[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -322,7 +322,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Ru.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Ru[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -336,7 +336,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Se.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Se[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -350,7 +350,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Sk.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Sk[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -364,7 +364,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Th.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Th[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,
@@ -378,7 +378,7 @@ public class TmdbCertification
         while (index < TmdbCertifications.Us.Length)
         {
             TmdbCertificationItem y = TmdbCertifications.Us[index];
-            certifications.Add(new TmdbCertificationItem
+            certifications.Add(new()
             {
                 Certification = y.Certification,
                 Meaning = y.Meaning,

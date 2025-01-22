@@ -36,7 +36,7 @@ public static class Images
 
     private static Image<Rgba32> ReadFileStream(string image, int attempts = 0)
     {
-        if (!File.Exists(image)) throw new Exception("File not found");
+        if (!File.Exists(image)) throw new("File not found");
 
         // try
         // {

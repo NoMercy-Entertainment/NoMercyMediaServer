@@ -45,11 +45,11 @@ public class Classes
     {
         get
         {
-            if (string.IsNullOrEmpty(CropValue)) return new CropArea();
+            if (string.IsNullOrEmpty(CropValue)) return new();
             int[] parts = CropValue.Split(':')
                 .Select(int.Parse)
                 .ToArray();
-            return new CropArea(parts[0], parts[1], parts[2], parts[3]);
+            return new(parts[0], parts[1], parts[2], parts[3]);
         }
         set => CropValue = $"crop={value.W}:{value.H}:{value.X}:{value.Y}";
     }
@@ -65,7 +65,7 @@ public class Classes
             try
             {
                 if (string.IsNullOrEmpty(ScaleValue))
-                    return new ScaleArea { W = 0, H = 0 };
+                    return new() { W = 0, H = 0 };
 
                 string[] scale = ScaleValue.Split(':');
                 int width = int.Parse(scale[0]);
@@ -76,7 +76,7 @@ public class Classes
                     height = (int)(width * AspectRatioValue);
                 }
 
-                return new ScaleArea
+                return new()
                 {
                     W = width,
                     H = height

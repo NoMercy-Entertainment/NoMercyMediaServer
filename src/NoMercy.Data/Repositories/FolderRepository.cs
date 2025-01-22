@@ -56,7 +56,7 @@ public class FolderRepository(MediaContext context)
     {
         return context.Folders.Upsert(folder)
             .On(f => new { f.Path })
-            .WhenMatched((fs, fi) => new Folder()
+            .WhenMatched((fs, fi) => new()
             {
                 Path = fi.Path
             })
@@ -67,7 +67,7 @@ public class FolderRepository(MediaContext context)
     {
         return context.FolderLibrary.Upsert(folderLibrary)
             .On(fl => new { fl.LibraryId, fl.FolderId })
-            .WhenMatched((fls, fli) => new FolderLibrary()
+            .WhenMatched((fls, fli) => new()
             {
                 LibraryId = fli.LibraryId,
                 FolderId = fli.FolderId
@@ -79,7 +79,7 @@ public class FolderRepository(MediaContext context)
     {
         return context.FolderLibrary.UpsertRange(folderLibraries)
             .On(fl => new { fl.LibraryId, fl.FolderId })
-            .WhenMatched((fls, fli) => new FolderLibrary()
+            .WhenMatched((fls, fli) => new()
             {
                 LibraryId = fli.LibraryId,
                 FolderId = fli.FolderId

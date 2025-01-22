@@ -60,7 +60,7 @@ public record SeasonDto
             : tmdbSeason.Overview;
         Poster = tmdbSeason.PosterPath;
         SeasonNumber = tmdbSeason.SeasonNumber;
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
         Translations = seasonData?.Translations.Translations
             .Select(translation => new TranslationDto(translation)) ?? [];
         Episodes = seasonData?.Episodes

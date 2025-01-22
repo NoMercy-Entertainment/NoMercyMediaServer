@@ -11,7 +11,7 @@ public class FileRepository(MediaContext context) : IFileRepository
     {
         return context.VideoFiles.Upsert(videoFile)
             .On(vf => vf.Filename)
-            .WhenMatched((vs, vi) => new VideoFile
+            .WhenMatched((vs, vi) => new()
             {
                 EpisodeId = vi.EpisodeId,
                 MovieId = vi.MovieId,
@@ -35,7 +35,7 @@ public class FileRepository(MediaContext context) : IFileRepository
     {
         await context.Metadata.Upsert(metadata)
             .On(mf => new { mf.Filename, mf.HostFolder })
-            .WhenMatched((ms, mi) => new Metadata
+            .WhenMatched((ms, mi) => new()
             {
                 AudioTrackId = mi.AudioTrackId,
                 Duration = mi.Duration,

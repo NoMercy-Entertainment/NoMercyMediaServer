@@ -10,7 +10,7 @@ public class ImageRepository(MediaContext context): IImageRepository
     {
         return context.Images.UpsertRange(images)
             .On(v => new { v.FilePath, v.ArtistId })
-            .WhenMatched((s, i) => new Image
+            .WhenMatched((s, i) => new()
             {
                 Id = i.Id,
                 AspectRatio = i.AspectRatio,
@@ -31,7 +31,7 @@ public class ImageRepository(MediaContext context): IImageRepository
     {
         return context.Images.UpsertRange(images)
             .On(v => new { v.FilePath, v.AlbumId })
-            .WhenMatched((s, i) => new Image
+            .WhenMatched((s, i) => new()
             {
                 Id = i.Id,
                 AspectRatio = i.AspectRatio,

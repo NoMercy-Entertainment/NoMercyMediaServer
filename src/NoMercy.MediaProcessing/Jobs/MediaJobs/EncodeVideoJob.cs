@@ -137,7 +137,7 @@ public class EncodeVideoJob : AbstractEncoderJob
 
         if (movie is null && episode is null)
         {
-            return new FileMetadata
+            return new()
             {
                 Success = false
             };
@@ -151,7 +151,7 @@ public class EncodeVideoJob : AbstractEncoderJob
         int baseId = movie?.Id ?? episode!.Tv.Id;
         string? imgPath = movie?.Backdrop ?? episode!.Still;
 
-        return new FileMetadata
+        return new()
         {
             Success = true,
             FolderName = folderName,

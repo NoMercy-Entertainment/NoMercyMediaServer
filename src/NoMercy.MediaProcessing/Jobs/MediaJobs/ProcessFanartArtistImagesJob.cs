@@ -52,7 +52,7 @@ public class ProcessFanartArtistImagesJob : AbstractFanArtDataJob
 
                     await context.Artists.Upsert(dbArtist)
                         .On(v => v.Id)
-                        .WhenMatched((s, i) => new Artist
+                        .WhenMatched((s, i) => new()
                         {
                             Id = i.Id,
                             Cover = i.Cover,

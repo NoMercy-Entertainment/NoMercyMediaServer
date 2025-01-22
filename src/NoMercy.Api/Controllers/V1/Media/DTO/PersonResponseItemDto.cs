@@ -62,16 +62,16 @@ public record PersonResponseItemDto
         UpdatedAt = person.UpdatedAt;
         ExternalIds = person.ExternalIds;
         Gender = person.Gender;
-        Link = new Uri($"/person/{Id}", UriKind.Relative);
+        Link = new($"/person/{Id}", UriKind.Relative);
 
-        Images = new Images
+        Images = new()
         {
             Profiles = person.Images
                 .Select(image => new ImageDto(image))
                 .ToArray()
         };
 
-        CombinedCredits = new Credits
+        CombinedCredits = new()
         {
             Cast = person.Casts
                 .Select(cast => new KnownFor(cast))
@@ -132,19 +132,19 @@ public record PersonResponseItemDto
         PlaceOfBirth = tmdbPersonAppends.PlaceOfBirth;
         Popularity = tmdbPersonAppends.Popularity;
         Profile = tmdbPersonAppends.ProfilePath;
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
         ExternalIds = tmdbPersonAppends.ExternalIds;
         Gender = Enum.Parse<TmdbGender>(tmdbPersonAppends.TmdbGender.ToString(), true).ToString();
-        Link = new Uri($"/person/{Id}", UriKind.Relative);
+        Link = new($"/person/{Id}", UriKind.Relative);
 
-        Images = new Images
+        Images = new()
         {
             Profiles = tmdbPersonAppends.Images.Profiles
                 .Select(image => new ImageDto(image))
                 .ToArray()
         };
 
-        CombinedCredits = new Credits
+        CombinedCredits = new()
         {
             Cast = tmdbPersonAppends.CombinedCredits.Cast
                 .Select(cast => new KnownFor(cast, person))

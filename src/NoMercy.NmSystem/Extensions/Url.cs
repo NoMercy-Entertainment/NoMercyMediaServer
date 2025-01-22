@@ -33,7 +33,7 @@ public static class Url
             if (contentType is not null)
                 httpClient.DefaultRequestHeaders.Add("Accept", contentType);
 
-            HttpResponseMessage res = httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url)).Result;
+            HttpResponseMessage res = httpClient.SendAsync(new(HttpMethod.Head, url)).Result;
             return res.IsSuccessStatusCode;
         }
         catch (Exception)

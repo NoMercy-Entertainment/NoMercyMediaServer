@@ -10,7 +10,7 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
     {
         return context.Tracks.Upsert(recording)
             .On(e => new { e.Id })
-            .WhenMatched((ts, ti) => new Track
+            .WhenMatched((ts, ti) => new()
             {
                 Id = ti.Id,
                 Name = ti.Name,
@@ -33,7 +33,7 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
     {
         return context.AlbumTrack.Upsert(trackRelease)
             .On(e => new { e.AlbumId, e.TrackId })
-            .WhenMatched((s, i) => new AlbumTrack
+            .WhenMatched((s, i) => new()
             {
                 AlbumId = i.AlbumId,
                 TrackId = i.TrackId
@@ -45,7 +45,7 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
     {
         return context.ArtistTrack.Upsert(insert)
             .On(e => new { e.ArtistId, e.TrackId })
-            .WhenMatched((s, i) => new ArtistTrack
+            .WhenMatched((s, i) => new()
             {
                 ArtistId = i.ArtistId,
                 TrackId = i.TrackId

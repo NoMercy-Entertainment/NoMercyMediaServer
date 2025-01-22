@@ -28,7 +28,7 @@ public class PlaylistsController : BaseController
 
         await using MediaContext mediaContext = new();
         await foreach (Playlist playlist in PlaylistResponseDto.GetPlaylists(mediaContext, userId))
-            playlists.Add(new PlaylistResponseItemDto(playlist));
+            playlists.Add(new(playlist));
 
         return Ok(new PlaylistResponseDto
         {
@@ -54,7 +54,7 @@ public class PlaylistsController : BaseController
 
         return Ok(new TracksResponseDto
         {
-            Data = new TracksResponseItemDto
+            Data = new()
             {
                 Id = playlist.Id,
                 Name = playlist.Name,

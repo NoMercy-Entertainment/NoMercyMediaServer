@@ -31,8 +31,8 @@ public class MovieManager(
 
         string colorPalette = await MovieDbImageManager
             .MultiColorPalette([
-                new BaseImageManager.MultiStringType("poster", movieAppends.PosterPath),
-                new BaseImageManager.MultiStringType("backdrop", movieAppends.BackdropPath)
+                new("poster", movieAppends.PosterPath),
+                new("backdrop", movieAppends.BackdropPath)
             ]);
 
         Movie movie = new()

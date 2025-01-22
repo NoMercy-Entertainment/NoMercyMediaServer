@@ -35,7 +35,7 @@ public record LoloMoRowItemDto
         TitleSort = genreMovie.Movie.Title.TitleSort(genreMovie.Movie.ReleaseDate);
         Year = genreMovie.Movie.ReleaseDate.ParseYear();
         MediaType = "movie";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         ColorPalette = genreMovie.Movie.ColorPalette;
     }
 
@@ -50,7 +50,7 @@ public record LoloMoRowItemDto
         Type = genreTv.Tv.Type;
         Year = genreTv.Tv.FirstAirDate.ParseYear();
         MediaType = "tv";
-        Link = new Uri($"/tv/{Id}", UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
         ColorPalette = genreTv.Tv.ColorPalette;
     }
 }

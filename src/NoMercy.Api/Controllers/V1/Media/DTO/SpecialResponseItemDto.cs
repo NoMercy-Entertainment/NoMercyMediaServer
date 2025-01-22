@@ -93,7 +93,7 @@ public record SpecialResponseItemDto
         TitleSort = special.Title.TitleSort();
         Type = "specials";
         MediaType = "specials";
-        Link = new Uri($"/specials/{Id}", UriKind.Relative);
+        Link = new($"/specials/{Id}", UriKind.Relative);
         ColorPalette = special.ColorPalette;
         Backdrops = backdrops;
         Posters = posters;
@@ -131,7 +131,7 @@ public record SpecialResponseItemDto
         TitleSort = special.Title.TitleSort();
         Type = "specials";
         MediaType = "specials";
-        Link = new Uri($"/specials/{Id}", UriKind.Relative);
+        Link = new($"/specials/{Id}", UriKind.Relative);
         ColorPalette = special.ColorPalette;
         Favorite = special.SpecialUser?.Count != 0;
         NumberOfItems = special.Items.Count;

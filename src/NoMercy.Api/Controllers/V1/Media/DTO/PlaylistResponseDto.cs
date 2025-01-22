@@ -83,7 +83,7 @@ public record PlaylistResponseDto
         File = $"{baseFolder}{videoFile.Filename}";
         Sources =
         [
-            new SourceDto
+            new()
             {
                 Src = $"{baseFolder}{videoFile.Filename}",
                 Type = videoFile.Filename.Contains(".mp4")
@@ -150,7 +150,7 @@ public record PlaylistResponseDto
         File = $"{baseFolder}{videoFile.Filename}";
         Sources =
         [
-            new SourceDto
+            new()
             {
                 Src = $"{baseFolder}{videoFile.Filename}",
                 Type = videoFile.Filename.Contains(".mp4")
@@ -211,7 +211,7 @@ public record PlaylistResponseDto
 
             if (ext == "ass") search = true;
 
-            textTracks.Add(new IVideoTrack
+            textTracks.Add(new()
             {
                 Label = type,
                 File = $"{baseFolder}/subtitles{videoFile?.Filename
@@ -226,7 +226,7 @@ public record PlaylistResponseDto
         string fontsFile = "";
 
         if (!search || !System.IO.File.Exists($"{videoFile?.HostFolder}fonts.json"))
-            return new Subs
+            return new()
             {
                 TextTracks = textTracks,
                 Fonts = fonts,
@@ -237,7 +237,7 @@ public record PlaylistResponseDto
         fonts = JsonConvert.DeserializeObject<List<FontDto?>?>(
             System.IO.File.ReadAllText($"{videoFile?.HostFolder}fonts.json"));
 
-        return new Subs
+        return new()
         {
             TextTracks = textTracks,
             Fonts = fonts,

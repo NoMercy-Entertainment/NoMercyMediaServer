@@ -82,7 +82,7 @@ public class ConnectionHub : Hub
         await using MediaContext mediaContext = new();
         await mediaContext.Devices.Upsert(client)
             .On(x => x.DeviceId)
-            .WhenMatched((ds, di) => new Device
+            .WhenMatched((ds, di) => new()
             {
                 Browser = di.Browser,
                 // CustomName = di.CustomName,
@@ -103,7 +103,7 @@ public class ConnectionHub : Hub
         
         if (device is not null)
         {
-            await SaveActivityLog(mediaContext, new ActivityLog()
+            await SaveActivityLog(mediaContext, new()
             {
                 DeviceId = device.Id,
                 Time = DateTime.Now,
@@ -127,7 +127,7 @@ public class ConnectionHub : Hub
             Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
             if (device is not null)
             {
-                await SaveActivityLog(mediaContext, new ActivityLog()
+                await SaveActivityLog(mediaContext, new()
                 {
                     DeviceId = device.Id,
                     Time = DateTime.Now,

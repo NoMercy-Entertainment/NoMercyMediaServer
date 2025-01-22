@@ -66,7 +66,7 @@ public class AniDbBaseClient
 
     public static Task Init()
     {
-        return new Task(() =>
+        return new(() =>
         {
             try
             {

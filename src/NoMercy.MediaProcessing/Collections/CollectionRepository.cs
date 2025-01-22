@@ -11,7 +11,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
     {
         return context.Collections.Upsert(collection)
             .On(v => new { v.Id })
-            .WhenMatched((ts, ti) => new Collection
+            .WhenMatched((ts, ti) => new()
             {
                 Id = ti.Id,
                 Backdrop = ti.Backdrop,
@@ -36,7 +36,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
                 })
             )
             .On(v => new { v.MovieId, v.CollectionId })
-            .WhenMatched((ts, ti) => new CollectionMovie
+            .WhenMatched((ts, ti) => new()
             {
                 MovieId = ti.MovieId,
                 CollectionId = ti.CollectionId
@@ -46,13 +46,13 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
 
     public Task LinkToLibrary(Library library, Collection collection)
     {
-        return context.CollectionLibrary.Upsert(new CollectionLibrary
-        {
+        return context.CollectionLibrary.Upsert(new()
+            {
             LibraryId = library.Id,
             CollectionId = collection.Id
         })
             .On(v => new { v.LibraryId, v.CollectionId })
-            .WhenMatched((ts, ti) => new CollectionLibrary
+            .WhenMatched((ts, ti) => new()
             {
                 LibraryId = ti.LibraryId,
                 CollectionId = ti.CollectionId
@@ -80,7 +80,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         return context.Translations
             .UpsertRange(translations.Where(translation => translation.Title != null || translation.Overview != ""))
             .On(t => new { t.Iso31661, t.Iso6391, t.CollectionId })
-            .WhenMatched((ts, ti) => new Translation
+            .WhenMatched((ts, ti) => new()
             {
                 Iso31661 = ti.Iso31661,
                 Iso6391 = ti.Iso6391,
@@ -103,7 +103,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
     {
         return context.Images.UpsertRange(images)
             .On(v => new { v.FilePath, v.CollectionId })
-            .WhenMatched((ts, ti) => new Image
+            .WhenMatched((ts, ti) => new()
             {
                 AspectRatio = ti.AspectRatio,
                 FilePath = ti.FilePath,

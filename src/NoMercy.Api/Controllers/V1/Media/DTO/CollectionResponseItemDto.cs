@@ -53,7 +53,7 @@ public record CollectionResponseItemDto
 
         Type = "collection";
         MediaType = "collection";
-        Link = new Uri($"/collection/{Id}", UriKind.Relative);
+        Link = new($"/collection/{Id}", UriKind.Relative);
 
         ColorPalette = collection.ColorPalette;
         NumberOfItems = collection.Parts;
@@ -139,11 +139,11 @@ public record CollectionResponseItemDto
         TitleSort = tmdbCollectionAppends.Name.TitleSort();
         Type = "collection";
         MediaType = "collection";
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
         NumberOfItems = tmdbCollectionAppends.Parts.Length;
         HaveItems = 0;
         Favorite = false;
-        Link = new Uri($"/collection/{Id}", UriKind.Relative);
+        Link = new($"/collection/{Id}", UriKind.Relative);
 
         Genres = [];
         Cast = [];

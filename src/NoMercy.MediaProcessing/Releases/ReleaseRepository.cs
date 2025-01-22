@@ -10,7 +10,7 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
     {
         return context.Albums.Upsert(release)
             .On(e => new { e.Id })
-            .WhenMatched((s, i) => new Album
+            .WhenMatched((s, i) => new()
             {
                 Id = i.Id,
                 Name = i.Name,
@@ -33,7 +33,7 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
     {
         return context.AlbumReleaseGroup.Upsert(albumReleaseGroup)
             .On(e => new { e.AlbumId, e.ReleaseGroupId })
-            .WhenMatched((s, i) => new AlbumReleaseGroup
+            .WhenMatched((s, i) => new()
             {
                 AlbumId = i.AlbumId,
                 ReleaseGroupId = i.ReleaseGroupId
@@ -45,7 +45,7 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
     {
         return context.AlbumLibrary.Upsert(albumLibrary)
             .On(e => new { e.AlbumId, e.LibraryId })
-            .WhenMatched((s, i) => new AlbumLibrary
+            .WhenMatched((s, i) => new()
             {
                 AlbumId = i.AlbumId,
                 LibraryId = i.LibraryId

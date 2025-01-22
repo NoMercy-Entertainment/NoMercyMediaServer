@@ -97,7 +97,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
         return Ok(new StatusResponseDto<SetupResponseDto>
         {
             Status = "ok",
-            Data = new SetupResponseDto
+            Data = new()
             {
                 SetupComplete = libraryCount > 0
                                 && folderCount > 0
@@ -264,7 +264,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
             ? "/"
             : Path.Combine(fullPath, @"..\..");
 
-        return new DirectoryTreeDto
+        return new()
         {
             Path = newPath,
             Parent = parentPath,
@@ -295,7 +295,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
 
         return Ok(new DataResponseDto<FileListResponseDto>
         {
-            Data = new FileListResponseDto()
+            Data = new()
             {
                 Status = "ok",
                 Files = fileList
@@ -336,20 +336,20 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
 
             Parallel.ForEach(audioFiles, (file) =>
             {
-                fileList.Add(new FileItemDto
+                fileList.Add(new()
                 {
                     Size = file.Length,
                     Mode = (int)file.Attributes,
                     Name = Path.Combine(directoryPath, file.Name),
                     Parent = directoryPath,
-                    Parsed = new MovieFile(directoryPath)
+                    Parsed = new(directoryPath)
                     {
                         Title = albumName + " - " + Path.GetFileNameWithoutExtension(file.Name),
                         Year = year.ToString(),
                         IsSeries = false,
                         IsSuccess = true
                     },
-                    Match = new MovieOrEpisodeDto()
+                    Match = new()
                     {
                         Title = albumName,
                     },
@@ -441,7 +441,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                                 Season? season = await context.Seasons
                                     .FirstOrDefaultAsync(season => season.TvId == show.Id && season.SeasonNumber == details.SeasonNumber);
 
-                                episode = new Episode
+                                episode = new()
                                 {
                                     Id = details.Id,
                                     TvId = show.Id,
@@ -461,7 +461,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                                 await context.SaveChangesAsync();
                             }
 
-                            match = new MovieOrEpisodeDto
+                            match = new()
                             {
                                 Id = episode.Id,
                                 Title = episode.Title ?? "",
@@ -515,7 +515,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                                     await job.Handle();
                                 }
 
-                                movieItem = new Movie
+                                movieItem = new()
                                 {
                                     Id = details.Id,
                                     Title = details.Title,
@@ -524,7 +524,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                                 };
                             }
 
-                            match = new MovieOrEpisodeDto
+                            match = new()
                             {
                                 Id = movieItem.Id,
                                 Title = movieItem.Title,
@@ -542,7 +542,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                         ? "/"
                         : Path.GetDirectoryName(Path.Combine(file.DirectoryName, ".."));
 
-                    fileList.Add(new FileItemDto
+                    fileList.Add(new()
                     {
                         Size = file.Length,
                         Mode = (int)file.Attributes,
@@ -551,7 +551,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                         Parsed = parsed,
                         Match = match,
                         File = file.FullName,
-                        Streams = new StreamsDto
+                        Streams = new()
                         {
                             Video = mediaAnalysis.VideoStreams
                                 .Select(video => new VideoDto
@@ -648,7 +648,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
         {
             if (configuration == null)
             {
-                configuration = new Configuration
+                configuration = new()
                 {
                     Key = "serverName",
                     Value = request.Name,
@@ -665,10 +665,10 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
             await context.SaveChangesAsync();
 
             HttpClient client = new();
-            client.BaseAddress = new Uri(Config.ApiServerBaseUrl);
+            client.BaseAddress = new(Config.ApiServerBaseUrl);
             client.DefaultRequestHeaders.Add("Accept", "application/json");
             client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Auth.AccessToken);
+            client.DefaultRequestHeaders.Authorization = new("Bearer", Auth.AccessToken);
 
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Patch, "server/name")
             {
@@ -832,7 +832,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                 .Resize(new ResizeOptions()
                 {
                     Sampler = KnownResamplers.NearestNeighbor,
-                    Size = new Size(100, 0)
+                    Size = new(100, 0)
                 })
                 // Reduce the color palette to 1 color without dithering.
                 .Quantize(new OctreeQuantizer()

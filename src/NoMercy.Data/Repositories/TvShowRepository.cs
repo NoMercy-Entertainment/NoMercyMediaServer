@@ -142,9 +142,9 @@ public class TvShowRepository(MediaContext context)
 
         if (like)
         {
-            await context.TvUser.Upsert(new TvUser(id, userId))
+            await context.TvUser.Upsert(new(id, userId))
                 .On(m => new { m.TvId, m.UserId })
-                .WhenMatched(m => new TvUser
+                .WhenMatched(m => new()
                 {
                     TvId = m.TvId,
                     UserId = m.UserId

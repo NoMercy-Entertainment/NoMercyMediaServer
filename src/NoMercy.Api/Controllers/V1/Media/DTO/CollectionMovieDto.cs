@@ -55,7 +55,7 @@ public record CollectionMovieDto
         Poster = movie.Poster;
         Type = "movie";
         Year = movie.ReleaseDate.ParseYear();
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         Genres = movie.GenreMovies
             .Select(genreMovie => new GenreDto(genreMovie.Genre))
             .ToArray();
@@ -83,7 +83,7 @@ public record CollectionMovieDto
         Watched = false;
         // Logo = movie.LogoPath;
         MediaType = "movie";
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
         Poster = tmdbMovie.PosterPath;
         Type = "movie";
         Year = tmdbMovie.ReleaseDate.ParseYear();

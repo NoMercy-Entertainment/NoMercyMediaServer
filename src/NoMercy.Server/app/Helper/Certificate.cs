@@ -42,16 +42,16 @@ public static class Certificate
         }
 
         X509Certificate2 keyPair = publicX509.CopyWithPrivateKey(rsa);
-        return new X509Certificate2(keyPair.Export(X509ContentType.Pfx));
+        return new(keyPair.Export(X509ContentType.Pfx));
     }
 
     private static HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()
     {
-        return new HttpsConnectionAdapterOptions
+        return new()
         {
             SslProtocols = SslProtocols.Tls12,
             ServerCertificate = CombinePublicAndPrivateCerts(),
-            ServerCertificateChain = new X509Certificate2Collection
+            ServerCertificateChain = new()
             {
                 new(Path.Combine(AppFiles.CaFile))
             }
@@ -83,9 +83,9 @@ public static class Certificate
         Logger.Certificate(@"Renewing SSL Certificate...");
 
         HttpClient client = new();
-        client.Timeout = new TimeSpan(0, 10, 0);
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Auth.AccessToken);
+        client.Timeout = new(0, 10, 0);
+        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+        client.DefaultRequestHeaders.Authorization = new("Bearer", Auth.AccessToken);
 
         string serverUrl = $"{Config.ApiServerBaseUrl}certificate?server_id={Info.DeviceId}";
 
@@ -97,7 +97,7 @@ public static class Certificate
             .Result;
 
         CertificateResponse data = JsonConvert.DeserializeObject<CertificateResponse>(response)
-                                   ?? throw new Exception("Failed to deserialize JSON");
+                                   ?? throw new("Failed to deserialize JSON");
 
         if (File.Exists(AppFiles.KeyFile))
             File.Delete(AppFiles.KeyFile);

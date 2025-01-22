@@ -67,7 +67,7 @@ public record SpecialItemsDto
         ColorPalette = movie.ColorPalette;
         Poster = movie.Poster;
         Type = "movie";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         Year = movie.ReleaseDate.ParseYear();
         Duration = movie.Runtime * 60 ?? 0;
         
@@ -124,7 +124,7 @@ public record SpecialItemsDto
         ColorPalette = tv.ColorPalette;
         Poster = tv.Poster;
         Type = "tv";
-        Link = new Uri($"/tv/{Id}", UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
         Year = tv.FirstAirDate.ParseYear();
 
         Genres = tv.GenreTvs

@@ -29,7 +29,7 @@ public record AlbumDto
         Cover = albumArtist.Album.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Disambiguation = albumArtist.Album.Disambiguation;
-        Link = new Uri($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
             ? description
             : albumArtist.Album.Description;
@@ -52,7 +52,7 @@ public record AlbumDto
         Cover = albumTrack.Album.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Disambiguation = albumTrack.Album.Disambiguation;
-        Link = new Uri($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
             ? description
             : albumTrack.Album.Description;
@@ -82,7 +82,7 @@ public record AlbumDto
         Cover = album.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Disambiguation = album.Disambiguation;
-        Link = new Uri($"/music/album/{Id}", UriKind.Relative);
+        Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
             ? description
             : album.Description;

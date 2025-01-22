@@ -19,7 +19,7 @@ public static class CredentialManager
         SecureBuffer ISecretSerializer.Serialize<T>(T input)
         {
             string serialized = JsonConvert.SerializeObject(input);
-            return new SecureBuffer(Encoding.UTF8.GetBytes(serialized));
+            return new(Encoding.UTF8.GetBytes(serialized));
         }
     }
 

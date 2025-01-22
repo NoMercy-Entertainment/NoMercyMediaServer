@@ -12,7 +12,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.Movies.Upsert(movie)
             .On(v => new { v.Id })
-            .WhenMatched((ts, ti) => new Movie
+            .WhenMatched((ts, ti) => new()
             {
                 Id = ti.Id,
                 Backdrop = ti.Backdrop,
@@ -41,9 +41,9 @@ public class MovieRepository(MediaContext context) : IMovieRepository
 
     public Task LinkToLibrary(Library library, Movie movie)
     {
-        return context.LibraryMovie.Upsert(new LibraryMovie(library.Id, movie.Id))
+        return context.LibraryMovie.Upsert(new(library.Id, movie.Id))
             .On(v => new { v.LibraryId, v.MovieId })
-            .WhenMatched((lts, lti) => new LibraryMovie
+            .WhenMatched((lts, lti) => new()
             {
                 LibraryId = lti.LibraryId,
                 MovieId = lti.MovieId
@@ -55,7 +55,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.AlternativeTitles.UpsertRange(alternativeTitles)
             .On(a => new { a.Title, a.MovieId })
-            .WhenMatched((ats, ati) => new AlternativeTitle
+            .WhenMatched((ats, ati) => new()
             {
                 Title = ati.Title,
                 Iso31661 = ati.Iso31661,
@@ -69,7 +69,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
         return context.Translations
             .UpsertRange(translations.Where(translation => translation.Title != "" || translation.Overview != ""))
             .On(t => new { t.Iso31661, t.Iso6391, t.MovieId })
-            .WhenMatched((ts, ti) => new Translation
+            .WhenMatched((ts, ti) => new()
             {
                 Iso31661 = ti.Iso31661,
                 Iso6391 = ti.Iso6391,
@@ -107,7 +107,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.CertificationMovie.UpsertRange(certifications)
             .On(v => new { v.CertificationId, v.MovieId })
-            .WhenMatched((ts, ti) => new CertificationMovie
+            .WhenMatched((ts, ti) => new()
             {
                 CertificationId = ti.CertificationId,
                 MovieId = ti.MovieId
@@ -119,7 +119,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.Similar.UpsertRange(similar)
             .On(v => new { v.MediaId, v.MovieFromId })
-            .WhenMatched((ts, ti) => new Similar
+            .WhenMatched((ts, ti) => new()
             {
                 MovieToId = ti.MovieToId,
                 MovieFromId = ti.MovieFromId,
@@ -137,7 +137,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.Recommendations.UpsertRange(recommendations)
             .On(v => new { v.MediaId, v.MovieFromId })
-            .WhenMatched((ts, ti) => new Recommendation
+            .WhenMatched((ts, ti) => new()
             {
                 MovieToId = ti.MovieToId,
                 MovieFromId = ti.MovieFromId,
@@ -155,7 +155,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.Medias.UpsertRange(videos)
             .On(v => new { v.Src, v.MovieId })
-            .WhenMatched((ts, ti) => new Media
+            .WhenMatched((ts, ti) => new()
             {
                 Src = ti.Src,
                 Iso6391 = ti.Iso6391,
@@ -173,7 +173,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.Images.UpsertRange(images)
             .On(v => new { v.FilePath, v.MovieId })
-            .WhenMatched((ts, ti) => new Image
+            .WhenMatched((ts, ti) => new()
             {
                 AspectRatio = ti.AspectRatio,
                 FilePath = ti.FilePath,
@@ -194,7 +194,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.Keywords.UpsertRange(keywords)
             .On(v => new { v.Id })
-            .WhenMatched((ts, ti) => new Keyword
+            .WhenMatched((ts, ti) => new()
             {
                 Id = ti.Id,
                 Name = ti.Name
@@ -206,7 +206,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.KeywordMovie.UpsertRange(keywordMovies)
             .On(v => new { v.KeywordId, v.MovieId })
-            .WhenMatched((ts, ti) => new KeywordMovie()
+            .WhenMatched((ts, ti) => new()
             {
                 KeywordId = ti.KeywordId,
                 MovieId = ti.MovieId
@@ -218,7 +218,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
     {
         return context.GenreMovie.UpsertRange(genreMovies)
             .On(v => new { v.GenreId, v.MovieId })
-            .WhenMatched((ts, ti) => new GenreMovie
+            .WhenMatched((ts, ti) => new()
             {
                 GenreId = ti.GenreId,
                 MovieId = ti.MovieId

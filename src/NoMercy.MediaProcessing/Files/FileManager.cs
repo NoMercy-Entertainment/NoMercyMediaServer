@@ -327,7 +327,7 @@ public partial class FileManager(
                 try
                 {
                     IMediaAnalysis ffprobe = FFProbe.Analyse(videoFile);
-                    videos.Add(new IVideo
+                    videos.Add(new()
                     {
                         FileName = Path.Combine(Path.GetFileName(path), Path.GetFileName(videoFile)).Replace("\\", "/"),
                         FileHash = ComputeFileHash(videoFile),
@@ -364,7 +364,7 @@ public partial class FileManager(
                 {
                     IMediaAnalysis ffprobe = FFProbe.Analyse(audioFile);
                 
-                    audios.Add(new IAudio
+                    audios.Add(new()
                     {
                         FileName = Path.Combine(Path.GetFileName(path), Path.GetFileName(audioFile)).Replace("\\", "/"),
                         FileHash = ComputeFileHash(audioFile),
@@ -407,7 +407,7 @@ public partial class FileManager(
 
             if(match.Groups["ext"].Value == "sup") continue;
 
-            subtitles.Add(new ISubtitle
+            subtitles.Add(new()
             {
                 Language = match.Groups["lang"].Value,
                 Type = match.Groups["type"].Value,
@@ -468,7 +468,7 @@ public partial class FileManager(
         foreach (string fontFile in fontFiles)
         {
             string path = Path.Combine(hostFolder, fontFile);
-            fonts.Add(new IFont
+            fonts.Add(new()
             {
                 FileName = Path.Combine("fonts", Path.GetFileName(path)).Replace("\\", "/"),
                 FileHash = ComputeFileHash(path),
@@ -571,7 +571,7 @@ public partial class FileManager(
             string name = Path.GetFileName(file);
             if (name.StartsWith("chapter"))
             {
-                tracks.Add(new IVideoTrack
+                tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "chapters"
@@ -579,7 +579,7 @@ public partial class FileManager(
             }
             else if (name.StartsWith("skipper"))
             {
-                tracks.Add(new IVideoTrack
+                tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "skippers"
@@ -587,7 +587,7 @@ public partial class FileManager(
             }
             else if ((name.StartsWith("sprite") || name.StartsWith("preview") || name.StartsWith("thumb")) && file.EndsWith("vtt"))
             {
-                tracks.Add(new IVideoTrack
+                tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "thumbnails"
@@ -595,7 +595,7 @@ public partial class FileManager(
             }
             else if ((name.StartsWith("sprite") || name.StartsWith("thumb")) && file.EndsWith("webp"))
             {
-                tracks.Add(new IVideoTrack
+                tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "sprite"
@@ -603,7 +603,7 @@ public partial class FileManager(
             }
             else if (name.StartsWith("fonts"))
             {
-                tracks.Add(new IVideoTrack
+                tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "fonts"
@@ -633,7 +633,7 @@ public partial class FileManager(
 
                 if(match.Groups["ext"].Value == "sup") continue;
 
-                subtitles.Add(new Subtitle
+                subtitles.Add(new()
                 {
                     Language = match.Groups["lang"].Value,
                     Type = match.Groups["type"].Value,
@@ -692,7 +692,7 @@ public partial class FileManager(
             string path = Path.Combine(rootFolder.Path, folder);
 
             if (Directory.Exists(path))
-                folders.Add(new Folder
+                folders.Add(new()
                 {
                     Path = path,
                     Id = rootFolder.Id

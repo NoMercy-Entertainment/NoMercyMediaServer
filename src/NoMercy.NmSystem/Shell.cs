@@ -8,7 +8,7 @@ public static class Shell
     {
         Process process = new()
         {
-            StartInfo = new ProcessStartInfo
+            StartInfo = new()
             {
                 FileName = command,
                 Arguments = args,

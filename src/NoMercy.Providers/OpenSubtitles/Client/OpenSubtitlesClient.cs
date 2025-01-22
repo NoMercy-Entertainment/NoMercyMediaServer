@@ -11,30 +11,30 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
             MethodName = "LogIn",
             Params =
             [
-                new LoginParam
+                new()
                 {
-                    Value = new LoginValue
+                    Value = new()
                     {
                         String = ""
                     }
                 },
-                new LoginParam
+                new()
                 {
-                    Value = new LoginValue
+                    Value = new()
                     {
                         String = ""
                     }
                 },
-                new LoginParam
+                new()
                 {
-                    Value = new LoginValue
+                    Value = new()
                     {
                         String = "dut"
                     }
                 },
-                new LoginParam
+                new()
                 {
-                    Value = new LoginValue
+                    Value = new()
                     {
                         // String = ApiInfo.UserAgent
                         String = "VLSub"
@@ -53,39 +53,39 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
     {
         SubtitleSearch searchResponse = new()
         {
-            MethodCall = new MethodCall
+            MethodCall = new()
             {
                 MethodName = "SearchSubtitles",
-                Params = new SubtitleSearchParams
+                Params = new()
                 {
                     Param =
                     [
-                        new SubtitleSearchParam
+                        new()
                         {
-                            Value = new SubtitleSearchParamValue
+                            Value = new()
                             {
                                 String = AccessToken!
                             }
                         },
-                        new SubtitleSearchParam
+                        new()
                         {
-                            Value = new SubtitleSearchParamValue
+                            Value = new()
                             {
-                                Array = new SubtitleSearchArray
+                                Array = new()
                                 {
-                                    Data = new SubtitleSearchData
+                                    Data = new()
                                     {
-                                        Value = new SubtitleSearchDataValue
+                                        Value = new()
                                         {
-                                            Struct = new SubtitleSearchStruct
+                                            Struct = new()
                                             {
                                                 Member =
                                                 [
-                                                    new SubtitleSearchMember(name: "sublanguageid", value: new SubtitleSearchMemberValue
+                                                    new(name: "sublanguageid", value: new()
                                                     {
                                                         String = language
                                                     }),
-                                                    new SubtitleSearchMember(name: "query", value: new SubtitleSearchMemberValue
+                                                    new(name: "query", value: new()
                                                     {
                                                         String = query
                                                     }),

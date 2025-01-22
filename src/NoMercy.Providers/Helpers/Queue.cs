@@ -76,11 +76,11 @@ public class Queue(QueueOptions options)
                 try
                 {
                     Task? result = task.Value?.Invoke();
-                    Resolve?.Invoke(this, new QueueEventArgs { Result = result });
+                    Resolve?.Invoke(this, new() { Result = result });
                 }
                 catch (Exception ex)
                 {
-                    Reject?.Invoke(this, new QueueEventArgs { Error = ex });
+                    Reject?.Invoke(this, new() { Error = ex });
                 }
                 finally
                 {
@@ -125,12 +125,12 @@ public class Queue(QueueOptions options)
                 try
                 {
                     T result = await task();
-                    Resolve?.Invoke(this, new QueueEventArgs { Result = result });
+                    Resolve?.Invoke(this, new() { Result = result });
                     tcs.SetResult(result);
                 }
                 catch (Exception ex)
                 {
-                    Reject?.Invoke(this, new QueueEventArgs { Error = ex });
+                    Reject?.Invoke(this, new() { Error = ex });
                     tcs.SetException(ex);
                     if (ex.Message.Contains("404")) return;
                     Logger.App($"Url failed: {url} {ex.Message}", LogEventLevel.Error);

@@ -373,14 +373,14 @@ public class PersonManager(
         {
             peopleIds.Add(tmdbCast.Id);
             
-            roles.Add(new Role
+            roles.Add(new()
             {
                 CreditId = tmdbCast.CreditId,
                 Character = tmdbCast.Character,
                 Order = tmdbCast.Order
             });
             
-            casts.Add(new Cast
+            casts.Add(new()
             {
                 CreditId = tmdbCast.CreditId,
                 PersonId = tmdbCast.Id,
@@ -392,14 +392,14 @@ public class PersonManager(
         {
             peopleIds.Add(tmdbCrew.Id);
             
-            jobs.Add(new Job
+            jobs.Add(new()
             {
                 CreditId = tmdbCrew.CreditId,
                 Task = tmdbCrew.Job,
                 Order = tmdbCrew.Order
             });
             
-            crews.Add(new Crew
+            crews.Add(new()
             {
                 CreditId = tmdbCrew.CreditId,
                 PersonId = tmdbCrew.Id,
@@ -422,14 +422,14 @@ public class PersonManager(
         {
             peopleIds.Add(aggregateCast.Id);
 
-            roles.Add(new Role
+            roles.Add(new()
             {
                 CreditId = aggregateCast.CreditId,
                 Character = aggregateCast.Character,
                 Order = aggregateCast.Order
             });
             
-            casts.Add(new Cast
+            casts.Add(new()
             {
                 CreditId = aggregateCast.CreditId,
                 PersonId = aggregateCast.Id,
@@ -441,14 +441,14 @@ public class PersonManager(
         {
             peopleIds.Add(tmdbCrew.Id);
 
-            jobs.Add(new Job
+            jobs.Add(new()
             {
                 CreditId = tmdbCrew.CreditId,
                 Task = tmdbCrew.Job,
                 Order = tmdbCrew.Order
             });
             
-            crews.Add(new Crew
+            crews.Add(new()
             {
                 CreditId = tmdbCrew.CreditId,
                 PersonId = tmdbCrew.Id,

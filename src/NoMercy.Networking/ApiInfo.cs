@@ -29,21 +29,21 @@ public partial class ApiInfo
     {
         HttpClient client = new();
         client.Timeout = TimeSpan.FromSeconds(120);
-        client.BaseAddress = new Uri(Config.ApiBaseUrl);
+        client.BaseAddress = new(Config.ApiBaseUrl);
         HttpResponseMessage response = await client.GetAsync("v1/info");
         if (!response.IsSuccessStatusCode)
         {
-            throw new Exception("The NoMercy API is not available");
+            throw new("The NoMercy API is not available");
         }
         
         string? content = await response.Content.ReadAsStringAsync();
 
-        if (content == null) throw new Exception("Failed to get server info");
+        if (content == null) throw new("Failed to get server info");
 
         try
         {
             ApiInfo? data = content.FromJson<ApiInfo>();
-            if (data == null) throw new Exception("Failed to deserialize server info");
+            if (data == null) throw new("Failed to deserialize server info");
 
             Quote = data.Data.Quote;
             Colors = data.Data.Colors;

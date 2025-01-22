@@ -27,7 +27,7 @@ public class AnimeParser
     {
         Match match = NameRegex.Match(filename.Trim());
         if (!match.Success)
-            return new AnimeInfo { FileName = filename };
+            return new() { FileName = filename };
 
         AnimeInfo info = new()
         {

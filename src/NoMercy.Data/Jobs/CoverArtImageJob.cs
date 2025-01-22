@@ -91,7 +91,7 @@ public class CoverArtImageJob : IShouldQueue
         {
             if (!coverItem.CoverArtThumbnails.Large.HasSuccessStatus("image/*")) continue;
 
-            return new CoverPalette
+            return new()
             {
                 // Palette =
                 //     await ImageLogic.CoverArtImage.ColorPalette("cover", coverItem.CoverArtThumbnails.Large),

@@ -14,7 +14,7 @@ namespace NoMercy.MediaProcessing.Files;
 public class LibraryFileWatcher
 {
     // ReSharper disable once InconsistentNaming
-    private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new LibraryFileWatcher());
+    private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new());
     public static LibraryFileWatcher Instance => _instance.Value;
 
     private static readonly MediaContext MediaContext = new();
@@ -122,12 +122,12 @@ public class LibraryFileWatcher
         {
             if (!FileChangeGroups.TryGetValue(folderPath, out FileChangeGroup? fileChangeGroup))
             {
-                fileChangeGroup = new FileChangeGroup(e.ChangeType, library, folderPath);
+                fileChangeGroup = new(e.ChangeType, library, folderPath);
                 FileChangeGroups[folderPath] = fileChangeGroup;
             }
 
             fileChangeGroup.Timer?.Dispose();
-            fileChangeGroup.Timer = new Timer(ProcessFileChanges, fileChangeGroup, TimeSpan.FromSeconds(Delay),
+            fileChangeGroup.Timer = new(ProcessFileChanges, fileChangeGroup, TimeSpan.FromSeconds(Delay),
                 Timeout.InfiniteTimeSpan);
         }
     }

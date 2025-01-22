@@ -49,7 +49,7 @@ public record GenreRowItemDto
 
         MediaType = "movie";
         Type = "movie";
-        Link = new Uri($"/movie/{Id}", UriKind.Relative);
+        Link = new($"/movie/{Id}", UriKind.Relative);
         NumberOfItems = 1;
         HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
 
@@ -93,7 +93,7 @@ public record GenreRowItemDto
 
         MediaType = "tv";
         Type = "tv";
-        Link = new Uri($"/tv/{Id}", UriKind.Relative);
+        Link = new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.Episodes
             .Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
@@ -139,7 +139,7 @@ public record GenreRowItemDto
 
         MediaType = "tv";
         Type = "tv";
-        Link = new Uri($"/collection/{Id}", UriKind.Relative);
+        Link = new($"/collection/{Id}", UriKind.Relative);
         NumberOfItems = collection.CollectionMovies.Count;
         HaveItems = collection.CollectionMovies
             .Count(movie => movie.Movie.VideoFiles.Any(v => v.Folder != null));
@@ -175,7 +175,7 @@ public record GenreRowItemDto
 
         MediaType = "tv";
         Type = "tv";
-        Link = new Uri($"/specials/{Id}", UriKind.Relative);
+        Link = new($"/specials/{Id}", UriKind.Relative);
 
         NumberOfItems = special.Items?.Count;
         

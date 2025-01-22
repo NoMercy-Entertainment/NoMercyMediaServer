@@ -33,6 +33,7 @@ using System.Security.Claims;
 using System.Text.Json.Serialization;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.Networking;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
@@ -54,6 +55,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
         services.AddSingleton<Helpers.Monitoring.ResourceMonitor>();
         services.AddSingleton<Networking.Networking>();
         services.AddSingleton<StorageMonitor>();
+        services.AddSingleton<ChromeCast>();
 
         // Add DbContexts
         services.AddDbContext<QueueContext>(optionsAction =>
@@ -202,6 +204,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
                     builder
                         .WithOrigins("https://nomercy.tv")
                         .WithOrigins("https://*.nomercy.tv")
+                        .WithOrigins("https://cast.nomercy.tv")
                         .WithOrigins("https://hlsjs.video-dev.org")
                         .WithOrigins("http://192.168.2.201:5501")
                         .WithOrigins("http://192.168.2.201:5502")
@@ -220,7 +223,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
 
         services.AddTransient<DynamicStaticFilesMiddleware>();
 
-        services.AddSingleton(LibraryFileWatcher.Instance);
+        // services.AddSingleton(LibraryFileWatcher.Instance);
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -309,6 +312,12 @@ public class Startup(IApiVersionDescriptionProvider provider)
                 });
 
                 endpoints.MapHub<DashboardHub>("/dashboardHub", options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.CloseOnAuthenticationExpiration = true;
+                });
+
+                endpoints.MapHub<CastHub>("/castHub", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
                     options.CloseOnAuthenticationExpiration = true;

@@ -34,7 +34,7 @@ public record PeopleDto
         DeathDay = cast.Person.DeathDay;
         Gender = cast.Person.Gender;
         Order = cast.Role.Order;
-        Link = new Uri($"/person/{cast.Person.Id}", UriKind.Relative);
+        Link = new($"/person/{cast.Person.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -45,10 +45,10 @@ public record PeopleDto
         ProfilePath = tmdbCast.ProfilePath;
         KnownForDepartment = tmdbCast.KnownForDepartment;
         Name = tmdbCast.Name ?? string.Empty;
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
         Gender = Enum.Parse<TmdbGender>(tmdbCast.Gender.ToString(), true).ToString();
         Order = tmdbCast.Order;
-        Link = new Uri($"/person/{tmdbCast.Id}", UriKind.Relative);
+        Link = new($"/person/{tmdbCast.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -63,7 +63,7 @@ public record PeopleDto
         DeathDay = crew.Person.DeathDay;
         Gender = crew.Person.Gender;
         Order = crew.Job.Order;
-        Link = new Uri($"/person/{crew.Person.Id}", UriKind.Relative);
+        Link = new($"/person/{crew.Person.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -74,10 +74,10 @@ public record PeopleDto
         ProfilePath = tmdbCrew.ProfilePath;
         KnownForDepartment = tmdbCrew.KnownForDepartment;
         Name = tmdbCrew.Name;
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
         Gender = Enum.Parse<TmdbGender>(tmdbCrew.Gender.ToString(), true).ToString();
         Order = tmdbCrew.Order;
-        Link = new Uri($"/person/{tmdbCrew.Id}", UriKind.Relative);
+        Link = new($"/person/{tmdbCrew.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -87,9 +87,9 @@ public record PeopleDto
         Job = "Creator";
         ProfilePath = crew.ProfilePath;
         Name = crew.Name;
-        ColorPalette = new IColorPalettes();
+        ColorPalette = new();
         Gender = Enum.Parse<TmdbGender>(crew.Gender.ToString(), true).ToString();
-        Link = new Uri($"/person/{crew.Id}", UriKind.Relative);
+        Link = new($"/person/{crew.Id}", UriKind.Relative);
         Translations = [];
     }
 
@@ -103,7 +103,7 @@ public record PeopleDto
         ColorPalette = creator.Person.ColorPalette;
         DeathDay = creator.Person.DeathDay;
         Gender = creator.Person.Gender;
-        Link = new Uri($"/person/{creator.Person.Id}", UriKind.Relative);
+        Link = new($"/person/{creator.Person.Id}", UriKind.Relative);
         Translations = [];
     }
 }

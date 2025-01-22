@@ -91,15 +91,15 @@ public class SpecialController(SpecialRepository specialRepository) : BaseContro
         
         IAsyncEnumerable<Movie> specialMovies = SpecialResponseDto.GetSpecialMovies(mediaContext, userId, movieIds, language, country);
         await foreach (Movie movie in specialMovies)
-            items.Add(new SpecialItemsDto(movie));
+            items.Add(new(movie));
         
         IAsyncEnumerable<Tv> specialTvs = SpecialResponseDto.GetSpecialTvs(mediaContext, userId, tvIds, language, country);
         await foreach (Tv tv in specialTvs)
-            items.Add(new SpecialItemsDto(tv));
+            items.Add(new(tv));
         
         return Ok(new DataResponseDto<SpecialResponseItemDto>
         {
-            Data = new SpecialResponseItemDto(special, items)
+            Data = new(special, items)
         });
     }
 
@@ -157,7 +157,7 @@ public class SpecialController(SpecialRepository specialRepository) : BaseContro
         PlaylistResponseDto[] items = special.Items
             .OrderBy(item => item.Order)
             .Select((item, index) => item.EpisodeId is not null
-                ? new PlaylistResponseDto(item.Episode ?? new Episode(), index)
+                ? new(item.Episode ?? new Episode(), index)
                 : new PlaylistResponseDto(item.Movie ?? new Movie(), index)
             )
             .ToArray();
@@ -187,9 +187,9 @@ public class SpecialController(SpecialRepository specialRepository) : BaseContro
 
         if (request.Value)
         {
-            await mediaContext.SpecialUser.Upsert(new SpecialUser(collection.Id, userId))
+            await mediaContext.SpecialUser.Upsert(new(collection.Id, userId))
                 .On(m => new { m.SpecialId, m.UserId })
-                .WhenMatched(m => new SpecialUser
+                .WhenMatched(m => new()
                 {
                     SpecialId = m.SpecialId,
                     UserId = m.UserId

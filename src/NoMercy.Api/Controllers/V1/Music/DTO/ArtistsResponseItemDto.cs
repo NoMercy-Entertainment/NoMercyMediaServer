@@ -28,7 +28,7 @@ public record ArtistsResponseItemDto
         Id = artist.Id;
         Name = artist.Name;
         Type = "artists";
-        Link = new Uri($"/music/artist/{Id}", UriKind.Relative);
+        Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack
             .Select(artistTrack => artistTrack.Track)

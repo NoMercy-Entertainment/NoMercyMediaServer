@@ -41,7 +41,7 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
         if (movie is not null)
             return Ok(new InfoResponseDto
             {
-                Data = new InfoResponseItemDto(movie, country)
+                Data = new(movie, country)
             });
 
         TmdbMovieClient tmdbMovieClient = new(id);
@@ -54,7 +54,7 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
 
         return Ok(new InfoResponseDto
         {
-            Data = new InfoResponseItemDto(movieAppends, country)
+            Data = new(movieAppends, country)
         });
     }
 

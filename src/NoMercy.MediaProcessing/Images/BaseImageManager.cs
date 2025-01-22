@@ -53,7 +53,7 @@ public class BaseImageManager (
     public static PaletteColors ColorPaletteFromImage(Image<Rgba32>? image)
     {
         if (image is null)
-            return new PaletteColors
+            return new()
             {
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
                 Dominant = null,
@@ -89,7 +89,7 @@ public class BaseImageManager (
         foreach (MultiUriType item in items)
         {
             Image<Rgba32>? imageData = await client.Invoke(item.Url, download);
-            list.Add(new ColorPaletteArgument
+            list.Add(new()
             {
                 Key = item.Key,
                 ImageData = imageData
@@ -121,7 +121,7 @@ public class BaseImageManager (
         foreach (MultiStringType item in items)
         {
             Image<Rgba32>? imageData = await client.Invoke(item.Path, download);
-            list.Add(new ColorPaletteArgument
+            list.Add(new()
             {
                 Key = item.Key,
                 ImageData = imageData
@@ -225,7 +225,7 @@ public class BaseImageManager (
 
         image.Mutate(x => x.Resize(new ResizeOptions()
         {
-            Size = new Size(1, 1),
+            Size = new(1, 1),
             Mode = ResizeMode.Max
         }));
 
@@ -233,7 +233,7 @@ public class BaseImageManager (
             .OrderByDescending(kvp => kvp.Value)
             .Take(1);
 
-        return new PaletteColors()
+        return new()
         {
             Dominant = "#" + sortedColors.FirstOrDefault().Key.ToHex(),
             Primary = "#" + image[0, 0].ToHex(),

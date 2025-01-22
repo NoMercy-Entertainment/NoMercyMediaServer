@@ -10,7 +10,7 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
     {
         return context.Seasons.UpsertRange(seasons.ToArray())
             .On(s => new { s.Id })
-            .WhenMatched((ss, si) => new Season
+            .WhenMatched((ss, si) => new()
             {
                 Id = si.Id,
                 Title = si.Title,
@@ -29,7 +29,7 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
     {
         return context.Translations.UpsertRange(translations.ToArray())
             .On(t => new { t.Iso31661, t.Iso6391, t.SeasonId })
-            .WhenMatched((ts, ti) => new Translation
+            .WhenMatched((ts, ti) => new()
             {
                 Iso31661 = ti.Iso31661,
                 Iso6391 = ti.Iso6391,
@@ -54,7 +54,7 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
     {
         return context.Images.UpsertRange(images.ToArray())
             .On(v => new { v.FilePath, v.SeasonId })
-            .WhenMatched((ts, ti) => new Image
+            .WhenMatched((ts, ti) => new()
             {
                 AspectRatio = ti.AspectRatio,
                 FilePath = ti.FilePath,
