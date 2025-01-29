@@ -32,8 +32,8 @@ public static class VideoCodecs
     public static readonly Classes.CodecDto H265Nvenc = new()
     {
         Name = "H.265 (nvenc)",
-        Value = "h265_nvenc",
-        SimpleValue = "h265_nvenc",
+        Value = "hevc_nvenc",
+        SimpleValue = "hevc_nvenc",
         RequiresGpu = true,
         IsDefault = false
     };

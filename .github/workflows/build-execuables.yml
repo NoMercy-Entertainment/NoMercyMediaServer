@@ -1,11 +1,11 @@
 name: Build Executables
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: ["Test and Create Pull Request to Master"]
     types:
       - completed
-  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}

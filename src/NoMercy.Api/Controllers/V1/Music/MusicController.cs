@@ -292,7 +292,7 @@ public class MusicController : BaseController
         //
         // Uri link = new("/", UriKind.Relative);
         // if (topTrack != null)
-        //     link = new Uri($"/music/track/{topTrack.Id}", UriKind.Relative);
+        //     link = new Uri($"/music/tracks/{topTrack.Id}", UriKind.Relative);
         // else if (topArtist != null)
         //     link = new Uri($"/music/artist/{topArtist.Id}", UriKind.Relative);
         // else if (topAlbum != null)

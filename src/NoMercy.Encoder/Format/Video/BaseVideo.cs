@@ -366,7 +366,7 @@ public abstract class BaseVideo : Classes
         return profileCodec switch
         {
             "libx264" or "h264_nvenc" => new X264(profileCodec),
-            "libx265" or "h265_nvenc" => new X265(profileCodec),
+            "libx265" or "hevc_nvenc" => new X265(profileCodec),
             "vp9" or "libvpx-vp9" => new Vp9(profileCodec),
             _ => throw new($"Video codec {profileCodec} is not supported")
         };

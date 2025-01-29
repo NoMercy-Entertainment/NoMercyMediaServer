@@ -211,6 +211,7 @@ public static partial class Str
         name = Regex.Replace(name, "’", "");
         name = Regex.Replace(name, "\"", "");
         name = Regex.Replace(name, "u,", ".");
+        name = Regex.Replace(name, @"\.,", ".");
         name = Regex.Replace(name, "\"", "'");
         name = Regex.Replace(name, "\\s", ".");
         name = Regex.Replace(name, "&", "and");

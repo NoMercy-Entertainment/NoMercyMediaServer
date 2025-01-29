@@ -81,7 +81,7 @@ public class VideoCodecDto: Classes.CodecDto {
             { SimpleValue: "h264" } => new X264(),
             { SimpleValue: "h264_nvenc"} => new X264("h264_nvenc"),
             { SimpleValue: "h265" } => new X265(),
-            { SimpleValue: "h265_nvenc"} => new X265("h265_nvenc"),
+            { SimpleValue: "hevc_nvenc"} => new X265("hevc_nvenc"),
             { SimpleValue: "vp9" } => new Vp9(),
             { SimpleValue: "vp9_nvenc"} => new Vp9("vp9_nvenc"),
             _ => throw new ArgumentOutOfRangeException(nameof(codecDto.SimpleValue))

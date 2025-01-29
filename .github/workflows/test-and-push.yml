@@ -2,9 +2,17 @@ name: Test and Create Pull Request to Master
 
 on:
   push:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
     branches:
       - dev
   pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
     branches:
       - dev
   workflow_dispatch:

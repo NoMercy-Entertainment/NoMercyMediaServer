@@ -233,6 +233,6 @@ public record CarouselResponseItemDto
         Id = track.Id.ToString();
         Name = track.Name;
         Type = "tracks";
-        Link = new($"/music/track/{Id}", UriKind.Relative);
+        Link = new($"/music/tracks/{Id}", UriKind.Relative);
     }
 }
