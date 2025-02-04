@@ -6,6 +6,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record ContinueWatchingItemDto
 {
     [JsonProperty("id")] public string Id { get; set; }
@@ -31,75 +32,16 @@ public record ContinueWatchingItemDto
 
     public ContinueWatchingItemDto(UserData item, string country)
     {
-        Id = item.MovieId?.ToString() ?? item.TvId?.ToString() ??
-            item.SpecialId?.ToString() ?? item.CollectionId.ToString() ?? string.Empty;
+        Id = item.SpecialId?.ToString() 
+             ?? item.CollectionId?.ToString() 
+             ?? item.MovieId?.ToString() 
+             ?? item.TvId?.ToString() 
+             ?? string.Empty;
         Type = item.Type;
         UpdatedAt = item.UpdatedAt;
         CreatedAt = item.CreatedAt;
-
-        if (item.Movie is not null)
-        {
-            ColorPalette = item.Movie.ColorPalette;
-            Year = item.Movie.ReleaseDate.ParseYear();
-            Poster = item.Movie.Poster;
-            Backdrop = item.Movie.Backdrop;
-            Title = item.Movie.Title;
-            TitleSort = item.Movie.Title.TitleSort(item.Movie.ReleaseDate);
-            Overview = item.Movie.Overview;
-            MediaType = "movie";
-            Type = "movie";
-            Link = new($"/movie/{Id}/watch", UriKind.Relative);
-
-            NumberOfItems = 1;
-            HaveItems = item.Movie.VideoFiles.Count(v => v.Folder != null);
-
-            Videos = item.Movie.Media
-                .Select(media => new VideoDto(media))
-                .ToArray();
-
-            ContentRatings = item.Movie.CertificationMovies
-                .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                    || certificationMovie.Certification.Iso31661 == country)
-                .Select(certificationMovie => new ContentRating
-                {
-                    Rating = certificationMovie.Certification.Rating,
-                    Iso31661 = certificationMovie.Certification.Iso31661
-                });
-        }
-        else if (item.Tv is not null)
-        {
-            ColorPalette = item.Tv.ColorPalette;
-            Year = item.Tv.FirstAirDate.ParseYear();
-            Poster = item.Tv.Poster;
-            Backdrop = item.Tv.Backdrop;
-            Title = item.Tv.Title;
-            TitleSort = item.Tv.Title.TitleSort(item.Tv.FirstAirDate);
-            HaveItems = item.Tv.HaveEpisodes;
-            Overview = item.Tv.Overview;
-            Type = item.Tv.Type;
-
-            MediaType = "tv";
-            Type = "tv";
-            Link = new($"/tv/{Id}/watch", UriKind.Relative);
-
-            NumberOfItems = item.Tv.NumberOfEpisodes;
-            HaveItems = item.Tv.Episodes
-                .Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
-
-            Videos = item.Tv.Media
-                .Select(media => new VideoDto(media))
-                .ToArray();
-
-            ContentRatings = item.Tv.CertificationTvs
-                .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                    || certificationMovie.Certification.Iso31661 == country)
-                .Select(certificationTv => new ContentRating
-                {
-                    Rating = certificationTv.Certification.Rating,
-                    Iso31661 = certificationTv.Certification.Iso31661
-                });
-        }
-        else if (item.Special is not null)
+        
+        if (item.Special is not null)
         {
             ColorPalette = item.Special.ColorPalette;
             Poster = item.Special.Poster;
@@ -114,14 +56,14 @@ public record ContinueWatchingItemDto
 
             NumberOfItems = item.Special.Items.Count;
             HaveItems = item.Special.Items
-                    .Select(specialItem => specialItem.Episode?.VideoFiles
-                        .Any(videoFile => videoFile.Folder != null)).Count()
-                + item.Special.Items.Count(i => i.MovieId != null);
+                            .Select(specialItem => specialItem.Episode?.VideoFiles
+                                .Any(videoFile => videoFile.Folder != null)).Count()
+                        + item.Special.Items.Count(i => i.MovieId != null);
             Videos = [];
             ContentRatings = item.Special.Items
                 .SelectMany(specialItem => specialItem.Episode?.Tv.CertificationTvs
                     .Where(certificationTv => certificationTv.Certification.Iso31661 == "US"
-                        || certificationTv.Certification.Iso31661 == country)
+                                              || certificationTv.Certification.Iso31661 == country)
                     .Select(certificationTv => new ContentRating
                     {
                         Rating = certificationTv.Certification.Rating,
@@ -131,7 +73,7 @@ public record ContinueWatchingItemDto
                     .Where(specialItem => specialItem.MovieId != null)
                     .SelectMany(specialItem => specialItem.Movie?.CertificationMovies
                         .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                            || certificationMovie.Certification.Iso31661 == country)
+                                                     || certificationMovie.Certification.Iso31661 == country)
                         .Select(certificationMovie => new ContentRating
                         {
                             Rating = certificationMovie.Certification.Rating,
@@ -171,11 +113,73 @@ public record ContinueWatchingItemDto
             ContentRatings = item.Collection.CollectionMovies
                 .SelectMany(collectionMovie => collectionMovie.Movie.CertificationMovies)
                 .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                    || certificationMovie.Certification.Iso31661 == country)
+                                             || certificationMovie.Certification.Iso31661 == country)
                 .Select(certificationMovie => new ContentRating
                 {
                     Rating = certificationMovie.Certification.Rating,
                     Iso31661 = certificationMovie.Certification.Iso31661
+                });
+        }
+        else if (item.Movie is not null)
+        {
+            ColorPalette = item.Movie.ColorPalette;
+            Year = item.Movie.ReleaseDate.ParseYear();
+            Poster = item.Movie.Poster;
+            Backdrop = item.Movie.Backdrop;
+            Title = item.Movie.Title;
+            TitleSort = item.Movie.Title.TitleSort(item.Movie.ReleaseDate);
+            Overview = item.Movie.Overview;
+            MediaType = "movie";
+            Type = "movie";
+            Link = new($"/movie/{Id}/watch", UriKind.Relative);
+
+            NumberOfItems = 1;
+            HaveItems = item.Movie.VideoFiles.Count(v => v.Folder != null);
+
+            Videos = item.Movie.Media
+                .Select(media => new VideoDto(media))
+                .ToArray();
+
+            ContentRatings = item.Movie.CertificationMovies
+                .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
+                                             || certificationMovie.Certification.Iso31661 == country)
+                .Select(certificationMovie => new ContentRating
+                {
+                    Rating = certificationMovie.Certification.Rating,
+                    Iso31661 = certificationMovie.Certification.Iso31661
+                });
+        }
+        else if (item.Tv is not null)
+        {
+            ColorPalette = item.Tv.ColorPalette;
+            Year = item.Tv.FirstAirDate.ParseYear();
+            Poster = item.Tv.Poster;
+            Backdrop = item.Tv.Backdrop;
+            Title = item.Tv.Title;
+            TitleSort = item.Tv.Title.TitleSort(item.Tv.FirstAirDate);
+            HaveItems = item.Tv.HaveEpisodes;
+            Overview = item.Tv.Overview;
+            Type = item.Tv.Type;
+
+            MediaType = "tv";
+            Type = "tv";
+            Link = new($"/tv/{Id}/watch", UriKind.Relative);
+
+            NumberOfItems = item.Tv.NumberOfEpisodes;
+            HaveItems = item.Tv.Episodes
+                .Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
+
+            Videos = item.Tv.Media
+                .Select(media => new VideoDto(media))
+                .ToArray();
+
+            ContentRatings = item.Tv.CertificationTvs
+                .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
+                                             || certificationMovie.Certification.Iso31661 == country)
+                .Select(certificationTv => new ContentRating
+                {
+                    Rating = certificationTv.Certification.Rating,
+                    Iso31661 = certificationTv.Certification.Iso31661
                 });
         }
     }

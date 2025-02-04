@@ -260,4 +260,8 @@
     <Key>User {0} created successfully</Key>
     <Value lang="nl">User {0} created successfully</Value>
   </Entry>
+  <Entry>
+    <Key>Movie not found</Key>
+    <Value lang="nl">Movie not found</Value>
+  </Entry>
 </I18N>

@@ -12,6 +12,7 @@ using NoMercy.Encoder.Format.Subtitle;
 using NoMercy.Encoder.Format.Video;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.NmSystem;
+using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -43,84 +44,100 @@ public class EncodeVideoJob : AbstractEncoderJob
         FileMetadata fileMetadata = await GetFileMetaData(folder, context);
         if (!fileMetadata.Success) return;
 
-        foreach (EncoderProfile profile in profiles)
+        try
         {
-            BaseContainer container = BaseContainer.Create(profile.Container);
-
-            BuildVideoStreams(profile, ref container);
-            BuildAudioStreams(profile, ref container);
-            BuildSubtitleStreams(profile, ref container);
-
-            BaseImage sprite = new Sprite()
-                .SetScale(320)
-                .SetFilename("thumbs_:framesize:");
-            container.AddStream(sprite);
-
-            VideoAudioFile ffmpeg = new FfMpeg()
-                .Open(InputFile);
-
-            ffmpeg.SetBasePath(fileMetadata.Path);
-            ffmpeg.SetTitle(fileMetadata.Title);
-            ffmpeg.ToFile(fileMetadata.FileName);
-
-            ffmpeg.AddContainer(container);
-
-            ffmpeg.Prioritize();
-
-            ffmpeg.Build();
-
-            string fullCommand = ffmpeg.GetFullCommand();
-            Logger.Encoder(fullCommand);
-
-            ProgressMeta progressMeta = new()
+            foreach (EncoderProfile profile in profiles)
             {
-                Id = Id,
-                Title = fileMetadata.Title,
-                BaseFolder = fileMetadata.Path,
-                ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
-                AudioStreams = container.AudioStreams.Select(x => $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}").ToList(),
-                VideoStreams = container.VideoStreams.Select(x => $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}").ToList(),
-                SubtitleStreams = container.SubtitleStreams.Select(x => $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}").ToList(),
-                HasGpu = container.VideoStreams.Any(x =>
-                    x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value || x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value),
-                IsHDR = container.VideoStreams.Any(x => x.IsHdr)
-            };
+                BaseContainer container = BaseContainer.Create(profile.Container);
 
-            await ffmpeg.Run(fullCommand, fileMetadata.Path, progressMeta);
+                BuildVideoStreams(profile, ref container);
+                BuildAudioStreams(profile, ref container);
+                BuildSubtitleStreams(profile, ref container);
 
-            await sprite.BuildSprite(progressMeta);
+                BaseImage sprite = new Sprite()
+                    .SetScale(320)
+                    .SetFilename("thumbs_:framesize:");
+                container.AddStream(sprite);
 
-            await container.BuildMasterPlaylist();
+                VideoAudioFile ffmpeg = new FfMpeg()
+                    .Open(InputFile);
 
-            await container.ExtractChapters();
+                ffmpeg.SetBasePath(fileMetadata.Path);
+                ffmpeg.SetTitle(fileMetadata.Title);
+                ffmpeg.ToFile(fileMetadata.FileName);
 
-            await container.ExtractFonts();
+                ffmpeg.AddContainer(container);
 
-            if (ffmpeg.ConvertSubtitle)
-            {
-                await ffmpeg.ConvertSubtitles(ffmpeg.Container.SubtitleStreams
-                    .Where(x => x.ConvertSubtitle)
-                    .ToList(), Id, fileMetadata.Title, fileMetadata.ImgPath);
+                ffmpeg.Prioritize();
+
+                ffmpeg.Build();
+
+                string fullCommand = ffmpeg.GetFullCommand();
+                Logger.Encoder(fullCommand);
+
+                ProgressMeta progressMeta = new()
+                {
+                    Id = Id,
+                    Title = fileMetadata.Title,
+                    BaseFolder = fileMetadata.Path,
+                    ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
+                    AudioStreams = container.AudioStreams.Select(x => $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}").ToList(),
+                    VideoStreams = container.VideoStreams.Select(x => $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}").ToList(),
+                    SubtitleStreams = container.SubtitleStreams.Select(x => $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}").ToList(),
+                    HasGpu = container.VideoStreams.Any(x =>
+                        x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value || x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value),
+                    IsHDR = container.VideoStreams.Any(x => x.IsHdr)
+                };
+
+                await ffmpeg.Run(fullCommand, fileMetadata.Path, progressMeta);
+
+                await sprite.BuildSprite(progressMeta);
+
+                await container.BuildMasterPlaylist();
+
+                await container.ExtractChapters();
+
+                await container.ExtractFonts();
+
+                if (ffmpeg.ConvertSubtitle)
+                {
+                    await ffmpeg.ConvertSubtitles(ffmpeg.Container.SubtitleStreams
+                        .Where(x => x.ConvertSubtitle)
+                        .ToList(), Id, fileMetadata.Title, fileMetadata.ImgPath);
+                }
+
+                Networking.Networking.SendToAll("encoder-progress", "dashboardHub",  new Progress
+                {
+                    Id = Id,
+                    Status = "running",
+                    Title = fileMetadata.Title,
+                    Message = "Scanning files",
+                });
+
+                await fileManager.FindFiles(fileMetadata.Id, folder.FolderLibraries.First().Library);
+
+                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+                {
+                    Id = Id,
+                    Status = "completed",
+                    Title = fileMetadata.Title,
+                    Message = "Done",
+                });
             }
-
-            Networking.Networking.SendToAll("encoder-progress", "dashboardHub",  new Progress
-            {
-                Id = Id,
-                Status = "running",
-                Title = fileMetadata.Title,
-                Message = "Scanning files",
-            });
-
-            await fileManager.FindFiles(fileMetadata.Id, folder.FolderLibraries.First().Library);
-
+        }
+        catch (Exception e)
+        {
+            Logger.Encoder(e.Message, LogEventLevel.Error);
+            
             Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
             {
                 Id = Id,
-                Status = "completed",
+                Status = "failed",
                 Title = fileMetadata.Title,
-                Message = "Done",
+                Message = e.Message,
             });
         }
+
     }
     
     private async Task<FileMetadata> GetFileMetaData(Folder folder, MediaContext context) {

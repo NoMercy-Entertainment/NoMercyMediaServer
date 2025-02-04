@@ -70,9 +70,9 @@ public class AccessLogMiddleware
                 return;
             }
 
-            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path}");
+            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (No GUID)");
             context.Response.StatusCode = 401;
-            // await context.Response.WriteAsync("Unauthorized");
+            await context.Response.WriteAsync("Unauthorized (No GUID)");
             return;
         }
 
@@ -86,9 +86,9 @@ public class AccessLogMiddleware
                 return;
             }
 
-            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path}");
+            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (Empty GUID)");
             context.Response.StatusCode = 401;
-            // await context.Response.WriteAsync("Unauthorized");
+            await context.Response.WriteAsync("Unauthorized (Empty GUID)");
             return;
         }
 
@@ -110,13 +110,13 @@ public class AccessLogMiddleware
         User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
         if (user is null)
         {
-            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path}");
+            Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (User not found)");
             context.Response.StatusCode = 401;
-            // await context.Response.WriteAsync("Unauthorized");
+            await context.Response.WriteAsync("Unauthorized (User not found)");
             return;
         }
 
-        Logger.Http($"{user?.Name ?? $": {context.Connection.RemoteIpAddress}:"}: {path}");
+        Logger.Http($"{user.Name}: {path}");
 
         await _next(context);
     }

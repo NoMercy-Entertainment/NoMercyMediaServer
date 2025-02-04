@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using NoMercy.Database.Models;
 using NoMercy.Networking;
+using NoMercy.NmSystem;
 
 namespace NoMercy.Api.Middleware;
 
@@ -31,6 +32,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
 
             if (string.IsNullOrEmpty(jwt))
             {
+                Logger.Http("Unauthorized request, no jwt: " + url);
                 context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 return;
             }
@@ -43,6 +45,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
 
             if (userId == Guid.Empty)
             {
+                Logger.Http("Unauthorized request, guid empty: " + url);
                 context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
@@ -51,6 +54,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
 
             if (user is null)
             {
+                Logger.Http("Unauthorized request, user not found: " + url);
                 context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }

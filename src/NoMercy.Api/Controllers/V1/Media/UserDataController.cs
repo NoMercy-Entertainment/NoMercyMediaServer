@@ -54,6 +54,7 @@ public class UserDataController : BaseController
         List<UserData> continueWatching = await mediaContext.UserData
             .AsNoTracking()
             .Where(user => user.UserId.Equals(userId))
+            
             .Include(userData => userData.Movie)
             .ThenInclude(movie => movie.Media
                 .Where(media => media.Site == "Youtube")
@@ -65,6 +66,7 @@ public class UserDataController : BaseController
             .ThenInclude(certificationMovie => certificationMovie.Certification)
             .Include(userData => userData.Movie)
             .ThenInclude(movie => movie.VideoFiles)
+            
             .Include(userData => userData.Tv)
             .ThenInclude(tv => tv.Media
                 .Where(media => media.Site == "Youtube")
@@ -79,6 +81,7 @@ public class UserDataController : BaseController
                 .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0)
             )
             .ThenInclude(episode => episode.VideoFiles)
+            
             .Include(userData => userData.Collection)
             .ThenInclude(collection => collection.CollectionMovies)
             .ThenInclude(collectionMovie => collectionMovie.Movie)
@@ -94,6 +97,7 @@ public class UserDataController : BaseController
             .ThenInclude(collection => collection.CollectionMovies)
             .ThenInclude(collectionMovie => collectionMovie.Movie)
             .ThenInclude(movie => movie.VideoFiles)
+            
             .Include(userData => userData.Special)
             .OrderByDescending(userData => userData.UpdatedAt)
             .ToListAsync();
@@ -111,7 +115,8 @@ public class UserDataController : BaseController
         {
             Data = filteredContinueWatching
                 .Select(item => new ContinueWatchingItemDto(item,
-                    country)),
+                    country))
+                .DistinctBy(item => item.Link),
         });
     }
 

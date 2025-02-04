@@ -271,6 +271,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                                     ]
                                 }
                             })
+                            .DistinctBy(item => item.Props.Data?.Link)
                     }
                 },
 
@@ -425,6 +426,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                                     ]
                                 }
                             })
+                            .DistinctBy(item => item.Props.Data?.Link)
                     }
                 },
             ]
@@ -586,6 +588,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                                     ]
                                 }
                             })
+                            .DistinctBy(item => item.Props.Data?.Link)
                     }
                 },
 

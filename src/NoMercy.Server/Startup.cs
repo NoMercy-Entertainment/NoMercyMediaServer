@@ -129,11 +129,12 @@ public class Startup(IApiVersionDescriptionProvider provider)
                 policy.RequireClaim("scope", "openid", "profile");
                 policy.AddRequirements(new AssertionRequirement(context =>
                 {
-                    using MediaContext mediaContext = new();
-                    User? user = mediaContext.Users
+                    User? user = ClaimsPrincipleExtensions.Users
                         .FirstOrDefault(user =>
                             user.Id == Guid.Parse(context.User.FindFirstValue(ClaimTypes.NameIdentifier) ??
                                                   string.Empty));
+                    
+                    Logger.App($"User: {user?.Name ?? "Unknown"}");
                     return user is not null;
                 }));
             });
