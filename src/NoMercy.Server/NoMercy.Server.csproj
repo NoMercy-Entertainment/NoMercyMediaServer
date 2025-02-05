@@ -80,6 +80,7 @@
         <ProjectReference Include="..\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj"/>
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
         <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj"/>
+        <ProjectReference Include="..\NoMercy.Updater\NoMercy.Updater.csproj"/>
     </ItemGroup>
     
     <ItemGroup>
