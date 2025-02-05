@@ -6,7 +6,7 @@
         <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
         <Authors>NoMercy Entertainment</Authors>
         <Description>The Effortless Encoder</Description>
-        <Copyright>(c) 2023 NoMercy Entertainment</Copyright>
+        <Copyright>(c) 2025 NoMercy Entertainment</Copyright>
         <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
         <PackageIcon>Assets\icon.png</PackageIcon>
         <Company>NoMercy Entertainment</Company>
@@ -80,7 +80,6 @@
         <ProjectReference Include="..\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj"/>
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
         <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj"/>
-        <ProjectReference Include="..\NoMercy.Updater\NoMercy.Updater.csproj"/>
     </ItemGroup>
     
     <ItemGroup>

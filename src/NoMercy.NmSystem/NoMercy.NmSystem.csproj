@@ -34,8 +34,4 @@
     <ItemGroup>
       <EmbeddedResource Include="Resources\I18N.xml" />
     </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\NoMercy.Updater\NoMercy.Updater.csproj" />
-    </ItemGroup>
 </Project>

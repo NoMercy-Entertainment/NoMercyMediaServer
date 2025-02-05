@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace NoMercy.Updater;
 
@@ -15,9 +15,9 @@ public class NoMercyUpdater
         if (args.Length > 0 && args[0] == "--check")
         {
             bool isUpdateAvailable = await CheckForUpdate();
-            Console.WriteLine(JsonSerializer.Serialize(new
+            Console.WriteLine(JsonConvert.SerializeObject(new
             {
-                updateAvailable = isUpdateAvailable
+                UpdateAvailable = isUpdateAvailable
             }));
             return;
         }
@@ -90,21 +90,32 @@ public class NoMercyUpdater
             : "unknown";
     }
 
+    private class Release
+    {
+        [JsonProperty("assets")] public List<Asset> Assets { get; set; } = [];
+    }
+    
+    private class Asset
+    {
+        [JsonProperty("name")] public string Name { get; set; } = "";
+        [JsonProperty("browser_download_url")] public string DownloadUrl { get; set; } = "";
+    }
+
     private static async Task<(string commitHash, string? downloadUrl)> GetLatestReleaseInfo(string? osIdentifier)
     {
         string url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
         HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
 
         string response = await HttpClient.GetStringAsync(url);
-        using JsonDocument doc = JsonDocument.Parse(response);
+        Release? doc = JsonConvert.DeserializeObject<Release>(response);
 
-        foreach (JsonElement asset in doc.RootElement.GetProperty("assets").EnumerateArray())
+        foreach (Asset asset in doc?.Assets ?? [])
         {
-            string? fileName = asset.GetProperty("name").GetString();
-            if (fileName == null || osIdentifier == null || !fileName.Contains(osIdentifier)) continue;
+            string fileName = asset.Name;
+            if (osIdentifier == null || !fileName.Contains(osIdentifier)) continue;
             
             string commitHash = fileName.Split('-')[^1].Replace(".exe", "").Trim();
-            string? downloadUrl = asset.GetProperty("browser_download_url").GetString();
+            string downloadUrl = asset.DownloadUrl;
             return (commitHash, downloadUrl);
         }
         return ("unknown", null);

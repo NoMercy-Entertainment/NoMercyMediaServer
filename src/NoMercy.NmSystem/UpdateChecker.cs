@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using NoMercy.Updater;
+using Newtonsoft.Json;
 
 namespace NoMercy.NmSystem;
 
@@ -12,7 +12,7 @@ public static class UpdateChecker
             while (true)
             {
                 await Task.Delay(TimeSpan.FromHours(6));
-                Config.UpdateAvailable =  await NoMercyUpdater.CheckForUpdate();
+                Config.UpdateAvailable = IsUpdateAvailable();
             }
             
             // ReSharper disable once FunctionNeverReturns
@@ -25,7 +25,23 @@ public static class UpdateChecker
     {
         try
         {
-            return NoMercyUpdater.CheckForUpdate().Result;
+            ProcessStartInfo startInfo = new()
+            {
+                FileName = AppFiles.UpdaterPath,
+                Arguments = "--check",
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using Process? process = Process.Start(startInfo);
+            string? output = process?.StandardOutput.ReadToEnd();
+            process?.WaitForExit();
+
+            if (string.IsNullOrEmpty(output)) return false;
+
+            UpdateCheckResult? result = JsonConvert.DeserializeObject<UpdateCheckResult>(output);
+            return result?.UpdateAvailable ?? false;
         }
         catch
         {

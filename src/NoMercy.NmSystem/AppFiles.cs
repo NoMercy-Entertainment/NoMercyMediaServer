@@ -39,7 +39,8 @@ public static class AppFiles
     public static readonly string FfmpegPath = Path.Combine(FfmpegFolder, "ffmpeg" + Info.ExecSuffix);
     public static readonly string FfProbePath = Path.Combine(FfmpegFolder, "ffprobe" + Info.ExecSuffix);
     public static readonly string FpCalcPath = Path.Combine(BinariesPath, "fpcalc", "fpcalc" + Info.ExecSuffix);
-
+    public static string UpdaterPath => Path.Combine(BinariesPath, "NoMercyUpdater" + Info.ExecSuffix);
+    
     public static readonly string SubtitleEdit =
         Path.Combine(BinariesPath, "subtitleedit", "SubtitleEdit" + Info.ExecSuffix);
 
