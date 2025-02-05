@@ -46,7 +46,7 @@ jobs:
           mkdir -p ./output
       
           # Publish for Linux
-          dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj --configuration Release --runtime linux-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyMediaServe r--output ./output
+          dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj --configuration Release --runtime linux-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyMediaServer --output ./output
           mv ./output/NoMercyMediaServer ./output/NoMercyMediaServer-linux-x64
       
           # Publish for Windows
