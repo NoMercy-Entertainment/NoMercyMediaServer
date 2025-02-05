@@ -182,7 +182,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             command.Append($" -threads {Math.Floor(threadCount * 0.8)} ");
         }
 
-        if (HasGpu) command.Append(" -extra_hw_frames 3 -init_hw_device opencl=ocl ");
+        if (HasGpu) command.Append(" -extra_hw_frames 3 -init_hw_device cuda=hw -filter_hw_device hw ");
 
         command.Append(" -progress - ");
 

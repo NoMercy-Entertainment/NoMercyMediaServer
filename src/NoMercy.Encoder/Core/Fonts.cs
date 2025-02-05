@@ -32,7 +32,7 @@ public static class Fonts
             });
         }
 
-        File.WriteAllText(attachmentsFile, attachments.ToJson());
+        await File.WriteAllTextAsync(attachmentsFile, attachments.ToJson());
     }
 
     private class Attachment

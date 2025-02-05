@@ -71,19 +71,20 @@ public static class Binaries
     {
         if (program.Url == null) return;
         
-        string? extension = Path.GetExtension(program.Url.ToString());
-        if (string.IsNullOrEmpty(extension) || extension == "exe")
-        {
-            Logger.Setup($"Skipping extracting {program.Name}");
-            return;
-        }
-        
         string sourceArchiveFileName =
             Path.Combine(AppFiles.BinariesPath, Path.GetFileName(program.Url?.ToString() ?? ""));
         string destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Name);
-
+        
         Logger.Setup($"Extracting {program.Name} to {destinationDirectoryName}");
-
+        
+        string extension = Path.GetExtension(program.Url!.ToString());
+        if (string.IsNullOrEmpty(extension) || extension == ".exe")
+        {
+            File.Delete(Path.Combine(AppFiles.BinariesPath, program.Name + Info.ExecSuffix));
+            File.Move(sourceArchiveFileName, Path.Combine(AppFiles.BinariesPath, program.Name + Info.ExecSuffix));
+            return;
+        }
+        
         if (Directory.Exists(destinationDirectoryName))
             Directory.Delete(destinationDirectoryName, true);
 

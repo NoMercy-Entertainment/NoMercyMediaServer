@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 
 namespace NoMercy.Updater;
@@ -10,6 +11,10 @@ public class NoMercyUpdater
     private static readonly HttpClient HttpClient = new();
     private const string InstalledVersionFile = "version.txt";
 
+
+    private static readonly string Platform = GetPlatform();
+    private static readonly string ExecSuffix = Platform == "windows" ? ".exe" : "";
+    
     static async Task Main(string[] args)
     {
         if (args.Length > 0 && args[0] == "--check")
@@ -37,7 +42,7 @@ public class NoMercyUpdater
         }
     }
 
-    public static async Task<bool> CheckForUpdate()
+    private static async Task<bool> CheckForUpdate()
     {
         string? osIdentifier = GetOsIdentifier();
         if (string.IsNullOrEmpty(osIdentifier)) return false;
@@ -48,7 +53,7 @@ public class NoMercyUpdater
         return installedCommit != latestCommit;
     }
 
-    public static async Task InstallUpdate()
+    private static async Task InstallUpdate()
     {
         string? osIdentifier = GetOsIdentifier();
         if (string.IsNullOrEmpty(osIdentifier)) return;
@@ -128,6 +133,19 @@ public class NoMercyUpdater
             Process.Start("chmod", $"+x {filePath}").WaitForExit();
         }
     }
+    
+    private static string GetPlatform()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return "windows";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            return "mac";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return "linux";
+
+        throw new("Unknown platform");
+    }
+
 
     private static void StopMediaServer()
     {
@@ -150,7 +168,7 @@ public class NoMercyUpdater
     {
         try
         {
-            Process.Start("./NoMercyMediaServer");
+            Process.Start("./NoMercyMediaServer" + ExecSuffix);
         }
         catch (Exception ex)
         {
