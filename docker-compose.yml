@@ -4,3 +4,9 @@
     build:
       context: .
       dockerfile: NoMercy.Service/Dockerfile
+
+  nomercy.updater:
+    image: nomercy.updater
+    build:
+      context: .
+      dockerfile: NoMercy.Updater/Dockerfile

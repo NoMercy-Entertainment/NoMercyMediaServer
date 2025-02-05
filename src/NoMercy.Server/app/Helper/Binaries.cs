@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
 using Serilog.Events;
@@ -8,13 +9,15 @@ namespace NoMercy.Server.app.Helper;
 
 public static class Binaries
 {
-    private static List<Download> Downloads { get; set; }
 
-    private static readonly HttpClient Client = new();
+    private const string RepoOwner = "NoMercy-Entertainment";
+    private const string RepoName = "NoMercyMediaServer";
+    private static List<Download> Downloads { get; set; }
+    private static readonly HttpClient HttpClient = new();
 
     static Binaries()
     {
-        Client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        HttpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             Downloads = ApiInfo.BinaryList.Linux;
@@ -34,6 +37,8 @@ public static class Binaries
             // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
             foreach (Download program in Downloads)
             {
+                if (program.Url == null) continue;
+                
                 string destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Name);
                 DateTime creationTime = Directory.GetCreationTimeUtc(destinationDirectoryName);
 
@@ -54,7 +59,7 @@ public static class Binaries
     {
         Logger.Setup($"Downloading {program.Name}");
 
-        HttpResponseMessage result = await Client.GetAsync(program.Url);
+        HttpResponseMessage result = await HttpClient.GetAsync(program.Url);
         byte[] content = await result.Content.ReadAsByteArrayAsync();
 
         string baseName = Path.GetFileName(program.Url?.ToString() ?? "");
@@ -64,6 +69,15 @@ public static class Binaries
 
     private static async Task Extract(Download program)
     {
+        if (program.Url == null) return;
+        
+        string? extension = Path.GetExtension(program.Url.ToString());
+        if (string.IsNullOrEmpty(extension) || extension == "exe")
+        {
+            Logger.Setup($"Skipping extracting {program.Name}");
+            return;
+        }
+        
         string sourceArchiveFileName =
             Path.Combine(AppFiles.BinariesPath, Path.GetFileName(program.Url?.ToString() ?? ""));
         string destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Name);

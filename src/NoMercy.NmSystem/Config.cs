@@ -32,4 +32,5 @@ public class Config
     public static readonly string TokenFile = Path.Combine(ConfigPath, "token.json");
     public static readonly string ConfigFile = Path.Combine(ConfigPath, "config.json");
     public static bool IsDev { get; set; }
+    public static bool UpdateAvailable { get; set; }
 }

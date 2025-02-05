@@ -181,6 +181,7 @@ public static class Program
             new (Binaries.DownloadAll),
             new (Dev.Run),
             new (ChromeCast.Init),
+            new (UpdateChecker.StartPeriodicUpdateCheck),
             // new (AniDbBaseClient.Init),
             new (delegate
             {

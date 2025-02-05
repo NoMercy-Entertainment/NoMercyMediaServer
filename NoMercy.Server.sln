@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tests.Database", "t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.MediaSources", "src\NoMercy.MediaSources\NoMercy.MediaSources.csproj", "{3E288163-4374-4B86-8BB3-74453ED3F7D7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Updater", "NoMercy.Updater\NoMercy.Updater.csproj", "{C3056365-AFDF-40D6-80D9-332FC49BD66D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,6 +99,10 @@ Global
 		{3E288163-4374-4B86-8BB3-74453ED3F7D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E288163-4374-4B86-8BB3-74453ED3F7D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E288163-4374-4B86-8BB3-74453ED3F7D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3056365-AFDF-40D6-80D9-332FC49BD66D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3056365-AFDF-40D6-80D9-332FC49BD66D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3056365-AFDF-40D6-80D9-332FC49BD66D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3056365-AFDF-40D6-80D9-332FC49BD66D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -119,5 +125,6 @@ Global
 		{E826EC83-E802-4AC2-B645-8B7691309A16} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
 		{FCEEA404-41C1-4190-82C7-3C765FB9268E} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
 		{3E288163-4374-4B86-8BB3-74453ED3F7D7} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
+		{C3056365-AFDF-40D6-80D9-332FC49BD66D} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
 	EndGlobalSection
 EndGlobal

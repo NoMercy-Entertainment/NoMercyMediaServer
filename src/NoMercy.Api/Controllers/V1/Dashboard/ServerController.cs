@@ -126,7 +126,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to stop the server");
 
-        // ApplicationLifetime.StopApplication();
+        ApplicationLifetime.StopApplication();
         return Content("Done");
     }
 
@@ -139,6 +139,15 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
 
         // ApplicationLifetime.StopApplication();
         return Content("Done");
+    }
+    
+    [HttpGet("update/check")]
+    public IActionResult CheckForUpdate()
+    {
+        return Ok(new
+        {
+            updateAvailable = UpdateChecker.IsUpdateAvailable()
+        });
     }
 
     [HttpPost]

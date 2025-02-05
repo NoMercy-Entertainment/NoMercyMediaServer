@@ -10,14 +10,10 @@ using NoMercy.Networking;
 using NoMercy.NmSystem;
 
 namespace NoMercy.Api.Controllers.Socket;
-public class VideoHub : ConnectionHub
+public class VideoHub(IHttpContextAccessor httpContextAccessor) : ConnectionHub(httpContextAccessor)
 {
     private static readonly ConcurrentDictionary<Guid, string> CurrentDevices = new();
     private static readonly ConcurrentDictionary<Guid, PlayerState> PlayerState = new();
-
-    public VideoHub(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
-    {
-    }
 
     public async Task SetTime(VideoProgressRequest request)
     {
@@ -38,7 +34,7 @@ public class VideoHub : ConnectionHub
             VideoFileId = Ulid.Parse(request.VideoId),
             MovieId = request.VideoType == "movie" ? request.TmdbId : null,
             TvId = request.VideoType == "tv" ? request.TmdbId : null,
-            CollectionId = request.VideoType == "collection" ? request.TmdbId : null,
+            CollectionId = request.CollectionId,
             SpecialId = request.SpecialId
         };
 
@@ -156,6 +152,7 @@ public class VideoHub : ConnectionHub
         [JsonProperty("subtitle")] public string Subtitle { get; set; } = string.Empty;
         [JsonProperty("subtitle_type")] public string SubtitleType { get; set; } = string.Empty;
         [JsonProperty("special_id")] public Ulid? SpecialId { get; set; }
+        [JsonProperty("collection_id")] public int? CollectionId { get; set; }
     }
 
     private PlayerState MusicPlayerState()
