@@ -475,7 +475,7 @@ public class PersonManager(
                     "translations"
                 ]);
 
-                if (personTask is null)
+                if (personTask?.Name is null)
                 {
                     Logger.MovieDb($"Person {id} not found", LogEventLevel.Warning);
                     return;
@@ -489,8 +489,8 @@ public class PersonManager(
             }
         });
 
-        return personAppends
+        return personAppends?
             .OrderBy(f => f.Name)
-            .ToList();
+            .ToList() ?? [];
     }
 }

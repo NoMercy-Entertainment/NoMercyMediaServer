@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
@@ -17,29 +18,91 @@ using NoMercy.Server.app.Helper;
 using AppFiles = NoMercy.NmSystem.AppFiles;
 
 namespace NoMercy.Server;
-public static class Program
+ public static class Program
 {
+    [DllImport("Kernel32")]
+    private static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate handler, bool add);
+
+    private delegate bool ConsoleCtrlDelegate(int signal);
+
+    private static bool ConsoleCtrlHandler(int signal)
+    {
+        if (signal == 2 || signal == 0)
+        {
+            Logger.App("Intercepted console close, preventing shutdown.");
+            HideConsoleWindow();
+            return true;
+        }
+        return false;
+    }
+    
     [DllImport("Kernel32.dll")]
     private static extern IntPtr GetConsoleWindow();
     [DllImport("User32.dll")]
     private static extern bool ShowWindow(IntPtr hWnd, int cmdShow);
-    
-    public static int ConsoleVisible { get; set; } = 1;
+    [DllImport("User32.dll")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+    [DllImport("User32.dll")]
+    private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
-    internal static void VsConsoleWindow(int i)
-    {
-        IntPtr hWnd = GetConsoleWindow();
-        if (hWnd != IntPtr.Zero)
-        {
-            ConsoleVisible = i;
-            ShowWindow(hWnd, i);
-        }
-    }
+    private const int GWL_WNDPROC = -4;
+    private const uint WM_CLOSE = 0x0010;
+    private static IntPtr _originalWndProc = IntPtr.Zero;
+    private static IntPtr _consoleWindow = IntPtr.Zero;
     
     private static bool ShouldSeedMarvel { get; set; }
-    
+
+    public static int ConsoleVisible { get; set; } = 1;
+
+    private static IntPtr CustomWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        if (msg == WM_CLOSE)
+        {
+            HideConsoleWindow();
+            return IntPtr.Zero;
+        }
+        else if (msg == 0x11)
+        {
+            return IntPtr.Zero;
+        }
+        else if (msg == 0x16)
+        {
+            return IntPtr.Zero;
+        }
+
+        return CallWindowProc(_originalWndProc, hWnd, msg, wParam, lParam);
+    }
+
+    internal static void VsConsoleWindow(int visible)
+    {
+        if (visible == 0)
+        {
+            HideConsoleWindow();
+        }
+        else
+        {
+            ShowConsoleWindow();
+        }
+    }
+
+    private static void HideConsoleWindow()
+    {
+        ShowWindow(_consoleWindow, 0);
+        ConsoleVisible = 0;
+    }
+
+    private static void ShowConsoleWindow()
+    {
+        ShowWindow(_consoleWindow, 1);
+        ConsoleVisible = 1;
+    }
+
     public static Task Main(string[] args)
     {
+        SetConsoleCtrlHandler(ConsoleCtrlHandler, true);
+        _consoleWindow = GetConsoleWindow();
+        _originalWndProc = SetWindowLongPtr(_consoleWindow, GWL_WNDPROC, Marshal.GetFunctionPointerForDelegate((WndProc)CustomWndProc));
+
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
         {
             Exception exception = (Exception)eventArgs.ExceptionObject;
@@ -54,19 +117,28 @@ public static class Program
 
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>
         {
-            Logger.App("SIGTERM received, shutting down.");
-            Shutdown().Wait();
+            if (ConsoleVisible == 0)
+            {
+                Logger.App("Prevented ProcessExit since the console is minimized.");
+            }
+            else
+            {
+                Logger.App("SIGTERM received, shutting down.");
+                Shutdown().Wait();
+            }
         };
 
         return Parser.Default.ParseArguments<StartupOptions>(args)
             .MapResult(Start, ErrorParsingArguments);
-        
+
         static Task ErrorParsingArguments(IEnumerable<Error> errors)
         {
             Environment.ExitCode = 1;
             return Task.CompletedTask;
         }
     }
+
+    private delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     private static async Task Start(StartupOptions options)
     {
@@ -75,7 +147,11 @@ public static class Program
             Console.Clear();
             Console.Title = "NoMercy Server";
         }
-
+        
+        Version version = Assembly.GetExecutingAssembly().GetName().Version!;
+        Info.Version = version;
+        Logger.App($"NoMercy Server v{version.Major}.{version.Minor}.{version.Build}");
+        
         options.ApplySettings(out bool shouldSeedMarvel);
         ShouldSeedMarvel = shouldSeedMarvel;
 
@@ -104,13 +180,13 @@ public static class Program
                 {
                     ConsoleMessages.ServerRunning();
                 }
-                
+
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
             });
         });
 
         new Thread(() => app.RunAsync()).Start();
-        
+
         await Task.Delay(-1);
     }
 
@@ -182,18 +258,16 @@ public static class Program
             new (Dev.Run),
             new (ChromeCast.Init),
             new (UpdateChecker.StartPeriodicUpdateCheck),
-            // new (AniDbBaseClient.Init),
+           
             new (delegate
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
                     return TrayIcon.Make();
                 return Task.CompletedTask;
             }),
             new (StorageMonitor.UpdateStorage),
         ];
-
-        // AppDomain.CurrentDomain.ProcessExit += (_, _) => { AniDbBaseClient.Dispose(); };
 
         await RunStartup(startupTasks);
 
@@ -204,7 +278,7 @@ public static class Program
             IsBackground = true
         };
         queues.Start();
-        
+
         Thread fileWatcher = new(new Task(() => _ = new LibraryFileWatcher()).Start)
         {
             Name = "Library File Watcher",
@@ -212,7 +286,7 @@ public static class Program
             IsBackground = true
         };
         fileWatcher.Start();
-        
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
         {
             Logger.App(

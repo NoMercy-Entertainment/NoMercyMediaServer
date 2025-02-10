@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using H.NotifyIcon.Core;
-using Microsoft.AspNetCore.Components.Web;
 
 namespace NoMercy.Server;
 

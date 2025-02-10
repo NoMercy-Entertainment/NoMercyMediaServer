@@ -11,4 +11,5 @@ public record ServerInfoDto
     [JsonProperty("arch")] public string Arch { get; set; } = string.Empty;
     [JsonProperty("version")] public string? Version { get; set; }
     [JsonProperty("bootTime")] public DateTime BootTime { get; set; }
+    [JsonProperty("os_version")] public string? OsVersion { get; set; }
 }

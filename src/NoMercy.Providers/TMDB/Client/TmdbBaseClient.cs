@@ -56,20 +56,23 @@ public class TmdbBaseClient : IDisposable
 
     public int Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false)
+    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false, bool skipCache = false)
         where T : class
     {
         query ??= new();
 
         string newUrl = QueryHelpers.AddQueryString(url, query!);
 
-        if (CacheController.Read(newUrl, out T? result)) return result;
+        if (!skipCache && CacheController.Read(newUrl, out T? result)) return result;
 
         Logger.MovieDb(newUrl, LogEventLevel.Verbose);
 
         string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
-        await CacheController.Write(newUrl, response);
+        if (!skipCache)
+        {
+            await CacheController.Write(newUrl, response);
+        }
 
         T? data = response.FromJson<T>();
 

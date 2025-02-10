@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Management;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,7 +17,8 @@ public class Info
     public static readonly string Architecture = RuntimeInformation.ProcessArchitecture.ToString();
     public static readonly string[] Cpu = GetCpuFullName();
     public static readonly string[] Gpu = GetGpuFullName();
-    public static readonly string? Version = GetSystemVersion();
+    public static readonly string? OsVersion = GetSystemVersion();
+    public static Version? Version { get; set; }
     public static readonly DateTime BootTime = GetBootTime();
     public static readonly DateTime StartTime = DateTime.UtcNow;
     public static readonly string ExecSuffix = Platform == "windows" ? ".exe" : "";
@@ -144,6 +146,11 @@ public class Info
         }
 
         return "Unknown";
+    }
+    
+    public static string GetReleaseVersion()
+    {
+        return $"{Version.Major}.{Version.Minor}.{Version.Build}";
     }
 
     private static DateTime GetBootTime()

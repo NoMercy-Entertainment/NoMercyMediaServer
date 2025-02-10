@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore.Query;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 
@@ -29,18 +28,12 @@ public record PeopleResponseDto
             .Include(person => person.Translations
                 .Where(translation => translation.Iso6391 == language));
 
-
-        int totalItems = await query.CountAsync();
-        Logger.Http($"Total items found: {totalItems}");
-
         IQueryable<Person> paginatedQuery = query
             .OrderByDescending(person => person.Popularity)
             .Skip(page * take)
             .Take(take);
 
         List<Person> people = await paginatedQuery.ToListAsync();
-
-        Logger.Http($"Page: {page}, Take: {take}, Items returned: {people.Count}");
 
         return people
             .Select(person => new PeopleResponseItemDto(person))

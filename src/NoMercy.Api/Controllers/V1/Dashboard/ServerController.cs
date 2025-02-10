@@ -284,13 +284,6 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
         };
     }
 
-    [NonAction]
-    private string DeviceName()
-    {
-        Configuration? device = context.Configuration.FirstOrDefault(device => device.Key == "serverName");
-        return device?.Value ?? Environment.MachineName;
-    }
-
     [HttpPost]
     [Route("filelist")]
     public async Task<IActionResult> FileList([FromBody] FileListRequest request)
@@ -439,6 +432,18 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                                 .Where(item => item.TvId == show.Id)
                                 .Where(item => item.SeasonNumber == parsed.Season)
                                 .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
+                            
+                            if (episode == null)
+                            {
+                                List<Episode> episodes = context.Episodes
+                                    .Where(item => item.TvId == show.Id)
+                                    .Where(item => item.SeasonNumber > 0)
+                                    .OrderBy(item => item.SeasonNumber)
+                                    .ThenBy(item => item.EpisodeNumber)
+                                    .ToList();
+
+                                episode = episodes.ElementAtOrDefault(parsed.Episode.Value - 1);
+                            }
 
                             if (episode == null)
                             {
@@ -593,6 +598,13 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
         return fileList.OrderBy(file => file.Name).ToList();
     }
 
+    [NonAction]
+    private string DeviceName()
+    {
+        Configuration? device = context.Configuration.FirstOrDefault(device => device.Key == "serverName");
+        return device?.Value ?? Environment.MachineName;
+    }
+
     [HttpGet]
     [Route("info")]
     public IActionResult ServerInfo()
@@ -605,9 +617,9 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
             Server = DeviceName(),
             Cpu = Info.Cpu,
             Gpu = Info.Gpu,
-            Os = Info.Platform.ToTitleCase(),
+            Os = $"{Info.Platform.ToTitleCase()} {Info.OsVersion}",
             Arch = Info.Architecture,
-            Version = Info.Version,
+            Version = Info.GetReleaseVersion(),
             BootTime = Info.StartTime
         });
     }

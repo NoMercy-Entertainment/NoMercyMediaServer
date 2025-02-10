@@ -72,13 +72,21 @@ jobs:
           # Publish for macOS
           dotnet publish ./src/NoMercy.Updater/NoMercy.Updater.csproj --configuration Release --runtime osx-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyUpdater --output ./output
           mv ./output/NoMercyUpdater ./output/NoMercyUpdater-macos-x64
+
+      # Get the version of the project
+      - name: Get Version
+        uses: kzrnm/get-net-sdk-project-versions-action@v2
+        id: get-version
+        with:
+          proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
+      - run: echo "${{steps.get-version.outputs.version}}"
           
       # Create the GitHub release
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         with:
-          tag_name: v${{ github.run_number }}
+          tag_name: ${{ steps.get-version.outputs.version }}
           release_name: NoMercy MediaServer Release
           body: |
             New release for NoMercy MediaServer is ready.
