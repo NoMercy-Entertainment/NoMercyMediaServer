@@ -124,7 +124,7 @@ public class EpisodeManager(
             .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
                         e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
             .ToArray();
-        ;
+        
         if (posterJobItems.Any())
             jobDispatcher.DispatchJob<ImagePaletteJob, Image>(episode.Id, posterJobItems);
     }

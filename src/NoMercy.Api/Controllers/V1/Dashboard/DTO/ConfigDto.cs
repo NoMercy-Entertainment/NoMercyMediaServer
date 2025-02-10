@@ -4,7 +4,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
 
 public class ConfigDto
 {
-    [JsonProperty("data")] public ConfigDtoData Data { get; set; }
+    [JsonProperty("data")] public ConfigDtoData Data { get; set; } = new();
 }
 
 public class ConfigDtoData

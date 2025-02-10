@@ -8,8 +8,8 @@ public record TranslationDto
     public TranslationDto(Translation translation)
     {
         Iso31661 = translation.Iso31661;
-        Iso6391 = translation.Iso6391;
-        EnglishName = translation.EnglishName;
+        Iso6391 = translation.Iso6391 ?? string.Empty;
+        EnglishName = translation.EnglishName ?? string.Empty;
         Name = translation.Name ?? string.Empty;
         Biography = translation.Biography ?? string.Empty;
     }
@@ -23,9 +23,9 @@ public record TranslationDto
         Biography = translation.Data.Biography ?? string.Empty;
     }
 
-    [JsonProperty("iso_3166_1")] public string Iso31661 { get; set; }
-    [JsonProperty("iso_639_1")] public string Iso6391 { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
-    [JsonProperty("english_name")] public string EnglishName { get; set; }
-    [JsonProperty("biography")] public string Biography { get; set; }
+    [JsonProperty("iso_3166_1")] public string Iso31661 { get; set; } = string.Empty;
+    [JsonProperty("iso_639_1")] public string Iso6391 { get; set; } = string.Empty;
+    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
+    [JsonProperty("english_name")] public string EnglishName { get; set; } = string.Empty;
+    [JsonProperty("biography")] public string Biography { get; set; } = string.Empty;
 }

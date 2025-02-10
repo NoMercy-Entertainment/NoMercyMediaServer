@@ -4,9 +4,10 @@ using NoMercy.Providers.Helpers;
 namespace NoMercy.Providers.FanArt.Models;
 public class MusicLabel
 {
-    private Uri __url;
+    // ReSharper disable once InconsistentNaming
+    private Uri __url = null!;
 
-    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("id")] public string Id { get; set; } = string.Empty;
 
     [JsonProperty("url")]
     public Uri Url
@@ -15,6 +16,6 @@ public class MusicLabel
         init => __url = value;
     }
 
-    [JsonProperty("colour")] public string Color { get; set; }
-    [JsonProperty("likes")] public string Likes { get; set; }
+    [JsonProperty("colour")] public string Color { get; set; } = string.Empty;
+    [JsonProperty("likes")] public string Likes { get; set; } = string.Empty;
 }

@@ -4,7 +4,7 @@ using NoMercy.NmSystem;
 namespace NoMercy.Helpers.Monitoring;
 public class ResourceMonitor
 {
-    private static readonly Computer? Computer = null;
+    private static readonly Computer? Computer;
 
     static ResourceMonitor()
     {
@@ -231,16 +231,16 @@ public class ResourceMonitor
 
     public static void Start()
     {
-        Computer.Open();
+        Computer?.Open();
     }
 
     public static void Stop()
     {
-        Computer.Close();
+        Computer?.Close();
     }
 
     ~ResourceMonitor()
     {
-        Computer.Close();
+        Computer?.Close();
     }
 }

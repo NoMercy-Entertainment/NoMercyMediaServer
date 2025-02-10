@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
@@ -108,7 +107,7 @@ public record SpecialResponseItemDto
         int movies = special.Items.Count(item => item.MovieId is not null && item.Movie?.VideoFiles.Count != 0);
         int episodes = special.Items
             .Where(item => item.EpisodeId is not null)
-            .Count(item => item.Episode?.VideoFiles?.Count != 0);
+            .Count(item => item.Episode?.VideoFiles.Count != 0);
 
         HaveItems = movies + episodes;
 
@@ -133,7 +132,7 @@ public record SpecialResponseItemDto
         MediaType = "specials";
         Link = new($"/specials/{Id}", UriKind.Relative);
         ColorPalette = special.ColorPalette;
-        Favorite = special.SpecialUser?.Count != 0;
+        Favorite = special.SpecialUser.Count != 0;
         NumberOfItems = special.Items.Count;
 
         int movies = special.Items.Count(item => item.MovieId is not null && (bool)item.Movie?.VideoFiles.Any());

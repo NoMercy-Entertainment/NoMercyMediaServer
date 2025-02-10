@@ -1,6 +1,5 @@
 using Newtonsoft.Json;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.People;
 
@@ -11,9 +10,9 @@ public record KnownFor
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("genre_ids")] public int[]? GenreIds { get; set; }
     [JsonProperty("id")] public int? Id { get; set; }
-    [JsonProperty("original_language")] public string OriginalLanguage { get; set; }
-    [JsonProperty("original_title")] public string OriginalTitle { get; set; }
-    [JsonProperty("overview")] public string Overview { get; set; }
+    [JsonProperty("original_language")] public string OriginalLanguage { get; set; } = string.Empty;
+    [JsonProperty("original_title")] public string OriginalTitle { get; set; } = string.Empty;
+    [JsonProperty("overview")] public string Overview { get; set; } = string.Empty;
     [JsonProperty("popularity")] public double Popularity { get; set; }
     [JsonProperty("release_date")] public DateTime? ReleaseDate { get; set; }
     [JsonProperty("title")] public string? Title { get; set; }
@@ -21,24 +20,24 @@ public record KnownFor
     [JsonProperty("vote_average")] public double VoteAverage { get; set; }
     [JsonProperty("vote_count")] public long VoteCount { get; set; }
     [JsonProperty("character")] public string? Character { get; set; }
-    [JsonProperty("credit_id")] public string CreditId { get; set; }
+    [JsonProperty("credit_id")] public string CreditId { get; set; } = string.Empty;
     [JsonProperty("order")] public long? Order { get; set; }
     [JsonProperty("media_type")] public string? MediaType { get; set; }
     [JsonProperty("hasItem")] public bool? HasItem { get; set; }
-    [JsonProperty("poster")] public string Poster { get; set; }
+    [JsonProperty("poster")] public string Poster { get; set; } = string.Empty;
     [JsonProperty("year")] public long? Year { get; set; }
-    [JsonProperty("origin_country")] public string[] OriginCountry { get; set; }
-    [JsonProperty("original_name")] public string OriginalName { get; set; }
+    [JsonProperty("origin_country")] public string[] OriginCountry { get; set; } = [];
+    [JsonProperty("original_name")] public string OriginalName { get; set; } = string.Empty;
     [JsonProperty("first_air_date")] public DateTimeOffset? FirstAirDate { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("department")] public string? Department { get; set; }
     [JsonProperty("job")] public string? Job { get; set; }
     [JsonProperty("type")] public string? Type { get; set; }
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
     [JsonProperty("episode_count")] public int? EpisodeCount { get; set; }
-    
-    [JsonProperty("link")] public Uri Link { get; set; }
+
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
     public KnownFor(Cast cast)
     {

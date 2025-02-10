@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
@@ -24,11 +23,11 @@ public record ContinueWatchingItemDto
     [JsonProperty("logo")] public string? Logo { get; set; }
     [JsonProperty("rating")] public RatingDto? Rating { get; set; }
     [JsonProperty("videoId")] public string? VideoId { get; set; }
-    [JsonProperty("videos")] public VideoDto[]? Videos { get; set; }
+    [JsonProperty("videos")] public VideoDto[] Videos { get; set; } = [];
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
-    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
     public ContinueWatchingItemDto(UserData item, string country)
     {

@@ -11,7 +11,7 @@ public record LibraryResponseDto
 {
     [JsonProperty("cursor")] public long? Cursor { get; set; }
 
-    [JsonProperty("data")] public List<LibraryResponseItemDto> Data { get; set; }
+    [JsonProperty("data")] public List<LibraryResponseItemDto> Data { get; set; } = [];
 
     public static async Task<List<Movie>> GetLibraryMovies(Guid userId, Ulid libraryId, string language, int take,
         int page = 0)

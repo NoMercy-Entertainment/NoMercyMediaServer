@@ -21,7 +21,7 @@ public class RecommendationPaletteJob : AbstractPaletteJob<Recommendation>
 
     public override async Task Handle()
     {
-        await using MediaContext? context = new();
+        await using MediaContext context = new();
 
         List<Recommendation> recommendations = context.Recommendations
             .Where(x => string.IsNullOrEmpty(x._colorPalette))

@@ -83,10 +83,10 @@ public class BaseSubtitle : Classes
         return this;
     }
 
-    public BaseSubtitle AddCustomArguments((string key, string Val)[] profileCustomArguments)
+    public BaseSubtitle AddCustomArguments((string key, string val)[] profileCustomArguments)
     {
-        foreach ((string key, string Val) in profileCustomArguments)
-            AddCustomArgument(key, Val);
+        foreach ((string key, string val) in profileCustomArguments)
+            AddCustomArgument(key, val);
         return this;
     }
 
@@ -170,7 +170,7 @@ public class BaseSubtitle : Classes
 
     private string GetVariant(BaseSubtitle stream)
     {
-        string? variant = "full";
+        string variant = "full";
 
         string? description = "";
         if(stream.SubtitleStream!.Tags?.TryGetValue("title", out description) is false) return variant;
@@ -194,7 +194,7 @@ public class BaseSubtitle : Classes
     internal static string GetExtension(BaseSubtitle stream)
     {
         stream.SubtitleCodec = SubtitleCodecs.Webvtt;
-        string? extension = "vtt";
+        string extension = "vtt";
             
         if (stream.SubtitleStream!.CodecName == "hdmv_pgs_subtitle" || stream.SubtitleStream.CodecName == "dvd_subtitle")
         {

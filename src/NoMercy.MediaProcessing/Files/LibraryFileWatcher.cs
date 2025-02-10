@@ -191,7 +191,7 @@ public class LibraryFileWatcher
     private async Task HandleFolder(Library library, string path)
     {
         MediaScan mediaScan = new();
-        MediaScan? scan = mediaScan.EnableFileListing();
+        MediaScan scan = mediaScan.EnableFileListing();
 
         if (library.Type == "music")
             scan.DisableRegexFilter();

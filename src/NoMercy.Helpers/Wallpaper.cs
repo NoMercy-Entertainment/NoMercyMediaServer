@@ -175,12 +175,9 @@ public static class Wallpaper
         _historyRestored = true;
     }
 
-    /// <summary>
-    /// Backups the current wallpaper state (style and history).
-    /// </summary>
     private static void BackupState()
     {
-        string[] history = new string?[HistoryMaxEntries];
+        string[] history = new string[HistoryMaxEntries];
 
         using (RegistryKey? key = Registry.CurrentUser.OpenSubKey(HistoryRegPath, true))
         {
@@ -188,23 +185,20 @@ public static class Wallpaper
                 throw new("Could not open the registry key.");
 
             for (int i = 0; i < history.Length; i++)
-                history[i] = (string)key.GetValue($"BackgroundHistoryPath{i}");
+                history[i] = (string)key.GetValue($"BackgroundHistoryPath{i}") ?? string.Empty;
         }
 
         _backupState = new State
         {
             Config = GetWallpaperConfig(),
             History = history,
-            Wallpaper = history[0]!,
-            Color = history[1]!
+            Wallpaper = history[0],
+            Color = history[1]
         };
 
         _historyRestored = false;
     }
 
-    /// <summary>
-    /// Restores the state (style, wallpaper and history) before any Set() method.
-    /// </summary>
     public static void RestoreState()
     {
         if (!_backupState.HasValue)
@@ -218,9 +212,6 @@ public static class Wallpaper
         _backupState = null;
     }
 
-    /// <summary>
-    /// Sets the wallpaper without changing its style.
-    /// </summary>
     public static void Set(string? filename, string color)
     {
         BackupState();
@@ -228,9 +219,6 @@ public static class Wallpaper
         ChangeWallpaper(filename);
     }
 
-    /// <summary>
-    /// Sets the wallpaper with the given style.
-    /// </summary>
     public static void Set(string? filename, WallpaperStyle style, string color)
     {
         BackupState();
@@ -239,18 +227,12 @@ public static class Wallpaper
         ChangeWallpaper(filename);
     }
 
-    /// <summary>
-    /// Sets the wallpaper without changing its style nor the history in Windows settings.
-    /// </summary>
     public static void SilentSet(string? filename, string color)
     {
         Set(filename, color);
         RestoreHistory();
     }
 
-    /// <summary>
-    /// Sets the wallpaper with the given style without changing the history in Windows settings.
-    /// </summary>
     public static void SilentSet(string filename, WallpaperStyle style, string color)
     {
         Set(filename, style, color);

@@ -33,7 +33,7 @@ public class AddReleaseJob : AbstractReleaseJob
         JobDispatcher jobDispatcher = new();
 
         ReleaseGroupRepository releaseGroupRepository = new(context);
-        ReleaseGroupManager releaseGroupManager = new(releaseGroupRepository, jobDispatcher);
+        ReleaseGroupManager releaseGroupManager = new(releaseGroupRepository);
         
         MusicGenreRepository musicGenreRepository = new(context);
 
@@ -44,7 +44,7 @@ public class AddReleaseJob : AbstractReleaseJob
         ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
         
         RecordingRepository recordingRepository = new(context);
-        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository, jobDispatcher);
+        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
 
         Library albumLibrary = await context.Libraries
             .Where(f => f.Id == LibraryId)

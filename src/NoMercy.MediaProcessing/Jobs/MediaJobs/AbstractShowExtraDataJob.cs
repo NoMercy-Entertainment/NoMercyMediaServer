@@ -10,12 +10,12 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractShowExtraDataJob<T, S> : IShouldQueue
+public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue
 {
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
 
-    public S Name { get; set; } = default!;
+    public TS Name { get; set; } = default!;
     private T[]? _storage;
 
     public IEnumerable<T> Storage

@@ -6,7 +6,6 @@ using NoMercy.Encoder.Format.Container;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.Encoder.Format.Subtitle;
 using NoMercy.Encoder.Format.Video;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using Ass = NoMercy.Encoder.Format.Container.Ass;
 using Flac = NoMercy.Encoder.Format.Container.Flac;

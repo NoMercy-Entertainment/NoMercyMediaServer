@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
 using NoMercy.NmSystem;
 using Serilog.Events;
 
@@ -28,8 +27,6 @@ public static class QueueRunner
     {
         if (_isInitialized) return;
 
-        // await Task.Delay(2000);
-
         _isInitialized = true;
 
         List<Task> taskList = [];
@@ -43,10 +40,8 @@ public static class QueueRunner
                      _cancellationTokenSource)> keyValuePair in Workers)
             for (int i = 0; i < keyValuePair.Value.count; i++)
                 taskList.Add(Task.Run(() => new Thread(() => SpawnWorker(keyValuePair.Key)).Start()));
-        // await Task.Delay(2000);
+        
         await Task.WhenAll(taskList);
-
-        return;
     }
 
     private static Task SpawnWorker(string name)
@@ -115,7 +110,7 @@ public static class QueueRunner
 
     private static WorkCompletedEventHandler QueueWorkerCompleted(string name, Worker instance)
     {
-        return (sender, args) =>
+        return (_, _) =>
         {
             if (!ShouldRemoveWorker(name)) return;
 
@@ -129,9 +124,9 @@ public static class QueueRunner
         return Workers[name].workerInstances.Count > Workers[name].count;
     }
 
-    private static Task UpdateRunningWorkerCounts(string name)
+    private static void UpdateRunningWorkerCounts(string name)
     {
-        if (ShouldRemoveWorker(name)) return Task.CompletedTask;
+        if (ShouldRemoveWorker(name)) return;
 
         int i = Workers[name].workerInstances.Count;
 
@@ -148,8 +143,6 @@ public static class QueueRunner
                 await Task.Delay(100);
             }
         }, Workers[name]._cancellationTokenSource.Token);
-
-        return Task.CompletedTask;
     }
 
     public static async Task<bool> SetWorkerCount(string name, int max, Guid? userId)

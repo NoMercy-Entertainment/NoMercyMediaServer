@@ -17,10 +17,11 @@ public class Job
     [JsonProperty("episode_count")] public int? EpisodeCount { get; set; }
     [JsonProperty("order")] public int? Order { get; set; }
 
-    [JsonProperty("credit_id")] public string? CreditId { get; set; }
-    public Crew? Crew { get; set; }
+    [JsonProperty("credit_id")] public string CreditId { get; set; } = null!;
+    public Crew? Crew { get; set; } = null!;
 
     public Job()
     {
+        //
     }
 }

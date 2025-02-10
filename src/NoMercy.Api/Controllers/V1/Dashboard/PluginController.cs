@@ -18,7 +18,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 public class PluginController : BaseController
 {
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public IActionResult Index()
     {
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to view plugins");

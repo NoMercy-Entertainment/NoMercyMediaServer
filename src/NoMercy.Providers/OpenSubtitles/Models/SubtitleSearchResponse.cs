@@ -59,7 +59,7 @@ public class SubtitleSearchResponseArrayData
 {
     [XmlArray("data")]
     [XmlArrayItem("value")]
-    public List<SubtitleSearchResponseMemberValue> Values { get; set; }
+    public List<SubtitleSearchResponseMemberValue> Values { get; set; } = [];
 }
 
 // [XmlRoot("methodResponse", IsNullable = false)]

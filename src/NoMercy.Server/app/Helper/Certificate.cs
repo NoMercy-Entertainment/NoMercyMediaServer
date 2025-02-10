@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Net.Http.Headers;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -16,10 +14,13 @@ public static class Certificate
     public static void KestrelConfig(KestrelServerOptions options)
     {
         options.ConfigureEndpointDefaults(listenOptions =>
+#pragma warning disable CS0618 // Type or member is obsolete
             listenOptions.UseHttps(HttpsConnectionAdapterOptions()));
+#pragma warning restore CS0618 // Type or member is obsolete
         options.AddServerHeader = false;
     }
 
+    [Obsolete("Obsolete")]
     private static X509Certificate2 CombinePublicAndPrivateCerts()
     {
         byte[] publicPemBytes = File.ReadAllBytes(Path.Combine(AppFiles.CertFile));
@@ -45,19 +46,18 @@ public static class Certificate
         return new(keyPair.Export(X509ContentType.Pfx));
     }
 
+    [Obsolete("Obsolete")]
     private static HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()
     {
         return new()
         {
             SslProtocols = SslProtocols.Tls12,
             ServerCertificate = CombinePublicAndPrivateCerts(),
-            ServerCertificateChain = new()
-            {
-                new(Path.Combine(AppFiles.CaFile))
-            }
+            ServerCertificateChain = [new(Path.Combine(AppFiles.CaFile))]
         };
     }
 
+    [Obsolete("Obsolete")]
     private static bool ValidateSslCertificate()
     {
         if (!File.Exists(Path.Combine(AppFiles.CertFile)))
@@ -71,6 +71,7 @@ public static class Certificate
         return certificate.NotAfter >= DateTime.Now - TimeSpan.FromDays(30);
     }
 
+    [Obsolete("Obsolete")]
     public static async Task RenewSslCertificate()
     {
         if (ValidateSslCertificate())

@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
@@ -14,8 +13,7 @@ namespace NoMercy.MediaProcessing.Recordings;
 
 public partial class RecordingManager(
     IRecordingRepository recordingRepository,
-    IMusicGenreRepository musicGenreRepository,
-    JobDispatcher jobDispatcher
+    IMusicGenreRepository musicGenreRepository
 ) : BaseManager, IRecordingManager
 {
     public async Task<bool> Store(MusicBrainzReleaseAppends releaseAppends,

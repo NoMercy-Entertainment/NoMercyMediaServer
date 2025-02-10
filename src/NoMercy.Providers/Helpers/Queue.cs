@@ -65,17 +65,17 @@ public class Queue(QueueOptions options)
     {
         lock (_tasks)
         {
-            List<KeyValuePair<string, Func<Task>>>? tasks = new ConcurrentDictionary<string, Func<Task>?>(_tasks)
+            List<KeyValuePair<string, Func<Task>>> tasks = new ConcurrentDictionary<string, Func<Task>?>(_tasks)
                 .Where(_ => _currentlyHandled < Options.Concurrent).ToList();
 
-            foreach (KeyValuePair<string, Func<Task>?> task in tasks ?? [])
+            foreach ((string? key, Func<Task>? value) in tasks)
             {
                 _currentlyHandled++;
-                _tasks?.Remove(task.Key);
+                _tasks?.Remove(key);
 
                 try
                 {
-                    Task? result = task.Value?.Invoke();
+                    Task result = value.Invoke();
                     Resolve?.Invoke(this, new() { Result = result });
                 }
                 catch (Exception ex)
@@ -165,7 +165,7 @@ public class Queue(QueueOptions options)
         {
             lock (_tasks)
             {
-                return _tasks?.Count ?? 0;
+                return _tasks.Count;
             }
         }
     }

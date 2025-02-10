@@ -2,31 +2,30 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 public record SpecialsResponseItemDto
 {
-    [JsonProperty("id")] public string Id { get; set; }
+    [JsonProperty("id")] public string Id { get; set; } = string.Empty;
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("favorite")] public bool Favorite { get; set; }
     [JsonProperty("watched")] public bool Watched { get; set; }
     [JsonProperty("logo")] public string? Logo { get; set; }
-    [JsonProperty("media_type")] public string MediaType { get; set; }
+    [JsonProperty("media_type")] public string MediaType { get; set; } = string.Empty;
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
     [JsonProperty("overview")] public string? Overview { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
 
     [JsonProperty("poster")] public string? Poster { get; set; }
-    [JsonProperty("title")] public string Title { get; set; }
-    [JsonProperty("titleSort")] public string? TitleSort { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
+    [JsonProperty("titleSort")] public string TitleSort { get; set; } = string.Empty;
+    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
     [JsonProperty("year")] public int? Year { get; set; }
-    [JsonProperty("genres")] public GenreDto[]? Genres { get; set; }
+    [JsonProperty("genres")] public GenreDto[]? Genres { get; set; } = [];
     [JsonProperty("videoId")] public string? VideoId { get; set; }
     [JsonProperty("videos")] public VideoDto[]? Videos { get; set; } = [];
 

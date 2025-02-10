@@ -23,7 +23,7 @@ public class SpecialRepository(MediaContext context)
             .ThenInclude(movie => movie!.VideoFiles)
             .OrderBy(special => special.TitleSort);
 
-        List<Special>? collections = await query
+        List<Special> collections = await query
             .Skip(page * take)
             .Take(take)
             .ToListAsync();
@@ -61,7 +61,7 @@ public class SpecialRepository(MediaContext context)
     public IQueryable<Special> GetSpecialItems(Guid userId, string? language, int take = 1, int page = 1,
         Expression<Func<Special, object>>? orderByExpression = null, string? direction = null)
     {
-        IIncludableQueryable<Special, IEnumerable<SpecialUser>>? x =  context.Specials
+        IIncludableQueryable<Special, IEnumerable<SpecialUser>> x =  context.Specials
             .AsNoTracking()
             .Include(special => special.Items
                 .OrderBy(specialItem => specialItem.Order)

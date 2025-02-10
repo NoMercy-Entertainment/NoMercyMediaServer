@@ -5,7 +5,7 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 public class MusicBrainzTrack
 {
     private int _number;
-    [JsonProperty("artist-credit")] public ReleaseArtistCredit[] ArtistCredit { get; set; }
+    [JsonProperty("artist-credit")] public ReleaseArtistCredit[] ArtistCredit { get; set; } = [];
     [JsonProperty("id")] public Guid Id { get; set; }
     
     /** Track length in milliseconds */
@@ -22,7 +22,7 @@ public class MusicBrainzTrack
             {
                 _number = Convert.ToInt32(value);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 _number = value.ToString().Replace("A", "").Split("-").LastOrDefault()?.ToInt() ?? 0;
             }
@@ -30,7 +30,7 @@ public class MusicBrainzTrack
     }
 
     [JsonProperty("position")] public int Position { get; set; }
-    [JsonProperty("recording")] public TrackRecording Recording { get; set; }
-    [JsonProperty("title")] public string Title { get; set; }
+    [JsonProperty("recording")] public TrackRecording Recording { get; set; } = new();
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("genres")] public MusicBrainzGenreDetails[]? Genres { get; set; }
 }

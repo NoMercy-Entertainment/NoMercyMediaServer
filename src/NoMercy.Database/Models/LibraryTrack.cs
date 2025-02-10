@@ -10,13 +10,14 @@ namespace NoMercy.Database.Models;
 public class LibraryTrack
 {
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
-    public Library Library { get; set; }
+    public Library Library { get; set; } = null!;
 
     [JsonProperty("track_id")] public Guid TrackId { get; set; }
-    public Track Track { get; set; }
+    public Track Track { get; set; } = null!;
 
     public LibraryTrack()
     {
+        //
     }
 
     public LibraryTrack(Ulid libraryId, Guid trackId)

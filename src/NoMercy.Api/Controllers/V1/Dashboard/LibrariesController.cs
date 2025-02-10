@@ -357,7 +357,7 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("{id:ulid}/refresh")]
-    public async Task<IActionResult> Refresh(Ulid id)
+    public IActionResult Refresh(Ulid id)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh the library");
@@ -394,8 +394,6 @@ public class LibrariesController(
             {
                 Status = "error", Message = "Something went wrong adding the folder: {0}", Args = [e.Message]
             });
-            return UnprocessableEntity(
-                $"Something went wrong adding a new folder {id} to {library} library: {e.Message}");
         }
 
         try

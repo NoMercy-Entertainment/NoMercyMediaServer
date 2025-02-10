@@ -22,18 +22,19 @@ public class Similar : ColorPalettes
     [JsonProperty("media_id")] public int MediaId { get; set; }
 
     [JsonProperty("tv_from_id")] public int? TvFromId { get; set; }
-    public Tv TvFrom { get; set; }
+    public Tv? TvFrom { get; set; }
 
     [JsonProperty("tv_to_id")] public int? TvToId { get; set; }
-    public Tv TvTo { get; set; }
+    public Tv? TvTo { get; set; }
 
     [JsonProperty("movie_from_id")] public int? MovieFromId { get; set; }
-    public Movie MovieFrom { get; set; }
+    public Movie? MovieFrom { get; set; }
 
     [JsonProperty("movie_to_id")] public int? MovieToId { get; set; }
-    public Movie MovieTo { get; set; }
+    public Movie? MovieTo { get; set; }
 
     public Similar()
     {
+        //
     }
 }

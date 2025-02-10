@@ -12,10 +12,11 @@ public class MusicGenre
     [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
 
     public MusicGenre()
     {
+        //
     }
 
     // public MusicGenre(Providers.MusicBrainz.Models.MusicBrainzGenre musicBrainzGenre)

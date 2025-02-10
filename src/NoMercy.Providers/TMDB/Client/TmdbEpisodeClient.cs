@@ -23,7 +23,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
 
     public Task<TmdbEpisodeAppends?> WithAppends(string[] appendices)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["append_to_response"] = string.Join(",", appendices)
         };

@@ -4,9 +4,10 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Providers.MusicBrainz.Models;
 public class ReleaseEvent
 {
-    [JsonProperty("area")] public MusicBrainzArea MusicBrainzArea { get; set; }
+    [JsonProperty("area")] public MusicBrainzArea MusicBrainzArea { get; set; } = new();
 
-    [JsonProperty("date")] private string _date { get; set; }
+    // ReSharper disable once InconsistentNaming
+    [JsonProperty("date")] private string _date { get; set; } = string.Empty;
 
     [JsonProperty("dateTime")]
     public DateTime? DateTime

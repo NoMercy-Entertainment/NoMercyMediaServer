@@ -17,7 +17,7 @@ public class TmdbCollectionClient : TmdbBaseClient
 
     private Task<TmdbCollectionAppends?> WithAppends(string[] appendices, bool? priority = false)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["append_to_response"] = string.Join(",", appendices)
         };

@@ -9,7 +9,6 @@ using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Networking;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.MusixMatch.Client;
 using NoMercy.Providers.MusixMatch.Models;
@@ -125,7 +124,6 @@ public class TracksController : BaseController
     [Obsolete("Obsolete")]
     public async Task<IActionResult> Lyrics(Guid id)
     {
-        Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view lyrics");
 

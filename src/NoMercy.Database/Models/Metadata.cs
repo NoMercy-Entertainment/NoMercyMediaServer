@@ -34,12 +34,13 @@ public class Metadata: Timestamps
     [StringLength(1024)]
     [JsonProperty("video")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string? _video { get; set; }
 
     [NotMapped]
     public List<IVideo>? Video
     {
-        get => _video != string.Empty
+        get => _video != null
             ? JsonConvert.DeserializeObject<List<IVideo>>(_video)
             : null;
         init => _video = JsonConvert.SerializeObject(value);
@@ -49,12 +50,13 @@ public class Metadata: Timestamps
     [StringLength(1024)]
     [JsonProperty("audio")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string? _audio { get; set; }
 
     [NotMapped]
     public List<IAudio>? Audio
     {
-        get => _audio != string.Empty
+        get => _audio != null
             ? JsonConvert.DeserializeObject<List<IAudio>>(_audio)
             : null;
         init => _audio = JsonConvert.SerializeObject(value);
@@ -64,12 +66,13 @@ public class Metadata: Timestamps
     [StringLength(1024)]
     [JsonProperty("subtitles")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string? _subtitles { get; set; }
 
     [NotMapped]
     public List<ISubtitle>? Subtitles
     {
-        get => _subtitles != string.Empty
+        get => _subtitles != null
             ? JsonConvert.DeserializeObject<List<ISubtitle>>(_subtitles)
             : null;
         init => _subtitles = JsonConvert.SerializeObject(value);
@@ -79,12 +82,13 @@ public class Metadata: Timestamps
     [StringLength(1024)]
     [JsonProperty("previews")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string? _previews { get; set; }
 
     [NotMapped]
     public List<IPreview>? Previews
     {
-        get => _previews != string.Empty
+        get => _previews != null
             ? JsonConvert.DeserializeObject<List<IPreview>>(_previews)
             : null;
         init => _previews = JsonConvert.SerializeObject(value);
@@ -94,12 +98,13 @@ public class Metadata: Timestamps
     [StringLength(1024)]
     [JsonProperty("fonts")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string? _fonts { get; set; }
 
     [NotMapped]
     public List<IFont>? Fonts
     {
-        get => _fonts != string.Empty
+        get => _fonts != null
             ? JsonConvert.DeserializeObject<List<IFont>>(_fonts)
             : null;
         init => _fonts = JsonConvert.SerializeObject(value);
@@ -109,12 +114,13 @@ public class Metadata: Timestamps
     [StringLength(1024)]
     [JsonProperty("fonts_file")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string? _fonts_file { get; set; }
 
     [NotMapped]
     public IFontsFile? FontsFile
     {
-        get => _fonts_file != string.Empty
+        get => _fonts_file != null
             ? JsonConvert.DeserializeObject<IFontsFile>(_fonts_file)
             : null;
         init => _fonts_file = JsonConvert.SerializeObject(value);
@@ -124,12 +130,13 @@ public class Metadata: Timestamps
     [StringLength(1024)]
     [JsonProperty("chapters_file")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string? _chapters_file { get; set; }
 
     [NotMapped]
     public IChaptersFile? Chapters
     {
-        get => _chapters_file != string.Empty
+        get => _chapters_file != null
             ? JsonConvert.DeserializeObject<IChaptersFile>(_chapters_file)
             : null;
         init => _chapters_file = JsonConvert.SerializeObject(value);

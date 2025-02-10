@@ -83,7 +83,7 @@ public class LibraryRepository(MediaContext context)
 
     public IQueryable<Movie> GetLibraryMovies(Guid userId, Ulid libraryId, string language, int take, int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)
     {
-        IIncludableQueryable<Movie, Certification>? x =  context.Movies
+        IIncludableQueryable<Movie, Certification> x =  context.Movies
             .AsNoTracking()
             .Where(movie => movie.Library.Id == libraryId)
             .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
@@ -127,7 +127,7 @@ public class LibraryRepository(MediaContext context)
 
     public IQueryable<Tv> GetLibraryShows(Guid userId, Ulid libraryId, string language, int take, int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null)
     {
-        IIncludableQueryable<Tv, Certification>? x = context.Tvs
+        IIncludableQueryable<Tv, Certification> x = context.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
             .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))

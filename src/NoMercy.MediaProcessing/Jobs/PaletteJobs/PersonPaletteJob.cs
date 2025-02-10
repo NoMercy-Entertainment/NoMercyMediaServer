@@ -21,7 +21,7 @@ public class PersonPaletteJob : AbstractPaletteJob<Person>
 
     public override async Task Handle()
     {
-        await using MediaContext? context = new();
+        await using MediaContext context = new();
 
         List<Person> people = context.People
             .Where(x => string.IsNullOrEmpty(x._colorPalette))

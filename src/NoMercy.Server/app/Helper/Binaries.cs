@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
 using Serilog.Events;
@@ -10,8 +9,6 @@ namespace NoMercy.Server.app.Helper;
 public static class Binaries
 {
 
-    private const string RepoOwner = "NoMercy-Entertainment";
-    private const string RepoName = "NoMercyMediaServer";
     private static List<Download> Downloads { get; set; }
     private static readonly HttpClient HttpClient = new();
 
@@ -93,13 +90,15 @@ public static class Binaries
         try
         {
             if (sourceArchiveFileName.EndsWith(".zip"))
+            {
                 ZipFile.ExtractToDirectory(sourceArchiveFileName, destinationDirectoryName);
+                File.Delete(sourceArchiveFileName);
+            }
             else if (sourceArchiveFileName.EndsWith(".tar.xz") || sourceArchiveFileName.EndsWith(".tar.gz"))
+            {
                 await Shell.Exec("tar", $"xf \"{sourceArchiveFileName}\" -C \"{destinationDirectoryName}\"");
-            else
-                throw new NotSupportedException("Unsupported archive format");
-
-            File.Delete(sourceArchiveFileName);
+                File.Delete(sourceArchiveFileName);
+            }
         }
         catch (Exception ex)
         {

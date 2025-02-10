@@ -10,13 +10,14 @@ namespace NoMercy.Database.Models;
 public class MusicGenreReleaseGroup
 {
     [JsonProperty("genre_id")] public Guid GenreId { get; set; }
-    public MusicGenre Genre { get; set; }
+    public MusicGenre Genre { get; set; } = null!;
 
     [JsonProperty("track_id")] public Guid ReleaseGroupId { get; set; }
-    public ReleaseGroup ReleaseGroup { get; set; }
+    public ReleaseGroup ReleaseGroup { get; set; } = null!;
 
     public MusicGenreReleaseGroup()
     {
+        //
     }
 
     public MusicGenreReleaseGroup(Guid genreId, Guid trackId)

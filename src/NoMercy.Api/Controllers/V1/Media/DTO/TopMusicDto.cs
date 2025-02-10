@@ -5,15 +5,16 @@ using NoMercy.Database.Models;
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 public record TopMusicDto
 {
-    [JsonProperty("id")] public string Id { get; set; } = "";
-    [JsonProperty("name")] public string Name { get; set; } = "";
+    [JsonProperty("id")] public string Id { get; set; } = string.Empty;
+    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("type")] public string Type { get; set; } = "albums";
     [JsonProperty("cover")] public string? Cover { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
     public TopMusicDto()
     {
+        //
     }
 
     public TopMusicDto(PlaylistTrack musicPlay)

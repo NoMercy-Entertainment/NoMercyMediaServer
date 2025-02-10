@@ -33,7 +33,7 @@ public class CollectionRepository(MediaContext context)
             .ThenInclude(genreMovie => genreMovie.Genre)
             .OrderBy(collection => collection.TitleSort);
 
-        List<Collection>? collections = await query
+        List<Collection> collections = await query
             .Skip(page * take)
             .Take(take)
             .ToListAsync();
@@ -119,7 +119,7 @@ public class CollectionRepository(MediaContext context)
     public IQueryable<Collection> GetCollectionItems(Guid userId, string? language, int take = 1, int page = 1,
         Expression<Func<Collection, object>>? orderByExpression = null, string? direction = null)
     {
-        IIncludableQueryable<Collection, IEnumerable<Image>>? x = context.Collections
+        IIncludableQueryable<Collection, IEnumerable<Image>> x = context.Collections
             .AsNoTracking()
             .Where(collection => collection.Library.LibraryUsers
                 .FirstOrDefault(u => u.UserId.Equals(userId)) != null)

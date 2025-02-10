@@ -6,7 +6,7 @@ public class Mp4 : BaseContainer
 {
     public override ContainerDto ContainerDto => AvailableContainers.First(c => c.Name == VideoContainers.Mp4);
 
-    public Mp4() : base()
+    public Mp4()
     {
         SetContainer(VideoContainers.Mp4);
         AddCustomArgument("-f", VideoFormats.Mp4);

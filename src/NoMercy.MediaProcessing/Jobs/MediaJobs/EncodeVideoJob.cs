@@ -86,7 +86,7 @@ public class EncodeVideoJob : AbstractEncoderJob
                     SubtitleStreams = container.SubtitleStreams.Select(x => $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}").ToList(),
                     HasGpu = container.VideoStreams.Any(x =>
                         x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value || x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value),
-                    IsHDR = container.VideoStreams.Any(x => x.IsHdr)
+                    IsHdr = container.VideoStreams.Any(x => x.IsHdr)
                 };
 
                 await ffmpeg.Run(fullCommand, fileMetadata.Path, progressMeta);

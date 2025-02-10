@@ -8,7 +8,7 @@ public class TmdbPerson
     [JsonProperty("known_for_department")] public string? KnownForDepartment { get; set; }
     [JsonProperty("id")] public int Id { get; set; }
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
-    [JsonProperty("also_known_as")] public string[] AlsoKnownAs { get; set; }
+    [JsonProperty("also_known_as")] public string[] AlsoKnownAs { get; set; } = [];
     [JsonProperty("gender")] public TmdbGender TmdbGender { get; set; } = TmdbGender.Unknown;
 
     [JsonProperty("biography")] public string? Biography { get; set; }

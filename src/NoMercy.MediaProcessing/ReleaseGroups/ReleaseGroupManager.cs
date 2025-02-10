@@ -1,7 +1,6 @@
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.MusicBrainz.Models;
@@ -9,10 +8,7 @@ using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.ReleaseGroups;
 
-public class ReleaseGroupManager(
-    IReleaseGroupRepository releaseGroupRepository,
-    JobDispatcher jobDispatcher
-) : BaseManager, IReleaseGroupManager
+public class ReleaseGroupManager(IReleaseGroupRepository releaseGroupRepository) : BaseManager, IReleaseGroupManager
 {
     public async Task Store(MusicBrainzReleaseGroup releaseGroup, Ulid id, CoverArtImageManagerManager.CoverPalette? coverPalette)
     {

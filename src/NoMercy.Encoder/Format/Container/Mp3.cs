@@ -6,7 +6,7 @@ public class Mp3 : BaseContainer
 {
     public override ContainerDto ContainerDto => AvailableContainers.First(c => c.Name == AudioContainers.Mp3);
 
-    public Mp3() : base()
+    public Mp3()
     {
         SetContainer(AudioContainers.Mp3);
         AddCustomArgument("-f", AudioFormats.Mp3);

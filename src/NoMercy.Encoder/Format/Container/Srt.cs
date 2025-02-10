@@ -4,7 +4,7 @@ namespace NoMercy.Encoder.Format.Container;
 
 public class Srt : BaseContainer
 {
-    public Srt() : base()
+    public Srt()
     {
         SetContainer(SubtitleContainers.Srt);
         AddCustomArgument("-f", SubtitleFormats.Srt);

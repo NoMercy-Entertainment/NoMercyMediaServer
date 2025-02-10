@@ -52,7 +52,7 @@ public abstract class ConsoleMessages
         return builder.ToString();
     }
 
-    private static string CreateQuote(string text, int totalSize, int rightPadding)
+    private static string CreateQuote(string text, int rightPadding)
     {
         // if (text.Length + rightPadding > totalSize - 2) throw new Exception("The text is too long to fit in the quote");
 
@@ -124,7 +124,7 @@ public abstract class ConsoleMessages
         Console.WriteLine(builder.ToString());
 
         Console.WriteLine($"{_()}{Repeat(" ", 63)}{letters["y"][10].Pastel(Colors[2])}" +
-                          CreateQuote(Quote, 0, 4) + $"{letters["║"][0].Pastel(Colors[0])}");
+                          CreateQuote(Quote, 4) + $"{letters["║"][0].Pastel(Colors[0])}");
         // Console.WriteLine($"{_()}" + CreateQuote(Quote, totalWidth, 4) + $"{(isXmas() ? ConsoleLetters.ColossalXmas : ConsoleLetters.Colossal)["║"][0].Pastel(Colors[0])}");        
         Console.WriteLine($"{("╚" + Repeat("═", magicSpacer) + "╝").Pastel(Colors[0])}");
 

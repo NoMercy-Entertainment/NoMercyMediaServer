@@ -14,26 +14,26 @@ public abstract class BaseVideo : Classes
 
     protected internal VideoStream? VideoStream;
 
-    internal List<VideoStream> VideoStreams { get; set; }
+    internal List<VideoStream> VideoStreams { get; set; } = [];
 
     protected internal virtual bool BFramesSupport => false;
 
     protected internal virtual int Modulus { get; set; }
     protected internal int Bitrate { get; set; }
     internal int BufferSize { get; set; }
-    internal string Tune { get; set; }
-    internal string Profile { get; set; }
-    internal string Preset { get; set; }
-    internal string PixelFormat { get; set; }
+    internal string Tune { get; set; } = string.Empty;
+    internal string Profile { get; set; } = string.Empty;
+    internal string Preset { get; set; } = string.Empty;
+    internal string PixelFormat { get; set; } = string.Empty;
     internal int ConstantRateFactor { get; set; }
     internal int FrameRate { get; set; }
     internal int KeyIntMin { get; set; }
     internal int OutputWidth { get; set; }
     internal int? OutputHeight { get; set; }
-    public int StreamIndex { get; set; } = 0;
+    public int StreamIndex { get; set; }
     internal int MaxRate { get; set; }
     public bool HdrAllowed { get; set; }
-    public bool ConverToSdr { get; set; }
+    public bool ConvertToSdr { get; set; }
 
     protected internal virtual string[] AvailableContainers => [
         VideoContainers.Hls, VideoContainers.Mkv,
@@ -76,7 +76,8 @@ public abstract class BaseVideo : Classes
         set => _hlsSegmentFilename = value;
     }
 
-    internal string _hlsPlaylistFilename = "";
+    // ReSharper disable once InconsistentNaming
+    internal string _hlsPlaylistFilename = string.Empty;
 
     public bool IsHdr => VideoIsHdr();
 
@@ -128,10 +129,10 @@ public abstract class BaseVideo : Classes
         return this;
     }
 
-    public BaseVideo AddCustomArguments((string key, string Val)[] profileCustomArguments)
+    public BaseVideo AddCustomArguments((string key, string val)[] profileCustomArguments)
     {
-        foreach ((string key, string Val) in profileCustomArguments)
-            AddCustomArgument(key, Val);
+        foreach ((string key, string val) in profileCustomArguments)
+            AddCustomArgument(key, val);
         return this;
     }
 
@@ -278,7 +279,7 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo ConvertHdrToSdr(bool value = true)
     {
-        ConverToSdr = value;
+        ConvertToSdr = value;
         return this;
     }
 

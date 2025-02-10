@@ -29,7 +29,7 @@ public record GenreDto
     public GenreDto(TmdbGenre tmdbGenreMovie)
     {
         Id = tmdbGenreMovie.Id;
-        Name = tmdbGenreMovie.Name;
+        Name = tmdbGenreMovie.Name ?? string.Empty;
     }
 
     public GenreDto(ArtistMusicGenre artistMusicGenre)

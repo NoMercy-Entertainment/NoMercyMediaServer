@@ -19,10 +19,11 @@ public class Language
 
     [JsonProperty("name")] public string? Name { get; set; }
 
-    [JsonProperty("language_library")] public ICollection<LanguageLibrary> LanguageLibrary { get; set; }
+    [JsonProperty("language_library")] public ICollection<LanguageLibrary> LanguageLibrary { get; set; } = [];
 
     public Language()
     {
+        //
     }
 
     // public Language(Providers.TMDB.Models.Configuration.TmdbLanguage tmdbLanguage)

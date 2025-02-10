@@ -1,9 +1,7 @@
-using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers.Monitoring;
-using NoMercy.NmSystem;
 using NoMercy.Queue;
 
 namespace NoMercy.Data.Jobs;
@@ -48,7 +46,7 @@ public class StorageJob : IShouldQueue
             
             .ToListAsync();
 
-        await Parallel.ForEachAsync(libraries, (library, ct) =>
+        await Parallel.ForEachAsync(libraries, (library, _) =>
         {
             List<Metadata?> movieMetaData = library.LibraryMovies
                 .Select(l => l.Movie)

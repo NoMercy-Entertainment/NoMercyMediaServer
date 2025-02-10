@@ -1,5 +1,4 @@
 using NoMercy.Database.Models;
-using NoMercy.Providers.MusicBrainz.Models;
 
 namespace NoMercy.MediaProcessing.MusicGenres;
 

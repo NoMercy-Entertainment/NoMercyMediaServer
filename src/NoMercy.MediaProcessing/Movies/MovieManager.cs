@@ -199,7 +199,6 @@ public class MovieManager(
         IEnumerable<Media> videos = movie.Videos.Results
             .Select(media => new Media
             {
-                _type = "video",
                 Id = Ulid.NewUlid(),
                 Iso6391 = media.Iso6391,
                 Name = media.Name,
@@ -290,7 +289,7 @@ public class MovieManager(
         Logger.MovieDb($"Movie: {movie.Title}: Logos stored", LogEventLevel.Debug);
 
         IEnumerable<Image> logosJobItems = logos
-            .Where(x => x.FilePath != null && !x.FilePath.EndsWith(".svg"))
+            .Where(x => !x.FilePath.EndsWith(".svg"))
             .Select(x => new Image { FilePath = x.FilePath })
             .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
                         e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)

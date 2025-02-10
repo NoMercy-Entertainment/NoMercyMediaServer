@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using Microsoft.AspNetCore.WebUtilities;
+﻿using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.Providers.Helpers;
@@ -53,7 +52,7 @@ public class TadbBaseClient : IDisposable
 
     public int Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string> query = null, bool? priority = false)
+    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false)
         where T : class
     {
         query ??= new();

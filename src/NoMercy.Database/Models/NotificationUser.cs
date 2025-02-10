@@ -10,13 +10,14 @@ namespace NoMercy.Database.Models;
 public class NotificationUser
 {
     [JsonProperty("notification_id")] public Ulid NotificationId { get; set; }
-    public Notification Notification { get; set; }
+    public Notification Notification { get; set; } = null!;
 
     [JsonProperty("user_id")] public Guid UserId { get; set; }
-    public User User { get; set; }
+    public User User { get; set; } = null!;
 
     public NotificationUser()
     {
+        //
     }
 
     public NotificationUser(Ulid notificationId, Guid userId)

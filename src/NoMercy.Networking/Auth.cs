@@ -336,7 +336,7 @@ public static class Auth
 
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return false;
 
-        if (string.IsNullOrEmpty(Info.Gpu?.FirstOrDefault())) return false;
+        if (string.IsNullOrEmpty(Info.Gpu.FirstOrDefault())) return false;
 
         return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY"));
     }

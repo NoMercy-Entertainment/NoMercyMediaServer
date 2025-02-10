@@ -64,7 +64,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
     {
         if (file.PhysicalPath is not { } filePhysicalPath) return;
 
-        FileInfo? fileInfo = new(filePhysicalPath);
+        FileInfo fileInfo = new(filePhysicalPath);
         long fileLength = fileInfo.Length;
 
         context.Response.ContentType = MimeTypes.GetMimeTypeFromFile(file.PhysicalPath);

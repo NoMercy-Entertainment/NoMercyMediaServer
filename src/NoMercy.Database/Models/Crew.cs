@@ -23,9 +23,8 @@ public class Crew
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [JsonProperty("id")]
     public int Id { get; set; }
-
     [JsonProperty("credit_id")] public string? CreditId { get; set; }
-
+    
     [JsonProperty("movie_id")] public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
@@ -33,16 +32,16 @@ public class Crew
     public Tv? Tv { get; set; }
 
     [JsonProperty("season_id")] public int? SeasonId { get; set; }
-    public Season Season { get; set; }
+    public Season? Season { get; set; }
 
     [JsonProperty("episode_id")] public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
     [JsonProperty("person_id")] public int PersonId { get; set; }
-    public Person Person { get; set; }
+    public Person Person { get; set; } = null!;
 
     [JsonProperty("job_id")] public int? JobId { get; set; }
-    public Job Job { get; set; }
+    public Job Job { get; set; } = null!;
 
     public Crew()
     {

@@ -41,7 +41,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
 
         foreach (Genre genre in genreItems)
         {
-            string? name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
+            string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
             GenreRowDto<GenreRowItemDto> genreRowDto = new()
             {
                 Title = name,
@@ -135,6 +135,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
 
         HashSet<Genre> genreItems = Queries
             .GetHome(mediaContext, userId, language, 300);
+        Logger.App($"Got home genres: {genreItems.Count}");
 
         foreach (Genre genre in genreItems)
         {
@@ -144,7 +145,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
             IEnumerable<HomeSourceDto> tvs = genre
                 .GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, "tv"));
 
-            string? name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
+            string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
             GenreRowDto<GenreRowItemDto> genreRowDto = new()
             {
                 Title = name,
@@ -207,13 +208,13 @@ public class HomeController(MediaContext mediaContext) : BaseController
                 })
                 .Where(genreRow => genreRow != null);
 
-        GenreRowItemDto? homeCardItem = genres.Where(g => g.Title != "")
+        GenreRowItemDto? homeCardItem = genres.Where(g => g.Title != String.Empty)
             .Randomize().FirstOrDefault()
-            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != "")
+            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != String.Empty)
             .Randomize().FirstOrDefault()
-            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != "")
+            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != String.Empty)
             .Randomize().FirstOrDefault()
-            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != "")
+            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != String.Empty)
             .Randomize().FirstOrDefault()
             ?.Items.Randomize().FirstOrDefault();
 
@@ -272,6 +273,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                                 }
                             })
                             .DistinctBy(item => item.Props.Data?.Link)
+                            .ToList()
                     }
                 },
 
@@ -290,7 +292,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
                                 Data = item ?? new GenreRowItemDto(),
                                 Watch = true,
                             }
-                        })
+                        }).ToList()
                     }
                 }),
 
@@ -375,7 +377,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
 
     [HttpPost]
     [Route("home/continue")]
-    public async Task<IActionResult> HomeContinue([FromBody] CardRequestDto request)
+    public IActionResult HomeContinue([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -467,7 +469,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
             IEnumerable<HomeSourceDto> tvs = genre
                 .GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, "tv"));
 
-            string? name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
+            string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
             GenreRowDto<GenreRowItemDto> genreRowDto = new()
             {
                 Title = name,
@@ -629,7 +631,7 @@ public class HomeController(MediaContext mediaContext) : BaseController
 
     [HttpGet]
     [Route("screensaver")]
-    public async Task<IActionResult> Screensaver()
+    public IActionResult Screensaver()
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())

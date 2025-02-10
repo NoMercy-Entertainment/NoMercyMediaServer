@@ -1,6 +1,5 @@
 using System.Text;
 using Newtonsoft.Json;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Encoder.Core;

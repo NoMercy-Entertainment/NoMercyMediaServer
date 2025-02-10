@@ -61,7 +61,7 @@ public class PlaylistsController : BaseController
                 Cover = playlist.Cover is not null ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString() : null,
                 Description = playlist.Description,
                 ColorPalette = playlist.ColorPalette,
-                Tracks = playlist.Tracks.Select(t => new ArtistTrackDto(t.Track, language)).ToList() ?? []
+                Tracks = playlist.Tracks.Select(t => new ArtistTrackDto(t.Track, language)).ToList()
             }
         });
     }

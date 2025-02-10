@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
@@ -97,9 +96,9 @@ public record SpecialItemsDto
     public SpecialItemsDto(Tv tv)
     {
         Id = tv.Id;
-        EpisodeIds = tv.Episodes?
+        EpisodeIds = tv.Episodes
             .Select(episode => episode.Id)
-            .ToArray() ?? [];
+            .ToArray();
 
         Title = tv.Title;
         Overview = tv.Overview;
@@ -134,15 +133,15 @@ public record SpecialItemsDto
             .Select(certificationTv => certificationTv.Certification)
             .FirstOrDefault() ?? new Certification();
 
-        NumberOfItems = tv.Episodes?.Where(e => e.SeasonNumber > 0).Count() ?? 0;
-        int have = tv.Episodes?.Where(e => e.SeasonNumber > 0)
-            .Count(episode => episode.VideoFiles.Any()) ?? 0;
+        NumberOfItems = tv.Episodes.Count(e => e.SeasonNumber > 0);
+        int have = tv.Episodes.Where(e => e.SeasonNumber > 0)
+            .Count(episode => episode.VideoFiles.Any());
 
         HaveItems = have;
 
         Duration = tv.Duration * have * 60 ?? 0;
         
-        TotalDuration = tv.Episodes?.Sum(item => item.Tv.Duration * 60 ?? 0) ?? 0;
+        TotalDuration = tv.Episodes.Sum(item => item.Tv.Duration * 60 ?? 0);
 
         // Watched = tv.Episodes
         //     .SelectMany(episode => episode!.VideoFiles

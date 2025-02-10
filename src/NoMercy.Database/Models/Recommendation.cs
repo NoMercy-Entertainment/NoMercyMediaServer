@@ -22,18 +22,19 @@ public class Recommendation : ColorPalettes
     [JsonProperty("mediaId")] public int MediaId { get; set; }
 
     [ForeignKey("TvFromId")] public int? TvFromId { get; set; }
-    public Tv TvFrom { get; set; }
+    public Tv? TvFrom { get; set; }
 
     [ForeignKey("TvToId")] public int? TvToId { get; set; }
-    public Tv TvTo { get; set; }
+    public Tv? TvTo { get; set; }
 
     [ForeignKey("RecommendationFrom")] public int? MovieFromId { get; set; }
-    public Movie MovieFrom { get; set; }
+    public Movie? MovieFrom { get; set; }
 
     [ForeignKey("RecommendationTo")] public int? MovieToId { get; set; }
-    public Movie MovieTo { get; set; }
+    public Movie? MovieTo { get; set; }
 
     public Recommendation()
     {
+        //
     }
 }

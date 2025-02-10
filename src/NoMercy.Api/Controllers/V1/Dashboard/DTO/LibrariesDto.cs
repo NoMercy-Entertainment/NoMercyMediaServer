@@ -8,7 +8,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
 
 public record LibrariesDto
 {
-    [JsonProperty("data")] public IEnumerable<LibrariesResponseItemDto> Data { get; set; }
+    [JsonProperty("data")] public IEnumerable<LibrariesResponseItemDto> Data { get; set; } = [];
 
     public static readonly Func<MediaContext, Guid, IAsyncEnumerable<Library?>> GetLibraries =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId) =>

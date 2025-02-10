@@ -11,7 +11,7 @@ public static class AudioFormats
     public static readonly string Flac = "flac";
     public static readonly string DolbyDigitalPlus = "eac3";
     public static readonly string DolbyDigital = "ac3";
-    public static readonly string M4a = "m4a";
+    public static readonly string M4A = "m4a";
     public static readonly string TrueHd = "truehd";
     public static readonly string Wav = "pcm_s16le";
 }

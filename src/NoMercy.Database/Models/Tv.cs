@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 
@@ -45,29 +44,30 @@ public class Tv : ColorPaletteTimeStamps
     [JsonProperty("vote_count")] public int? VoteCount { get; set; }
 
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
-    public Library Library { get; set; }
+    public Library Library { get; set; } = null!;
 
-    [JsonProperty("alternative_titles")] public ICollection<AlternativeTitle> AlternativeTitles { get; set; }
-    [JsonProperty("casts")] public ICollection<Cast> Cast { get; set; }
-    [JsonProperty("certifications")] public ICollection<CertificationTv> CertificationTvs { get; set; }
-    [JsonProperty("crews")] public ICollection<Crew> Crew { get; set; }
-    [JsonProperty("creators")] public ICollection<Creator> Creators { get; set; }
-    [JsonProperty("genres")] public ICollection<GenreTv> GenreTvs { get; set; }
-    [JsonProperty("keywords")] public ICollection<KeywordTv> KeywordTvs { get; set; }
-    [JsonProperty("medias")] public ICollection<Media> Media { get; set; }
-    [JsonProperty("images")] public ICollection<Image> Images { get; set; }
-    [JsonProperty("seasons")] public ICollection<Season> Seasons { get; set; }
-    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; }
-    [JsonProperty("user_data")] public ICollection<UserData> UserData { get; set; }
-    [JsonProperty("episodes")] public ICollection<Episode> Episodes { get; set; } = new HashSet<Episode>();
-    [InverseProperty("TvFrom")] public ICollection<Recommendation> RecommendationFrom { get; set; }
-    [InverseProperty("TvTo")] public ICollection<Recommendation> RecommendationTo { get; set; }
-    [InverseProperty("TvFrom")] public ICollection<Similar> SimilarFrom { get; set; }
-    [InverseProperty("TvTo")] public ICollection<Similar> SimilarTo { get; set; }
-    [JsonProperty("tv_user")] public ICollection<TvUser> TvUser { get; set; }
+    [JsonProperty("alternative_titles")] public ICollection<AlternativeTitle> AlternativeTitles { get; set; } = [];
+    [JsonProperty("casts")] public ICollection<Cast> Cast { get; set; } = [];
+    [JsonProperty("certifications")] public ICollection<CertificationTv> CertificationTvs { get; set; } = [];
+    [JsonProperty("crews")] public ICollection<Crew> Crew { get; set; } = [];
+    [JsonProperty("creators")] public ICollection<Creator> Creators { get; set; } = [];
+    [JsonProperty("genres")] public ICollection<GenreTv> GenreTvs { get; set; } = [];
+    [JsonProperty("keywords")] public ICollection<KeywordTv> KeywordTvs { get; set; } = [];
+    [JsonProperty("medias")] public ICollection<Media> Media { get; set; } = [];
+    [JsonProperty("images")] public ICollection<Image> Images { get; set; } = [];
+    [JsonProperty("seasons")] public ICollection<Season> Seasons { get; set; } = [];
+    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; } = [];
+    [JsonProperty("user_data")] public ICollection<UserData> UserData { get; set; } = [];
+    [JsonProperty("episodes")] public ICollection<Episode> Episodes { get; set; } = [];
+    [InverseProperty("TvFrom")] public ICollection<Recommendation> RecommendationFrom { get; set; } = [];
+    [InverseProperty("TvTo")] public ICollection<Recommendation> RecommendationTo { get; set; } = [];
+    [InverseProperty("TvFrom")] public ICollection<Similar> SimilarFrom { get; set; } = [];
+    [InverseProperty("TvTo")] public ICollection<Similar> SimilarTo { get; set; } = [];
+    [JsonProperty("tv_user")] public ICollection<TvUser> TvUser { get; set; } = [];
 
     public Tv()
     {
+        //
     }
 
     public string CreateFolderName()

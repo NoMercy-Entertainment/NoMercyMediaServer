@@ -15,7 +15,7 @@ public class Track : ColorPaletteTimeStamps
     [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("track")] public int TrackNumber { get; set; }
     [JsonProperty("disc")] public int DiscNumber { get; set; }
     [JsonProperty("cover")] public string? Cover { get; set; }
@@ -26,7 +26,7 @@ public class Track : ColorPaletteTimeStamps
 
     [Column("Lyrics")]
     [System.Text.Json.Serialization.JsonIgnore]
-
+    // ReSharper disable once InconsistentNaming
     public string? _lyrics { get; set; }
 
     [NotMapped]
@@ -61,12 +61,12 @@ public class Track : ColorPaletteTimeStamps
     [JsonProperty("metadata_id")] public int? MetadataId { get; set; }
     public Metadata Metadata { get; init; } = null!;
 
-    [JsonProperty("album_track")] public ICollection<AlbumTrack> AlbumTrack { get; set; } = new List<AlbumTrack>();
-    [JsonProperty("artist_track")] public ICollection<ArtistTrack> ArtistTrack { get; set; } = new List<ArtistTrack>();
-    [JsonProperty("library_track")] public ICollection<LibraryTrack> LibraryTrack { get; set; } = new List<LibraryTrack>();
-    [JsonProperty("playlist_track")] public ICollection<PlaylistTrack> PlaylistTrack { get; set; } = new List<PlaylistTrack>();
-    [JsonProperty("images")] public ICollection<Image> Images { get; set; } = new List<Image>();
-    [JsonProperty("track_user")] public ICollection<TrackUser> TrackUser { get; set; } = new List<TrackUser>();
-    [JsonProperty("genre_track")] public ICollection<MusicGenreTrack> MusicGenreTrack { get; set; } = new List<MusicGenreTrack>();
-    [JsonProperty("music_plays")] public ICollection<MusicPlay> MusicPlays { get; set; } = new List<MusicPlay>();
+    [JsonProperty("album_track")] public ICollection<AlbumTrack> AlbumTrack { get; set; } = [];
+    [JsonProperty("artist_track")] public ICollection<ArtistTrack> ArtistTrack { get; set; } = [];
+    [JsonProperty("library_track")] public ICollection<LibraryTrack> LibraryTrack { get; set; } = [];
+    [JsonProperty("playlist_track")] public ICollection<PlaylistTrack> PlaylistTrack { get; set; } = [];
+    [JsonProperty("images")] public ICollection<Image> Images { get; set; } = [];
+    [JsonProperty("track_user")] public ICollection<TrackUser> TrackUser { get; set; } = [];
+    [JsonProperty("genre_track")] public ICollection<MusicGenreTrack> MusicGenreTrack { get; set; } = [];
+    [JsonProperty("music_plays")] public ICollection<MusicPlay> MusicPlays { get; set; } = [];
 }

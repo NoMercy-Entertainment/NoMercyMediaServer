@@ -169,7 +169,7 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
 
     public Task<TmdbGenreMovies?> Genres(string language = "en")
     {
-        return Get<TmdbGenreMovies>("genre/movie/list", new Dictionary<string, string>
+        return Get<TmdbGenreMovies>("genre/movie/list", new Dictionary<string, string?>
         {
             ["language"] = language
         });

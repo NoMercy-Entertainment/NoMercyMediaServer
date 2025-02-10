@@ -18,8 +18,6 @@ public class Wip
         // string fileName = "E:/";
         // string fileName = @"M:\Anime\Download\Bleach\[BDMV] Bleach [BD-BOX] [SET-1]\BLEACH SET 1 DISC 2";
         IDirectoryInfo directoryInfo = new DirectoryInfo(@"H:\TV.Shows\Download\The.Pink.Panther\The Pink Panther - La Pantera Rosa Vol 2 (1966-1968) [Bluray 1080p AVC Eng DTS-HD MA 2.0]");
-        string ffmpegExecutable = @"H:\C\Downloads\ffmpeg-build-windows\ffmpeg.exe";
-        string ffprobeExecutable = @"H:\C\Downloads\ffmpeg-build-windows\ffprobe.exe";
         
         string metadataFile = Path.Combine(directoryInfo.FullName, "BDMV", "META", "DL", "bdmt_eng.xml");
 
@@ -30,7 +28,7 @@ public class Wip
         {
             bDRom.Scan();
         }
-        catch (Exception e)
+        catch (Exception)
         {
             //
         }
@@ -42,7 +40,7 @@ public class Wip
         string title = doc.Descendants(di + "name").FirstOrDefault()?.Value ?? bDRom.VolumeLabel;
 
         string playlistString = FfMpeg
-            .Exec($" -hide_banner -v info -i \"bluray:{directoryInfo.FullName}\"", executable: ffprobeExecutable).Result;
+            .Exec($" -hide_banner -v info -i \"bluray:{directoryInfo.FullName}\"", executable: AppFiles.FfProbePath).Result;
 
         string ffprobeString = HlsPlaylistGenerator.RunProcess(AppFiles.FfProbePath,
             $" -v quiet -show_programs -show_format -show_streams -show_data -show_chapters -sexagesimal -print_format json \"bluray:{directoryInfo.FullName}\"");

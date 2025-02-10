@@ -9,10 +9,10 @@ namespace NoMercy.Database.Models;
 public class AlbumReleaseGroup
 {
     [JsonProperty("album_id")] public Guid AlbumId { get; set; }
-    public Album Album { get; set; }
+    public Album Album { get; set; } = null!;
 
     [JsonProperty("release_id")] public Guid ReleaseGroupId { get; set; }
-    public ReleaseGroup ReleaseGroup { get; set; }
+    public ReleaseGroup ReleaseGroup { get; set; } = null!;
 
     public AlbumReleaseGroup()
     {

@@ -32,7 +32,6 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 using NoMercy.Helpers.Monitoring;
-using NoMercy.MediaProcessing.Files;
 using NoMercy.Networking;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
@@ -230,7 +229,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
         string[] supportedCultures = ["en-US", "nl-NL"]; // Add other supported locales
-        RequestLocalizationOptions? localizationOptions = new RequestLocalizationOptions()
+        RequestLocalizationOptions localizationOptions = new RequestLocalizationOptions()
             .SetDefaultCulture(supportedCultures[0])
             .AddSupportedCultures(supportedCultures)
             .AddSupportedUICultures(supportedCultures);

@@ -67,7 +67,7 @@ public class X265 : BaseVideo
             return
             [
                 VideoProfiles.Baseline, VideoProfiles.Main, VideoProfiles.High,
-                VideoProfiles.High10, VideoProfiles.High444p
+                VideoProfiles.High10, VideoProfiles.High444P
             ];
         }
     }
@@ -93,8 +93,8 @@ public class X265 : BaseVideo
 
     public override string[] AvailableColorSpaces =>
     [
-        ColorSpaces.Yuv420p, ColorSpaces.Yuv420p10le,
-        ColorSpaces.Yuv422p, ColorSpaces.Yuv444p,
+        ColorSpaces.Yuv420P, ColorSpaces.Yuv420P10Le,
+        ColorSpaces.Yuv422P, ColorSpaces.Yuv444P,
     ];
 
     public override string[] AvailableLevels

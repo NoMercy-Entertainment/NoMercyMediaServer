@@ -24,6 +24,7 @@ public class BaseAudio : Classes
 
     public int StreamIndex => AudioStream?.Index ?? -1;
 
+    // ReSharper disable once InconsistentNaming
     public long _bitRate = -1;
 
     private long BitRate => _bitRate == -1
@@ -42,7 +43,7 @@ public class BaseAudio : Classes
     private readonly Dictionary<string, dynamic> _ops = [];
 
     protected virtual string[] AvailableContainers { get; set; } = [
-        AudioContainers.Mp3, AudioContainers.Flac, AudioContainers.M4a,
+        AudioContainers.Mp3, AudioContainers.Flac, AudioContainers.M4A,
         AudioContainers.Aac, AudioContainers.Ogg, AudioContainers.Wav
     ];
 
@@ -135,14 +136,14 @@ public class BaseAudio : Classes
 
     public BaseAudio AddCustomArgument(string key, dynamic? value)
     {
-        _extraParameters[key] = value;
+        _extraParameters[key] = value ?? string.Empty;
         return this;
     }
 
-    public BaseAudio AddCustomArguments((string key, string Val)[] profileCustomArguments)
+    public BaseAudio AddCustomArguments((string key, string val)[] profileCustomArguments)
     {
-        foreach ((string key, string Val) in profileCustomArguments)
-            AddCustomArgument(key, Val);
+        foreach ((string key, string val) in profileCustomArguments)
+            AddCustomArgument(key, val);
         return this;
     }
 
@@ -210,7 +211,9 @@ public class BaseAudio : Classes
             {
                 BaseAudio newStream = (BaseAudio)MemberwiseClone();
 
-                newStream.Language = stream.Language == "und" ? "eng" : stream.Language;
+                newStream.Language = stream.Language == "und" 
+                    ? "eng" 
+                    : stream.Language ?? "eng";
 
                 newStream.IsAudio = true;
 

@@ -17,7 +17,6 @@ public class Person : ColorPaletteTimeStamps
     [JsonProperty("biography")] public string? Biography { get; set; }
     [JsonProperty("birthday")] public DateTime? BirthDay { get; set; }
     [JsonProperty("deathday")] public DateTime? DeathDay { get; set; }
-
     [JsonProperty("homepage")] public string? Homepage { get; set; }
     [JsonProperty("imdb_id")] public string? ImdbId { get; set; }
     [JsonProperty("known_for_department")] public string? KnownForDepartment { get; set; }
@@ -27,15 +26,14 @@ public class Person : ColorPaletteTimeStamps
     [JsonProperty("profile")] public string? Profile { get; set; }
     [JsonProperty("title_sort")] public string TitleSort { get; set; } = string.Empty;
 
-    [JsonProperty("casts")] public ICollection<Cast> Casts { get; set; }
-    [JsonProperty("crews")] public ICollection<Crew> Crews { get; set; }
-    [JsonProperty("images")] public ICollection<Image> Images { get; set; }
-    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; }
+    [JsonProperty("casts")] public ICollection<Cast> Casts { get; set; } = [];
+    [JsonProperty("crews")] public ICollection<Crew> Crews { get; set; } = [];
+    [JsonProperty("images")] public ICollection<Image> Images { get; set; } = [];
+    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; } = [];
 
     [Column("Gender")]
     [JsonProperty("gender")]
     [System.Text.Json.Serialization.JsonIgnore]
-
     public TmdbGender TmdbGender { get; set; }
 
     [NotMapped]
@@ -49,7 +47,7 @@ public class Person : ColorPaletteTimeStamps
     [Column("ExternalIds")]
     [JsonProperty("external_ids")]
     [System.Text.Json.Serialization.JsonIgnore]
-
+    // ReSharper disable once InconsistentNaming
     public string? _externalIds { get; set; }
 
     [NotMapped]
@@ -61,5 +59,6 @@ public class Person : ColorPaletteTimeStamps
 
     public Person()
     {
+        //
     }
 }

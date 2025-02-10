@@ -10,7 +10,7 @@ public record GenreResponseDto
 {
     [JsonProperty("nextId")] public long? NextId { get; set; }
 
-    [JsonProperty("data")] public IOrderedEnumerable<GenreResponseItemDto> Data { get; set; }
+    [JsonProperty("data")] public IOrderedEnumerable<GenreResponseItemDto>? Data { get; set; }
 
     public static readonly Func<MediaContext, Guid, int, string, int, int, Task<Genre>> GetGenre =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, int id, string language, int take, int page) =>

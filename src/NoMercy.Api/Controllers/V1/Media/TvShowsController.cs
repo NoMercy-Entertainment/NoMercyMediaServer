@@ -156,7 +156,6 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan tv shows");
 
-        await using MediaContext mediaContext = new();
         Tv? tv = await mediaContext.Tvs
             .AsNoTracking()
             .Where(tv => tv.Id == id)
@@ -200,7 +199,6 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh tv shows");
 
-        await using MediaContext mediaContext = new();
         Tv? tv = await mediaContext.Tvs
             .AsNoTracking()
             .Where(tv => tv.Id == id)

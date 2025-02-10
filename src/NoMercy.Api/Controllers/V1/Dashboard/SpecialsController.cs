@@ -374,7 +374,7 @@ public class SpecialsController : BaseController
 
     [HttpPost]
     [Route("addmarvel")]
-    public async Task<IActionResult> AddMarvel()
+    public IActionResult AddMarvel()
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan all specials");

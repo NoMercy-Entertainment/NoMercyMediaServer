@@ -9,6 +9,7 @@ public class ColorPalettes
     [StringLength(1024)]
     [JsonProperty("color_palette")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string _colorPalette { get; set; } = string.Empty;
 
     [NotMapped]

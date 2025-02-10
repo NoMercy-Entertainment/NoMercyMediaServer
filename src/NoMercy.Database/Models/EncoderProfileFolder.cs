@@ -10,10 +10,10 @@ namespace NoMercy.Database.Models;
 public class EncoderProfileFolder
 {
     [JsonProperty("encoder_profile_id")] public Ulid EncoderProfileId { get; set; }
-    public EncoderProfile EncoderProfile { get; set; }
+    public EncoderProfile EncoderProfile { get; set; } = null!;
 
     [JsonProperty("folder_id")] public Ulid FolderId { get; set; }
-    public Folder Folder { get; set; }
+    public Folder Folder { get; set; } = null!;
 
     public EncoderProfileFolder()
     {

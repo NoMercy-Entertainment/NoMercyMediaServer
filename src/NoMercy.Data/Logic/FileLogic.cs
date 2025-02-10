@@ -54,7 +54,7 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
 
     private async Task StoreMusic()
     {
-        MediaFile? item = Files.FirstOrDefault(file => file.Parsed is not null)
+        MediaFile? item = Files.FirstOrDefault(file => file.Parsed.Title is not null)
             ?.Files?.FirstOrDefault(file => file.Parsed is not null);
 
         if (item == null) return;

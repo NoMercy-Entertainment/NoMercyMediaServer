@@ -12,7 +12,7 @@ public class QueueJob
     public int Id { get; set; }
 
     public int Priority { get; set; }
-    public string Queue { get; set; }
+    public string Queue { get; set; } = "default";
     public required string Payload { get; set; }
     public byte Attempts { get; set; } = 0;
     public DateTime? ReservedAt { get; set; }

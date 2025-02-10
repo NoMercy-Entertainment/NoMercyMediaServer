@@ -91,7 +91,7 @@ public static class Logger
             Name = name;
             DisplayName = displayName;
             Color = ToHexString(color);
-            Type = type ?? "log";
+            Type = type;
         }
     }
 
@@ -312,11 +312,13 @@ public static class Logger
         return LogColors?[type] ?? Color.White;
     }
 
+    // ReSharper disable once MethodOverloadWithOptionalParameter
     public static T Log<T>(this T self, string type = "server") where T : class
     {
         return Log<T>(self, LogEventLevel.Debug, type);
     }
 
+    // ReSharper disable once MethodOverloadWithOptionalParameter
     private static T Log<T>(this T self, LogEventLevel level = LogEventLevel.Debug, string type = "server")
         where T : class
     {

@@ -20,16 +20,15 @@ public class UserData : Timestamps
     public Ulid Id { get; set; } = Ulid.NewUlid();
 
     [JsonProperty("name")] public int? Rating { get; set; }
-
     [JsonProperty("last_played_date")] public string? LastPlayedDate { get; set; }
     [JsonProperty("audio")] public string? Audio { get; set; }
     [JsonProperty("subtitle")] public string? Subtitle { get; set; }
     [JsonProperty("subtitle_type")] public string? SubtitleType { get; set; }
     [JsonProperty("time")] public int? Time { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
 
     [JsonProperty("user_id")] public Guid UserId { get; set; }
-    public User? User { get; set; }
+    public User User { get; set; } = null!;
 
     [JsonProperty("movie_id")] public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
@@ -43,6 +42,6 @@ public class UserData : Timestamps
     [JsonProperty("special_id")] public Ulid? SpecialId { get; set; }
     public Special? Special { get; set; }
 
-    [JsonProperty("video_file_id")] public Ulid? VideoFileId { get; set; }
-    public VideoFile? VideoFile { get; set; }
+    [JsonProperty("video_file_id")] public Ulid VideoFileId { get; set; }
+    public VideoFile VideoFile { get; set; } = null!;
 }

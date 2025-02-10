@@ -4,10 +4,11 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Providers.MusicBrainz.Models;
 public class TrackRecording
 {
-    [JsonProperty("aliases")] public Alias[] Aliases { get; set; }
-    [JsonProperty("artist-credit")] public RecordingArtistCredit[] ArtistCredit { get; set; }
-    [JsonProperty("disambiguation")] public string Disambiguation { get; set; }
+    [JsonProperty("aliases")] public Alias[] Aliases { get; set; } = [];
+    [JsonProperty("artist-credit")] public RecordingArtistCredit[] ArtistCredit { get; set; } = [];
+    [JsonProperty("disambiguation")] public string Disambiguation { get; set; } = string.Empty;
 
+    // ReSharper disable once InconsistentNaming
     [JsonProperty("first-release-date")] private string? _firstReleaseDate { get; set; }
 
     public DateTime? FirstReleaseDate
@@ -16,12 +17,12 @@ public class TrackRecording
         set => _firstReleaseDate = value.ToString() ?? string.Empty;
     }
 
-    [JsonProperty("genres")] public MusicBrainzGenreDetails[] Genres { get; set; }
+    [JsonProperty("genres")] public MusicBrainzGenreDetails[] Genres { get; set; } = [];
     [JsonProperty("id")] public Guid Id { get; set; }
-    [JsonProperty("isrcs")] public string[] Isrcs { get; set; }
+    [JsonProperty("isrcs")] public string[] Isrcs { get; set; } = [];
     [JsonProperty("length")] public int? Length { get; set; }
-    [JsonProperty("relations")] public RecordingRelation[] Relations { get; set; }
-    [JsonProperty("tags")] public MusicBrainzTag[] Tags { get; set; }
-    [JsonProperty("title")] public string Title { get; set; }
+    [JsonProperty("relations")] public RecordingRelation[] Relations { get; set; } = [];
+    [JsonProperty("tags")] public MusicBrainzTag[] Tags { get; set; } = [];
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("video")] public bool Video { get; set; }
 }

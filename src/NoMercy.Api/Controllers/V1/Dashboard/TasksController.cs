@@ -179,7 +179,7 @@ public class TasksController : BaseController
                     ?.EncoderProfile.Name
             }).ToArray();
 
-        IEnumerable<EncodeVideoJob>? runningJobs = encoderJobs
+        IEnumerable<EncodeVideoJob> runningJobs = encoderJobs
             .Where(j => j.Status == "running");
 
         foreach (EncodeVideoJob job in runningJobs)

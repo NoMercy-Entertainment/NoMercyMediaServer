@@ -4,9 +4,10 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Providers.MusicBrainz.Models;
 public class MusicBrainzReleaseGroup
 {
-    [JsonProperty("disambiguation")] public string Disambiguation { get; set; }
+    [JsonProperty("disambiguation")] public string Disambiguation { get; set; } = string.Empty;
 
-    [JsonProperty("first-release-date")] private string? _firstReleaseDate { get; set; }
+    // ReSharper disable once InconsistentNaming
+    [JsonProperty("first-release-date")] private string? _firstReleaseDate { get; set; } = string.Empty;
 
     public DateTime? FirstReleaseDate
     {
@@ -16,9 +17,9 @@ public class MusicBrainzReleaseGroup
 
     [JsonProperty("genres")] public MusicBrainzGenreDetails[]? Genres { get; set; }
     [JsonProperty("id")] public Guid Id { get; set; }
-    [JsonProperty("primary-type")] public string PrimaryType { get; set; }
+    [JsonProperty("primary-type")] public string PrimaryType { get; set; } = string.Empty;
     [JsonProperty("primary-type-id")] public Guid? PrimaryTypeId { get; set; }
-    [JsonProperty("secondary-type-ids")] public Guid[] SecondaryTypeIds { get; set; }
-    [JsonProperty("secondary-types")] public string[] SecondaryTypes { get; set; }
-    [JsonProperty("title")] public string Title { get; set; }
+    [JsonProperty("secondary-type-ids")] public Guid[] SecondaryTypeIds { get; set; } = [];
+    [JsonProperty("secondary-types")] public string[] SecondaryTypes { get; set; } = [];
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
 }

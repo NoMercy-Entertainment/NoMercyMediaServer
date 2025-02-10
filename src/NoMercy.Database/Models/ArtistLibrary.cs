@@ -10,10 +10,10 @@ namespace NoMercy.Database.Models;
 public class ArtistLibrary
 {
     [JsonProperty("artist_id")] public Guid ArtistId { get; set; }
-    public Artist Artist { get; set; }
+    public Artist Artist { get; set; } = null!;
 
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
-    public Library Library { get; set; }
+    public Library Library { get; set; } = null!;
 
     public ArtistLibrary()
     {

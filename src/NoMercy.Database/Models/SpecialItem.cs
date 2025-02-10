@@ -10,11 +10,10 @@ namespace NoMercy.Database.Models;
 public class SpecialItem
 {
     [JsonProperty("id")] public int Id { get; set; }
-
     [JsonProperty("order")] public int Order { get; set; }
 
     [JsonProperty("special_id")] public Ulid SpecialId { get; set; }
-    [JsonProperty("special")] public Special Special { get; set; }
+    [JsonProperty("special")] public Special Special { get; set; } = null!;
 
     [JsonProperty("episode_id")] public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
@@ -22,5 +21,5 @@ public class SpecialItem
     [JsonProperty("movie_id")] public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty("user_data")] public ICollection<UserData> UserData { get; set; }
+    [JsonProperty("user_data")] public ICollection<UserData> UserData { get; set; } = [];
 }

@@ -240,7 +240,7 @@ public class PersonManager(
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
                 Iso6391 = image.Iso6391,
-                FilePath = image.FilePath,
+                FilePath = image.FilePath ?? string.Empty,
                 Width = image.Width,
                 VoteAverage = image.VoteAverage,
                 VoteCount = image.VoteCount,
@@ -293,7 +293,7 @@ public class PersonManager(
 
             jobs.AddRange(aggregateCrew.Jobs.Select(crewJob => new Job
             {
-                CreditId = crewJob.CreditId,
+                CreditId = crewJob.CreditId ?? string.Empty,
                 Task = crewJob.Job,
                 Order = crewJob.Order,
                 EpisodeCount = crewJob.EpisodeCount
@@ -344,7 +344,7 @@ public class PersonManager(
             
             jobs.AddRange(aggregateCrew.Jobs.Select(j => new Job
             {
-                CreditId = j.CreditId,
+                CreditId = j.CreditId ?? string.Empty,
                 Task = j.Job,
                 Order = j.Order,
                 EpisodeCount = j.EpisodeCount
@@ -394,7 +394,7 @@ public class PersonManager(
             
             jobs.Add(new()
             {
-                CreditId = tmdbCrew.CreditId,
+                CreditId = tmdbCrew.CreditId ?? string.Empty,
                 Task = tmdbCrew.Job,
                 Order = tmdbCrew.Order
             });
@@ -443,7 +443,7 @@ public class PersonManager(
 
             jobs.Add(new()
             {
-                CreditId = tmdbCrew.CreditId,
+                CreditId = tmdbCrew.CreditId ?? string.Empty,
                 Task = tmdbCrew.Job,
                 Order = tmdbCrew.Order
             });
@@ -489,8 +489,8 @@ public class PersonManager(
             }
         });
 
-        return personAppends?
+        return personAppends
             .OrderBy(f => f.Name)
-            .ToList() ?? [];
+            .ToList();
     }
 }

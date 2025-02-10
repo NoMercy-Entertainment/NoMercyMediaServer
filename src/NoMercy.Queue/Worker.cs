@@ -15,7 +15,7 @@ public class Worker(JobQueue queue, string name = "default")
 
     public void Start()
     {
-        Logger.Queue($"Worker {name} - {CurrentIndex}: started", LogEventLevel.Debug);
+        Logger.Queue($"Worker {name} - {CurrentIndex}: started");
 
         Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 

@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using Microsoft.AspNetCore.WebUtilities;
+﻿using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.Providers.Helpers;
@@ -56,12 +55,12 @@ public class TmdbBaseClient : IDisposable
 
     public int Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false, bool skipCache = false)
+    protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = null, bool? priority = false, bool skipCache = false)
         where T : class
     {
         query ??= new();
 
-        string newUrl = QueryHelpers.AddQueryString(url, query!);
+        string newUrl = QueryHelpers.AddQueryString(url, query);
 
         if (!skipCache && CacheController.Read(newUrl, out T? result)) return result;
 

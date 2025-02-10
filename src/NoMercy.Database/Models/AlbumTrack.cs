@@ -9,10 +9,10 @@ namespace NoMercy.Database.Models;
 public class AlbumTrack
 {
     [JsonProperty("album_id")] public Guid AlbumId { get; set; }
-    public Album Album { get; set; }
+    public Album Album { get; set; } = null!;
 
     [JsonProperty("track_id")] public Guid TrackId { get; set; }
-    public Track Track { get; set; }
+    public Track Track { get; set; } = null!;
 
     public AlbumTrack()
     {

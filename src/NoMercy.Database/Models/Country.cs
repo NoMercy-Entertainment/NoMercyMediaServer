@@ -13,11 +13,9 @@ public class Country
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [JsonProperty("id")]
     public int Id { get; set; }
-
-    [Key] [JsonProperty("iso_3166_1")] public string Iso31661 { get; set; } = string.Empty;
-
+    [Key] 
+    [JsonProperty("iso_3166_1")] public string Iso31661 { get; set; } = string.Empty;
     [JsonProperty("english_name")] public string? EnglishName { get; set; }
-
     [JsonProperty("native_name")] public string? NativeName { get; set; }
 
     public Country()

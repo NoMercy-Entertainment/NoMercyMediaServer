@@ -4,11 +4,13 @@ using NoMercy.Providers.Helpers;
 namespace NoMercy.Providers.CoverArt.Models;
 public class CoverArtThumbnails
 {
-    private readonly Uri __250;
-    private readonly Uri __500;
-    private readonly Uri __1200;
-    private readonly Uri __large;
-    private readonly Uri __small;
+    private Uri __250 { get; set;} = null!;
+    private Uri __500 { get; set;} = null!;
+    private Uri __1200 { get; set;} = null!;
+    // ReSharper disable once InconsistentNaming
+    private Uri __large { get; set;} = null!;
+    // ReSharper disable once InconsistentNaming
+    private Uri __small { get; set;} = null!;
 
     [JsonProperty("250")]
     public Uri _250

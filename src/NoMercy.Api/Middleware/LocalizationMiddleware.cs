@@ -28,7 +28,7 @@ public class LocalizationMiddleware
         else
             context.Request.Headers.AcceptLanguage = "en-US".Split('-');
 
-        Localizer? reportLocalize = new();
+        Localizer reportLocalize = new();
         reportLocalize.LoadXML(Assembly.GetExecutingAssembly(), "Resources.I18N.xml", firstLang?.FirstOrDefault() ?? "en");
         LocalizationHelper.GlobalLocalizer = reportLocalize;
 

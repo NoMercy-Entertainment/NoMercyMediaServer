@@ -37,7 +37,7 @@ public partial class FileManager(
         {
             Logger.App($"Scanning {Movie?.Title ?? Show?.Title} for files in {folder.Path}");
 
-            ConcurrentBag<MediaFolderExtend>? files = await GetFiles(library, folder.Path);
+            ConcurrentBag<MediaFolderExtend> files = await GetFiles(library, folder.Path);
 
             if (!files.IsEmpty) Files.AddRange(files);
         }
@@ -315,7 +315,7 @@ public partial class FileManager(
     {
         List<IVideo> videos = [];
 
-        string[] videoFolders = Directory.GetDirectories(hostFolder).Where(folder => Path.GetFileName(folder)!.StartsWith("video")).ToArray();
+        string[] videoFolders = Directory.GetDirectories(hostFolder).Where(folder => Path.GetFileName(folder).StartsWith("video")).ToArray();
 
         foreach (string videoFolder in videoFolders)
         {
@@ -338,7 +338,7 @@ public partial class FileManager(
                         BitRate = ffprobe.AudioStreams.FirstOrDefault()?.BitRate ?? 0,
                     });
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     //
                 }
@@ -352,7 +352,7 @@ public partial class FileManager(
     {
         List<IAudio> audios = [];
         
-        string[] audioFolders = Directory.GetDirectories(hostFolder).Where(folder => Path.GetFileName(folder)!.StartsWith("audio")).ToArray();
+        string[] audioFolders = Directory.GetDirectories(hostFolder).Where(folder => Path.GetFileName(folder).StartsWith("audio")).ToArray();
         foreach (string audioFolder in audioFolders)
         {
             string path = Path.Combine(hostFolder, audioFolder);
@@ -377,7 +377,7 @@ public partial class FileManager(
                         SampleRate = ffprobe.AudioStreams.FirstOrDefault()?.SampleRateHz ?? 0,
                     });
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                    //
                 }

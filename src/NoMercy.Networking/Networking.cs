@@ -17,7 +17,7 @@ namespace NoMercy.Networking;
 
 public class Networking
 {
-    private static IHubContext<ConnectionHub> HubContext { get; set; }
+    private static IHubContext<ConnectionHub> HubContext { get; set; } = null!;
 
     public Networking(IHubContext<ConnectionHub> hubContext)
     {
@@ -171,7 +171,7 @@ public class Networking
                 else
                     client.Socket.SendAsync(name).Wait();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return false;
             }
@@ -190,7 +190,7 @@ public class Networking
                 else
                     client.Socket.SendAsync(name).Wait();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return false;
             }
@@ -211,7 +211,7 @@ public class Networking
                 else
                     client.Socket.SendAsync(name).Wait();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return false;
             }

@@ -13,7 +13,7 @@ public class MusixMatchSubtitle
     [Column("SubtitleBody")]
     [JsonProperty("subtitle_body")]
     [System.Text.Json.Serialization.JsonIgnore]
-
+    // ReSharper disable once InconsistentNaming
     public string? _subtitle_body { get; set; }
 
     [NotMapped]
@@ -26,17 +26,16 @@ public class MusixMatchSubtitle
     }
 
     [JsonProperty("subtitle_avg_count")] public long SubtitleAvgCount { get; set; }
-    [JsonProperty("lyrics_copyright")] public string LyricsCopyright { get; set; }
+    [JsonProperty("lyrics_copyright")] public string LyricsCopyright { get; set; } = string.Empty;
     [JsonProperty("subtitle_length")] public long SubtitleLength { get; set; }
-    [JsonProperty("subtitle_language")] public string SubtitleLanguage { get; set; }
+    [JsonProperty("subtitle_language")] public string SubtitleLanguage { get; set; } = string.Empty;
 
-    [JsonProperty("subtitle_language_description")]
-    public string SubtitleLanguageDescription { get; set; }
+    [JsonProperty("subtitle_language_description")] public string SubtitleLanguageDescription { get; set; } = string.Empty;
 
-    [JsonProperty("script_tracking_url")] public Uri ScriptTrackingUrl { get; set; }
-    [JsonProperty("pixel_tracking_url")] public Uri PixelTrackingUrl { get; set; }
-    [JsonProperty("html_tracking_url")] public Uri HtmlTrackingUrl { get; set; }
-    [JsonProperty("writer_list")] public object[] WriterList { get; set; }
-    [JsonProperty("publisher_list")] public object[] PublisherList { get; set; }
+    [JsonProperty("script_tracking_url")] public Uri ScriptTrackingUrl { get; set; } = null!;
+    [JsonProperty("pixel_tracking_url")] public Uri PixelTrackingUrl { get; set; } = null!;
+    [JsonProperty("html_tracking_url")] public Uri HtmlTrackingUrl { get; set; } = null!;
+    [JsonProperty("writer_list")] public object[] WriterList { get; set; } = [];
+    [JsonProperty("publisher_list")] public object[] PublisherList { get; set; } = [];
     [JsonProperty("updated_time")] public DateTimeOffset UpdatedTime { get; set; }
 }

@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
@@ -21,7 +20,7 @@ public record LibraryResponseItemDto
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
 
     [JsonProperty("poster")] public string? Poster { get; set; }
-    [JsonProperty("title")] public string? Title { get; set; }
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("name")] public string? Name { get; set; }
 
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }

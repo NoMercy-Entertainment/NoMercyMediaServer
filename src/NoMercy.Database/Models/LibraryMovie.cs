@@ -10,13 +10,14 @@ namespace NoMercy.Database.Models;
 public class LibraryMovie
 {
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
-    public Library Library { get; set; }
+    public Library Library { get; set; } = null!;
 
     [JsonProperty("movie_id")] public int MovieId { get; set; }
-    public Movie Movie { get; set; }
+    public Movie Movie { get; set; } = null!;
 
     public LibraryMovie()
     {
+        //
     }
 
     public LibraryMovie(Ulid libraryId, int movieId)

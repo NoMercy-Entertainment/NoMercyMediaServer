@@ -20,817 +20,817 @@ public static class Mcu
     [
         new()
         {
-            index = 1,
-            type = "movie",
-            title = "Captain America: The First Avenger",
-            year = 2011
+            Index = 1,
+            Type = "movie",
+            Title = "Captain America: The First Avenger",
+            Year = 2011
         },
         new()
         {
-            index = 2,
-            type = "movie",
-            title = "Marvel One-Shot: Agent Carter",
-            year = 2013
+            Index = 2,
+            Type = "movie",
+            Title = "Marvel One-Shot: Agent Carter",
+            Year = 2013
         },
         new()
         {
-            index = 3,
-            type = "tv",
-            title = "Agent Carter",
-            year = 2015,
-            seasons = [1],
-            episodes = []
+            Index = 3,
+            Type = "tv",
+            Title = "Agent Carter",
+            Year = 2015,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 4,
-            type = "tv",
-            title = "Agent Carter",
-            year = 2015,
-            seasons = [2],
-            episodes = []
+            Index = 4,
+            Type = "tv",
+            Title = "Agent Carter",
+            Year = 2015,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 5,
-            type = "movie",
-            title = "Captain Marvel",
-            year = 2019
+            Index = 5,
+            Type = "movie",
+            Title = "Captain Marvel",
+            Year = 2019
         },
         new()
         {
-            index = 6,
-            type = "movie",
-            title = "Iron Man",
-            year = 2008
+            Index = 6,
+            Type = "movie",
+            Title = "Iron Man",
+            Year = 2008
         },
         new()
         {
-            index = 7,
-            type = "movie",
-            title = "Iron Man 2",
-            year = 2010
+            Index = 7,
+            Type = "movie",
+            Title = "Iron Man 2",
+            Year = 2010
         },
         new()
         {
-            index = 8,
-            type = "movie",
-            title = "The Incredible Hulk",
-            year = 2008
+            Index = 8,
+            Type = "movie",
+            Title = "The Incredible Hulk",
+            Year = 2008
         },
         new()
         {
-            index = 9,
-            type = "movie",
-            title = "The Consultant",
-            year = 2011
+            Index = 9,
+            Type = "movie",
+            Title = "The Consultant",
+            Year = 2011
         },
         new()
         {
-            index = 10,
-            type = "movie",
-            title = "A Funny Thing Happened on the Way to Thor's Hammer",
-            year = 2011
+            Index = 10,
+            Type = "movie",
+            Title = "A Funny Thing Happened on the Way to Thor's Hammer",
+            Year = 2011
         },
         new()
         {
-            index = 11,
-            type = "movie",
-            title = "Thor",
-            year = 2011
+            Index = 11,
+            Type = "movie",
+            Title = "Thor",
+            Year = 2011
         },
         new()
         {
-            index = 12,
-            type = "movie",
-            title = "The Avengers",
-            year = 2012
+            Index = 12,
+            Type = "movie",
+            Title = "The Avengers",
+            Year = 2012
         },
         new()
         {
-            index = 13,
-            type = "movie",
-            title = "Item 47",
-            year = 2012
+            Index = 13,
+            Type = "movie",
+            Title = "Item 47",
+            Year = 2012
         },
         new()
         {
-            index = 14,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [1],
-            episodes = [1, 2, 3, 4, 5, 6, 7]
+            Index = 14,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [1],
+            Episodes = [1, 2, 3, 4, 5, 6, 7]
         },
         new()
         {
-            index = 15,
-            type = "movie",
-            title = "Thor: The Dark World",
-            year = 2013
+            Index = 15,
+            Type = "movie",
+            Title = "Thor: The Dark World",
+            Year = 2013
         },
         new()
         {
-            index = 16,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [1],
-            episodes = [8, 9, 10, 11, 12, 13, 14, 15, 16]
+            Index = 16,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [1],
+            Episodes = [8, 9, 10, 11, 12, 13, 14, 15, 16]
         },
         new()
         {
-            index = 17,
-            type = "movie",
-            title = "Iron Man 3",
-            year = 2013
+            Index = 17,
+            Type = "movie",
+            Title = "Iron Man 3",
+            Year = 2013
         },
         new()
         {
-            index = 18,
-            type = "movie",
-            title = "All Hail the King",
-            year = 2014
+            Index = 18,
+            Type = "movie",
+            Title = "All Hail the King",
+            Year = 2014
         },
         new()
         {
-            index = 19,
-            type = "movie",
-            title = "Captain America: The Winter Soldier",
-            year = 2014
+            Index = 19,
+            Type = "movie",
+            Title = "Captain America: The Winter Soldier",
+            Year = 2014
         },
         new()
         {
-            index = 20,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [1],
-            episodes = [17, 18, 19, 20, 21, 22]
+            Index = 20,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [1],
+            Episodes = [17, 18, 19, 20, 21, 22]
         },
         new()
         {
-            index = 21,
-            type = "movie",
-            title = "Guardians of the Galaxy",
-            year = 2014
+            Index = 21,
+            Type = "movie",
+            Title = "Guardians of the Galaxy",
+            Year = 2014
         },
         new()
         {
-            index = 22,
-            type = "movie",
-            title = "Guardians of the Galaxy Vol 2",
-            year = 2017
+            Index = 22,
+            Type = "movie",
+            Title = "Guardians of the Galaxy Vol 2",
+            Year = 2017
         },
         new()
         {
-            index = 23,
-            type = "tv",
-            title = "I Am Groot",
-            year = 2022,
-            seasons = [1],
-            episodes = []
+            Index = 23,
+            Type = "tv",
+            Title = "I Am Groot",
+            Year = 2022,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 24,
-            type = "tv",
-            title = "I Am Groot",
-            year = 2022,
-            seasons = [2],
-            episodes = []
+            Index = 24,
+            Type = "tv",
+            Title = "I Am Groot",
+            Year = 2022,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 25,
-            type = "tv",
-            title = "Daredevil",
-            year = 2015,
-            seasons = [1],
-            episodes = []
+            Index = 25,
+            Type = "tv",
+            Title = "Daredevil",
+            Year = 2015,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 26,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [2],
-            episodes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            Index = 26,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [2],
+            Episodes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         },
         new()
         {
-            index = 27,
-            type = "tv",
-            title = "Jessica Jones",
-            year = 2015,
-            seasons = [1],
-            episodes = []
+            Index = 27,
+            Type = "tv",
+            Title = "Jessica Jones",
+            Year = 2015,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 28,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [2],
-            episodes = [11, 12, 13, 14, 15, 16, 17, 18, 19]
+            Index = 28,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [2],
+            Episodes = [11, 12, 13, 14, 15, 16, 17, 18, 19]
         },
         new()
         {
-            index = 29,
-            type = "movie",
-            title = "Avengers: Age of Ultron",
-            year = 2015
+            Index = 29,
+            Type = "movie",
+            Title = "Avengers: Age of Ultron",
+            Year = 2015
         },
         new()
         {
-            index = 30,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [2],
-            episodes = [20, 21, 22]
+            Index = 30,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [2],
+            Episodes = [20, 21, 22]
         },
         new()
         {
-            index = 31,
-            type = "tv",
-            title = "Daredevil",
-            year = 2015,
-            seasons = [2],
-            episodes = [1, 2, 3, 4]
+            Index = 31,
+            Type = "tv",
+            Title = "Daredevil",
+            Year = 2015,
+            Seasons = [2],
+            Episodes = [1, 2, 3, 4]
         },
         new()
         {
-            index = 32,
-            type = "tv",
-            title = "Luke Cage",
-            year = 2016,
-            seasons = [1],
-            episodes = [1, 2, 3, 4]
+            Index = 32,
+            Type = "tv",
+            Title = "Luke Cage",
+            Year = 2016,
+            Seasons = [1],
+            Episodes = [1, 2, 3, 4]
         },
         new()
         {
-            index = 33,
-            type = "tv",
-            title = "Daredevil",
-            year = 2015,
-            seasons = [2],
-            episodes = [5, 6, 7, 8, 9, 10, 11]
+            Index = 33,
+            Type = "tv",
+            Title = "Daredevil",
+            Year = 2015,
+            Seasons = [2],
+            Episodes = [5, 6, 7, 8, 9, 10, 11]
         },
         new()
         {
-            index = 34,
-            type = "tv",
-            title = "Luke Cage",
-            year = 2016,
-            seasons = [1],
-            episodes = [5, 6, 7, 8]
+            Index = 34,
+            Type = "tv",
+            Title = "Luke Cage",
+            Year = 2016,
+            Seasons = [1],
+            Episodes = [5, 6, 7, 8]
         },
         new()
         {
-            index = 35,
-            type = "tv",
-            title = "Daredevil",
-            year = 2015,
-            seasons = [2],
-            episodes = [12, 13]
+            Index = 35,
+            Type = "tv",
+            Title = "Daredevil",
+            Year = 2015,
+            Seasons = [2],
+            Episodes = [12, 13]
         },
         new()
         {
-            index = 36,
-            type = "tv",
-            title = "Luke Cage",
-            year = 2016,
-            seasons = [1],
-            episodes = [9, 10, 11, 12, 13]
+            Index = 36,
+            Type = "tv",
+            Title = "Luke Cage",
+            Year = 2016,
+            Seasons = [1],
+            Episodes = [9, 10, 11, 12, 13]
         },
         new()
         {
-            index = 37,
-            type = "movie",
-            title = "Ant-Man",
-            year = 2015
+            Index = 37,
+            Type = "movie",
+            Title = "Ant-Man",
+            Year = 2015
         },
         new()
         {
-            index = 38,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [3],
-            episodes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            Index = 38,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [3],
+            Episodes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         },
         new()
         {
-            index = 39,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [3],
-            episodes = [11, 12, 13, 14, 15, 16, 17, 18, 19]
+            Index = 39,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [3],
+            Episodes = [11, 12, 13, 14, 15, 16, 17, 18, 19]
         },
         new()
         {
-            index = 40,
-            type = "tv",
-            title = "Iron Fist",
-            year = 2017,
-            seasons = [1],
-            episodes = []
+            Index = 40,
+            Type = "tv",
+            Title = "Iron Fist",
+            Year = 2017,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 41,
-            type = "movie",
-            title = "Captain America: Civil War",
-            year = 2016
+            Index = 41,
+            Type = "movie",
+            Title = "Captain America: Civil War",
+            Year = 2016
         },
         new()
         {
-            index = 42,
-            type = "movie",
-            title = "Team Thor",
-            year = 2016
+            Index = 42,
+            Type = "movie",
+            Title = "Team Thor",
+            Year = 2016
         },
         new()
         {
-            index = 43,
-            type = "movie",
-            title = "Team Thor: Part 2",
-            year = 2017
+            Index = 43,
+            Type = "movie",
+            Title = "Team Thor: Part 2",
+            Year = 2017
         },
         new()
         {
-            index = 44,
-            type = "movie",
-            title = "Black Widow",
-            year = 2021
+            Index = 44,
+            Type = "movie",
+            Title = "Black Widow",
+            Year = 2021
         },
         new()
         {
-            index = 45,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [3],
-            episodes = [20, 21, 22]
+            Index = 45,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [3],
+            Episodes = [20, 21, 22]
         },
         new()
         {
-            index = 46,
-            type = "tv",
-            title = "The Defenders",
-            year = 2017,
-            seasons = [1],
-            episodes = []
+            Index = 46,
+            Type = "tv",
+            Title = "The Defenders",
+            Year = 2017,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 47,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [4],
-            episodes = [1, 2, 3, 4, 5, 6]
+            Index = 47,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [4],
+            Episodes = [1, 2, 3, 4, 5, 6]
         },
         new()
         {
-            index = 48,
-            type = "movie",
-            title = "Doctor Strange",
-            year = 2016
+            Index = 48,
+            Type = "movie",
+            Title = "Doctor Strange",
+            Year = 2016
         },
         new()
         {
-            index = 49,
-            type = "movie",
-            title = "Black Panther",
-            year = 2018
+            Index = 49,
+            Type = "movie",
+            Title = "Black Panther",
+            Year = 2018
         },
         new()
         {
-            index = 50,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [4],
-            episodes = [7, 8]
+            Index = 50,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [4],
+            Episodes = [7, 8]
         },
         new()
         {
-            index = 51,
-            type = "tv",
-            title = "Agents of SHIELD: Slingshot",
-            year = 2016,
-            seasons = [1],
-            episodes = [1, 2, 3, 4, 5, 6]
+            Index = 51,
+            Type = "tv",
+            Title = "Agents of SHIELD: Slingshot",
+            Year = 2016,
+            Seasons = [1],
+            Episodes = [1, 2, 3, 4, 5, 6]
         },
         new()
         {
-            index = 52,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [4],
-            episodes = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+            Index = 52,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [4],
+            Episodes = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
         },
         new()
         {
-            index = 53,
-            type = "movie",
-            title = "Spider-Man: Homecoming",
-            year = 2017
+            Index = 53,
+            Type = "movie",
+            Title = "Spider-Man: Homecoming",
+            Year = 2017
         },
         new()
         {
-            index = 54,
-            type = "movie",
-            title = "Thor: Ragnarok",
-            year = 2017
+            Index = 54,
+            Type = "movie",
+            Title = "Thor: Ragnarok",
+            Year = 2017
         },
         new()
         {
-            index = 55,
-            type = "movie",
-            title = "Team Darryl",
-            year = 2018
+            Index = 55,
+            Type = "movie",
+            Title = "Team Darryl",
+            Year = 2018
         },
         new()
         {
-            index = 56,
-            type = "tv",
-            title = "Inhumans",
-            year = 2017,
-            seasons = [1],
-            episodes = []
+            Index = 56,
+            Type = "tv",
+            Title = "Inhumans",
+            Year = 2017,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 57,
-            type = "tv",
-            title = "The Punisher",
-            year = 2017,
-            seasons = [1],
-            episodes = []
+            Index = 57,
+            Type = "tv",
+            Title = "The Punisher",
+            Year = 2017,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 58,
-            type = "tv",
-            title = "Runaways",
-            year = 2017,
-            seasons = [1],
-            episodes = []
+            Index = 58,
+            Type = "tv",
+            Title = "Runaways",
+            Year = 2017,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 59,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [5],
-            episodes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            Index = 59,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [5],
+            Episodes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         },
         new()
         {
-            index = 60,
-            type = "tv",
-            title = "Jessica Jones",
-            year = 2015,
-            seasons = [2],
-            episodes = []
+            Index = 60,
+            Type = "tv",
+            Title = "Jessica Jones",
+            Year = 2015,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 61,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [5],
-            episodes = [11, 12, 13, 14, 15, 16, 17, 18]
+            Index = 61,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [5],
+            Episodes = [11, 12, 13, 14, 15, 16, 17, 18]
         },
         new()
         {
-            index = 62,
-            type = "tv",
-            title = "Cloak & Dagger",
-            year = 2018,
-            seasons = [1],
-            episodes = []
+            Index = 62,
+            Type = "tv",
+            Title = "Cloak & Dagger",
+            Year = 2018,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 63,
-            type = "tv",
-            title = "Cloak & Dagger",
-            year = 2018,
-            seasons = [2],
-            episodes = []
+            Index = 63,
+            Type = "tv",
+            Title = "Cloak & Dagger",
+            Year = 2018,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 64,
-            type = "tv",
-            title = "Luke Cage",
-            year = 2016,
-            seasons = [2],
-            episodes = []
+            Index = 64,
+            Type = "tv",
+            Title = "Luke Cage",
+            Year = 2016,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 65,
-            type = "tv",
-            title = "Iron Fist",
-            year = 2017,
-            seasons = [2],
-            episodes = []
+            Index = 65,
+            Type = "tv",
+            Title = "Iron Fist",
+            Year = 2017,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 66,
-            type = "tv",
-            title = "Daredevil",
-            year = 2015,
-            seasons = [3],
-            episodes = []
+            Index = 66,
+            Type = "tv",
+            Title = "Daredevil",
+            Year = 2015,
+            Seasons = [3],
+            Episodes = []
         },
         new()
         {
-            index = 67,
-            type = "tv",
-            title = "Runaways",
-            year = 2017,
-            seasons = [2],
-            episodes = []
+            Index = 67,
+            Type = "tv",
+            Title = "Runaways",
+            Year = 2017,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 68,
-            type = "tv",
-            title = "The Punisher",
-            year = 2017,
-            seasons = [2],
-            episodes = []
+            Index = 68,
+            Type = "tv",
+            Title = "The Punisher",
+            Year = 2017,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 69,
-            type = "tv",
-            title = "Jessica Jones",
-            year = 2015,
-            seasons = [3],
-            episodes = []
+            Index = 69,
+            Type = "tv",
+            Title = "Jessica Jones",
+            Year = 2015,
+            Seasons = [3],
+            Episodes = []
         },
         new()
         {
-            index = 70,
-            type = "movie",
-            title = "Ant-Man and the Wasp",
-            year = 2018
+            Index = 70,
+            Type = "movie",
+            Title = "Ant-Man and the Wasp",
+            Year = 2018
         },
         new()
         {
-            index = 71,
-            type = "movie",
-            title = "Avengers: Infinity War",
-            year = 2018
+            Index = 71,
+            Type = "movie",
+            Title = "Avengers: Infinity War",
+            Year = 2018
         },
         new()
         {
-            index = 72,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [5],
-            episodes = [19, 20, 21, 22]
+            Index = 72,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [5],
+            Episodes = [19, 20, 21, 22]
         },
         new()
         {
-            index = 73,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [6],
-            episodes = []
+            Index = 73,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [6],
+            Episodes = []
         },
         new()
         {
-            index = 74,
-            type = "tv",
-            title = "Agents of SHIELD",
-            year = 2013,
-            seasons = [7],
-            episodes = []
+            Index = 74,
+            Type = "tv",
+            Title = "Agents of SHIELD",
+            Year = 2013,
+            Seasons = [7],
+            Episodes = []
         },
         new()
         {
-            index = 75,
-            type = "tv",
-            title = "Runaways",
-            year = 2017,
-            seasons = [3],
-            episodes = []
+            Index = 75,
+            Type = "tv",
+            Title = "Runaways",
+            Year = 2017,
+            Seasons = [3],
+            Episodes = []
         },
         new()
         {
-            index = 76,
-            type = "movie",
-            title = "Avengers: Endgame",
-            year = 2019
+            Index = 76,
+            Type = "movie",
+            Title = "Avengers: Endgame",
+            Year = 2019
         },
         new()
         {
-            index = 77,
-            type = "tv",
-            title = "Loki",
-            year = 2021,
-            seasons = [1],
-            episodes = []
+            Index = 77,
+            Type = "tv",
+            Title = "Loki",
+            Year = 2021,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 78,
-            type = "tv",
-            title = "Loki",
-            year = 2021,
-            seasons = [2],
-            episodes = []
+            Index = 78,
+            Type = "tv",
+            Title = "Loki",
+            Year = 2021,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 79,
-            type = "tv",
-            title = "What If...?",
-            year = 2021,
-            seasons = [1],
-            episodes = []
+            Index = 79,
+            Type = "tv",
+            Title = "What If...?",
+            Year = 2021,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 80,
-            type = "tv",
-            title = "What If...?",
-            year = 2021,
-            seasons = [2],
-            episodes = []
+            Index = 80,
+            Type = "tv",
+            Title = "What If...?",
+            Year = 2021,
+            Seasons = [2],
+            Episodes = []
         },
         new()
         {
-            index = 81,
-            type = "tv",
-            title = "WandaVision",
-            year = 2021,
-            seasons = [1],
-            episodes = []
+            Index = 81,
+            Type = "tv",
+            Title = "WandaVision",
+            Year = 2021,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 82,
-            type = "tv",
-            title = "The Falcon and the Winter Soldier",
-            year = 2021,
-            seasons = [1],
-            episodes = []
+            Index = 82,
+            Type = "tv",
+            Title = "The Falcon and the Winter Soldier",
+            Year = 2021,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 83,
-            type = "movie",
-            title = "Shang-Chi and the Legend of the Ten Rings",
-            year = 2021
+            Index = 83,
+            Type = "movie",
+            Title = "Shang-Chi and the Legend of the Ten Rings",
+            Year = 2021
         },
         new()
         {
-            index = 84,
-            type = "movie",
-            title = "Eternals",
-            year = 2021
+            Index = 84,
+            Type = "movie",
+            Title = "Eternals",
+            Year = 2021
         },
         new()
         {
-            index = 85,
-            type = "movie",
-            title = "Spider-Man: Far From Home",
-            year = 2019
+            Index = 85,
+            Type = "movie",
+            Title = "Spider-Man: Far From Home",
+            Year = 2019
         },
         new()
         {
-            index = 86,
-            type = "movie",
-            title = "Spider-Man: No Way Home",
-            year = 2021
+            Index = 86,
+            Type = "movie",
+            Title = "Spider-Man: No Way Home",
+            Year = 2021
         },
         new()
         {
-            index = 87,
-            type = "movie",
-            title = "Doctor Strange in the Multiverse of Madness",
-            year = 2022
+            Index = 87,
+            Type = "movie",
+            Title = "Doctor Strange in the Multiverse of Madness",
+            Year = 2022
         },
         new()
         {
-            index = 88,
-            type = "tv",
-            title = "Hawkeye",
-            year = 2021,
-            seasons = [1],
-            episodes = []
+            Index = 88,
+            Type = "tv",
+            Title = "Hawkeye",
+            Year = 2021,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 89,
-            type = "tv",
-            title = "Moon Knight",
-            year = 2022,
-            seasons = [1],
-            episodes = []
+            Index = 89,
+            Type = "tv",
+            Title = "Moon Knight",
+            Year = 2022,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 90,
-            type = "movie",
-            title = "Black Panther: Wakanda Forever",
-            year = 2022
+            Index = 90,
+            Type = "movie",
+            Title = "Black Panther: Wakanda Forever",
+            Year = 2022
         },
         new()
         {
-            index = 91,
-            type = "tv",
-            title = "Echo",
-            year = 2024,
-            seasons = [1],
-            episodes = []
+            Index = 91,
+            Type = "tv",
+            Title = "Echo",
+            Year = 2024,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 92,
-            type = "tv",
-            title = "She-Hulk: Attorney at Law",
-            year = 2022,
-            seasons = [1],
-            episodes = []
+            Index = 92,
+            Type = "tv",
+            Title = "She-Hulk: Attorney at Law",
+            Year = 2022,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 93,
-            type = "tv",
-            title = "Ms Marvel",
-            year = 2022,
-            seasons = [1],
-            episodes = []
+            Index = 93,
+            Type = "tv",
+            Title = "Ms Marvel",
+            Year = 2022,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 94,
-            type = "movie",
-            title = "Thor: Love and Thunder",
-            year = 2022
+            Index = 94,
+            Type = "movie",
+            Title = "Thor: Love and Thunder",
+            Year = 2022
         },
         new()
         {
-            index = 95,
-            type = "movie",
-            title = "Werewolf by Night",
-            year = 2022
+            Index = 95,
+            Type = "movie",
+            Title = "Werewolf by Night",
+            Year = 2022
         },
         new()
         {
-            index = 96,
-            type = "movie",
-            title = "The Guardians of the Galaxy Holiday Special",
-            year = 2022
+            Index = 96,
+            Type = "movie",
+            Title = "The Guardians of the Galaxy Holiday Special",
+            Year = 2022
         },
         new()
         {
-            index = 97,
-            type = "movie",
-            title = "Ant-Man and The Wasp: Quantumania",
-            year = 2023
+            Index = 97,
+            Type = "movie",
+            Title = "Ant-Man and The Wasp: Quantumania",
+            Year = 2023
         },
         new()
         {
-            index = 98,
-            type = "movie",
-            title = "Guardians of the Galaxy Vol 3",
-            year = 2023
+            Index = 98,
+            Type = "movie",
+            Title = "Guardians of the Galaxy Vol 3",
+            Year = 2023
         },
         new()
         {
-            index = 99,
-            type = "tv",
-            title = "Secret Invasion",
-            year = 2023,
-            seasons = [1],
-            episodes = []
+            Index = 99,
+            Type = "tv",
+            Title = "Secret Invasion",
+            Year = 2023,
+            Seasons = [1],
+            Episodes = []
         },
         new()
         {
-            index = 100,
-            type = "movie",
-            title = "The Marvels",
-            year = 2023
+            Index = 100,
+            Type = "movie",
+            Title = "The Marvels",
+            Year = 2023
         }
     ];
 }

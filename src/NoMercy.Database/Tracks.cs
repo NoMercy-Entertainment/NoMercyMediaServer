@@ -9,6 +9,7 @@ public class VideoTracks: Timestamps
     [StringLength(1024)]
     [JsonProperty("tracks")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string _tracks { get; set; } = string.Empty;
 
     [NotMapped]

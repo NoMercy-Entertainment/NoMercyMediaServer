@@ -19,6 +19,7 @@ public class EncoderProfile : Timestamps
     [Column("VideoProfile")]
     [JsonProperty("video_profile")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string _videoProfiles { get; set; } = string.Empty;
 
     [NotMapped]
@@ -33,6 +34,7 @@ public class EncoderProfile : Timestamps
     [Column("AudioProfile")]
     [JsonProperty("audio_profile")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string _audioProfiles { get; set; } = string.Empty;
 
     [NotMapped]
@@ -47,6 +49,7 @@ public class EncoderProfile : Timestamps
     [Column("SubtitleProfile")]
     [JsonProperty("subtitle_profile")]
     [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
     public string _subtitleProfiles { get; set; } = string.Empty;
 
     [NotMapped]
@@ -59,5 +62,5 @@ public class EncoderProfile : Timestamps
     }
 
     [JsonProperty("encoder_profile_folder")]
-    public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; }
+    public ICollection<EncoderProfileFolder> EncoderProfileFolder { get; set; } = [];
 }

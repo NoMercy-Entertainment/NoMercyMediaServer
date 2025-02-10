@@ -38,9 +38,7 @@ public class AddEpisodeExtraDataJob : AbstractShowExtraDataJob<TmdbEpisodeAppend
             await episodeManager.StoreImages(Name, episode);
             await episodeManager.StoreTranslations(Name, episode);
         }
-
-        ;
-
+        
         Logger.MovieDb(
             $"Show {Name}: Season {Storage.FirstOrDefault()?.SeasonNumber} Episodes: Images and Translations stored",
             LogEventLevel.Debug);

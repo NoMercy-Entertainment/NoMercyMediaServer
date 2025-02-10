@@ -6,7 +6,7 @@ public class Flac : BaseContainer
 {
     public override ContainerDto ContainerDto => AvailableContainers.First(c => c.Name == AudioContainers.Flac);
 
-    public Flac() : base()
+    public Flac()
     {
         SetContainer(AudioContainers.Flac);
         AddCustomArgument("-f", AudioFormats.Flac);

@@ -22,24 +22,25 @@ public class Cast
     [JsonProperty("credit_id")] public string? CreditId { get; set; }
 
     [JsonProperty("person_id")] public int PersonId { get; set; }
-    public Person Person { get; set; }
+    public Person Person { get; set; } = null!;
 
     [JsonProperty("movie_id")] public int? MovieId { get; set; }
-    public Movie? Movie { get; set; }
+    public Movie? Movie { get; set; } = new();
 
     [JsonProperty("tv_id")] public int? TvId { get; set; }
-    public Tv? Tv { get; set; }
+    public Tv? Tv { get; set; } = new();
 
     [JsonProperty("season_id")] public int? SeasonId { get; set; }
-    public Season Season { get; set; }
+    public Season? Season { get; set; } = new();
 
     [JsonProperty("episode_id")] public int? EpisodeId { get; set; }
-    public Episode? Episode { get; set; }
+    public Episode? Episode { get; set; } = new();
 
     [JsonProperty("role_id")] public int? RoleId { get; set; }
-    public Role Role { get; set; }
+    public Role Role { get; set; } = null!;
 
     public Cast()
     {
+        //
     }
 }

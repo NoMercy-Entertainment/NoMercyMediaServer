@@ -35,7 +35,7 @@ public class GenresController : BaseController
 
         string language = Language();
 
-        List<GenresResponseItemDto>? genres = await _genreRepository
+        List<GenresResponseItemDto> genres = await _genreRepository
             .GetGenresAsync(userId, language, request.Take, request.Page)
             .Select(genre => new GenresResponseItemDto(genre))
             .ToListAsync();
@@ -60,7 +60,7 @@ public class GenresController : BaseController
 
         if (request.Version != "lolomo")
         {
-            IOrderedEnumerable<GenreResponseItemDto>? concat = genre.GenreMovies
+            IOrderedEnumerable<GenreResponseItemDto> concat = genre.GenreMovies
                 .Select(movie => new GenreResponseItemDto(movie))
                 .Concat(genre.GenreTvShows
                     .Select(tv => new GenreResponseItemDto(tv)))

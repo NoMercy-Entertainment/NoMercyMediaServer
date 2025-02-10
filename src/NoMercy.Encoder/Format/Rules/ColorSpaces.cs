@@ -3,8 +3,8 @@ namespace NoMercy.Encoder.Format.Rules;
 public class ColorSpaces
 {
     public static string Bt470M = "bt470m";
-    public static string Yuv444p = "yuv444p";
-    public static string Yuv422p = "yuv422p";
-    public static string Yuv420p = "yuv420p";
-    public static string Yuv420p10le = "yuv420p10le";
+    public static readonly string Yuv444P = "yuv444p";
+    public static readonly string Yuv422P = "yuv422p";
+    public static readonly string Yuv420P = "yuv420p";
+    public static readonly string Yuv420P10Le = "yuv420p10le";
 }

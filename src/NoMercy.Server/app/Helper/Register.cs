@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
@@ -116,7 +115,9 @@ public static class Register
 
         Logger.Register("Server assigned successfully");
 
+#pragma warning disable CS0618 // Type or member is obsolete
         Certificate.RenewSslCertificate().Wait();
+#pragma warning restore CS0618 // Type or member is obsolete
 
         return Task.CompletedTask;
     }

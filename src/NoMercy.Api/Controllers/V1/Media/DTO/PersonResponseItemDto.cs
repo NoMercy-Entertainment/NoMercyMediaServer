@@ -14,26 +14,26 @@ public record PersonResponseItemDto
     [JsonProperty("biography")] public string? Biography { get; set; }
     [JsonProperty("birthday")] public DateTime? Birthday { get; set; }
     [JsonProperty("deathday")] public DateTime? DeathDay { get; set; }
-    [JsonProperty("gender")] public string Gender { get; set; }
+    [JsonProperty("gender")] public string Gender { get; set; } = TmdbGender.Unknown.ToString();
     [JsonProperty("homepage")] public string? Homepage { get; set; }
     [JsonProperty("imdb_id")] public string? ImdbId { get; set; }
     [JsonProperty("known_for_department")] public string? KnownForDepartment { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("place_of_birth")] public string? PlaceOfBirth { get; set; }
     [JsonProperty("popularity")] public double Popularity { get; set; }
     [JsonProperty("profile")] public string? Profile { get; set; }
-    [JsonProperty("titleSort")] public string TitleSort { get; set; }
+    [JsonProperty("titleSort")] public string TitleSort { get; set; } = string.Empty;
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("created_at")] public DateTime CreatedAt { get; set; }
     [JsonProperty("updated_at")] public DateTime UpdatedAt { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
-    [JsonProperty("combined_credits")] public Credits CombinedCredits { get; set; }
+    [JsonProperty("combined_credits")] public Credits CombinedCredits { get; set; } = new();
 
     [JsonProperty("external_ids")] public Database.Models.TmdbPersonExternalIds? ExternalIds { get; set; }
-    [JsonProperty("translations")] public TranslationsDto TranslationsDto { get; set; }
-    [JsonProperty("known_for")] public KnownFor[] KnownFor { get; set; }
-    [JsonProperty("images")] public Images Images { get; set; }
+    [JsonProperty("translations")] public TranslationsDto TranslationsDto { get; set; } = new();
+    [JsonProperty("known_for")] public KnownFor[] KnownFor { get; set; } = [];
+    [JsonProperty("images")] public Images Images { get; set; } = new();
 
     public PersonResponseItemDto(Person person)
     {

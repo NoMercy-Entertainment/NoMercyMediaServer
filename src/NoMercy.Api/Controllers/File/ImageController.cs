@@ -30,10 +30,10 @@ public class ImageController : Controller
             {
                 if (!System.IO.File.Exists(filePath) && type == "original")
                 {
-                    await TmdbImageClient.Download("/" + path);
+                    await TmdbImageClient.Download("/" + path)!;
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //
             }

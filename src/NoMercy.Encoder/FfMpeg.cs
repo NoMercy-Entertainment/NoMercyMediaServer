@@ -260,7 +260,7 @@ public class FfMpeg : Classes
                         thumbnailFolder = Path.GetFileNameWithoutExtension(thumbnail).Split("-").FirstOrDefault() ?? "";
                     }
 
-                    string remainingHMS = TimeSpan.FromSeconds(double.IsPositiveInfinity(remaining) || double.IsNegativeInfinity(remaining) ? 0 : remaining).ToString();
+                    string remainingHms = TimeSpan.FromSeconds(double.IsPositiveInfinity(remaining) || double.IsNegativeInfinity(remaining) ? 0 : remaining).ToString();
 
                     if (e.Data.Contains("progress") || e.Data.Contains("continue"))
                     {
@@ -271,13 +271,13 @@ public class FfMpeg : Classes
                             CurrentTime = currentTime.TotalSeconds,
                             Duration = totalDuration.TotalSeconds,
                             Remaining = remaining,
-                            RemainingHms = remainingHMS,
+                            RemainingHms = remainingHms,
                             Fps = fps,
                             Speed = speed,
                             Frame = frame,
                             Bitrate = bitrate,
                             HasGpu = meta.HasGpu,
-                            IsHDR = meta.IsHDR,
+                            IsHdr = meta.IsHdr,
                             VideoStreams = meta.VideoStreams,
                             AudioStreams = meta.AudioStreams,
                             SubtitleStreams = meta.SubtitleStreams,

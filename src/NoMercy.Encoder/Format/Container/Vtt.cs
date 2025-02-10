@@ -4,7 +4,7 @@ namespace NoMercy.Encoder.Format.Container;
 
 public class Vtt : BaseContainer
 {
-    public Vtt() : base()
+    public Vtt()
     {
         SetContainer(SubtitleContainers.WebVtt);
         AddCustomArgument("-f", SubtitleFormats.WebVtt);

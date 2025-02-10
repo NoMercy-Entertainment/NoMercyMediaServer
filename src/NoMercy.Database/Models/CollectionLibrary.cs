@@ -10,10 +10,10 @@ namespace NoMercy.Database.Models;
 public class CollectionLibrary
 {
     [JsonProperty("collection_id")] public int CollectionId { get; set; }
-    public Collection Collection { get; set; }
+    public Collection Collection { get; set; } = null!;
 
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
-    public Library Library { get; set; }
+    public Library Library { get; set; } = null!;
 
     public CollectionLibrary()
     {

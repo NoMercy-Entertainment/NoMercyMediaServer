@@ -17,7 +17,7 @@ public class Aac : BaseAudio
     protected override string[] AvailableContainers =>
     [
         AudioContainers.Aac,
-        AudioContainers.M4a,
+        AudioContainers.M4A,
 
         VideoContainers.Mkv,
         VideoContainers.Mp4,

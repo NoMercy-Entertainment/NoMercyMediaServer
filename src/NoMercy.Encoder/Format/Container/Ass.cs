@@ -4,7 +4,7 @@ namespace NoMercy.Encoder.Format.Container;
 
 public class Ass : BaseContainer
 {
-    public Ass() : base()
+    public Ass()
     {
         SetContainer(SubtitleContainers.Ass);
         AddCustomArgument("-f", SubtitleFormats.Ass);

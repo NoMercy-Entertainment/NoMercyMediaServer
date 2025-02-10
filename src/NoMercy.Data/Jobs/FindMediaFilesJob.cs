@@ -58,7 +58,7 @@ public class FindMediaFilesJob : IShouldQueue
 
             if (library.LibraryMovies.Count > 0)
             {
-                LibraryMovie? libraryMovie = library.LibraryMovies?.FirstOrDefault();
+                LibraryMovie? libraryMovie = library.LibraryMovies.FirstOrDefault();
                 if (libraryMovie == null) return;
 
                 libraryMovie.Movie.Folder = file.Files.FirstOrDefault()?.Path;
@@ -67,7 +67,7 @@ public class FindMediaFilesJob : IShouldQueue
             }
             else if (library.LibraryTvs.Count > 0)
             {
-                LibraryTv? libraryTv = library.LibraryTvs?.FirstOrDefault();
+                LibraryTv? libraryTv = library.LibraryTvs.FirstOrDefault();
                 if (libraryTv == null) return;
 
                 libraryTv.Tv.Folder = file.Files.FirstOrDefault()?.Path;

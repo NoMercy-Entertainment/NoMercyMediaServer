@@ -11,7 +11,7 @@ public record UserPermissionRequest
     [JsonProperty("audio_transcoding")] public bool AudioTranscoding { get; set; }
     [JsonProperty("video_transcoding")] public bool VideoTranscoding { get; set; }
     [JsonProperty("no_transcoding")] public bool NoTranscoding { get; set; }
-    [JsonProperty("libraries")] public Ulid[] Libraries { get; set; }
+    [JsonProperty("libraries")] public Ulid[] Libraries { get; set; } = [];
 
     public UserPermissionRequest()
     {

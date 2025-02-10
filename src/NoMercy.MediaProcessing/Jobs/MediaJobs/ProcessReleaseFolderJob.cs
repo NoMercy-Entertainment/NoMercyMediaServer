@@ -26,7 +26,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
     public override string QueueName => "queue";
     public override int Priority => 4;
 
-    private bool _fromFingerprint = false;
+    private bool _fromFingerprint;
 
     public override async Task Handle()
     {
@@ -42,7 +42,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
         Logger.App("Processing music folder " + FilePath);
 
         await using MediaScan mediaScan = new();
-        ConcurrentBag<MediaFolderExtend>? rootFolders = await mediaScan
+        ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             .EnableFileListing()
             .Process(FilePath, 2);
@@ -66,7 +66,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
         using MusicBrainzRecordingClient musicBrainzRecordingClient = new();
         foreach (MediaFolderExtend folder in rootFolders ?? [])
         {
-            if (folder?.Files is null || folder.Files.IsEmpty || folder.Files.Count == 0)
+            if (folder.Files is null || folder.Files.IsEmpty || folder.Files.Count == 0)
             {
                 continue;
             }
@@ -215,7 +215,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
         year = match.Groups["year"].Success ? Convert.ToInt32(match.Groups["year"].Value) : 0;
         releaseType = match.Groups["releaseType"].Success ? match.Groups["releaseType"].Value : string.Empty;
         libraryFolder = (match.Groups["library_folder"].Success ? match.Groups["library_folder"].Value : null) ??
-                        Regex.Split(folder.Path, pattern)?[0] ?? string.Empty;
+                        Regex.Split(folder.Path, pattern).First();
     }
 
     private async Task<MusicBrainzRelease?> GetBestMatchedRelease(
@@ -251,7 +251,9 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
 
     private int CalculateMatchScore(MusicBrainzRelease? release, ConcurrentBag<MediaFile> localTracks)
     {
-        MusicBrainzTrack[] tracks = release?.Media?.SelectMany(m => m?.Tracks ?? [])?.DistinctBy(r => r.Id)?.ToArray() ?? [];
+        MusicBrainzTrack[] tracks = release?.Media.SelectMany(m => m.Tracks)
+            .DistinctBy(r => r.Id)
+            .ToArray() ?? [];
         if (tracks.Length == 0) return 0;
 
         int score = 0;
@@ -303,7 +305,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
     {
         List<MusicBrainzRelease> musicBrainzReleases = [];
 
-        foreach (MediaFile file in folder?.Files ?? [])
+        foreach (MediaFile file in folder.Files ?? [])
         {
             string rawTitle = Path.GetFileNameWithoutExtension(file.Name);
             string title = Regex.Replace(
@@ -349,7 +351,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
 
         List<MusicBrainzRelease> matchedReleases = [];
         
-        foreach (MediaFile file in folder?.Files ?? [])
+        foreach (MediaFile file in folder.Files ?? [])
         {
             if (file.FFprobe is null) continue;
 
@@ -367,7 +369,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
         List<MusicBrainzRelease> matchedReleases,
         int retry = 0)
     {
-        AcoustIdFingerprint? fingerprint = null;
+        AcoustIdFingerprint? fingerprint;
 
         try
         {
@@ -391,11 +393,11 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
             return matchedReleases;
         }
 
-        foreach (AcoustIdFingerprintResult fingerprintResult in fingerprint?.Results ?? [])
+        foreach (AcoustIdFingerprintResult fingerprintResult in fingerprint.Results)
         {
             if (fingerprintResult.Id == Guid.Empty) continue;
 
-            foreach (AcoustIdFingerprintRecording? fingerprintResultRecording in fingerprintResult?.Recordings ?? [])
+            foreach (AcoustIdFingerprintRecording? fingerprintResultRecording in fingerprintResult.Recordings ?? [])
             {
                 if (fingerprintResultRecording?.Releases is null) continue;
                 if (fingerprintResultRecording.Id == Guid.Empty) continue;
@@ -426,7 +428,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
     private async Task<AcoustIdFingerprint?> AcoustIdFingerprintLookUp(string path, int retry = 0)
     {
         AcoustIdFingerprintClient acoustIdFingerprintClient = new();
-        AcoustIdFingerprint? result = null;
+        AcoustIdFingerprint? result;
         try
         {
             result = await acoustIdFingerprintClient.Lookup(path);
@@ -452,7 +454,7 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
         int year)
     {
         MusicBrainzRelease[] releases;
-        MusicBrainzReleaseSearchResponse? result = null;
+        MusicBrainzReleaseSearchResponse? result ;
         List<MusicBrainzRelease> musicBrainzReleases = [];
         string query = $"release:{albumName}";
 

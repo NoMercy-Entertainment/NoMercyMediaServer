@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using System.ComponentModel.DataAnnotations.Schema;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database;
@@ -48,19 +47,16 @@ public record Update
 
 public record RenderProps<T>
 {
-    private string _title = string.Empty;
     [JsonProperty("id")] public Ulid Id { get; set; } = Ulid.NewUlid();
-
-    [JsonProperty("title")] public string Title { get; set; }
-
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("more_link")] public Uri? MoreLink { get; set; }
     [JsonProperty("more_link_text")] public string? MoreText => MoreLink is not null ? "See all".Localize() : null;
     [JsonProperty("items")] public IEnumerable<ComponentDto<T>>? Items { get; set; } = [];
     [JsonProperty("data")] public T? Data { get; set; }
     [JsonProperty("watch")] public bool Watch { get; set; }
-    [JsonProperty("context_menu_items")] public Dictionary<string, object>[]? ContextMenuItems { get; set; }
+    [JsonProperty("context_menu_items")] public Dictionary<string, object>[]? ContextMenuItems { get; set; } = [];
     [JsonProperty("url")] public Uri? Url { get; set; }
-    [JsonProperty("displayList")] public IEnumerable<ArtistTrackDto>? DisplayList { get; set; }
+    [JsonProperty("displayList")] public IEnumerable<ArtistTrackDto>? DisplayList { get; set; } = [];
 }
 
 public record RenderPropsItemDto
@@ -83,7 +79,7 @@ public record RenderPropsItemDto
     [JsonProperty("videos")] public VideoDto[]? Videos { get; set; }
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
-    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; } = default!;
+    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
     [JsonProperty("link")] public required Uri Link { get; set; } = default!;
 
     public RenderPropsItemDto(UserData item, string country)

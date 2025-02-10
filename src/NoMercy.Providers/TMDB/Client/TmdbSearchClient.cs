@@ -12,7 +12,7 @@ public class TmdbSearchClient : TmdbBaseClient
 {
     public Task<TmdbPaginatedResponse<TmdbMovie>?> Movie(string query, string? year)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
             ["primary_release_year"] = year ?? "",
@@ -24,7 +24,7 @@ public class TmdbSearchClient : TmdbBaseClient
 
     public Task<TmdbPaginatedResponse<TmdbTvShow>?> TvShow(string query, string? year)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
             ["first_air_date_year"] = year ?? "",
@@ -36,7 +36,7 @@ public class TmdbSearchClient : TmdbBaseClient
 
     public Task<TmdbPaginatedResponse<TmdbPerson>?> Person(string query, string? year)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
             ["primary_release_year"] = year ?? "",
@@ -48,7 +48,7 @@ public class TmdbSearchClient : TmdbBaseClient
 
     public Task<TmdbPaginatedResponse<TmdbMultiSearch>?> Multi(string query, string? year)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
             ["primary_release_year"] = year ?? "",
@@ -60,7 +60,7 @@ public class TmdbSearchClient : TmdbBaseClient
 
     public Task<TmdbPaginatedResponse<TmdbCollection>?> Collection(string query, string? year)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
             ["primary_release_year"] = year ?? "",
@@ -72,7 +72,7 @@ public class TmdbSearchClient : TmdbBaseClient
 
     public Task<TmdbPaginatedResponse<TmdbNetwork>?> Network(string query, string? year)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
             ["primary_release_year"] = year ?? "",
@@ -84,7 +84,7 @@ public class TmdbSearchClient : TmdbBaseClient
 
     public Task<TmdbPaginatedResponse<TmdbKeyword>?> Keyword(string query, string? year)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
             ["primary_release_year"] = year ?? "",

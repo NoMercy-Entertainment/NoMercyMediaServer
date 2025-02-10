@@ -32,8 +32,8 @@ public class BaseClient : IDisposable
             Timeout = TimeSpan.FromMinutes(5)
         };
 
-        foreach (KeyValuePair<string, string> keyValuePair in _instance.QueryParams)
-            Client.DefaultRequestHeaders.Add(keyValuePair.Key, keyValuePair.Value);
+        foreach ((string? key, string? value) in _instance.QueryParams)
+            Client.DefaultRequestHeaders.Add(key, value);
     }
 
     protected BaseClient(Guid id)
@@ -51,8 +51,8 @@ public class BaseClient : IDisposable
             Timeout = TimeSpan.FromMinutes(5)
         };
 
-        foreach (KeyValuePair<string, string> keyValuePair in _instance.QueryParams)
-            Client.DefaultRequestHeaders.Add(keyValuePair.Key, keyValuePair.Value);
+        foreach ((string? key, string? value) in _instance.QueryParams)
+            Client.DefaultRequestHeaders.Add(key, value);
     }
 
     private static Queue? _queue;
@@ -72,9 +72,9 @@ public class BaseClient : IDisposable
     {
         query ??= new();
 
-        foreach (KeyValuePair<string, string> queryParam in QueryParams) query.Add(queryParam.Key, queryParam.Value);
+        foreach (KeyValuePair<string, string?> queryParam in QueryParams) query.Add(queryParam.Key, queryParam.Value);
 
-        string newUrl = QueryHelpers.AddQueryString(url, query!);
+        string newUrl = QueryHelpers.AddQueryString(url, query);
 
         if (CacheController.Read(newUrl, out T? result)) return result;
 

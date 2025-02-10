@@ -9,7 +9,7 @@ namespace NoMercy.Api.Controllers.V1.Media.DTO;
 
 public record SpecialResponseDto
 {
-    [JsonProperty("nextId")] public object NextId { get; set; }
+    [JsonProperty("nextId")] public object NextId { get; set; } = null!;
 
     [JsonProperty("data")] public SpecialResponseItemDto? Data { get; set; }
 
@@ -242,6 +242,7 @@ public record SpecialResponseDto
 
     public SpecialResponseDto(Special special)
     {
+        //
     }
 
     public SpecialResponseDto()

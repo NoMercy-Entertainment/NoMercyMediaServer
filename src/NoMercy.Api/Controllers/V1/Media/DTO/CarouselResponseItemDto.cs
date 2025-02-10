@@ -30,8 +30,8 @@ public record CarouselResponseItemDto
             .Take(36)
             .ToListAsync();
 
-    public static readonly Func<MediaContext, Guid, Task<List<CarouselResponseItemDto>>> GetLatestAlbums =
-        (mediaContext, userId) => mediaContext.Albums
+    public static readonly Func<MediaContext, Task<List<CarouselResponseItemDto>>> GetLatestAlbums =
+        (mediaContext) => mediaContext.Albums
             .Where(album => album.Cover != null && album.AlbumTrack.Count > 0)
             .Where(album => album.AlbumTrack
                 .Any(artistTrack => artistTrack.Track.Duration != null))
@@ -42,8 +42,8 @@ public record CarouselResponseItemDto
             .Take(36)
             .ToListAsync();
 
-    public static readonly Func<MediaContext, Guid, Task<List<CarouselResponseItemDto>>> GetLatestArtists =
-        (mediaContext, userId) => mediaContext.Artists
+    public static readonly Func<MediaContext, Task<List<CarouselResponseItemDto>>> GetLatestArtists =
+        (mediaContext) => mediaContext.Artists
             .Where(artist => artist.Cover != null && artist.ArtistTrack.Count > 0)
             .Where(artist => artist.ArtistTrack
                 .Any(artistTrack => artistTrack.Track.Duration != null))
@@ -135,7 +135,7 @@ public record CarouselResponseItemDto
         Description = artist.Description;
         Folder = artist.Folder ?? "";
         Id = artist.Id.ToString();
-        LibraryId = artist.LibraryId ?? Ulid.Empty;
+        LibraryId = artist.LibraryId;
         Name = artist.Name;
         Type = "artists";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
@@ -155,7 +155,7 @@ public record CarouselResponseItemDto
         Description = album.Description;
         Folder = album.Folder ?? "";
         Id = album.Id.ToString();
-        LibraryId = album.LibraryId ?? Ulid.Empty;
+        LibraryId = album.LibraryId;
         Name = album.Name;
         Type = "albums";
         Link = new($"/music/album/{Id}", UriKind.Relative);
@@ -176,7 +176,7 @@ public record CarouselResponseItemDto
         Description = playlist.Artist.Description;
         Folder = playlist.Artist.Folder ?? "";
         Id = playlist.Artist.Id.ToString();
-        LibraryId = playlist.Artist.LibraryId ?? Ulid.Empty;
+        LibraryId = playlist.Artist.LibraryId;
         Name = playlist.Artist.Name;
         Type = "artists";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
@@ -196,7 +196,7 @@ public record CarouselResponseItemDto
         Description = playlist.Album.Description;
         Folder = playlist.Album.Folder ?? "";
         Id = playlist.Album.Id.ToString();
-        LibraryId = playlist.Album.LibraryId ?? Ulid.Empty;
+        LibraryId = playlist.Album.LibraryId;
         Name = playlist.Album.Name;
         Type = "albums";
         Link = new($"/music/album/{Id}", UriKind.Relative);

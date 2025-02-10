@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models;
@@ -29,21 +28,19 @@ public class Episode : ColorPalettes
     [JsonProperty("vote_count")] public int? VoteCount { get; set; }
 
     [JsonProperty("tv_id")] public int TvId { get; set; }
-    public Tv Tv { get; set; }
+    public Tv Tv { get; set; } = null!;
 
     [JsonProperty("season_id")] public int SeasonId { get; set; }
-    public Season Season { get; set; }
+    public Season Season { get; set; } = null!;
 
-    [JsonProperty("casts")] public ICollection<Cast> Cast { get; set; }
-    [JsonProperty("crews")] public ICollection<Crew> Crew { get; set; }
-    [JsonProperty("special_items")] public ICollection<SpecialItem> SpecialItems { get; set; }
-
-    [JsonProperty("video_files")] public ICollection<VideoFile> VideoFiles { get; set; }
-
-    [JsonProperty("medias")] public ICollection<Media> Media { get; set; }
-    [JsonProperty("images")] public ICollection<Image> Images { get; set; }
-    [JsonProperty("guest_stars")] public ICollection<GuestStar> GuestStars { get; set; }
-    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; }
+    [JsonProperty("casts")] public ICollection<Cast> Cast { get; set; } = [];
+    [JsonProperty("crews")] public ICollection<Crew> Crew { get; set; } = [];
+    [JsonProperty("special_items")] public ICollection<SpecialItem> SpecialItems { get; set; } = [];
+    [JsonProperty("video_files")] public ICollection<VideoFile> VideoFiles { get; set; } = [];
+    [JsonProperty("medias")] public ICollection<Media> Media { get; set; } = [];
+    [JsonProperty("images")] public ICollection<Image> Images { get; set; } = [];
+    [JsonProperty("guest_stars")] public ICollection<GuestStar> GuestStars { get; set; } = [];
+    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; } = [];
 
     public Episode()
     {

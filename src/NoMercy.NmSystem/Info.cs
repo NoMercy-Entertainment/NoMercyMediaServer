@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Management;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -83,7 +82,7 @@ public class Info
                 if (line.TrimStart().StartsWith(marker))
                 {
                     // Extract the GPU name after the marker
-                    string gpuName = line.Substring(line.IndexOf(marker) + marker.Length).Trim();
+                    string gpuName = line.Substring(line.IndexOf(marker, StringComparison.Ordinal) + marker.Length).Trim();
                     if (!string.IsNullOrEmpty(gpuName))
                     {
                         gpus.Add(gpuName);
@@ -95,7 +94,7 @@ public class Info
 
         string output = ExecuteBashCommand("lspci | grep 'VGA'");
 
-        return output.Trim().Split(':').LastOrDefault()?.Trim()?.Split('\n') ?? [];
+        return output.Trim().Split(':').LastOrDefault()?.Trim().Split('\n') ?? [];
     }
 
     private static string[] GetCpuFullName()
@@ -150,7 +149,7 @@ public class Info
     
     public static string GetReleaseVersion()
     {
-        return $"{Version.Major}.{Version.Minor}.{Version.Build}";
+        return $"{Version!.Major}.{Version.Minor}.{Version.Build}";
     }
 
     private static DateTime GetBootTime()

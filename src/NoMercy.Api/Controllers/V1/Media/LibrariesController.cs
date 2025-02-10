@@ -1,4 +1,3 @@
-using System.Collections;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -25,7 +24,7 @@ public class LibrariesController(
     : BaseController
 {
     [HttpGet]
-    public async Task<IActionResult> Libraries()
+    public IActionResult Libraries()
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -147,7 +146,7 @@ public class LibrariesController(
 
     [HttpGet]
     [Route("tv")]
-    public async Task<IActionResult> Tv()
+    public IActionResult Tv()
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -237,7 +236,7 @@ public class LibrariesController(
 
     [HttpGet]
     [Route("{libraryId:ulid}")]
-    public async Task<IActionResult> Library(Ulid libraryId, [FromQuery] PageRequestDto request)
+    public IActionResult Library(Ulid libraryId, [FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())

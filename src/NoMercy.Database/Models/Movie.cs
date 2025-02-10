@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Database.Models;
@@ -15,7 +14,7 @@ public class Movie : ColorPaletteTimeStamps
     public int Id { get; set; }
 
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("title_sort")] public string TitleSort { get; set; }
+    [JsonProperty("title_sort")] public string TitleSort { get; set; } = string.Empty;
     [JsonProperty("duration")] public int? Duration { get; set; }
     [JsonProperty("show")] public bool Show { get; set; }
     [JsonProperty("folder")] public string? Folder { get; set; }
@@ -40,34 +39,34 @@ public class Movie : ColorPaletteTimeStamps
     [JsonProperty("vote_count")] public int? VoteCount { get; set; }
 
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
-    public Library Library { get; set; }
+    public Library Library { get; set; } = null!;
 
-    [JsonProperty("alternative_titles")] public ICollection<AlternativeTitle> AlternativeTitles { get; set; }
+    [JsonProperty("alternative_titles")] public ICollection<AlternativeTitle> AlternativeTitles { get; set; } = [];
 
-    [JsonProperty("cast")] public ICollection<Cast> Cast { get; set; } = new HashSet<Cast>();
+    [JsonProperty("cast")] public ICollection<Cast> Cast { get; set; } = [];
 
     [JsonProperty("certifications")]
-    public ICollection<CertificationMovie> CertificationMovies { get; set; } =
-        new HashSet<CertificationMovie>();
+    public ICollection<CertificationMovie> CertificationMovies { get; set; } = [];
 
-    [JsonProperty("crew")] public ICollection<Crew> Crew { get; set; } = new HashSet<Crew>();
-    [JsonProperty("genre")] public ICollection<GenreMovie> GenreMovies { get; set; }
-    [JsonProperty("keywords")] public ICollection<KeywordMovie> KeywordMovies { get; set; }
-    [JsonProperty("media")] public ICollection<Media> Media { get; set; }
-    [JsonProperty("images")] public ICollection<Image> Images { get; set; }
-    [JsonProperty("seasons")] public ICollection<Season> Seasons { get; set; }
-    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; }
-    [JsonProperty("user_data")] public ICollection<UserData> UserData { get; set; }
-    [InverseProperty("MovieFrom")] public ICollection<Recommendation> RecommendationFrom { get; set; }
-    [InverseProperty("MovieTo")] public ICollection<Recommendation> RecommendationTo { get; set; }
-    [InverseProperty("MovieFrom")] public ICollection<Similar> SimilarFrom { get; set; }
-    [InverseProperty("MovieTo")] public ICollection<Similar> SimilarTo { get; set; }
-    [JsonProperty("movie_user")] public ICollection<MovieUser> MovieUser { get; set; }
+    [JsonProperty("crew")] public ICollection<Crew> Crew { get; set; } = [];
+    [JsonProperty("genre")] public ICollection<GenreMovie> GenreMovies { get; set; } = [];
+    [JsonProperty("keywords")] public ICollection<KeywordMovie> KeywordMovies { get; set; } = [];
+    [JsonProperty("media")] public ICollection<Media> Media { get; set; } = [];
+    [JsonProperty("images")] public ICollection<Image> Images { get; set; } = [];
+    [JsonProperty("seasons")] public ICollection<Season> Seasons { get; set; } = [];
+    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; } = [];
+    [JsonProperty("user_data")] public ICollection<UserData> UserData { get; set; } = [];
+    [InverseProperty("MovieFrom")] public ICollection<Recommendation> RecommendationFrom { get; set; } = [];
+    [InverseProperty("MovieTo")] public ICollection<Recommendation> RecommendationTo { get; set; } = [];
+    [InverseProperty("MovieFrom")] public ICollection<Similar> SimilarFrom { get; set; } = [];
+    [InverseProperty("MovieTo")] public ICollection<Similar> SimilarTo { get; set; } = [];
+    [JsonProperty("movie_user")] public ICollection<MovieUser> MovieUser { get; set; } = [];
 
-    [JsonProperty("video_files")] public ICollection<VideoFile> VideoFiles { get; set; } = new HashSet<VideoFile>();
+    [JsonProperty("video_files")] public ICollection<VideoFile> VideoFiles { get; set; } = [];
 
     public Movie()
     {
+        //
     }
 
     // public Movie(Providers.TMDB.Models.Movies.TmdbMovie input, Ulid libraryId)

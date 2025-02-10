@@ -75,8 +75,8 @@ public static class SpecialSeed
 
             foreach (CollectionItem item in Mcu.McuItems)
             {
-                Logger.Setup($"Searching for {item.title} ({item.year})");
-                switch (item.type)
+                Logger.Setup($"Searching for {item.Title} ({item.Year})");
+                switch (item.Type)
                 {
                     case "movie":
                         await AddMovieItem(context, client, movieLibrary, item, movieIds, specialItems);
@@ -98,7 +98,7 @@ public static class SpecialSeed
 
     private static async Task AddMovieItem(MediaContext context, TmdbSearchClient client, Library movieLibrary, CollectionItem item, List<int> movieIds, List<SpecialItem> specialItems)
     {
-        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(item.title, item.year.ToString());
+        TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(item.Title, item.Year.ToString());
         TmdbMovie? movie = result?.Results.FirstOrDefault(r => !r.Title.ToLower().Contains("making of"));
 
         if (movie is null || movieIds.Contains(movie.Id)) return;
@@ -129,7 +129,7 @@ public static class SpecialSeed
 
     private static async Task AddTvItem(MediaContext context, TmdbSearchClient client, Library tvLibrary, CollectionItem item, List<int> tvIds, List<SpecialItem> specialItems)
     {
-        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(item.title, item.year.ToString());
+        TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(item.Title, item.Year.ToString());
         TmdbTvShow? tv = result?.Results.FirstOrDefault(r => !r.Name.Contains("making of", StringComparison.InvariantCultureIgnoreCase));
 
         if (tv is null || tvIds.Contains(tv.Id)) return;
@@ -150,21 +150,21 @@ public static class SpecialSeed
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
 
-      if (item.episodes.Length == 0)
+      if (item.Episodes.Length == 0)
         {
-            item.episodes = context.Episodes
+            item.Episodes = context.Episodes
                 .Where(x => x.TvId == tv.Id)
-                .Where(x => x.SeasonNumber == item.seasons.First())
+                .Where(x => x.SeasonNumber == item.Seasons.First())
                 .Select(x => x.EpisodeNumber)
                 .ToArray();
         }
 
-        foreach (int episodeNumber in item.episodes)
+        foreach (int episodeNumber in item.Episodes)
         {
             Episode? episode = context.Episodes
                 .FirstOrDefault(x =>
                     x.TvId == tv.Id
-                    && x.SeasonNumber == item.seasons.First()
+                    && x.SeasonNumber == item.Seasons.First()
                     && x.EpisodeNumber == episodeNumber);
 
             if (episode is null) continue;

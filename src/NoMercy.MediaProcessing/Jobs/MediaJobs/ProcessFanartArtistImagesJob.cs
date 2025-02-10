@@ -3,7 +3,6 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Images;
@@ -47,7 +46,7 @@ public class ProcessFanartArtistImagesJob : AbstractFanArtDataJob
             {
                 if (artistCover is not null && (dbArtist.Cover is null || dbArtist._colorPalette is ""))
                 {
-                    dbArtist.Cover = artistCover.FilePath ?? dbArtist.Cover;
+                    dbArtist.Cover = artistCover.FilePath;
                     dbArtist._colorPalette = artistCover._colorPalette.Replace("\"image\"", "\"cover\"");
 
                     await context.Artists.Upsert(dbArtist)

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using NoMercy.NmSystem;
 using Sharpcaster;
 using Sharpcaster.Interfaces;

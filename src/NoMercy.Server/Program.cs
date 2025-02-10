@@ -6,9 +6,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
-using NoMercy.Data.Jobs;
 using NoMercy.Data.Logic;
-using NoMercy.Database;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.Networking;
@@ -18,8 +16,9 @@ using NoMercy.Server.app.Helper;
 using AppFiles = NoMercy.NmSystem.AppFiles;
 
 namespace NoMercy.Server;
- public static class Program
+public static class Program
 {
+#if WINDOWS
     [DllImport("Kernel32")]
     private static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate handler, bool add);
 
@@ -35,7 +34,7 @@ namespace NoMercy.Server;
         }
         return false;
     }
-    
+
     [DllImport("Kernel32.dll")]
     private static extern IntPtr GetConsoleWindow();
     [DllImport("User32.dll")]
@@ -49,10 +48,6 @@ namespace NoMercy.Server;
     private const uint WM_CLOSE = 0x0010;
     private static IntPtr _originalWndProc = IntPtr.Zero;
     private static IntPtr _consoleWindow = IntPtr.Zero;
-    
-    private static bool ShouldSeedMarvel { get; set; }
-
-    public static int ConsoleVisible { get; set; } = 1;
 
     private static IntPtr CustomWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
@@ -96,12 +91,17 @@ namespace NoMercy.Server;
         ShowWindow(_consoleWindow, 1);
         ConsoleVisible = 1;
     }
+#endif
+
+    public static int ConsoleVisible { get; set; } = 1;
 
     public static Task Main(string[] args)
     {
+#if WINDOWS
         SetConsoleCtrlHandler(ConsoleCtrlHandler, true);
         _consoleWindow = GetConsoleWindow();
         _originalWndProc = SetWindowLongPtr(_consoleWindow, GWL_WNDPROC, Marshal.GetFunctionPointerForDelegate((WndProc)CustomWndProc));
+#endif
 
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
         {
@@ -137,6 +137,8 @@ namespace NoMercy.Server;
             return Task.CompletedTask;
         }
     }
+    
+    private static bool ShouldSeedMarvel { get; set; }
 
     private delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
@@ -147,11 +149,11 @@ namespace NoMercy.Server;
             Console.Clear();
             Console.Title = "NoMercy Server";
         }
-        
+
         Version version = Assembly.GetExecutingAssembly().GetName().Version!;
         Info.Version = version;
         Logger.App($"NoMercy Server v{version.Major}.{version.Minor}.{version.Build}");
-        
+
         options.ApplySettings(out bool shouldSeedMarvel);
         ShouldSeedMarvel = shouldSeedMarvel;
 
@@ -258,12 +260,14 @@ namespace NoMercy.Server;
             new (Dev.Run),
             new (ChromeCast.Init),
             new (UpdateChecker.StartPeriodicUpdateCheck),
-           
+
             new (delegate
             {
+#if WINDOWS
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
                     return TrayIcon.Make();
+#endif
                 return Task.CompletedTask;
             }),
             new (StorageMonitor.UpdateStorage),
@@ -287,6 +291,7 @@ namespace NoMercy.Server;
         };
         fileWatcher.Start();
 
+#if WINDOWS
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
         {
             Logger.App(
@@ -294,6 +299,7 @@ namespace NoMercy.Server;
             await Task.Delay(10000)
                 .ContinueWith(_ => VsConsoleWindow(0));
         }
+#endif
     }
 
     private static async Task RunStartup(List<TaskDelegate> startupTasks)

@@ -49,8 +49,6 @@ public class EncodeMusicJob : AbstractEncoderJob
             .DisableRegexFilter()
             .EnableFileListing()
             .Process(folder.Path);
-        
-        if (files is null) return;
 
         string rawAlbumName = Path.GetDirectoryName(folder.Path) ?? string.Empty;
         

@@ -21,7 +21,7 @@ public class SimilarPaletteJob : AbstractPaletteJob<Similar>
 
     public override async Task Handle()
     {
-        await using MediaContext? context = new();
+        await using MediaContext context = new();
 
         List<Similar> similars = context.Similar
             .Where(x => string.IsNullOrEmpty(x._colorPalette))

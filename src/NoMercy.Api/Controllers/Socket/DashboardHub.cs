@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.SignalR;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
 

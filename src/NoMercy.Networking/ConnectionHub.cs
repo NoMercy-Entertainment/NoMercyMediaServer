@@ -151,7 +151,7 @@ public class ConnectionHub : Hub
             await mediaContext.ActivityLogs.AddAsync(log);
             await mediaContext.SaveChangesAsync();
         }
-        catch (Exception e)
+        catch (Exception)
         {
             if (count > 2) return; // 3 times
             

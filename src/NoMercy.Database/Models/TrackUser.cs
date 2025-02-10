@@ -10,13 +10,14 @@ namespace NoMercy.Database.Models;
 public class TrackUser
 {
     [JsonProperty("track_id")] public Guid TrackId { get; set; }
-    public Track Track { get; set; }
+    public Track Track { get; set; } = null!;
 
     [JsonProperty("user_id")] public Guid UserId { get; set; }
-    public User User { get; set; }
+    public User User { get; set; } = null!;
 
     public TrackUser()
     {
+        //
     }
 
     public TrackUser(Guid trackId, Guid userId)

@@ -5,7 +5,8 @@ namespace NoMercy.Providers.FanArt.Models;
 
 public class Image
 {
-    private Uri __url;
+    // ReSharper disable once InconsistentNaming
+    private Uri __url { get; set; } = null!;
 
     [JsonProperty("id")] public int Id { get; set; }
 

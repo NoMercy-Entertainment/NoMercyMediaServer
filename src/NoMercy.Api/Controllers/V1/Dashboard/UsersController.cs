@@ -8,7 +8,6 @@ using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Networking;
-using NoMercy.NmSystem;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 

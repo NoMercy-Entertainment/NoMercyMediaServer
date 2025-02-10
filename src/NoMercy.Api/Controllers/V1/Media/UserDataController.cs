@@ -21,7 +21,7 @@ public class UserDataController : BaseController
     [HttpGet]
     public IActionResult Index()
     {
-        Guid userId = User.UserId();
+        // Guid userId = User.UserId();
         if (!User.IsAllowed())
             return Unauthorized(new StatusResponseDto<string>
             {
@@ -47,7 +47,7 @@ public class UserDataController : BaseController
                 Message = "You do not have permission to view continue watching"
             });
 
-        string? language = Language();
+        // string language = Language();
         string country = Country();
 
         await using MediaContext mediaContext = new();
@@ -55,47 +55,47 @@ public class UserDataController : BaseController
             .AsNoTracking()
             .Where(user => user.UserId.Equals(userId))
             
-            .Include(userData => userData.Movie)
+            .Include(userData => userData.Movie!)
             .ThenInclude(movie => movie.Media
                 .Where(media => media.Site == "Youtube")
             )
-            .Include(userData => userData.Movie)
+            .Include(userData => userData.Movie!)
             .ThenInclude(movie => movie.CertificationMovies
                 .Where(certificationMovie => certificationMovie.Certification.Iso31661 == country)
             )
             .ThenInclude(certificationMovie => certificationMovie.Certification)
-            .Include(userData => userData.Movie)
+            .Include(userData => userData.Movie!)
             .ThenInclude(movie => movie.VideoFiles)
             
-            .Include(userData => userData.Tv)
+            .Include(userData => userData.Tv!)
             .ThenInclude(tv => tv.Media
                 .Where(media => media.Site == "Youtube")
             )
-            .Include(userData => userData.Tv)
+            .Include(userData => userData.Tv!)
             .ThenInclude(tv => tv.CertificationTvs
                 .Where(certificationTv => certificationTv.Certification.Iso31661 == country)
             )
             .ThenInclude(certificationTv => certificationTv.Certification)
-            .Include(userData => userData.Tv)
+            .Include(userData => userData.Tv!)
             .ThenInclude(tv => tv.Episodes
                 .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0)
             )
             .ThenInclude(episode => episode.VideoFiles)
             
-            .Include(userData => userData.Collection)
+            .Include(userData => userData.Collection!)
             .ThenInclude(collection => collection.CollectionMovies)
             .ThenInclude(collectionMovie => collectionMovie.Movie)
             .ThenInclude(movie => movie.CertificationMovies)
             .ThenInclude(certificationMovie => certificationMovie.Certification)
-            .Include(userData => userData.Collection)
+            .Include(userData => userData.Collection!)
             .ThenInclude(collection => collection.CollectionMovies)
             .ThenInclude(collectionMovie => collectionMovie.Movie)
             .ThenInclude(movie => movie.Media
                 .Where(media => media.Site == "Youtube")
             )
-            .Include(userData => userData.Collection)
+            .Include(userData => userData.Collection!)
             .ThenInclude(collection => collection.CollectionMovies)
-            .ThenInclude(collectionMovie => collectionMovie.Movie)
+            .ThenInclude(collectionMovie => collectionMovie.Movie!)
             .ThenInclude(movie => movie.VideoFiles)
             
             .Include(userData => userData.Special)

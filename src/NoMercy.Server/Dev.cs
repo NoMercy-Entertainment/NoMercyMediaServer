@@ -1,5 +1,3 @@
-using NoMercy.Networking;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 // using NoMercy.Providers.TVDB.Client;
 // using NoMercy.Providers.TVDB.Models;

@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Asp.Versioning;
@@ -70,7 +69,6 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                 title: "Unauthorized.",
                 detail: "You do not have permission to access the setup");
 
-        await using MediaContext context = new();
         List<Library> libraries = await context.Libraries
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
@@ -177,7 +175,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
 
     [HttpPost]
     [Route("addfiles")]
-    public async Task<IActionResult> AddFiles([FromBody] AddFilesRequest request)
+    public IActionResult AddFiles([FromBody] AddFilesRequest request)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add files");
@@ -660,7 +658,6 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update server information");
 
-        await using MediaContext context = new();
         Configuration? configuration = await context.Configuration
             .AsTracking()
             .FirstOrDefaultAsync(configuration => configuration.Key == "serverName");

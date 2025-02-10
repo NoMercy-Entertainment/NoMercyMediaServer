@@ -26,7 +26,7 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
 
     public Task<TmdbSeasonAppends?> WithAppends(string[] appendices)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["append_to_response"] = string.Join(",", appendices)
         };
@@ -59,7 +59,7 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
 
     public Task<TmdbSeasonChanges?> Changes(string startDate, string endDate)
     {
-        Dictionary<string, string> queryParams = new()
+        Dictionary<string, string?> queryParams = new()
         {
             ["start_date"] = startDate,
             ["end_date"] = endDate

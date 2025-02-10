@@ -36,13 +36,13 @@ public class Image : ColorPaletteTimeStamps
     public int Id { get; set; }
 
     [JsonProperty("aspect_ratio")] public double AspectRatio { get; set; }
-    [JsonProperty("file_path")] public string? FilePath { get; set; }
+    [JsonProperty("file_path")] public string FilePath { get; set; } = null!;
     [JsonProperty("file_type")] public string? Name { get; set; }
     [JsonProperty("height")] public int? Height { get; set; }
     [JsonProperty("iso_639_1")] public string? Iso6391 { get; set; }
     [JsonProperty("site")] public string? Site { get; set; }
     [JsonProperty("size")] public int? Size { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("type")] public string Type { get; set; } = null!;
     [JsonProperty("vote_average")] public double? VoteAverage { get; set; }
     [JsonProperty("vote_count")] public int? VoteCount { get; set; }
     [JsonProperty("width")] public int? Width { get; set; }
@@ -54,33 +54,34 @@ public class Image : ColorPaletteTimeStamps
     public virtual Crew? Crew { get; set; }
 
     [JsonProperty("person_id")] public int? PersonId { get; set; }
-    public virtual Person Person { get; set; }
+    public virtual Person? Person { get; set; }
 
     [JsonProperty("artist_id")] public Guid? ArtistId { get; set; }
-    public virtual Artist Artist { get; set; }
+    public virtual Artist? Artist { get; set; }
 
     [JsonProperty("album_id")] public Guid? AlbumId { get; set; }
-    public virtual Album Album { get; set; }
+    public virtual Album? Album { get; set; }
 
     [JsonProperty("track_id")] public Guid? TrackId { get; set; }
-    public virtual Track Track { get; set; }
+    public virtual Track? Track { get; set; }
 
     [JsonProperty("tv_id")] public int? TvId { get; set; }
-    public virtual Tv Tv { get; set; }
+    public virtual Tv? Tv { get; set; }
 
     [JsonProperty("season_id")] public int? SeasonId { get; set; }
-    public virtual Season Season { get; set; }
+    public virtual Season? Season { get; set; }
 
     [JsonProperty("episode_id")] public int? EpisodeId { get; set; }
-    public virtual Episode Episode { get; set; }
+    public virtual Episode? Episode { get; set; }
 
     [JsonProperty("movie_id")] public int? MovieId { get; set; }
-    public virtual Movie Movie { get; set; }
+    public virtual Movie? Movie { get; set; }
 
     [JsonProperty("collection_id")] public int? CollectionId { get; set; }
-    public virtual Collection Collection { get; set; }
+    public virtual Collection? Collection { get; set; }
 
     public Image()
     {
+        //
     }
 }

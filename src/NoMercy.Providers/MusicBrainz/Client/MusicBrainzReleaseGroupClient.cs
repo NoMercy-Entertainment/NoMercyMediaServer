@@ -6,13 +6,13 @@ namespace NoMercy.Providers.MusicBrainz.Client;
 
 public class MusicBrainzReleaseGroupClient : MusicBrainzBaseClient
 {
-    public MusicBrainzReleaseGroupClient(Guid? id, string[]? appendices = null) : base((Guid)id!)
+    public MusicBrainzReleaseGroupClient(Guid? id) : base((Guid)id!)
     {
     }
 
     public Task<MusicBrainzReleaseAppends?> WithAppends(string[] appendices, bool? priority = false)
     {
-        Dictionary<string, string>? queryParams = new()
+        Dictionary<string, string> queryParams = new()
         {
             ["inc"] = string.Join("+", appendices),
             ["fmt"] = "json"
@@ -31,7 +31,7 @@ public class MusicBrainzReleaseGroupClient : MusicBrainzBaseClient
 
     public Task<MusicBrainzReleaseAppends?> SearchReleaseGroups(string query, bool? priority = false)
     {
-        Dictionary<string, string>? queryParams = new()
+        Dictionary<string, string> queryParams = new()
         {
             ["query"] = query,
             ["fmt"] = "json"

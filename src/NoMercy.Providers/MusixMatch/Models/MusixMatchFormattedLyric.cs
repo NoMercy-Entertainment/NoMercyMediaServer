@@ -4,8 +4,8 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchFormattedLyric
 {
-    [JsonProperty("text")] public string Text;
-    [JsonProperty("time")] public LineTime Time;
+    [JsonProperty("text")] public string Text = string.Empty;
+    [JsonProperty("time")] public LineTime Time = new();
 
     public class LineTime
     {

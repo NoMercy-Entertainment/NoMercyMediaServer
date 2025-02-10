@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using Microsoft.AspNetCore.WebUtilities;
+﻿using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.Providers.Helpers;

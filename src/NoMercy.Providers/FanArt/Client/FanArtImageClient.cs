@@ -17,7 +17,7 @@ public class FanArtImageClient : FanArtBaseClient
 
     public Task<CoverArtCovers?> Cover(bool priority = false)
     {
-        Dictionary<string, string?> queryParams = new()
+        Dictionary<string, string> queryParams = new()
         {
             //
         };

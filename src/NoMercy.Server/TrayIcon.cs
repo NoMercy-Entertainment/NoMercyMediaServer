@@ -57,20 +57,12 @@ public class TrayIcon
     private static void Pause()
     {
     }
-
-    private static void Show()
-    {
-        Program.VsConsoleWindow(1);
-    }
-
-    private static void Hide()
-    {
-        Program.VsConsoleWindow(0);
-    }
     
     private void Toggle()
     {
+#if WINDOWS
         Program.VsConsoleWindow(Program.ConsoleVisible == 1 ? 0 : 1);
+#endif
 
         if (Program.ConsoleVisible == 1 && _trayIcon.ContextMenu?.Items.ElementAt(1) is not null)
         {

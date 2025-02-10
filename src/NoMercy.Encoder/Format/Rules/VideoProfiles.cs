@@ -6,7 +6,7 @@ public static class VideoProfiles
     public static string Main = "main";
     public static string High = "high";
     public static string High10 = "high10";
-    public static string High444p = "high444p";
+    public static string High444P = "high444p";
 
     // H.265 Profiles
     public static string High422 = "high422";

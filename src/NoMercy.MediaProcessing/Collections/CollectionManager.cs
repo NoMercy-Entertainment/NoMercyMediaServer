@@ -167,7 +167,7 @@ public class CollectionManager(
         Logger.MovieDb($"Collection: {collection.Name}: Logos stored", LogEventLevel.Debug);
 
         IEnumerable<Image> logosJobItems = logos
-            .Where(x => x.FilePath != null && !x.FilePath.EndsWith(".svg"))
+            .Where(x => !x.FilePath.EndsWith(".svg"))
             .Select(x => new Image { FilePath = x.FilePath })
             .ToArray();
         if (logosJobItems.Any())
@@ -190,7 +190,7 @@ public class CollectionManager(
         foreach (TmdbMovieAppends movie in movies)
         {
             await movieManager.Add(movie.Id, library);
-        };
+        }
 
         await collectionRepository.LinkToMovies(collectionAppends);
 

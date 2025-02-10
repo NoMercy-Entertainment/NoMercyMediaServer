@@ -6,7 +6,7 @@ public class WebM : BaseContainer
 {
     public override ContainerDto ContainerDto => AvailableContainers.First(c => c.Name == VideoContainers.Webm);
 
-    public WebM() : base()
+    public WebM()
     {
         SetContainer(VideoContainers.Webm);
         AddCustomArgument("-f", VideoFormats.Webm);

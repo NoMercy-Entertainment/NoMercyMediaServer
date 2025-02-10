@@ -16,7 +16,7 @@ public class BaseImage : Classes
 
     protected internal VideoStream? ImageStream;
 
-    internal List<VideoStream> ImageStreams { get; set; }
+    internal List<VideoStream> ImageStreams { get; set; } = [];
 
     private protected virtual string[] InitialParameters => [];
     private protected virtual string[] AvailableContainers => [];
@@ -35,14 +35,15 @@ public class BaseImage : Classes
 
     public bool IsHdr => VideoIsHdr();
 
-    internal string _Filename = "";
+    // ReSharper disable once InconsistentNaming
+    private string _filename = string.Empty;
 
     internal string Filename
     {
-        get => _Filename
+        get => _filename
             .Replace(":framesize:", $"{Scale.W}x{Scale.H}")
             .Replace(":type:", Type);
-        set => _Filename = value;
+        set => _filename = value;
     }
 
     public dynamic Data => new

@@ -10,10 +10,10 @@ namespace NoMercy.Database.Models;
 public class FolderLibrary
 {
     [JsonProperty("folder_id")] public Ulid FolderId { get; set; }
-    public Folder Folder { get; set; }
+    public Folder Folder { get; set; } = null!;
 
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
-    public Library Library { get; set; }
+    public Library Library { get; set; } = null!;
 
     public FolderLibrary(Ulid folderId, Ulid libraryId)
     {

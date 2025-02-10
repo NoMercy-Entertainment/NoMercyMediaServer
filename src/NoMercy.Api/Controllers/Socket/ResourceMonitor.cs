@@ -33,7 +33,7 @@ public static class ResourceMonitor
             if (!_broadcasting || cancellationToken.IsCancellationRequested) break;
             try
             {
-                Resource? resourceData = Helpers.Monitoring.ResourceMonitor.Monitor();
+                Resource resourceData = Helpers.Monitoring.ResourceMonitor.Monitor();
                 Networking.Networking.SendToAll("ResourceUpdate", "dashboardHub", resourceData);
 
                 // at least one second between broadcasts

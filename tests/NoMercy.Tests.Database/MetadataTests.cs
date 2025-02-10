@@ -1,6 +1,4 @@
-﻿
-using Xunit;
-using NoMercy.Database.Models;
+﻿using NoMercy.Database.Models;
 
 namespace NoMercy.Tests.Database;
 
@@ -9,8 +7,7 @@ public class MetadataTests
     [Fact]
     public async Task CalculateTotalSize_ReturnsCorrectSize()
     {
-        // Arrange
-        Metadata? metadata = new()
+        Metadata metadata = new()
         {
             Id = new(),
             Video =
@@ -42,7 +39,6 @@ public class MetadataTests
             Chapters = new() { FileSize = 200 }
         };
 
-        // Expected total size
         long expectedTotalSize = 
             500 + 700 // Video sizes
                 + 300 + 400 // Audio sizes

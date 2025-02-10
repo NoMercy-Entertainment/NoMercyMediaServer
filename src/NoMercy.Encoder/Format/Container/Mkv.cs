@@ -6,7 +6,7 @@ public class Mkv : BaseContainer
 {
     public override ContainerDto ContainerDto => AvailableContainers.First(c => c.Name == VideoContainers.Mkv);
 
-    public Mkv() : base()
+    public Mkv()
     {
         SetContainer(VideoContainers.Mkv);
         AddCustomArgument("-f", VideoFormats.Mkv);

@@ -16,7 +16,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 {
     public string FfmpegPath => ffmpegPath;
 
-    private bool Priority { get; set; } = false;
+    private bool Priority { get; set; }
 
     public VideoAudioFile AddContainer(BaseContainer container)
     {
@@ -31,7 +31,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         Container.IsAudio = IsAudio;
         Container.IsVideo = IsVideo;
         Container.IsSubtitle = IsSubtitle;
-        Container.MediaAnalysis = fMediaAnalysis!;
+        Container.MediaAnalysis = fMediaAnalysis;
         Container.ApplyFlags();
 
         foreach (KeyValuePair<int, dynamic> keyValuePair in Container.Streams)
@@ -43,24 +43,24 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             {
                 (keyValuePair.Value as BaseVideo)!.CropValue = cropValue;
 
-                (keyValuePair.Value as BaseVideo)!.VideoStreams = [fMediaAnalysis!.PrimaryVideoStream!];
-                (keyValuePair.Value as BaseVideo)!.VideoStream = fMediaAnalysis!.PrimaryVideoStream!;
-                (keyValuePair.Value as BaseVideo)!.Index = fMediaAnalysis!.PrimaryVideoStream!.Index;
+                (keyValuePair.Value as BaseVideo)!.VideoStreams = [fMediaAnalysis.PrimaryVideoStream!];
+                (keyValuePair.Value as BaseVideo)!.VideoStream = fMediaAnalysis.PrimaryVideoStream!;
+                (keyValuePair.Value as BaseVideo)!.Index = fMediaAnalysis.PrimaryVideoStream!.Index;
                 (keyValuePair.Value as BaseVideo)!.Title = Title;
 
                 Container.VideoStreams.Add((keyValuePair.Value as BaseVideo)!.Build());
             }
             else if (keyValuePair.Value.IsAudio)
             {
-                (keyValuePair.Value as BaseAudio)!.AudioStreams = fMediaAnalysis!.AudioStreams!;
-                (keyValuePair.Value as BaseAudio)!.AudioStream = fMediaAnalysis!.PrimaryAudioStream!;
+                (keyValuePair.Value as BaseAudio)!.AudioStreams = fMediaAnalysis.AudioStreams;
+                (keyValuePair.Value as BaseAudio)!.AudioStream = fMediaAnalysis.PrimaryAudioStream!;
 
                 Container.AudioStreams.AddRange((keyValuePair.Value as BaseAudio)!.Build());
             }
             else if (keyValuePair.Value.IsSubtitle)
             {
-                (keyValuePair.Value as BaseSubtitle)!.SubtitleStreams = fMediaAnalysis!.SubtitleStreams!;
-                (keyValuePair.Value as BaseSubtitle)!.SubtitleStream = fMediaAnalysis!.PrimarySubtitleStream!;
+                (keyValuePair.Value as BaseSubtitle)!.SubtitleStreams = fMediaAnalysis.SubtitleStreams;
+                (keyValuePair.Value as BaseSubtitle)!.SubtitleStream = fMediaAnalysis.PrimarySubtitleStream!;
 
                 List<BaseSubtitle> x = (keyValuePair.Value as BaseSubtitle)!.Build();
                 foreach (BaseSubtitle newStream in x)
@@ -72,8 +72,8 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             {
                 (keyValuePair.Value as BaseImage)!.CropValue = cropValue;
 
-                (keyValuePair.Value as BaseImage)!.ImageStreams = [fMediaAnalysis!.PrimaryVideoStream!];
-                (keyValuePair.Value as BaseImage)!.ImageStream = fMediaAnalysis!.PrimaryVideoStream!;
+                (keyValuePair.Value as BaseImage)!.ImageStreams = [fMediaAnalysis.PrimaryVideoStream!];
+                (keyValuePair.Value as BaseImage)!.ImageStream = fMediaAnalysis.PrimaryVideoStream!;
 
                 Container.ImageStreams.Add((keyValuePair.Value as BaseImage)!.Build());
             }
@@ -195,7 +195,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         StringBuilder complexString = new();
         foreach (BaseVideo stream in Container.VideoStreams)
         {
-            int index = Container!.VideoStreams.IndexOf(stream);
+            int index = Container.VideoStreams.IndexOf(stream);
 
             // if source is smaller than requested size, don't upscale
             // if (stream.Scale.W > stream.VideoStream!.Width || stream.Scale.H > stream.VideoStream.Height) continue;
@@ -207,11 +207,11 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
             // if source is not HDR then don't make the HDR profile
             if (!stream.IsHdr
-                && (stream.PixelFormat == VideoPixelFormats.Yuv444p
-                    || stream.PixelFormat == VideoPixelFormats.Yuv444p10le)
+                && (stream.PixelFormat == VideoPixelFormats.Yuv444P
+                    || stream.PixelFormat == VideoPixelFormats.Yuv444P10Le)
             ) continue;
 
-            if (stream.ConverToSdr && stream.IsHdr)
+            if (stream.ConvertToSdr && stream.IsHdr)
             {
                 isHdr = stream.IsHdr;
                 complexString.Append(
@@ -231,7 +231,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         if (Container.AudioStreams.Count > 0 && complexString.Length > 0) complexString.Append(';');
         foreach (BaseAudio stream in Container.AudioStreams)
         {
-            int index = Container!.AudioStreams.IndexOf(stream);
+            int index = Container.AudioStreams.IndexOf(stream);
 
             complexString.Append($"[a:{stream.Index}]volume=3,loudnorm[a{index}_hls_0]");
 
@@ -241,7 +241,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         // if (Container.SubtitleStreams.Count > 0 && complexString.Length > 0) complexString.Append(';');
         // foreach (BaseSubtitle stream in Container.SubtitleStreams)
         // {
-        //     int index = Container!.SubtitleStreams.IndexOf(stream);
+        //     int index = Container.SubtitleStreams.IndexOf(stream);
         //
         //     complexString.Append($"[s:{stream.Index}]overlay[s{index}_hls_0]");
         //
@@ -251,7 +251,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         if (Container.ImageStreams.Count > 0 && complexString.Length > 0) complexString.Append(';');
         foreach (BaseImage stream in Container.ImageStreams)
         {
-            int index = Container!.ImageStreams.IndexOf(stream);
+            int index = Container.ImageStreams.IndexOf(stream);
 
             if (isHdr)
                 complexString.Append(
@@ -281,23 +281,23 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
             // if source is not HDR then don't make the HDR profile
             if (!stream.IsHdr
-                && (stream.PixelFormat == VideoPixelFormats.Yuv444p
-                    || stream.PixelFormat == VideoPixelFormats.Yuv444p10le)
+                && (stream.PixelFormat == VideoPixelFormats.Yuv444P
+                    || stream.PixelFormat == VideoPixelFormats.Yuv444P10Le)
                ) continue;
 
             Dictionary<string, dynamic> commandDictionary = new();
 
-            int index = Container!.VideoStreams.IndexOf(stream);
+            int index = Container.VideoStreams.IndexOf(stream);
 
             stream.AddToDictionary(commandDictionary, index);
 
-            foreach (KeyValuePair<string, dynamic> parameter in Container?._extraParameters ??
+            foreach (KeyValuePair<string, dynamic> parameter in Container._extraParameters ??
                                                                 new Dictionary<string, dynamic>())
                 commandDictionary[parameter.Key] = parameter.Value;
 
             // commandDictionary["-t"] = 300;
 
-            if (Container!.ContainerDto.Name == VideoContainers.Hls)
+            if (Container.ContainerDto.Name == VideoContainers.Hls)
             {
                 commandDictionary["-hls_segment_filename"] = $"\"./{stream.HlsPlaylistFilename}_%05d.ts\"";
                 commandDictionary[""] = $"\"./{stream.HlsPlaylistFilename}.m3u8\"";
@@ -311,7 +311,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         foreach (BaseAudio stream in Container.AudioStreams)
         {
             Dictionary<string, dynamic> commandDictionary = new();
-            int index = Container!.AudioStreams.IndexOf(stream);
+            int index = Container.AudioStreams.IndexOf(stream);
             stream.AddToDictionary(commandDictionary, index);
 
             foreach (KeyValuePair<string, dynamic> parameter in Container._extraParameters ??
@@ -363,13 +363,13 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         {
             Dictionary<string, dynamic> commandDictionary = new();
 
-            int index = Container!.ImageStreams.IndexOf(stream);
+            int index = Container.ImageStreams.IndexOf(stream);
 
             stream.AddToDictionary(commandDictionary, index);
 
             // commandDictionary["-t"] = 300;
 
-            if (Container!.ContainerDto.Name == VideoContainers.Hls)
+            if (Container.ContainerDto.Name == VideoContainers.Hls)
                 commandDictionary[""] = $"\"./{stream.Filename}/{stream.Filename}-%04d.jpg\"";
 
             command.Append(commandDictionary.Aggregate("", (acc, pair) => $"{acc} {pair.Key} {pair.Value}"));
@@ -431,7 +431,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
             await Task.WhenAll(execTask, progressTask);
 
-        };
+        }
 
         Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
         {

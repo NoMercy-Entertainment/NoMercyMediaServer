@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.Providers.MusicBrainz.Models;
 
 namespace NoMercy.MediaProcessing.MusicGenres;
 

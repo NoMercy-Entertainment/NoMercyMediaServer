@@ -12,6 +12,5 @@ public class MusicBrainzReleaseSearchResponse
     [JsonProperty("offset")]
     public long Offset { get; set; }
 
-    [JsonProperty("releases")]
-    public MusicBrainzRelease[] Releases { get; set; }
+    [JsonProperty("releases")] public MusicBrainzRelease[] Releases { get; set; } = [];
 }

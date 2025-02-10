@@ -43,7 +43,7 @@ public static class LocalizationHelper
         doc.Save(filePath);
 
         // Reload the localizer to include the new entry
-        Localizer? reportLocalizer = new();
+        Localizer reportLocalizer = new();
         reportLocalizer.LoadXML(Assembly.GetExecutingAssembly(), "Resources.I18N.xml", "nl");
         GlobalLocalizer = reportLocalizer;
     }

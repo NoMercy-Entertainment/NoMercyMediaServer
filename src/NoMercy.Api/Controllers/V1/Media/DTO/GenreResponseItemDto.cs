@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
@@ -23,10 +22,10 @@ public record GenreResponseItemDto
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }
     [JsonProperty("type")] public string Type { get; set; }
     [JsonProperty("year")] public int? Year { get; set; }
-    [JsonProperty("genres")] public GenreDto[]? Genres { get; set; }
+    [JsonProperty("genres")] public GenreDto[] Genres { get; set; } = [];
     [JsonProperty("videoId")] public string? VideoId { get; set; }
-    [JsonProperty("videos")] public VideoDto[] Videos { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("videos")] public VideoDto[] Videos { get; set; } = [];
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
     public GenreResponseItemDto(GenreMovie movie)
     {

@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.TV;
@@ -18,14 +17,6 @@ public record InfoResponseItemDto
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("logo")] public string? Logo { get; set; }
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("videos")] public IEnumerable<VideoDto> Videos { get; set; }
-    [JsonProperty("backdrops")] public IEnumerable<ImageDto> Backdrops { get; set; }
-    [JsonProperty("posters")] public IEnumerable<ImageDto> Posters { get; set; }
-    [JsonProperty("similar")] public IEnumerable<RelatedDto> Similar { get; set; }
-    [JsonProperty("recommendations")] public IEnumerable<RelatedDto> Recommendations { get; set; }
-    [JsonProperty("cast")] public IEnumerable<PeopleDto> Cast { get; set; }
-    [JsonProperty("crew")] public IEnumerable<PeopleDto> Crew { get; set; }
-    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; }
     [JsonProperty("watched")] public bool Watched { get; set; }
     [JsonProperty("favorite")] public bool Favorite { get; set; }
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }
@@ -38,14 +29,23 @@ public record InfoResponseItemDto
     [JsonProperty("creator")] public PeopleDto? Creator { get; set; }
     [JsonProperty("director")] public PeopleDto? Director { get; set; }
     [JsonProperty("writer")] public PeopleDto? Writer { get; set; }
-    [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; }
-    [JsonProperty("keywords")] public IEnumerable<string> Keywords { get; set; }
     [JsonProperty("type")] public string Type { get; set; }
     [JsonProperty("media_type")] public string MediaType { get; set; }
-    [JsonProperty("translations")] public IEnumerable<TranslationDto> Translations { get; set; }
-    [JsonProperty("seasons")] public IEnumerable<SeasonDto> Seasons { get; set; }
     [JsonProperty("total_duration")] public int TotalDuration { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    
+    [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; } = [];
+    [JsonProperty("keywords")] public IEnumerable<string> Keywords { get; set; } = [];
+    [JsonProperty("videos")] public IEnumerable<VideoDto> Videos { get; set; } = [];
+    [JsonProperty("backdrops")] public IEnumerable<ImageDto> Backdrops { get; set; } = [];
+    [JsonProperty("posters")] public IEnumerable<ImageDto> Posters { get; set; } = [];
+    [JsonProperty("similar")] public IEnumerable<RelatedDto> Similar { get; set; } = [];
+    [JsonProperty("recommendations")] public IEnumerable<RelatedDto> Recommendations { get; set; } = [];
+    [JsonProperty("cast")] public IEnumerable<PeopleDto> Cast { get; set; } = [];
+    [JsonProperty("crew")] public IEnumerable<PeopleDto> Crew { get; set; } = [];
+    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
+    [JsonProperty("translations")] public IEnumerable<TranslationDto> Translations { get; set; } = [];
+    [JsonProperty("seasons")] public IEnumerable<SeasonDto> Seasons { get; set; } = [];
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
     public InfoResponseItemDto(Movie movie, string? country)
     {
@@ -151,9 +151,9 @@ public record InfoResponseItemDto
 
     public InfoResponseItemDto(TmdbMovieAppends tmdbMovie, string? country)
     {
-        string? title = tmdbMovie.Translations.Translations
-            .FirstOrDefault(translation => translation.Iso31661 == country)?
-            .Data.Title;
+        // string? title = tmdbMovie.Translations.Translations
+        //     .FirstOrDefault(translation => translation.Iso31661 == country)?
+        //     .Data.Title;
 
         string? overview = tmdbMovie.Translations.Translations
             .FirstOrDefault(translation => translation.Iso31661 == country)?
@@ -561,7 +561,6 @@ public record InfoResponseItemDto
             collection.Backdrop;
         Poster = collection.Images.FirstOrDefault(image => image is { Type: "poster", Iso6391: null })?.FilePath ??
             collection.Poster;
-
 
         ContentRatings = collection.CollectionMovies
             .Select(certificationMovie => new ContentRating

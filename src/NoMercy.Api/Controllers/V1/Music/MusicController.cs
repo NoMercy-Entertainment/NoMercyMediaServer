@@ -10,7 +10,6 @@ using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Networking;
-using Uri = System.Uri;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -40,8 +39,8 @@ public class MusicController : BaseController
         List<CarouselResponseItemDto> favoriteAlbums = await CarouselResponseItemDto.GetFavoriteAlbums(mediaContext, userId);
 
         List<CarouselResponseItemDto> playlists = await CarouselResponseItemDto.GetPlaylists(mediaContext, userId);
-        List<CarouselResponseItemDto> latestArtists = await CarouselResponseItemDto.GetLatestArtists(mediaContext, userId);
-        List<CarouselResponseItemDto> latestAlbums = await CarouselResponseItemDto.GetLatestAlbums(mediaContext, userId);
+        List<CarouselResponseItemDto> latestArtists = await CarouselResponseItemDto.GetLatestArtists(mediaContext);
+        List<CarouselResponseItemDto> latestAlbums = await CarouselResponseItemDto.GetLatestAlbums(mediaContext);
 
         return Ok(new Render
         {
@@ -308,7 +307,7 @@ public class MusicController : BaseController
         //     {"width", "33.33333%"}
         // };
 
-        List<ArtistTrackDto>? songResults = songs
+        List<ArtistTrackDto> songResults = songs
             .Take(6)
             .Select(track => new ArtistTrackDto(track, country))
             .ToList();
@@ -350,7 +349,7 @@ public class MusicController : BaseController
                             },
                         ]
                     }
-                } : new ComponentDto<dynamic> { },
+                } : new ComponentDto<dynamic>(),
 
                 new ComponentDto<CarouselResponseItemDto>
                 {

@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using NoMercy.NmSystem;
+﻿using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.Helpers;
 using Serilog.Events;
@@ -47,7 +46,7 @@ public class MusicBrainzBaseClient : IDisposable
     {
         query ??= new();
 
-        string newUrl = url.ToQueryUri(query!);
+        string newUrl = url.ToQueryUri(query);
 
         if (CacheController.Read(newUrl, out T? result)) return result;
 
@@ -55,7 +54,7 @@ public class MusicBrainzBaseClient : IDisposable
 
         T? data;
 
-        string? response = null as string;
+        string? response;
         try
         {
             response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);

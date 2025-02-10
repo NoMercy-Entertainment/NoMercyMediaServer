@@ -80,7 +80,7 @@ public static class HlsPlaylistGenerator
                 string profile = RunProcess(AppFiles.FfProbePath,
                         $"-v error -select_streams v:0 -show_entries stream=profile -of default=noprint_wrappers=1:nokey=1 {videoFile}")
                     .Trim();
-                string vCodecProfile = MapProfileToCodec(vCodec, profile);
+                string vCodecProfile = MapProfileToCodec(profile);
 
                 double duration = GetVideoDuration(videoFile) / 100000;
                 double totalSize = GetTotalSize(Path.Combine(inputFilePath, folderName ?? ""));
@@ -131,7 +131,7 @@ public static class HlsPlaylistGenerator
         string output = RunProcess(AppFiles.FfProbePath,
             $"-v error -select_streams 0 -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{videoPath}\"");
         
-        string? x = output.Trim().Replace("N/A", "0");
+        string x = output.Trim().Replace("N/A", "0");
         if (x == "")
         {
             return 0;
@@ -161,7 +161,7 @@ public static class HlsPlaylistGenerator
         return result;
     }
 
-    private static string MapProfileToCodec(string codec, string profile)
+    private static string MapProfileToCodec(string profile)
     {
         return profile switch
         {

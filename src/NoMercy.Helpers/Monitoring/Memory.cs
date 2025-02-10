@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using System.Runtime.InteropServices;
 
 namespace NoMercy.Helpers.Monitoring;
 public class Memory

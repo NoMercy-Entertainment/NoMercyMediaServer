@@ -10,13 +10,14 @@ namespace NoMercy.Database.Models;
 public class TvUser
 {
     [JsonProperty("tv_id")] public int TvId { get; set; }
-    public Tv Tv { get; set; }
+    public Tv Tv { get; set; } = null!;
 
     [JsonProperty("user_id")] public Guid UserId { get; set; }
-    public User User { get; set; }
+    public User User { get; set; } = null!;
 
     public TvUser()
     {
+        //
     }
 
     public TvUser(int tvId, Guid userId)

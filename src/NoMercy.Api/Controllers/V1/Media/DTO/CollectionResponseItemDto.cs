@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.Collections;
 
@@ -10,33 +9,34 @@ namespace NoMercy.Api.Controllers.V1.Media.DTO;
 public record CollectionResponseItemDto
 {
     [JsonProperty("id")] public long Id { get; set; }
-    [JsonProperty("title")] public string Title { get; set; }
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("overview")] public string? Overview { get; set; }
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
-    [JsonProperty("media_type")] public string MediaType { get; set; }
+    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
+    [JsonProperty("media_type")] public string MediaType { get; set; } = string.Empty;
     [JsonProperty("duration")] public double Duration { get; set; }
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("collection")] public CollectionMovieDto[] Collection { get; set; }
+    [JsonProperty("collection")] public CollectionMovieDto[] Collection { get; set; } = [];
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
     [JsonProperty("favorite")] public bool Favorite { get; set; }
     [JsonProperty("watched")] public bool Watched { get; set; }
-    [JsonProperty("genres")] public GenreDto[] Genres { get; set; }
+    [JsonProperty("genres")] public GenreDto[] Genres { get; set; } = [];
     [JsonProperty("total_duration")] public int TotalDuration { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
-    [JsonProperty("cast")] public PeopleDto[] Cast { get; set; }
-    [JsonProperty("crew")] public PeopleDto[] Crew { get; set; }
-    [JsonProperty("backdrops")] public ImageDto[] Backdrops { get; set; }
-    [JsonProperty("posters")] public ImageDto[] Posters { get; set; }
+    [JsonProperty("cast")] public PeopleDto[] Cast { get; set; } = [];
+    [JsonProperty("crew")] public PeopleDto[] Crew { get; set; } = [];
+    [JsonProperty("backdrops")] public ImageDto[] Backdrops { get; set; } = [];
+    [JsonProperty("posters")] public ImageDto[] Posters { get; set; } = [];
+    [JsonProperty("content_ratings")] public ContentRating[] ContentRatings { get; set; } = [];
 
-    [JsonProperty("content_ratings")] public ContentRating[] ContentRatings { get; set; }
-
-    public CollectionResponseItemDto(Collection? collection, string? country)
+    public CollectionResponseItemDto(Collection? collection)
     {
+        if (collection is null) return;
+        
         string? title = collection.Translations.FirstOrDefault()?.Title;
         string? overview = collection.Translations.FirstOrDefault()?.Overview;
 

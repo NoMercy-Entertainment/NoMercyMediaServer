@@ -43,7 +43,7 @@ public static class ClaimsPrincipleExtensions
                    ?? principal?.FindFirst(ClaimTypes.GivenName)?.Value + " " +
                    principal?.FindFirst(ClaimTypes.Surname)?.Value;
         }
-        catch (Exception e)
+        catch (Exception)
         {
             throw new AuthenticationException("User name not found");
         }
@@ -56,7 +56,7 @@ public static class ClaimsPrincipleExtensions
             return principal?.FindFirst(ClaimTypes.Email)?.Value
                    ?? throw new AuthenticationException("Email not found");
         }
-        catch (Exception e)
+        catch (Exception)
         {
             throw new AuthenticationException("User name not found");
         }

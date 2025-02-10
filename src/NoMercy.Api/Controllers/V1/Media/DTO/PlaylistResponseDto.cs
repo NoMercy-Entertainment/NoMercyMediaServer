@@ -15,19 +15,19 @@ public record PlaylistResponseDto
     [JsonProperty("origin")] public Guid Origin { get; set; }
     [JsonProperty("uuid")] public int Uuid { get; set; }
     [JsonProperty("video_id")] public Ulid VideoId { get; set; }
-    [JsonProperty("duration")] public string Duration { get; set; }
+    [JsonProperty("duration")] public string Duration { get; set; } = string.Empty;
     [JsonProperty("tmdb_id")] public int TmdbId { get; set; }
-    [JsonProperty("video_type")] public string VideoType { get; set; }
-    [JsonProperty("playlist_type")] public string PlaylistType { get; set; }
+    [JsonProperty("video_type")] public string VideoType { get; set; } = string.Empty;
+    [JsonProperty("playlist_type")] public string PlaylistType { get; set; } = string.Empty;
     [JsonProperty("year")] public long Year { get; set; }
-    [JsonProperty("file")] public string File { get; set; }
+    [JsonProperty("file")] public string File { get; set; } = string.Empty;
     [JsonProperty("progress")] public ProgressDto? Progress { get; set; }
     [JsonProperty("image")] public string? Image { get; set; }
     [JsonProperty("logo")] public string? Logo { get; set; }
-    [JsonProperty("sources")] public SourceDto[] Sources { get; set; }
-    [JsonProperty("fonts")] public List<FontDto?>? Fonts { get; set; }
-    [JsonProperty("fontsFile")] public string FontsFile { get; set; }
-    [JsonProperty("tracks")] public List<IVideoTrack> Tracks { get; set; }
+    [JsonProperty("sources")] public SourceDto[] Sources { get; set; } = [];
+    [JsonProperty("fonts")] public List<FontDto?>? Fonts { get; set; } = [];
+    [JsonProperty("fontsFile")] public string FontsFile { get; set; } = string.Empty;
+    [JsonProperty("tracks")] public List<IVideoTrack> Tracks { get; set; } = [];
 
     [JsonProperty("season")] public int? Season { get; set; }
     [JsonProperty("episode")] public int? Episode { get; set; }
@@ -182,15 +182,15 @@ public record PlaylistResponseDto
     private record Subs
     {
         public List<IVideoTrack> TextTracks { get; set; } = [];
-        public List<FontDto?>? Fonts { get; set; }
-        public string FontsFile { get; set; } = "";
+        public List<FontDto?>? Fonts { get; set; } = [];
+        public string FontsFile { get; set; } = string.Empty;
     }
 
     public class Subtitle
     {
-        [JsonProperty("language")] public string Language { get; set; }
-        [JsonProperty("type")] public string Type { get; set; }
-        [JsonProperty("ext")] public string Ext { get; set; }
+        [JsonProperty("language")] public string Language { get; set; } = "eng";
+        [JsonProperty("type")] public string Type { get; set; } = "full";
+        [JsonProperty("ext")] public string Ext { get; set; } = "vtt";
     }
 
     private static Subs Subtitles(VideoFile videoFile)

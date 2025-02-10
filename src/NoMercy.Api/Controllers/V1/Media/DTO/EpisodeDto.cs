@@ -1,7 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Episode;
@@ -19,8 +18,8 @@ public record EpisodeDto
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("progress")] public object? Progress { get; set; }
     [JsonProperty("available")] public bool Available { get; set; }
-    [JsonProperty("translations")] public IEnumerable<TranslationDto> Translations { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("translations")] public IEnumerable<TranslationDto> Translations { get; set; } = [];
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
     public EpisodeDto(Episode episode)
     {
