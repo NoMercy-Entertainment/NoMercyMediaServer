@@ -31,7 +31,7 @@
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
         
-       <Version>0.1.44</Version>
+       <Version>0.1.45</Version>
        <AssemblyVersion>$(Version).0</AssemblyVersion>
        <FileVersion>$(Version).0</FileVersion>
     </PropertyGroup>

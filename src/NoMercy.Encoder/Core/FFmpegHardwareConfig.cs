@@ -33,7 +33,8 @@ public class FFmpegHardwareConfig
         try
         {
             string result = FfMpeg.Exec($"{arg} -hwaccels 2>&1").Result;
-            return !result.Contains("Failed", StringComparison.InvariantCultureIgnoreCase);
+            return !result.Contains("Failed", StringComparison.InvariantCultureIgnoreCase) &&
+                   !result.Contains("exception", StringComparison.InvariantCultureIgnoreCase);
         }
         catch (Exception e)
         {
