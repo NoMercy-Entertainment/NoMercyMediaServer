@@ -2,16 +2,16 @@ using NoMercy.Encoder.Format.Rules;
 
 namespace NoMercy.Encoder.Format.Video;
 
-// https://trac.ffmpeg.org/wiki/Encode/H.265
+// https://trac.ffmpeg.org/wiki/Encode/AV1
 
-public class X265 : BaseVideo
+public class AV1 : BaseVideo
 {
     protected internal override bool BFramesSupport => true;
     protected internal override int Modulus => 2;
     protected internal int Passes { get; set; } = 2;
-    protected internal override int[] CrfRange => [0, 51];
+    protected internal override int[] CrfRange => [0, 63];
 
-    public X265(string videoCodec = "libx265")
+    public AV1(string videoCodec = "librav1e")
     {
         try
         {
@@ -19,17 +19,17 @@ public class X265 : BaseVideo
         }
         catch (Exception e)
         {
-            SetVideoCodec(VideoCodecs.H265.Value);
+            SetVideoCodec(VideoCodecs.Av1.Value);
         }
     }
 
     protected override CodecDto[] AvailableCodecs =>
     [
-        VideoCodecs.H265,
-        VideoCodecs.H265Nvenc,
-        // VideoCodecs.H265Qsv,
-        // VideoCodecs.H265Amf,
-        VideoCodecs.H265Videotoolbox
+        VideoCodecs.Av1,
+        VideoCodecs.Av1Nvenc,
+        // VideoCodecs.Av1Qsv,
+        // VideoCodecs.Av1Amf,
+        // VideoCodecs.Av1Videotoolbox
     ];
 
     protected internal override string[] AvailableContainers =>
@@ -43,7 +43,7 @@ public class X265 : BaseVideo
     {
         get
         {
-            if (VideoCodecs.H265Nvenc.Value == VideoCodec.Value)
+            if (VideoCodecs.Av1Nvenc.Value == VideoCodec.Value)
             {
                 return
                 [
@@ -54,13 +54,13 @@ public class X265 : BaseVideo
                     VideoPresets.P6, VideoPresets.P7
                 ];
             }
-            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value)
+            else if (VideoCodecs.Av1Amf.Value == VideoCodec.Value)
             {
             }
-            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value)
+            else if (VideoCodecs.Av1Qsv.Value == VideoCodec.Value)
             {
             }
-            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value)
+            else if (VideoCodecs.Av1Videotoolbox.Value == VideoCodec.Value)
             {
             }
 
@@ -78,21 +78,21 @@ public class X265 : BaseVideo
     {
         get
         {
-            if (VideoCodecs.H265Nvenc.Value == VideoCodec.Value)
+            if (VideoCodecs.Av1Nvenc.Value == VideoCodec.Value)
             {
                 return
                 [
                     VideoProfiles.Baseline, VideoProfiles.Main, VideoProfiles.High,
-                    VideoProfiles.High10, VideoProfiles.High422, VideoProfiles.High444
+                    VideoProfiles.High10, VideoProfiles.High422, VideoProfiles.High444P
                 ];
             }
-            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value)
+            else if (VideoCodecs.Av1Amf.Value == VideoCodec.Value)
             {
             }
-            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value)
+            else if (VideoCodecs.Av1Qsv.Value == VideoCodec.Value)
             {
             }
-            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value)
+            else if (VideoCodecs.Av1Videotoolbox.Value == VideoCodec.Value)
             {
             }
 
@@ -108,7 +108,7 @@ public class X265 : BaseVideo
     {
         get
         {
-            if (VideoCodecs.H265Nvenc.Value == VideoCodec.Value)
+            if (VideoCodecs.Av1Nvenc.Value == VideoCodec.Value)
             {
                 return
                 [
@@ -116,18 +116,20 @@ public class X265 : BaseVideo
                     VideoTunes.Ull, VideoTunes.Lossless
                 ];
             }
-            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value)
+            else if (VideoCodecs.Av1Amf.Value == VideoCodec.Value)
             {
             }
-            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value)
+            else if (VideoCodecs.Av1Qsv.Value == VideoCodec.Value)
             {
             }
-            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value)
+            else if (VideoCodecs.Av1Videotoolbox.Value == VideoCodec.Value)
             {
             }
-
+            
             return
             [
+                VideoTunes.Film, VideoTunes.Animation,
+                VideoTunes.Grain, VideoTunes.StillImage,
                 VideoTunes.Fastdecode, VideoTunes.Zerolatency,
                 VideoTunes.Psnr, VideoTunes.Ssim
             ];
@@ -140,46 +142,18 @@ public class X265 : BaseVideo
         ColorSpaces.Yuv422P, ColorSpaces.Yuv444P,
     ];
 
-    public override string[] AvailableLevels
-    {
-        get
-        {
-            if (VideoCodecs.H265Nvenc.Value == VideoCodec.Value)
-            {
-                return
-                [
-                    "auto",
-                    "1", "1.0", "1b", "1.0b", "1.1", "1.2", "1.3",
-                    "2", "2.0", "2.1", "2.2",
-                    "3", "3.0", "3.1", "3.2",
-                    "4", "4.0", "4.1", "4.2",
-                    "5", "5.0", "5.1", "5.2",
-                    "6.0", "6.1", "6.2"
-                ];
-            }
-            else if (VideoCodecs.H265Amf.Value == VideoCodec.Value)
-            {
-            }
-            else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value)
-            {
-            }
-            else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value)
-            {
-            }
+    public override string[] AvailableLevels =>
+    [
+        "auto",
+        "1", "1.0", "1b", "1.0b", "1.1", "1.2", "1.3",
+        "2", "2.0", "2.1", "2.2",
+        "3", "3.0", "3.1", "3.2",
+        "4", "4.0", "4.1", "4.2",
+        "5", "5.0", "5.1", "5.2",
+        "6.0", "6.1", "6.2"
+    ];
 
-            return
-            [
-                "1",
-                "2", "2.1",
-                "3", "3.1",
-                "4", "4.1",
-                "5", "5.1", "5.2",
-                "6.0", "6.1", "6.2"
-            ];
-        }
-    }
-
-    public X265 SetPasses(int passes)
+    public AV1 SetPasses(int passes)
     {
         Passes = passes;
         return this;

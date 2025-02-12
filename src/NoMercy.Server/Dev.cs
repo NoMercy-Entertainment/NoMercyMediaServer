@@ -1,3 +1,5 @@
+using NoMercy.Encoder.Core;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 // using NoMercy.Providers.TVDB.Client;
 // using NoMercy.Providers.TVDB.Models;
@@ -13,6 +15,13 @@ public class Dev
 {
     public static async Task Run()
     {
+        FFmpegHardwareConfig ffmpegConfig = new();
+
+        foreach (GpuAccelerator accelerator in ffmpegConfig.Accelerators)
+        {
+            Logger.Encoder(accelerator);
+        }
+        
         // OpenSubtitlesClient client = new();
         // OpenSubtitlesClient subtitlesClient = await client.Login();
         // SubtitleSearchResponse? x = await subtitlesClient.SearchSubtitles("Black Panther Wakanda Forever (2022)", "dut");

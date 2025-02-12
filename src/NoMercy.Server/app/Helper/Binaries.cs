@@ -82,20 +82,24 @@ public static class Binaries
             return;
         }
         
-        if (Directory.Exists(destinationDirectoryName))
-            Directory.Delete(destinationDirectoryName, true);
-
-        Directory.CreateDirectory(destinationDirectoryName);
-
         try
         {
+            if (Directory.Exists(destinationDirectoryName) && 
+                (sourceArchiveFileName.EndsWith(".zip") || sourceArchiveFileName.EndsWith(".tar.xz") ||
+                                                           sourceArchiveFileName.EndsWith(".tar.gz")))
+            {
+                Directory.Delete(destinationDirectoryName, true);
+            }
+
             if (sourceArchiveFileName.EndsWith(".zip"))
             {
+                Directory.CreateDirectory(destinationDirectoryName);
                 ZipFile.ExtractToDirectory(sourceArchiveFileName, destinationDirectoryName);
                 File.Delete(sourceArchiveFileName);
             }
             else if (sourceArchiveFileName.EndsWith(".tar.xz") || sourceArchiveFileName.EndsWith(".tar.gz"))
             {
+                Directory.CreateDirectory(destinationDirectoryName);
                 await Shell.Exec("tar", $"xf \"{sourceArchiveFileName}\" -C \"{destinationDirectoryName}\"");
                 File.Delete(sourceArchiveFileName);
             }

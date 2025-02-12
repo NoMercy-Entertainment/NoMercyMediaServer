@@ -11,6 +11,7 @@ using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
+using NoMercy.NmSystem.Information;
 using NoMercy.Queue;
 using NoMercy.Server.app.Helper;
 using AppFiles = NoMercy.NmSystem.AppFiles;
@@ -151,7 +152,7 @@ public static class Program
         }
 
         Version version = Assembly.GetExecutingAssembly().GetName().Version!;
-        Info.Version = version;
+        Software.Version = version;
         Logger.App($"NoMercy Server v{version.Major}.{version.Minor}.{version.Build}");
 
         options.ApplySettings(out bool shouldSeedMarvel);

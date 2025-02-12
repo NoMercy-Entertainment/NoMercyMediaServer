@@ -22,6 +22,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Episode;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -613,11 +614,11 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
         return Ok(new ServerInfoDto
         {
             Server = DeviceName(),
-            Cpu = Info.Cpu,
-            Gpu = Info.Gpu,
+            Cpu = Info.CpuNames,
+            Gpu = Info.GpuNames,
             Os = $"{Info.Platform.ToTitleCase()} {Info.OsVersion}",
             Arch = Info.Architecture,
-            Version = Info.GetReleaseVersion(),
+            Version = Software.GetReleaseVersion(),
             BootTime = Info.StartTime
         });
     }

@@ -19,6 +19,8 @@ public abstract class BaseVideo : Classes
     protected internal virtual bool BFramesSupport => false;
 
     protected internal virtual int Modulus { get; set; }
+    
+    protected internal virtual int[] CrfRange { get; set; } = [0, 51];
     protected internal int Bitrate { get; set; }
     internal int BufferSize { get; set; }
     internal string Tune { get; set; } = string.Empty;

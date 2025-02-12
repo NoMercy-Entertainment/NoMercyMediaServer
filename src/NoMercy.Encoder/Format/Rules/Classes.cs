@@ -1,3 +1,4 @@
+using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Container;
 using NoMercy.NmSystem;
 using Serilog.Events;
@@ -25,8 +26,8 @@ public class Classes
     internal int HlsListSize { get; set; }
     internal string HlsPlaylistType { get; set; } = "vod";
     protected int HlsTime { get; set; } = 4;
-
-    public static bool HasGpu => CheckGpu();
+    
+    internal static FFmpegHardwareConfig FfmpegConfig = new();
 
     protected string Type
     {
@@ -177,20 +178,5 @@ public class Classes
     public virtual Classes ApplyFlags()
     {
         return this;
-    }
-
-    private static bool CheckGpu()
-    {
-        try
-        {
-            string result = FfMpeg.Exec("-init_hw_device cuda=hw -filter_hw_device hw -hwaccels 2>&1").Result;
-            // Logger.Encoder(result);
-            return !result.Contains("Failed", StringComparison.InvariantCultureIgnoreCase);
-        }
-        catch (Exception e)
-        {
-            Logger.Encoder(e.Message);
-            return false;
-        }
     }
 }

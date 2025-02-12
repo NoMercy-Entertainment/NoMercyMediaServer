@@ -45,11 +45,10 @@ public static class SpecialSeed
                 Overview = Mcu.Special.Description,
                 Creator = Mcu.Special.Creator,
                 _colorPalette = await NoMercyImageManager
-                    .MultiColorPalette(new[]
-                    {
+                    .MultiColorPalette([
                         new BaseImageManager.MultiStringType("poster", Mcu.Special.Poster),
                         new BaseImageManager.MultiStringType("backdrop", Mcu.Special.Backdrop)
-                    })
+                    ])
             };
 
             await context.Specials
@@ -69,9 +68,9 @@ public static class SpecialSeed
                 .RunAsync();
 
             TmdbSearchClient client = new();
-            List<int> tvIds = new();
-            List<int> movieIds = new();
-            List<SpecialItem> specialItems = new();
+            List<int> tvIds = [];
+            List<int> movieIds = [];
+            List<SpecialItem> specialItems = [];
 
             foreach (CollectionItem item in Mcu.McuItems)
             {

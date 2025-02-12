@@ -135,7 +135,6 @@ public class HomeController(MediaContext mediaContext) : BaseController
 
         HashSet<Genre> genreItems = Queries
             .GetHome(mediaContext, userId, language, 300);
-        Logger.App($"Got home genres: {genreItems.Count}");
 
         foreach (Genre genre in genreItems)
         {

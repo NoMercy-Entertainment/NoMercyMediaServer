@@ -181,8 +181,11 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         {
             command.Append($" -threads {Math.Floor(threadCount * 0.8)} ");
         }
-
-        if (HasGpu) command.Append(" -extra_hw_frames 3 -init_hw_device cuda=hw -filter_hw_device hw ");
+        
+        foreach (GpuAccelerator accelerator in FfmpegConfig.Accelerators)
+        {
+            command.Append($" {accelerator.FfmpegArgs} ");
+        }
 
         command.Append(" -progress - ");
 

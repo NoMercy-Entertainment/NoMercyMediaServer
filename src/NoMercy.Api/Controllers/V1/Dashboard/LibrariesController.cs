@@ -523,15 +523,15 @@ public class LibrariesController(
 
     [HttpDelete]
     [Route("{id:ulid}/folders/{folderId:ulid}/encoder_profiles/{encoderProfileId:ulid}")]
-    public async Task<IActionResult> DeleteEncoderProfile(Ulid id, Ulid profileId)
+    public async Task<IActionResult> DeleteEncoderProfile(Ulid id, Ulid folderId, Ulid encoderProfileId)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete the encoder profile");
-
-        EncoderProfile? encoderProfile = await encoderRepository.GetEncoderProfileByIdAsync(profileId);
+    
+        EncoderProfile? encoderProfile = await encoderRepository.GetEncoderProfileByIdAsync(encoderProfileId);
         if (encoderProfile is null)
             return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Encoder profile not found" });
-
+    
         try
         {
             await encoderRepository.DeleteEncoderProfileAsync(encoderProfile);

@@ -267,7 +267,7 @@ public static partial class Str
         if (string.IsNullOrEmpty(str))
             return str;
 
-        string[] words = str.Split(new[] { ' ', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        string[] words = str.Split([' ', '_'], StringSplitOptions.RemoveEmptyEntries);
         return string.Join("_", words.Select(word => word[..1].ToUpper() + word[1..].ToLower()));
     }
 
