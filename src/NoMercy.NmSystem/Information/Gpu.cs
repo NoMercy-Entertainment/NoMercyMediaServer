@@ -1,4 +1,5 @@
 using System.Management;
+using FFMpegCore;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -126,5 +127,5 @@ public class Gpu
 
         return gpus;
     }
-
+    
 }

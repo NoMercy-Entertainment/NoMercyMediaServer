@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem;
+using Serilog.Events;
 
 namespace NoMercy.Encoder.Core;
 
@@ -16,17 +17,45 @@ public enum GpuVendor
 public class FFmpegHardwareConfig
 {
     public List<GpuAccelerator> Accelerators { get; private set; } = new();
-    
+
     public FFmpegHardwareConfig()
     {
         SetHardwareAccelerationFlags(Info.GpuVendors);
     }
-    
+
     public bool HasAccelerator(string accelerator)
     {
         return Accelerators.Any(a => a.Accelerator == accelerator);
     }
-    
+
+    private static bool CheckAccel(string arg)
+    {
+        try
+        {
+            string result = FfMpeg.Exec($"{arg} -hwaccels 2>&1").Result;
+            return !result.Contains("Failed", StringComparison.InvariantCultureIgnoreCase);
+        }
+        catch (Exception e)
+        {
+            Logger.Encoder(e.Message, LogEventLevel.Debug);
+            return false;
+        }
+    }
+
+    private void OpenClCheck()
+    {
+        string arg = "-extra_hw_frames 3 -init_hw_device opencl=ocl";
+        bool supported = CheckAccel(arg);
+        if (supported)
+        {
+            Accelerators.Add(new(
+                vendor: GpuVendor.Unknown,
+                ffmpegArgs: arg,
+                accelerator: "none"
+            ));
+        }
+    }
+
     private void SetHardwareAccelerationFlags(List<string> gpuVendors)
     {
         Dictionary<GpuVendor, int> gpuCounts = new()
@@ -43,11 +72,22 @@ public class FFmpegHardwareConfig
             if (vendor.Contains("nvidia"))
             {
                 int index = gpuCounts[GpuVendor.Nvidia];
-                Accelerators.Add(new(
-                    vendor: GpuVendor.Nvidia,
-                    ffmpegArgs: $"-hwaccel cuda -init_hw_device cuda=cu:{index} -filter_hw_device cu -hwaccel_output_format cuda",
-                    accelerator: "cuda"
-                ));
+                string arg =
+                    $"-hwaccel cuda -init_hw_device cuda=cu:{index} -filter_hw_device cu -hwaccel_output_format cuda";
+                bool supported = CheckAccel(arg);
+                if (supported)
+                {
+                    Accelerators.Add(new(
+                        vendor: GpuVendor.Nvidia,
+                        ffmpegArgs: arg,
+                        accelerator: "cuda"
+                    ));
+                }
+                else
+                {
+                    OpenClCheck();
+                }
+
                 gpuCounts[GpuVendor.Nvidia]++;
             }
             else if (vendor.Contains("amd") || vendor.Contains("advanced micro devices"))
@@ -55,60 +95,108 @@ public class FFmpegHardwareConfig
                 int index = gpuCounts[GpuVendor.Amd];
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    Accelerators.Add(new(
-                        vendor: GpuVendor.Amd,
-                        ffmpegArgs: $"-hwaccel dxva2 -init_hw_device dxva2=hw{index} -filter_hw_device hw -hwaccel_output_format dxva2",
-                        accelerator: "dxva2"
-                    ));
+                    string arg =
+                        $"-hwaccel dxva2 -init_hw_device dxva2=hw{index} -filter_hw_device hw -hwaccel_output_format dxva2";
+                    bool supported = CheckAccel(arg);
+                    if (supported)
+                    {
+                        Accelerators.Add(new(
+                            vendor: GpuVendor.Amd,
+                            ffmpegArgs: arg,
+                            accelerator: "dxva2"
+                        ));
+                    }
+                    else
+                    {
+                        OpenClCheck();
+                    }
                 }
                 else
                 {
-                    Accelerators.Add(new(
-                        vendor: GpuVendor.Amd,
-                        ffmpegArgs: $"-hwaccel vaapi -init_hw_device vaapi=hw{index}:/dev/dri/renderD128 -filter_hw_device hw -hwaccel_output_format vaapi",
-                        filter: "hwupload",
-                        accelerator: "vaapi"
-                    ));
+                    string arg =
+                        $"-hwaccel vaapi -init_hw_device vaapi=hw{index}:/dev/dri/renderD128 -filter_hw_device hw -hwaccel_output_format vaapi";
+                    bool supported = CheckAccel(arg);
+                    if (supported)
+                    {
+                        Accelerators.Add(new(
+                            vendor: GpuVendor.Amd,
+                            ffmpegArgs: arg,
+                            filter: "hwupload",
+                            accelerator: "vaapi"
+                        ));
+                    }
+                    else
+                    {
+                        OpenClCheck();
+                    }
                 }
+
                 gpuCounts[GpuVendor.Amd]++;
             }
             else if (vendor.Contains("intel"))
             {
                 int index = gpuCounts[GpuVendor.Intel];
-                Accelerators.Add(new(
-                    vendor: GpuVendor.Intel,
-                    ffmpegArgs: $"-hwaccel qsv -init_hw_device qsv=hw{index} -filter_hw_device hw -hwaccel_output_format qsv",
-                    accelerator: "qsv"
-                ));
+                string arg =
+                    $"-hwaccel qsv -init_hw_device qsv=hw{index} -filter_hw_device hw -hwaccel_output_format qsv";
+                bool supported = CheckAccel(arg);
+                if (supported)
+                {
+                    Accelerators.Add(new(
+                        vendor: GpuVendor.Intel,
+                        ffmpegArgs: arg,
+                        accelerator: "qsv"
+                    ));
+                }
+                else
+                {
+                    OpenClCheck();
+                }
+
                 gpuCounts[GpuVendor.Intel]++;
             }
             else if (vendor.Contains("qualcomm"))
             {
                 int index = gpuCounts[GpuVendor.Qualcomm];
-                Accelerators.Add(new(
-                    vendor: GpuVendor.Qualcomm,
-                    ffmpegArgs: $"-hwaccel opencl -init_hw_device opencl=hw{index} -filter_hw_device hw",
-                    accelerator: "opencl"
-                ));
+                string arg = $"-hwaccel opencl -init_hw_device opencl=hw{index} -filter_hw_device hw";
+                bool supported = CheckAccel(arg);
+                if (supported)
+                {
+                    Accelerators.Add(new(
+                        vendor: GpuVendor.Qualcomm,
+                        ffmpegArgs: arg,
+                        accelerator: "opencl"
+                    ));
+                }
+                else
+                {
+                    OpenClCheck();
+                }
+
                 gpuCounts[GpuVendor.Qualcomm]++;
             }
             else if (vendor.Contains("apple"))
             {
                 int index = gpuCounts[GpuVendor.Apple];
-                Accelerators.Add(new(
-                    vendor: GpuVendor.Apple,
-                    ffmpegArgs: $"-hwaccel videotoolbox -init_hw_device videotoolbox:hw{index} -filter_hw_device hw",
-                    accelerator: "videotoolbox"
-                ));
+                string arg = $"-hwaccel videotoolbox -init_hw_device videotoolbox:hw{index} -filter_hw_device hw";
+                bool supported = CheckAccel(arg);
+                if (supported)
+                {
+                    Accelerators.Add(new(
+                        vendor: GpuVendor.Apple,
+                        ffmpegArgs: arg,
+                        accelerator: "videotoolbox"
+                    ));
+                }
+                else
+                {
+                    OpenClCheck();
+                }
+
                 gpuCounts[GpuVendor.Apple]++;
             }
             else
             {
-                Accelerators.Add(new(
-                    vendor: GpuVendor.Unknown,
-                    ffmpegArgs: "-extra_hw_frames 3 -init_hw_device opencl=ocl",
-                    accelerator: "none"
-                ));
+                OpenClCheck();
             }
         }
     }
