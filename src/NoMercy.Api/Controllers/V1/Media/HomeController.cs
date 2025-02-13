@@ -106,6 +106,8 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     }
                 })
                 .Where(genreRow => genreRow != null);
+        
+        genres = genres.Where(genre => genre.Items.Any()).ToList();
 
         return GetPaginatedResponse(genres, request);
     }
@@ -206,6 +208,8 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     }
                 })
                 .Where(genreRow => genreRow != null);
+        
+        genres = genres.Where(genre => genre.Items.Any()).ToList();
 
         GenreRowItemDto? homeCardItem = genres.Where(g => g.Title != String.Empty)
             .Randomize().FirstOrDefault()
@@ -231,6 +235,8 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     },
                     Props =
                     {
+                        NextId = "continue",
+                        PreviousId = "",
                         Data = homeCardItem
                     }
                 },
@@ -245,6 +251,9 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     },
                     Props =
                     {
+                        Id = "continue",
+                        NextId = genres.ElementAtOrDefault(0)?.Id ?? "continue",
+                        PreviousId = "continue",
                         Title = "Continue watching".Localize(),
                         MoreLink = null,
                         Items = continueWatching
@@ -281,6 +290,9 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     Component = "NMCarousel",
                     Props =
                     {
+                        Id = genre.Id,
+                        NextId = genres.ElementAtOrDefault(genres.IndexOf(genre) + 1)?.Id ?? "continue",
+                        PreviousId = genres.ElementAtOrDefault(genres.IndexOf(genre) - 1)?.Id ?? "continue",
                         Title = genre.Title,
                         MoreLink = genre.MoreLink,
                         Items = genre.Items.Select(item => new ComponentDto<GenreRowItemDto>
@@ -401,6 +413,8 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     },
                     Props =
                     {
+                        NextId = 28,
+                        PreviousId = "continue",
                         Title = "Continue watching".Localize(),
                         MoreLink = null,
                         Items = continueWatching
@@ -530,6 +544,8 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     }
                 })
                 .Where(genreRow => genreRow != null);
+        
+        genres = genres.Where(genre => genre.Items.Any()).ToList();
 
         GenreRowItemDto? genreRowItemDto = genres.Where(g => g.Title != "")
             .Randomize().FirstOrDefault()
@@ -563,6 +579,8 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     },
                     Props =
                     {
+                        NextId = genres.FirstOrDefault()?.Id ?? "continue",
+                        PreviousId = "continue",
                         Title = "Continue watching".Localize(),
                         MoreLink = null,
                         Items = continueWatching
@@ -598,6 +616,8 @@ public class HomeController(MediaContext mediaContext) : BaseController
                     Component = "NMCarousel",
                     Props =
                     {
+                        NextId = genres.ElementAtOrDefault(genres.IndexOf(genre) + 1)?.Id ?? "continue",
+                        PreviousId = genres.ElementAtOrDefault(genres.IndexOf(genre) - 1)?.Id ?? "continue",
                         Title = genre.Title,
                         MoreLink = genre.MoreLink,
                         Items = genre.Items.Select(item => new ComponentDto<GenreRowItemDto>

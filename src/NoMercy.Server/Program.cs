@@ -148,12 +148,12 @@ public static class Program
         if (!Console.IsOutputRedirected)
         {
             Console.Clear();
-            Console.Title = "NoMercy Server";
+            Console.Title = "NoMercy MediaServer";
         }
 
         Version version = Assembly.GetExecutingAssembly().GetName().Version!;
         Software.Version = version;
-        Logger.App($"NoMercy Server v{version.Major}.{version.Minor}.{version.Build}");
+        Logger.App($"NoMercy MediaServer version: v{version.Major}.{version.Minor}.{version.Build}");
 
         options.ApplySettings(out bool shouldSeedMarvel);
         ShouldSeedMarvel = shouldSeedMarvel;

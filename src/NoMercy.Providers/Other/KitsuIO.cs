@@ -11,7 +11,7 @@ public static class KitsuIo
         bool isAnime = false;
 
         HttpClient client = new();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(ApiInfo.UserAgent);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
         client.BaseAddress = new("https://kitsu.io/api/edge/");
 
         HttpResponseMessage response = await client.GetAsync($"anime?filter[text]={title}&filter[year]={year}");

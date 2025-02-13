@@ -686,7 +686,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
             HttpClient client = new();
             client.BaseAddress = new(Config.ApiServerBaseUrl);
             client.DefaultRequestHeaders.Add("Accept", "application/json");
-            client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
             client.DefaultRequestHeaders.Authorization = new("Bearer", Auth.AccessToken);
 
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Patch, "server/name")

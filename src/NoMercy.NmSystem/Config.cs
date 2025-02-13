@@ -10,6 +10,8 @@ public class Config
     public static string AppBaseUrl = "https://app.nomercy.tv/";
     public static string ApiBaseUrl = "https://api.nomercy.tv/";
     public static string ApiServerBaseUrl = $"{ApiBaseUrl}v1/server/";
+    
+    public const string UserAgent = "NoMercy MediaServer/0.1.0 ( admin@nomercy.tv )";
 
     public static int InternalServerPort { get; set; } = 7626;
     public static int ExternalServerPort { get; set; } = 7626;

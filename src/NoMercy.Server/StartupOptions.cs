@@ -53,8 +53,6 @@ public class StartupOptions
             Logger.SetLogLevel(Enum.Parse<LogEventLevel>(LogLevel.ToTitleCase()));
         }
 
-        Logger.App(Config.AuthBaseUrl);
-
         if (InternalPort != 0)
         {
             Logger.App("Setting internal port to " + InternalPort);
@@ -66,6 +64,7 @@ public class StartupOptions
             Logger.App("Setting external port to " + ExternalPort);
             Config.ExternalServerPort = ExternalPort;
         }
+       
     }
 
 }

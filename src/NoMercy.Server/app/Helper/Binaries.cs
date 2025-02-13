@@ -14,7 +14,7 @@ public static class Binaries
 
     static Binaries()
     {
-        HttpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             Downloads = ApiInfo.BinaryList.Linux;

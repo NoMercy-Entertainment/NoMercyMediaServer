@@ -32,7 +32,7 @@ public class FanArtImageClient : FanArtBaseClient
         if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
 
         HttpClient httpClient = new();
-        httpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
         httpClient.BaseAddress = new("https://assets.fanart.tv");
 

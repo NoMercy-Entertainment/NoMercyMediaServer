@@ -29,7 +29,7 @@ public abstract class NoMercyImageClient : TmdbBaseClient
                 if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
 
                 using HttpClient httpClient = new();
-                httpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+                httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
                 httpClient.BaseAddress = new("https://image.nomercy.tv/");
                 httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
                 httpClient.Timeout = TimeSpan.FromMinutes(5);

@@ -27,7 +27,7 @@ public static class UpdateChecker
         {
             ProcessStartInfo startInfo = new()
             {
-                FileName = AppFiles.UpdaterPath,
+                FileName = AppFiles.UpdaterExePath,
                 Arguments = "--check",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,

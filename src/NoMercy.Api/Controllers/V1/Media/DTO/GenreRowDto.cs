@@ -4,9 +4,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 public record GenreRowDto<T>
 {
-    [JsonProperty("id")] public string Id { get; set; } = string.Empty;
+    [JsonProperty("id")] public dynamic Id { get; set; } = string.Empty;
+    [JsonProperty("next_id")] public dynamic NextId { get; set; } = Ulid.NewUlid();
+    [JsonProperty("previous_id")] public dynamic PreviousId { get; set; } = Ulid.NewUlid();
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("moreLink")] public Uri? MoreLink { get; set; }
+    [JsonProperty("more_link")] public Uri? MoreLink { get; set; }
     [JsonProperty("items")] public IEnumerable<T?> Items { get; set; } = [];
 
     [NotMapped]

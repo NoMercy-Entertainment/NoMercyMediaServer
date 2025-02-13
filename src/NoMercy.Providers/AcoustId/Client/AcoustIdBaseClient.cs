@@ -18,7 +18,7 @@ public class AcoustIdBaseClient : IDisposable
         _client.BaseAddress = _baseUrl;
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
     }
 
     protected AcoustIdBaseClient(Guid id)
@@ -29,7 +29,7 @@ public class AcoustIdBaseClient : IDisposable
         };
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         Id = id;
     }
 

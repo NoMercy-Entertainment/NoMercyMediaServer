@@ -40,7 +40,7 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
         if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
 
         HttpClient httpClient = new();
-        httpClient.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
 
         HttpResponseMessage response = await httpClient.GetAsync(url);

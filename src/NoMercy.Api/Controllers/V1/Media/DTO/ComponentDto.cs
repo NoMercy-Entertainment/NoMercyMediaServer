@@ -47,7 +47,9 @@ public record Update
 
 public record RenderProps<T>
 {
-    [JsonProperty("id")] public Ulid Id { get; set; } = Ulid.NewUlid();
+    [JsonProperty("id")] public dynamic Id { get; set; } = Ulid.NewUlid();
+    [JsonProperty("next_id")] public dynamic NextId { get; set; } = Ulid.NewUlid();
+    [JsonProperty("previous_id")] public dynamic PreviousId { get; set; } = Ulid.NewUlid();
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("more_link")] public Uri? MoreLink { get; set; }
     [JsonProperty("more_link_text")] public string? MoreText => MoreLink is not null ? "See all".Localize() : null;

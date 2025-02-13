@@ -33,12 +33,13 @@ public class FFmpegHardwareConfig
         try
         {
             string result = FfMpeg.Exec($"{arg} -hwaccels 2>&1").Result;
+            Logger.Encoder($"Checking Acceleration: {arg} -hwaccels 2>&1 - Result: {result}", LogEventLevel.Debug);
             return !result.Contains("Failed", StringComparison.InvariantCultureIgnoreCase) &&
                    !result.Contains("exception", StringComparison.InvariantCultureIgnoreCase);
         }
         catch (Exception e)
         {
-            Logger.Encoder(e.Message, LogEventLevel.Debug);
+            Logger.Encoder(e, LogEventLevel.Debug);
             return false;
         }
     }

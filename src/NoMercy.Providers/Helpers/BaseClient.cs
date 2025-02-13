@@ -15,7 +15,7 @@ public class BaseClient : IDisposable
     protected virtual int ConcurrentRequests => 1;
     protected virtual int Interval => 1000;
     protected virtual Dictionary<string, string?> QueryParams => new();
-    protected virtual string UserAgent => ApiInfo.UserAgent;
+    protected virtual string UserAgent => Config.UserAgent;
     private static BaseClient? _instance;
 
     protected BaseClient()

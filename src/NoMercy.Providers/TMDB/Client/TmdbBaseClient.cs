@@ -19,7 +19,7 @@ public class TmdbBaseClient : IDisposable
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
-        _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
     }
 
@@ -32,7 +32,7 @@ public class TmdbBaseClient : IDisposable
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
-        _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
         Id = id;
     }

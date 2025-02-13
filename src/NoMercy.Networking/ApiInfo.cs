@@ -21,15 +21,20 @@ public partial class ApiInfo
     public static string MusixmatchKey { get; set; } = string.Empty;
     public static string JwplayerKey { get; set; } = string.Empty;
     public static Downloads BinaryList { get; private set; } = new();
-    public static string[] Colors { get; private set; } = [];
+    public static string[] Colors { get; private set; } = [
+        "#8f00fc",
+        "#705BAD",
+        "#CBAFFF"
+    ];
     public static string Quote { get; private set; } = string.Empty;
-    public const string UserAgent = "NoMercy MediaServer/0.1.0 ( admin@nomercy.tv )";
 
     public static async Task RequestInfo()
     {
         HttpClient client = new();
         client.Timeout = TimeSpan.FromSeconds(120);
         client.BaseAddress = new(Config.ApiBaseUrl);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+        
         HttpResponseMessage response = await client.GetAsync("v1/info");
         if (!response.IsSuccessStatusCode)
         {

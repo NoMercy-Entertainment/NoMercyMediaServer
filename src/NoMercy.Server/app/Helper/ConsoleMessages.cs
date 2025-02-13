@@ -82,6 +82,9 @@ public abstract class ConsoleMessages
 
     public static Task Logo()
     {
+        ClearConsole();
+        SetConsoleSize(200, 40);
+        
         if (Console.IsOutputRedirected) return Task.CompletedTask;
 
         StringBuilder builder = new();
@@ -145,5 +148,31 @@ public abstract class ConsoleMessages
         Console.WriteLine(("╚" + Repeat("═", 46) + "╝").Pastel("#00a10d"));
 
         return Task.CompletedTask;
+    }
+    
+    private static void SetConsoleSize(int width, int height)
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                Console.SetWindowSize(Math.Min(width, Console.LargestWindowWidth), 
+                    Math.Min(height, Console.LargestWindowHeight));
+            }
+            else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                Console.Write($"\x1b[8;{height};{width}t");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to resize console: {ex.Message}");
+        }
+    }
+    
+    private static void ClearConsole()
+    {
+        Console.Clear();
+        Console.SetCursorPosition(0, 0);
     }
 }

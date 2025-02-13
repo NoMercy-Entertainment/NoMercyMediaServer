@@ -19,7 +19,7 @@ public class OpenSubtitlesBaseClient : IDisposable
         _client.BaseAddress = _baseUrl;
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
-        _client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
     }
 

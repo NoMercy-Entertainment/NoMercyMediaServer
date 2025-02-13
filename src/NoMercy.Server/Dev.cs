@@ -19,7 +19,10 @@ public class Dev
 
         foreach (GpuAccelerator accelerator in ffmpegConfig.Accelerators)
         {
-            Logger.Encoder(accelerator);
+            Logger.Encoder("Found a dedicated GPU:");
+            Logger.Encoder($"Vendor: {accelerator.Vendor}");
+            Logger.Encoder($"Accelerator: {accelerator.Accelerator}");
+            Logger.Encoder("");
         }
         
         // OpenSubtitlesClient client = new();

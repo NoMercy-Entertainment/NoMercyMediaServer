@@ -36,7 +36,7 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 {
                     Value = new()
                     {
-                        // String = ApiInfo.UserAgent
+                        // String = Config.UserAgent
                         String = "VLSub"
                     }
                 }

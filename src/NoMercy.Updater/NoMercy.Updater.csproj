@@ -34,12 +34,18 @@
 
     <ItemGroup>
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <PackageReference Include="Semver" Version="3.0.0" />
     </ItemGroup>
     
     <ItemGroup>
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+      <ProjectReference Include="..\NoMercy.Server\NoMercy.Server.csproj" />
     </ItemGroup>
 
 </Project>

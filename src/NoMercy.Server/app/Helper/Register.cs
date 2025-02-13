@@ -61,7 +61,7 @@ public static class Register
         HttpClient client = new();
         client.BaseAddress = new(Config.ApiServerBaseUrl);
         client.DefaultRequestHeaders.Add("Accept", "application/json");
-        client.DefaultRequestHeaders.Add("User-Agent", ApiInfo.UserAgent);
+        client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         client.DefaultRequestHeaders.Authorization = new("Bearer", Auth.AccessToken);
         
         string content = client
