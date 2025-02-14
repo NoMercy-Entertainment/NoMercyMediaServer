@@ -60,9 +60,7 @@ public class TrayIcon
     
     private void Toggle()
     {
-#if WINDOWS
         Program.VsConsoleWindow(Program.ConsoleVisible == 1 ? 0 : 1);
-#endif
 
         if (Program.ConsoleVisible == 1 && _trayIcon.ContextMenu?.Items.ElementAt(1) is not null)
         {
@@ -97,6 +95,4 @@ public class TrayIcon
 
         return Task.CompletedTask;
     }
-    
-#pragma warning disable CA1416
 }

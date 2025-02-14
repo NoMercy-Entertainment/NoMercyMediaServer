@@ -7,6 +7,7 @@ using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
 using NoMercy.Data.Logic;
+using NoMercy.Encoder.Core;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.Networking;
@@ -19,91 +20,27 @@ using AppFiles = NoMercy.NmSystem.AppFiles;
 namespace NoMercy.Server;
 public static class Program
 {
-#if WINDOWS
-    [DllImport("Kernel32")]
-    private static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate handler, bool add);
-
-    private delegate bool ConsoleCtrlDelegate(int signal);
-
-    private static bool ConsoleCtrlHandler(int signal)
-    {
-        if (signal == 2 || signal == 0)
-        {
-            Logger.App("Intercepted console close, preventing shutdown.");
-            HideConsoleWindow();
-            return true;
-        }
-        return false;
-    }
-
     [DllImport("Kernel32.dll")]
     private static extern IntPtr GetConsoleWindow();
     [DllImport("User32.dll")]
     private static extern bool ShowWindow(IntPtr hWnd, int cmdShow);
-    [DllImport("User32.dll")]
-    private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
-    [DllImport("User32.dll")]
-    private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-
-    private const int GWL_WNDPROC = -4;
-    private const uint WM_CLOSE = 0x0010;
-    private static IntPtr _originalWndProc = IntPtr.Zero;
-    private static IntPtr _consoleWindow = IntPtr.Zero;
-
-    private static IntPtr CustomWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
-    {
-        if (msg == WM_CLOSE)
-        {
-            HideConsoleWindow();
-            return IntPtr.Zero;
-        }
-        else if (msg == 0x11)
-        {
-            return IntPtr.Zero;
-        }
-        else if (msg == 0x16)
-        {
-            return IntPtr.Zero;
-        }
-
-        return CallWindowProc(_originalWndProc, hWnd, msg, wParam, lParam);
-    }
-
-    internal static void VsConsoleWindow(int visible)
-    {
-        if (visible == 0)
-        {
-            HideConsoleWindow();
-        }
-        else
-        {
-            ShowConsoleWindow();
-        }
-    }
-
-    private static void HideConsoleWindow()
-    {
-        ShowWindow(_consoleWindow, 0);
-        ConsoleVisible = 0;
-    }
-
-    private static void ShowConsoleWindow()
-    {
-        ShowWindow(_consoleWindow, 1);
-        ConsoleVisible = 1;
-    }
-#endif
 
     public static int ConsoleVisible { get; set; } = 1;
 
+    internal static void VsConsoleWindow(int i)
+    {
+        IntPtr hWnd = GetConsoleWindow();
+        if (hWnd != IntPtr.Zero)
+        {
+            ConsoleVisible = i;
+            ShowWindow(hWnd, i);
+        }
+    }
+
+    private static bool ShouldSeedMarvel { get; set; }
+
     public static Task Main(string[] args)
     {
-#if WINDOWS
-        SetConsoleCtrlHandler(ConsoleCtrlHandler, true);
-        _consoleWindow = GetConsoleWindow();
-        _originalWndProc = SetWindowLongPtr(_consoleWindow, GWL_WNDPROC, Marshal.GetFunctionPointerForDelegate((WndProc)CustomWndProc));
-#endif
-
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
         {
             Exception exception = (Exception)eventArgs.ExceptionObject;
@@ -138,8 +75,6 @@ public static class Program
             return Task.CompletedTask;
         }
     }
-    
-    private static bool ShouldSeedMarvel { get; set; }
 
     private delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
@@ -264,14 +199,12 @@ public static class Program
 
             new (delegate
             {
-#if WINDOWS
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
                     return TrayIcon.Make();
-#endif
                 return Task.CompletedTask;
             }),
-            new (StorageMonitor.UpdateStorage),
+            // new (StorageMonitor.UpdateStorage),
         ];
 
         await RunStartup(startupTasks);
@@ -291,8 +224,17 @@ public static class Program
             IsBackground = true
         };
         fileWatcher.Start();
+        
+        FFmpegHardwareConfig ffmpegConfig = new();
 
-#if WINDOWS
+        foreach (GpuAccelerator accelerator in ffmpegConfig.Accelerators)
+        {
+            Logger.Encoder("");
+            Logger.Encoder("Found a dedicated GPU:");
+            Logger.Encoder($"Vendor: {accelerator.Vendor}");
+            Logger.Encoder($"Accelerator: {accelerator.Accelerator}");
+        }
+        
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
         {
             Logger.App(
@@ -300,7 +242,6 @@ public static class Program
             await Task.Delay(10000)
                 .ContinueWith(_ => VsConsoleWindow(0));
         }
-#endif
     }
 
     private static async Task RunStartup(List<TaskDelegate> startupTasks)

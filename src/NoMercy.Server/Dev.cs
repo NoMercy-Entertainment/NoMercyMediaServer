@@ -1,8 +1,4 @@
-using NoMercy.Encoder.Core;
-using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
-// using NoMercy.Providers.TVDB.Client;
-// using NoMercy.Providers.TVDB.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -15,16 +11,6 @@ public class Dev
 {
     public static async Task Run()
     {
-        FFmpegHardwareConfig ffmpegConfig = new();
-
-        foreach (GpuAccelerator accelerator in ffmpegConfig.Accelerators)
-        {
-            Logger.Encoder("Found a dedicated GPU:");
-            Logger.Encoder($"Vendor: {accelerator.Vendor}");
-            Logger.Encoder($"Accelerator: {accelerator.Accelerator}");
-            Logger.Encoder("");
-        }
-        
         // OpenSubtitlesClient client = new();
         // OpenSubtitlesClient subtitlesClient = await client.Login();
         // SubtitleSearchResponse? x = await subtitlesClient.SearchSubtitles("Black Panther Wakanda Forever (2022)", "dut");

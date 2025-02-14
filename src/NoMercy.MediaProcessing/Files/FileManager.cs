@@ -25,6 +25,8 @@ public partial class FileManager(
     private List<Folder> Folders { get; set; } = [];
     private List<MediaFolderExtend> Files { get; set; } = [];
     public string Type { get; set; } = "";
+    
+    private string? Filter { get; set; }
 
     public async Task FindFiles(int id, Library library)
     {
@@ -58,6 +60,11 @@ public partial class FileManager(
                 Logger.App("Unknown library type");
                 break;
         }
+    }
+    
+    public void FilterFiles(string filter)
+    {
+        Filter = filter;
     }
 
     public async Task MoveToLibraryFolder(int id, Folder folder)
@@ -214,7 +221,7 @@ public partial class FileManager(
         await Task.CompletedTask;
     }
 
-    private async Task StoreVideoItem(MediaFile item)
+    internal async Task StoreVideoItem(MediaFile item)
     {
         Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
         if (folder == null) return;
@@ -664,6 +671,7 @@ public partial class FileManager(
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
             .FilterByMediaType(library.Type)
+            .FilterByFileName(Filter)
             .Process(path, depth);
 
         await mediaScan.DisposeAsync();

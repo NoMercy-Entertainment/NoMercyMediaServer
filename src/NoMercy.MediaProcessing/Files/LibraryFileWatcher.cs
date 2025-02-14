@@ -90,7 +90,7 @@ public class LibraryFileWatcher
 
     private void _onError(FileWatcherEventArgs e)
     {
-        Logger.System(e, LogEventLevel.Verbose);
+        // Logger.System(e, LogEventLevel.Error);
     }
 
     private Library? GetLibraryByPath(string path)

@@ -12,6 +12,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     private bool _fileListingEnabled;
     private bool _regexFilterEnabled = true;
+    private string? Filter { get; set; }
 
     private readonly Regex _folderNameRegex =
         new(
@@ -242,6 +243,12 @@ public class MediaScan : IDisposable, IAsyncDisposable
             Parallel.ForEach(Directory.GetFiles(folderPath), (file, _) =>
             {
                 file = Path.GetFullPath(file.ToUtf8());
+                
+                if (Filter is not null)
+                {
+                    if(!file.Contains(Filter)) return;
+                }
+                
                 string extension = Path.GetExtension(file).ToLower();
 
                 if (_extensionFilter.Length > 0 && !_extensionFilter.Contains(extension)) return;
@@ -348,5 +355,12 @@ public class MediaScan : IDisposable, IAsyncDisposable
         GC.WaitForPendingFinalizers();
 
         return ValueTask.CompletedTask;
+    }
+
+    public MediaScan FilterByFileName(string? filter)
+    {
+        Filter = filter;
+        
+        return this;
     }
 }

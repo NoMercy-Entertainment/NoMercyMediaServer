@@ -1,3 +1,4 @@
+using FFMpegCore;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -113,7 +114,9 @@ public class EncodeVideoJob : AbstractEncoderJob
                     Title = fileMetadata.Title,
                     Message = "Scanning files",
                 });
-
+                
+                fileManager.FilterFiles(container.FileName);
+                
                 await fileManager.FindFiles(fileMetadata.Id, folder.FolderLibraries.First().Library);
 
                 Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress

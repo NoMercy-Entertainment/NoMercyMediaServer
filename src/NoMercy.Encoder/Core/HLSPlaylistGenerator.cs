@@ -9,11 +9,11 @@ namespace NoMercy.Encoder.Core;
 
 public static class HlsPlaylistGenerator
 {
-    public static Task Build(string inputFilePath, string outputFilename, List<string>? priorityLanguages = null)
+    public static Task Build(string basePath, string filename, List<string>? priorityLanguages = null)
     {
         priorityLanguages ??= ["eng", "jpn"];
 
-        string[] folders = Directory.GetDirectories(inputFilePath)
+        string[] folders = Directory.GetDirectories(basePath)
             .Where(f => Path.GetFileName(f).StartsWith("audio_", StringComparison.InvariantCultureIgnoreCase) ||
                         Path.GetFileName(f).StartsWith("video_", StringComparison.InvariantCultureIgnoreCase))
             .ToArray();
@@ -83,7 +83,7 @@ public static class HlsPlaylistGenerator
                 string vCodecProfile = MapProfileToCodec(profile);
 
                 double duration = GetVideoDuration(videoFile) / 100000;
-                double totalSize = GetTotalSize(Path.Combine(inputFilePath, folderName ?? ""));
+                double totalSize = GetTotalSize(Path.Combine(basePath, folderName ?? ""));
 
                 double bandwidth = totalSize * 8 / duration;
                 bandwidth = Math.Round(bandwidth);
@@ -114,7 +114,7 @@ public static class HlsPlaylistGenerator
             masterPlaylist.AppendLine();
         }
 
-        File.WriteAllText(Path.Combine(inputFilePath, outputFilename + ".m3u8"), masterPlaylist.ToString());
+        File.WriteAllText(Path.Combine(basePath, filename + ".m3u8"), masterPlaylist.ToString());
 
         return Task.CompletedTask;
     }
