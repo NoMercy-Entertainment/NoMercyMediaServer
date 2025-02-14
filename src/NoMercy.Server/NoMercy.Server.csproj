@@ -6,7 +6,7 @@
         <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
         <Authors>NoMercy Entertainment</Authors>
         <Description>The Effortless Encoder</Description>
-        <Copyright>(c) 2025 NoMercy Entertainment</Copyright>
+        <Copyright>2025 NoMercy Entertainment</Copyright>
         <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
         <PackageIcon>Assets\icon.png</PackageIcon>
         <Company>NoMercy Entertainment</Company>
@@ -31,7 +31,7 @@
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
         
-       <Version>0.1.47</Version>
+       <Version>0.1.48</Version>
        <AssemblyVersion>$(Version).0</AssemblyVersion>
        <FileVersion>$(Version).0</FileVersion>
     </PropertyGroup>
