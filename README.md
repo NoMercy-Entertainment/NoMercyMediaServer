@@ -1,4 +1,5 @@
 > [!CAUTION]
+> :warning: **WORK IN PROGRESS - USE WITH CAUTION** :warning: <br>
 > **This repository is under active development and currently not stable.**
 
 <img src="https://raw.githubusercontent.com/NoMercy-Entertainment/NoMercyMediaServer/master/src/NoMercy.Server/Assets/logo.png" style="width: auto;height: 240px;">
@@ -64,7 +65,7 @@ To set up NoMercy MediaServer on your local machine:
 
 1. Start the server:
    ```bash
-   dotnet run
+   dotnet run --project **src/NoMercy.Server
    ```
 2. If you are on a desktop, it will authenticate the server by logging in from the browser. If you are on a server, it will ask you for your credentials.
 3. Open your browser and go to [https://app.nomercy.tv](https://app.nomercy.tv) to access the web interface.
