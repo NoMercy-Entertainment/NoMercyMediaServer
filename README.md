@@ -1,16 +1,9 @@
-
-
-                  
-   \####################################################  
-  \#      ⚠️ WORK IN PROGRESS - USE WITH CAUTION ⚠️      #  
- \#      This repository is under development and is not stable.     #  
-\####################################################
+> [!CAUTION]
+> **This repository is under active development and currently not stable.**
 
 <img src="https://raw.githubusercontent.com/NoMercy-Entertainment/NoMercyMediaServer/master/src/NoMercy.Server/Assets/logo.png" style="width: auto;height: 240px;">
 
 **"Empower Ownership: Overcome Licensing Barriers and Effortlessly Archive Your Media Collection with Privacy and Simplicity."**
-
-[![CI](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/actions/workflows/ci.yml/badge.svg)](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/actions/workflows/ci.yml)
 
 ## Features
 
@@ -47,6 +40,9 @@ A user account is **mandatory** for using NoMercy MediaServer. This account is e
 We have many more exciting features planned for the future, enhancing your experience even further!
 
 ## Installation
+
+> [!TIP]
+> You may need to install the .NET Core SDK, which can be found here: [Download .NET (Linux, macOS and Windows)](https://dotnet.microsoft.com/en-us/download)
 
 To set up NoMercy MediaServer on your local machine:
 
