@@ -253,6 +253,13 @@ public static partial class Str
         return name.Trim();
     }
 
+    public static string DirectorySafeName(this string? self)
+    {
+        if (string.IsNullOrEmpty(self)) return string.Empty;
+        string name = Regex.Replace(self, @"[/\\|:*?\""<>{}]", " ");
+        return name.Trim();
+    }
+
     public static string CleanFileName(this string? self)
     {
         return _cleanFileName(self);

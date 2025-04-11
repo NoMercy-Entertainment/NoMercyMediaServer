@@ -266,6 +266,7 @@ public class BaseAudio : Classes
 
             "opus" => new Opus(),
             "mp3" => new Mp3(),
+            "libmp3lame" => new Mp3(),
             "flac" => new Flac(),
             "vorbis" => new Vorbis(),
             _ => throw new($"Audio codec {profileCodec} is not supported")

@@ -331,6 +331,27 @@ public static class EncoderProfileSeedData
                         AllowedLanguages = AllLanguages()
                     }
                 ]
+            },
+            new EncoderProfile
+            {
+                Id = Ulid.Parse("01JRH6Q85QT0D08F9J9577J04K"),
+                Name = "Music",
+                Container = AudioContainers.Mp3,
+                EncoderProfileFolder =
+                [
+                    new()
+                    {
+                        FolderId = Ulid.Parse("01JRFTHR7CB35PQDJZP0V1FHYR"),
+                        EncoderProfileId = Ulid.Parse("01JRH6Q85QT0D08F9J9577J04K")
+                    }
+                ],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Mp3.Value
+                    }
+                ]
             }
         ];
     }
