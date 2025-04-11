@@ -316,4 +316,34 @@ public static partial class Str
     {;
         return NumberConverter.ConvertNumbersInString(str);
     }
+    
+    public static string NormalizeSearch(this string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
+
+        // Normalize to FormD to separate characters and diacritics
+        string normalized = input.Normalize(NormalizationForm.FormD);
+
+        // Remove diacritics
+        StringBuilder stringBuilder = new();
+        foreach (char c in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                stringBuilder.Append(c);
+        }
+
+        // Replace variations of dashes with a standard dash
+        string result = stringBuilder.ToString()
+            .Replace("‐", "-") // Hyphen
+            .Replace("–", "-") // En dash
+            .Replace("—", "-") // Em dash
+            .Replace("−", "-") // Minus sign
+            .ToLowerInvariant(); // Convert to lowercase
+
+        // Remove non-alphanumeric characters (optional)
+        result = Regex.Replace(result, @"[^a-zA-Z0-9\s-]", "");
+
+        return result;
+    }
 }
