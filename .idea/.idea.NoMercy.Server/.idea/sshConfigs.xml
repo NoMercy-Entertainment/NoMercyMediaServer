@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="SshConfigs">
-    <configs>
-      <sshConfig host="192.168.2.100" id="3884d558-5843-4c58-b030-e5149d5afae3" keyPath="C:\Users\patri\.ssh\Phoenix.ppk" port="22" nameFormat="DESCRIPTIVE" username="stoney" useOpenSSHConfig="true" />
-    </configs>
-  </component>
-</project>

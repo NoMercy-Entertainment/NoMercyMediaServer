@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
 public record MovieOrEpisodeDto
 {
-    [JsonProperty("id")] public int Id { get; set; }
+    [JsonProperty("id")] public dynamic Id { get; set; } = string.Empty;
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("duration")] public TimeSpan Duration { get; set; }
     [JsonProperty("adult")] public bool Adult { get; set; }

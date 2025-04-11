@@ -4,9 +4,9 @@ namespace NoMercy.Encoder.Format.Audio;
 
 public class Mp3 : BaseAudio
 {
-    public Mp3()
+    public Mp3(string audioCodec = "libmp3lame")
     {
-        SetAudioCodec(AudioFormats.Mp3);
+        SetAudioCodec(audioCodec);
     }
 
     public override CodecDto[] AvailableCodecs =>

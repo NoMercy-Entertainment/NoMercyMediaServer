@@ -241,6 +241,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         }
 
         if (Container.AudioStreams.Count > 0 && complexString.Length > 0) complexString.Append(';');
+        
         foreach (BaseAudio stream in Container.AudioStreams)
         {
             int index = Container.AudioStreams.IndexOf(stream);
@@ -266,6 +267,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         // }
 
         if (Container.ImageStreams.Count > 0 && complexString.Length > 0) complexString.Append(';');
+        
         foreach (BaseImage stream in Container.ImageStreams)
         {
             int index = Container.ImageStreams.IndexOf(stream);

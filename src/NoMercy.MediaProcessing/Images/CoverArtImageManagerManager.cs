@@ -24,6 +24,27 @@ public class CoverArtImageManagerManager: ICoverArtImageManagerManager
         public Uri? Url { get; set; }
     }
 
+    public static async Task<Uri?> GetCoverUrl(Guid id)
+    {
+        try
+        {
+            CoverArtCoverArtClient coverArtCoverArtClient = new(id);
+            CoverArtCovers? covers = await coverArtCoverArtClient.Cover();
+            if (covers is null) return null;
+
+            CoverArtImage? coverItem = covers.Images
+                .FirstOrDefault(image => image.Types.Contains("Front"));
+            
+            return coverItem?.CoverArtThumbnails.Large;
+        }
+        catch (Exception e)
+        {
+            if (e.Message.Contains("404")) return null;
+            Logger.FanArt(e.Message, LogEventLevel.Verbose);
+            return null;
+        }
+    }
+
     public static async Task<CoverPalette?> Add(Guid id)
     {
         try

@@ -24,6 +24,10 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.AcoustId.Client;
+using NoMercy.Providers.AcoustId.Models;
+using NoMercy.Providers.MusicBrainz.Client;
+using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Episode;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -179,22 +183,48 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
 
     [HttpPost]
     [Route("addfiles")]
-    public IActionResult AddFiles([FromBody] AddFilesRequest request)
+    public async Task<IActionResult> AddFiles([FromBody] AddFilesRequest request)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add files");
+        
+        Library? library = await context.Libraries.FirstOrDefaultAsync(x => x.Id == request.LibraryId);
+        
+        if (library == null)
+            return NotFoundResponse("Library not found");
 
-        foreach (AddFile file in request.Files)
+        try
         {
-            JobDispatcher.Dispatch(new EncodeVideoJob
+            if (library.Type == "music")
             {
-                FolderId = request.FolderId,
-                Id = file.Id,
-                InputFile = file.Path,
-            }, "encoder");
-        }
+                Logger.App("Adding music files to library", LogEventLevel.Verbose);
+                JobDispatcher.Dispatch(new EncodeMusicJob
+                {
+                    FolderId = request.FolderId,
+                    Id = Guid.Parse(request.Files[0].Id.ToString()),
+                    InputFolder = request.Files[0].Path,
+                }, "encoder");
 
-        return Ok(request);
+                return Ok(request);
+            }
+        
+            foreach (AddFile file in request.Files)
+            {
+                JobDispatcher.Dispatch(new EncodeVideoJob
+                {
+                    FolderId = request.FolderId,
+                    Id = file.Id,
+                    InputFile = file.Path,
+                }, "encoder");
+            }
+
+            return Ok(request);
+        }
+        catch (Exception e)
+        {
+            Logger.App(e, LogEventLevel.Error);
+            return BadRequestResponse(e.Message);
+        }
     }
 
     [HttpPost]
@@ -296,7 +326,79 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                 detail: "You do not have permission to view files");
 
         List<FileItemDto> fileList = await GetFilesInDirectory(request.Folder, request.Type);
+        
+        if (request.Type == "music")
+        {
+            Dictionary<Guid,(MusicBrainzReleaseAppends release, int count)> musicBrainzReleasesDic = new();
 
+            foreach (FileItemDto file in fileList)
+            {
+                AcoustIdFingerprint? fingerprint = await AcoustIdFingerprintLookUp(file.File);
+                
+                if (fingerprint is null) continue;
+                foreach (AcoustIdFingerprintResult acoustIdFingerprint in fingerprint.Results)
+                {
+                    if (acoustIdFingerprint.Id == Guid.Empty) continue;
+                    foreach (AcoustIdFingerprintRecording? acoustIdFingerprintRecording in acoustIdFingerprint?.Recordings ?? [])
+                    {
+                        if (acoustIdFingerprintRecording is null) continue;
+                        if (acoustIdFingerprintRecording?.Id == Guid.Empty) continue;
+                        if (acoustIdFingerprintRecording?.Releases is null) continue;
+
+                        foreach (AcoustIdFingerprintReleaseGroups release in acoustIdFingerprintRecording?.Releases ?? [])
+                        {
+                            using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
+                            MusicBrainzReleaseAppends? item = await musicBrainzReleaseClient.WithAllAppends(release.Id);
+                            if (item == null) continue;
+                            if (musicBrainzReleasesDic.ContainsKey(item.Id))
+                            {
+                                var tmp = musicBrainzReleasesDic[item.Id];
+                                tmp.count++;
+                                musicBrainzReleasesDic[item.Id] = tmp;
+                                continue;
+                            }
+                            musicBrainzReleasesDic.Add(item.Id, (item, 1));
+                        }
+                    }
+                }
+            }
+
+            List<MusicBrainzReleaseAppends> musicBrainzReleases = musicBrainzReleasesDic.Values
+                .OrderByDescending(x => x.count)
+                .Select(x => x.release)
+                .ToList();
+        
+            if (musicBrainzReleases.Count == 0)
+                return NotFoundResponse("No releases found");
+            
+            fileList = musicBrainzReleases.Select(release =>
+            {
+                Uri? coverPaletteUrl = CoverArtImageManagerManager.GetCoverUrl(release.Id).Result;
+                return new FileItemDto
+                {
+                    Size = fileList.Sum(x => x.Size),
+                    Mode = 0,
+                    Name = release.Title,
+                    Parent = request.Folder,
+                    Parsed = new MovieFile(request.Folder)
+                    {
+                        Title = release.Title,
+                        Year = release.DateTime.ParseYear().ToString(),
+                        IsSeries = false,
+                        IsSuccess = true,
+                    },
+                    Match = new MovieOrEpisodeDto
+                    {
+                        Id = release.Id,
+                        Title = release.Title,
+                        Still = coverPaletteUrl?.ToString(),
+                    },
+                    File = request.Folder,
+                    Tracks = release.Media.Sum(m => m.TrackCount)
+                };
+            }).ToList();
+        }
+        
         return Ok(new DataResponseDto<FileListResponseDto>
         {
             Data = new()
@@ -307,6 +409,29 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                     .ToList()
             }
         });
+    }
+
+    [NonAction]
+    private async Task<AcoustIdFingerprint?> AcoustIdFingerprintLookUp(string path, int retry = 0)
+    {
+        AcoustIdFingerprintClient acoustIdFingerprintClient = new();
+        AcoustIdFingerprint? result;
+        try
+        {
+            result = await acoustIdFingerprintClient.Lookup(path);
+        }
+        catch (Exception e)
+        {
+            if (retry == 3)
+            {
+                Logger.Fingerprint(e.Message, LogEventLevel.Error);
+                return null;
+            }
+            await Task.Delay(200);
+            retry += 1;
+            return await AcoustIdFingerprintLookUp(path, retry);
+        }
+        return result;
     }
 
     [NonAction]

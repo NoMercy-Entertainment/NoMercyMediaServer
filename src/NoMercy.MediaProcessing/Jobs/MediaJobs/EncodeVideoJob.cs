@@ -21,6 +21,8 @@ public class EncodeVideoJob : AbstractEncoderJob
     public override string QueueName => "encoder";
     public override int Priority => 4;
     public string Status { get; set; } = "pending";
+    
+    public string  InputFile { get; set; } = string.Empty;
 
     public override async Task Handle()
     {
@@ -157,7 +159,7 @@ public class EncodeVideoJob : AbstractEncoderJob
 
         if (movie is null && episode is null)
         {
-            return new()
+            return new FileMetadata
             {
                 Success = false
             };
@@ -171,7 +173,7 @@ public class EncodeVideoJob : AbstractEncoderJob
         int baseId = movie?.Id ?? episode!.Tv.Id;
         string? imgPath = movie?.Backdrop ?? episode!.Still;
 
-        return new()
+        return new FileMetadata
         {
             Success = true,
             FolderName = folderName,
@@ -183,7 +185,7 @@ public class EncodeVideoJob : AbstractEncoderJob
         };
     }
 
-    public record FileMetadata
+    private record FileMetadata
     {
         public bool Success { get; set; }
         public string FolderName { get; set; } = string.Empty;
@@ -194,9 +196,9 @@ public class EncodeVideoJob : AbstractEncoderJob
         public string? ImgPath { get; set; }
     }
 
-    private static void BuildVideoStreams(EncoderProfile? encoderProfile, ref BaseContainer container)
+    private static void BuildVideoStreams(EncoderProfile encoderProfile, ref BaseContainer container)
     {
-        foreach (IVideoProfile profile in encoderProfile?.VideoProfiles ?? [])
+        foreach (IVideoProfile profile in encoderProfile.VideoProfiles)
         {
             BaseVideo stream = BaseVideo.Create(profile.Codec)
                 .SetScale(profile.Width, profile.Height)
@@ -217,9 +219,9 @@ public class EncodeVideoJob : AbstractEncoderJob
         }
     }
 
-    private static void BuildAudioStreams(EncoderProfile? encoderProfile, ref BaseContainer container)
+    private static void BuildAudioStreams(EncoderProfile encoderProfile, ref BaseContainer container)
     {
-        foreach (IAudioProfile profile in encoderProfile?.AudioProfiles ?? [])
+        foreach (IAudioProfile profile in encoderProfile.AudioProfiles)
         {
             BaseAudio stream = BaseAudio.Create(profile.Codec)
                 .SetAudioChannels(profile.Channels)

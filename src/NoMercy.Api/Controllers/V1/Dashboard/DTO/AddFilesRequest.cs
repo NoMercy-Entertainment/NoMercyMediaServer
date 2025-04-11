@@ -11,5 +11,5 @@ public record AddFilesRequest
 public record AddFile
 {
     [JsonProperty("path")] public string Path { get; set; } = string.Empty;
-    [JsonProperty("id")] public int Id { get; set; }
+    [JsonProperty("id")] public dynamic Id { get; set; } = null!;
 }
