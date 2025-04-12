@@ -30,7 +30,6 @@ using NoMercy.Server.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
-using NoMercy.Encoder.Core;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaSources.OpticalMedia;

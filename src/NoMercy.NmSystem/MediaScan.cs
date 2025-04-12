@@ -76,8 +76,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
         ConcurrentBag<MediaFile> files = Files(folderPath);
 
         MovieFile movieFile1 = _movieDetector.GetInfo(folderPath);
-        movieFile1.Year ??= Str.MatchYearRegex().Match(folderPath)
-            .Value;
+        movieFile1.Year ??= folderPath.TryGetYear();
 
         folders.Add(new()
         {
@@ -123,8 +122,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 ConcurrentBag<MediaFile> files2 = depth - 1 > 0 ? Files(directory) : [];
 
                 MovieFile movieFile = _movieDetector.GetInfo(directory);
-                movieFile.Year ??= Str.MatchYearRegex()
-                    .Match(directory).Value;
+                movieFile.Year ??= directory.TryGetYear();
 
                 folders.Add(new()
                 {
@@ -200,8 +198,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
                 MovieFile movieFile = _movieDetector.GetInfo(directory);
 
-                movieFile.Year ??= Str.MatchYearRegex()
-                    .Match(directory).Value;
+                movieFile.Year ??= directory.TryGetYear();
 
                 folders.Add(new()
                 {

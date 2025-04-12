@@ -88,6 +88,28 @@ public static partial class Str
 
     [GeneratedRegex(@"(1(8|9)|20)\d{2}(?!p|i|(1(8|9)|20)\d{2}|\W(1(8|9)|20)\d{2})")]
     public static partial Regex MatchYearRegex();
+    
+    public static string? TryGetYear(this string str)
+    {
+        if (!MatchYearRegex().Match(str).Success) return null;
+        return MatchYearRegex().Match(str).Value;
+    }
+    
+    [GeneratedRegex("/[^a-zA-Z0-9]/")]
+    public static partial Regex IsAlphaNumeric();
+    
+    public static bool IsAlphaNumeric(this string str)
+    {
+        return IsAlphaNumeric().IsMatch(str);
+    }
+
+    [GeneratedRegex("/[0-9]/")]
+    public static partial Regex IsNumeric();
+    
+    public static bool IsNumeric(this string str)
+    {
+        return IsNumeric().IsMatch(str);
+    }
 
     public static string PathName(this string path)
     {

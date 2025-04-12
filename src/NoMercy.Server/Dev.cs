@@ -1,6 +1,3 @@
-using NoMercy.Encoder.Core;
-using NoMercy.MediaSources.OpticalMedia;
-using NoMercy.MediaSources.OpticalMedia.Dto;
 using NoMercy.NmSystem.Extensions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;

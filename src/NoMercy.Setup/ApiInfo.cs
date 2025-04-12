@@ -1,4 +1,3 @@
-using Microsoft.Diagnostics.Tracing.AutomatedAnalysis;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;

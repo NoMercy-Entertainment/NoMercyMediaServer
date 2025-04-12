@@ -9,7 +9,6 @@ public class Mp3 : BaseContainer
     public Mp3()
     {
         SetContainer(AudioContainers.Mp3);
-        AddCustomArgument("-f", AudioFormats.Mp3);
     }
 
     public override CodecDto[] AvailableCodecs =>

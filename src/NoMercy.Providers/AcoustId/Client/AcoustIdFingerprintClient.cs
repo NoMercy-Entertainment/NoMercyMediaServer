@@ -1,6 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text;
 using AcoustID;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;

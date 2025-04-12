@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Xml.Linq;
 using I18N.DotNet;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.NmSystem;
 

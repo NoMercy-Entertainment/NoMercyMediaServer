@@ -67,7 +67,7 @@ public class FfMpeg : Classes
         // first ffprobe the file check for streams
         MediaAnalysis = new(FFProbe.Analyse(path), path);
 
-        if (MediaAnalysis.VideoStreams.Count > 0)
+        if (MediaAnalysis.VideoStreams.Count(s => s.CodecName != "mjpeg") > 0)
             return new VideoFile(MediaAnalysis, FfmpegPath);
 
         if (MediaAnalysis.AudioStreams.Count > 0)

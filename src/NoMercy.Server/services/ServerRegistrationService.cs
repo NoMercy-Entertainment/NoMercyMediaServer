@@ -1,4 +1,3 @@
-using NoMercy.Api.Middleware;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
