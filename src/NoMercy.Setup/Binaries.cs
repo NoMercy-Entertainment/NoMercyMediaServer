@@ -88,6 +88,7 @@ public static class Binaries
             
             File.Delete(file);
             File.Move(sourceArchiveFileName, file);
+            await SetExecutionPermissions(file);
             return;
         }
         
@@ -105,6 +106,7 @@ public static class Binaries
                 Directory.CreateDirectory(destinationDirectoryName);
                 ZipFile.ExtractToDirectory(sourceArchiveFileName, destinationDirectoryName);
                 File.Delete(sourceArchiveFileName);
+                await SetExecutionPermissions(destinationDirectoryName);
             }
             else if (sourceArchiveFileName.EndsWith(".tar.xz") || sourceArchiveFileName.EndsWith(".tar.gz") 
                                                                || sourceArchiveFileName.EndsWith("tgz"))
@@ -112,6 +114,7 @@ public static class Binaries
                 Directory.CreateDirectory(destinationDirectoryName);
                 await Shell.ExecAsync("tar", $"xf \"{sourceArchiveFileName}\" -C \"{destinationDirectoryName}\"");
                 File.Delete(sourceArchiveFileName);
+                await SetExecutionPermissions(destinationDirectoryName);
             }
         }
         catch (Exception ex)
@@ -123,6 +126,23 @@ public static class Binaries
         await Task.Delay(0);
     }
 
+    private static async Task SetExecutionPermissions(string path)
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            if (File.Exists(path))
+            {
+                await Shell.ExecAsync("chmod", $"+x \"{path}\"");
+            }
+            else if (Directory.Exists(path))
+            {
+                await Shell.ExecAsync("chmod", $"-R +x \"{path}\"");
+            }
+        
+            Logger.Setup($"Set execution permissions for {path}", LogEventLevel.Verbose);
+        }
+    }
+    
     private static async Task Cleanup(Download program)
     {
         if (program.Filter == "")
