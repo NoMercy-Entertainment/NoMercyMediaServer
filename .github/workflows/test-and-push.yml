@@ -31,6 +31,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Setup .NET SDK for the NoMercy.Server project
       - name: Setup .NET
@@ -62,10 +64,14 @@ jobs:
             git config user.email "actions@github.com"
             
             git config --global --add safe.directory ${{ github.workspace }}
+            
+            # Explicitly fetch all tags
+            git fetch --tags
+            
             # Get the latest version tag
             LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "1.0.0")
             
-            echo "LATEST_TAG=$LATEST_TAG" 
+            echo "LATEST_TAG=$LATEST_TAG"
 
             # Extract components
             MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1 | sed 's/v//')
