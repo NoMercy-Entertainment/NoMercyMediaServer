@@ -268,7 +268,6 @@ public static class EncoderProfileSeedData
                     }
                 ]
             },
-
             new EncoderProfile
             {
                 Id = Ulid.Parse("01HR360AKTW47XC6ZQ2V9DF024"),
@@ -329,6 +328,27 @@ public static class EncoderProfileSeedData
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
                         AllowedLanguages = AllLanguages()
+                    }
+                ]
+            },
+            new EncoderProfile
+            {
+                Id = Ulid.Parse("01JRH6Q85QT0D08F9J9577J04K"),
+                Name = "Music",
+                Container = AudioContainers.Mp3,
+                EncoderProfileFolder =
+                [
+                    new()
+                    {
+                        FolderId = Ulid.Parse("01HQ5W84R600G31Q038AGNSKGT"),
+                        EncoderProfileId = Ulid.Parse("01JRH6Q85QT0D08F9J9577J04K")
+                    }
+                ],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Mp3.Value
                     }
                 ]
             }

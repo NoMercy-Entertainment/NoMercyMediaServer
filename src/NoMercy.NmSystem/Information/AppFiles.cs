@@ -1,6 +1,5 @@
 // ReSharper disable MemberCanBePrivate.Global
 
-using System.Security.AccessControl;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.NmSystem.Information;

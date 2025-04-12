@@ -1,7 +1,4 @@
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Database;
-using Collection = NoMercy.Database.Models.Collection;
 
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;

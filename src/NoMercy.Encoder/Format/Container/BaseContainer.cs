@@ -84,6 +84,21 @@ public class BaseContainer : Classes
                 $"Wrong video container value for {videoContainer}, available formats are {string.Join(", ", AvailableContainers.Select(container => container.Name))}");
 
         ContainerDto = availableCodecs.First(container => container.Name == videoContainer);
+        Extension = ContainerDto.Name switch
+        {
+            "mkv" => "mkv",
+            "mp4" => "mp4",
+            "webm" => "webm",
+            "flv" => "flv",
+            "m4a" => "m4a",
+            "aac" => "aac",
+            "opus" => "opus",
+            "ogg" => "ogg",
+            "mp3" => "mp3",
+            "flac" => "flac",
+            "m3u8" => "m3u8",
+            _ => throw new ArgumentOutOfRangeException(nameof(videoContainer), videoContainer, null)
+        };
 
         return this;
     }
@@ -153,8 +168,10 @@ public class BaseContainer : Classes
         {
             "mkv" => new Mkv(),
             "Mp4" => new Mp4(),
+            "mp3" => new Mp3(),
+            "flac" => new Flac(),
             "Hls" => new Hls().SetHlsFlags("independent_segments"),
-            _ => new Hls().SetHlsFlags("independent_segments")
+            _ => throw new($"Container {profileContainer} not supported")
         };
     }
 

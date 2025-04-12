@@ -274,7 +274,7 @@ public class MusicController : BaseController
 
         if (albums.Count > 0)
         {
-            foreach (var album in albums)
+            foreach (Album? album in albums)
             {
                 if (album.AlbumTrack.Count > 0)
                 {
@@ -288,7 +288,7 @@ public class MusicController : BaseController
 
         if (playlists.Count > 0)
         {
-            foreach (var playlist in playlists)
+            foreach (Playlist? playlist in playlists)
             {
                 if (playlist.Tracks.Count > 0)
                 {
@@ -302,7 +302,7 @@ public class MusicController : BaseController
 
         if (songs.Count > 0)
         {
-            foreach (var song in songs)
+            foreach (Track? song in songs)
             {
                 if (song.ArtistTrack.Count > 0)
                 {

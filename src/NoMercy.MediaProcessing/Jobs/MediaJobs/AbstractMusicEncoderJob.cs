@@ -10,9 +10,9 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 // Code
 // ---------------------------------------------------------------------------------------------------------------------
 [Serializable]
-public abstract class AbstractEncoderJob : IShouldQueue
+public abstract class AbstractMusicEncoderJob : IShouldQueue
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public Ulid FolderId { get; set; }
 
     public abstract string QueueName { get; }

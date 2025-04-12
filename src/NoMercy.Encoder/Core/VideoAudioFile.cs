@@ -20,7 +20,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
     public VideoAudioFile AddContainer(BaseContainer container)
     {
-        string cropValue = CropDetect(fMediaAnalysis.Path);
+        string cropValue = container.IsVideo ? CropDetect(fMediaAnalysis.Path) : string.Empty;
 
         Container = container;
         Container.Title = Title;
@@ -55,7 +55,11 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
                 (keyValuePair.Value as BaseAudio)!.AudioStreams = fMediaAnalysis.AudioStreams;
                 (keyValuePair.Value as BaseAudio)!.AudioStream = fMediaAnalysis.PrimaryAudioStream!;
 
-                Container.AudioStreams.AddRange((keyValuePair.Value as BaseAudio)!.Build());
+                List<BaseAudio> x = (keyValuePair.Value as BaseAudio)!.Build();
+                foreach (BaseAudio newStream in x)
+                    newStream.Extension = Container.Extension;
+                
+                Container.AudioStreams.AddRange(x);
             }
             else if (keyValuePair.Value.IsSubtitle)
             {
@@ -171,26 +175,32 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
         StringBuilder command = new();
 
-        command.Append(" -hide_banner -probesize 4092M -analyzeduration 9999M");
-        if (Priority)
+        command.Append(" -hide_banner ");
+
+        if (Container.IsVideo)
         {
-            command.Append($" -threads {Math.Floor(threadCount * 2.0)} ");
-        }
-        else
-        {
-            command.Append($" -threads {Math.Floor(threadCount * 0.5)} ");
-        }
-        
-        foreach (GpuAccelerator accelerator in Accelerators)
-        {
-            command.Append($" {accelerator.FfmpegArgs} ");
+            command.Append(" -probesize 4092M -analyzeduration 9999M");
+            
+            if (Priority)
+            {
+                command.Append($" -threads {Math.Floor(threadCount * 2.0)} ");
+            }
+            else
+            {
+                command.Append($" -threads {Math.Floor(threadCount * 0.5)} ");
+            }
+
+            foreach (GpuAccelerator accelerator in Accelerators)
+            {
+                command.Append($" {accelerator.FfmpegArgs} ");
+            }
         }
 
         command.Append(" -progress - ");
 
         command.Append($" -y -i \"{Container.InputFile}\" ");
         
-        if (Accelerators.Count > 0)
+        if (Container.IsVideo && Accelerators.Count > 0)
         {
             command.Append(" -gpu any ");
         }
@@ -241,6 +251,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         }
 
         if (Container.AudioStreams.Count > 0 && complexString.Length > 0) complexString.Append(';');
+        
         foreach (BaseAudio stream in Container.AudioStreams)
         {
             int index = Container.AudioStreams.IndexOf(stream);
@@ -266,6 +277,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         // }
 
         if (Container.ImageStreams.Count > 0 && complexString.Length > 0) complexString.Append(';');
+        
         foreach (BaseImage stream in Container.ImageStreams)
         {
             int index = Container.ImageStreams.IndexOf(stream);
@@ -339,15 +351,44 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
                                                                 new Dictionary<string, dynamic>())
                 commandDictionary[parameter.Key] = parameter.Value;
 
+            if (Container.IsAudio)
+            {
+                command.Append(" -map 0:v:0 ");
+                
+                if (stream._id3Tags.Count > 0)
+                {
+                    command.Append(" -id3v2_version 3 -write_id3v1 1 ");
+                    foreach (string extraTag in stream._id3Tags)
+                        command.Append($" -metadata {extraTag} ");
+
+                    command.Append(" -metadata:s:v title=\"Album cover\"");
+                    command.Append(" -metadata:s:v comment=\"Cover (front)\""); // Lowercase f required
+                }
+            }
+            else
+            {
+                if (!IsoLanguageMapper.IsoToLanguage.TryGetValue(stream.Language, out string? language))
+                {
+                    throw new($"Language {stream.Language} is not supported");
+                }
+                
+                command.Append($" -metadata:s:a:{index} title=\"{language} {stream.AudioChannels}-{stream.AudioCodec.SimpleValue}\" ");
+                command.Append($" -metadata:s:a:{index} language=\"{stream.Language}\" ");
+            }
+
             // commandDictionary["-t"] = 300;
             if (Container.ContainerDto.Name == VideoContainers.Hls)
             {
                 commandDictionary["-hls_segment_filename"] = $"\"./{stream.HlsPlaylistFilename}_%05d.ts\"";
                 commandDictionary[""] = $"\"./{stream.HlsPlaylistFilename}.m3u8\"";
             }
+            else
+            {
+                commandDictionary[""] = $"\"./{stream.HlsPlaylistFilename}.{stream.Extension}\"";
+            }
 
             command.Append(commandDictionary.Aggregate("", (acc, pair) => $"{acc} {pair.Key} {pair.Value}"));
-
+            
             stream.CreateFolder();
         }
 

@@ -12,4 +12,5 @@ public record FileItemDto
     [JsonProperty("match")] public MovieOrEpisodeDto Match { get; set; } = new();
     [JsonProperty("streams")] public StreamsDto Streams { get; set; } = new();
     [JsonProperty("file")] public string File { get; set; } = string.Empty;
+    [JsonProperty("tracks")] public int Tracks { get; set; }
 }

@@ -1,5 +1,4 @@
 using FFMpegCore;
-using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -19,7 +18,7 @@ public class BaseAudio : Classes
     public string Language
     {
         get => _language ?? AudioStream?.Language ?? "und";
-        set => _language = value;
+        set => _language = value != null ? value : _language ?? "und";
     }
 
     public int StreamIndex => AudioStream?.Index ?? -1;
@@ -41,6 +40,8 @@ public class BaseAudio : Classes
     private readonly Dictionary<string, dynamic> _extraParameters = [];
     private readonly Dictionary<string, dynamic> _filters = [];
     private readonly Dictionary<string, dynamic> _ops = [];
+
+    internal readonly List<string> _id3Tags = [];
 
     protected virtual string[] AvailableContainers { get; set; } = [
         AudioContainers.Mp3, AudioContainers.Flac, AudioContainers.M4A,
@@ -146,6 +147,12 @@ public class BaseAudio : Classes
             AddCustomArgument(key, val);
         return this;
     }
+    
+    public BaseAudio AddId3Tag(string value)
+    {
+        _id3Tags.Add(value);
+        return this;
+    }
 
     public BaseAudio AddOpts(string key, dynamic value)
     {
@@ -202,7 +209,8 @@ public class BaseAudio : Classes
 
         foreach (string allowedLanguage in AllowedLanguages.Append("und"))
         {
-            foreach (AudioStream stream in AudioStreams.Where(audioStream => audioStream.Language == allowedLanguage))
+            foreach (AudioStream stream in AudioStreams.Where(audioStream => 
+                         audioStream.Language is null || audioStream.Language == allowedLanguage))
             {
                 BaseAudio newStream = (BaseAudio)MemberwiseClone();
 
@@ -233,13 +241,6 @@ public class BaseAudio : Classes
         if (AudioChannels != -1)
             commandDictionary["-ac"] = AudioChannels;
 
-        if (!IsoLanguageMapper.IsoToLanguage.TryGetValue(Language, out string? language))
-        {
-            throw new($"Language {Language} is not supported");
-        }
-        commandDictionary[$"-metadata:s:a:{index}"] = $"title=\"{language} {AudioChannels}-{AudioCodec.SimpleValue}\"";
-        commandDictionary[$"-metadata:s:a:{index}"] = $"language=\"{Language}\"";
-
         foreach (KeyValuePair<string, dynamic> extraParameter in _extraParameters)
             commandDictionary[extraParameter.Key] = extraParameter.Value;
     }
@@ -255,9 +256,9 @@ public class BaseAudio : Classes
         }
     }
 
-    public static BaseAudio Create(string profileCodec)
+    public static BaseAudio Create(string codec)
     {
-        return profileCodec switch
+        return codec switch
         {
             "aac" => new Aac(),
             "eac3" => new Eac3(),
@@ -265,10 +266,29 @@ public class BaseAudio : Classes
             "truehd" => new TrueHd(),
 
             "opus" => new Opus(),
-            "mp3" => new Mp3(),
+            "libmp3lame" => new Mp3(),
             "flac" => new Flac(),
             "vorbis" => new Vorbis(),
-            _ => throw new($"Audio codec {profileCodec} is not supported")
+            _ => throw new($"Audio codec {codec} is not supported")
         };
+    }
+
+    public BaseAudio SetLanguage(string language)
+    {
+        Language = language;
+        
+        return this;
+    }
+
+    public BaseAudio AddId3Tags(Dictionary<string, object?> id3Tags)
+    {
+        foreach (KeyValuePair<string, object?> item in id3Tags)
+        {
+            if (item.Value is null or "")
+                continue;
+            AddId3Tag($"{item.Key.Replace(" ", "_")}=\"{item.Value}\"");
+        }
+
+        return this;
     }
 }

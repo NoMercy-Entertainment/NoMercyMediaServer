@@ -5,7 +5,6 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
-using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
