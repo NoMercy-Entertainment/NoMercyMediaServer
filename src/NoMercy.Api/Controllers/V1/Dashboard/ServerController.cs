@@ -326,79 +326,91 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                 detail: "You do not have permission to view files");
 
         List<FileItemDto> fileList = await GetFilesInDirectory(request.Folder, request.Type);
-        
-        if (request.Type == "music")
+
+        if (request.Type != "music")
         {
-            Dictionary<Guid,(MusicBrainzReleaseAppends release, int count)> musicBrainzReleasesDic = new();
-
-            foreach (FileItemDto file in fileList)
+            return Ok(new DataResponseDto<FileListResponseDto>
             {
-                AcoustIdFingerprint? fingerprint = await AcoustIdFingerprintLookUp(file.File);
-                
-                if (fingerprint is null) continue;
-                foreach (AcoustIdFingerprintResult acoustIdFingerprint in fingerprint.Results)
+                Data = new()
                 {
-                    if (acoustIdFingerprint.Id == Guid.Empty) continue;
-                    foreach (AcoustIdFingerprintRecording? acoustIdFingerprintRecording in acoustIdFingerprint?.Recordings ?? [])
-                    {
-                        if (acoustIdFingerprintRecording is null) continue;
-                        if (acoustIdFingerprintRecording?.Id == Guid.Empty) continue;
-                        if (acoustIdFingerprintRecording?.Releases is null) continue;
+                    Status = "ok",
+                    Files = fileList
+                        .OrderBy(file => file.File)
+                        .ToList()
+                }
+            });
+        }
+        
+        Dictionary<Guid,(MusicBrainzReleaseAppends release, int count)> musicBrainzReleasesDic = new();
 
-                        foreach (AcoustIdFingerprintReleaseGroups release in acoustIdFingerprintRecording?.Releases ?? [])
+        foreach (FileItemDto file in fileList)
+        {
+            AcoustIdFingerprint? fingerprint = await AcoustIdFingerprintLookUp(file.File);
+            
+            if (fingerprint is null) continue;
+            foreach (AcoustIdFingerprintResult acoustIdFingerprint in fingerprint.Results)
+            {
+                if (acoustIdFingerprint.Id == Guid.Empty) continue;
+                foreach (AcoustIdFingerprintRecording? acoustIdFingerprintRecording in acoustIdFingerprint.Recordings ?? [])
+                {
+                    if (acoustIdFingerprintRecording is null) continue;
+                    if (acoustIdFingerprintRecording.Id == Guid.Empty) continue;
+                    if (acoustIdFingerprintRecording.Releases is null) continue;
+
+                    foreach (AcoustIdFingerprintReleaseGroups release in acoustIdFingerprintRecording.Releases ?? [])
+                    {
+                        using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
+                        MusicBrainzReleaseAppends? item = await musicBrainzReleaseClient.WithAllAppends(release.Id);
+                        if (item == null) continue;
+                        if (musicBrainzReleasesDic.ContainsKey(item.Id))
                         {
-                            using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
-                            MusicBrainzReleaseAppends? item = await musicBrainzReleaseClient.WithAllAppends(release.Id);
-                            if (item == null) continue;
-                            if (musicBrainzReleasesDic.ContainsKey(item.Id))
-                            {
-                                var tmp = musicBrainzReleasesDic[item.Id];
-                                tmp.count++;
-                                musicBrainzReleasesDic[item.Id] = tmp;
-                                continue;
-                            }
-                            musicBrainzReleasesDic.Add(item.Id, (item, 1));
+                            (MusicBrainzReleaseAppends release, int count) tmp = musicBrainzReleasesDic[item.Id];
+                            tmp.count++;
+                            musicBrainzReleasesDic[item.Id] = tmp;
+                            continue;
                         }
+                        musicBrainzReleasesDic.Add(item.Id, (item, 1));
                     }
                 }
             }
-
-            List<MusicBrainzReleaseAppends> musicBrainzReleases = musicBrainzReleasesDic.Values
-                .OrderByDescending(x => x.count)
-                .Select(x => x.release)
-                .ToList();
-        
-            if (musicBrainzReleases.Count == 0)
-                return NotFoundResponse("No releases found");
-            
-            fileList = musicBrainzReleases.Select(release =>
-            {
-                Uri? coverPaletteUrl = CoverArtImageManagerManager.GetCoverUrl(release.Id).Result;
-                return new FileItemDto
-                {
-                    Size = fileList.Sum(x => x.Size),
-                    Mode = 0,
-                    Name = release.Title,
-                    Parent = request.Folder,
-                    Parsed = new MovieFile(request.Folder)
-                    {
-                        Title = release.Title,
-                        Year = release.DateTime.ParseYear().ToString(),
-                        IsSeries = false,
-                        IsSuccess = true,
-                    },
-                    Match = new MovieOrEpisodeDto
-                    {
-                        Id = release.Id,
-                        Title = release.Title,
-                        Still = coverPaletteUrl?.ToString(),
-                    },
-                    File = request.Folder,
-                    Tracks = release.Media.Sum(m => m.TrackCount)
-                };
-            }).ToList();
         }
+
+        List<MusicBrainzReleaseAppends> musicBrainzReleases = musicBrainzReleasesDic.Values
+            .OrderByDescending(x => x.count)
+            .Select(x => x.release)
+            .ToList();
+    
+        if (musicBrainzReleases.Count == 0)
+            return NotFoundResponse("No releases found");
         
+        fileList = musicBrainzReleases.Select(release =>
+        {
+            Uri? coverPaletteUrl = CoverArtImageManagerManager.GetCoverUrl(release.Id).Result;
+            return new FileItemDto
+            {
+                Size = fileList.Sum(x => x.Size),
+                Mode = 0,
+                Name = release.Title,
+                Parent = request.Folder,
+                Parsed = new(request.Folder)
+                {
+                    Title = release.Title,
+                    Year = release.DateTime.ParseYear().ToString(),
+                    IsSeries = false,
+                    IsSuccess = true,
+                },
+                Match = new()
+                {
+                    Id = release.Id,
+                    Title = release.Title,
+                    Still = coverPaletteUrl?.ToString(),
+                },
+                File = request.Folder,
+                Tracks = release.Media.Sum(m => m.TrackCount)
+            };
+        }).ToList();
+    
+
         return Ok(new DataResponseDto<FileListResponseDto>
         {
             Data = new()
@@ -504,9 +516,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
 
                     MovieFile parsed = movieDetector.GetInfo(title);
                     
-                    parsed.Year ??= Str.MatchYearRegex()
-                        .Match(title)
-                        .Value;
+                    parsed.Year ??= title.TryGetYear();
 
 
                     if (parsed.Title == null) continue;
@@ -527,7 +537,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                         case "anime" or "tv":
                         {
                             TmdbPaginatedResponse<TmdbTvShow>? shows =
-                                await searchClient.TvShow(parsed.Title ?? "", parsed.Year);
+                                await searchClient.TvShow(parsed.Title ?? "", parsed.Year ?? "");
                             TmdbTvShow? show = shows?.Results.FirstOrDefault();
                             if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) continue;
 
@@ -619,7 +629,7 @@ public partial class ServerController(IHostApplicationLifetime appLifetime, Medi
                         case "movie":
                         {
                             TmdbPaginatedResponse<TmdbMovie>? movies =
-                                await searchClient.Movie(parsed.Title ?? "", parsed.Year);
+                                await searchClient.Movie(parsed.Title ?? "", parsed.Year ?? "");
                             TmdbMovie? movie = movies?.Results.FirstOrDefault();
                             if (movie == null) continue;
 

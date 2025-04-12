@@ -5,7 +5,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 

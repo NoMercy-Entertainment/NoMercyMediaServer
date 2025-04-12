@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Globalization;
-using System.Text.RegularExpressions;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Encoder;
@@ -40,7 +39,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null)
         {
-            Logger.Encoder($"Folder not found: {FolderId}", LogEventLevel.Verbose);
+            Logger.Encoder($"Folder not found: {FolderId}", LogEventLevel.Error);
             return;
         }
 
@@ -50,14 +49,14 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
 
         if (profiles.Count == 0)
         {
-            Logger.Encoder($"No encoder profiles found for folder: {folder.Id}", LogEventLevel.Verbose);
+            Logger.Encoder($"No encoder profiles found for folder: {folder.Id}", LogEventLevel.Error);
             return;
         }
 
         FolderMetadata? folderMetaData = await GetFolderMetaData(folder);
         if (folderMetaData is null)
         {
-            Logger.Encoder($"Folder metadata not found for folder: {folder.Id}", LogEventLevel.Verbose);
+            Logger.Encoder($"Folder metadata not found for folder: {folder.Id}", LogEventLevel.Error);
             return;
         }
 
@@ -66,30 +65,30 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
             Directory.CreateDirectory(folderMetaData.BasePath);
             Logger.Encoder($"{folderMetaData.BasePath} is created", LogEventLevel.Verbose);
         }
-        
+
         foreach (EncoderProfile profile in profiles)
         {
             foreach (MediaFile mediaFile in folderMetaData.Files)
             {
                 if (string.IsNullOrEmpty(mediaFile.Path))
                 {
-                    Logger.Encoder($"File path is empty: {mediaFile.Name}", LogEventLevel.Verbose);
+                    Logger.Encoder($"File path is empty: {mediaFile.Name}", LogEventLevel.Error);
                     continue;
                 }
 
                 MusicBrainzTrack? foundTrack = folderMetaData.MusicBrainzRelease.Media.SelectMany(x => x.Tracks)
                     .FirstOrDefault(x => x.Title.ContainsSanitized(mediaFile.Name));
-                
+
                 if (foundTrack is null)
                 {
-                    Logger.Encoder($"Track not found in MusicBrainz: {mediaFile.Name}", LogEventLevel.Verbose);
+                    Logger.Encoder($"Track not found in MusicBrainz: {mediaFile.Name}", LogEventLevel.Error);
                     continue;
                 }
 
                 try
                 {
                     BaseContainer container = BaseContainer.Create(profile.Container);
-                
+
                     Track track = new()
                     {
                         Id = folderMetaData.MusicBrainzRelease.Id,
@@ -98,7 +97,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                         TrackNumber = foundTrack.Position
                     };
 
-                    BuildAudioStreams(profile, ref container);
+                    BuildAudioStreams(profile, ref container, foundTrack, folderMetaData.MusicBrainzRelease);
 
                     VideoAudioFile ffmpeg = new FfMpeg()
                         .Open(mediaFile.Path);
@@ -121,10 +120,10 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                         Title = foundTrack.Title,
                         BaseFolder = folderMetaData.BasePath
                     };
-                    
+
                     // Logger.Encoder(ffmpeg);
                     Logger.Encoder(fullCommand);
-                    // await ffmpeg.Run(fullCommand, mediaFile.Path, progressMeta);
+                    await ffmpeg.Run(fullCommand, folderMetaData.BasePath, progressMeta);
 
                     Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
                     {
@@ -138,15 +137,13 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 {
                     Logger.Encoder(e, LogEventLevel.Error);
 
-                    // Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                    // {
-                    //     Id = Id,
-                    //     Status = "failed",
-                    //     Title = fileMetadata.Title,
-                    //     Message = e.Message,
-                    // });
-
-                    throw;
+                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+                    {
+                        Id = Id,
+                        Status = "failed",
+                        Title = foundTrack.Title,
+                        Message = e.Message,
+                    });
                 }
             }
         }
@@ -159,7 +156,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         if (
             musicBrainzRelease is null ||
             string.IsNullOrEmpty(musicBrainzRelease.Title) ||
-            string.IsNullOrEmpty(musicBrainzRelease.ArtistCredit?.FirstOrDefault()?.Name)
+            string.IsNullOrEmpty(musicBrainzRelease.ArtistCredit.FirstOrDefault()?.Name)
         )
         {
             return null;
@@ -169,13 +166,13 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         string releaseName = musicBrainzRelease.Title;
         string year = musicBrainzRelease.DateTime?.Year.ToString() ?? string.Empty;
         string folderReleaseName = $"[{year}] {releaseName}";
-        string folderStartLetter = artistName[0..1];
+        string folderStartLetter = artistName[..1];
 
-        if (Regex.Match(folderStartLetter, "/[^a-zA-Z0-9]/").Success)
+        if (folderStartLetter.IsAlphaNumeric())
         {
             folderStartLetter = "[Other]";
         }
-        else if (Regex.Match(folderStartLetter, "/[0-9]/").Success)
+        else if (folderStartLetter.IsNumeric())
         {
             folderStartLetter = "#";
         }
@@ -191,9 +188,9 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
 
         ConcurrentBag<MediaFolderExtend> mediaFiles =
             await mediaScan.DisableRegexFilter().EnableFileListing().Process(InputFolder);
-        ConcurrentBag<MediaFile> files = mediaFiles.First()?.Files ?? [];
+        ConcurrentBag<MediaFile> files = mediaFiles.First().Files ?? [];
 
-        return new FolderMetadata
+        return new()
         {
             MusicBrainzRelease = musicBrainzRelease,
             BasePath = basePath,
@@ -218,17 +215,59 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         public string FolderStartLetter { get; set; } = string.Empty;
     }
 
-    private static void BuildAudioStreams(EncoderProfile encoderProfile, ref BaseContainer container)
+    private static void BuildAudioStreams(EncoderProfile encoderProfile, ref BaseContainer container,
+        MusicBrainzTrack track, MusicBrainzReleaseAppends musicBrainzRelease)
     {
         foreach (IAudioProfile profile in encoderProfile.AudioProfiles)
         {
+            MusicBrainzMedia album = musicBrainzRelease.Media
+                .First(m => m.Tracks.Any(t => t.Title == track.Title));
+            
+            string albumArtist = string.Join("/", musicBrainzRelease.ArtistCredit.Select(c => c.Name));
+            string albumNumber = musicBrainzRelease.Title;
+            string artist = string.Join("/", track.ArtistCredit.Select(c => c.Name));
+            int date = musicBrainzRelease.ReleaseEvents?[0].DateTime.ParseYear() ??
+                       track.Recording.FirstReleaseDate.ParseYear();
+            string disambiguation = track.Recording.Disambiguation;
+            string discNumber = $"{album.Position}/{musicBrainzRelease.Media.Length}";
+            string genre = string.Join("/",
+                musicBrainzRelease.MusicBrainzReleaseGroup?.Genres?.Select(c => c.Name) ?? []);
+            string title = track.Title;
+            string trackNumber = $"{track.Number}/{album.TrackCount}";
+            
+            Guid musicBrainzReleaseId = musicBrainzRelease.Id;
+            Guid musicBrainzRecordingId = track.Id;
+            Guid musicBrainzTrackId = track.Id;
+            Guid musicBrainzArtistId = track.ArtistCredit[0].MusicBrainzArtist.Id;
+            Guid musicBrainzAlbumArtistId = musicBrainzRelease.ArtistCredit[0].MusicBrainzArtist.Id;
+            Guid? musicBrainzReleaseGroupId = musicBrainzRelease.MusicBrainzReleaseGroup?.Id;
+
             BaseAudio stream = BaseAudio.Create(profile.Codec)
                 .SetAudioChannels(profile.Channels)
                 .SetAllowedLanguages(profile.AllowedLanguages)
-                .SetHlsSegmentFilename("")
-                .SetHlsPlaylistFilename("")
+                .SetHlsSegmentFilename(profile.SegmentName)
+                .SetHlsPlaylistFilename(profile.PlaylistName)
                 .AddOpts(profile.Opts)
-                .AddCustomArguments(profile.CustomArguments);
+                .AddCustomArguments(profile.CustomArguments)
+                .SetLanguage(musicBrainzRelease.MusicBrainzTextRepresentation.Language)
+                .AddId3Tags(new()
+                {
+                    { "album", albumNumber },
+                    { "album_artist", albumArtist },
+                    { "artist", artist },
+                    { "date", date.ToString() },
+                    { "disc", discNumber },
+                    { "genre", genre },
+                    { "title", title },
+                    { "track", trackNumber },
+                    { "Disambiguation", disambiguation },
+                    { "MusicBrainzReleaseId", musicBrainzReleaseId },
+                    { "MusicBrainzRecordingId", musicBrainzRecordingId },
+                    { "MusicBrainzTrackId", musicBrainzTrackId },
+                    { "MusicBrainzArtistId", musicBrainzArtistId },
+                    { "MusicBrainzAlbumArtistId", musicBrainzAlbumArtistId },
+                    { "MusicBrainzReleaseGroupId", musicBrainzReleaseGroupId }
+                });
 
             container.AddStream(stream);
         }
