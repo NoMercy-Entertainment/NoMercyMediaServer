@@ -281,6 +281,13 @@ public static partial class Str
         string name = Regex.Replace(self, @"[/\\|:*?\""<>{}]", " ");
         return name.Trim();
     }
+    
+    public static string MusicBrainzSafeName(this string? self)
+    {
+        if (string.IsNullOrEmpty(self)) return string.Empty;
+        string name = Regex.Replace(self, @"[/\\|:*?\""<>{}]", "_");
+        return name.Trim();
+    }
 
     public static string CleanFileName(this string? self)
     {

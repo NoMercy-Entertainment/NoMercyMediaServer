@@ -31,6 +31,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
     {
         await using MediaContext context = new();
         await using QueueContext queueContext = new();
+        JobDispatcher jobDispatcher = new();
 
         await using LibraryRepository libraryRepository = new(context);
         FileRepository fileRepository = new(context);
@@ -65,7 +66,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
             Directory.CreateDirectory(folderMetaData.BasePath);
             Logger.Encoder($"{folderMetaData.BasePath} is created", LogEventLevel.Verbose);
         }
-
+        
         foreach (EncoderProfile profile in profiles)
         {
             foreach (MediaFile mediaFile in folderMetaData.Files)
@@ -91,7 +92,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
 
                     Track track = new()
                     {
-                        Id = folderMetaData.MusicBrainzRelease.Id,
+                        Id = foundTrack.Id,
                         Name = foundTrack.Title,
                         FolderId = folder.Id,
                         TrackNumber = foundTrack.Position
@@ -132,6 +133,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                         Title = foundTrack.Title,
                         Message = "Done",
                     });
+                    
                 }
                 catch (Exception e)
                 {
@@ -147,6 +149,13 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 }
             }
         }
+        
+        await using MediaScan mediaScan = new();
+        MediaFolderExtend mediaFolder =
+            (await mediaScan.DisableRegexFilter().EnableFileListing().Process(folderMetaData.BasePath)).First();
+        
+        Logger.App("Matched: " + folderMetaData.ReleaseName + " - " + Id);
+        jobDispatcher.DispatchJob<AddReleaseJob>(folder.FolderLibraries.First().LibraryId, Id, folder, mediaFolder);
     }
 
     private async Task<FolderMetadata?> GetFolderMetaData(Folder folder)
@@ -186,9 +195,9 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
 
         await using MediaScan mediaScan = new();
 
-        ConcurrentBag<MediaFolderExtend> mediaFiles =
-            await mediaScan.DisableRegexFilter().EnableFileListing().Process(InputFolder);
-        ConcurrentBag<MediaFile> files = mediaFiles.First().Files ?? [];
+        MediaFolderExtend mediaFolder =
+            (await mediaScan.DisableRegexFilter().EnableFileListing().Process(InputFolder)).First();
+        ConcurrentBag<MediaFile> files = mediaFolder.Files ?? [];
 
         return new()
         {
@@ -199,7 +208,8 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
             ReleaseName = releaseName,
             Year = int.Parse(year, CultureInfo.InvariantCulture),
             FolderReleaseName = folderReleaseName,
-            FolderStartLetter = folderStartLetter
+            FolderStartLetter = folderStartLetter,
+            
         };
     }
 
