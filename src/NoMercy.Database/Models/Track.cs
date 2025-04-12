@@ -88,6 +88,6 @@ public class Track : ColorPaletteTimeStamps
         {
             padding = AlbumTrack.Count.ToString().Length;
         }
-        return string.Concat(TrackNumber.ToString().PadLeft(padding, '0'), " - ",  Name.CleanFileName(), ".NoMercy");
+        return string.Concat(TrackNumber.ToString().PadLeft(padding, '0'), " - ",  Name.MusicBrainzSafeName(), ".NoMercy");
     }
 }
