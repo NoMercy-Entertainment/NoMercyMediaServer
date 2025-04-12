@@ -185,7 +185,7 @@ public class BaseController : Controller
             detail: detail.Localize(),
             instance: HttpContext.Request.Path,
             statusCode: StatusCodes.Status415UnsupportedMediaType,
-            type: "/docs/errors/unsupported-media-type");
+            type: "/docs/errors/unsupported-media-libraryType");
     }
 
     protected IActionResult RequestedRangeNotSatisfiableResponse(string detail)

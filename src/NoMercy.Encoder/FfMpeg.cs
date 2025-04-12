@@ -361,6 +361,86 @@ public class FfMpeg : Classes
         return $"{meta.ShareBasePath}/{thumbnailFolder}/{thumbnail}";
     }
 
+    public static async Task<string> GetFingerprint(string file)
+    {
+        Process process1 = new()
+        {
+            StartInfo =
+            {
+                FileName = AppFiles.FfmpegPath,
+                Arguments = "-hide_banner -i \"" + file + "\" -map 0:a:0  -ar 11025 -f chromaprint -t 120 -",
+                WindowStyle = ProcessWindowStyle.Hidden,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            }
+        };
+
+        process1.Start();
+
+        using StreamReader outputReader = process1.StandardOutput;
+        using StreamReader errorReader = process1.StandardError;
+    
+        // Read both streams simultaneously
+        Task<string> outputTask = outputReader.ReadToEndAsync();
+        Task<string> errorTask = errorReader.ReadToEndAsync();
+    
+        await Task.WhenAll(outputTask, errorTask);
+        string fingerprint = await outputTask;
+        await process1.WaitForExitAsync();
+
+        return fingerprint;
+    }
+    
+    public static async Task<string> GetDuration(string file)
+    {
+        Process process2 = new()
+        {
+            StartInfo =
+            {
+                FileName = AppFiles.FfProbePath,
+                Arguments = "-i \"" + file + "\" -hide_banner -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
+                WindowStyle = ProcessWindowStyle.Hidden,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            }
+        };
+
+        process2.Start();
+
+        using StreamReader outputReader2 = process2.StandardOutput;
+        using StreamReader errorReader2 = process2.StandardError;
+    
+        // Read both streams simultaneously
+        Task<string> outputTask2 = outputReader2.ReadToEndAsync();
+        Task<string> errorTask2 = errorReader2.ReadToEndAsync();
+    
+        await Task.WhenAll(outputTask2, errorTask2);
+        string time = await outputTask2;
+        await process2.WaitForExitAsync();
+        
+        if (string.IsNullOrEmpty(time))
+        {
+            throw new("Failed to get duration");
+        }
+        
+        if (time.Contains("N/A"))
+        {
+            throw new("Failed to get duration");
+        }
+        
+        if (time.Contains("Duration"))
+        {
+            time = time.Split("Duration: ")[1].Split(",")[0];
+        }
+
+        return time.Trim();
+    }
+    
+    
     public static async Task<bool> Pause(int id)
     {
         if (!FfmpegProcess.TryGetValue(id, out Process? process)) return false;
@@ -438,4 +518,5 @@ public class FfMpeg : Classes
         }
         await Task.CompletedTask;
     }
+
 }

@@ -95,6 +95,12 @@ public static partial class Str
         return MatchYearRegex().Match(str).Value;
     }
     
+    [GeneratedRegex(@"\[.*?\]")]
+    public static partial Regex RemoveBracketedString();
+    
+    [GeneratedRegex(@"\d+")]
+    public static partial Regex MatchNumbers();
+    
     [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();
     

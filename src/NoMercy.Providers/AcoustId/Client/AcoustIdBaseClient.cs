@@ -43,49 +43,69 @@ public class AcoustIdBaseClient : IDisposable
 
     protected Guid Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = default, bool? priority = false)
-        where T : class
+    protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = default, bool? priority = false, int retry = 0) where T : AcoustIdFingerprint 
     {
         query ??= new();
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (CacheController.Read(newUrl, out AcoustIdFingerprint? result))
+        if (CacheController.Read(newUrl, out T? result))
             if (result?.Results.Length > 0 && result.Results
                     .Any(fpResult => fpResult.Recordings is not null && fpResult.Recordings
                         .Any(recording => recording?.Title != null)))
                 return result as T;
 
         Logger.AcoustId(newUrl, LogEventLevel.Verbose);
-
-        string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
-
-        await CacheController.Write(newUrl, response);
-
-        AcoustIdFingerprint? data = response.FromJson<AcoustIdFingerprint>();
-
-        int iteration = 0;
-
-        if (data?.Results.Length > 0 && data.Results
-                .Any(fpResult => fpResult.Recordings is not null && fpResult.Recordings
-                    .Any(recording => recording?.Title != null))) return data as T;
-
-        while (data?.Results.Length == 0 && data.Results
-                   .Any(fpResult => fpResult.Recordings is not null && fpResult.Recordings
-                       .Any(recording => recording?.Title == null)) && iteration < 10)
+        
+        T? data;
+        
+        string? response;
+        
+        try
         {
             response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
             await CacheController.Write(newUrl, response);
 
-            Logger.Request(response, LogEventLevel.Verbose);
+            data = response.FromJson<T>();
 
-            data = response.FromJson<AcoustIdFingerprint>();
+            int iteration = 0;
 
-            iteration++;
+            if (data?.Results.Length > 0 && data.Results
+                    .Any(fpResult => fpResult.Recordings is not null && fpResult.Recordings
+                        .Any(recording => recording?.Title != null))) return data as T;
+
+            while (data?.Results.Length == 0 && data.Results
+                       .Any(fpResult => fpResult.Recordings is not null && fpResult.Recordings
+                           .Any(recording => recording?.Title == null)) && iteration < 10)
+            {
+                response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+
+                await CacheController.Write(newUrl, response);
+
+                Logger.Request(response, LogEventLevel.Verbose);
+
+                data = response.FromJson<T>();
+
+                iteration++;
+            }
+        }
+        catch (Exception e)
+        {
+            if (e.Message.Contains("503"))
+            {
+                Task.Delay(5000).Wait();
+                return await Get<T>(url, query, priority, retry + 1);
+            }
+
+            if (retry == 10) throw;
+
+            Task.Delay(5000).Wait();
+            return await Get<T>(url, query, priority, retry + 1);
         }
 
-        return data as T;
+        return data ?? throw new($"Failed to parse {response}");
+
     }
 
     public void Dispose()

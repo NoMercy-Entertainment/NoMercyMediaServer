@@ -1,7 +1,8 @@
 using Newtonsoft.Json;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
-public record MovieOrEpisodeDto
+namespace NoMercy.Providers.TMDB.Models.Shared;
+
+public record MovieOrEpisode
 {
     [JsonProperty("id")] public dynamic Id { get; set; } = string.Empty;
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;

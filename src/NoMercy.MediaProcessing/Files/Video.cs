@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 
-namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
-public record VideoDto
+namespace NoMercy.MediaProcessing.Files;
+public record Video
 {
     [JsonProperty("index")] public int Index { get; set; }
     [JsonProperty("width")] public int? Width { get; set; }

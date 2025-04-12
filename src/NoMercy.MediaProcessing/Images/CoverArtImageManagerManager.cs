@@ -24,12 +24,12 @@ public class CoverArtImageManagerManager: ICoverArtImageManagerManager
         public Uri? Url { get; set; }
     }
 
-    public static async Task<Uri?> GetCoverUrl(Guid id)
+    public static async Task<Uri?> GetCoverUrl(Guid id, bool priority = false)
     {
         try
         {
             CoverArtCoverArtClient coverArtCoverArtClient = new(id);
-            CoverArtCovers? covers = await coverArtCoverArtClient.Cover();
+            CoverArtCovers? covers = await coverArtCoverArtClient.Cover(priority);
             if (covers is null) return null;
 
             CoverArtImage? coverItem = covers.Images
@@ -45,12 +45,12 @@ public class CoverArtImageManagerManager: ICoverArtImageManagerManager
         }
     }
 
-    public static async Task<CoverPalette?> Add(Guid id)
+    public static async Task<CoverPalette?> Add(Guid id, bool priority = false)
     {
         try
         {
             CoverArtCoverArtClient coverArtCoverArtClient = new(id);
-            CoverArtCovers? covers = await coverArtCoverArtClient.Cover();
+            CoverArtCovers? covers = await coverArtCoverArtClient.Cover(priority);
             if (covers is null) return null;
 
             List<CoverArtImage> coverList = covers.Images

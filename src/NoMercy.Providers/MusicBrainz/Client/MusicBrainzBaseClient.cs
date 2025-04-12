@@ -41,9 +41,7 @@ public class MusicBrainzBaseClient : IDisposable
 
     protected Guid Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false,
-        int iteration = 0)
-        where T : class
+    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false, int retry = 0) where T : class
     {
         query ??= new();
 
@@ -68,13 +66,13 @@ public class MusicBrainzBaseClient : IDisposable
             if (e.Message.Contains("503"))
             {
                 Task.Delay(5000).Wait();
-                return await Get<T>(url, query, priority, iteration + 1);
+                return await Get<T>(url, query, priority, retry + 1);
             }
 
-            if (iteration == 10) throw;
+            if (retry == 10) throw;
 
             Task.Delay(5000).Wait();
-            return await Get<T>(url, query, priority, iteration + 1);
+            return await Get<T>(url, query, priority, retry + 1);
         }
 
         return data ?? throw new($"Failed to parse {response}");

@@ -80,7 +80,7 @@ public record ContinueWatchingItemDto
                         }) ?? Array.Empty<ContentRating>()));
             // Videos = item.SpecialItemsDto.SpecialItems
             //     .SelectMany(specialDto => specialDto.Tv.Media)
-            //     .Select(media => new VideoDto(media))
+            //     .Select(media => new Video(media))
             //     .ToArray();
         }
         else if (item.Collection is not null)

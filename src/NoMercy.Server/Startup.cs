@@ -32,6 +32,7 @@ using System.Security.Claims;
 using System.Text.Json.Serialization;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Monitoring;
+using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.Networking;
 using NoMercy.NmSystem.FileSystem;
@@ -82,6 +83,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
         services.AddScoped<LibraryRepository>();
         services.AddScoped<DeviceRepository>();
         services.AddScoped<FolderRepository>();
+        services.AddScoped<FileRepository>();
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
         services.AddScoped<GenreRepository>();
