@@ -2,6 +2,7 @@ using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Dto;
+using NoMercy.Providers.MusicBrainz.Models;
 
 namespace NoMercy.MediaProcessing.Jobs;
 
@@ -74,6 +75,19 @@ public class JobDispatcher
         where TJob : AbstractFanArtDataJob, new()
     {
         TJob job = new() { Id1 = id1, Id2 = id2, Id3 = id3 };
+        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+    }
+    
+    public void DispatchJob<TJob>(MusicBrainzReleaseGroup musicBrainzReleaseGroup)
+        where TJob : MusicDescriptionJob, new()
+    {
+        TJob job = new() { MusicBrainzReleaseGroup = musicBrainzReleaseGroup};
+        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+    }
+    public void DispatchJob<TJob>(MusicBrainzArtist musicBrainzArtist)
+        where TJob : MusicDescriptionJob, new()
+    {
+        TJob job = new() { MusicBrainzArtist = musicBrainzArtist};
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
 }

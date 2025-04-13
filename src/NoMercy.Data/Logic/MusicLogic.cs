@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Jobs;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Networking.Dto;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -465,8 +466,8 @@ public partial class MusicLogic : IAsyncDisposable
             Logger.App(e.Message, LogEventLevel.Error);
         }
 
-        MusicDescriptionJob musicDescriptionJob = new(musicBrainzArtist);
-        JobDispatcher.Dispatch(musicDescriptionJob, "data", 2);
+        MediaProcessing.Jobs.JobDispatcher jobDispatcher = new();
+        jobDispatcher.DispatchJob<MusicDescriptionJob>(musicBrainzArtist);
 
         FanArtImagesJob fanartImagesJob = new(musicBrainzArtist);
         JobDispatcher.Dispatch(fanartImagesJob, "image", 2);

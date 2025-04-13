@@ -69,6 +69,8 @@ public class AddReleaseJob : AbstractReleaseJob
         foreach (ReleaseArtistCredit? artist in releaseAppends.ArtistCredit)
         {
             await artistManager.Store(artist, albumLibrary, BaseFolder, MediaFolder, releaseAppends);
+        
+            jobDispatcher.DispatchJob<MusicDescriptionJob>(artist.MusicBrainzArtist);
         }
         
         foreach (MusicBrainzMedia media in releaseAppends.Media)
@@ -82,8 +84,12 @@ public class AddReleaseJob : AbstractReleaseJob
             foreach (ReleaseArtistCredit artist in track.ArtistCredit)
             {
                 await artistManager.Store(artist.MusicBrainzArtist, albumLibrary, BaseFolder, MediaFolder, track);
+        
+                jobDispatcher.DispatchJob<MusicDescriptionJob>(artist.MusicBrainzArtist);
             }
         }
+        
+        jobDispatcher.DispatchJob<MusicDescriptionJob>(releaseAppends.MusicBrainzReleaseGroup);
         
         Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
         {
