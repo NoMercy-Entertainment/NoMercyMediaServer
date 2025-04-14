@@ -206,7 +206,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                     {
                         Title = albumName,
                     },
-                    File = Path.Combine(directoryPath, file.FullName)
+                    Path = Path.Combine(directoryPath, file.FullName)
                 });
             });
         }
@@ -413,7 +413,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                         Parent = parentPath,
                         Parsed = parsed,
                         Match = match,
-                        File = file.FullName,
+                        Path = file.FullName,
                         Streams = new()
                         {
                             Video = mediaAnalysis.VideoStreams
@@ -523,7 +523,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                     Title = release.Title,
                     Still = coverPaletteUrl?.ToString(),
                 },
-                File = folder,
+                Path = folder,
                 Tracks = release.Media.Sum(m => m.TrackCount)
             });
         }

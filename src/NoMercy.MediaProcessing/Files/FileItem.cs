@@ -13,6 +13,6 @@ public class FileItem
     [JsonProperty("parsed")] public MovieFile? Parsed { get; set; }
     [JsonProperty("match")] public MovieOrEpisode Match { get; set; } = new();
     [JsonProperty("streams")] public Streams Streams { get; set; } = new();
-    [JsonProperty("file")] public string File { get; set; } = string.Empty;
+    [JsonProperty("path")] public string Path { get; set; } = string.Empty;
     [JsonProperty("tracks")] public int Tracks { get; set; }
 }

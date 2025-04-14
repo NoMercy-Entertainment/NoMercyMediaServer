@@ -188,7 +188,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
                 JobDispatcher.Dispatch(new EncodeMusicJob
                 {
                     FolderId = request.FolderId,
-                    Id = Guid.Parse(request.Files[0].Id.ToString()),
+                    Id = Guid.Parse(request.Files[0].Id),
                     InputFolder = request.Files[0].Path,
                 }, "encoder");
 
@@ -200,7 +200,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
                 JobDispatcher.Dispatch(new EncodeVideoJob
                 {
                     FolderId = request.FolderId,
-                    Id = file.Id,
+                    Id = file.Id.ToInt(),
                     InputFile = file.Path,
                 }, "encoder");
             }
@@ -260,7 +260,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
                 {
                     Status = "ok",
                     Files = fileList
-                        .OrderBy(file => file.File)
+                        .OrderBy(file => file.Path)
                         .ToList()
                 }
             });
@@ -275,7 +275,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
                 {
                     Status = "ok",
                     Files = fileList
-                        .OrderBy(file => file.File)
+                        .OrderBy(file => file.Path)
                         .ToList()
                 }
             });

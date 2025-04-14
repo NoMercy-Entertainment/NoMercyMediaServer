@@ -170,7 +170,7 @@ public class BaseContainer : Classes
             "Mp4" => new Mp4(),
             "mp3" => new Mp3(),
             "flac" => new Flac(),
-            "Hls" => new Hls().SetHlsFlags("independent_segments"),
+            "m3u8" => new Hls().SetHlsFlags("independent_segments"),
             _ => throw new($"Container {profileContainer} not supported")
         };
     }
