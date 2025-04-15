@@ -8,15 +8,17 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Mono.Nat;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Networking;
 
 public class Networking
 {
     private static IHubContext<ConnectionHub> HubContext { get; set; } = null!;
-
+    
     public Networking(IHubContext<ConnectionHub> hubContext)
     {
         HubContext = hubContext;
@@ -51,9 +53,6 @@ public class Networking
         if (!HasFoundDevice)
         {
             Logger.Setup("No UPNP device found");
-            Logger.Setup($"You need to manually forward port {Config.InternalServerPort} to {Config.ExternalServerPort} if you want to use the server outside your local network");
-            Logger.Setup($"For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide");
-            Config.UseCloudflareProxy = true;
         }
     }
 
@@ -73,8 +72,10 @@ public class Networking
         set => _externalIp = value;
     }
 
+    public static string InternalDomain { get; private set; } = "";
     public static string InternalAddress { get; private set; } = "";
 
+    public static string ExternalDomain { get; private set; } = "";
     public static string ExternalAddress { get; private set; } = "";
 
     public static bool Ipv6Enabled => CheckIpv6();
@@ -91,8 +92,8 @@ public class Networking
 
         if (localIp == null) return "";
 
-        InternalAddress =
-            $"https://{Regex.Replace(localIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv:{Config.InternalServerPort}";
+        InternalDomain = $"{Regex.Replace(localIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        InternalAddress = $"https://{InternalDomain}:{Config.InternalServerPort}";
 
         return localIp;
     }
@@ -104,8 +105,8 @@ public class Networking
 
         string externalIp = client.GetStringAsync("v1/ip").Result.Replace("\"", "");
 
-        ExternalAddress =
-            $"https://{Regex.Replace(externalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
+        ExternalDomain = $"{Regex.Replace(externalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
 
         return externalIp;
     }
@@ -117,45 +118,16 @@ public class Networking
         _device = args.Device;
         
         HasFoundDevice = true;
-        
-        try
-        {
-            Logger.Setup("Trying to add UPNP records");
-            
-            _device.CreatePortMap(new(
-                protocol:Protocol.Tcp,
-                privatePort: Config.InternalServerPort,
-                publicPort: Config.ExternalServerPort,
-                lifetime: 0,
-                description: "NoMercy MediaServer (TCP)"));
 
-            _device.CreatePortMap(new(
-                protocol:Protocol.Udp,
-                privatePort: Config.InternalServerPort,
-                publicPort: Config.ExternalServerPort,
-                lifetime: 0,
-                description: "NoMercy MediaServer (UDP)"));
-
-            ExternalIp = _device.GetExternalIP().ToString();
-            
-            Logger.Setup($"IP address obtained from UPNP: {ExternalIp}");
-        }
-        catch (Exception e)
-        {
-            Logger.Setup($"Failed to create UPNP records: {e.Message}");
-            Logger.Setup($"You may need to manually forward port {Config.InternalServerPort} to {Config.ExternalServerPort}");
-            Logger.Setup($"For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide");
-            Config.UseCloudflareProxy = true;
-            HasFoundDevice = false;
-        }
+        GetNatStatus();
 
         NatUtility.StopDiscovery();
         
         if (ExternalIp == "")
             ExternalIp = GetExternalIp();
 
-        ExternalAddress =
-            $"https://{Regex.Replace(ExternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
+        ExternalDomain = $"{Regex.Replace(ExternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
     }
     
     private static void UnknownDeviceFound(object? sender, DeviceEventUnknownArgs args)
@@ -222,7 +194,7 @@ public class Networking
         return true;
     }
 
-    public static bool CheckIpv6()
+    private static bool CheckIpv6()
     {
         if (!Socket.OSSupportsIPv6) return false;
 
@@ -234,5 +206,83 @@ public class Networking
             }
         }
         return false;
+    }
+
+    private static void GetNatStatus()
+    {
+        if (_device == null)
+        {
+            Config.NatStatus = NatStatus.None;
+            return;
+        }
+
+        if (HasFoundDevice)
+        {
+            Config.NatStatus = NatStatus.Open;
+            return;
+        }
+
+        try
+        {
+            Logger.Setup("Trying to add UPNP records");
+            
+            _device.CreatePortMap(new(
+                protocol:Protocol.Tcp,
+                privatePort: Config.InternalServerPort,
+                publicPort: Config.ExternalServerPort,
+                lifetime: 0,
+                description: "NoMercy MediaServer (TCP)"));
+
+            _device.CreatePortMap(new(
+                protocol:Protocol.Udp,
+                privatePort: Config.InternalServerPort,
+                publicPort: Config.ExternalServerPort,
+                lifetime: 0,
+                description: "NoMercy MediaServer (UDP)"));
+
+            ExternalIp = _device.GetExternalIP().ToString();
+            
+            Logger.Setup($"IP address obtained from UPNP: {ExternalIp}");
+        }
+        catch (Exception e)
+        {
+            Logger.Setup($"Failed to create UPNP records: {e.Message}");
+            HasFoundDevice = false;
+            Config.NatStatus = NatStatus.Closed;
+            return;
+        }
+
+        Config.NatStatus = NatStatus.Filtered;
+    }
+    
+    public static async Task<bool> IsPortOpenAsync()
+    {
+        int timeoutMilliseconds = 1500;
+    
+        using TcpClient client = new ();
+        Task connectTask = client.ConnectAsync(ExternalIp, Config.ExternalServerPort);
+        Task delayTask = Task.Delay(timeoutMilliseconds);
+        Task completedTask = await Task.WhenAny(connectTask, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            Logger.Setup($"Timeout checking {ExternalIp}:{Config.ExternalServerPort} after {timeoutMilliseconds}ms.", LogEventLevel.Verbose);
+            return false;
+        }
+        try
+        {
+            await connectTask;
+            return true;
+        }
+        catch (SocketException ex)
+        {
+            Logger.Setup($"SocketException checking {ExternalIp}:{Config.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})", LogEventLevel.Error);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup($"Exception checking {ExternalIp}:{Config.ExternalServerPort}: {ex.Message}", LogEventLevel.Error);
+            return false;
+        }
     }
 }

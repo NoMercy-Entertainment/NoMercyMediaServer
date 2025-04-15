@@ -31,6 +31,7 @@ using SixLabors.ImageSharp.Processing.Processors.Quantization;
 using AppFiles = NoMercy.NmSystem.Information.AppFiles;
 using Config = NoMercy.NmSystem.Information.Config;
 using Configuration = NoMercy.Database.Models.Configuration;
+using HttpClient = System.Net.Http.HttpClient;
 using Image = NoMercy.Database.Models.Image;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 

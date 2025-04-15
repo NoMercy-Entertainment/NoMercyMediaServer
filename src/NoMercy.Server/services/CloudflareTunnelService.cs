@@ -6,7 +6,7 @@ using Serilog.Events;
 
 namespace NoMercy.Server.services;
 
-public class CloudflareTunnelService : IHostedService
+public sealed class CloudflareTunnelService : IHostedService
 {
     private Process? _tunnelProcess;
     private readonly string _tunnelToken;
@@ -108,7 +108,7 @@ public class CloudflareTunnelService : IHostedService
         GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (_disposed) return;
         

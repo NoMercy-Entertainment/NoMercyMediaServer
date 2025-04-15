@@ -3,6 +3,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using Serilog.Events;
+using HttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Providers.MusicBrainz.Client;
 

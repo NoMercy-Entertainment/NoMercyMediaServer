@@ -1,3 +1,5 @@
+using NoMercy.NmSystem.Dto;
+
 namespace NoMercy.NmSystem.Information;
 
 public static class Config
@@ -11,10 +13,15 @@ public static class Config
     public static string ApiBaseUrl = "https://api.nomercy.tv/";
     public static string ApiServerBaseUrl = $"{ApiBaseUrl}v1/server/";
     
+    public static string DnsServer = "1.1.1.1";
+    
     public static string UserAgent => $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
 
+    public static bool Started { get; set; }
     public static string? CloudflareTunnelToken { get; set; }
-    public static bool UseCloudflareProxy { get; set; }
+    
+    public static NatStatus NatStatus { get; set; } = NatStatus.None;
+    public static bool PortForwarded { get; set; }
 
     public static int InternalServerPort { get; set; } = 7626;
     public static int ExternalServerPort { get; set; } = 7626;

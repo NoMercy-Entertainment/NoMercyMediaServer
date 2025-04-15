@@ -72,10 +72,11 @@ public static class Program
 
         app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStarted.Register(() =>
         {
+            Config.Started = true;
+            stopWatch.Stop();
+            
             Task.Run(() =>
             {
-                stopWatch.Stop();
-
                 Task.Delay(300).Wait();
 
                 Logger.App($"Internal Address: {Networking.Networking.InternalAddress}");

@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
+using HttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
 namespace NoMercy.Setup;
 
@@ -117,7 +118,8 @@ public static class Auth
 
         Logger.Auth("Authenticating via device grant", LogEventLevel.Verbose);
 
-        using HttpClient client = new();
+        using 
+        System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         List<KeyValuePair<string, string>> deviceCodeBody =
@@ -311,7 +313,8 @@ public static class Auth
     {
         Logger.Auth("Getting auth keys", LogEventLevel.Verbose);
 
-        HttpClient client = new();
+        
+        System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         string response = client.GetStringAsync(BaseUrl).Result;
@@ -358,7 +361,8 @@ public static class Auth
         if (Config.TokenClientId == null || Config.TokenClientSecret == null)
             throw new("Auth keys not initialized");
 
-        HttpClient client = new();
+        
+        System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         List<KeyValuePair<string, string>> body =
@@ -386,7 +390,8 @@ public static class Auth
 
         Logger.Auth("Refreshing token");
 
-        HttpClient client = new();
+        
+        System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         List<KeyValuePair<string, string>> body =
@@ -410,7 +415,8 @@ public static class Auth
         if (Config.TokenClientId == null || Config.TokenClientSecret == null)
             throw new("Auth keys not initialized");
 
-        HttpClient client = new();
+        
+        System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         List<KeyValuePair<string, string>> body =

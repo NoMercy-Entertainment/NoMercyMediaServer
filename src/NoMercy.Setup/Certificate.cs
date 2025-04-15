@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using HttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
 namespace NoMercy.Setup;
 
@@ -85,7 +86,7 @@ public static class Certificate
             ? "Generating SSL Certificate..."
             : "Renewing SSL Certificate...");
         
-        using HttpClient client = new();
+        using System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.Timeout = TimeSpan.FromMinutes(10);
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);

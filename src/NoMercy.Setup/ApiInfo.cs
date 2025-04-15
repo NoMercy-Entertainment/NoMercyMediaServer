@@ -4,6 +4,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using Serilog.Events;
+using HttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
 namespace NoMercy.Setup;
 
@@ -35,7 +36,7 @@ public partial class ApiInfo
     {
         try
         {
-            HttpClient client = new();
+            System.Net.Http.HttpClient client = HttpClient.WithDns();
             client.Timeout = TimeSpan.FromSeconds(120);
             client.BaseAddress = new(Config.ApiBaseUrl);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);

@@ -103,7 +103,11 @@ public class Startup(IApiVersionDescriptionProvider provider)
 
         services.AddScoped<HomeController>();
         
-        services.AddHostedService<ServerRegistrationService>();
+        services.AddHostedService<ServerRegistrationService>(_ =>
+        {
+            ServerRegistrationService service = new();
+            return service;
+        });
         
         services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();

@@ -7,6 +7,7 @@ using NoMercy.Helpers;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
+using HttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
 namespace NoMercy.Setup;
 
@@ -33,8 +34,8 @@ public static class Register
         };
 
         Logger.Register("Registering Server, this takes a moment...");
-
-        HttpClient client = new();
+        
+        System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.BaseAddress = new(Config.ApiServerBaseUrl);
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -51,7 +52,6 @@ public static class Register
         Logger.Register("Server registered successfully");
 
         await AssignServer();
-        await GetTunnelAvailability();
     }
 
     private static Task AssignServer()
@@ -61,7 +61,8 @@ public static class Register
             { "server_id", Info.DeviceId.ToString() }
         };
 
-        HttpClient client = new();
+        
+        System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.BaseAddress = new(Config.ApiServerBaseUrl);
         client.DefaultRequestHeaders.Add("Accept", "application/json");
         client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -124,10 +125,9 @@ public static class Register
         return Task.CompletedTask;
     }
 
-    private static Task GetTunnelAvailability()
+    public static Task GetTunnelAvailability()
     {
-        
-        HttpClient client = new();
+        System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.BaseAddress = new(Config.ApiServerBaseUrl);
         client.DefaultRequestHeaders.Add("Accept", "application/json");
         client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -147,22 +147,10 @@ public static class Register
 
         ServerTunnelAvailabilityResponse? data = JsonConvert.DeserializeObject<ServerTunnelAvailabilityResponse>(response);
 
-        if (data is null)
-        {
-            throw new(data?.Message ?? "Failed to acquire tunnel");
-        }
+        if (data is null || !data.Allowed) return Task.CompletedTask;
         
-        if (data.Allowed)
-        {
-            Config.UseCloudflareProxy = true;
-            Config.CloudflareTunnelToken = data.Token;
-            Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
-        }
-        else
-        {
-            Config.UseCloudflareProxy = false;
-            Logger.Register("Cloudflare tunnel is not available", LogEventLevel.Verbose);
-        }
+        Config.CloudflareTunnelToken = data.Token;
+        Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
 
         return Task.CompletedTask;
         

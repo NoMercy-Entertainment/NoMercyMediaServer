@@ -27,7 +27,7 @@ public static class Url
     {
         try
         {
-            HttpClient httpClient = new();
+            System.Net.Http.HttpClient httpClient = new();
             httpClient.DefaultRequestHeaders.Add("User-Agent", "NoMercy wMediaServer/0.1.0 ( admin@nomercy.tv )");
 
             if (contentType is not null)
