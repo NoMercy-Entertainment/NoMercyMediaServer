@@ -28,7 +28,7 @@ public static class Register
             { "internal_ip", Networking.Networking.InternalIp },
             { "internal_port", Config.InternalServerPort.ToString() },
             { "external_port", Config.ExternalServerPort.ToString() },
-            { "server_version", ApiInfo.ApplicationVersion },
+            { "server_version", Software.Version!.ToString() },
             { "platform", Info.Platform }
         };
 
