@@ -353,7 +353,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
             if (Container.IsAudio)
             {
-                command.Append(" -map 0:v:0 ");
+                command.Append(" -map 0:v:0? ");
                 
                 if (stream._id3Tags.Count > 0)
                 {

@@ -18,3 +18,23 @@ public class MusicBrainzRecordingAppends : MusicBrainzRecording
     [JsonProperty("releases")] public MusicBrainzRelease[] Releases { get; set; } = [];
     [JsonProperty("artist-credit")] public MusicBrainzArtistCredit[] ArtistCredit { get; set; } = [];
 }
+
+public class MusicBrainzSearchResponse
+{
+    [JsonProperty("created")]
+    public DateTime Created { get; set; }
+
+    [JsonProperty("count")]
+    public int Count { get; set; }
+
+    [JsonProperty("offset")]
+    public int Offset { get; set; }
+
+    [JsonProperty("recordings")] public List<MusicBrainzSearchRecording> Recordings { get; set; } = [];
+}
+
+public class MusicBrainzSearchRecording : MusicBrainzRecordingAppends
+{
+    [JsonProperty("score")]
+    public int Score { get; set; }
+}

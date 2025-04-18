@@ -1,18 +1,19 @@
-using System.Collections.Concurrent;
-using System.Globalization;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Encoder;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Audio;
 using NoMercy.Encoder.Format.Container;
+using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Libraries;
+using NoMercy.MediaProcessing.MusicGenres;
+using NoMercy.MediaProcessing.Recordings;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
 
@@ -21,208 +22,116 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 public class EncodeMusicJob : AbstractMusicEncoderJob
 {
     public override string QueueName => "encoder";
-    public override int Priority => 4;
+    public override int Priority => 7;
 
     public string Status { get; set; } = "pending";
-
-    public string InputFolder { get; set; } = string.Empty;
 
     public override async Task Handle()
     {
         await using MediaContext context = new();
         await using QueueContext queueContext = new();
-        JobDispatcher jobDispatcher = new();
-
         await using LibraryRepository libraryRepository = new(context);
+        
+        JobDispatcher jobDispatcher = new();
+        
+        MusicGenreRepository musicGenreRepository = new(context);
+        
+        ArtistRepository artistRepository = new(context);
+        ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
+        
+        RecordingRepository recordingRepository = new(context);
+        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
+        
         FileRepository fileRepository = new(context);
         FileManager fileManager = new(fileRepository);
-
-        Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
-        if (folder is null)
-        {
-            Logger.Encoder($"Folder not found: {FolderId}", LogEventLevel.Error);
-            return;
-        }
-
-        List<EncoderProfile> profiles = folder.EncoderProfileFolder
-            .Select(e => e.EncoderProfile)
-            .ToList();
-
-        if (profiles.Count == 0)
-        {
-            Logger.Encoder($"No encoder profiles found for folder: {folder.Id}", LogEventLevel.Error);
-            return;
-        }
-
-        FolderMetadata? folderMetaData = await GetFolderMetaData(folder);
-        if (folderMetaData is null)
-        {
-            Logger.Encoder($"Folder metadata not found for folder: {folder.Id}", LogEventLevel.Error);
-            return;
-        }
-
-        if (!Directory.Exists(folderMetaData.BasePath))
-        {
-            Directory.CreateDirectory(folderMetaData.BasePath);
-            Logger.Encoder($"{folderMetaData.BasePath} is created", LogEventLevel.Verbose);
-        }
         
-        foreach (EncoderProfile profile in profiles)
+        Library albumLibrary = await context.Libraries
+            .Where(f => f.Id == Folder.Id)
+            .Include(f => f.FolderLibraries)
+            .ThenInclude(f => f.Folder)
+            .FirstAsync();
+        
+        try
         {
-            foreach (MediaFile mediaFile in folderMetaData.Files)
+            BaseContainer container = BaseContainer.Create(Profile.Container);
+
+            Track track = new()
             {
-                if (string.IsNullOrEmpty(mediaFile.Path))
-                {
-                    Logger.Encoder($"File path is empty: {mediaFile.Name}", LogEventLevel.Error);
-                    continue;
-                }
+                Id = foundTrack.Id,
+                Name = foundTrack.Title,
+                FolderId = Folder.Id,
+                TrackNumber = foundTrack.Position
+            };
 
-                MusicBrainzTrack? foundTrack = folderMetaData.MusicBrainzRelease.Media.SelectMany(x => x.Tracks)
-                    .FirstOrDefault(x => x.Title.ContainsSanitized(mediaFile.Name));
+            BuildAudioStreams(Profile, ref container, foundTrack, folderMetaData.MusicBrainzRelease);
 
-                if (foundTrack is null)
-                {
-                    Logger.Encoder($"Track not found in MusicBrainz: {mediaFile.Name}", LogEventLevel.Error);
-                    continue;
-                }
+            VideoAudioFile ffmpeg = new FfMpeg()
+                .Open(mediaFile.Path);
 
-                try
-                {
-                    BaseContainer container = BaseContainer.Create(profile.Container);
+            ffmpeg.SetBasePath(folderMetaData.BasePath);
+            ffmpeg.SetTitle(mediaFile.Name);
+            ffmpeg.ToFile(track.CreateFileName());
 
-                    Track track = new()
-                    {
-                        Id = foundTrack.Id,
-                        Name = foundTrack.Title,
-                        FolderId = folder.Id,
-                        TrackNumber = foundTrack.Position
-                    };
+            ffmpeg.AddContainer(container);
 
-                    BuildAudioStreams(profile, ref container, foundTrack, folderMetaData.MusicBrainzRelease);
+            ffmpeg.Prioritize();
 
-                    VideoAudioFile ffmpeg = new FfMpeg()
-                        .Open(mediaFile.Path);
+            ffmpeg.Build();
 
-                    ffmpeg.SetBasePath(folderMetaData.BasePath);
-                    ffmpeg.SetTitle(mediaFile.Name);
-                    ffmpeg.ToFile(track.CreateFileName());
+            string fullCommand = ffmpeg.GetFullCommand();
 
-                    ffmpeg.AddContainer(container);
-
-                    ffmpeg.Prioritize();
-
-                    ffmpeg.Build();
-
-                    string fullCommand = ffmpeg.GetFullCommand();
-
-                    ProgressMeta progressMeta = new()
-                    {
-                        Id = Id,
-                        Title = foundTrack.Title,
-                        BaseFolder = folderMetaData.BasePath
-                    };
-
-                    // Logger.Encoder(ffmpeg);
-                    Logger.Encoder(fullCommand);
-                    await ffmpeg.Run(fullCommand, folderMetaData.BasePath, progressMeta);
-
-                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                    {
-                        Id = Id,
-                        Status = "completed",
-                        Title = foundTrack.Title,
-                        Message = "Done",
-                    });
-                    
-                }
-                catch (Exception e)
-                {
-                    Logger.Encoder(e, LogEventLevel.Error);
-
-                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                    {
-                        Id = Id,
-                        Status = "failed",
-                        Title = foundTrack.Title,
-                        Message = e.Message,
-                    });
-                }
-            }
-        }
-        
-        await using MediaScan mediaScan = new();
-        MediaFolderExtend mediaFolder =
-            (await mediaScan.DisableRegexFilter().EnableFileListing().Process(folderMetaData.BasePath)).First();
-        
-        Logger.App("Matched: " + folderMetaData.ReleaseName + " - " + Id);
-        jobDispatcher.DispatchJob<AddReleaseJob>(folder.FolderLibraries.First().LibraryId, Id, folder, mediaFolder);
-    }
-
-    private async Task<FolderMetadata?> GetFolderMetaData(Folder folder)
-    {
-        using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
-        MusicBrainzReleaseAppends? musicBrainzRelease = await musicBrainzReleaseClient.WithAllAppends(Id);
-        if (
-            musicBrainzRelease is null ||
-            string.IsNullOrEmpty(musicBrainzRelease.Title) ||
-            string.IsNullOrEmpty(musicBrainzRelease.ArtistCredit.FirstOrDefault()?.Name)
-        )
-        {
-            return null;
-        }
-
-        string artistName = musicBrainzRelease.ArtistCredit.FirstOrDefault()?.Name ?? string.Empty;
-        string releaseName = musicBrainzRelease.Title;
-        string year = musicBrainzRelease.DateTime?.Year.ToString() ?? string.Empty;
-        string folderReleaseName = $"[{year}] {releaseName}";
-        string folderStartLetter = artistName[..1];
-
-        if (folderStartLetter.IsAlphaNumeric())
-        {
-            folderStartLetter = "[Other]";
-        }
-        else if (folderStartLetter.IsNumeric())
-        {
-            folderStartLetter = "#";
-        }
-        else
-        {
-            folderStartLetter = folderStartLetter.ToUpper();
-        }
-
-        string basePath = Path.Combine(folder.Path, folderStartLetter, artistName,
-            folderReleaseName.DirectorySafeName());
-
-        await using MediaScan mediaScan = new();
-
-        MediaFolderExtend mediaFolder =
-            (await mediaScan.DisableRegexFilter().EnableFileListing().Process(InputFolder)).First();
-        ConcurrentBag<MediaFile> files = mediaFolder.Files ?? [];
-
-        return new()
-        {
-            MusicBrainzRelease = musicBrainzRelease,
-            BasePath = basePath,
-            Files = files,
-            ArtistName = artistName,
-            ReleaseName = releaseName,
-            Year = int.Parse(year, CultureInfo.InvariantCulture),
-            FolderReleaseName = folderReleaseName,
-            FolderStartLetter = folderStartLetter,
+            ProgressMeta progressMeta = new()
+            {
+                Id = Id,
+                Title = foundTrack.Title,
+                BaseFolder = folderMetaData.BasePath
+            };
             
-        };
-    }
+            Logger.Encoder(fullCommand);
+            await ffmpeg.Run(fullCommand, folderMetaData.BasePath, progressMeta);
+            
+            
+            fileManager.FilterFiles(container.FileName);
+                
+            await fileManager.FindFiles(Id, albumLibrary);
+            
+            // await using MediaScan mediaScan = new();
+            // MediaFolderExtend mediaFolder =
+            //     (await mediaScan.DisableRegexFilter().EnableFileListing().Process(folderMetaData.BasePath)).First();
+            //
+            // foreach(MusicBrainzMedia media in folderMetaData.MusicBrainzRelease.Media)
+            // {
+            //     if (!await recordingManager.Store(folderMetaData.MusicBrainzRelease, foundTrack, media,
+            //         Folder, mediaFolder, null)) continue;
+            //
+            //     foreach (ReleaseArtistCredit artist in foundTrack.ArtistCredit)
+            //     {
+            //         await artistManager.Store(artist.MusicBrainzArtist, albumLibrary, Folder, mediaFolder, foundTrack);
+            //
+            //         jobDispatcher.DispatchJob<MusicDescriptionJob>(artist.MusicBrainzArtist);
+            //     }
+            // }
 
-    private record FolderMetadata
-    {
-        public MusicBrainzReleaseAppends MusicBrainzRelease { get; set; } = null!;
-        public string BasePath { get; set; } = string.Empty;
-        public ConcurrentBag<MediaFile> Files { get; set; } = [];
-        public string ArtistName { get; set; } = string.Empty;
-        public string ReleaseName { get; set; } = string.Empty;
-        public int Year { get; set; }
-        public string FolderReleaseName { get; set; } = string.Empty;
-        public string FolderStartLetter { get; set; } = string.Empty;
+            Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+            {
+                Id = Id,
+                Status = "completed",
+                Title = foundTrack.Title,
+                Message = "Done",
+            });
+        }
+        catch (Exception e)
+        {
+            Logger.Encoder(e, LogEventLevel.Error);
+
+            Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+            {
+                Id = Id,
+                Status = "failed",
+                Title = foundTrack.Title,
+                Message = e.Message,
+            });
+        }
     }
 
     private static void BuildAudioStreams(EncoderProfile encoderProfile, ref BaseContainer container,

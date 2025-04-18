@@ -90,4 +90,17 @@ public class JobDispatcher
         TJob job = new() { MusicBrainzArtist = musicBrainzArtist};
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
+    
+    public void DispatchJob<TJob>(
+        EncoderProfile profile, 
+        Folder folder, 
+        ProcessMusicFolderJob.FolderMetadata folderMetaData, 
+        MediaFile mediaFile,
+        MusicBrainzTrack foundTrack 
+    )
+        where TJob : EncodeMusicJob, new()
+    {
+        TJob job = new() { Folder = folder, Profile = profile, foundTrack = foundTrack, folderMetaData = folderMetaData, mediaFile = mediaFile };
+        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+    }
 }
