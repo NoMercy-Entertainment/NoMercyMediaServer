@@ -10,7 +10,7 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public class TmdbSearchClient : TmdbBaseClient
 {
-    public Task<TmdbPaginatedResponse<TmdbMovie>?> Movie(string query, string year = "")
+    public Task<TmdbPaginatedResponse<TmdbMovie>?> Movie(string query, string? year = "")
     {
         Dictionary<string, string?> queryParams = new()
         {
@@ -22,7 +22,7 @@ public class TmdbSearchClient : TmdbBaseClient
         return Get<TmdbPaginatedResponse<TmdbMovie>>("search/movie", queryParams);
     }
 
-    public Task<TmdbPaginatedResponse<TmdbTvShow>?> TvShow(string query, string year = "")
+    public Task<TmdbPaginatedResponse<TmdbTvShow>?> TvShow(string query, string? year = "")
     {
         Dictionary<string, string?> queryParams = new()
         {
@@ -34,7 +34,7 @@ public class TmdbSearchClient : TmdbBaseClient
         return Get<TmdbPaginatedResponse<TmdbTvShow>>("search/tv", queryParams);
     }
 
-    public Task<TmdbPaginatedResponse<TmdbPerson>?> Person(string query, string year = "")
+    public Task<TmdbPaginatedResponse<TmdbPerson>?> Person(string query, string? year = "")
     {
         Dictionary<string, string?> queryParams = new()
         {
@@ -46,7 +46,7 @@ public class TmdbSearchClient : TmdbBaseClient
         return Get<TmdbPaginatedResponse<TmdbPerson>>("search/person", queryParams);
     }
 
-    public Task<TmdbPaginatedResponse<TmdbMultiSearch>?> Multi(string query, string year = "")
+    public Task<TmdbPaginatedResponse<TmdbMultiSearch>?> Multi(string query, string? year = "")
     {
         Dictionary<string, string?> queryParams = new()
         {
@@ -58,7 +58,7 @@ public class TmdbSearchClient : TmdbBaseClient
         return Get<TmdbPaginatedResponse<TmdbMultiSearch>>("search/multi", queryParams);
     }
 
-    public Task<TmdbPaginatedResponse<TmdbCollection>?> Collection(string query, string year = "")
+    public Task<TmdbPaginatedResponse<TmdbCollection>?> Collection(string query, string? year = "")
     {
         Dictionary<string, string?> queryParams = new()
         {
@@ -70,7 +70,7 @@ public class TmdbSearchClient : TmdbBaseClient
         return Get<TmdbPaginatedResponse<TmdbCollection>>("search/collection", queryParams);
     }
 
-    public Task<TmdbPaginatedResponse<TmdbNetwork>?> Network(string query, string year = "")
+    public Task<TmdbPaginatedResponse<TmdbNetwork>?> Network(string query, string? year = "")
     {
         Dictionary<string, string?> queryParams = new()
         {
@@ -82,7 +82,7 @@ public class TmdbSearchClient : TmdbBaseClient
         return Get<TmdbPaginatedResponse<TmdbNetwork>>("search/network", queryParams);
     }
 
-    public Task<TmdbPaginatedResponse<TmdbKeyword>?> Keyword(string query, string year = "")
+    public Task<TmdbPaginatedResponse<TmdbKeyword>?> Keyword(string query, string? year = "")
     {
         Dictionary<string, string?> queryParams = new()
         {

@@ -1,9 +1,15 @@
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
+using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.SystemCalls;
+using Sharpcaster.Channels;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Dithering;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
+using Image = SixLabors.ImageSharp.Image;
 
 namespace NoMercy.Server;
 
@@ -11,6 +17,23 @@ public class Dev
 {
     public static async Task Run()
     {
+
+        // MediaContext context = new();
+        // List<Folder> folders = context.Folders
+        //     .Include(l => l.FolderLibraries)
+        //     .ThenInclude(fl => fl.Library)
+        //     .Where(f => f.FolderLibraries
+        //         .Any(fl => fl.Library.Type == "movie" || fl.Library.Type == "tv"))
+        //     .ToList();
+        //
+        // foreach (Folder folder in folders)
+        // {
+        //     await Task.Run(() =>
+        //     {
+        //         ProcessM3U8Files(folder.Path);
+        //     });
+        // }
+        
         // OpenSubtitlesClient client = new();
         // OpenSubtitlesClient subtitlesClient = await client.Login();
         // SubtitleSearchResponse? x = await subtitlesClient.SearchSubtitles("Black Panther Wakanda Forever (2022)", "dut");
@@ -89,6 +112,36 @@ public class Dev
         // TvdbLanguagesClient languagesClient = new();
         // TvdbLanguagesResponse? languages = await languagesClient.Languages();
         // Logger.Tvdb(languages);
+    }
+    
+    private static void ProcessM3U8Files(string rootPath)
+    {
+        try
+        {
+            Logger.Encoder($"Processing M3U8 files in {rootPath}");
+            string[] m3U8TmpFiles = Directory.GetFiles(rootPath, "*.m3u8.tmp", SearchOption.AllDirectories) 
+                                    ?? throw new ArgumentNullException(nameof(m3U8TmpFiles), "No M3U8 files found");
+            
+            foreach (string tmpFile in m3U8TmpFiles)
+            {
+                string originalFile = tmpFile[..^4]; // Remove .tmp extension
+                if (File.Exists(originalFile))
+                {
+                    Logger.Encoder($"replacing {originalFile} with {tmpFile}");
+                    File.Delete(originalFile);
+                    File.Move(tmpFile, originalFile);
+                }
+                else
+                {
+                    Logger.Encoder($"renaming {tmpFile} to {originalFile}");
+                    File.Move(tmpFile, originalFile);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing M3U8 files: {ex.Message}");
+        }
     }
     
     public static string GetDominantColor(string path)

@@ -132,7 +132,7 @@ public class LibraryManager(
 
         // List<TvShow> res = Str.SortByMatchPercentage(paginatedTvShowResponse.Results, m => m.Name, folder.Parsed.Title);
         IEnumerable<TmdbTvShow> res = paginatedTvShowResponse?.Results ?? [];
-        if (res.Count() is 0) return;
+        if (!res.Any()) return;
 
         jobDispatcher.DispatchJob<AddShowJob>(res.First().Id, _library);
     }

@@ -670,6 +670,7 @@ public partial class FileManager(
 
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
             .EnableFileListing()
+            .DisableRegexFilter()
             .FilterByMediaType(library.Type)
             .FilterByFileName(Filter)
             .Process(path, depth);

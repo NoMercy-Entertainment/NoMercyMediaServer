@@ -6,7 +6,9 @@ using System.Web;
 using Microsoft.AspNetCore.Hosting;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Setup.Dto;
 using Serilog.Events;
 using HttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
@@ -132,7 +134,7 @@ public static class Auth
                 new FormUrlEncodedContent(deviceCodeBody))
             .Result.Content.ReadAsStringAsync().Result;
         
-        DeviceAuthResponse deviceData = JsonConvert.DeserializeObject<DeviceAuthResponse>(deviceCodeResponse)
+        DeviceAuthResponse deviceData = deviceCodeResponse.FromJson<DeviceAuthResponse>()
                                       ?? throw new("Failed to get device code");
         
         Logger.Auth($"Scan QR code or visit: {deviceData.VerificationUriComplete}");
@@ -254,16 +256,8 @@ public static class Auth
 
     private static void SetTokens(string response)
     {
-        dynamic data = JsonConvert.DeserializeObject(response)
-                       ?? throw new("Failed to deserialize JSON");
-
-        if (data.access_token == null || data.refresh_token == null || data.expires_in == null)
-        {
-            File.Delete(AppFiles.TokenFile);
-            TokenByBrowserOrPassword();
-
-            return;
-        }
+        AuthResponse data = response.FromJson<AuthResponse>()
+                        ?? throw new("Failed to deserialize JSON");
 
         FileStream tmp = File.OpenWrite(AppFiles.TokenFile);
         tmp.SetLength(0);
@@ -272,57 +266,57 @@ public static class Auth
 
         Logger.Auth("Tokens refreshed");
 
-        Globals.Globals.AccessToken = data.access_token;
-        RefreshToken = data.refresh_token;
-        ExpiresIn = data.expires_in;
-        NotBefore = data["not-before-policy"];
+        Globals.Globals.AccessToken = data.AccessToken;
+        RefreshToken = data.RefreshToken;
+        ExpiresIn = data.ExpiresIn;
+        NotBefore = data.NotBeforePolicy;
     }
 
-    private static dynamic TokenData()
+    private static AuthResponse TokenData()
     {
-        return JsonConvert.DeserializeObject(File.ReadAllText(AppFiles.TokenFile))
+        string fileContents = File.ReadAllText(AppFiles.TokenFile);
+        return fileContents.FromJson<AuthResponse>()
                ?? throw new("Failed to deserialize JSON");
     }
 
     private static string? GetAccessToken()
     {
-        dynamic data = TokenData();
+        AuthResponse data = TokenData();
 
-        return data.access_token;
+        return data.AccessToken;
     }
 
     private static string? GetRefreshToken()
     {
-        dynamic data = TokenData();
-        return data.refresh_token;
+        AuthResponse data = TokenData();
+        return data.RefreshToken;
     }
 
     private static int? TokenExpiration()
     {
-        dynamic data = TokenData();
-        return data.expires_in;
+        AuthResponse data = TokenData();
+        return data.ExpiresIn;
     }
 
     private static int? TokenNotBefore()
     {
-        dynamic data = TokenData();
-        return data["not-before-policy"];
+        AuthResponse data = TokenData();
+        return data.NotBeforePolicy;
     }
 
     private static void AuthKeys()
     {
         Logger.Auth("Getting auth keys", LogEventLevel.Verbose);
-
         
         System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
 
         string response = client.GetStringAsync(BaseUrl).Result;
 
-        dynamic data = JsonConvert.DeserializeObject(response)
-                       ?? throw new("Failed to deserialize JSON");
+        AuthKeysResponse data = JsonConvert.DeserializeObject<AuthKeysResponse>(response)
+                                ?? throw new("Failed to deserialize JSON");
 
-        PublicKey = data.public_key;
+        PublicKey = data.PublicKey;
     }
 
     private static void TokenByPassword()
@@ -360,7 +354,6 @@ public static class Auth
     {
         if (Config.TokenClientId == null || Config.TokenClientSecret == null)
             throw new("Auth keys not initialized");
-
         
         System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
@@ -425,8 +418,7 @@ public static class Auth
             new("client_id", Config.TokenClientId),
             new("client_secret", Config.TokenClientSecret),
             new("scope", "openid offline_access email profile"),
-            new("redirect_uri",
-                $"http://localhost:{Config.InternalServerPort}/sso-callback"),
+            new("redirect_uri", $"http://localhost:{Config.InternalServerPort}/sso-callback"),
             new("code", code)
         ];
 
@@ -460,24 +452,4 @@ public static class Auth
         return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY"));
     }
     
-    private class DeviceAuthResponse
-    {
-        [JsonProperty("device_code")]
-        public string DeviceCode { get; set; } = string.Empty;
-
-        [JsonProperty("user_code")]
-        public string UserCode { get; set; } = string.Empty;
-
-        [JsonProperty("verification_uri")]
-        public string VerificationUri { get; set; } = string.Empty;
-
-        [JsonProperty("verification_uri_complete")]
-        public string VerificationUriComplete { get; set; } = string.Empty;
-
-        [JsonProperty("expires_in")]
-        public int ExpiresIn { get; set; }
-
-        [JsonProperty("interval")]
-        public int Interval { get; set; }
-    }
 }

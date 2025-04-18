@@ -268,17 +268,23 @@ public static partial class Str
         // Replace forbidden characters with a dot or remove them
         name = Regex.Replace(name, @"[/\\|:*?\""<>{}]", ".");
         // Remove unwanted punctuation
-        name = Regex.Replace(name, @"[!'’`]", "");
+        name = Regex.Replace(name, "[!'’`]", "");
         // Replace ampersand
-        name = Regex.Replace(name, @"&", "and");
+        name = Regex.Replace(name, "&", "and");
         // Replace spaces with dots
         name = Regex.Replace(name, @"\s+", ".");
         // Collapse multiple dots
         name = Regex.Replace(name, @"\.+", ".");
+        name = Regex.Replace(name, @"°", ".Degrees");
         // Trim leading/trailing dots
         name = Regex.Replace(name, @"^\.+|\.+$", "");
 
-        return name.Trim();
+        return name
+            .Replace("‐", "-") // Hyphen
+            .Replace("–", "-") // En dash
+            .Replace("—", "-") // Em dash
+            .Replace("−", "-") // Minus sign
+            .Trim();
     }
 
     public static string DirectorySafeName(this string? self)
