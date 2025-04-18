@@ -186,10 +186,10 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
             if (library.Type == "music")
             {
                 Logger.App("Adding music files to library", LogEventLevel.Verbose);
-                JobDispatcher.Dispatch(new EncodeMusicJob
+                JobDispatcher.Dispatch(new ProcessMusicFolderJob
                 {
                     FolderId = request.FolderId,
-                    Id = Guid.Parse(request.Files[0].Id),
+                    Id = request.Files[0].Id.ToGuid(),
                     InputFolder = request.Files[0].Path,
                 }, "encoder");
 

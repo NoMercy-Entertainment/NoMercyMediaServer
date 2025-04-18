@@ -34,8 +34,15 @@ public partial class RecordingManager(
             if (folder.Files is null) continue;
             foreach (MediaFile file in folder.Files)
             {
+                // wait for file to be available
                 MediaFile? mediaFile = FileMatch(file, releaseAppends, musicBrainzMedia, musicBrainzTrack.Position);
                 if (mediaFile is null) continue;
+                TagLib.File tagFile = TagLib.File.Create(file.Path);
+                if (tagFile == null || mediaFile.FFprobe == null)
+                {
+                    Logger.MusicBrainz($"File not found: {file.Name}", LogEventLevel.Error);
+                    continue;
+                }
 
                 Logger.MusicBrainz($"Recording {musicBrainzTrack.Title} found", LogEventLevel.Verbose);
 
@@ -50,8 +57,8 @@ public partial class RecordingManager(
                     TrackNumber = musicBrainzTrack.Position,
 
                     Filename = "/" + Path.GetFileName(mediaFile.Path),
-                    Quality = (int)Math.Floor(mediaFile.FFprobe!.Format.BitRate / 1000.0),
-                    Duration = HmsRegex().Replace(mediaFile.FFprobe.Duration.ToString("hh\\:mm\\:ss"), ""),
+                    Quality = (int)Math.Floor((mediaFile.FFprobe?.Format.BitRate ?? (tagFile.Properties.AudioBitrate * 1000)) / 1000.0),
+                    Duration = HmsRegex().Replace((mediaFile.FFprobe?.Duration ?? tagFile.Properties.Duration).ToString("hh\\:mm\\:ss"), ""),
 
                     FolderId = libraryFolder.Id,
                     Folder = path.Replace(libraryFolder.Path, "").Replace("\\", "/"),

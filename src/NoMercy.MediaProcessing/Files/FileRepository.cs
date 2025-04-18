@@ -457,46 +457,142 @@ public class FileRepository(MediaContext context) : IFileRepository
         Dictionary<Guid,(MusicBrainzReleaseAppends release, int count)> musicBrainzReleasesDic = new();
 
         AcoustIdFingerprintClient acoustIdFingerprintClient = new();
+        using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
+        using MusicBrainzRecordingClient musicBrainzRecordingClient = new();
+        
+        List<TagLib.File> fileTagList = new();
         
         foreach (FileInfo file in audioFiles)
         {
-            AcoustIdFingerprint? fingerprint = await acoustIdFingerprintClient.Lookup(file.FullName, priority: true);
-            
-            if (fingerprint is null) continue;
-            foreach (AcoustIdFingerprintResult acoustIdFingerprint in fingerprint.Results)
-            {
-                if (acoustIdFingerprint.Id == Guid.Empty) continue;
-                foreach (AcoustIdFingerprintRecording? acoustIdFingerprintRecording in acoustIdFingerprint.Recordings ?? [])
-                {
-                    if (acoustIdFingerprintRecording is null) continue;
-                    if (acoustIdFingerprintRecording.Id == Guid.Empty) continue;
-                    if (acoustIdFingerprintRecording.Releases is null) continue;
+            TagLib.File tagFile = TagLib.File.Create(file.FullName);
+            if (tagFile.Tag == null || string.IsNullOrEmpty(tagFile.Tag.Album)) continue;
+            fileTagList.Add(tagFile);
+        }
 
-                    foreach (AcoustIdFingerprintReleaseGroups release in acoustIdFingerprintRecording.Releases ?? [])
+        if (fileTagList.Count > 0)
+        {
+            List<TagLib.Tag> albumTags = fileTagList.DistinctBy(x => x.Tag.Album).Select(x => x.Tag).ToList();
+            foreach (TagLib.Tag tag in albumTags)
+            {
+                MusicBrainzRelease[] releases;
+                if (!string.IsNullOrEmpty(tag.MusicBrainzReleaseId))
+                {
+                    MusicBrainzReleaseAppends? release = await musicBrainzReleaseClient.WithAllAppends(tag.MusicBrainzReleaseId.ToGuid());
+                    if (release == null) continue;
+                    releases =
+                    [
+                        release
+                    ];
+                }
+                else
+                {
+                    string albumName = tag.Album;
+                    string query = $"release:{albumName}";
+                    if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
                     {
-                        using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
-                        MusicBrainzReleaseAppends? item = await musicBrainzReleaseClient.WithAllAppends(release.Id, true);
-                        if (item == null) continue;
-                        if (musicBrainzReleasesDic.ContainsKey(item.Id))
+                        string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
+                            ? tag.AlbumArtists[0]
+                            : tag.FirstAlbumArtist;
+                        query += $" artist:{artistName}";
+                    }
+
+                    if (tag.Year > 0)
+                    {
+                        query += $" date:{tag.Year}";
+                    }
+
+                    MusicBrainzReleaseSearchResponse? releaseSearchResponse =
+                        await musicBrainzReleaseClient.SearchReleases(query, true);
+                    if (releaseSearchResponse == null) continue;
+                    if (releaseSearchResponse.Releases.Length == 0)
+                    {
+                        query = $"release:{albumName}";
+                        if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
                         {
-                            (MusicBrainzReleaseAppends release, int count) tmp = musicBrainzReleasesDic[item.Id];
+                            string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
+                                ? tag.AlbumArtists[0]
+                                : tag.FirstAlbumArtist;
+                            query += $" artist:{artistName}";
+                        }
+
+                        releaseSearchResponse = await musicBrainzReleaseClient.SearchReleases(query, true);
+                        if (releaseSearchResponse == null) continue;
+                        if (releaseSearchResponse.Releases.Length == 0)
+                            continue;
+                    }
+
+                    releases = releaseSearchResponse.Releases
+                        .Where(x => x.Score >= 95)
+                        .ToArray();
+                }
+
+                foreach (MusicBrainzRelease release in releases)
+                {
+                    MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(release.Id, true);
+                    if (releaseAppends == null) continue;
+                    if (musicBrainzReleasesDic.TryGetValue(releaseAppends.Id, out (MusicBrainzReleaseAppends release, int count) tmp))
+                    {
+                        tmp.count++;
+                        musicBrainzReleasesDic[releaseAppends.Id] = tmp;
+                        continue;
+                    }
+                    musicBrainzReleasesDic.Add(releaseAppends.Id, (releaseAppends, 1));
+                }
+            }
+        }
+        
+        if (musicBrainzReleasesDic.Count == 0) {
+            foreach (FileInfo file in audioFiles)
+            {
+                await Fingerprint(acoustIdFingerprintClient, file, musicBrainzReleaseClient, musicBrainzReleasesDic);
+            }
+        }
+        
+        if (musicBrainzReleasesDic.Count == 0)
+        {
+            foreach (FileInfo file in audioFiles)
+            {
+                MusicBrainzSearchResponse? searchResponse;
+                
+                TagLib.File tagFile = TagLib.File.Create(file.FullName);                
+                
+                if (tagFile.Tag == null || string.IsNullOrEmpty(tagFile.Tag.Title))
+                    searchResponse = await musicBrainzRecordingClient.SearchRecordingsDynamic(file.Name.Replace(file.Extension, ""));
+                else
+                    searchResponse = await musicBrainzRecordingClient.SearchRecordingsDynamic(tagFile.Tag.Title);
+                
+                if (searchResponse == null) continue;
+                if (searchResponse.Recordings.Count == 0) continue;
+                searchResponse.Recordings = searchResponse.Recordings.Where(x => x.Score >= 95).ToList();
+                int index = 0;
+                for (; index < searchResponse.Recordings.Count; index++)
+                {
+                    MusicBrainzSearchRecording recording = searchResponse.Recordings[index];
+                    foreach (MusicBrainzRelease recordingRelease in recording.Releases)
+                    {
+                        MusicBrainzReleaseAppends? release =
+                            await musicBrainzReleaseClient.WithAllAppends(recordingRelease.Id, true);
+                        if (release == null) continue;
+                        if (musicBrainzReleasesDic.TryGetValue(release.Id, out (MusicBrainzReleaseAppends release, int count) tmp))
+                        {
                             tmp.count++;
-                            musicBrainzReleasesDic[item.Id] = tmp;
+                            musicBrainzReleasesDic[release.Id] = tmp;
                             continue;
                         }
-                        musicBrainzReleasesDic.Add(item.Id, (item, 1));
+
+                        musicBrainzReleasesDic.Add(release.Id, (release, 1));
                     }
                 }
             }
         }
-
+            
         List<MusicBrainzReleaseAppends> musicBrainzReleases = musicBrainzReleasesDic.Values
             .OrderByDescending(x => x.count)
             .Select(x => x.release)
             .ToList();
     
         if (musicBrainzReleases.Count == 0)
-            throw new("No releases found");
+            return [];
 
         List<FileItem> files = [];
 
@@ -529,6 +625,37 @@ public class FileRepository(MediaContext context) : IFileRepository
         }
 
         return files;
+    }
+
+    private static async Task Fingerprint(AcoustIdFingerprintClient acoustIdFingerprintClient, FileInfo file,
+        MusicBrainzReleaseClient musicBrainzReleaseClient, Dictionary<Guid, (MusicBrainzReleaseAppends release, int count)> musicBrainzReleasesDic)
+    {
+        AcoustIdFingerprint? fingerprint = await acoustIdFingerprintClient.Lookup(file.FullName, priority: true);
+        if (fingerprint is null) return;
+        foreach (AcoustIdFingerprintResult acoustIdFingerprint in fingerprint.Results)
+        {
+            if (acoustIdFingerprint.Id == Guid.Empty) continue;
+            foreach (AcoustIdFingerprintRecording? acoustIdFingerprintRecording in acoustIdFingerprint.Recordings ?? [])
+            {
+                if (acoustIdFingerprintRecording is null) continue;
+                if (acoustIdFingerprintRecording.Id == Guid.Empty) continue;
+                if (acoustIdFingerprintRecording.Releases is null) continue;
+
+                foreach (AcoustIdFingerprintReleaseGroups fingerprintRelease in acoustIdFingerprintRecording.Releases ?? [])
+                {
+                    MusicBrainzReleaseAppends? release = await musicBrainzReleaseClient.WithAllAppends(fingerprintRelease.Id, true);
+                    if (release == null) continue;
+                    if (musicBrainzReleasesDic.ContainsKey(release.Id))
+                    {
+                        (MusicBrainzReleaseAppends release, int count) tmp = musicBrainzReleasesDic[release.Id];
+                        tmp.count++;
+                        musicBrainzReleasesDic[release.Id] = tmp;
+                        continue;
+                    }
+                    musicBrainzReleasesDic.Add(release.Id, (release, 1));
+                }
+            }
+        }
     }
 
     public List<DirectoryTree> GetDirectoryTree(string folder = "")

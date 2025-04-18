@@ -60,6 +60,11 @@ public partial class FileManager(
         }
     }
     
+    public async Task FindFiles(Guid id, Library albumLibrary)
+    {
+        Type = "music";
+    }
+    
     public void FilterFiles(string filter)
     {
         Filter = filter;
@@ -736,4 +741,5 @@ public partial class FileManager(
 
     [GeneratedRegex(@"(?<lang>\w{3}).(?<type>\w{3,4}).(?<ext>\w{3})$")]
     private static partial Regex SubtitleFileRegex();
+
 }

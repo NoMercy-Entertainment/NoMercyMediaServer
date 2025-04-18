@@ -46,4 +46,15 @@ public class MusicBrainzRecordingClient : MusicBrainzBaseClient
         };
         return Get<MusicBrainzRecordingAppends>($"recording", queryParams, priority);
     }
+    
+    public Task<MusicBrainzSearchResponse?> SearchRecordingsDynamic(string query, bool? priority = false)
+    {
+        Dictionary<string, string>? queryParams = new()
+        {
+            ["query"] = query,
+            ["inc"] = "releases",
+            ["fmt"] = "json"
+        };
+        return Get<MusicBrainzSearchResponse>($"recording", queryParams, priority);
+    }
 }

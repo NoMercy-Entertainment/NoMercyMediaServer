@@ -309,6 +309,8 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
 
         foreach (MediaFile file in folder.Files ?? [])
         {
+            TagLib.File tagFile = TagLib.File.Create(file.Path);
+            
             string rawTitle = Path.GetFileNameWithoutExtension(file.Name);
             string title = Regex.Replace(
                 rawTitle,
@@ -317,25 +319,29 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
 
             if (string.IsNullOrEmpty(title)) continue;
             IEnumerable<MusicBrainzRelease> matchedReleases;
+            List<MusicBrainzRelease> allReleases = [];
             if (!string.IsNullOrEmpty(artist))
             {
-                MusicBrainzRecordingAppends? brainzRecordingAppends = await musicBrainzRecordingClient.SearchRecordings($"recording:{title} artist:{artist}");
-                if (brainzRecordingAppends?.Releases is null || brainzRecordingAppends.Releases.Length == 0)
+                MusicBrainzSearchResponse? brainzRecordingResponse = await musicBrainzRecordingClient.SearchRecordingsDynamic($"recording:{title} artist:{artist}");
+                IEnumerable<MusicBrainzRelease> filteredReleases = brainzRecordingResponse?.Recordings.SelectMany(x => x.Releases).Where(r => r.Id != Guid.Empty).DistinctBy(x => x.Id) ?? [];
+                allReleases.AddRange(filteredReleases);                
+                if (allReleases.Count == 0)
                 {
-                    brainzRecordingAppends = await musicBrainzRecordingClient.SearchRecordings($"recording:{title}");
-                    if (brainzRecordingAppends?.Releases is null || brainzRecordingAppends.Releases.Length == 0) continue;
+                    brainzRecordingResponse = await musicBrainzRecordingClient.SearchRecordingsDynamic($"recording:{title}");
+                    filteredReleases = brainzRecordingResponse?.Recordings.SelectMany(x => x.Releases).Where(r => r.Id != Guid.Empty).DistinctBy(x => x.Id) ?? [];
+                    allReleases.AddRange(filteredReleases); 
                 }
-                matchedReleases = brainzRecordingAppends.Releases.Where(r => r.Id != Guid.Empty);
-                musicBrainzReleases.AddRange(matchedReleases);
             }
             else
             {
-                MusicBrainzRecordingAppends? brainzRecordingAppends = await musicBrainzRecordingClient.SearchRecordings($"recording:{title}");
-                if (brainzRecordingAppends?.Releases is null || brainzRecordingAppends.Releases.Length == 0) continue;
-
-                matchedReleases = brainzRecordingAppends.Releases.Where(r => r.Id != Guid.Empty);
-                musicBrainzReleases.AddRange(matchedReleases);
+                MusicBrainzSearchResponse? brainzRecordingResponse = await musicBrainzRecordingClient.SearchRecordingsDynamic($"recording:{title}");
+                IEnumerable<MusicBrainzRelease> filteredReleases = brainzRecordingResponse?.Recordings.SelectMany(x => x.Releases).Where(r => r.Id != Guid.Empty).DistinctBy(x => x.Id) ?? [];
+                allReleases.AddRange(filteredReleases); 
             }
+        
+            if (allReleases.Count == 0) continue;
+            allReleases = allReleases.Where(x => x.Id != Guid.Empty).DistinctBy(x => x.Id).ToList();
+            musicBrainzReleases.AddRange(allReleases);
         }
 
         return musicBrainzReleases
