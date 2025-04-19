@@ -39,6 +39,11 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
             .FirstOrDefaultAsync(folder => folder.Id == folderId);
     }
 
+    public Task<Library?> GetLibraryById(Ulid libraryId)
+    {
+        return context.Libraries.FirstOrDefaultAsync(library => library.Id == libraryId);
+    }
+
     public void Dispose()
     {
         context.Dispose();

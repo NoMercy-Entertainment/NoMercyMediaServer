@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Globalization;
+using NoMercy.NmSystem.Dto;
 
 namespace NoMercy.NmSystem.Extensions;
 
@@ -101,5 +103,16 @@ public static class Date
     public static string ToHis(this long time)
     {
         return TimeSpan.FromSeconds(time).ToString(@"hh\:mm\:ss\.fff");
+    }
+
+    public static ConcurrentBag<MediaFile> ToConcurrentBag(this IEnumerable<MediaFile> self)
+    {
+        return new ConcurrentBag<MediaFile>(self);
+    }
+    
+    public static ConcurrentBag<MediaFile> FilterConcurrentBag(this ConcurrentBag<MediaFile> self, string[] filterFiles)
+    {
+        self = self.Where(f => filterFiles.Any(s => f.Name == s)).ToConcurrentBag();
+        return self;
     }
 }

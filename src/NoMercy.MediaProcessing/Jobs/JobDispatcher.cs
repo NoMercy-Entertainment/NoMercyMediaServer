@@ -64,7 +64,7 @@ public class JobDispatcher
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
 
-    public void DispatchJob<TJob>(Ulid libraryId, Guid id, Folder baseFolder, MediaFolder mediaFolder)
+    public void DispatchJob<TJob>(Ulid libraryId, Guid id, Folder baseFolder, MediaFolderExtend mediaFolder)
         where TJob : AbstractReleaseJob, new()
     {
         TJob job = new() { LibraryId = libraryId, Id = id, BaseFolder = baseFolder, MediaFolder = mediaFolder};
@@ -96,11 +96,12 @@ public class JobDispatcher
         Folder folder, 
         ProcessMusicFolderJob.FolderMetadata folderMetaData, 
         MediaFile mediaFile,
-        MusicBrainzTrack foundTrack 
+        MusicBrainzTrack foundTrack,
+        Ulid libraryId
     )
         where TJob : EncodeMusicJob, new()
     {
-        TJob job = new() { Folder = folder, Profile = profile, foundTrack = foundTrack, folderMetaData = folderMetaData, mediaFile = mediaFile };
+        TJob job = new() { Folder = folder, Profile = profile, foundTrack = foundTrack, folderMetaData = folderMetaData, mediaFile = mediaFile, LibraryId = libraryId };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
 }

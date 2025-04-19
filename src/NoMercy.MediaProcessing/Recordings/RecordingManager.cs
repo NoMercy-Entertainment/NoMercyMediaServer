@@ -31,10 +31,9 @@ public partial class RecordingManager(
 
         foreach (MediaFolderExtend folder in folders)
         {
-            if (folder.Files is null) continue;
+            if (folder.Files is null || folder.Files.IsEmpty) continue;
             foreach (MediaFile file in folder.Files)
             {
-                // wait for file to be available
                 MediaFile? mediaFile = FileMatch(file, releaseAppends, musicBrainzMedia, musicBrainzTrack.Position);
                 if (mediaFile is null) continue;
                 TagLib.File tagFile = TagLib.File.Create(file.Path);
