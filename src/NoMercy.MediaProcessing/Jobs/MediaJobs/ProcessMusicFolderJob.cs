@@ -88,10 +88,15 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
         Logger.App("Matched: " + folderMetaData.ReleaseName + " - " + Id);
         jobDispatcher.DispatchJob<AddReleaseOnlyJob>(LibraryId, Id, folder, mediaFolder);
         
+        string[] extensions = [".mp3", ".flac", ".wav", ".m4a"];
+        List<MediaFile> files = folderMetaData.Files
+            .Where(f => f.Type == "file" && extensions.Contains(f.Extension))
+            .OrderBy(x => x.Name)
+            .ToList();
+        
         await Parallel.ForEachAsync(profiles, async (profile, t) =>
         {
-            List<MediaFile> files = folderMetaData.Files.OrderBy(x => x.Name).ToList();
-            await Parallel.ForEachAsync(files, t, (mediaFile, y) =>
+            await Parallel.ForEachAsync(files, t, (mediaFile, _) =>
             {
                 if (string.IsNullOrEmpty(mediaFile.Path))
                 {
