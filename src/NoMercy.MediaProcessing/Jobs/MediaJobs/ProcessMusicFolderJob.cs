@@ -86,7 +86,8 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
         mediaFolder.Files?.Clear();
         
         Logger.App("Matched: " + folderMetaData.ReleaseName + " - " + Id);
-        jobDispatcher.DispatchJob<AddReleaseOnlyJob>(LibraryId, Id, folder, mediaFolder);
+        AddReleaseOnlyJob addReleaseOnlyJob = new AddReleaseOnlyJob { LibraryId = LibraryId, Id = Id, BaseFolder = folder, MediaFolder = mediaFolder };
+        await addReleaseOnlyJob.Handle();
         
         string[] extensions = [".mp3", ".flac", ".wav", ".m4a"];
         List<MediaFile> files = folderMetaData.Files
