@@ -462,27 +462,26 @@ public class FileRepository(MediaContext context) : IFileRepository
         
         List<TagLib.File> fileTagList = new();
         
-        foreach (FileInfo file in audioFiles)
+        await Parallel.ForEachAsync(audioFiles, (file ,_) =>
         {
             TagLib.File tagFile = TagLib.File.Create(file.FullName);
-            if (tagFile.Tag == null || string.IsNullOrEmpty(tagFile.Tag.Album)) continue;
+            if (tagFile.Tag == null || string.IsNullOrEmpty(tagFile.Tag.Album)) return ValueTask.CompletedTask;
             fileTagList.Add(tagFile);
-        }
+            return ValueTask.CompletedTask;
+        });
 
         if (fileTagList.Count > 0)
         {
             List<TagLib.Tag> albumTags = fileTagList.DistinctBy(x => x.Tag.Album).Select(x => x.Tag).ToList();
-            foreach (TagLib.Tag tag in albumTags)
+            await Parallel.ForEachAsync(albumTags, async (tag, t) =>
             {
-                MusicBrainzRelease[] releases;
+                List<MusicBrainzRelease> releases = [];
                 if (!string.IsNullOrEmpty(tag.MusicBrainzReleaseId))
                 {
-                    MusicBrainzReleaseAppends? release = await musicBrainzReleaseClient.WithAllAppends(tag.MusicBrainzReleaseId.ToGuid());
-                    if (release == null) continue;
-                    releases =
-                    [
-                        release
-                    ];
+                    MusicBrainzReleaseAppends? release =
+                        await musicBrainzReleaseClient.WithAllAppends(tag.MusicBrainzReleaseId.ToGuid());
+                    if (release == null) return;
+                    releases.Add(release);
                 }
                 else
                 {
@@ -503,7 +502,7 @@ public class FileRepository(MediaContext context) : IFileRepository
 
                     MusicBrainzReleaseSearchResponse? releaseSearchResponse =
                         await musicBrainzReleaseClient.SearchReleases(query, true);
-                    if (releaseSearchResponse == null) continue;
+                    if (releaseSearchResponse == null) return;
                     if (releaseSearchResponse.Releases.Length == 0)
                     {
                         query = $"release:{albumName}";
@@ -516,74 +515,76 @@ public class FileRepository(MediaContext context) : IFileRepository
                         }
 
                         releaseSearchResponse = await musicBrainzReleaseClient.SearchReleases(query, true);
-                        if (releaseSearchResponse == null) continue;
+                        if (releaseSearchResponse == null) return;
                         if (releaseSearchResponse.Releases.Length == 0)
-                            continue;
+                            return;
                     }
 
-                    releases = releaseSearchResponse.Releases
-                        .Where(x => x.Score >= 95)
-                        .ToArray();
+                    releases.AddRange(releaseSearchResponse.Releases
+                        .Where(x => x.Score >= 95));
                 }
 
-                foreach (MusicBrainzRelease release in releases)
+                await Parallel.ForEachAsync(releases, t, async (release, _) =>
                 {
-                    MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(release.Id, true);
-                    if (releaseAppends == null) continue;
-                    if (musicBrainzReleasesDic.TryGetValue(releaseAppends.Id, out (MusicBrainzReleaseAppends release, int count) tmp))
+                    MusicBrainzReleaseAppends? releaseAppends =
+                        await musicBrainzReleaseClient.WithAllAppends(release.Id, true);
+                    if (releaseAppends == null) return;
+                    if (musicBrainzReleasesDic.TryGetValue(releaseAppends.Id,
+                            out (MusicBrainzReleaseAppends release, int count) tmp))
                     {
                         tmp.count++;
                         musicBrainzReleasesDic[releaseAppends.Id] = tmp;
-                        continue;
+                        return;
                     }
+
                     musicBrainzReleasesDic.Add(releaseAppends.Id, (releaseAppends, 1));
-                }
-            }
+                });
+            });
         }
-        
-        if (musicBrainzReleasesDic.Count == 0) {
-            foreach (FileInfo file in audioFiles)
+        else
+        {
+            await Parallel.ForEachAsync(audioFiles, async (file, _) =>
             {
                 await Fingerprint(acoustIdFingerprintClient, file, musicBrainzReleaseClient, musicBrainzReleasesDic);
-            }
+            });
         }
         
         if (musicBrainzReleasesDic.Count == 0)
         {
-            foreach (FileInfo file in audioFiles)
+            await Parallel.ForEachAsync(audioFiles, async (file, t) =>
             {
                 MusicBrainzSearchResponse? searchResponse;
-                
-                TagLib.File tagFile = TagLib.File.Create(file.FullName);                
-                
+
+                TagLib.File tagFile = TagLib.File.Create(file.FullName);
+
                 if (tagFile.Tag == null || string.IsNullOrEmpty(tagFile.Tag.Title))
-                    searchResponse = await musicBrainzRecordingClient.SearchRecordingsDynamic(file.Name.Replace(file.Extension, ""));
+                    searchResponse =
+                        await musicBrainzRecordingClient.SearchRecordingsDynamic(file.Name.Replace(file.Extension, ""));
                 else
                     searchResponse = await musicBrainzRecordingClient.SearchRecordingsDynamic(tagFile.Tag.Title);
-                
-                if (searchResponse == null) continue;
-                if (searchResponse.Recordings.Count == 0) continue;
+
+                if (searchResponse == null) return;
+                if (searchResponse.Recordings.Count == 0) return;
                 searchResponse.Recordings = searchResponse.Recordings.Where(x => x.Score >= 95).ToList();
-                int index = 0;
-                for (; index < searchResponse.Recordings.Count; index++)
+                await Parallel.ForEachAsync(searchResponse.Recordings, t,async (recording, y) =>
                 {
-                    MusicBrainzSearchRecording recording = searchResponse.Recordings[index];
-                    foreach (MusicBrainzRelease recordingRelease in recording.Releases)
+                    await Parallel.ForEachAsync(recording.Releases, y,async (recordingRelease, _) =>
                     {
                         MusicBrainzReleaseAppends? release =
                             await musicBrainzReleaseClient.WithAllAppends(recordingRelease.Id, true);
-                        if (release == null) continue;
-                        if (musicBrainzReleasesDic.TryGetValue(release.Id, out (MusicBrainzReleaseAppends release, int count) tmp))
+                        if (release == null) return;
+                        if (musicBrainzReleasesDic.TryGetValue(release.Id,
+                                out (MusicBrainzReleaseAppends release, int count) tmp))
                         {
                             tmp.count++;
                             musicBrainzReleasesDic[release.Id] = tmp;
-                            continue;
+                            return;
                         }
 
                         musicBrainzReleasesDic.Add(release.Id, (release, 1));
-                    }
-                }
-            }
+                    });
+                });
+            });
         }
             
         List<MusicBrainzReleaseAppends> musicBrainzReleases = musicBrainzReleasesDic.Values
@@ -632,30 +633,33 @@ public class FileRepository(MediaContext context) : IFileRepository
     {
         AcoustIdFingerprint? fingerprint = await acoustIdFingerprintClient.Lookup(file.FullName, priority: true);
         if (fingerprint is null) return;
-        foreach (AcoustIdFingerprintResult acoustIdFingerprint in fingerprint.Results)
+        await Parallel.ForEachAsync(fingerprint.Results, async (acoustIdFingerprint, t) =>
         {
-            if (acoustIdFingerprint.Id == Guid.Empty) continue;
-            foreach (AcoustIdFingerprintRecording? acoustIdFingerprintRecording in acoustIdFingerprint.Recordings ?? [])
-            {
-                if (acoustIdFingerprintRecording is null) continue;
-                if (acoustIdFingerprintRecording.Id == Guid.Empty) continue;
-                if (acoustIdFingerprintRecording.Releases is null) continue;
-
-                foreach (AcoustIdFingerprintReleaseGroups fingerprintRelease in acoustIdFingerprintRecording.Releases ?? [])
+            if (acoustIdFingerprint.Id == Guid.Empty) return;
+            await Parallel.ForEachAsync(acoustIdFingerprint.Recordings ?? [], t,
+                async (acoustIdFingerprintRecording, y) =>
                 {
-                    MusicBrainzReleaseAppends? release = await musicBrainzReleaseClient.WithAllAppends(fingerprintRelease.Id, true);
-                    if (release == null) continue;
-                    if (musicBrainzReleasesDic.ContainsKey(release.Id))
-                    {
-                        (MusicBrainzReleaseAppends release, int count) tmp = musicBrainzReleasesDic[release.Id];
-                        tmp.count++;
-                        musicBrainzReleasesDic[release.Id] = tmp;
-                        continue;
-                    }
-                    musicBrainzReleasesDic.Add(release.Id, (release, 1));
-                }
-            }
-        }
+                    if (acoustIdFingerprintRecording is null) return;
+                    if (acoustIdFingerprintRecording.Id == Guid.Empty) return;
+                    if (acoustIdFingerprintRecording.Releases is null) return;
+                    await Parallel.ForEachAsync(acoustIdFingerprintRecording.Releases ?? [], y,
+                        async (fingerprintRelease, _) =>
+                        {
+                            MusicBrainzReleaseAppends? release =
+                                await musicBrainzReleaseClient.WithAllAppends(fingerprintRelease.Id, true);
+                            if (release == null) return;
+                            if (musicBrainzReleasesDic.ContainsKey(release.Id))
+                            {
+                                (MusicBrainzReleaseAppends release, int count) tmp = musicBrainzReleasesDic[release.Id];
+                                tmp.count++;
+                                musicBrainzReleasesDic[release.Id] = tmp;
+                                return;
+                            }
+
+                            musicBrainzReleasesDic.Add(release.Id, (release, 1));
+                        });
+                });
+        });
     }
 
     public List<DirectoryTree> GetDirectoryTree(string folder = "")
