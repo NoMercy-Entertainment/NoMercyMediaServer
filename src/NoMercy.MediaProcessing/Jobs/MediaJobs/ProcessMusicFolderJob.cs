@@ -1,8 +1,11 @@
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using System.Globalization;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Libraries;
+using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -25,12 +28,17 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
     public override async Task Handle()
     {
         await using MediaContext context = new();
-        await using QueueContext queueContext = new();
         JobDispatcher jobDispatcher = new();
 
         await using LibraryRepository libraryRepository = new(context);
+        
+        MusicGenreRepository musicGenreRepository = new(context);
+        
+        ArtistRepository artistRepository = new(context);
+        ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
+        
         if (folder is null)
         {
             Logger.Encoder($"Folder not found: {FolderId}", LogEventLevel.Error);
@@ -56,71 +64,77 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
 
         if (!Directory.Exists(folderMetaData.BasePath))
         {
-            Directory.CreateDirectory(folderMetaData.BasePath);
+            if (!OperatingSystem.IsWindows())
+            {
+                UnixFileMode unixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                                            UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
+                                            UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute;
+                
+                Directory.CreateDirectory(folderMetaData.BasePath, unixFileMode);
+            }
+            else
+            {
+                Directory.CreateDirectory(folderMetaData.BasePath);
+            }
             Logger.Encoder($"{folderMetaData.BasePath} is created", LogEventLevel.Verbose);
         }
         
         await using MediaScan mediaScan = new();
+        
         MediaFolderExtend mediaFolder =
             (await mediaScan.DisableRegexFilter().EnableFileListing().Process(folderMetaData.BasePath)).First();
+        mediaFolder.Files?.Clear();
         
         Logger.App("Matched: " + folderMetaData.ReleaseName + " - " + Id);
-        AddReleaseJob addReleaseOnlyJob = new AddReleaseJob()
-        {
-            LibraryId = folder.FolderLibraries.First().LibraryId,
-            Id = Id,
-            BaseFolder = folder,
-            MediaFolder = mediaFolder
-        };
-        await addReleaseOnlyJob.Handle();
+        jobDispatcher.DispatchJob<AddReleaseOnlyJob>(LibraryId, Id, folder, mediaFolder);
         
-        foreach (EncoderProfile profile in profiles)
+        await Parallel.ForEachAsync(profiles, async (profile, t) =>
         {
-            int fileCount = 0;
-            IOrderedEnumerable<MediaFile> files = folderMetaData.Files.OrderBy(x => x.Name);
-            foreach (MediaFile mediaFile in files)
+            List<MediaFile> files = folderMetaData.Files.OrderBy(x => x.Name).ToList();
+            await Parallel.ForEachAsync(files, t, (mediaFile, y) =>
             {
-                fileCount++;
                 if (string.IsNullOrEmpty(mediaFile.Path))
                 {
                     Logger.Encoder($"File path is empty: {mediaFile.Name}", LogEventLevel.Error);
-                    continue;
+                    return ValueTask.CompletedTask;
                 }
+
                 TagLib.File tagFile = TagLib.File.Create(mediaFile.Path);
                 string recordingName = tagFile.Tag.Title ?? mediaFile.Name;
-                int trackNumber = tagFile.Tag.Track > 0 ? (int)tagFile.Tag.Track : fileCount;
+                int trackNumber = tagFile.Tag.Track > 0 ? (int)tagFile.Tag.Track : files.IndexOf(mediaFile) + 1;
                 MusicBrainzTrack? foundTrack = folderMetaData.MusicBrainzRelease.Media.SelectMany(x => x.Tracks)
                     .FirstOrDefault(x =>
                         (
                             x.Title.ContainsSanitized(recordingName) &&
                             x.Position == trackNumber
-                        ) ||
+                        ) || 
                         (
-                            x.Title.ContainsSanitized(mediaFile.Name) &&
-                            x.Position == trackNumber
+                            x.Title.ContainsSanitized(mediaFile.Name) && 
+                            x.Title.ContainsSanitized(recordingName)
                         )
                     );
                 if (foundTrack is null)
                 {
                     foundTrack = folderMetaData.MusicBrainzRelease.Media.SelectMany(x => x.Tracks)
-                        .FirstOrDefault(x =>x.Position == trackNumber);
+                        .FirstOrDefault(x => x.Position == trackNumber);
                     if (foundTrack is null)
                     {
                         Logger.Encoder($"Track not found in MusicBrainz: {recordingName}", LogEventLevel.Error);
-                        continue;
+                        return ValueTask.CompletedTask;
                     }
                 }
-                
+
                 jobDispatcher.DispatchJob<EncodeMusicJob>(
-                    profile, 
-                    folder, 
-                    folderMetaData, 
+                    profile,
+                    folder,
+                    folderMetaData,
                     mediaFile,
-                    foundTrack 
+                    foundTrack,
+                    LibraryId
                 );
-                
-            }
-        }
+                return ValueTask.CompletedTask;
+            });
+        });
     }
 
     private async Task<FolderMetadata?> GetFolderMetaData(Folder folder)

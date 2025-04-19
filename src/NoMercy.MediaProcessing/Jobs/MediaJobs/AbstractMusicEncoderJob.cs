@@ -15,6 +15,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public abstract class AbstractMusicEncoderJob : IShouldQueue
 {
+    public Ulid LibraryId { get; set; }
     public Guid Id { get; set; }
     public Folder Folder { get; set; } = null!;
 

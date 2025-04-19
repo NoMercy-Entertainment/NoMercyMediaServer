@@ -188,6 +188,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
                 Logger.App("Adding music files to library", LogEventLevel.Verbose);
                 JobDispatcher.Dispatch(new ProcessMusicFolderJob
                 {
+                    LibraryId = library.Id,
                     FolderId = request.FolderId,
                     Id = request.Files[0].Id.ToGuid(),
                     InputFolder = request.Files[0].Path,
