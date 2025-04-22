@@ -98,7 +98,7 @@ jobs:
       - name: Install Package Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm createrepo-c dpkg-dev
+          sudo apt-get install -y rpm createrepo-c dpkg-dev devscripts fakeroot
 
       - name: Setup Package Directories
         run: |
@@ -116,37 +116,36 @@ jobs:
           
           # Function to create DEB package
           create_deb_package() {
-          local name=$1
-          local friendly_name=$2
-          local bin_path=$3
-          local desktop_file=$4
-          
-          local PACKAGE_ROOT=./packages/debian-${name}
-          mkdir -p $PACKAGE_ROOT/{DEBIAN,usr/{bin,share/{applications,icons/hicolor/scalable/apps}}}
-          
-          # Copy files
-          cp ${bin_path} $PACKAGE_ROOT/usr/bin/${name}
-          cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} $PACKAGE_ROOT/usr/share/applications/
-          cp ./src/NoMercy.Server/Assets/Linux/icon.png $PACKAGE_ROOT/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-          
-          cat > $PACKAGE_ROOT/DEBIAN/control << EOF
+            local name=$1
+            local friendly_name=$2
+            local bin_path=$3
+            local desktop_file=$4
+            
+            local PACKAGE_ROOT=./packages/debian-${name}
+            mkdir -p $PACKAGE_ROOT/{DEBIAN,usr/{bin,share/{applications,icons/hicolor/scalable/apps}}}
+            
+            # Copy files
+            cp ${bin_path} $PACKAGE_ROOT/usr/bin/${name}
+            cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} $PACKAGE_ROOT/usr/share/applications/
+            cp ./src/NoMercy.Server/Assets/Linux/icon.png $PACKAGE_ROOT/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+            
+            cat > $PACKAGE_ROOT/DEBIAN/control << EOF
           Package: ${name}
           Version: $VERSION
           Architecture: amd64
           Maintainer: NoMercy Entertainment <support@nomercy.tv>
           Description: ${friendly_name}
-          Modern Media Server Solution
           Depends: libc6
           Priority: optional
           Section: multimedia
           EOF
-          
-          dpkg-deb --build $PACKAGE_ROOT
-          mv $PACKAGE_ROOT.deb ./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb
-          
-          cd ./packages/apt/pool/main/n/${name}
-          ln -sf ${name}_${VERSION}_amd64.deb ${name}_latest_amd64.deb
-          cd -
+            
+            dpkg-deb --build $PACKAGE_ROOT
+            mv $PACKAGE_ROOT.deb ./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb
+            
+            cd ./packages/apt/pool/main/n/${name}
+            ln -sf ${name}_${VERSION}_amd64.deb ${name}_latest_amd64.deb
+            cd -
           }
           
           # Create package directories
@@ -157,157 +156,242 @@ jobs:
           create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
           create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
 
-          - name: Build RPM Packages
-            run: |
-              VERSION=${{ steps.get-version.outputs.version }}
-              
-              # Function to create RPM package
-              create_rpm_package() {
-                local name=$1
-                local friendly_name=$2
-                local bin_path=$3
-                local desktop_file=$4
-              
-                # Copy source files
-                cp ${bin_path} ~/rpmbuild/SOURCES/${name}
-                cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} ~/rpmbuild/SOURCES/
-                cp ./src/NoMercy.Server/Assets/Linux/icon.png ~/rpmbuild/SOURCES/
-              
-                cat > ~/rpmbuild/SPECS/${name}.spec << EOF
-              Name: ${name}
-              Version: $VERSION
-              Release: 1%{?dist}
-              Summary: ${friendly_name}
-              License: Proprietary
-              URL: https://nomercy.tv
-              BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-              
-              %description
-              Modern Media Server Solution
-              
-              %install
-              mkdir -p %{buildroot}/usr/bin
-              mkdir -p %{buildroot}/usr/share/applications
-              mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
-              cp %{_sourcedir}/${name} %{buildroot}/usr/bin/
-              cp %{_sourcedir}/${desktop_file} %{buildroot}/usr/share/applications/
-              cp %{_sourcedir}/icon.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-              chmod 755 %{buildroot}/usr/bin/${name}
-              
-              %files
-              %attr(755,root,root) /usr/bin/${name}
-              %attr(644,root,root) /usr/share/applications/${desktop_file}
-              %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-              
-              %clean
-              rm -rf %{buildroot}
-              
-              %changelog
-              * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - $VERSION-1
-              - Initial package
-              EOF
-              
-                # Build RPM package
-                rpmbuild -bb ~/rpmbuild/SPECS/${name}.spec
-              
-                # Move and create symlink
-                mv ~/rpmbuild/RPMS/x86_64/${name}-${VERSION}-1.x86_64.rpm packages/rpm/pool/x86_64/
-                cd packages/rpm/pool/x86_64
-                ln -sf ${name}-${VERSION}-1.x86_64.rpm ${name}-latest.x86_64.rpm
-                cd -
-              }
-              
-              # Build packages
-              create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-              create_rpm_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-              create_rpm_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
-              
-              # Generate repo metadata
-              createrepo_c packages/rpm
+      - name: Build RPM Packages
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }}
+          
+          # Function to create RPM package
+          create_rpm_package() {
+            local name=$1
+            local friendly_name=$2
+            local bin_path=$3
+            local desktop_file=$4
+          
+            # Copy source files
+            cp ${bin_path} ~/rpmbuild/SOURCES/${name}
+            cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} ~/rpmbuild/SOURCES/
+            cp ./src/NoMercy.Server/Assets/Linux/icon.png ~/rpmbuild/SOURCES/
+          
+            cat > ~/rpmbuild/SPECS/${name}.spec << EOF
+          Name: ${name}
+          Version: $VERSION
+          Release: 1%{?dist}
+          Summary: ${friendly_name}
+          License: Proprietary
+          URL: https://nomercy.tv
+          BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+          
+          %description
+          Modern Media Server Solution
+          
+          %install
+          mkdir -p %{buildroot}/usr/bin
+          mkdir -p %{buildroot}/usr/share/applications
+          mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
+          cp %{_sourcedir}/${name} %{buildroot}/usr/bin/
+          cp %{_sourcedir}/${desktop_file} %{buildroot}/usr/share/applications/
+          cp %{_sourcedir}/icon.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+          chmod 755 %{buildroot}/usr/bin/${name}
+          
+          %files
+          %attr(755,root,root) /usr/bin/${name}
+          %attr(644,root,root) /usr/share/applications/${desktop_file}
+          %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+          
+          %clean
+          rm -rf %{buildroot}
+          
+          %changelog
+          * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - $VERSION-1
+          - Initial package
+          EOF
+          
+            # Build RPM package
+            rpmbuild -bb ~/rpmbuild/SPECS/${name}.spec
+          
+            # Move and create symlink
+            mv ~/rpmbuild/RPMS/x86_64/${name}-${VERSION}-1.x86_64.rpm packages/rpm/pool/x86_64/
+            cd packages/rpm/pool/x86_64
+            ln -sf ${name}-${VERSION}-1.x86_64.rpm ${name}-latest.x86_64.rpm
+            cd -
+          }
+          
+          # Build packages
+          create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
+          create_rpm_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
+          create_rpm_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+          
+          # Generate repo metadata
+          createrepo_c packages/rpm
+          
+      - name: Build Arch Packages
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }}
 
-          - name: Generate Repository Index
-            run: |
-              VERSION=${{ steps.get-version.outputs.version }}
-              
-              # Function to get package versions
-              get_versions() {
-                local path=$1
-                local pattern=$2
-                cd $path
-                ls -1 $pattern | grep -v latest | sed 's/.*[_-]\([0-9.]*\)[_-].*$/\1/' | sort -V
-                cd -
-              }
-              
-              # Get versions for all packages
-              MS_DEB_VERSIONS=$(get_versions packages/apt/pool/main/n/nomercymediaserver "*.deb")
-              UP_DEB_VERSIONS=$(get_versions packages/apt/pool/main/n/nomercyupdater "*.deb")
-              APP_DEB_VERSIONS=$(get_versions packages/apt/pool/main/n/nomercyapp "*.deb")
-              
-              MS_RPM_VERSIONS=$(get_versions packages/rpm/pool/x86_64 "nomercymediaserver-*.rpm")
-              UP_RPM_VERSIONS=$(get_versions packages/rpm/pool/x86_64 "nomercyupdater-*.rpm")
-              APP_RPM_VERSIONS=$(get_versions packages/rpm/pool/x86_64 "nomercyapp-*.rpm")
-              
-              cat > packages/index.html << EOF
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <title>NoMercy Package Repository</title>
-              </head>
-              <body>
-                <h1>NoMercy Package Repository</h1>
-                <h2>Installation Instructions</h2>
-              
-                <h3>Latest Version ($VERSION)</h3>
-              
-                <h4>Debian/Ubuntu</h4>
-                <pre>
-              # For latest version
-              echo "deb [trusted=yes] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
-              sudo apt update
-              sudo apt install nomercymediaserver nomercyupdater nomercyapp
-              </pre>
-              
-                <h4>RedHat/Fedora</h4>
-                <pre>
-              # For latest version
-              sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo
-              sudo dnf install nomercymediaserver nomercyupdater nomercyapp
-              </pre>
-              
-                <h3>Available Versions</h3>
-              
-                <h4>DEB Packages - MediaServer</h4>
-                <ul>
-                $(for ver in $MS_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
-                </ul>
-              
-                <h4>DEB Packages - Updater</h4>
-                <ul>
-                $(for ver in $UP_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
-                </ul>
-              
-                <h4>DEB Packages - App</h4>
-                <ul>
-                $(for ver in $APP_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
-                </ul>
-              
-                <h4>RPM Packages - MediaServer</h4>
-                <ul>
-                $(for ver in $MS_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
-                </ul>
-              
-                <h4>RPM Packages - Updater</h4>
-                <ul>
-                $(for ver in $UP_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
-                </ul>
-              
-                <h4>RPM Packages - App</h4>
-                <ul>
-                $(for ver in $APP_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
-                </ul>
-              </body>
-              </html>
-              EOF
+          # Function to create Arch package
+          create_arch_package() {
+            local name=$1
+            local friendly_name=$2
+            local bin_path=$3
+            local desktop_file=$4
+
+            local PACKAGE_ROOT=./packages/arch-${name}
+            mkdir -p $PACKAGE_ROOT
+
+            cat > $PACKAGE_ROOT/PKGBUILD << EOF
+          pkgname=${name}
+          pkgver=${VERSION}
+          pkgrel=1
+          pkgdesc="${friendly_name}"
+          arch=('x86_64')
+          url="https://nomercy.tv"
+          license=('custom')
+          depends=('glibc')
+          provides=("${name}")
+          conflicts=("${name}")
+
+          package() {
+            install -Dm755 "${bin_path}" "\${pkgdir}/usr/bin/${name}"
+            install -Dm644 "../src/NoMercy.Server/Assets/Linux/${desktop_file}" "\${pkgdir}/usr/share/applications/${desktop_file}"
+            install -Dm644 "../src/NoMercy.Server/Assets/Linux/icon.png" "\${pkgdir}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
+          }
+          EOF
+
+            # Build package
+            cd $PACKAGE_ROOT
+            makepkg -f
+            cd -
+
+            # Move and create symlink
+            mv $PACKAGE_ROOT/${name}-${VERSION}-1-x86_64.pkg.tar.zst ./packages/arch/pool/x86_64/
+            cd ./packages/arch/pool/x86_64
+            ln -sf ${name}-${VERSION}-1-x86_64.pkg.tar.zst ${name}-latest-x86_64.pkg.tar.zst
+            cd -
+          }
+
+          # Build packages
+          create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "../../output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
+          create_arch_package "nomercyupdater" "NoMercy-Updater" "../../output/NoMercyUpdater" "NoMercy-Updater.desktop"
+          create_arch_package "nomercyapp" "NoMercy-App" "../../output/NoMercyApp" "NoMercy-App.desktop"
+
+          # Generate repo database
+          cd packages/arch/pool/x86_64
+          repo-add nomercy.db.tar.gz *.pkg.tar.zst
+          cd -
+
+      - name: Generate Repository Index
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }}
+
+          # Function to get package versions
+          get_versions() {
+            local path=$1
+            local pattern=$2
+            cd $path
+            ls -1 $pattern | grep -v latest | sed 's/.*[_-]\([0-9.]*\)[_-].*$/\1/' | sort -V
+            cd -
+          }
+
+          # Get versions for all packages
+          MS_DEB_VERSIONS=$(get_versions packages/apt/pool/main/n/nomercymediaserver "*.deb")
+          UP_DEB_VERSIONS=$(get_versions packages/apt/pool/main/n/nomercyupdater "*.deb")
+          APP_DEB_VERSIONS=$(get_versions packages/apt/pool/main/n/nomercyapp "*.deb")
+
+          MS_RPM_VERSIONS=$(get_versions packages/rpm/pool/x86_64 "nomercymediaserver-*.rpm")
+          UP_RPM_VERSIONS=$(get_versions packages/rpm/pool/x86_64 "nomercyupdater-*.rpm")
+          APP_RPM_VERSIONS=$(get_versions packages/rpm/pool/x86_64 "nomercyapp-*.rpm")
+
+          MS_ARCH_VERSIONS=$(get_versions packages/arch/pool/x86_64 "nomercymediaserver-*.pkg.tar.zst")
+          UP_ARCH_VERSIONS=$(get_versions packages/arch/pool/x86_64 "nomercyupdater-*.pkg.tar.zst")
+          APP_ARCH_VERSIONS=$(get_versions packages/arch/pool/x86_64 "nomercyapp-*.pkg.tar.zst")
+
+          cat > packages/index.html << EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>NoMercy Package Repository</title>
+          </head>
+          <body>
+            <h1>NoMercy Package Repository</h1>
+            <h2>Installation Instructions</h2>
+
+            <h3>Latest Version ($VERSION)</h3>
+
+            <h4>Debian/Ubuntu</h4>
+            <pre>
+          # For latest version
+          echo "deb [trusted=yes] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
+          sudo apt update
+          sudo apt install nomercymediaserver nomercyupdater nomercyapp
+          </pre>
+
+            <h4>RedHat/Fedora</h4>
+            <pre>
+          # For latest version
+          sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo
+          sudo dnf install nomercymediaserver nomercyupdater nomercyapp
+          </pre>
+
+            <h4>Arch Linux</h4>
+            <pre>
+          # For latest version
+          echo "[nomercy]
+          Server = https://repo.nomercy.tv/arch/pool/x86_64" | sudo tee /etc/pacman.d/nomercy-repo
+          sudo pacman-key --recv-key support@nomercy.tv
+          sudo pacman-key --lsign-key support@nomercy.tv
+          sudo pacman -Sy
+          sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
+          </pre>
+
+            <h3>Available Versions</h3>
+
+            <h4>DEB Packages - MediaServer</h4>
+            <ul>
+            $(for ver in $MS_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
+            </ul>
+
+            <h4>DEB Packages - Updater</h4>
+            <ul>
+            $(for ver in $UP_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
+            </ul>
+
+            <h4>DEB Packages - App</h4>
+            <ul>
+            $(for ver in $APP_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
+            </ul>
+
+            <h4>RPM Packages - MediaServer</h4>
+            <ul>
+            $(for ver in $MS_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
+            </ul>
+
+            <h4>RPM Packages - Updater</h4>
+            <ul>
+            $(for ver in $UP_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
+            </ul>
+
+            <h4>RPM Packages - App</h4>
+            <ul>
+            $(for ver in $APP_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
+            </ul>
+
+            <h4>Arch Packages - MediaServer</h4>
+            <ul>
+            $(for ver in $MS_ARCH_VERSIONS; do echo "<li>$ver</li>"; done)
+            </ul>
+
+            <h4>Arch Packages - Updater</h4>
+            <ul>
+            $(for ver in $UP_ARCH_VERSIONS; do echo "<li>$ver</li>"; done)
+            </ul>
+
+            <h4>Arch Packages - App</h4>
+            <ul>
+            $(for ver in $APP_ARCH_VERSIONS; do echo "<li>$ver</li>"; done)
+            </ul>
+          </body>
+          </html>
+          EOF
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
