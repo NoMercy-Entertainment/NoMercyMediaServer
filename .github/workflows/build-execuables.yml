@@ -258,6 +258,7 @@ jobs:
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
+        id: artifact-upload-step
         with:
           name: build-artifacts
           retention-days: 1
