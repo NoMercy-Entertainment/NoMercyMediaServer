@@ -249,3 +249,11 @@ jobs:
           asset_path: ./output/NoMercyApp-linux-x64
           asset_name: NoMercyApp-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}
           asset_content_type: application/x-executable
+          
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            ./output/NoMercyMediaServer-linux-x64
+            ./src/NoMercy.Server/Assets/Linux/

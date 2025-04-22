@@ -3,6 +3,10 @@ name: Package Repository
 on:
   release:
     types: [published]
+  workflow_run:
+    workflows: ["Build Executables"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -15,6 +19,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./
+
+      - name: Setup File Structure
+        run: |
+          mkdir -p ./output
+          mv ./NoMercyMediaServer-linux-x64 ./output/NoMercyMediaServer
+          chmod +x ./output/NoMercyMediaServer
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -83,11 +99,11 @@ jobs:
           EOF
 
           # Build package
-          dpkg-deb --build $PACKAGE_ROOT
-          mv debian.deb packages/apt/pool/main/n/nomercymediaserver/nomercymediaserver_${VERSION}_amd64.deb
+          dpkg-deb --build ./packages/debian
+          mv ./packages/debian.deb ./packages/apt/pool/main/n/nomercymediaserver/nomercymediaserver_${VERSION}_amd64.deb
 
           # Create symlink to latest
-          cd packages/apt/pool/main/n/nomercymediaserver
+          cd ./packages/apt/pool/main/n/nomercymediaserver
           ln -sf nomercymediaserver_${VERSION}_amd64.deb nomercymediaserver_latest_amd64.deb
 
       - name: Generate APT Repository
