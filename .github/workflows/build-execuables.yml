@@ -134,7 +134,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get-version.outputs.version }}
-          name: NoMercy MediaServer v${{ steps.get-version.outputs.version }}
+          release_name: NoMercy MediaServer v${{ steps.get-version.outputs.version }}
           body: |            
             ## What's New
             This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
