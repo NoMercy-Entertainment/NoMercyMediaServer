@@ -98,7 +98,20 @@ jobs:
       - name: Install Package Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm createrepo-c dpkg-dev devscripts fakeroot
+          sudo apt-get install -y rpm createrepo-c dpkg-dev devscripts fakeroot base-devel binutils
+          
+          # Install pacman and its build tools
+          wget https://github.com/archlinux/arch-install-scripts/releases/download/v28/arch-install-scripts-28-1-any.pkg.tar.zst
+          sudo pacman -U --noconfirm arch-install-scripts-28-1-any.pkg.tar.zst
+          
+          # Install makepkg
+          git clone https://github.com/archlinux/pacman.git
+          cd pacman
+          ./autogen.sh
+          ./configure
+          make
+          sudo make install
+          cd ..
 
       - name: Setup Package Directories
         run: |
