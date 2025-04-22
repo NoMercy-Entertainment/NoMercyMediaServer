@@ -37,34 +37,60 @@ jobs:
       - name: Publish NoMercy.Server
         run: |
           mkdir -p ./output
-      
-          # Publish for Linux
+          
+          # Linux Build
           dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj --configuration Release --runtime linux-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyMediaServer --output ./output
+          chmod +x ./output/NoMercyMediaServer
+          mkdir -p ./output/linux-package/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
+          cp ./output/NoMercyMediaServer ./output/linux-package/usr/bin/nomercymediaserver
+          cp ./src/NoMercy.Server/Assets/Linux/NoMercy-MediaServer.desktop ./output/linux-package/usr/share/applications/
+          cp ./src/NoMercy.Server/Assets/icon.png ./output/linux-package/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
+          tar -czf ./output/NoMercyMediaServer-linux-x64.tar.gz -C ./output/linux-package .
           mv ./output/NoMercyMediaServer ./output/NoMercyMediaServer-linux-x64
-      
-          # Publish for Windows
+
+          # Windows Build
           dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj --configuration Release --runtime win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyMediaServer --output ./output
           mv ./output/NoMercyMediaServer.exe ./output/NoMercyMediaServer-windows-x64.exe
-      
-          # Publish for macOS
+
+          # macOS Build
           dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj --configuration Release --runtime osx-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyMediaServer --output ./output
+          mkdir -p ./output/NoMercyMediaServer.app/Contents/{MacOS,Resources}
+          cp ./output/NoMercyMediaServer ./output/NoMercyMediaServer.app/Contents/MacOS/
+          cp ./src/NoMercy.Server/Assets/macOS/Info.plist ./output/NoMercyMediaServer.app/Contents/
+          cp ./src/NoMercy.Server/Assets/icon.icns ./output/NoMercyMediaServer.app/Contents/Resources/AppIcon.icns
+          chmod +x ./output/NoMercyMediaServer.app/Contents/MacOS/NoMercyMediaServer
+          tar -czf ./output/NoMercyMediaServer-macos-x64.tar.gz -C ./output NoMercyMediaServer.app
           mv ./output/NoMercyMediaServer ./output/NoMercyMediaServer-macos-x64
-          
+
+
       - name: Publish NoMercy.Updater
         run: |
           mkdir -p ./output
-      
-          # Publish for Linux
+
+          # Linux Build
           dotnet publish ./src/NoMercy.Updater/NoMercy.Updater.csproj --configuration Release --runtime linux-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyUpdater --output ./output
+          chmod +x ./output/NoMercyUpdater
+          mkdir -p ./output/updater-linux-package/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
+          cp ./output/NoMercyUpdater ./output/updater-linux-package/usr/bin/nomercyupdater
+          cp ./src/NoMercy.Server/Assets/Linux/NoMercy-Updater.desktop ./output/updater-linux-package/usr/share/applications/
+          cp ./src/NoMercy.Server/Assets/icon.png ./output/updater-linux-package/usr/share/icons/hicolor/scalable/apps/NoMercy-Updater.png
+          tar -czf ./output/NoMercyUpdater-linux-x64.tar.gz -C ./output/updater-linux-package .
           mv ./output/NoMercyUpdater ./output/NoMercyUpdater-linux-x64
       
-          # Publish for Windows
+          # Windows Build
           dotnet publish ./src/NoMercy.Updater/NoMercy.Updater.csproj --configuration Release --runtime win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyUpdater --output ./output
           mv ./output/NoMercyUpdater.exe ./output/NoMercyUpdater-windows-x64.exe
       
-          # Publish for macOS
+          # macOS Build
           dotnet publish ./src/NoMercy.Updater/NoMercy.Updater.csproj --configuration Release --runtime osx-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyUpdater --output ./output
+          mkdir -p ./output/NoMercyUpdater.app/Contents/{MacOS,Resources}
+          cp ./output/NoMercyUpdater ./output/NoMercyUpdater.app/Contents/MacOS/
+          cp ./src/NoMercy.Server/Assets/macOS/Info.plist.updater ./output/NoMercyUpdater.app/Contents/Info.plist
+          cp ./src/NoMercy.Server/Assets/icon.icns ./output/NoMercyUpdater.app/Contents/Resources/AppIcon.icns
+          chmod +x ./output/NoMercyUpdater.app/Contents/MacOS/NoMercyUpdater
+          tar -czf ./output/NoMercyUpdater-macos-x64.tar.gz -C ./output NoMercyUpdater.app
           mv ./output/NoMercyUpdater ./output/NoMercyUpdater-macos-x64
+
 
       - name: Pull App Files
         uses: actions/checkout@v4
@@ -82,18 +108,31 @@ jobs:
       - name: Publish NoMercy.App
         run: |
           mkdir -p ./output
-      
-          # Publish for Linux
+
+          # Linux Build
           dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime linux-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp --output ./output
+          chmod +x ./output/NoMercyApp
+          mkdir -p ./output/app-linux-package/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
+          cp ./output/NoMercyApp ./output/app-linux-package/usr/bin/nomercyapp
+          cp ./src/NoMercy.Server/Assets/Linux/NoMercy-App.desktop ./output/app-linux-package/usr/share/applications/
+          cp ./src/NoMercy.Server/Assets/icon.png ./output/app-linux-package/usr/share/icons/hicolor/scalable/apps/NoMercy-App.png
+          tar -czf ./output/NoMercyApp-linux-x64.tar.gz -C ./output/app-linux-package .
           mv ./output/NoMercyApp ./output/NoMercyApp-linux-x64
       
-          # Publish for Windows
+          # Windows Build
           dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp --output ./output
           mv ./output/NoMercyApp.exe ./output/NoMercyApp-windows-x64.exe
       
-          # Publish for macOS
+          # macOS Build
           dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime osx-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp --output ./output
+          mkdir -p ./output/NoMercyApp.app/Contents/{MacOS,Resources}
+          cp ./output/NoMercyApp ./output/NoMercyApp.app/Contents/MacOS/
+          cp ./src/NoMercy.Server/Assets/macOS/Info.plist.app ./output/NoMercyApp.app/Contents/Info.plist
+          cp ./src/NoMercy.Server/Assets/icon.icns ./output/NoMercyApp.app/Contents/Resources/AppIcon.icns
+          chmod +x ./output/NoMercyApp.app/Contents/MacOS/NoMercyApp
+          tar -czf ./output/NoMercyApp-macos-x64.tar.gz -C ./output NoMercyApp.app
           mv ./output/NoMercyApp ./output/NoMercyApp-macos-x64
+        
           
       # Get the version of the project
       - name: Get Version
@@ -137,9 +176,9 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Upload Windows Release Asset
-      - name: Upload Windows Release Asset
+      
+      # Upload Windows Release Assets
+      - name: Upload Windows Release Assets
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -148,7 +187,7 @@ jobs:
           asset_path: ./output/NoMercyMediaServer-windows-x64.exe
           asset_name: NoMercyMediaServer-windows-x64-${{ steps.get_short_sha.outputs.short_sha }}.exe
           asset_content_type: application/vnd.microsoft.portable-executable
-
+    
       - name: Upload Windows Updater Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -158,7 +197,7 @@ jobs:
           asset_path: ./output/NoMercyUpdater-windows-x64.exe
           asset_name: NoMercyUpdater-windows-x64-${{ steps.get_short_sha.outputs.short_sha }}.exe
           asset_content_type: application/vnd.microsoft.portable-executable
-
+      
       - name: Upload Windows App Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -168,27 +207,27 @@ jobs:
           asset_path: ./output/NoMercyApp-windows-x64.exe
           asset_name: NoMercyApp-windows-x64-${{ steps.get_short_sha.outputs.short_sha }}.exe
           asset_content_type: application/vnd.microsoft.portable-executable
-
-      # Upload macOS Release Asset
+        
+        # Upload macOS Release Assets
       - name: Upload macOS Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./output/NoMercyMediaServer-macos-x64
-          asset_name: NoMercyMediaServer-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}
-          asset_content_type: application/x-apple-diskimage
-
+          asset_path: ./output/NoMercyMediaServer-macos-x64.tar.gz
+          asset_name: NoMercyMediaServer-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}.tar.gz
+          asset_content_type: application/gzip
+    
       - name: Upload macOS Updater Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./output/NoMercyUpdater-macos-x64
-          asset_name: NoMercyUpdater-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}
-          asset_content_type: application/x-apple-diskimage
+          asset_path: ./output/NoMercyUpdater-macos-x64.tar.gz
+          asset_name: NoMercyUpdater-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}.tar.gz
+          asset_content_type: application/gzip
 
       - name: Upload macOS App Release Asset
         uses: actions/upload-release-asset@v1
@@ -196,30 +235,30 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./output/NoMercyApp-macos-x64
-          asset_name: NoMercyApp-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}
-          asset_content_type: application/x-apple-diskimage
+          asset_path: ./output/NoMercyApp-macos-x64.tar.gz
+          asset_name: NoMercyApp-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}.tar.gz
+          asset_content_type: application/gzip
 
-      # Upload Linux Release Asset
+      # Upload Linux Release Assets
       - name: Upload Linux Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./output/NoMercyMediaServer-linux-x64
-          asset_name: NoMercyMediaServer-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}
-          asset_content_type: application/x-executable
-
+          asset_path: ./output/NoMercyMediaServer-linux-x64.tar.gz
+          asset_name: NoMercyMediaServer-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}.tar.gz
+          asset_content_type: application/gzip
+    
       - name: Upload Linux Updater Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./output/NoMercyUpdater-linux-x64
-          asset_name: NoMercyUpdater-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}
-          asset_content_type: application/x-executable
+          asset_path: ./output/NoMercyUpdater-linux-x64.tar.gz
+          asset_name: NoMercyUpdater-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}.tar.gz
+          asset_content_type: application/gzip
 
       - name: Upload Linux App Release Asset
         uses: actions/upload-release-asset@v1
@@ -227,6 +266,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./output/NoMercyApp-linux-x64
-          asset_name: NoMercyApp-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}
-          asset_content_type: application/x-executable
+          asset_path: ./output/NoMercyApp-linux-x64.tar.gz
+          asset_name: NoMercyApp-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}.tar.gz
+          asset_content_type: application/gzip
