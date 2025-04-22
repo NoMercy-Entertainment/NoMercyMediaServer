@@ -1,0 +1,203 @@
+name: Package Repository
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build_packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Install Package Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm createrepo-c dpkg-dev
+
+      - name: Get Version
+        uses: kzrnm/get-net-sdk-project-versions-action@v2
+        id: get-version
+        with:
+          proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
+
+      - name: Build Executables
+        run: |
+          dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:EnableCompressionInSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false \
+            /p:PublishReadyToRun=false \
+            /p:OutputFileName=NoMercyMediaServer \
+            --output ./output
+
+      - name: Setup Package Directories
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }}
+          mkdir -p packages/{apt,rpm,arch}
+          mkdir -p packages/apt/pool/main/n/nomercymediaserver
+          mkdir -p packages/apt/dists/stable/main/binary-amd64
+          mkdir -p packages/rpm/pool/x86_64
+          mkdir -p packages/rpm/repodata
+          mkdir -p packages/arch/pool/x86_64
+
+      - name: Build DEB Package
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }}
+          PACKAGE_ROOT=./packages/debian
+          mkdir -p $PACKAGE_ROOT/{DEBIAN,usr/{bin,share/{applications,icons/hicolor/scalable/apps}}}
+
+          # Copy files
+          cp ./output/NoMercyMediaServer $PACKAGE_ROOT/usr/bin/nomercymediaserver
+          cp ./src/NoMercy.Server/Assets/Linux/NoMercy-MediaServer.desktop $PACKAGE_ROOT/usr/share/applications/
+          cp ./src/NoMercy.Server/Assets/Linux/icon.png $PACKAGE_ROOT/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
+
+          # Create control file
+          cat > $PACKAGE_ROOT/DEBIAN/control << EOF
+          Package: nomercymediaserver
+          Version: $VERSION
+          Architecture: amd64
+          Maintainer: NoMercy Entertainment <support@nomercy.tv>
+          Description: NoMercy MediaServer
+           Modern Media Server Solution
+          Depends: libc6
+          Priority: optional
+          Section: multimedia
+          EOF
+
+          # Build package
+          dpkg-deb --build $PACKAGE_ROOT
+          mv debian.deb packages/apt/pool/main/n/nomercymediaserver/nomercymediaserver_${VERSION}_amd64.deb
+
+          # Create symlink to latest
+          cd packages/apt/pool/main/n/nomercymediaserver
+          ln -sf nomercymediaserver_${VERSION}_amd64.deb nomercymediaserver_latest_amd64.deb
+
+      - name: Generate APT Repository
+        run: |
+          cd packages/apt
+          dpkg-scanpackages pool/main > dists/stable/main/binary-amd64/Packages
+          gzip -k dists/stable/main/binary-amd64/Packages
+
+          cat > dists/stable/Release << EOF
+          Origin: NoMercy Entertainment
+          Label: NoMercy MediaServer
+          Suite: stable
+          Codename: stable
+          Version: ${{ steps.get-version.outputs.version }}
+          Architectures: amd64
+          Components: main
+          Description: NoMercy MediaServer Package Repository
+          EOF
+
+      - name: Build RPM Package
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }}
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          
+          # Copy files to rpmbuild dirs
+          cp ./output/NoMercyMediaServer ~/rpmbuild/SOURCES/nomercymediaserver
+          cp ./src/NoMercy.Server/Assets/Linux/NoMercy-MediaServer.desktop ~/rpmbuild/SOURCES/
+          cp ./src/NoMercy.Server/Assets/Linux/icon.png ~/rpmbuild/SOURCES/
+
+          cat > ~/rpmbuild/SPECS/nomercymediaserver.spec << EOF
+          Name: nomercymediaserver
+          Version: $VERSION
+          Release: 1%{?dist}
+          Summary: NoMercy MediaServer
+          License: Proprietary
+          URL: https://nomercy.tv
+
+          %description
+          Modern Media Server Solution
+
+          %install
+          mkdir -p %{buildroot}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
+          cp %{_sourcedir}/nomercymediaserver %{buildroot}/usr/bin/
+          cp %{_sourcedir}/NoMercy-MediaServer.desktop %{buildroot}/usr/share/applications/
+          cp %{_sourcedir}/icon.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
+
+          %files
+          /usr/bin/nomercymediaserver
+          /usr/share/applications/NoMercy-MediaServer.desktop
+          /usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
+          EOF
+
+          # Build package
+          rpmbuild -bb ~/rpmbuild/SPECS/nomercymediaserver.spec
+          mv ~/rpmbuild/RPMS/x86_64/*.rpm packages/rpm/pool/x86_64/nomercymediaserver-${VERSION}-1.x86_64.rpm
+
+          # Create symlink to latest
+          cd packages/rpm/pool/x86_64
+          ln -sf nomercymediaserver-${VERSION}-1.x86_64.rpm nomercymediaserver-latest.x86_64.rpm
+
+          # Generate repo metadata
+          createrepo packages/rpm
+
+      - name: Generate Repository Index
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }}
+          cat > packages/index.html << EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>NoMercy Package Repository</title>
+          </head>
+          <body>
+            <h1>NoMercy Package Repository</h1>
+            <h2>Installation Instructions</h2>
+
+            <h3>Latest Version ($VERSION)</h3>
+
+            <h4>Debian/Ubuntu</h4>
+            <pre>
+          # For latest version
+          echo "deb [trusted=yes] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
+          sudo apt update
+          sudo apt install nomercymediaserver
+
+          # For specific version
+          sudo apt install nomercymediaserver=$VERSION
+            </pre>
+
+            <h4>RedHat/Fedora</h4>
+            <pre>
+          # For latest version
+          sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo
+          sudo dnf install nomercymediaserver
+
+          # For specific version
+          sudo dnf install nomercymediaserver-$VERSION
+            </pre>
+
+            <h3>Available Versions</h3>
+            <ul>
+            \$(cd packages/apt/pool/main/n/nomercymediaserver && ls -1 *.deb | grep -v latest | sed 's/.*_\(.*\)_amd64.deb/<li>\1<\/li>/')
+            </ul>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./packages
+          cname: repo.nomercy.tv
