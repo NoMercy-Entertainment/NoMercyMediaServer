@@ -13,6 +13,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  actions: read
 
 jobs:
   build_packages:
@@ -22,20 +23,41 @@ jobs:
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: build-artifacts
           path: ./
 
+      - name: Check Artifacts
+        run: |
+          if [ ! -f "./artifacts/NoMercyMediaServer-linux-x64" ]; then
+            echo "Build artifacts not found, falling back to fresh build"
+            mkdir -p ./output
+            dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj \
+              --configuration Release \
+              --runtime linux-x64 \
+              --self-contained true \
+              /p:PublishSingleFile=true \
+              /p:IncludeNativeLibrariesForSelfExtract=true \
+              /p:IncludeAllContentForSelfExtract=true \
+              /p:EnableCompressionInSingleFile=true \
+              /p:DebugType=None \
+              /p:DebugSymbols=false \
+              /p:PublishReadyToRun=false \
+              /p:OutputFileName=NoMercyMediaServer \
+              --output ./output
+          else
+            mkdir -p ./output
+            mv ./artifacts/NoMercyMediaServer-linux-x64 ./output/NoMercyMediaServer
+            mv ./artifacts/Linux/* ./src/NoMercy.Server/Assets/Linux/
+          fi
+          chmod +x ./output/NoMercyMediaServer
+          
       - name: Setup File Structure
         run: |
           mkdir -p ./output
           mv ./NoMercyMediaServer-linux-x64 ./output/NoMercyMediaServer
           chmod +x ./output/NoMercyMediaServer
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "9.0.x"
 
       - name: Install Package Build Dependencies
         run: |
@@ -47,22 +69,6 @@ jobs:
         id: get-version
         with:
           proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
-
-      - name: Build Executables
-        run: |
-          dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj \
-            --configuration Release \
-            --runtime linux-x64 \
-            --self-contained true \
-            /p:PublishSingleFile=true \
-            /p:IncludeNativeLibrariesForSelfExtract=true \
-            /p:IncludeAllContentForSelfExtract=true \
-            /p:EnableCompressionInSingleFile=true \
-            /p:DebugType=None \
-            /p:DebugSymbols=false \
-            /p:PublishReadyToRun=false \
-            /p:OutputFileName=NoMercyMediaServer \
-            --output ./output
 
       - name: Setup Package Directories
         run: |
