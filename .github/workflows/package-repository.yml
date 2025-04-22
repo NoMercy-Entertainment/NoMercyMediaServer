@@ -159,19 +159,22 @@ jobs:
       - name: Build RPM Packages
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
-          
+
+          # Setup RPM build environment
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
           # Function to create RPM package
           create_rpm_package() {
             local name=$1
             local friendly_name=$2
             local bin_path=$3
             local desktop_file=$4
-          
+
             # Copy source files
             cp ${bin_path} ~/rpmbuild/SOURCES/${name}
             cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} ~/rpmbuild/SOURCES/
             cp ./src/NoMercy.Server/Assets/Linux/icon.png ~/rpmbuild/SOURCES/
-          
+
             cat > ~/rpmbuild/SPECS/${name}.spec << EOF
           Name: ${name}
           Version: $VERSION
@@ -180,10 +183,10 @@ jobs:
           License: Proprietary
           URL: https://nomercy.tv
           BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-          
+
           %description
           Modern Media Server Solution
-          
+
           %install
           mkdir -p %{buildroot}/usr/bin
           mkdir -p %{buildroot}/usr/share/applications
@@ -192,35 +195,35 @@ jobs:
           cp %{_sourcedir}/${desktop_file} %{buildroot}/usr/share/applications/
           cp %{_sourcedir}/icon.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
           chmod 755 %{buildroot}/usr/bin/${name}
-          
+
           %files
           %attr(755,root,root) /usr/bin/${name}
           %attr(644,root,root) /usr/share/applications/${desktop_file}
           %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-          
+
           %clean
           rm -rf %{buildroot}
-          
+
           %changelog
           * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - $VERSION-1
           - Initial package
           EOF
-          
+
             # Build RPM package
             rpmbuild -bb ~/rpmbuild/SPECS/${name}.spec
-          
+
             # Move and create symlink
             mv ~/rpmbuild/RPMS/x86_64/${name}-${VERSION}-1.x86_64.rpm packages/rpm/pool/x86_64/
             cd packages/rpm/pool/x86_64
             ln -sf ${name}-${VERSION}-1.x86_64.rpm ${name}-latest.x86_64.rpm
             cd -
           }
-          
+
           # Build packages
           create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
           create_rpm_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
           create_rpm_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
-          
+
           # Generate repo metadata
           createrepo_c packages/rpm
           
