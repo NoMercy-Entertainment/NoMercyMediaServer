@@ -45,12 +45,6 @@ jobs:
               --output ./output
             chmod +x ./output/NoMercyMediaServer
           
-      - name: Setup File Structure
-        run: |
-          mkdir -p ./output
-          mv ./NoMercyMediaServer-linux-x64 ./output/NoMercyMediaServer
-          chmod +x ./output/NoMercyMediaServer
-
       - name: Install Package Build Dependencies
         run: |
           sudo apt-get update
