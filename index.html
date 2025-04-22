@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NoMercy Package Repository</title>
+</head>
+<body>
+  <h1>NoMercy Package Repository</h1>
+  <h2>Installation Instructions</h2>
+
+  <h3>Latest Version (0.1.89)</h3>
+
+  <h4>Debian/Ubuntu</h4>
+  <pre>
+# For latest version
+echo "deb [trusted=yes] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
+sudo apt update
+sudo apt install nomercymediaserver
+
+# For specific version
+sudo apt install nomercymediaserver=0.1.89
+  </pre>
+
+  <h4>RedHat/Fedora</h4>
+  <pre>
+# For latest version
+sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo
+sudo dnf install nomercymediaserver
+
+# For specific version
+sudo dnf install nomercymediaserver-0.1.89
+  </pre>
+
+  <h3>Available Versions</h3>
+  <ul>
+  $(cd packages/apt/pool/main/n/nomercymediaserver && ls -1 *.deb | grep -v latest | sed 's/.*_\(.*\)_amd64.deb/<li>\1<\/li>/')
+  </ul>
+</body>
+</html>

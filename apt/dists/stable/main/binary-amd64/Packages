@@ -1,0 +1,15 @@
+Package: nomercymediaserver
+Version: 0.1.89
+Architecture: amd64
+Maintainer: NoMercy Entertainment <support@nomercy.tv>
+Depends: libc6
+Filename: pool/main/n/nomercymediaserver/nomercymediaserver_latest_amd64.deb
+Size: 69596036
+MD5sum: 1783b15f6af03a6e0d422272d74ebfb8
+SHA1: d524831c56382a1c968f54e4789731795192b0fc
+SHA256: 9898b5fff1feda47dc931ab335fb4b9f5740bbaad36d27abcea6cc2731f1807e
+Section: multimedia
+Priority: optional
+Description: NoMercy MediaServer
+ Modern Media Server Solution
+
