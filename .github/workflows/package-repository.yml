@@ -266,26 +266,26 @@ jobs:
 
           # Generate repo metadata
           createrepo_c packages/rpm
-          
+        
       - name: Build Arch Packages
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
-          
+
           # Function to create Arch package
           create_arch_package() {
             local name=$1
             local friendly_name=$2
             local bin_path=$3
             local desktop_file=$4
-          
+
             local PACKAGE_ROOT=./packages/arch-${name}
             mkdir -p $PACKAGE_ROOT/pkg/${name}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
-          
+
             # Copy files directly to package structure
             cp ${bin_path} $PACKAGE_ROOT/pkg/${name}/usr/bin/${name}
             cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} $PACKAGE_ROOT/pkg/${name}/usr/share/applications/
             cp ./src/NoMercy.Server/Assets/Linux/icon.png $PACKAGE_ROOT/pkg/${name}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-          
+
             # Create .PKGINFO
             cat > $PACKAGE_ROOT/pkg/${name}/.PKGINFO << EOF
           pkgname = ${name}
@@ -298,24 +298,24 @@ jobs:
           license = custom
           depend = glibc
           EOF
-          
+
             # Create package manually with tar and zstd
             cd $PACKAGE_ROOT/pkg
             tar -cf - ${name} | zstd -z -c -T0 > ../${name}-${VERSION}-1-x86_64.pkg.tar.zst
             cd ../../..
-          
+
             # Move and create symlink
             mv $PACKAGE_ROOT/${name}-${VERSION}-1-x86_64.pkg.tar.zst ./packages/arch/pool/x86_64/
             cd ./packages/arch/pool/x86_64
             ln -sf ${name}-${VERSION}-1-x86_64.pkg.tar.zst ${name}-latest-x86_64.pkg.tar.zst
             cd -
           }
-          
+
           # Build packages
-          create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "../../output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-          create_arch_package "nomercyupdater" "NoMercy-Updater" "../../output/NoMercyUpdater" "NoMercy-Updater.desktop"
-          create_arch_package "nomercyapp" "NoMercy-App" "../../output/NoMercyApp" "NoMercy-App.desktop"
-          
+          create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
+          create_arch_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
+          create_arch_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+
           # Generate repo database
           cd packages/arch/pool/x86_64
           tar --use-compress-program=zstd -cf nomercy.db.tar.zst *.pkg.tar.zst
