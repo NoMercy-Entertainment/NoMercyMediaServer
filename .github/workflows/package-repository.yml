@@ -98,12 +98,11 @@ jobs:
       - name: Install Package Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm createrepo-c dpkg-dev devscripts fakeroot base-devel binutils
-          
-          # Install pacman and its build tools
-          wget https://github.com/archlinux/arch-install-scripts/releases/download/v28/arch-install-scripts-28-1-any.pkg.tar.zst
-          sudo pacman -U --noconfirm arch-install-scripts-28-1-any.pkg.tar.zst
-          
+          sudo apt-get install -y rpm createrepo-c dpkg-dev devscripts fakeroot build-essential binutils autoconf automake libtool pkg-config
+
+          # Install dependencies for makepkg
+          sudo apt-get install -y git zstd libarchive-dev libcurl4-openssl-dev libgpgme-dev libssl-dev
+
           # Install makepkg
           git clone https://github.com/archlinux/pacman.git
           cd pacman
