@@ -21,6 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Setup .NET SDK for the NoMercy.Server project
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4.1.1
         continue-on-error: true
