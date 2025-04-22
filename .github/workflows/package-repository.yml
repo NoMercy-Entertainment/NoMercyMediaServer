@@ -29,22 +29,22 @@ jobs:
 
       - name: Build NoMercy.Server
         run: |
-            mkdir -p ./output
-            dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj \
-              --configuration Release \
-              --runtime linux-x64 \
-              --self-contained true \
-              /p:PublishSingleFile=true \
-              /p:IncludeNativeLibrariesForSelfExtract=true \
-              /p:IncludeAllContentForSelfExtract=true \
-              /p:EnableCompressionInSingleFile=true \
-              /p:DebugType=None \
-              /p:DebugSymbols=false \
-              /p:PublishReadyToRun=false \
-              /p:OutputFileName=NoMercyMediaServer \
-              --output ./output
-            chmod +x ./output/NoMercyMediaServer
-          
+          mkdir -p ./output
+          dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:EnableCompressionInSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false \
+            /p:PublishReadyToRun=false \
+            /p:OutputFileName=NoMercyMediaServer \
+            --output ./output
+          chmod +x ./output/NoMercyMediaServer
+
       - name: Build NoMercy.Updater
         run: |
           mkdir -p ./output
@@ -88,7 +88,7 @@ jobs:
             /p:OutputFileName=NoMercyApp \
             --output ./output
           chmod +x ./output/NoMercyApp
-          
+
       - name: Get Version
         uses: kzrnm/get-net-sdk-project-versions-action@v2
         id: get-version
@@ -98,7 +98,7 @@ jobs:
       - name: Install Package Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm createrepo-c dpkg-dev devscripts fakeroot build-essential binutils autoconf automake libtool pkg-config
+          sudo apt-get install -y rpm createrepo-c dpkg-dev devscripts fakeroot build-essential binutils autoconf automake libtool pkg-config gnupg
 
       - name: Install Arch Build Dependencies
         run: |
@@ -106,99 +106,136 @@ jobs:
             git pkg-config meson gcc libtool libgpgme-dev libarchive-dev ninja-build \
             libcurl4-openssl-dev libssl-dev curl gettext python3 python3-setuptools \
             dash gawk ca-certificates fakeroot fakechroot libarchive-tools
-          
+
           # Need a more recent version of Meson
-            sudo mkdir -p /usr/local/meson
-            sudo git clone https://github.com/mesonbuild/meson.git /usr/local/meson
-            [ -f /usr/bin/meson ] && {
-              mver=$(/usr/bin/meson --version)
-              sudo mv /usr/bin/meson /usr/bin/meson-${mver}
-            }
-            if [ -f /usr/local/meson/meson.py ]; then
-              sudo ln -s /usr/local/meson/meson.py /usr/bin/meson
-            else
-              echo "ERROR: cannot locate /usr/local/meson/meson.py"
+          sudo mkdir -p /usr/local/meson
+          sudo git clone https://github.com/mesonbuild/meson.git /usr/local/meson
+          [ -f /usr/bin/meson ] && {
+            mver=<span class="math-inline">\(/usr/bin/meson --version\)
+            sudo mv /usr/bin/meson /usr/bin/meson-</span>{mver}
+          }
+          if [ -f /usr/local/meson/meson.py ]; then
+            sudo ln -s /usr/local/meson/meson.py /usr/bin/meson
+          else
+            echo "ERROR: cannot locate /usr/local/meson/meson.py"
             exit 1
-            fi
-            
-            sudo rm -rf pacman
-            git clone https://gitlab.archlinux.org/pacman/pacman.git
-            cd pacman
-            meson setup -Ddoc=disabled build
-            ninja -C build
-            
-            [ -d build ] || {
-              echo "Directory pacman/build does not exist. Exiting."
-              exit 1
-            }
-            cd build
-            grep mirror scripts/libmakepkg/source/git.sh > /dev/null && {
+          fi
+
+          sudo rm -rf pacman
+          git clone https://gitlab.archlinux.org/pacman/pacman.git
+          cd pacman
+          meson setup -Ddoc=disabled build
+          ninja -C build
+
+          [ -d build ] || {
+            echo "Directory pacman/build does not exist. Exiting."
+            exit 1
+          }
+          cd build
+          grep mirror scripts/libmakepkg/source/git.sh > /dev/null && {
             cat scripts/libmakepkg/source/git.sh | sed -e "s/---mirror//" > /tmp/git$$
             cp /tmp/git$$ scripts/libmakepkg/source/git.sh
             rm -f /tmp/git$$
           }
-            
+
           sudo meson install --no-rebuild --quiet
 
       - name: Setup Package Directories
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
-          mkdir -p packages/{apt,rpm,arch}
+          mkdir -p packages/{apt,rpm,arch,debian,redhat}
           mkdir -p packages/apt/pool/main/n/nomercymediaserver
           mkdir -p packages/apt/dists/stable/main/binary-amd64
+          mkdir -p packages/debian/dists/stable/main/binary-amd64
           mkdir -p packages/rpm/pool/x86_64
           mkdir -p packages/rpm/repodata
+          mkdir -p packages/redhat/repodata
           mkdir -p packages/arch/pool/x86_64
+
+      - name: Generate APT Repository Metadata and Sign
+        run: |
+          # Create necessary directories
+          mkdir -p packages/apt/dists/stable/main/binary-amd64
+
+          # Generate Packages file
+          cd packages/apt
+          dpkg-scanpackages --arch amd64 pool/ > dists/stable/main/binary-amd64/Packages
+          gzip -k dists/stable/main/binary-amd64/Packages
+
+          # Generate Release file
+          cd dists/stable
+
+          # Calculate sizes and hashes
+          echo "Origin: NoMercy Entertainment" > Release
+          echo "Label: NoMercy" >> Release
+          echo "Suite: stable" >> Release
+          echo "Codename: stable" >> Release
+          echo "Version: 1.0" >> Release
+          echo "Architectures: amd64" >> Release
+          echo "Components: main" >> Release
+          echo "Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')" >> Release
+
+          # Add hashes
+          echo "SHA256:" >> Release
+          for file in $(find main -type f); do
+            echo " $(sha256sum $file | cut -d' ' -f1) $(wc -c < $file) <span class="math-inline">file" \>\> Release
+          done
+          # Import GPG private key
+          echo "</span>{{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+          # Sign the Release file
+          gpg --batch --detach-sig -o Release.gpg Release
+
+          # Generate an inline clear-signed file (optional)
+          gpg --clearsign -o InRelease Release
+
+          cd ../../..
 
       - name: Build DEB Packages
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
-          
+
           # Function to create DEB package
           create_deb_package() {
             local name=$1
             local friendly_name=$2
             local bin_path=$3
-            local desktop_file=$4
-            
-            local PACKAGE_ROOT=./packages/debian-${name}
+            local desktop_file=<span class="math-inline">4
+            local PACKAGE\_ROOT\=\./packages/debian-</span>{name}
             mkdir -p $PACKAGE_ROOT/{DEBIAN,usr/{bin,share/{applications,icons/hicolor/scalable/apps}}}
-            
-            # Copy files
-            cp ${bin_path} $PACKAGE_ROOT/usr/bin/${name}
-            cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} $PACKAGE_ROOT/usr/share/applications/
-            cp ./src/NoMercy.Server/Assets/Linux/icon.png $PACKAGE_ROOT/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-            
-            cat > $PACKAGE_ROOT/DEBIAN/control << EOF
-          Package: ${name}
-          Version: $VERSION
-          Architecture: amd64
-          Maintainer: NoMercy Entertainment <support@nomercy.tv>
-          Description: ${friendly_name}
-          Depends: libc6
-          Priority: optional
-          Section: multimedia
-          EOF
-            
-            dpkg-deb --build $PACKAGE_ROOT
-            mv $PACKAGE_ROOT.deb ./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb
-            
-            cd ./packages/apt/pool/main/n/${name}
-            ln -sf ${name}_${VERSION}_amd64.deb ${name}_latest_amd64.deb
-            cd -
-          }
-          
-          # Create package directories
-          mkdir -p packages/apt/pool/main/n/{nomercymediaserver,nomercyupdater,nomercyapp}
-          
-          # Build packages
-          create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-          create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-          create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
 
-      - name: Build RPM Packages
-        run: |
-          VERSION=${{ steps.get-version.outputs.version }}
+            # Copy files
+            cp ${bin_path} <span class="math-inline">PACKAGE\_ROOT/usr/bin/</span>{name}
+            cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} $PACKAGE_ROOT/usr/share/applications/
+            cp ./src/NoMercy.Server/Assets/Linux/icon.png <span class="math-inline">PACKAGE\_ROOT/usr/share/icons/hicolor/scalable/apps/</span>{friendly_name}.png
+
+            cat > $PACKAGE_ROOT/DEBIAN/control << EOF
+            Package: ${name}
+            Version: $VERSION
+            Architecture: amd64
+            Maintainer: NoMercy Entertainment <support@nomercy.tv>
+            Description: ${friendly_name}
+            Depends: libc6
+            Priority: optional
+            Section: multimedia
+            EOF
+
+            dpkg-deb --build $PACKAGE_ROOT
+            mv <span class="math-inline">PACKAGE\_ROOT\.deb \./packages/apt/pool/main/n/</span>{name}/<span class="math-inline">\{name\}\_</span>{VERSION}_amd64.deb
+
+            cd ./packages/apt/pool/main/n/${name}
+            ln -sf <span class="math-inline">\{name\}\_</span>{VERSION}_amd64.deb <span class="math-inline">\{name\}\_latest\_amd64\.deb
+            cd -
+            \}
+            # Create package directories
+            mkdir -p packages/apt/pool/main/n/\{nomercymediaserver,nomercyupdater,nomercyapp\}
+            # Build packages
+            create\_deb\_package "nomercymediaserver" "NoMercy-MediaServer" "\./output/NoMercyMediaServer" "NoMercy-MediaServer\.desktop"
+            create\_deb\_package "nomercyupdater" "NoMercy-Updater" "\./output/NoMercyUpdater" "NoMercy-Updater\.desktop"
+            create\_deb\_package "nomercyapp" "NoMercy-App" "\./output/NoMercyApp" "NoMercy-App\.desktop"
+            - name: Build RPM Packages and Sign Repository
+            run: \|
+            VERSION\=</span>{{ steps.get-version.outputs.version }}
 
           # Setup RPM build environment
           mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
@@ -211,63 +248,63 @@ jobs:
             local desktop_file=$4
 
             # Copy source files
-            cp ${bin_path} ~/rpmbuild/SOURCES/${name}
-            cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} ~/rpmbuild/SOURCES/
-            cp ./src/NoMercy.Server/Assets/Linux/icon.png ~/rpmbuild/SOURCES/
-
-            cat > ~/rpmbuild/SPECS/${name}.spec << EOF
+            cp <span class="math-inline">\{bin\_path\} \~/rpmbuild/SOURCES/</span>{name}
+            cp ./src/NoMercy.Server/Assets/Linux/<span class="math-inline">\{desktop\_file\} \~/rpmbuild/SOURCES/
+            cp \./src/NoMercy\.Server/Assets/Linux/icon\.png \~/rpmbuild/SOURCES/
+            cat \> \~/rpmbuild/SPECS/</span>{name}.spec << EOF
           Name: ${name}
           Version: $VERSION
           Release: 1%{?dist}
-          Summary: ${friendly_name}
+          Summary: <span class="math-inline">\{friendly\_name\}
           License: Proprietary
-          URL: https://nomercy.tv
-          BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-
+          URL: https://nomercy\.tv
+          BuildRoot: %\{\_tmppath\}/%\{name\}-%\{version\}-%\{release\}-root
           %description
           Modern Media Server Solution
-
           %install
-          mkdir -p %{buildroot}/usr/bin
-          mkdir -p %{buildroot}/usr/share/applications
-          mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
-          cp %{_sourcedir}/${name} %{buildroot}/usr/bin/
-          cp %{_sourcedir}/${desktop_file} %{buildroot}/usr/share/applications/
-          cp %{_sourcedir}/icon.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-          chmod 755 %{buildroot}/usr/bin/${name}
-
+          mkdir -p %\{buildroot\}/usr/bin
+          mkdir -p %\{buildroot\}/usr/share/applications
+          mkdir -p %\{buildroot\}/usr/share/icons/hicolor/scalable/apps
+          cp %\{\_sourcedir\}/</span>{name} %{buildroot}/usr/bin/
+                    cp %{_sourcedir}/<span class="math-inline">\{desktop\_file\} %\{buildroot\}/usr/share/applications/
+          cp %\{\_sourcedir\}/icon\.png %\{buildroot\}/usr/share/icons/hicolor/scalable/apps/</span>{friendly_name}.png
+                    chmod 755 %{buildroot}/usr/bin/<span class="math-inline">\{name\}
           %files
-          %attr(755,root,root) /usr/bin/${name}
-          %attr(644,root,root) /usr/share/applications/${desktop_file}
-          %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+          %attr\(755,root,root\) /usr/bin/</span>{name}
+                    %attr(644,root,root) /usr/share/applications/<span class="math-inline">\{desktop\_file\}
+          %attr\(644,root,root\) /usr/share/icons/hicolor/scalable/apps/</span>{friendly_name}.png
 
           %clean
           rm -rf %{buildroot}
 
           %changelog
-          * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - $VERSION-1
+          * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - <span class="math-inline">VERSION-1
           - Initial package
           EOF
-
-            # Build RPM package
-            rpmbuild -bb ~/rpmbuild/SPECS/${name}.spec
+          # Build RPM package
+          rpmbuild -bb \~/rpmbuild/SPECS/</span>{name}.spec
 
             # Move and create symlink
-            mv ~/rpmbuild/RPMS/x86_64/${name}-${VERSION}-1.x86_64.rpm packages/rpm/pool/x86_64/
+            mv ~/rpmbuild/RPMS/x86_64/<span class="math-inline">\{name\}-</span>{VERSION}-1.x86_64.rpm packages/rpm/pool/x86_64/
             cd packages/rpm/pool/x86_64
-            ln -sf ${name}-${VERSION}-1.x86_64.rpm ${name}-latest.x86_64.rpm
-            cd -
-          }
-
+            ln -sf <span class="math-inline">\{name\}-</span>{VERSION}-1.x86_64.rpm <span class="math-inline">\{name\}-latest\.x86\_64\.rpm
+          cd -
+          \}
           # Build packages
-          create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-          create_rpm_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-          create_rpm_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
-
+          create\_rpm\_package "nomercymediaserver" "NoMercy-MediaServer" "\./output/NoMercyMediaServer" "NoMercy-MediaServer\.desktop"
+          create\_rpm\_package "nomercyupdater" "NoMercy-Updater" "\./output/NoMercyUpdater" "NoMercy-Updater\.desktop"
+          create\_rpm\_package "nomercyapp" "NoMercy-App" "\./output/NoMercyApp" "NoMercy-App\.desktop"
           # Generate repo metadata
-          createrepo_c packages/rpm
-        
-      - name: Build Arch Packages
+          createrepo\_c packages/rpm
+          # Import GPG private key for RPM signing
+          echo "</span>{{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+          # Sign the repository metadata
+          cd packages/rpm
+          gpg --armor --detach-sig -o repodata/repomd.xml.asc repodata/repomd.xml
+          cd ../..
+
+      - name: Build Arch Packages and Sign Database
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
 
@@ -276,18 +313,17 @@ jobs:
             local name=$1
             local friendly_name=$2
             local bin_path=$3
-            local desktop_file=$4
-
-            local PACKAGE_ROOT=./packages/arch-${name}
-            mkdir -p $PACKAGE_ROOT/pkg/${name}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
+            local desktop_file=<span class="math-inline">4
+            local PACKAGE\_ROOT\=\./packages/arch-</span>{name}
+            mkdir -p <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
 
             # Copy files directly to package structure
-            cp ${bin_path} $PACKAGE_ROOT/pkg/${name}/usr/bin/${name}
-            cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} $PACKAGE_ROOT/pkg/${name}/usr/share/applications/
-            cp ./src/NoMercy.Server/Assets/Linux/icon.png $PACKAGE_ROOT/pkg/${name}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+            cp ${bin_path} <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/usr/bin/<span class="math-inline">\{name\}
+            cp \./src/NoMercy\.Server/Assets/Linux/</span>{desktop_file} <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/usr/share/applications/
+            cp ./src/NoMercy.Server/Assets/Linux/icon.png <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
 
             # Create .PKGINFO
-            cat > $PACKAGE_ROOT/pkg/${name}/.PKGINFO << EOF
+            cat > <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/.PKGINFO << EOF
           pkgname = ${name}
           pkgver = ${VERSION}-1
           pkgdesc = ${friendly_name}
@@ -301,13 +337,13 @@ jobs:
 
             # Create package manually with tar and zstd
             cd $PACKAGE_ROOT/pkg
-            tar -cf - ${name} | zstd -z -c -T0 > ../${name}-${VERSION}-1-x86_64.pkg.tar.zst
+            tar -cf - <span class="math-inline">\{name\} \| zstd -z -c -T0 \> \.\./</span>{name}-${VERSION}-1-x86_64.pkg.tar.zst
             cd ../../..
 
             # Move and create symlink
-            mv $PACKAGE_ROOT/${name}-${VERSION}-1-x86_64.pkg.tar.zst ./packages/arch/pool/x86_64/
+            mv <span class="math-inline">PACKAGE\_ROOT/</span>{name}-${VERSION}-1-x86_64.pkg.tar.zst ./packages/arch/pool/x86_64/
             cd ./packages/arch/pool/x86_64
-            ln -sf ${name}-${VERSION}-1-x86_64.pkg.tar.zst ${name}-latest-x86_64.pkg.tar.zst
+            ln -sf <span class="math-inline">\{name\}-</span>{VERSION}-1-x86_64.pkg.tar.zst ${name}-latest-x86_64.pkg.tar.zst
             cd -
           }
 
@@ -318,10 +354,13 @@ jobs:
 
           # Generate repo database
           cd packages/arch/pool/x86_64
-          tar --use-compress-program=zstd -cf nomercy.db.tar.zst *.pkg.tar.zst
-          ln -sf nomercy.db.tar.zst nomercy.db
-          cd -
-
+          tar --use-compress-program=zstd -cf nomercy.db *.pkg.tar.zst
+          
+      - name: Create Public Key File
+        run: |
+          echo "${{ vars.GPG_PUBLIC_KEY }}" > packages/nomercy_repo.gpg.pub
+          chmod 644 packages/nomercy_repo.gpg.pub
+        
       - name: Generate Repository Index
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
@@ -363,7 +402,8 @@ jobs:
             <h4>Debian/Ubuntu</h4>
             <pre>
           # For latest version
-          echo "deb [trusted=yes] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
+          echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
+          wget -O- https://repo.nomercy.tv/Release.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
           sudo apt update
           sudo apt install nomercymediaserver nomercyupdater nomercyapp
           </pre>
@@ -380,8 +420,9 @@ jobs:
           # For latest version
           echo "[nomercy]
           Server = https://repo.nomercy.tv/arch/pool/x86_64" | sudo tee /etc/pacman.d/nomercy-repo
-          sudo pacman-key --recv-key support@nomercy.tv
-          sudo pacman-key --lsign-key support@nomercy.tv
+          curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub
+          sudo pacman-key --add nomercy.gpg.pub
+          sudo pacman-key --lsign-key 23F1B8BDEE7408FBB2401B66EBBAD4C5328D9E9B
           sudo pacman -Sy
           sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
           </pre>
@@ -435,9 +476,21 @@ jobs:
           </body>
           </html>
           EOF
-          
+
       - name: Clean up Arch repository files
-        run: rm -f packages/arch/pool/x86_64/nomercy.db*
+        run: |
+          # Clean up DEB build files
+          rm -rf packages/debian-*
+          find packages/apt -type f ! -name "*.deb" -a ! -name "Release*" -delete
+
+          # Clean up RPM build files
+          rm -rf packages/rpm/repodata/
+          find packages/rpm -type f ! -name "*.rpm" -a ! -name "*.asc" -delete
+
+          # Clean up Arch build files
+          rm -rf packages/arch-*
+          rm -f packages/arch/pool/x86_64/nomercy.db*
+          find packages/arch -type f ! -name "*.pkg.tar.zst" -a ! -name "*.sig" -delete
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
