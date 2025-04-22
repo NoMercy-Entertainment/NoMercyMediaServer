@@ -119,12 +119,22 @@ jobs:
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
           mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-          
-          # Copy files to rpmbuild dirs
+
+          # Create RPM build structure
+          BUILDROOT=~/rpmbuild/BUILDROOT/nomercymediaserver-${VERSION}-1.x86_64
+          mkdir -p ${BUILDROOT}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
+
+          # Copy files to BUILDROOT
+          cp ./output/NoMercyMediaServer ${BUILDROOT}/usr/bin/nomercymediaserver
+          cp ./src/NoMercy.Server/Assets/Linux/NoMercy-MediaServer.desktop ${BUILDROOT}/usr/share/applications/
+          cp ./src/NoMercy.Server/Assets/Linux/icon.png ${BUILDROOT}/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
+
+          # Copy files to SOURCES
           cp ./output/NoMercyMediaServer ~/rpmbuild/SOURCES/nomercymediaserver
           cp ./src/NoMercy.Server/Assets/Linux/NoMercy-MediaServer.desktop ~/rpmbuild/SOURCES/
           cp ./src/NoMercy.Server/Assets/Linux/icon.png ~/rpmbuild/SOURCES/
 
+          # Create spec file
           cat > ~/rpmbuild/SPECS/nomercymediaserver.spec << EOF
           Name: nomercymediaserver
           Version: $VERSION
@@ -132,29 +142,45 @@ jobs:
           Summary: NoMercy MediaServer
           License: Proprietary
           URL: https://nomercy.tv
+          BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
           %description
           Modern Media Server Solution
 
+          %prep
+          # No source unpacking needed
+
           %install
+          rm -rf %{buildroot}
           mkdir -p %{buildroot}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
           cp %{_sourcedir}/nomercymediaserver %{buildroot}/usr/bin/
           cp %{_sourcedir}/NoMercy-MediaServer.desktop %{buildroot}/usr/share/applications/
           cp %{_sourcedir}/icon.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
+          chmod 755 %{buildroot}/usr/bin/nomercymediaserver
+
+          %clean
+          rm -rf %{buildroot}
 
           %files
+          %defattr(-,root,root,-)
           /usr/bin/nomercymediaserver
           /usr/share/applications/NoMercy-MediaServer.desktop
           /usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
+
+          %changelog
+          * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - $VERSION-1
+          - Initial package
           EOF
 
           # Build package
           rpmbuild -bb ~/rpmbuild/SPECS/nomercymediaserver.spec
-          mv ~/rpmbuild/RPMS/x86_64/*.rpm packages/rpm/pool/x86_64/nomercymediaserver-${VERSION}-1.x86_64.rpm
 
-          # Create symlink to latest
+          # Move and create symlink
+          mkdir -p packages/rpm/pool/x86_64
+          mv ~/rpmbuild/RPMS/x86_64/*.rpm packages/rpm/pool/x86_64/nomercymediaserver-${VERSION}-1.x86_64.rpm
           cd packages/rpm/pool/x86_64
           ln -sf nomercymediaserver-${VERSION}-1.x86_64.rpm nomercymediaserver-latest.x86_64.rpm
+          cd -
 
           # Generate repo metadata
           createrepo packages/rpm
