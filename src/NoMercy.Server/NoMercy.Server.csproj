@@ -79,13 +79,13 @@
     </ItemGroup>
     
     <ItemGroup>
-        <None Update="appsettings.json" CopyToOutputDirectory="Never" />
-        <None Update="appsettings.Development.json" CopyToOutputDirectory="Never" />
-    </ItemGroup>
-    
-    <ItemGroup>
         <Content Include="Assets\**\*.*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json" CopyToOutputDirectory="Never" />
+        <None Update="appsettings.Development.json" CopyToOutputDirectory="Never" />
     </ItemGroup>
 </Project>
