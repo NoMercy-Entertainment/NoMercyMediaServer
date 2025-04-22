@@ -435,6 +435,9 @@ jobs:
           </body>
           </html>
           EOF
+          
+      - name: Clean up Arch repository files
+        run: rm -f packages/arch/pool/x86_64/nomercy.db*
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
