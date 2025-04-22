@@ -134,7 +134,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get-version.outputs.version }}
-          release_name: NoMercy MediaServer v${{ steps.get-version.outputs.version }}
+          name: NoMercy MediaServer v${{ steps.get-version.outputs.version }}
           body: |            
             ## What's New
             This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
@@ -162,106 +162,3 @@ jobs:
             ./output/NoMercyApp-*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-#      # Upload Windows Release Assets
-#      - name: Upload Windows Release Assets
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./output/NoMercyMediaServer-windows-x64.exe
-#          asset_name: NoMercyMediaServer-windows-x64-${{ steps.get_short_sha.outputs.short_sha }}.exe
-#          asset_content_type: application/vnd.microsoft.portable-executable
-#    
-#      - name: Upload Windows Updater Release Asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./output/NoMercyUpdater-windows-x64.exe
-#          asset_name: NoMercyUpdater-windows-x64-${{ steps.get_short_sha.outputs.short_sha }}.exe
-#          asset_content_type: application/vnd.microsoft.portable-executable
-#      
-#      - name: Upload Windows App Release Asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./output/NoMercyApp-windows-x64.exe
-#          asset_name: NoMercyApp-windows-x64-${{ steps.get_short_sha.outputs.short_sha }}.exe
-#          asset_content_type: application/vnd.microsoft.portable-executable
-#        
-#      # Upload MacOS Release Assets
-#      - name: Upload macOS Release Asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./output/NoMercyMediaServer-macos-x64.tar.gz
-#          asset_name: NoMercyMediaServer-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}.tar.gz
-#          asset_content_type: application/gzip
-#    
-#      - name: Upload macOS Updater Release Asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./output/NoMercyUpdater-macos-x64.tar.gz
-#          asset_name: NoMercyUpdater-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}.tar.gz
-#          asset_content_type: application/gzip
-#
-#      - name: Upload macOS App Release Asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./output/NoMercyApp-macos-x64.tar.gz
-#          asset_name: NoMercyApp-macos-x64-${{ steps.get_short_sha.outputs.short_sha }}.tar.gz
-#          asset_content_type: application/gzip
-#
-#      # Upload Linux Release Asset
-#      - name: Upload Linux Release Asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./output/NoMercyMediaServer-linux-x64
-#          asset_name: NoMercyMediaServer-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}
-#          asset_content_type: application/x-executable
-#
-#      - name: Upload Linux Updater Release Asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./output/NoMercyUpdater-linux-x64
-#          asset_name: NoMercyUpdater-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}
-#          asset_content_type: application/x-executable
-#
-#      - name: Upload Linux App Release Asset
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: ./output/NoMercyApp-linux-x64
-#          asset_name: NoMercyApp-linux-x64-${{ steps.get_short_sha.outputs.short_sha }}
-#          asset_content_type: application/x-executable
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        id: artifact-upload-step
-        with:
-          name: build-artifacts
-          retention-days: 1
-          path: |
-            ./output/NoMercyMediaServer-linux-x64
-            ./src/NoMercy.Server/Assets/Linux/

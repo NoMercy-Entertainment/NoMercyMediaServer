@@ -27,19 +27,8 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4.1.1
-        continue-on-error: true
-        with:
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          name: build-artifacts
-          path: ./
-
-      - name: Check Artifacts
+      - name: Build NoMercy.Server
         run: |
-          if [ ! -f "./artifacts/NoMercyMediaServer-linux-x64" ]; then
-            echo "Build artifacts not found, falling back to fresh build"
             mkdir -p ./output
             dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj \
               --configuration Release \
@@ -54,12 +43,7 @@ jobs:
               /p:PublishReadyToRun=false \
               /p:OutputFileName=NoMercyMediaServer \
               --output ./output
-          else
-            mkdir -p ./output
-            mv ./artifacts/NoMercyMediaServer-linux-x64 ./output/NoMercyMediaServer
-            mv ./artifacts/Linux/* ./src/NoMercy.Server/Assets/Linux/
-          fi
-          chmod +x ./output/NoMercyMediaServer
+            chmod +x ./output/NoMercyMediaServer
           
       - name: Setup File Structure
         run: |
