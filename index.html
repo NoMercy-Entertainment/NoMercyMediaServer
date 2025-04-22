@@ -14,25 +14,81 @@
 # For latest version
 echo "deb [trusted=yes] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
 sudo apt update
-sudo apt install nomercymediaserver
-
-# For specific version
-sudo apt install nomercymediaserver=0.1.89
-  </pre>
+sudo apt install nomercymediaserver nomercyupdater nomercyapp
+</pre>
 
   <h4>RedHat/Fedora</h4>
   <pre>
 # For latest version
 sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo
-sudo dnf install nomercymediaserver
+sudo dnf install nomercymediaserver nomercyupdater nomercyapp
+</pre>
 
-# For specific version
-sudo dnf install nomercymediaserver-0.1.89
-  </pre>
+  <h4>Arch Linux</h4>
+  <pre>
+# For latest version
+echo "[nomercy]
+Server = https://repo.nomercy.tv/arch/pool/x86_64" | sudo tee /etc/pacman.d/nomercy-repo
+sudo pacman-key --recv-key support@nomercy.tv
+sudo pacman-key --lsign-key support@nomercy.tv
+sudo pacman -Sy
+sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
+</pre>
 
   <h3>Available Versions</h3>
+
+  <h4>DEB Packages - MediaServer</h4>
   <ul>
-  $(cd packages/apt/pool/main/n/nomercymediaserver && ls -1 *.deb | grep -v latest | sed 's/.*_\(.*\)_amd64.deb/<li>\1<\/li>/')
+  <li>0.1.89</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
+  </ul>
+
+  <h4>DEB Packages - Updater</h4>
+  <ul>
+  <li>0.1.89</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
+  </ul>
+
+  <h4>DEB Packages - App</h4>
+  <ul>
+  <li>0.1.89</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
+  </ul>
+
+  <h4>RPM Packages - MediaServer</h4>
+  <ul>
+  <li>0.1.89</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
+  </ul>
+
+  <h4>RPM Packages - Updater</h4>
+  <ul>
+  <li>0.1.89</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
+  </ul>
+
+  <h4>RPM Packages - App</h4>
+  <ul>
+  <li>0.1.89</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
+  </ul>
+
+  <h4>Arch Packages - MediaServer</h4>
+  <ul>
+  <li>1</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
+  </ul>
+
+  <h4>Arch Packages - Updater</h4>
+  <ul>
+  <li>1</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
+  </ul>
+
+  <h4>Arch Packages - App</h4>
+  <ul>
+  <li>1</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
 </body>
 </html>

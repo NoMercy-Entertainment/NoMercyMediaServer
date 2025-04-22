@@ -1,8 +1,0 @@
-Origin: NoMercy Entertainment
-Label: NoMercy MediaServer
-Suite: stable
-Codename: stable
-Version: 0.1.89
-Architectures: amd64
-Components: main
-Description: NoMercy MediaServer Package Repository

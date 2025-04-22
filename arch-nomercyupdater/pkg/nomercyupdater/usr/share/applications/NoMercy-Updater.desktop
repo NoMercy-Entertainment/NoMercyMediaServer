@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=NoMercy Updater
+GenericName=NoMercy Update Manager
+Comment=Update Manager for NoMercy MediaServer
+Categories=System;Settings;
+Exec=NoMercyUpdater
+Icon=NoMercy-Updater
+Terminal=false
+StartupNotify=true
+NoDisplay=true
+X-GNOME-UsesNotifications=true
+StartupWMClass=NoMercyUpdater

@@ -1,0 +1,8 @@
+Package: nomercyapp
+Version: 0.1.89
+Architecture: amd64
+Maintainer: NoMercy Entertainment <support@nomercy.tv>
+Description: NoMercy-App
+Depends: libc6
+Priority: optional
+Section: multimedia
