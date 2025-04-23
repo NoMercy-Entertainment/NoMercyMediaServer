@@ -222,11 +222,30 @@ jobs:
             mkdir -p "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps"
             mkdir -p "${PACKAGE_ROOT}/lib/systemd/user"
           
-            # Copy binary and assets
+            # Copy binary with error checking
+            if [ ! -f "${bin_path}" ]; then
+              echo "ERROR: Binary file ${bin_path} not found"
+              exit 1
+            fi
             cp "${bin_path}" "${PACKAGE_ROOT}/usr/bin/${name}"
+            chmod 755 "${PACKAGE_ROOT}/usr/bin/${name}"
+
+            # Copy desktop file
+            if [ ! -f "./src/NoMercy.Server/Assets/Linux/${desktop_file}" ]; then
+              echo "ERROR: Desktop file ${desktop_file} not found"
+              exit 1
+            fi
             cp "./src/NoMercy.Server/Assets/Linux/${desktop_file}" "${PACKAGE_ROOT}/usr/share/applications/"
+            chmod 644 "${PACKAGE_ROOT}/usr/share/applications/${desktop_file}"
+
+            # Copy icon
+            if [ ! -f "./src/NoMercy.Server/Assets/Linux/icon.png" ]; then
+              echo "ERROR: Icon file not found"
+              exit 1
+            fi
             cp "./src/NoMercy.Server/Assets/Linux/icon.png" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
-          
+            chmod 644 "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
+
             # Create systemd service file
             cat > "${PACKAGE_ROOT}/lib/systemd/user/${name}.service" << EOF
           [ Unit ]
@@ -237,11 +256,14 @@ jobs:
           Type=simple
           ExecStart=/usr/bin/${name}
           Restart=on-failure
+          RestartSec=5
     
           [ Install ]
           WantedBy=default.target
           EOF
-      
+          
+            chmod 644 "${PACKAGE_ROOT}/lib/systemd/user/${name}.service"
+          
             # Create control file with dependencies
             cat > "${PACKAGE_ROOT}/DEBIAN/control" << EOF
           Package: ${name}
@@ -249,7 +271,7 @@ jobs:
           Architecture: amd64
           Maintainer: NoMercy Entertainment <support@nomercy.tv>
           Description: ${friendly_name}
-          Depends: libc6, libicu70, libssl3, libgssapi-krb5-2
+          Depends: libc6 (>= 2.34), libicu70 (>= 70.1), libssl3 (>= 3.0.0), libgssapi-krb5-2
           Priority: optional
           Section: multimedia
           EOF
@@ -259,67 +281,59 @@ jobs:
           #!/bin/sh
           set -e
           
-          # Set correct permissions
-          chmod 755 /usr/bin/${name}
-          chmod 644 /usr/share/applications/${desktop_file}
-          chmod 644 /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-          chmod 644 /lib/systemd/user/${name}.service
-          
           # Reload systemd user daemon
           systemctl --user daemon-reload || true
           
-          # Enable and start service for current user
-          systemctl --user enable ${name}.service || true
-          systemctl --user start ${name}.service || true
-    
+          # Enable and start service
+          if [ -n "\$SUDO_USER" ]; then
+          su - \$SUDO_USER -c "systemctl --user enable ${name}.service" || true
+          su - \$SUDO_USER -c "systemctl --user start ${name}.service" || true
+          fi
+          
           exit 0
           EOF
-      
+          chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst"
+          
           # Create prerm script
           cat > "${PACKAGE_ROOT}/DEBIAN/prerm" << EOF
           #!/bin/sh
           set -e
           
-          # Stop and disable service for current user
-          systemctl --user stop ${name}.service || true
-          systemctl --user disable ${name}.service || true
-    
+          # Stop and disable service
+          if [ -n "\$SUDO_USER" ]; then
+          su - \$SUDO_USER -c "systemctl --user stop ${name}.service" || true
+          su - \$SUDO_USER -c "systemctl --user disable ${name}.service" || true
+          fi
+          
           exit 0
           EOF
+          chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm"
           
+          # Build package
+          echo "Building DEB package for ${name}"
+          dpkg-deb --build "${PACKAGE_ROOT}"
           
-            # Set permissions
-            chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst"
-            chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm"
-            chmod 755 "${PACKAGE_ROOT}/usr/bin/${name}"
-            chmod 644 "${PACKAGE_ROOT}/usr/share/applications/${desktop_file}"
-            chmod 644 "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
-            chmod 644 "${PACKAGE_ROOT}/lib/systemd/user/${name}.service"
-
-            # Build package
-            dpkg-deb --build "${PACKAGE_ROOT}"
-
-            # Move to repository location
-            local PKG_FILE="${name}_${VERSION}_amd64.deb"
-            mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${PKG_FILE}"
-
-            # Create latest symlink
-            cd "./packages/apt/pool/main/n/${name}"
-            ln -sf "${PKG_FILE}" "${name}_latest_amd64.deb"
-            cd -
+          # Create package directory
+          mkdir -p "./packages/apt/pool/main/n/${name}"
+          
+          # Move package and create symlink
+          mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
+          cd "./packages/apt/pool/main/n/${name}"
+          ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
+          cd -
+          
+          echo "Package ${name} created successfully"
           }
-
-          # Clean up old packages
-          rm -rf packages/apt/pool/main/n/*/*.deb
-
-          # Create package directories
+          
+          # Clean existing packages
+          rm -rf packages/apt/pool/main/n/*
           mkdir -p packages/apt/pool/main/n/{nomercymediaserver,nomercyupdater,nomercyapp}
-
+          
           # Build packages
           create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
           create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
           create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
-
+          
           # Update package index
           cd packages/apt
           rm -f dists/stable/main/binary-amd64/Packages*
