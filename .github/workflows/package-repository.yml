@@ -443,25 +443,21 @@ jobs:
 
       - name: Generate APT Repository Metadata and Sign
         run: |
-          VERSION=${{ steps.get-version.outputs.version }}
-          
-          # Create necessary directories
+          # Ensure complete directory structure exists
           mkdir -p packages/apt/dists/stable/main/binary-amd64
+          chmod -R 755 packages/apt
 
-          # Generate Packages file
           cd packages/apt
-          
-          # Remove any existing Packages files
-          rm -f dists/stable/main/binary-amd64/Packages*
-          
-          # Ensure proper permissions on pool directory
-          chmod -R 755 pool/
-          
-          # Generate Packages file from pool directory
+
+          # Remove any existing metadata files
+          rm -rf dists/stable/main/binary-amd64/Packages*
+          rm -f dists/stable/Release*
+
+          # Generate package index
           dpkg-scanpackages --multiversion pool/ > dists/stable/main/binary-amd64/Packages
           gzip -k -f dists/stable/main/binary-amd64/Packages
-          
-          # Generate Release file
+
+          # Create Release file in proper location
           cd dists/stable
           cat > Release << EOF
           Origin: NoMercy Entertainment
@@ -471,23 +467,28 @@ jobs:
           Version: 1.0
           Architectures: amd64
           Components: main
+          Description: NoMercy Entertainment Repository
           Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')
           SHA256:
           EOF
 
-          # Calculate hashes of Packages files
-          cd ../..
-          for file in $(find dists/stable/main -type f); do
-          size=$(wc -c < "$file")
-          sha256=$(sha256sum "$file" | cut -d' ' -f1)
-          echo " $sha256 $size ${file#dists/stable/}" >> dists/stable/Release
+          # Calculate hashes from root of dists/stable
+          cd .. # Move to dists directory
+          for file in $(find stable/main -type f); do
+            size=$(wc -c < "$file")
+            sha256=$(sha256sum "$file" | cut -d' ' -f1)
+            echo " $sha256 $size ${file#stable/}" >> stable/Release
           done
-          
-          # Sign Release file
-          gpg --batch --yes --clear-sign -o dists/stable/InRelease dists/stable/Release
-          gpg --batch --yes --detach-sign --armor -o dists/stable/Release.gpg dists/stable/Release
-          
-          cd ../..      
+
+          # Sign Release file in correct location
+          cd stable
+          gpg --batch --yes --clear-sign -o InRelease Release
+          gpg --batch --yes --detach-sign --armor -o Release.gpg Release
+
+          cd ../../../..
+
+          # Verify final structure
+          tree packages/apt
       
       - name: Generate Repository Index
         run: |
