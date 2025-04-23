@@ -340,21 +340,21 @@ jobs:
           VERSION=${{ steps.get-version.outputs.version }}
 
           # Function to create Arch package
-          create_arch_package() {
+           create_arch_package() {
             local name=$1
             local friendly_name=$2
             local bin_path=$3
-            local desktop_file=<span class="math-inline">4
-            local PACKAGE\_ROOT\=\./packages/arch-</span>{name}
-            mkdir -p <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
+            local desktop_file=$4
+            local PACKAGE_ROOT=./packages/arch-${name}
+            mkdir -p ${PACKAGE_ROOT}/pkg/${name}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
 
             # Copy files directly to package structure
-            cp ${bin_path} <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/usr/bin/<span class="math-inline">\{name\}
-            cp \./src/NoMercy\.Server/Assets/Linux/</span>{desktop_file} <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/usr/share/applications/
-            cp ./src/NoMercy.Server/Assets/Linux/icon.png <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+            cp ${bin_path} ${PACKAGE_ROOT}/pkg/${name}/usr/bin/${name}
+            cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} ${PACKAGE_ROOT}/pkg/${name}/usr/share/applications/
+            cp ./src/NoMercy.Server/Assets/Linux/icon.png ${PACKAGE_ROOT}/pkg/${name}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
 
             # Create .PKGINFO
-            cat > <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/.PKGINFO << EOF
+            cat > ${PACKAGE_ROOT}/pkg/${name}/.PKGINFO <<EOF
           pkgname = ${name}
           pkgver = ${VERSION}-1
           pkgdesc = ${friendly_name}
@@ -366,15 +366,15 @@ jobs:
           depend = glibc
           EOF
 
-            # Create package manually with tar and zstd
-            cd $PACKAGE_ROOT/pkg
-            tar -cf - <span class="math-inline">\{name\} \| zstd -z -c -T0 \> \.\./</span>{name}-${VERSION}-1-x86_64.pkg.tar.zst
+             # Create package manually with tar and zstd
+            cd ${PACKAGE_ROOT}/pkg
+            tar -cf - ${name} | zstd -z -c -T0 > ../${name}-${VERSION}-1-x86_64.pkg.tar.zst
             cd ../../..
 
             # Move and create symlink
-            mv <span class="math-inline">PACKAGE\_ROOT/</span>{name}-${VERSION}-1-x86_64.pkg.tar.zst ./packages/arch/pool/x86_64/
+            mv ${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst ./packages/arch/pool/x86_64/
             cd ./packages/arch/pool/x86_64
-            ln -sf <span class="math-inline">\{name\}-</span>{VERSION}-1-x86_64.pkg.tar.zst ${name}-latest-x86_64.pkg.tar.zst
+            ln -sf ${name}-${VERSION}-1-x86_64.pkg.tar.zst ${name}-latest-x86_64.pkg.tar.zst
             cd -
           }
 
