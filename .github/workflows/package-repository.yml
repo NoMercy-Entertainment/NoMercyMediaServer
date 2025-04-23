@@ -397,13 +397,16 @@ jobs:
           # Import the GPG key
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
+          # Move to the correct directory
+          cd packages/arch/pool/x86_64
+
           # Trust the key
           gpg --batch --yes --pinentry-mode loopback \
             -u "${{ vars.GPG_KEY_ID }}" \
             -o nomercy.db.sig --detach-sign nomercy.db
 
           # Create pacman.conf
-          cat > ./pacman.conf << EOF
+          cat > ../../pacman.conf << EOF
           [options]
           SigLevel = Optional TrustAll
 
@@ -411,6 +414,8 @@ jobs:
           Server = https://repo.nomercy.tv/arch/pool/$arch
           SigLevel = Required
           EOF
+
+          cd -
 
       - name: Export Public Key
         run: |
