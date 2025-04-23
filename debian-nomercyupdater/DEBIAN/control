@@ -1,0 +1,8 @@
+Package: nomercyupdater
+Version: 0.1.90
+Architecture: amd64
+Maintainer: NoMercy Entertainment <support@nomercy.tv>
+Description: NoMercy-Updater
+Depends: libc6 (>= 2.34), libicu70 (>= 70.1), libssl3 (>= 3.0.0), libgssapi-krb5-2
+Priority: optional
+Section: multimedia
