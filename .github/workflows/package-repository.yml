@@ -360,6 +360,29 @@ jobs:
         run: |
           echo "${{ vars.GPG_PUBLIC_KEY }}" > packages/nomercy_repo.gpg.pub
           chmod 644 packages/nomercy_repo.gpg.pub
+
+      - name: Configure Package Signing
+        run: |
+          # Import the GPG key
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+          # Trust the key
+          echo -e "5\ny\n" | gpg --command-fd 0 --expert --edit-key "${{ vars.GPG_KEY_ID }}" trust
+
+          # Create pacman.conf
+          cat > ./pacman.conf << EOF
+          [options]
+          SigLevel = Optional TrustAll
+
+          [nomercy]
+          Server = https://repo.nomercy.tv/arch/pool/$arch
+          SigLevel = Required
+          EOF
+
+      - name: Export Public Key
+        run: |
+          gpg --armor --export "${{ vars.GPG_KEY_ID }}" > packages/nomercy_repo.gpg.pub
+          chmod 644 packages/nomercy_repo.gpg.pub
         
       - name: Generate Repository Index
         run: |
