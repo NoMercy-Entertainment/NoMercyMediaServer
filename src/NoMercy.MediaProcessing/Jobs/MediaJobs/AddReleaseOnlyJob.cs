@@ -2,13 +2,12 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.MusicGenres;
-// using NoMercy.MediaProcessing.Recordings;
 using NoMercy.MediaProcessing.ReleaseGroups;
 using NoMercy.MediaProcessing.Releases;
 using NoMercy.Networking.Dto;
@@ -43,11 +42,14 @@ public class AddReleaseOnlyJob : AbstractReleaseJob
         ArtistRepository artistRepository = new(context);
         ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
 
-        Library albumLibrary = await context.Libraries
-            .Where(f => f.Id == LibraryId)
-            .Include(f => f.FolderLibraries)
-            .ThenInclude(f => f.Folder)
-            .FirstAsync();
+        await using LibraryRepository libraryRepository = new(context);
+        Library? albumLibrary = await libraryRepository.GetLibraryByIdWithFolders(LibraryId);
+        
+        if (albumLibrary is null)
+        {
+            Logger.App($"Library not found: {LibraryId}", LogEventLevel.Error);
+            return;
+        }
         
         (MusicBrainzReleaseAppends? releaseAppends, CoverArtImageManagerManager.CoverPalette? coverPalette) 
             = await releaseManager.Add(Id, albumLibrary, BaseFolder, MediaFolder);

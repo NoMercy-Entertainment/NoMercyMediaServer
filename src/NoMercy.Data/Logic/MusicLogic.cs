@@ -54,7 +54,7 @@ public partial class MusicLogic : IAsyncDisposable
             .FirstOrDefault(folder => folder.Path == libraryFolder);
 
         Logger.App("Files", LogEventLevel.Verbose);
-        Logger.App(Files, LogEventLevel.Verbose);
+        Logger.App(Files ?? [], LogEventLevel.Verbose);
 
         Logger.App("ArtistName: " + ArtistName, LogEventLevel.Verbose);
         Logger.App("AlbumName " + AlbumName, LogEventLevel.Verbose);

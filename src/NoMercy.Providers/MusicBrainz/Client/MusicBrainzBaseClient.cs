@@ -37,7 +37,7 @@ public class MusicBrainzBaseClient : IDisposable
 
     private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 20, Interval = 1000, Start = true });
+        return _queue ??= new(new() { Concurrent = 1, Interval = 1000, Start = true });
     }
 
     protected Guid Id { get; private set; }

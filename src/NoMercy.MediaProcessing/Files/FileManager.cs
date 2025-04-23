@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using FFMpegCore;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
@@ -58,11 +57,6 @@ public partial class FileManager(
                 Logger.App("Unknown library type");
                 break;
         }
-    }
-    
-    public async Task FindFiles(Guid id, Library albumLibrary)
-    {
-        Type = "music";
     }
     
     public void FilterFiles(string filter)
@@ -336,7 +330,7 @@ public partial class FileManager(
             {
                 try
                 {
-                    IMediaAnalysis ffprobe = FFProbe.Analyse(videoFile);
+                    FFMpegCore.IMediaAnalysis ffprobe = FFMpegCore.FFProbe.Analyse(videoFile);
                     videos.Add(new()
                     {
                         FileName = Path.Combine(Path.GetFileName(path), Path.GetFileName(videoFile)).Replace("\\", "/"),
@@ -372,7 +366,7 @@ public partial class FileManager(
             {
                 try
                 {
-                    IMediaAnalysis ffprobe = FFProbe.Analyse(audioFile);
+                    FFMpegCore.IMediaAnalysis ffprobe = FFMpegCore.FFProbe.Analyse(audioFile);
                 
                     audios.Add(new()
                     {

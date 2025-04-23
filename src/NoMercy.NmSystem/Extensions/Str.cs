@@ -202,7 +202,7 @@ public static partial class Str
     /** This method sanitizes a string by removing diacritics, non-alphanumeric characters and accents. */
     public static string Sanitize(this string str)
     {
-        return str.RemoveDiacritics().RemoveNonAlphaNumericCharacters().RemoveAccents();
+        return str.RemoveDiacritics().RemoveNonAlphaNumericCharacters().RemoveAccents().Trim();
     }
     
     public static bool ContainsSanitized(this string str, string value)
