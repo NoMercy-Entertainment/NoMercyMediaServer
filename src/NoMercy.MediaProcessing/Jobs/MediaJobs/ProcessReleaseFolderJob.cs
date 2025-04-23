@@ -309,8 +309,6 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
 
         foreach (MediaFile file in folder.Files ?? [])
         {
-            TagLib.File tagFile = TagLib.File.Create(file.Path);
-            
             string rawTitle = Path.GetFileNameWithoutExtension(file.Name);
             string title = Regex.Replace(
                 rawTitle,

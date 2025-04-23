@@ -12,4 +12,5 @@ public class ProgressMeta
     [JsonProperty("video_streams")] public List<string> VideoStreams { get; set; } = [];
     [JsonProperty("audio_streams")] public List<string> AudioStreams { get; set; } = [];
     [JsonProperty("subtitle_streams")] public List<string> SubtitleStreams { get; set; } = [];
+    [JsonProperty("type")] public string Type { get; set; } = "video";
 }

@@ -10,6 +10,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
+using TagLib;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -19,8 +20,6 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
     public override int Priority => 7;
 
     public string Status { get; set; } = "pending";
-
-    public string InputFolder { get; set; } = string.Empty;
 
     public override async Task Handle()
     {
@@ -75,9 +74,17 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
         
         MediaFolderExtend? mediaFolder = (
             await mediaScan
+                .EnableFileListing()
                 .FilterByMediaType("music")
-                .Process(folderMetaData.BasePath)
-        ).First();
+                .Process(folderMetaData.BasePath, 1)
+        ).FirstOrDefault();
+        
+        if (mediaFolder is null)
+        {
+            Logger.Encoder($"Media folder not found for: {folderMetaData.BasePath}", LogEventLevel.Error);
+            return;
+        }
+        
         mediaFolder.Files?.Clear();
         
         Logger.App("Matched: " + folderMetaData.ReleaseName + " - " + Id);
@@ -86,58 +93,75 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
             LibraryId = LibraryId,
             Id = Id,
             BaseFolder = folder,
-            MediaFolder = mediaFolder
+            MediaFolder = mediaFolder,
         };
         await addReleaseOnlyJob.Handle();
         
         string[] extensions = [".mp3", ".flac", ".wav", ".m4a"];
         List<MediaFile> files = folderMetaData.Files
             .Where(f => f.Type == "file" && extensions.Contains(f.Extension))
-            .OrderBy(x => x.Name)
+            .OrderBy(x => x.Parsed?.DiscNumber)
+            .ThenBy(x => x.Parsed?.TrackNumber)
             .ToList();
-        
-        await Parallel.ForEachAsync(profiles, async (profile, t) =>
+
+        foreach (EncoderProfile profile in profiles)
         {
-            await Parallel.ForEachAsync(files, t, (mediaFile, _) =>
+            foreach (MediaFile? mediaFile in files)
             {
                 TagLib.File tagFile = TagLib.File.Create(mediaFile.Path);
-                string recordingName = tagFile.Tag.Title ?? mediaFile.Name;
-                int trackNumber = tagFile.Tag.Track > 0 ? (int)tagFile.Tag.Track : files.IndexOf(mediaFile) + 1;
+                Tag? tag = tagFile.Tag;
+                string recordingName = tag.Title ?? mediaFile.Name;
+                int albumNumber = tag.Disc.ToInt();
+                int trackNumber = tag.Track > 0 ? tag.Track.ToInt() : files.IndexOf(mediaFile) + 1;
                 MusicBrainzTrack? foundTrack = folderMetaData.MusicBrainzRelease.Media.SelectMany(x => x.Tracks)
                     .FirstOrDefault(x =>
                         (
                             x.Title.ContainsSanitized(recordingName) &&
                             x.Position == trackNumber
-                        ) || 
+                        ) ||
                         (
-                            x.Title.ContainsSanitized(mediaFile.Name) && 
-                            x.Title.ContainsSanitized(recordingName)
-                        )
-                    );
+                            x.Title.ContainsSanitized(mediaFile.Name) &&
+                            x.Title.ContainsSanitized(recordingName) &&
+                            x.Position == trackNumber
+                        ));
+                
                 if (foundTrack is null)
                 {
-                    foundTrack = folderMetaData.MusicBrainzRelease.Media.SelectMany(x => x.Tracks)
+                    foundTrack = folderMetaData.MusicBrainzRelease.Media
+                        .Where(x => x.Position == albumNumber)
+                        .SelectMany(x => x.Tracks)
                         .FirstOrDefault(x => x.Position == trackNumber);
                     if (foundTrack is null)
                     {
-                        Logger.Encoder($"Track not found in MusicBrainz: {recordingName}", LogEventLevel.Error);
-                        return ValueTask.CompletedTask;
+                        foundTrack = folderMetaData.MusicBrainzRelease.Media
+                            .SelectMany(x => x.Tracks)
+                            .FirstOrDefault(x => x.Position == trackNumber);
+                        
+                        if (foundTrack is null)
+                        {
+                            Logger.Encoder($"Track not found in MusicBrainz: {recordingName}", LogEventLevel.Error);
+                            continue;
+                        }
                     }
                 }
-
+                
+                folderMetaData.Files.Clear();
+                
                 jobDispatcher.DispatchJob<EncodeMusicJob>(
+                    foundTrack.Id,
                     profile,
                     folder,
                     folderMetaData,
                     mediaFile,
                     foundTrack,
-                    LibraryId
+                    LibraryId,
+                    FilePath,
+                    mediaFile.Path
                 );
-                return ValueTask.CompletedTask;
-            });
-        });
+            }
+        }
     }
-
+    
     private async Task<FolderMetadata?> GetFolderMetaData(Folder folder)
     {
         using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
@@ -179,7 +203,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
             await mediaScan
                 .EnableFileListing()
                 .FilterByMediaType("music")
-                .Process(InputFolder)
+                .Process(FilePath)
         ).First();
         ConcurrentBag<MediaFile> files = mediaFolder.Files ?? [];
 
@@ -187,7 +211,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
         {
             MusicBrainzRelease = musicBrainzRelease,
             BasePath = basePath,
-            Files = files,
+            Files = files.ToList(),
             ArtistName = artistName,
             ReleaseName = releaseName,
             Year = int.Parse(year, CultureInfo.InvariantCulture),
@@ -201,7 +225,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
     {
         public MusicBrainzReleaseAppends MusicBrainzRelease { get; set; } = null!;
         public string BasePath { get; set; } = string.Empty;
-        public ConcurrentBag<MediaFile> Files { get; set; } = [];
+        public List<MediaFile> Files { get; set; } = [];
         public string ArtistName { get; set; } = string.Empty;
         public string ReleaseName { get; set; } = string.Empty;
         public int Year { get; set; }

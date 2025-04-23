@@ -14,6 +14,7 @@ using NoMercy.Encoder;
 using NoMercy.Encoder.Core;
 using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
 
 
@@ -169,7 +170,7 @@ public class TasksController : BaseController
             {
                 Id = jobs.ElementAt(encoderJobs.IndexOf(j)).Id,
                 Priority = jobs.ElementAt(encoderJobs.IndexOf(j)).Priority,
-                PayloadId = j.Id,
+                PayloadId = j.Id.ToInt(),
                 Title = GetTitle(folders, j),
                 Type = j.GetType().Name,
                 Status = j.Status.ToString(),
@@ -203,16 +204,21 @@ public class TasksController : BaseController
     {
         Movie? movie = folders.FirstOrDefault(f => f.Id == j.FolderId)
             ?.FolderLibraries.FirstOrDefault()
-            ?.Library.LibraryMovies.FirstOrDefault(m => m.MovieId == j.Id)?.Movie;
+            ?.Library.LibraryMovies.FirstOrDefault(m => m.MovieId == j.Id.ToInt())?.Movie;
 
         Tv? tv = folders.FirstOrDefault(f => f.Id == j.FolderId)
             ?.FolderLibraries.FirstOrDefault()
-            ?.Library.LibraryTvs.FirstOrDefault(m => m.Tv.Episodes.Any(e => e.Id == j.Id))?.Tv;
+            ?.Library.LibraryTvs.FirstOrDefault(m => m.Tv.Episodes.Any(e => e.Id == j.Id.ToInt()))?.Tv;
 
-        Episode? episode = tv?.Episodes.FirstOrDefault(e => e.Id == j.Id);
+        Episode? episode = tv?.Episodes.FirstOrDefault(e => e.Id == j.Id.ToInt());
+        
+        Track? track = folders.FirstOrDefault(f => f.Id == j.FolderId)
+            ?.FolderLibraries.FirstOrDefault()
+            ?.Library.LibraryTracks.FirstOrDefault(m => m.TrackId == j.Id.ToGuid())?.Track;
 
         return movie?.CreateTitle() 
                ?? episode?.CreateTitle() 
+               ?? track?.CreateName()
                ?? string.Empty;
     }
 
@@ -228,7 +234,7 @@ public class TasksController : BaseController
             .ToList();
 
         QueueJob? job = jobs
-            .FirstOrDefault(j => JsonConvert.DeserializeObject<EncodeVideoJob>(j.Payload)?.Id == id);
+            .FirstOrDefault(j => JsonConvert.DeserializeObject<EncodeVideoJob>(j.Payload)?.Id.ToInt() == id);
         
         if (job is null)
             return NotFoundResponse("Job not found");

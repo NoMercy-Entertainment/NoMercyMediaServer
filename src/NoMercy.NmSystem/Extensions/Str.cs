@@ -132,6 +132,11 @@ public static partial class Str
     {
         return Convert.ToInt32(value);
     }
+    
+    public static int ToInt(this uint value)
+    {
+        return Convert.ToInt32(value);
+    }
 
     public static double ToDouble(this string value)
     {
@@ -286,19 +291,38 @@ public static partial class Str
             .Replace("−", "-") // Minus sign
             .Trim();
     }
+    
+    public static string SanitizeFileName(this string filePath)
+    {
+        string directory = Path.GetDirectoryName(filePath) ?? string.Empty;
+        string fileName = Path.GetFileName(filePath);
+
+        // Replace problematic Unicode characters with ASCII equivalents
+        fileName = fileName.Replace('\u2019', '\'')  // Right single quote
+            .Replace('\u2018', '\'')  // Left single quote
+            .Replace('\u201C', '"')   // Left double quote
+            .Replace('\u201D', '"')   // Right double quote
+            .Replace('\u2013', '-')   // En dash
+            .Replace('\u2014', '-');  // Em dash
+        
+        // Normalize to decomposed form (separates combined characters)
+        fileName = fileName.Normalize(NormalizationForm.FormKD);
+
+        return Path.Combine(directory, fileName);
+    }
 
     public static string DirectorySafeName(this string? self)
     {
         if (string.IsNullOrEmpty(self)) return string.Empty;
         string name = Regex.Replace(self, @"[/\\|:*?\""<>{}]", " ");
-        return name.Trim();
+        return name.Trim().SanitizeFileName();
     }
     
     public static string MusicBrainzSafeName(this string? self)
     {
         if (string.IsNullOrEmpty(self)) return string.Empty;
         string name = Regex.Replace(self, @"[/\\|:*?\""<>{}]", "_");
-        return name.Trim();
+        return name.Trim().SanitizeFileName();
     }
 
     public static string CleanFileName(this string? self)

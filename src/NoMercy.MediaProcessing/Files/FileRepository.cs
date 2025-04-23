@@ -503,10 +503,12 @@ public class FileRepository(MediaContext context) : IFileRepository
         object lockObject = new();
         await Parallel.ForEachAsync(mediaFiles, async (mediaFile, _) =>
         {
-            mediaFile.TagFile ??= TagFile.Create(mediaFile.Path);
+            TagFile? tagFile = TagFile.Create(mediaFile.Path);
+            mediaFile.Tag ??= tagFile.Tag;
+            mediaFile.Properties ??= tagFile.Properties;
             mediaFile.FFprobe ??= FFProbe.Create(mediaFile.Path);
 
-            Tag? tag = mediaFile.TagFile?.Tag;
+            Tag? tag = mediaFile.Tag;
             if (tag == null) return;
 
             if (!string.IsNullOrEmpty(tag.MusicBrainzReleaseId))
@@ -854,7 +856,9 @@ public class FileRepository(MediaContext context) : IFileRepository
             {
                 try
                 {
-                    file.TagFile ??= TagFile.Create(file.Path);
+                    TagFile? tagFile = TagFile.Create(file.Path);
+                    file.Tag ??= tagFile.Tag;
+                    file.Properties ??= tagFile.Properties;
                     file.FFprobe ??= FFProbe.Create(file.Path);
                     
                     int trackIndex = localFiles.ToList().IndexOf(file);
@@ -882,7 +886,7 @@ public class FileRepository(MediaContext context) : IFileRepository
     private static bool CompareTrackDuration(MediaFile mediaFile, MusicBrainzTrack track)
     {
         double duration = track.Duration;
-        double tagDuration = mediaFile.TagFile?.Properties.Duration.TotalSeconds ?? 0;
+        double tagDuration = mediaFile.Properties?.Duration.TotalSeconds ?? 0;
         double fileDuration = mediaFile.FFprobe?.Duration.TotalSeconds ?? 0;
         
         if (duration == 0 && fileDuration == 0 && tagDuration == 0) return false;
@@ -894,7 +898,7 @@ public class FileRepository(MediaContext context) : IFileRepository
     private static bool CompareTrackNumber(MediaFile mediaFile, MusicBrainzTrack track, int trackIndex)
     {
         int trackNumber = track.Position;
-        long tagTrackNumber = mediaFile.TagFile?.Tag?.Track ?? 0;
+        long tagTrackNumber = mediaFile.Tag?.Track ?? 0;
         int fileTrackNumber = mediaFile.Parsed?.TrackNumber ?? 0;
 
         if (trackNumber == 0 && fileTrackNumber == 0 && tagTrackNumber == 0) return false;
@@ -907,7 +911,7 @@ public class FileRepository(MediaContext context) : IFileRepository
     private static bool CompareTrackName(MediaFile mediaFile, MusicBrainzTrack track)
     {
         string trackTitle = track.Title;
-        string tagTitle = mediaFile.TagFile?.Tag?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
+        string tagTitle = mediaFile.Tag?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
         string fileTitle = mediaFile.Parsed?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
         
         if (string.IsNullOrEmpty(trackTitle) && string.IsNullOrEmpty(fileTitle) && string.IsNullOrEmpty(tagTitle)) return false;

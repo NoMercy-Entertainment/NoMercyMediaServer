@@ -11,6 +11,7 @@ using NoMercy.Encoder.Format.Rules;
 using NoMercy.Encoder.Format.Subtitle;
 using NoMercy.Encoder.Format.Video;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -21,8 +22,6 @@ public class EncodeVideoJob : AbstractEncoderJob
     public override string QueueName => "encoder";
     public override int Priority => 4;
     public string Status { get; set; } = "pending";
-    
-    public string  InputFile { get; set; } = string.Empty;
 
     public override async Task Handle()
     {
@@ -104,7 +103,7 @@ public class EncodeVideoJob : AbstractEncoderJob
                 {
                     await ffmpeg.ConvertSubtitles(ffmpeg.Container.SubtitleStreams
                         .Where(x => x.ConvertSubtitle)
-                        .ToList(), Id, fileMetadata.Title, fileMetadata.ImgPath);
+                        .ToList(), Id.ToInt(), fileMetadata.Title, fileMetadata.ImgPath);
                 }
 
                 Networking.Networking.SendToAll("encoder-progress", "dashboardHub",  new Progress
@@ -148,13 +147,13 @@ public class EncodeVideoJob : AbstractEncoderJob
     private async Task<FileMetadata> GetFileMetaData(Folder folder, MediaContext context) {
         Movie? movie = folder.FolderLibraries.Any(x => x.Library.Type == "movie")
             ? await context.Movies
-                .FirstOrDefaultAsync(x => x.Id == Id)
+                .FirstOrDefaultAsync(x => x.Id == Id.ToInt())
             : null;
 
         Episode? episode = folder.FolderLibraries.Any(x => x.Library.Type == "tv" || x.Library.Type == "anime")
             ? await context.Episodes
                 .Include(x => x.Tv)
-                .FirstOrDefaultAsync(x => x.Id == Id)
+                .FirstOrDefaultAsync(x => x.Id == Id.ToInt())
             : null;
 
         if (movie is null && episode is null)

@@ -23,6 +23,10 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue
     public MusicBrainzTrack foundTrack { get; set; } = null!;
     public ProcessMusicFolderJob.FolderMetadata folderMetaData { get; set; } = null!;
     public MediaFile mediaFile { get; set; } = null!;
+    
+    public string  InputFolder { get; set; } = string.Empty;
+    
+    public string  InputFile { get; set; } = string.Empty;
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
