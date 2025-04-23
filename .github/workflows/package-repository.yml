@@ -168,30 +168,37 @@ jobs:
 
           # Generate Release file
           cd dists/stable
+          cat > Release << EOF
+          Origin: NoMercy Entertainment
+          Label: NoMercy
+          Suite: stable
+          Codename: stable
+          Version: 1.0
+          Architectures: amd64
+          Components: main
+          Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')
+          SHA256:
+          EOF
 
-          # Calculate sizes and hashes
-          echo "Origin: NoMercy Entertainment" > Release
-          echo "Label: NoMercy" >> Release
-          echo "Suite: stable" >> Release
-          echo "Codename: stable" >> Release
-          echo "Version: 1.0" >> Release
-          echo "Architectures: amd64" >> Release
-          echo "Components: main" >> Release
-          echo "Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')" >> Release
-
-          # Add hashes
-          echo "SHA256:" >> Release
+          # Add hashes to Release file
           for file in $(find main -type f); do
-            echo " $(sha256sum $file | cut -d' ' -f1) $(wc -c < $file) <span class="math-inline">file" \>\> Release
+            size=$(wc -c < "$file")
+            sha256=$(sha256sum "$file" | cut -d' ' -f1)
+            echo " $sha256 $size $file" >> Release
           done
-          # Import GPG private key
-          echo "</span>{{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+          # Import GPG private key with proper error handling
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import --allow-secret-key-import
+          if [ $? -ne 0 ]; then
+            echo "Failed to import GPG key"
+            exit 1
+          fi
 
           # Sign the Release file
-          gpg --batch --detach-sig -o Release.gpg Release
+          gpg --batch --yes --detach-sign --armor -o Release.gpg Release
 
-          # Generate an inline clear-signed file (optional)
-          gpg --clearsign -o InRelease Release
+          # Create InRelease file
+          gpg --batch --yes --clearsign -o InRelease Release
 
           cd ../../..
 
