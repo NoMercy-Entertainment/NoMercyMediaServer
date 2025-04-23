@@ -354,7 +354,7 @@ jobs:
             cp ./src/NoMercy.Server/Assets/Linux/icon.png <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
 
             # Create .PKGINFO
-            cat > <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/.PKGINFO << EOF
+            cat > ${PACKAGE_ROOT}/pkg/${name}/.PKGINFO <<EOF
           pkgname = ${name}
           pkgver = ${VERSION}-1
           pkgdesc = ${friendly_name}
