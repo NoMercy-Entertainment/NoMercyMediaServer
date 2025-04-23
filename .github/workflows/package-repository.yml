@@ -226,33 +226,33 @@ jobs:
 
             # Create control file
             cat > "${PACKAGE_ROOT}/DEBIAN/control" << EOF
-              Package: ${name}
-              Version: ${VERSION}
-              Architecture: amd64
-              Maintainer: NoMercy Entertainment <support@nomercy.tv>
-              Description: ${friendly_name}
-              Depends: libc6
-              Priority: optional
-              Section: multimedia
-              EOF
+            Package: ${name}
+            Version: ${VERSION}
+            Architecture: amd64
+            Maintainer: NoMercy Entertainment <support@nomercy.tv>
+            Description: ${friendly_name}
+            Depends: libc6
+            Priority: optional
+            Section: multimedia
+            EOF
               
-              # Build package
-              dpkg-deb --build "${PACKAGE_ROOT}"
-              mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
-              
-              # Create symlink
-              cd "./packages/apt/pool/main/n/${name}"
-              ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
-              cd -
-            }
+            # Build package
+            dpkg-deb --build "${PACKAGE_ROOT}"
+            mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
             
-            # Create package directories
-            mkdir -p packages/apt/pool/main/n/{nomercymediaserver,nomercyupdater,nomercyapp}
+            # Create symlink
+            cd "./packages/apt/pool/main/n/${name}"
+            ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
+            cd -
+          }
             
-            # Build packages
-            create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-            create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-            create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+          # Create package directories
+          mkdir -p packages/apt/pool/main/n/{nomercymediaserver,nomercyupdater,nomercyapp}
+          
+          # Build packages
+          create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
+          create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
+          create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
 
           cd ../../..
 
