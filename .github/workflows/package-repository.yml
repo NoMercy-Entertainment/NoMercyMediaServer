@@ -225,16 +225,16 @@ jobs:
             cp "./src/NoMercy.Server/Assets/Linux/icon.png" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
 
             # Create control file
-            cat > "${PACKAGE_ROOT}/DEBIAN/control" << -EOF
-            Package: ${name}
-            Version: ${VERSION}
-            Architecture: amd64
-            Maintainer: NoMercy Entertainment <support@nomercy.tv>
-            Description: ${friendly_name}
-            Depends: libc6
-            Priority: optional
-            Section: multimedia
-            EOF
+            cat > "${PACKAGE_ROOT}/DEBIAN/control" << EOF
+          Package: ${name}
+          Version: ${VERSION}
+          Architecture: amd64
+          Maintainer: NoMercy Entertainment <support@nomercy.tv>
+          Description: ${friendly_name}
+          Depends: libc6
+          Priority: optional
+          Section: multimedia
+          EOF
             
             # Build package
             dpkg-deb --build "${PACKAGE_ROOT}"
@@ -276,38 +276,38 @@ jobs:
             cp "./src/NoMercy.Server/Assets/Linux/icon.png" ~/rpmbuild/SOURCES/
 
             cat > ~/rpmbuild/SPECS/"${name}".spec << EOF
-            Name: ${name}
-            Version: ${VERSION}
-            Release: 1%{?dist}
-            Summary: ${friendly_name}
-            License: Proprietary
-            URL: https://nomercy.tv
-            BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-      
-            %description
-            Modern Media Server Solution
-      
-            %install
-            mkdir -p %{buildroot}/usr/bin
-            mkdir -p %{buildroot}/usr/share/applications
-            mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
-            cp %{_sourcedir}/${name} %{buildroot}/usr/bin/
-            cp %{_sourcedir}/${desktop_file} %{buildroot}/usr/share/applications/
-            cp %{_sourcedir}/icon.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-            chmod 755 %{buildroot}/usr/bin/${name}
-      
-            %files
-            %attr(755,root,root) /usr/bin/${name}
-            %attr(644,root,root) /usr/share/applications/${desktop_file}
-            %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-      
-            %clean
-            rm -rf %{buildroot}
-      
-            %changelog
-            * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - ${VERSION}-1
-            - Initial package
-            EOF
+          Name: ${name}
+          Version: ${VERSION}
+          Release: 1%{?dist}
+          Summary: ${friendly_name}
+          License: Proprietary
+          URL: https://nomercy.tv
+          BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+    
+          %description
+          Modern Media Server Solution
+    
+          %install
+          mkdir -p %{buildroot}/usr/bin
+          mkdir -p %{buildroot}/usr/share/applications
+          mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
+          cp %{_sourcedir}/${name} %{buildroot}/usr/bin/
+          cp %{_sourcedir}/${desktop_file} %{buildroot}/usr/share/applications/
+          cp %{_sourcedir}/icon.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+          chmod 755 %{buildroot}/usr/bin/${name}
+    
+          %files
+          %attr(755,root,root) /usr/bin/${name}
+          %attr(644,root,root) /usr/share/applications/${desktop_file}
+          %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+    
+          %clean
+          rm -rf %{buildroot}
+    
+          %changelog
+          * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - ${VERSION}-1
+          - Initial package
+          EOF
             
             # Build RPM package
             rpmbuild -bb ~/rpmbuild/SPECS/"${name}".spec
@@ -355,16 +355,16 @@ jobs:
 
             # Create .PKGINFO
             cat > <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/.PKGINFO << EOF
-            pkgname = ${name}
-            pkgver = ${VERSION}-1
-            pkgdesc = ${friendly_name}
-            url = https://nomercy.tv
-            builddate = $(date +%s)
-            size = $(du -b ${bin_path} | cut -f1)
-            arch = x86_64
-            license = custom
-            depend = glibc
-            EOF
+          pkgname = ${name}
+          pkgver = ${VERSION}-1
+          pkgdesc = ${friendly_name}
+          url = https://nomercy.tv
+          builddate = $(date +%s)
+          size = $(du -b ${bin_path} | cut -f1)
+          arch = x86_64
+          license = custom
+          depend = glibc
+          EOF
 
             # Create package manually with tar and zstd
             cd $PACKAGE_ROOT/pkg
