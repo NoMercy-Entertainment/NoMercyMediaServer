@@ -606,21 +606,6 @@ jobs:
           </html>
           EOF
 
-      - name: Clean up Arch repository files
-        run: |
-          # Clean up DEB build files
-          rm -rf packages/debian-*
-          find packages/apt -type f ! -name "*.deb" -a ! -name "Release*" -delete
-
-          # Clean up RPM build files
-          rm -rf packages/rpm/repodata/
-          find packages/rpm -type f ! -name "*.rpm" -a ! -name "*.asc" -delete
-
-          # Clean up Arch build files
-          rm -rf packages/arch-*
-          rm -f packages/arch/pool/x86_64/nomercy.db*
-          find packages/arch -type f ! -name "*.pkg.tar.zst" -a ! -name "*.sig" -delete
-
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
