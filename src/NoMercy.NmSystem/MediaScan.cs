@@ -274,17 +274,6 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 //     movieFile.Episode ??= animeInfo.Episode;
                 // }
 
-                MovieFileExtend movieFileExtend = new()
-                {
-                    FilePath = movieFile?.Path ?? file,
-                    Episode = movieFile?.Episode,
-                    Year = movieFile?.Year,
-                    Season = movieFile?.Season,
-                    Title = movieFile?.Title,
-                    IsSeries = movieFile?.IsSeries ?? false,
-                    IsSuccess = movieFile?.IsSuccess ?? false
-                };
-
                 FfProbeData? ffprobe = null;
                 TagFile? tagFile = null;
                 try
@@ -301,6 +290,20 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     Logger.App(e.Message, LogEventLevel.Fatal);
                     // return;
                 }
+                
+                MovieFileExtend movieFileExtend = new()
+                {
+                    FilePath = movieFile?.Path ?? file,
+                    Episode = movieFile?.Episode,
+                    Year = movieFile?.Year,
+                    Season = movieFile?.Season,
+                    Title = movieFile?.Title,
+                    IsSeries = movieFile?.IsSeries ?? false,
+                    IsSuccess = movieFile?.IsSuccess ?? false,
+                    DiscNumber = tagFile?.Tag?.Disc.ToInt() ?? 0,
+                    TrackNumber = tagFile?.Tag?.Track.ToInt() ?? 0
+                };
+
 
                 MediaFile res = new()
                 {
@@ -315,7 +318,8 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
                     Parsed = movieFileExtend,
                     FFprobe = ffprobe,
-                    TagFile = tagFile,
+                    Tag = tagFile?.Tag,
+                    Properties = tagFile?.Properties,
                     // FingerPint = fingerPrint
                 };
 

@@ -236,7 +236,7 @@ public class FfMpeg : Classes
                     Thumbnail = thumbnail,
                     Title = meta.Title,
                     Id = meta.Id,
-                    Message = "Encoding video",
+                    Message = $"Encoding {meta.Type}",
                     ProgressId = ffmpeg.Id
                 };
 

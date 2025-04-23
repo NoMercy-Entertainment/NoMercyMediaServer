@@ -42,7 +42,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/server", Order = 10)]
-public class ServerController(IHostApplicationLifetime appLifetime, MediaContext context, FileRepository fileRepository) : BaseController
+public class ServerController(IHostApplicationLifetime appLifetime, MediaContext context, FileRepository fileRepository, MediaProcessing.Jobs.JobDispatcher jobDispatcher) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -186,25 +186,22 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
             if (library.Type == "music")
             {
                 Logger.App("Adding music files to library", LogEventLevel.Verbose);
-                JobDispatcher.Dispatch(new ProcessMusicFolderJob
-                {
-                    LibraryId = library.Id,
-                    FolderId = request.FolderId,
-                    Id = request.Files[0].Id.ToGuid(),
-                    InputFolder = request.Files[0].Path,
-                }, "encoder");
+                jobDispatcher.DispatchJob<ProcessMusicFolderJob>(
+                    library.Id,
+                    request.FolderId,
+                    request.Files[0].Id.ToGuid(),
+                    request.Files[0].Path);
 
                 return Ok(request);
             }
         
             foreach (AddFile file in request.Files)
             {
-                JobDispatcher.Dispatch(new EncodeVideoJob
-                {
-                    FolderId = request.FolderId,
-                    Id = file.Id.ToInt(),
-                    InputFile = file.Path,
-                }, "encoder");
+                jobDispatcher.DispatchJob<EncodeVideoJob>(
+                    request.FolderId,
+                    file.Id,
+                    file.Path
+                );
             }
 
             return Ok(request);

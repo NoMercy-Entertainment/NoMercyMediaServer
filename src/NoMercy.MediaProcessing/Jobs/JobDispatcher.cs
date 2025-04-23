@@ -8,10 +8,17 @@ namespace NoMercy.MediaProcessing.Jobs;
 
 public class JobDispatcher
 {
-
-    public void DispatchJob<TJob>(TJob job)
+    public void DispatchJob<TJob>(Ulid folderId, string id, string inputFile)
         where TJob : AbstractEncoderJob, new()
     {
+        TJob job = new() { FolderId = folderId, Id = id, InputFile = inputFile };
+        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+    }
+    
+    public void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, Guid releaseId, string filePath)
+        where TJob : AbstractMusicFolderJob, new()
+    {
+        TJob job = new() { FolderId = folderId, LibraryId = libraryId, Id = releaseId, FilePath = filePath };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
     
@@ -92,16 +99,25 @@ public class JobDispatcher
     }
     
     public void DispatchJob<TJob>(
+        Guid id,
         EncoderProfile profile, 
         Folder folder, 
         ProcessMusicFolderJob.FolderMetadata folderMetaData, 
         MediaFile mediaFile,
         MusicBrainzTrack foundTrack,
-        Ulid libraryId
+        Ulid libraryId,
+        string inputFolder,
+        string inputFile
     )
         where TJob : EncodeMusicJob, new()
     {
-        TJob job = new() { Folder = folder, Profile = profile, foundTrack = foundTrack, folderMetaData = folderMetaData, mediaFile = mediaFile, LibraryId = libraryId };
+        TJob job = new() { 
+            Id = id,
+            Folder = folder, Profile = profile, 
+            foundTrack = foundTrack, folderMetaData = folderMetaData, 
+            mediaFile = mediaFile, LibraryId = libraryId, 
+            InputFolder = inputFolder, InputFile = inputFile
+        };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
 }

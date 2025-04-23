@@ -41,6 +41,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Server.services;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
+using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
 
@@ -102,6 +103,8 @@ public class Startup(IApiVersionDescriptionProvider provider)
         services.AddScoped<PersonManager>();
 
         services.AddScoped<HomeController>();
+        
+        services.AddScoped<JobDispatcher>();
         
         services.AddHostedService<ServerRegistrationService>(_ =>
         {

@@ -44,7 +44,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
 
             ffmpeg.SetBasePath(folderMetaData.BasePath);
             ffmpeg.SetTitle(mediaFile.Name);
-            ffmpeg.ToFile(track.CreateFileName());
+            ffmpeg.ToFile(track.CreateTitle());
 
             ffmpeg.AddContainer(container);
 
@@ -58,7 +58,8 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
             {
                 Id = track.Id,
                 Title = foundTrack.Title,
-                BaseFolder = folderMetaData.BasePath
+                BaseFolder = folderMetaData.BasePath,
+                Type = "audio",
             };
             
             Logger.Encoder(fullCommand);
@@ -123,7 +124,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 Folder, mediaFolder, coverPalette)) return;
                 
             Library? albumLibrary = Folder.FolderLibraries
-                ?.FirstOrDefault(f => f.LibraryId == LibraryId)?.Library;
+                .FirstOrDefault(f => f.LibraryId == LibraryId)?.Library;
             
             if (albumLibrary is null)
             {

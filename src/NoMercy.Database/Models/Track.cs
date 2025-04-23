@@ -81,13 +81,18 @@ public class Track : ColorPaletteTimeStamps
         return string.Concat(Name, " NoMercy");
     }
 
-    public string CreateFileName()
+    public string CreateTitle()
     {
         int padding = 2;
         if (AlbumTrack.Count.ToString().Length > 2)
         {
             padding = AlbumTrack.Count.ToString().Length;
         }
-        return string.Concat(TrackNumber.ToString().PadLeft(padding, '0'), " - ",  Name.MusicBrainzSafeName(), ".NoMercy");
+        return string.Concat(
+            TrackNumber.ToString().PadLeft(padding, '0'), 
+            " - ", 
+            Name.MusicBrainzSafeName(), 
+            ".NoMercy"
+            );
     }
 }

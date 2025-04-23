@@ -4,7 +4,6 @@
 
 using NoMercy.Database.Models;
 using NoMercy.Encoder.Format.Container;
-using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Queue;
 
