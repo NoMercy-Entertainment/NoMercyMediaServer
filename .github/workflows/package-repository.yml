@@ -325,9 +325,10 @@ jobs:
           echo "Package ${name} created successfully"
           }
           
-          # Clean existing packages
-          rm -rf packages/apt/pool/main/n/*
-          mkdir -p packages/apt/pool/main/n/{nomercymediaserver,nomercyupdater,nomercyapp}
+          # Move package and create symlink
+          mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
+          cd "./packages/apt/pool/main/n/${name}"
+          ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
           
           # Build packages
           create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
