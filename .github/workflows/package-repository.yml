@@ -385,36 +385,23 @@ jobs:
           depend = glibc
           EOF
 
-             # Create package manually with tar and zstd
-            cd ${PACKAGE_ROOT}/pkg
-            tar -cf - ${name} | zstd -z -c -T0 > ../${name}-${VERSION}-1-x86_64.pkg.tar.zst
-            cd ../../..
+          # Calculate hashes from root of dists/stable
+          cd .. # Move to dists directory
+          for file in $(find stable/main -type f); do
+            size=$(wc -c < "$file")
+            sha256=$(sha256sum "$file" | cut -d' ' -f1)
+            echo " $sha256 $size ${file#stable/}" >> stable/Release
+          done
 
-              # Move package
-              mv ${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst ./packages/arch/pool/x86_64/
-          }
+          # Sign Release file in correct location
+          cd stable
+          gpg --batch --yes --clear-sign -o InRelease Release
+          gpg --batch --yes --detach-sign --armor -o Release.gpg Release
 
-          # Build packages
-          create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-          create_arch_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-          create_arch_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+          cd ../../../..
 
-          cd packages/arch/pool/x86_64
-          
-          # Generate smaller repo database
-          repo-add -n -R nomercy.db.tar.gz *.pkg.tar.zst
-
-          # Create symbolic links
-          ln -sf nomercy.db.tar.gz nomercy.db
-          ln -sf nomercy.files.tar.gz nomercy.files
-          
-          # Sign the database
-          gpg --batch --yes --detach-sign --armor -o nomercy.db.sig nomercy.db
-          
-          # Cleanup old files but keep necessary ones
-          rm -f *.old
-          rm -f *.files.tar.gz*
-          rm -f *.db.tar.gz.old*
+          # Verify final structure
+          tree packages/apt
           
       - name: Create Public Key File
         run: |
