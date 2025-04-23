@@ -148,9 +148,7 @@ jobs:
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
           mkdir -p packages/{apt,rpm,arch,debian,redhat}
-          mkdir -p packages/apt/pool/main/n/nomercymediaserver
-          mkdir -p packages/apt/dists/stable/main/binary-amd64
-          mkdir -p packages/debian/dists/stable/main/binary-amd64
+          mkdir -p packages/apt/{pool/main/n,dists/stable/main/binary-amd64}
           mkdir -p packages/rpm/pool/x86_64
           mkdir -p packages/rpm/repodata
           mkdir -p packages/redhat/repodata
@@ -205,7 +203,7 @@ jobs:
       - name: Build DEB Packages
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
-
+          
           # Function to create DEB package
           create_deb_package() {
             local name=$1
@@ -213,28 +211,96 @@ jobs:
             local bin_path=$3
             local desktop_file=$4
             local PACKAGE_ROOT="./packages/debian-${name}"
-
+          
+            # Create directory structure
             mkdir -p "${PACKAGE_ROOT}/DEBIAN"
             mkdir -p "${PACKAGE_ROOT}/usr/bin"
             mkdir -p "${PACKAGE_ROOT}/usr/share/applications"
             mkdir -p "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps"
-
-            # Copy files
+            mkdir -p "${PACKAGE_ROOT}/lib/systemd/user"
+          
+            # Copy binary and assets
             cp "${bin_path}" "${PACKAGE_ROOT}/usr/bin/${name}"
             cp "./src/NoMercy.Server/Assets/Linux/${desktop_file}" "${PACKAGE_ROOT}/usr/share/applications/"
             cp "./src/NoMercy.Server/Assets/Linux/icon.png" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
-
-            # Create control file
+          
+            # Create systemd service file
+            cat > "${PACKAGE_ROOT}/lib/systemd/user/${name}.service" << EOF
+          [ Unit ]
+          Description=${friendly_name} Service
+          After=network.target
+    
+          [ Service ]
+          Type=simple
+          ExecStart=/usr/bin/${name}
+          Restart=on-failure
+    
+          [ Install ]
+          WantedBy=default.target
+          EOF
+      
+            # Create control file with dependencies
             cat > "${PACKAGE_ROOT}/DEBIAN/control" << EOF
           Package: ${name}
           Version: ${VERSION}
           Architecture: amd64
           Maintainer: NoMercy Entertainment <support@nomercy.tv>
           Description: ${friendly_name}
-          Depends: libc6
+          Depends: libc6, libicu70, libssl3, libgssapi-krb5-2
           Priority: optional
           Section: multimedia
           EOF
+      
+            # Create postinst script
+            cat > "${PACKAGE_ROOT}/DEBIAN/postinst" << EOF
+          #!/bin/sh
+          set -e
+    
+          # Set correct permissions
+          chmod 755 /usr/bin/${name}
+          chmod 644 /usr/share/applications/${desktop_file}
+          chmod 644 /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+          chmod 644 /lib/systemd/user/${name}.service
+    
+          # Reload systemd user daemon
+          systemctl --user daemon-reload || true
+    
+          # Enable and start service for all users
+          for uid in \$(getent passwd | cut -d: -f3); do
+            if [ "\$uid" -ge 1000 ] && [ "\$uid" -lt 60000 ]; then
+            username=\$(getent passwd "\$uid" | cut -d: -f1)
+            if [ -d "/home/\$username" ]; then
+            su - "\$username" -c "systemctl --user enable ${name}.service" || true
+            su - "\$username" -c "systemctl --user start ${name}.service" || true
+            fi
+            fi
+          done
+    
+          exit 0
+          EOF
+      
+          # Create prerm script
+          cat > "${PACKAGE_ROOT}/DEBIAN/prerm" << EOF
+          #!/bin/sh
+          set -e
+    
+          # Stop and disable service for all users
+          for uid in \$(getent passwd | cut -d: -f3); do
+            if [ "\$uid" -ge 1000 ] && [ "\$uid" -lt 60000 ]; then
+            username=\$(getent passwd "\$uid" | cut -d: -f1)
+            if [ -d "/home/\$username" ]; then
+            su - "\$username" -c "systemctl --user stop ${name}.service" || true
+            su - "\$username" -c "systemctl --user disable ${name}.service" || true
+            fi
+            fi
+          done
+    
+          exit 0
+          EOF
+          
+            # Set permissions for maintainer scripts
+            chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst"
+            chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm"
             
             # Build package
             dpkg-deb --build "${PACKAGE_ROOT}"
@@ -245,7 +311,7 @@ jobs:
             ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
             cd -
           }
-            
+          
           # Create package directories
           mkdir -p packages/apt/pool/main/n/{nomercymediaserver,nomercyupdater,nomercyapp}
           
@@ -253,8 +319,11 @@ jobs:
           create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
           create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
           create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
-
-          cd ../../..
+      
+          # Update package index
+          cd packages/apt
+          dpkg-scanpackages --arch amd64 pool/ > dists/stable/main/binary-amd64/Packages
+          gzip -k dists/stable/main/binary-amd64/Packages
 
       - name: Build RPM Packages and Sign Repository
         run: |
@@ -464,7 +533,7 @@ jobs:
             <pre>
           # For latest version
           echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
-          wget -O- https://repo.nomercy.tv/Release.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
+          wget -O - https://repo.nomercy.tv/nomercy_repo.gpg.pub | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
           sudo apt update
           sudo apt install nomercymediaserver nomercyupdater nomercyapp
           </pre>
