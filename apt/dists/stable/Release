@@ -5,7 +5,8 @@ Codename: stable
 Version: 1.0
 Architectures: amd64
 Components: main
-Date: Wed, 23 Apr 2025 04:40:14 UTC
+Description: NoMercy Entertainment Repository
+Date: Wed, 23 Apr 2025 04:56:29 UTC
 SHA256:
- cb5ec32f6e5cafb5bca55dfafab3943bf6c6ee096fc26732a0716582daf93644 3072 main/binary-amd64/Packages
- c8b727eb2752de1ceec3cefc1a794abdac4de1c5511b208fc6378a22a501db01 649 main/binary-amd64/Packages.gz
+ d9bae1a9b3f53a74bd2441cbe5e24e547ed878dff2cd014498c54dd8822536c5 3072 main/binary-amd64/Packages
+ 575c4626318bd356847154aaee483e91a452ffb09a99dd9c3ef4b3427c404f8d 651 main/binary-amd64/Packages.gz
