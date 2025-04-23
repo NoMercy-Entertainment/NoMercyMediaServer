@@ -1,8 +1,0 @@
-Package: nomercymediaserver
-Version: 0.1.89
-Architecture: amd64
-Maintainer: NoMercy Entertainment <support@nomercy.tv>
-Description: NoMercy-MediaServer
-Depends: libc6
-Priority: optional
-Section: multimedia

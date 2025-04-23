@@ -12,7 +12,8 @@
   <h4>Debian/Ubuntu</h4>
   <pre>
 # For latest version
-echo "deb [trusted=yes] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
+echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
+wget -O- https://repo.nomercy.tv/Release.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
 sudo apt update
 sudo apt install nomercymediaserver nomercyupdater nomercyapp
 </pre>
@@ -29,8 +30,9 @@ sudo dnf install nomercymediaserver nomercyupdater nomercyapp
 # For latest version
 echo "[nomercy]
 Server = https://repo.nomercy.tv/arch/pool/x86_64" | sudo tee /etc/pacman.d/nomercy-repo
-sudo pacman-key --recv-key support@nomercy.tv
-sudo pacman-key --lsign-key support@nomercy.tv
+curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub
+sudo pacman-key --add nomercy.gpg.pub
+sudo pacman-key --lsign-key 23F1B8BDEE7408FBB2401B66EBBAD4C5328D9E9B
 sudo pacman -Sy
 sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
 </pre>
