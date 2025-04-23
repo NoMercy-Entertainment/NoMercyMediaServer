@@ -225,7 +225,7 @@ jobs:
             cp "./src/NoMercy.Server/Assets/Linux/icon.png" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
 
             # Create control file
-            cat > "${PACKAGE_ROOT}/DEBIAN/control" << EOF
+            cat > "${PACKAGE_ROOT}/DEBIAN/control" << -EOF
             Package: ${name}
             Version: ${VERSION}
             Architecture: amd64
