@@ -13,7 +13,7 @@
   <pre>
 # For latest version
 echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
-wget -O- https://repo.nomercy.tv/Release.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
+wget -O - https://repo.nomercy.tv/nomercy_repo.gpg.pub | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
 sudo apt update
 sudo apt install nomercymediaserver nomercyupdater nomercyapp
 </pre>
