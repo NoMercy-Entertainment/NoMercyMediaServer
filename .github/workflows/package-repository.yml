@@ -161,10 +161,10 @@ jobs:
 
           # Generate Packages file
           cd packages/apt
-          dpkg-scanpackages --arch amd64 pool/ > dists/stable/main/binary-amd64/Packages
-          gzip -k dists/stable/main/binary-amd64/Packages
-
-          # Generate Release file
+          dpkg-scanpackages --multiversion pool/ > dists/stable/main/binary-amd64/Packages
+          gzip -k -f dists/stable/main/binary-amd64/Packages
+      
+          # Generate Release file directly after scanning packages
           cd dists/stable
           cat > Release << EOF
           Origin: NoMercy Entertainment
@@ -178,25 +178,18 @@ jobs:
           SHA256:
           EOF
 
-          # Add hashes to Release file
-          for file in $(find main -type f); do
-            size=$(wc -c < "$file")
-            sha256=$(sha256sum "$file" | cut -d' ' -f1)
-            echo " $sha256 $size $file" >> Release
+          # Add hashes after packages are scanned
+          cd ../..
+          for file in $(find dists/stable/main -type f); do
+          size=$(wc -c < "$file")
+          sha256=$(sha256sum "$file" | cut -d' ' -f1)
+          echo " $sha256 $size $file" >> dists/stable/Release
           done
-
-          # Import GPG private key with proper error handling
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import --allow-secret-key-import
-          if [ $? -ne 0 ]; then
-            echo "Failed to import GPG key"
-            exit 1
-          fi
-
-          # Sign the Release file
-          gpg --batch --yes --detach-sign --armor -o Release.gpg Release
-
-          # Create InRelease file
-          gpg --batch --yes --clearsign -o InRelease Release
+      
+          # Sign repository
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          gpg --batch --yes --detach-sign --armor -o dists/stable/Release.gpg dists/stable/Release
+          gpg --batch --yes --clearsign -o dists/stable/InRelease dists/stable/Release
 
           cd ../../..
 
