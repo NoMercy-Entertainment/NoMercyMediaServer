@@ -154,45 +154,6 @@ jobs:
           mkdir -p packages/redhat/repodata
           mkdir -p packages/arch/pool/x86_64
 
-      - name: Generate APT Repository Metadata and Sign
-        run: |
-          # Create necessary directories
-          mkdir -p packages/apt/dists/stable/main/binary-amd64
-
-          # Generate Packages file
-          cd packages/apt
-          dpkg-scanpackages --multiversion pool/ > dists/stable/main/binary-amd64/Packages
-          gzip -k -f dists/stable/main/binary-amd64/Packages
-      
-          # Generate Release file directly after scanning packages
-          cd dists/stable
-          cat > Release << EOF
-          Origin: NoMercy Entertainment
-          Label: NoMercy
-          Suite: stable
-          Codename: stable
-          Version: 1.0
-          Architectures: amd64
-          Components: main
-          Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')
-          SHA256:
-          EOF
-
-          # Add hashes after packages are scanned
-          cd ../..
-          for file in $(find dists/stable/main -type f); do
-          size=$(wc -c < "$file")
-          sha256=$(sha256sum "$file" | cut -d' ' -f1)
-          echo " $sha256 $size $file" >> dists/stable/Release
-          done
-      
-          # Sign repository
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-          gpg --batch --yes --detach-sign --armor -o dists/stable/Release.gpg dists/stable/Release
-          gpg --batch --yes --clearsign -o dists/stable/InRelease dists/stable/Release
-
-          cd ../../..
-
       - name: Build DEB Packages
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
@@ -479,7 +440,55 @@ jobs:
         run: |
           gpg --armor --export "${{ vars.GPG_KEY_ID }}" > packages/nomercy_repo.gpg.pub
           chmod 644 packages/nomercy_repo.gpg.pub
-        
+
+      - name: Generate APT Repository Metadata and Sign
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }}
+          
+          # Create necessary directories
+          mkdir -p packages/apt/dists/stable/main/binary-amd64
+
+          # Generate Packages file
+          cd packages/apt
+          
+          # Remove any existing Packages files
+          rm -f dists/stable/main/binary-amd64/Packages*
+          
+          # Ensure proper permissions on pool directory
+          chmod -R 755 pool/
+          
+          # Generate Packages file from pool directory
+          dpkg-scanpackages --multiversion pool/ > dists/stable/main/binary-amd64/Packages
+          gzip -k -f dists/stable/main/binary-amd64/Packages
+          
+          # Generate Release file
+          cd dists/stable
+          cat > Release << EOF
+          Origin: NoMercy Entertainment
+          Label: NoMercy
+          Suite: stable
+          Codename: stable
+          Version: 1.0
+          Architectures: amd64
+          Components: main
+          Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')
+          SHA256:
+          EOF
+
+          # Calculate hashes of Packages files
+          cd ../..
+          for file in $(find dists/stable/main -type f); do
+          size=$(wc -c < "$file")
+          sha256=$(sha256sum "$file" | cut -d' ' -f1)
+          echo " $sha256 $size ${file#dists/stable/}" >> dists/stable/Release
+          done
+          
+          # Sign Release file
+          gpg --batch --yes --clear-sign -o dists/stable/InRelease dists/stable/Release
+          gpg --batch --yes --detach-sign --armor -o dists/stable/Release.gpg dists/stable/Release
+          
+          cd ../..      
+      
       - name: Generate Repository Index
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
