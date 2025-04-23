@@ -398,7 +398,9 @@ jobs:
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
           # Trust the key
-          echo -e "5\ny\n" | gpg --command-fd 0 --expert --edit-key "${{ vars.GPG_KEY_ID }}" trust
+          gpg --batch --yes --pinentry-mode loopback \
+            -u "${{ vars.GPG_KEY_ID }}" \
+            -o nomercy.db.sig --detach-sign nomercy.db
 
           # Create pacman.conf
           cat > ./pacman.conf << EOF
