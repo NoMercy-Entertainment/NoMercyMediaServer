@@ -214,31 +214,19 @@ jobs:
             mkdir -p "${PACKAGE_ROOT}/usr/share/applications"
             mkdir -p "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps"
             mkdir -p "${PACKAGE_ROOT}/lib/systemd/user"
-          
-            # Copy binary with error checking
-            if [ ! -f "${bin_path}" ]; then
-              echo "ERROR: Binary file ${bin_path} not found"
-              exit 1
-            fi
+      
+            # Copy binary
             cp "${bin_path}" "${PACKAGE_ROOT}/usr/bin/${name}"
             chmod 755 "${PACKAGE_ROOT}/usr/bin/${name}"
-
+      
             # Copy desktop file
-            if [ ! -f "./src/NoMercy.Server/Assets/Linux/${desktop_file}" ]; then
-              echo "ERROR: Desktop file ${desktop_file} not found"
-              exit 1
-            fi
             cp "./src/NoMercy.Server/Assets/Linux/${desktop_file}" "${PACKAGE_ROOT}/usr/share/applications/"
             chmod 644 "${PACKAGE_ROOT}/usr/share/applications/${desktop_file}"
-
+      
             # Copy icon
-            if [ ! -f "./src/NoMercy.Server/Assets/Linux/icon.png" ]; then
-              echo "ERROR: Icon file not found"
-              exit 1
-            fi
             cp "./src/NoMercy.Server/Assets/Linux/icon.png" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
             chmod 644 "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
-
+      
             # Create systemd service file
             cat > "${PACKAGE_ROOT}/lib/systemd/user/${name}.service" << EOF
           [ Unit ]
@@ -285,10 +273,10 @@ jobs:
           
           exit 0
           EOF
-          chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst"
-          
-          # Create prerm script
-          cat > "${PACKAGE_ROOT}/DEBIAN/prerm" << EOF
+            chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst"
+            
+            # Create prerm script
+            cat > "${PACKAGE_ROOT}/DEBIAN/prerm" << EOF
           #!/bin/sh
           set -e
           
@@ -300,34 +288,26 @@ jobs:
           
           exit 0
           EOF
-          chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm"
-          
-          # Build package
-          echo "Building DEB package for ${name}"
-          dpkg-deb --build "${PACKAGE_ROOT}"
-          
-          # Create package directory
-          mkdir -p "./packages/apt/pool/main/n/${name}"
-          
-          # Move package and create symlink
-          mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
-          cd "./packages/apt/pool/main/n/${name}"
-          ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
-          cd -
-          
-          echo "Package ${name} created successfully"
+            chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm"
+  
+            # Build package
+            dpkg-deb --build "${PACKAGE_ROOT}"
+      
+            # Create package directory and move package
+            mkdir -p "./packages/apt/pool/main/n/${name}"
+            mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
+            
+            # Create symlink
+            cd "./packages/apt/pool/main/n/${name}"
+            ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
+            cd ../../../../../..
           }
-          
-          # Move package and create symlink
-          mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
-          cd "./packages/apt/pool/main/n/${name}"
-          ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
-          
+    
           # Build packages
           create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
           create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
           create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
-          
+      
           # Update package index
           cd packages/apt
           rm -f dists/stable/main/binary-amd64/Packages*
