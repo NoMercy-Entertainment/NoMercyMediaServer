@@ -389,15 +389,24 @@ jobs:
           
             # Create package with proper permissions
             cd ${PACKAGE_ROOT}/pkg
-            chmod 644 ${name}/.PKGINFO
-            tar --create --file ../pkg.tar ${name}/
+            chmod 644 "${name}/.PKGINFO"
+            
+            # Create tar archive with proper structure
+            tar --create \
+            --file ../pkg.tar \
+            --directory . \
+            --owner=0 --group=0 \
+            --mode=644 \
+            --xform="s,^${name}/,," \
+            "${name}/"
+            
             cd ..
-            zstd -19 -T0 pkg.tar -o ${name}-${VERSION}-1-x86_64.pkg.tar.zst
+            zstd -19 -T0 pkg.tar -o "${name}-${VERSION}-1-x86_64.pkg.tar.zst"
             rm pkg.tar
             cd ../..
             
             # Move package
-            mv ${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst ./packages/arch/pool/x86_64/
+            mv "${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst" "./packages/arch/pool/x86_64/"
           }
           
           # Build packages
