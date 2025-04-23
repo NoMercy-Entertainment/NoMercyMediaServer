@@ -1,11 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using System.Globalization;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Libraries;
-using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -18,8 +15,8 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class ProcessMusicFolderJob : AbstractMusicFolderJob
 {
-    public override string QueueName => "encoder";
-    public override int Priority => 4;
+    public override string QueueName => "queue";
+    public override int Priority => 7;
 
     public string Status { get; set; } = "pending";
 
@@ -31,11 +28,6 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
         JobDispatcher jobDispatcher = new();
 
         await using LibraryRepository libraryRepository = new(context);
-        
-        MusicGenreRepository musicGenreRepository = new(context);
-        
-        ArtistRepository artistRepository = new(context);
-        ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         
@@ -81,12 +73,21 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
         
         await using MediaScan mediaScan = new();
         
-        MediaFolderExtend mediaFolder =
-            (await mediaScan.DisableRegexFilter().EnableFileListing().Process(folderMetaData.BasePath)).First();
+        MediaFolderExtend? mediaFolder = (
+            await mediaScan
+                .FilterByMediaType("music")
+                .Process(folderMetaData.BasePath)
+        ).First();
         mediaFolder.Files?.Clear();
         
         Logger.App("Matched: " + folderMetaData.ReleaseName + " - " + Id);
-        AddReleaseOnlyJob addReleaseOnlyJob = new AddReleaseOnlyJob { LibraryId = LibraryId, Id = Id, BaseFolder = folder, MediaFolder = mediaFolder };
+        AddReleaseOnlyJob addReleaseOnlyJob = new()
+        {
+            LibraryId = LibraryId,
+            Id = Id,
+            BaseFolder = folder,
+            MediaFolder = mediaFolder
+        };
         await addReleaseOnlyJob.Handle();
         
         string[] extensions = [".mp3", ".flac", ".wav", ".m4a"];
@@ -99,12 +100,6 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
         {
             await Parallel.ForEachAsync(files, t, (mediaFile, _) =>
             {
-                if (string.IsNullOrEmpty(mediaFile.Path))
-                {
-                    Logger.Encoder($"File path is empty: {mediaFile.Name}", LogEventLevel.Error);
-                    return ValueTask.CompletedTask;
-                }
-
                 TagLib.File tagFile = TagLib.File.Create(mediaFile.Path);
                 string recordingName = tagFile.Tag.Title ?? mediaFile.Name;
                 int trackNumber = tagFile.Tag.Track > 0 ? (int)tagFile.Tag.Track : files.IndexOf(mediaFile) + 1;
@@ -180,8 +175,12 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
 
         await using MediaScan mediaScan = new();
 
-        MediaFolderExtend mediaFolder =
-            (await mediaScan.DisableRegexFilter().EnableFileListing().Process(InputFolder)).First();
+        MediaFolderExtend mediaFolder = (
+            await mediaScan
+                .EnableFileListing()
+                .FilterByMediaType("music")
+                .Process(InputFolder)
+        ).First();
         ConcurrentBag<MediaFile> files = mediaFolder.Files ?? [];
 
         return new()

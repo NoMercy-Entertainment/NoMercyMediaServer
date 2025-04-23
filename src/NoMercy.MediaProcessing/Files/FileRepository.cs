@@ -1,6 +1,6 @@
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using FFMpegCore;
 using Microsoft.EntityFrameworkCore;
 using MovieFileLibrary;
 using NoMercy.Database;
@@ -8,12 +8,12 @@ using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Networking.Dto;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.AcoustId.Client;
-using NoMercy.Providers.AcoustId.Models;
+using NoMercy.Providers.AcoustId;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Providers.TMDB.Client;
@@ -22,6 +22,8 @@ using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 using Serilog.Events;
+using TagLib;
+using TagFile = TagLib.File;
 
 namespace NoMercy.MediaProcessing.Files;
 
@@ -167,7 +169,7 @@ public class FileRepository(MediaContext context) : IFileRepository
 
     public async Task<List<FileItem>> GetFilesInDirectory(string directoryPath, string libraryType)
     {
-        GlobalFFOptions.Configure(options => options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
+        FFMpegCore.GlobalFFOptions.Configure(options => options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
 
         DirectoryInfo directoryInfo = new(directoryPath);
         
@@ -187,7 +189,7 @@ public class FileRepository(MediaContext context) : IFileRepository
             int year = match.Groups["year"].Success ? Convert.ToInt32(match.Groups["year"].Value) : 0;
             string albumName = match.Groups["album"].Success ? match.Groups["album"].Value : Regex.Replace(directoryInfo.Name, @"\[\d{4}\]\s?", "");
             
-            Parallel.ForEach(audioFiles, (file) =>
+            await Parallel.ForEachAsync(audioFiles, (file, _) =>
             {
                 fileList.Add(new()
                 {
@@ -208,30 +210,31 @@ public class FileRepository(MediaContext context) : IFileRepository
                     },
                     Path = Path.Combine(directoryPath, file.FullName)
                 });
+                return ValueTask.CompletedTask;
             });
         }
         else if (videoFiles.Length > 0)
         {
-            foreach (FileInfo file in videoFiles)
+            await Parallel.ForEachAsync(videoFiles, async (file, token) =>
             {
                 try
                 {
                     MovieOrEpisode match = new();
                     TmdbSearchClient searchClient = new();
                     MovieDetector movieDetector = new();
-                    
+
                     string title = file.FullName.Replace("v2", "");
                     // remove any text in square brackets that may cause year to match incorrectly
                     title = Str.RemoveBracketedString().Replace(title, string.Empty);
-                    
-                    IMediaAnalysis mediaAnalysis = await FFProbe.AnalyseAsync(file.FullName);
+
+                    FFMpegCore.IMediaAnalysis mediaAnalysis = await FFMpegCore.FFProbe.AnalyseAsync(file.FullName, cancellationToken: token);
 
                     MovieFile parsed = movieDetector.GetInfo(title);
-                    
+
                     parsed.Year ??= title.TryGetYear();
 
 
-                    if (parsed.Title == null) continue;
+                    if (parsed.Title == null) return;
 
                     Regex regex = Str.MatchNumbers();
                     Match match2 = regex.Match(parsed.Title);
@@ -251,7 +254,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                             TmdbPaginatedResponse<TmdbTvShow>? shows =
                                 await searchClient.TvShow(parsed.Title ?? "", parsed.Year ?? "");
                             TmdbTvShow? show = shows?.Results.FirstOrDefault();
-                            if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) continue;
+                            if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) return;
 
                             bool hasShow = context.Tvs
                                 .Any(item => item.Id == show.Id);
@@ -281,7 +284,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                                 .Where(item => item.TvId == show.Id)
                                 .Where(item => item.SeasonNumber == parsed.Season)
                                 .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
-                            
+
                             if (episode == null)
                             {
                                 List<Episode> episodes = context.Episodes
@@ -299,10 +302,11 @@ public class FileRepository(MediaContext context) : IFileRepository
                                 TmdbEpisodeClient episodeClient =
                                     new(show.Id, parsed.Season.Value, parsed.Episode.Value);
                                 TmdbEpisodeDetails? details = await episodeClient.Details();
-                                if (details == null) continue;
+                                if (details == null) return;
 
                                 Season? season = await context.Seasons
-                                    .FirstOrDefaultAsync(season => season.TvId == show.Id && season.SeasonNumber == details.SeasonNumber);
+                                    .FirstOrDefaultAsync(season =>
+                                        season.TvId == show.Id && season.SeasonNumber == details.SeasonNumber);
 
                                 episode = new()
                                 {
@@ -343,7 +347,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                             TmdbPaginatedResponse<TmdbMovie>? movies =
                                 await searchClient.Movie(parsed.Title ?? "", parsed.Year ?? "");
                             TmdbMovie? movie = movies?.Results.FirstOrDefault();
-                            if (movie == null) continue;
+                            if (movie == null) return;
 
                             Movie? movieItem = context.Movies
                                 .FirstOrDefault(item => item.Id == movie.Id);
@@ -352,7 +356,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                             {
                                 TmdbMovieClient movieClient = new(movie.Id);
                                 TmdbMovieDetails? details = await movieClient.Details();
-                                if (details == null) continue;
+                                if (details == null) return;
 
                                 bool hasMovie = context.Movies
                                     .Any(item => item.Id == movie.Id);
@@ -437,180 +441,191 @@ public class FileRepository(MediaContext context) : IFileRepository
                                 })
                         },
                     });
-                } catch (Exception e)
+                }
+                catch (Exception e)
                 {
                     Logger.App(e.Message, LogEventLevel.Error);
                 }
-            }
+            });
         }
 
         return fileList.OrderBy(file => file.Name).ToList();
     }
 
+    private static readonly List<string> PrevSearchQueries = [];
     public static async Task<List<FileItem>> GetMusicBrainzReleasesInDirectory(string folder)
     {
-        DirectoryInfo directoryInfo = new(folder);
-        FileInfo[] audioFiles = directoryInfo.GetFiles()
-            .Where(file => file.Extension is ".mp3" or ".flac" or ".wav" or ".m4a")
-            .ToArray();
+        PrevSearchQueries.Clear();
         
-        Dictionary<Guid,(MusicBrainzReleaseAppends release, int count)> musicBrainzReleasesDic = new();
+        MediaScan mediaScan = new();
+        ConcurrentBag<MediaFolderExtend> mediaFolders = await mediaScan
+            .EnableFileListing()
+            .FilterByMediaType("music")
+            .Process(folder, 2);
+        
+        if (mediaFolders.Count == 0)
+            return [];
 
-        AcoustIdFingerprintClient acoustIdFingerprintClient = new();
+        ConcurrentBag<MediaFile> mediaFiles = mediaFolders
+            .SelectMany(m => m.Files ?? [])
+            .ToConcurrentBag();
+        
         using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
         using MusicBrainzRecordingClient musicBrainzRecordingClient = new();
+        List<Guid> lookupReleaseIds = [];
         
-        List<TagLib.File> fileTagList = new();
-        
-        await Parallel.ForEachAsync(audioFiles, (file ,_) =>
-        {
-            TagLib.File tagFile = TagLib.File.Create(file.FullName);
-            if (tagFile.Tag == null || string.IsNullOrEmpty(tagFile.Tag.Album)) return ValueTask.CompletedTask;
-            fileTagList.Add(tagFile);
-            return ValueTask.CompletedTask;
-        });
+        (List<MusicBrainzReleaseAppends> releases, string year) = await SearchForReleasesFromMediaFiles(
+            mediaFiles,
+            musicBrainzReleaseClient,
+            lookupReleaseIds,
+            musicBrainzRecordingClient
+        );
 
-        if (fileTagList.Count > 0)
+        releases = await FetchReleaseAppends(
+            lookupReleaseIds,
+            musicBrainzReleaseClient,
+            releases
+        );
+        List<FileItem> files = await GenerateResponse(folder, releases, mediaFiles, year);
+        return files;
+    }
+
+    private static async Task<(List<MusicBrainzReleaseAppends> releases, string year)> SearchForReleasesFromMediaFiles(
+        ConcurrentBag<MediaFile> mediaFiles,
+        MusicBrainzReleaseClient musicBrainzReleaseClient,
+        List<Guid> lookupReleaseIds,
+        MusicBrainzRecordingClient musicBrainzRecordingClient
+    )
+    {
+        string prevMusicBrainzReleaseId = string.Empty;
+        string year = "0";
+        List<MusicBrainzReleaseAppends> releases = new();
+        object lockObject = new();
+        await Parallel.ForEachAsync(mediaFiles, async (mediaFile, _) =>
         {
-            List<TagLib.Tag> albumTags = fileTagList.DistinctBy(x => x.Tag.Album).Select(x => x.Tag).ToList();
-            await Parallel.ForEachAsync(albumTags, async (tag, t) =>
+            mediaFile.TagFile ??= TagFile.Create(mediaFile.Path);
+            mediaFile.FFprobe ??= FFProbe.Create(mediaFile.Path);
+
+            Tag? tag = mediaFile.TagFile?.Tag;
+            if (tag == null) return;
+
+            if (!string.IsNullOrEmpty(tag.MusicBrainzReleaseId))
             {
-                List<MusicBrainzRelease> releases = [];
-                if (!string.IsNullOrEmpty(tag.MusicBrainzReleaseId))
+                if (prevMusicBrainzReleaseId == tag.MusicBrainzReleaseId)
                 {
-                    MusicBrainzReleaseAppends? release =
-                        await musicBrainzReleaseClient.WithAllAppends(tag.MusicBrainzReleaseId.ToGuid());
-                    if (release == null) return;
+                    if (year == "0")
+                        year = tag.Year.ToString();
+                    return;
+                }
+                Guid musicBrainzReleaseId = Guid.Parse(tag.MusicBrainzReleaseId ?? "");
+                if (musicBrainzReleaseId == Guid.Empty) return;
+                MusicBrainzReleaseAppends? release =
+                    await musicBrainzReleaseClient.WithAllAppends(musicBrainzReleaseId);
+
+                if (release == null || release.Id == Guid.Empty) return;
+                prevMusicBrainzReleaseId = release.Id.ToString();
+                lock(lockObject)
+                {
                     releases.Add(release);
                 }
-                else
-                {
-                    string albumName = tag.Album;
-                    string query = $"release:{albumName}";
-                    if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
-                    {
-                        string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
-                            ? tag.AlbumArtists[0]
-                            : tag.FirstAlbumArtist;
-                        query += $" artist:{artistName}";
-                    }
-
-                    if (tag.Year > 0)
-                    {
-                        query += $" date:{tag.Year}";
-                    }
-
-                    MusicBrainzReleaseSearchResponse? releaseSearchResponse =
-                        await musicBrainzReleaseClient.SearchReleases(query, true);
-                    if (releaseSearchResponse == null) return;
-                    if (releaseSearchResponse.Releases.Length == 0)
-                    {
-                        query = $"release:{albumName}";
-                        if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
-                        {
-                            string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
-                                ? tag.AlbumArtists[0]
-                                : tag.FirstAlbumArtist;
-                            query += $" artist:{artistName}";
-                        }
-
-                        releaseSearchResponse = await musicBrainzReleaseClient.SearchReleases(query, true);
-                        if (releaseSearchResponse == null) return;
-                        if (releaseSearchResponse.Releases.Length == 0)
-                            return;
-                    }
-
-                    releases.AddRange(releaseSearchResponse.Releases
-                        .Where(x => x.Score >= 95));
-                }
-
-                await Parallel.ForEachAsync(releases, t, async (release, _) =>
-                {
-                    MusicBrainzReleaseAppends? releaseAppends =
-                        await musicBrainzReleaseClient.WithAllAppends(release.Id, true);
-                    if (releaseAppends == null) return;
-                    if (musicBrainzReleasesDic.TryGetValue(releaseAppends.Id,
-                            out (MusicBrainzReleaseAppends release, int count) tmp))
-                    {
-                        tmp.count++;
-                        musicBrainzReleasesDic[releaseAppends.Id] = tmp;
-                        return;
-                    }
-
-                    musicBrainzReleasesDic.Add(releaseAppends.Id, (releaseAppends, 1));
-                });
-            });
-        }
-        else
-        {
-            await Parallel.ForEachAsync(audioFiles, async (file, _) =>
-            {
-                await Fingerprint(acoustIdFingerprintClient, file, musicBrainzReleaseClient, musicBrainzReleasesDic);
-            });
-        }
-        
-        if (musicBrainzReleasesDic.Count == 0)
-        {
-            await Parallel.ForEachAsync(audioFiles, async (file, t) =>
-            {
-                MusicBrainzSearchResponse? searchResponse;
-
-                TagLib.File tagFile = TagLib.File.Create(file.FullName);
-
-                if (tagFile.Tag == null || string.IsNullOrEmpty(tagFile.Tag.Title))
-                    searchResponse =
-                        await musicBrainzRecordingClient.SearchRecordingsDynamic(file.Name.Replace(file.Extension, ""));
-                else
-                    searchResponse = await musicBrainzRecordingClient.SearchRecordingsDynamic(tagFile.Tag.Title);
-
-                if (searchResponse == null) return;
-                if (searchResponse.Recordings.Count == 0) return;
-                searchResponse.Recordings = searchResponse.Recordings.Where(x => x.Score >= 95).ToList();
-                await Parallel.ForEachAsync(searchResponse.Recordings, t,async (recording, y) =>
-                {
-                    await Parallel.ForEachAsync(recording.Releases, y,async (recordingRelease, _) =>
-                    {
-                        MusicBrainzReleaseAppends? release =
-                            await musicBrainzReleaseClient.WithAllAppends(recordingRelease.Id, true);
-                        if (release == null) return;
-                        if (musicBrainzReleasesDic.TryGetValue(release.Id,
-                                out (MusicBrainzReleaseAppends release, int count) tmp))
-                        {
-                            tmp.count++;
-                            musicBrainzReleasesDic[release.Id] = tmp;
-                            return;
-                        }
-
-                        musicBrainzReleasesDic.Add(release.Id, (release, 1));
-                    });
-                });
-            });
-        }
+            }
             
-        List<MusicBrainzReleaseAppends> musicBrainzReleases = musicBrainzReleasesDic.Values
-            .OrderByDescending(x => x.count)
-            .Select(x => x.release)
+            string albumName = tag.Album.Trim();
+            string trackName = tag.Title.Trim();
+            
+            List<Guid> resultIds = await FingerPrint.GetReleaseIds(mediaFile.Path, albumName);
+            lock (lockObject)
+            {
+                lookupReleaseIds.AddRange(resultIds);
+                lookupReleaseIds = lookupReleaseIds.Distinct().ToList();
+            }
+
+            if (!string.IsNullOrEmpty(trackName))
+            {
+                await SearchOnRecording(trackName, albumName, tag, musicBrainzRecordingClient, lookupReleaseIds);
+            }
+
+            if (string.IsNullOrEmpty(albumName) || PrevSearchQueries.Any(x => x == albumName)) return;
+            PrevSearchQueries.Add(albumName);
+            await SearchOnRelease(albumName, tag, musicBrainzReleaseClient, lookupReleaseIds);
+        });
+        releases = releases
+            .Where(x => x.Id != Guid.Empty)
+            .DistinctBy(x => x.Id)
             .ToList();
-    
-        if (musicBrainzReleases.Count == 0)
+        return (releases, year);
+    }
+
+    private static async Task<List<FileItem>> GenerateResponse(
+        string folder,
+        List<MusicBrainzReleaseAppends> releases,
+        ConcurrentBag<MediaFile> mediaFiles,
+        string year
+    )
+    {
+        if (releases.Count == 0)
             return [];
 
         List<FileItem> files = [];
-
-        foreach (MusicBrainzReleaseAppends release in musicBrainzReleases)
+        
+        MusicBrainzReleaseAppends? bestResult = await GetBestMatchedRelease(mediaFiles, releases);
+        if (bestResult != null)
         {
-            Uri? coverPaletteUrl = await CoverArtImageManagerManager.GetCoverUrl(release.Id, true);
+            Logger.MusicBrainz($"Best match: {bestResult.Title} - {bestResult.Id}", LogEventLevel.Verbose);
             
+            Uri? coverPaletteUrl = await CoverArtImageManagerManager.GetCoverUrl(bestResult.Id, true);
+
             files.Add(new()
             {
-                Size = audioFiles.Sum(x => x.Length),
+                Size = mediaFiles.Sum(x => x.Size),
+                Mode = 0,
+                Name = bestResult.Title,
+                Parent = folder,
+                Parsed = new(folder)
+                {
+                    Title = bestResult.Title,
+                    Year = bestResult.DateTime?.Year.ToString() ?? year,
+                    IsSeries = false,
+                    IsSuccess = true,
+                },
+                Match = new()
+                {
+                    Id = bestResult.Id,
+                    Title = bestResult.Title,
+                    Still = coverPaletteUrl?.ToString(),
+                },
+                Path = folder,
+                Tracks = bestResult.Media.Sum(m => m.TrackCount),
+                Streams = new ()
+                {
+                    Audio =
+                    [
+                        new Audio
+                        {
+                            Index = 0,
+                            Language = $"Best Match {string.Join(", ", Enumerable.Select<MusicBrainzMedia, string>(bestResult.Media, m => m.Format))}"
+                        }
+                    ]
+                }
+            });
+        }
+
+        await Parallel.ForEachAsync(releases, async (release, _) =>
+        {
+            if (files.Any(x => x.Match.Id == release.Id)) return;
+            
+            Uri? coverPaletteUrl = await CoverArtImageManagerManager.GetCoverUrl(release.Id, true);
+
+            files.Add(new()
+            {
+                Size = mediaFiles.Sum(x => x.Size),
                 Mode = 0,
                 Name = release.Title,
                 Parent = folder,
                 Parsed = new(folder)
                 {
                     Title = release.Title,
-                    Year = release.DateTime.ParseYear().ToString(),
+                    Year = release.DateTime?.Year.ToString() ?? year,
                     IsSeries = false,
                     IsSuccess = true,
                 },
@@ -621,47 +636,286 @@ public class FileRepository(MediaContext context) : IFileRepository
                     Still = coverPaletteUrl?.ToString(),
                 },
                 Path = folder,
-                Tracks = release.Media.Sum(m => m.TrackCount)
+                Tracks = release.Media.Sum(m => m.TrackCount),
+                Streams = new ()
+                {
+                    Audio =
+                    [
+                        new Audio
+                        {
+                            Index = 0,
+                            Language = $"Formats: {string.Join(", ", release.Media.Select(m => m.Format))}"
+                        }
+                    ]
+                }
             });
-        }
+        });
 
         return files;
     }
 
-    private static async Task Fingerprint(AcoustIdFingerprintClient acoustIdFingerprintClient, FileInfo file,
-        MusicBrainzReleaseClient musicBrainzReleaseClient, Dictionary<Guid, (MusicBrainzReleaseAppends release, int count)> musicBrainzReleasesDic)
+    private static async Task<List<MusicBrainzReleaseAppends>> FetchReleaseAppends(
+        List<Guid> lookupReleaseIds,
+        MusicBrainzReleaseClient musicBrainzReleaseClient,
+        List<MusicBrainzReleaseAppends> releases
+    )
     {
-        AcoustIdFingerprint? fingerprint = await acoustIdFingerprintClient.Lookup(file.FullName, priority: true);
-        if (fingerprint is null) return;
-        await Parallel.ForEachAsync(fingerprint.Results, async (acoustIdFingerprint, t) =>
+        object lockObject = new();
+        lookupReleaseIds = lookupReleaseIds.DistinctBy(x => x).ToList();
+        await Parallel.ForEachAsync(lookupReleaseIds, async (releaseId, _) =>
         {
-            if (acoustIdFingerprint.Id == Guid.Empty) return;
-            await Parallel.ForEachAsync(acoustIdFingerprint.Recordings ?? [], t,
-                async (acoustIdFingerprintRecording, y) =>
-                {
-                    if (acoustIdFingerprintRecording is null) return;
-                    if (acoustIdFingerprintRecording.Id == Guid.Empty) return;
-                    if (acoustIdFingerprintRecording.Releases is null) return;
-                    await Parallel.ForEachAsync(acoustIdFingerprintRecording.Releases ?? [], y,
-                        async (fingerprintRelease, _) =>
-                        {
-                            MusicBrainzReleaseAppends? release =
-                                await musicBrainzReleaseClient.WithAllAppends(fingerprintRelease.Id, true);
-                            if (release == null) return;
-                            if (musicBrainzReleasesDic.ContainsKey(release.Id))
-                            {
-                                (MusicBrainzReleaseAppends release, int count) tmp = musicBrainzReleasesDic[release.Id];
-                                tmp.count++;
-                                musicBrainzReleasesDic[release.Id] = tmp;
-                                return;
-                            }
+            MusicBrainzReleaseAppends? musicBrainzRelease = await musicBrainzReleaseClient.WithAllAppends(releaseId, true);
+            if (musicBrainzRelease == null || releases.Any(r => r.Id == musicBrainzRelease.Id)) return;
+            lock (lockObject)
+            {
+                releases.Add(musicBrainzRelease);
+            }
+        });
+        
+        return releases
+            .Where(x => x.Id != Guid.Empty)
+            .DistinctBy(x => x.Id)
+            .ToList();
+    }
 
-                            musicBrainzReleasesDic.Add(release.Id, (release, 1));
-                        });
-                });
+    private static async Task SearchOnRelease(
+        string albumName,
+        Tag tag,
+        MusicBrainzReleaseClient musicBrainzReleaseClient,
+        List<Guid> releaseIds
+    )
+    {
+        object lockObject = new();
+        string query = $"release:{albumName}";
+        if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
+        {
+            string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
+                ? tag.AlbumArtists[0]
+                : tag.FirstAlbumArtist;
+            query += $" artist:{artistName}";
+        }
+
+        if (tag.Year > 0)
+        {
+            query += $" date:{tag.Year}";
+        }
+        
+        if (PrevSearchQueries.Contains(query))
+            return;
+        
+        PrevSearchQueries.Add(query);
+        
+        MusicBrainzReleaseSearchResponse? releaseSearchResponse =
+            await musicBrainzReleaseClient.SearchReleases(query, true);
+                        
+        if (releaseSearchResponse == null) return;
+        if (releaseSearchResponse.Releases.Length == 0)
+        {
+            query = $"release:{albumName}";
+            if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
+            {
+                string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
+                    ? tag.AlbumArtists[0]
+                    : tag.FirstAlbumArtist;
+                query += $" artist:{artistName}";
+            }
+
+            releaseSearchResponse = await musicBrainzReleaseClient.SearchReleases(query, true);
+            if (releaseSearchResponse == null) return;
+            if (releaseSearchResponse.Releases.Length == 0)
+                return;
+        }
+        
+        IEnumerable<MusicBrainzRelease> foundReleases = releaseSearchResponse.Releases
+            .Where(x => x.Score >= 95)
+            .DistinctBy(x => x.Id);
+        
+        await Parallel.ForEachAsync(foundReleases, (release, _) =>
+        {
+            lock (lockObject)
+            {
+                if (release.Id == Guid.Empty || releaseIds.Any(x => x == release.Id)) return ValueTask.CompletedTask;
+                releaseIds.Add(release.Id);
+            }
+            return ValueTask.CompletedTask;
         });
     }
 
+    private static async Task SearchOnRecording(
+        string trackName,
+        string albumName,
+        Tag tag,
+        MusicBrainzRecordingClient musicBrainzRecordingClient,
+        List<Guid> releaseIds
+    )
+    {
+        object lockObject = new();
+        string query = $"recording:{trackName}";
+        if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
+        {
+            string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
+                ? tag.AlbumArtists[0]
+                : tag.FirstAlbumArtist;
+            query += $" artist:{artistName}";
+        }
+
+        if (tag.Year > 0)
+        {
+            query += $" date:{tag.Year}";
+        }
+        
+        if (PrevSearchQueries.Contains(query))
+            return;
+        
+        PrevSearchQueries.Add(query);
+        
+        MusicBrainzSearchResponse? searchResponse = 
+            await musicBrainzRecordingClient.SearchRecordingsDynamic(query, true);
+
+        if (searchResponse == null) return;
+        if (searchResponse.Recordings.Count == 0)
+        {
+            query = $"recording:{trackName}";
+            if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
+            {
+                string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
+                    ? tag.AlbumArtists[0]
+                    : tag.FirstAlbumArtist;
+                query += $" artist:{artistName}";
+            }
+
+            searchResponse = 
+                await musicBrainzRecordingClient.SearchRecordingsDynamic(query, true);
+            if (searchResponse == null) return;
+            if (searchResponse.Recordings.Count == 0)
+                return;
+        }
+        
+        IEnumerable<MusicBrainzRelease> foundReleases = searchResponse.Recordings
+            .Where(x => x.Score >= 95)
+            .SelectMany(x => x.Releases)
+            .DistinctBy(x => x.Id);
+        
+        if (!string.IsNullOrEmpty(albumName))
+        {
+            foundReleases = foundReleases.Where(r => r.Title.ContainsSanitized(albumName));
+        }
+        await Parallel.ForEachAsync(foundReleases, (release, _) =>
+        {
+            lock (lockObject)
+            {
+                if (release.Id == Guid.Empty || releaseIds.Any(x => x == release.Id)) return ValueTask.CompletedTask;
+                releaseIds.Add(release.Id);
+            }
+            return ValueTask.CompletedTask;
+        });
+    }
+
+    private static async Task<MusicBrainzReleaseAppends?> GetBestMatchedRelease(
+        ConcurrentBag<MediaFile> mediaFiles,
+        List<MusicBrainzReleaseAppends> matchedReleases
+    )
+    {
+        MusicBrainzReleaseAppends? bestRelease = null;
+        int highestScore = 0;
+        object lockObject = new();
+        
+        await Parallel.ForEachAsync(matchedReleases, (release, _) =>
+        {
+            int score = CalculateMatchScore(release, mediaFiles);
+            lock (lockObject)
+            {
+                if (score < highestScore) return ValueTask.CompletedTask;
+                highestScore = score;
+                if (highestScore == mediaFiles.Count)
+                    bestRelease = release;
+            }
+            return ValueTask.CompletedTask;
+        });
+
+        return bestRelease;
+    }
+    
+    private static int CalculateMatchScore(
+        MusicBrainzReleaseAppends release,
+        ConcurrentBag<MediaFile> localFiles
+    )
+    {
+        int score = 0;
+        
+        if (release.Media.Length == 0) return 0;
+
+        Parallel.ForEach(release.Media, media =>
+        {
+            if (media.Tracks.Length == 0 || media.TrackCount == 0)
+                return;
+
+            Parallel.ForEach(localFiles, file =>
+            {
+                try
+                {
+                    file.TagFile ??= TagFile.Create(file.Path);
+                    file.FFprobe ??= FFProbe.Create(file.Path);
+                    
+                    int trackIndex = localFiles.ToList().IndexOf(file);
+                    bool isMatch = media.Tracks.Any(track =>
+                    {
+                        bool nameMatch = CompareTrackName(file, track);
+                        bool numberMatch = CompareTrackNumber(file, track, trackIndex);
+                        bool durationMatch = CompareTrackDuration(file, track);
+                        return nameMatch && numberMatch && durationMatch;
+                    });
+
+                    if (!isMatch) return;
+                    score = Interlocked.Increment(ref score);
+                }
+                catch (Exception ex)
+                {
+                    Logger.MusicBrainz($"Error processing file {file.Path}: {ex.Message}", LogEventLevel.Verbose);
+                }
+            });
+        });
+
+        return score;
+    }
+
+    private static bool CompareTrackDuration(MediaFile mediaFile, MusicBrainzTrack track)
+    {
+        double duration = track.Duration;
+        double tagDuration = mediaFile.TagFile?.Properties.Duration.TotalSeconds ?? 0;
+        double fileDuration = mediaFile.FFprobe?.Duration.TotalSeconds ?? 0;
+        
+        if (duration == 0 && fileDuration == 0 && tagDuration == 0) return false;
+
+        return Math.Abs(duration - fileDuration).ToInt() < 3 ||
+               Math.Abs(duration - tagDuration).ToInt() < 3;
+    }
+
+    private static bool CompareTrackNumber(MediaFile mediaFile, MusicBrainzTrack track, int trackIndex)
+    {
+        int trackNumber = track.Position;
+        long tagTrackNumber = mediaFile.TagFile?.Tag?.Track ?? 0;
+        int fileTrackNumber = mediaFile.Parsed?.TrackNumber ?? 0;
+
+        if (trackNumber == 0 && fileTrackNumber == 0 && tagTrackNumber == 0) return false;
+        
+        return Math.Abs(trackNumber - fileTrackNumber) == 0 ||
+               Math.Abs(trackNumber - trackIndex) == 0 ||
+               (int)Math.Abs(trackNumber - tagTrackNumber) == 0;
+    }
+
+    private static bool CompareTrackName(MediaFile mediaFile, MusicBrainzTrack track)
+    {
+        string trackTitle = track.Title;
+        string tagTitle = mediaFile.TagFile?.Tag?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
+        string fileTitle = mediaFile.Parsed?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
+        
+        if (string.IsNullOrEmpty(trackTitle) && string.IsNullOrEmpty(fileTitle) && string.IsNullOrEmpty(tagTitle)) return false;
+        
+        return fileTitle.ContainsSanitized(trackTitle) || 
+               tagTitle.ContainsSanitized(trackTitle);
+    }
+    
     public List<DirectoryTree> GetDirectoryTree(string folder = "")
     {
         List<DirectoryTree> array = [];

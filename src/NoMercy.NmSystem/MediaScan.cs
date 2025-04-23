@@ -7,6 +7,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
+using TagFile = TagLib.File;
 
 namespace NoMercy.NmSystem;
 public class MediaScan : IDisposable, IAsyncDisposable
@@ -149,9 +150,10 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 });
             });
 
-            ConcurrentBag<MediaFolderExtend> response = new(folders
+            ConcurrentBag<MediaFolderExtend> response = folders
                 .Where(f => f.Name is not "")
-                .OrderByDescending(f => f.Name));
+                .OrderByDescending(f => f.Name)
+                .ToConcurrentBag();
 
             return response;
         }
@@ -222,9 +224,10 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 });
             });
 
-            ConcurrentBag<MediaFolderExtend> response = new(folders
+            ConcurrentBag<MediaFolderExtend> response = folders
                 .Where(f => f.Name is not "")
-                .OrderByDescending(f => f.Name));
+                .OrderByDescending(f => f.Name)
+                .ToConcurrentBag();
 
             return response;
         }
@@ -283,23 +286,14 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 };
 
                 FfProbeData? ffprobe = null;
+                TagFile? tagFile = null;
                 try
                 {
-                    IMediaAnalysis analysis = FFProbe.Analyse(file);
                     if (isVideoFile || isAudioFile)
                     {
-                        ffprobe = new()
-                        {
-                            Duration = analysis.Duration,
-                            Format = analysis.Format,
-                            PrimaryAudioStream = analysis.PrimaryAudioStream,
-                            PrimaryVideoStream = analysis.PrimaryVideoStream,
-                            PrimarySubtitleStream = analysis.PrimarySubtitleStream,
-                            VideoStreams = analysis.VideoStreams,
-                            AudioStreams = analysis.AudioStreams,
-                            SubtitleStreams = analysis.SubtitleStreams,
-                            ErrorData = analysis.ErrorData
-                        };
+                        ffprobe = FFProbe.Create(file);
+                        if (isAudioFile)
+                            tagFile = TagFile.Create(file);
                     }
                 }
                 catch (Exception e)
@@ -320,16 +314,18 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     Type = "file",
 
                     Parsed = movieFileExtend,
-                    FFprobe = ffprobe
+                    FFprobe = ffprobe,
+                    TagFile = tagFile,
                     // FingerPint = fingerPrint
                 };
 
                 files.Add(res);
             });
 
-            ConcurrentBag<MediaFile> response = new(files
+            ConcurrentBag<MediaFile> response = files
                 // .Where(f => f.Name is not "")
-                .OrderBy(f => f.Name));
+                .OrderBy(f => f.Name)
+                .ToConcurrentBag();
 
             return response;
         }

@@ -318,7 +318,6 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
                 "");
 
             if (string.IsNullOrEmpty(title)) continue;
-            IEnumerable<MusicBrainzRelease> matchedReleases;
             List<MusicBrainzRelease> allReleases = [];
             if (!string.IsNullOrEmpty(artist))
             {

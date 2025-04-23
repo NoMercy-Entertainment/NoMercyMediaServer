@@ -38,10 +38,14 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
                 .ThenInclude(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
             .FirstOrDefaultAsync(folder => folder.Id == folderId);
     }
-
-    public Task<Library?> GetLibraryById(Ulid libraryId)
+    
+    public Task<Library?> GetLibraryByIdWithFolders(Ulid libraryId)
     {
-        return context.Libraries.FirstOrDefaultAsync(library => library.Id == libraryId);
+        return context.Libraries
+            .AsNoTracking()
+            .Include(library => library.FolderLibraries)
+            .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .FirstOrDefaultAsync(library => library.Id == libraryId);
     }
 
     public void Dispose()

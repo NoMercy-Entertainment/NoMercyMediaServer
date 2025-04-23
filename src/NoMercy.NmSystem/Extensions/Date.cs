@@ -104,15 +104,4 @@ public static class Date
     {
         return TimeSpan.FromSeconds(time).ToString(@"hh\:mm\:ss\.fff");
     }
-
-    public static ConcurrentBag<MediaFile> ToConcurrentBag(this IEnumerable<MediaFile> self)
-    {
-        return new ConcurrentBag<MediaFile>(self);
-    }
-    
-    public static ConcurrentBag<MediaFile> FilterConcurrentBag(this ConcurrentBag<MediaFile> self, string[] filterFiles)
-    {
-        self = self.Where(f => filterFiles.Any(s => f.Name == s)).ToConcurrentBag();
-        return self;
-    }
 }

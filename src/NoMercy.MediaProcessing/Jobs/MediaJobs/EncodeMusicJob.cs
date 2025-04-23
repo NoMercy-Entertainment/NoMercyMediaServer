@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Encoder;
@@ -21,7 +20,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 public class EncodeMusicJob : AbstractMusicEncoderJob
 {
     public override string QueueName => "encoder";
-    public override int Priority => 7;
+    public override int Priority => 3;
 
     public string Status { get; set; } = "pending";
 
@@ -57,7 +56,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
 
             ProgressMeta progressMeta = new()
             {
-                Id = Id,
+                Id = track.Id,
                 Title = foundTrack.Title,
                 BaseFolder = folderMetaData.BasePath
             };
@@ -69,7 +68,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
 
             Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
             {
-                Id = Id,
+                Id = track.Id,
                 Status = "completed",
                 Title = foundTrack.Title,
                 Message = "Done",
@@ -81,14 +80,14 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
 
             Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
             {
-                Id = Id,
+                Id = track.Id,
                 Status = "failed",
                 Title = foundTrack.Title,
                 Message = e.Message,
             });
         }
     }
-
+    
     private async Task AddRecording(BaseContainer container)
     {
         await using MediaContext context = new();
@@ -102,8 +101,17 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         RecordingRepository recordingRepository = new(context);
         RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
         
+        await Task.Delay(1000);
+        
         await using MediaScan mediaScan = new();
-        MediaFolderExtend mediaFolder = (await mediaScan.DisableRegexFilter().EnableFileListing().Process(folderMetaData.BasePath)).First();
+        
+        MediaFolderExtend mediaFolder = (
+            await mediaScan
+                .EnableFileListing()
+                .FilterByMediaType("music")
+                .FilterByFileName(container.FileName)
+                .Process(folderMetaData.BasePath)
+        ).First();
 
         mediaFolder.Files?.FilterConcurrentBag([container.FileName]);
         
