@@ -355,16 +355,16 @@ jobs:
 
             # Create .PKGINFO
             cat > <span class="math-inline">PACKAGE\_ROOT/pkg/</span>{name}/.PKGINFO << EOF
-          pkgname = ${name}
-          pkgver = ${VERSION}-1
-          pkgdesc = ${friendly_name}
-          url = https://nomercy.tv
-          builddate = $(date +%s)
-          size = $(du -b ${bin_path} | cut -f1)
-          arch = x86_64
-          license = custom
-          depend = glibc
-          EOF
+            pkgname = ${name}
+            pkgver = ${VERSION}-1
+            pkgdesc = ${friendly_name}
+            url = https://nomercy.tv
+            builddate = $(date +%s)
+            size = $(du -b ${bin_path} | cut -f1)
+            arch = x86_64
+            license = custom
+            depend = glibc
+            EOF
 
             # Create package manually with tar and zstd
             cd $PACKAGE_ROOT/pkg
