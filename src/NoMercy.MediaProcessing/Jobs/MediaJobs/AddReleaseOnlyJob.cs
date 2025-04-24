@@ -8,6 +8,7 @@ using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.MusicGenres;
+using NoMercy.MediaProcessing.Recordings;
 using NoMercy.MediaProcessing.ReleaseGroups;
 using NoMercy.MediaProcessing.Releases;
 using NoMercy.Networking.Dto;
@@ -41,6 +42,9 @@ public class AddReleaseOnlyJob : AbstractReleaseJob
 
         ArtistRepository artistRepository = new(context);
         ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
+        
+        RecordingRepository recordingRepository = new(context);
+        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
 
         await using LibraryRepository libraryRepository = new(context);
         Library? albumLibrary = await libraryRepository.GetLibraryByIdWithFolders(LibraryId);
@@ -71,6 +75,8 @@ public class AddReleaseOnlyJob : AbstractReleaseJob
         
             jobDispatcher.DispatchJob<MusicDescriptionJob>(artist.MusicBrainzArtist);
         }
+        
+        await recordingManager.StoreWithoutFiles(releaseAppends, BaseFolder);
         
         jobDispatcher.DispatchJob<MusicDescriptionJob>(releaseAppends.MusicBrainzReleaseGroup);
         

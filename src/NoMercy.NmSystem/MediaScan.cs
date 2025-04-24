@@ -1,13 +1,11 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using FFMpegCore;
 using MovieFileLibrary;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
-using TagFile = TagLib.File;
 
 namespace NoMercy.NmSystem;
 public class MediaScan : IDisposable, IAsyncDisposable
@@ -28,7 +26,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     public MediaScan()
     {
-        GlobalFFOptions.Configure(options => options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
+        FFMpegCore.GlobalFFOptions.Configure(options => options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
     }
 
     public MediaScan EnableFileListing()
@@ -318,8 +316,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
                     Parsed = movieFileExtend,
                     FFprobe = ffprobe,
-                    Tag = tagFile?.Tag,
-                    Properties = tagFile?.Properties,
+                    TagFile = tagFile
                     // FingerPint = fingerPrint
                 };
 
