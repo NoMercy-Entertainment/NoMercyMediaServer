@@ -49,6 +49,7 @@ public partial class RecordingManager(
                 await recordingRepository.Store(insert);
                 
                 await LinkToRelease(musicBrainzTrack, releaseAppends);
+                await LinkToLibrary(musicBrainzTrack, libraryFolder.FolderLibraries.FirstOrDefault()!.Library);
                 
                 List<MusicGenreTrack> genres = musicBrainzTrack.Genres
                     ?.Select(genre => new MusicGenreTrack
@@ -115,6 +116,7 @@ public partial class RecordingManager(
                 await recordingRepository.Store(insert);
                 
                 await LinkToRelease(musicBrainzTrack, releaseAppends);
+                await LinkToLibrary(musicBrainzTrack, libraryFolder.FolderLibraries.FirstOrDefault()!.Library);
                 
                 List<MusicGenreTrack> genres = musicBrainzTrack.Genres
                     ?.Select(genre => new MusicGenreTrack
@@ -161,6 +163,19 @@ public partial class RecordingManager(
         };
         
         await recordingRepository.LinkToRelease(insert);
+    }
+    
+    private async Task LinkToLibrary(MusicBrainzTrack track, Library library)
+    {
+        Logger.MusicBrainz($"Linking Recording to Library: {track.Title} - {library.Title}", LogEventLevel.Verbose);
+        
+        LibraryTrack insert = new()
+        {
+            LibraryId = library.Id,
+            TrackId = track.Id
+        };
+        
+        await recordingRepository.LinkToLibrary(insert);
     }
     
     private MediaFile? FileMatch(MediaFile inputFile, MusicBrainzReleaseAppends musicBrainzRelease,

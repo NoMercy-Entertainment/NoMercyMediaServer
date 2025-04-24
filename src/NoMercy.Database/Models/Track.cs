@@ -78,7 +78,22 @@ public class Track : ColorPaletteTimeStamps
 
     public string CreateName()
     {
-        return string.Concat(Name, " NoMercy");
+        int padding = 2;
+        if (AlbumTrack.Count.ToString().Length > 2)
+        {
+            padding = AlbumTrack.Count.ToString().Length;
+        }
+        
+        return string.Concat(
+            AlbumTrack.First().Album.Name,
+            ": ",
+            DiscNumber.ToString(),
+            "-",
+            TrackNumber.ToString().PadLeft(padding, '0'), 
+            " - ",
+            Name, 
+            " NoMercy"
+        );
     }
 
     public string CreateTitle()

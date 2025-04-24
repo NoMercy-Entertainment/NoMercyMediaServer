@@ -159,6 +159,12 @@ public class TasksController : BaseController
                 .ThenInclude(f => f.Library)
                     .ThenInclude(f => f.LibraryMovies)
                         .ThenInclude(libraryMovie => libraryMovie.Movie)
+            .Include(f => f.FolderLibraries)
+                .ThenInclude(f => f.Library)
+                    .ThenInclude(f => f.LibraryTracks)
+                        .ThenInclude(libraryTrack => libraryTrack.Track)
+                            .ThenInclude(track => track.AlbumTrack)
+                                .ThenInclude(albumTrack => albumTrack.Album)
             .ToListAsync();
 
         folders = folders
