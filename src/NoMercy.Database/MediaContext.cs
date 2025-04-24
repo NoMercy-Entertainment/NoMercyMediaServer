@@ -98,6 +98,7 @@ public class MediaContext : DbContext
     public virtual DbSet<Library> Libraries { get; init; }
     public virtual DbSet<LibraryMovie> LibraryMovie { get; init; }
     public virtual DbSet<LibraryTv> LibraryTv { get; init; }
+    public virtual DbSet<LibraryTrack> LibraryTrack { get; init; }
     public virtual DbSet<LibraryUser> LibraryUser { get; init; }
     public virtual DbSet<CollectionUser> CollectionUser { get; init; }
     public virtual DbSet<MovieUser> MovieUser { get; init; }

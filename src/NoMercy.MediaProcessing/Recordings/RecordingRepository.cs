@@ -52,4 +52,28 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
             })
             .RunAsync();
     }
+    
+    public Task LinkToLibrary(LibraryTrack libraryTrack)
+    {
+        return context.LibraryTrack.Upsert(new(libraryTrack.LibraryId, libraryTrack.TrackId))
+            .On(v => new { v.LibraryId, v.TrackId })
+            .WhenMatched((lts, lti) => new()
+            {
+                LibraryId = lti.LibraryId,
+                TrackId = lti.TrackId
+            })
+            .RunAsync();
+    }
+    
+    public Task LinkToLibrary(ArtistLibrary artistLibrary)
+    {
+        return context.ArtistLibrary.Upsert(new(artistLibrary.ArtistId, artistLibrary.LibraryId))
+            .On(v => new { v.ArtistId, v.LibraryId })
+            .WhenMatched((lts, lti) => new()
+            {
+                ArtistId = lti.ArtistId,
+                LibraryId = lti.LibraryId
+            })
+            .RunAsync();
+    }
 }
