@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using TagLib;
 using FileTag = TagLib.File;
 
@@ -16,6 +17,7 @@ public class TagFile
         };
     }
     
+    [JsonIgnore]
     public Tag? Tag { get; set; }
     public Properties? Properties { get; set; }
 }
