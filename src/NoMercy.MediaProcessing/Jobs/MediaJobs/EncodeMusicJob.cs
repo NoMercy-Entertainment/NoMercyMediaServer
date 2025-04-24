@@ -33,8 +33,6 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         await using QueueContext queueContext = new();
 
         await using LibraryRepository libraryRepository = new(context);
-        FileRepository fileRepository = new(context);
-        FileManager fileManager = new(fileRepository);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
         if (folder is null) return;
@@ -122,8 +120,6 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         
         RecordingRepository recordingRepository = new(context);
         RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
-        
-        await Task.Delay(1000);
         
         await using MediaScan mediaScan = new();
         

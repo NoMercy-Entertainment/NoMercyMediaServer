@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
@@ -18,6 +19,49 @@ public partial class RecordingManager(
     IMusicGenreRepository musicGenreRepository
 ) : BaseManager, IRecordingManager
 {
+    public static async Task<bool> StoreAsync(MusicBrainzReleaseAppends releaseAppends,
+        MusicBrainzTrack musicBrainzTrack, MusicBrainzMedia musicBrainzMedia, Folder libraryFolder, MediaFolder mediaFolder, CoverArtImageManagerManager.CoverPalette? coverPalette)
+    {
+        await using MediaContext context = new();
+        MusicGenreRepository musicGenreRepository = new(context);
+        RecordingRepository recordingRepository = new(context);
+        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
+        
+        return await recordingManager.Store(releaseAppends, musicBrainzTrack, musicBrainzMedia, libraryFolder, mediaFolder, coverPalette);
+    }
+    
+    public async Task StoreWithoutFiles(MusicBrainzReleaseAppends releaseAppends, Folder libraryFolder)
+    {
+        foreach (MusicBrainzMedia media in releaseAppends.Media)
+        {
+            foreach (MusicBrainzTrack musicBrainzTrack in media.Tracks)
+            {
+                Track insert = new()
+                {
+                    Id = musicBrainzTrack.Id,
+                    Name = musicBrainzTrack.Title,
+                    Date = releaseAppends.DateTime ?? releaseAppends.ReleaseEvents?.FirstOrDefault()?.DateTime,
+                    DiscNumber = media.Position,
+                    TrackNumber = musicBrainzTrack.Position,
+                    FolderId = libraryFolder.Id,
+                };
+                
+                await recordingRepository.Store(insert);
+                
+                await LinkToRelease(musicBrainzTrack, releaseAppends);
+                
+                List<MusicGenreTrack> genres = musicBrainzTrack.Genres
+                    ?.Select(genre => new MusicGenreTrack
+                    {
+                        TrackId = musicBrainzTrack.Id,
+                        GenreId = genre.Id,
+                    }).ToList() ?? [];
+
+                await musicGenreRepository.LinkToRecording(genres);
+            }
+        }
+    }
+    
     public async Task<bool> Store(MusicBrainzReleaseAppends releaseAppends,
         MusicBrainzTrack musicBrainzTrack, MusicBrainzMedia musicBrainzMedia, Folder libraryFolder, MediaFolder mediaFolder, CoverArtImageManagerManager.CoverPalette? coverPalette)
     {

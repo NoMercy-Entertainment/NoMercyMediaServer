@@ -22,8 +22,6 @@ using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 using Serilog.Events;
-using TagLib;
-using TagFile = TagLib.File;
 
 namespace NoMercy.MediaProcessing.Files;
 
@@ -503,23 +501,20 @@ public class FileRepository(MediaContext context) : IFileRepository
         object lockObject = new();
         await Parallel.ForEachAsync(mediaFiles, async (mediaFile, _) =>
         {
-            TagFile? tagFile = TagFile.Create(mediaFile.Path);
-            mediaFile.Tag ??= tagFile.Tag;
-            mediaFile.Properties ??= tagFile.Properties;
+            mediaFile.TagFile ??= TagFile.Create(mediaFile.Path);
             mediaFile.FFprobe ??= FfProbe.Create(mediaFile.Path);
+            
+            if (mediaFile.TagFile.Tag == null) return;
 
-            Tag? tag = mediaFile.Tag;
-            if (tag == null) return;
-
-            if (!string.IsNullOrEmpty(tag.MusicBrainzReleaseId))
+            if (!string.IsNullOrEmpty(mediaFile.TagFile.Tag.MusicBrainzReleaseId))
             {
-                if (prevMusicBrainzReleaseId == tag.MusicBrainzReleaseId)
+                if (prevMusicBrainzReleaseId == mediaFile.TagFile.Tag.MusicBrainzReleaseId)
                 {
                     if (year == "0")
-                        year = tag.Year.ToString();
+                        year = mediaFile.TagFile.Tag.Year.ToString();
                     return;
                 }
-                Guid musicBrainzReleaseId = Guid.Parse(tag.MusicBrainzReleaseId ?? "");
+                Guid musicBrainzReleaseId = Guid.Parse(mediaFile.TagFile.Tag.MusicBrainzReleaseId ?? "");
                 if (musicBrainzReleaseId == Guid.Empty) return;
                 MusicBrainzReleaseAppends? release =
                     await musicBrainzReleaseClient.WithAllAppends(musicBrainzReleaseId);
@@ -532,8 +527,8 @@ public class FileRepository(MediaContext context) : IFileRepository
                 }
             }
             
-            string albumName = tag.Album.Trim();
-            string trackName = tag.Title.Trim();
+            string albumName = mediaFile.TagFile.Tag.Album.Trim();
+            string trackName = mediaFile.TagFile.Tag.Title.Trim();
             
             List<Guid> resultIds = await FingerPrint.GetReleaseIds(mediaFile.Path, albumName);
             lock (lockObject)
@@ -544,12 +539,12 @@ public class FileRepository(MediaContext context) : IFileRepository
 
             if (!string.IsNullOrEmpty(trackName))
             {
-                await SearchOnRecording(trackName, albumName, tag, musicBrainzRecordingClient, lookupReleaseIds);
+                await SearchOnRecording(trackName, albumName, mediaFile.TagFile, musicBrainzRecordingClient, lookupReleaseIds);
             }
 
             if (string.IsNullOrEmpty(albumName) || PrevSearchQueries.Any(x => x == albumName)) return;
             PrevSearchQueries.Add(albumName);
-            await SearchOnRelease(albumName, tag, musicBrainzReleaseClient, lookupReleaseIds);
+            await SearchOnRelease(albumName, mediaFile.TagFile, musicBrainzReleaseClient, lookupReleaseIds);
         });
         releases = releases
             .Where(x => x.Id != Guid.Empty)
@@ -682,24 +677,25 @@ public class FileRepository(MediaContext context) : IFileRepository
 
     private static async Task SearchOnRelease(
         string albumName,
-        Tag tag,
+        TagFile tagFile,
         MusicBrainzReleaseClient musicBrainzReleaseClient,
         List<Guid> releaseIds
     )
     {
         object lockObject = new();
         string query = $"release:{albumName}";
-        if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
+        if (tagFile.Tag == null) return;
+        if (tagFile.Tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tagFile.Tag.FirstAlbumArtist))
         {
-            string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
-                ? tag.AlbumArtists[0]
-                : tag.FirstAlbumArtist;
+            string artistName = !string.IsNullOrEmpty(tagFile.Tag.AlbumArtists[0])
+                ? tagFile.Tag.AlbumArtists[0]
+                : tagFile.Tag.FirstAlbumArtist;
             query += $" artist:{artistName}";
         }
 
-        if (tag.Year > 0)
+        if (tagFile.Tag.Year > 0)
         {
-            query += $" date:{tag.Year}";
+            query += $" date:{tagFile.Tag.Year}";
         }
         
         if (PrevSearchQueries.Contains(query))
@@ -714,11 +710,11 @@ public class FileRepository(MediaContext context) : IFileRepository
         if (releaseSearchResponse.Releases.Length == 0)
         {
             query = $"release:{albumName}";
-            if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
+            if (tagFile.Tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tagFile.Tag.FirstAlbumArtist))
             {
-                string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
-                    ? tag.AlbumArtists[0]
-                    : tag.FirstAlbumArtist;
+                string artistName = !string.IsNullOrEmpty(tagFile.Tag.AlbumArtists[0])
+                    ? tagFile.Tag.AlbumArtists[0]
+                    : tagFile.Tag.FirstAlbumArtist;
                 query += $" artist:{artistName}";
             }
 
@@ -746,24 +742,25 @@ public class FileRepository(MediaContext context) : IFileRepository
     private static async Task SearchOnRecording(
         string trackName,
         string albumName,
-        Tag tag,
+        TagFile tagFile,
         MusicBrainzRecordingClient musicBrainzRecordingClient,
         List<Guid> releaseIds
     )
     {
         object lockObject = new();
         string query = $"recording:{trackName}";
-        if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
+        if (tagFile.Tag == null) return;
+        if (tagFile.Tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tagFile.Tag.FirstAlbumArtist))
         {
-            string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
-                ? tag.AlbumArtists[0]
-                : tag.FirstAlbumArtist;
+            string artistName = !string.IsNullOrEmpty(tagFile.Tag.AlbumArtists[0])
+                ? tagFile.Tag.AlbumArtists[0]
+                : tagFile.Tag.FirstAlbumArtist;
             query += $" artist:{artistName}";
         }
 
-        if (tag.Year > 0)
+        if (tagFile.Tag.Year > 0)
         {
-            query += $" date:{tag.Year}";
+            query += $" date:{tagFile.Tag.Year}";
         }
         
         if (PrevSearchQueries.Contains(query))
@@ -778,11 +775,11 @@ public class FileRepository(MediaContext context) : IFileRepository
         if (searchResponse.Recordings.Count == 0)
         {
             query = $"recording:{trackName}";
-            if (tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tag.FirstAlbumArtist))
+            if (tagFile.Tag.AlbumArtists.Length > 0 || !string.IsNullOrEmpty(tagFile.Tag.FirstAlbumArtist))
             {
-                string artistName = !string.IsNullOrEmpty(tag.AlbumArtists[0])
-                    ? tag.AlbumArtists[0]
-                    : tag.FirstAlbumArtist;
+                string artistName = !string.IsNullOrEmpty(tagFile.Tag.AlbumArtists[0])
+                    ? tagFile.Tag.AlbumArtists[0]
+                    : tagFile.Tag.FirstAlbumArtist;
                 query += $" artist:{artistName}";
             }
 
@@ -856,9 +853,7 @@ public class FileRepository(MediaContext context) : IFileRepository
             {
                 try
                 {
-                    TagFile? tagFile = TagFile.Create(file.Path);
-                    file.Tag ??= tagFile.Tag;
-                    file.Properties ??= tagFile.Properties;
+                    file.TagFile ??= TagFile.Create(file.Path);
                     file.FFprobe ??= FfProbe.Create(file.Path);
                     
                     int trackIndex = localFiles.ToList().IndexOf(file);
@@ -886,7 +881,7 @@ public class FileRepository(MediaContext context) : IFileRepository
     private static bool CompareTrackDuration(MediaFile mediaFile, MusicBrainzTrack track)
     {
         double duration = track.Duration;
-        double tagDuration = mediaFile.Properties?.Duration.TotalSeconds ?? 0;
+        double tagDuration = mediaFile.TagFile?.Properties?.Duration.TotalSeconds ?? 0;
         double fileDuration = mediaFile.FFprobe?.Duration.TotalSeconds ?? 0;
         
         if (duration == 0 && fileDuration == 0 && tagDuration == 0) return false;
@@ -898,7 +893,7 @@ public class FileRepository(MediaContext context) : IFileRepository
     private static bool CompareTrackNumber(MediaFile mediaFile, MusicBrainzTrack track, int trackIndex)
     {
         int trackNumber = track.Position;
-        long tagTrackNumber = mediaFile.Tag?.Track ?? 0;
+        long tagTrackNumber = mediaFile.TagFile?.Tag?.Track ?? 0;
         int fileTrackNumber = mediaFile.Parsed?.TrackNumber ?? 0;
 
         if (trackNumber == 0 && fileTrackNumber == 0 && tagTrackNumber == 0) return false;
@@ -911,7 +906,7 @@ public class FileRepository(MediaContext context) : IFileRepository
     private static bool CompareTrackName(MediaFile mediaFile, MusicBrainzTrack track)
     {
         string trackTitle = track.Title;
-        string tagTitle = mediaFile.Tag?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
+        string tagTitle = mediaFile.TagFile?.Tag?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
         string fileTitle = mediaFile.Parsed?.Title ?? Path.GetFileNameWithoutExtension(mediaFile.Name);
         
         if (string.IsNullOrEmpty(trackTitle) && string.IsNullOrEmpty(fileTitle) && string.IsNullOrEmpty(tagTitle)) return false;

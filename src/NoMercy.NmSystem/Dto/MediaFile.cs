@@ -1,5 +1,3 @@
-using TagLib;
-
 namespace NoMercy.NmSystem.Dto;
 
 public class MediaFile
@@ -15,8 +13,6 @@ public class MediaFile
     public MovieFileExtend? Parsed { get; set; }
 
     public FfProbeData? FFprobe { get; set; }
-    
-    public Tag? Tag { get; set; }
-    public Properties? Properties { get; set; }
+    public TagFile? TagFile { get; set; }
     // public Fingerprint? FingerPint { get; init; }
 }
