@@ -17,9 +17,9 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue
 {
     public Ulid LibraryId { get; set; }
     public Guid Id { get; set; }
-    public Folder Folder { get; set; } = null!;
+    
+    public Ulid FolderId { get; set; }
 
-    public EncoderProfile Profile { get; set; } = null!;
     public MusicBrainzTrack foundTrack { get; set; } = null!;
     public ProcessMusicFolderJob.FolderMetadata folderMetaData { get; set; } = null!;
     public MediaFile mediaFile { get; set; } = null!;

@@ -1,6 +1,6 @@
 namespace NoMercy.NmSystem;
 
-public static class FFProbe
+public static class FfProbe
 {
     public static FfProbeData Create(string file)
     {

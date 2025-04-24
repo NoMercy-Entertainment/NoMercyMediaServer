@@ -170,7 +170,7 @@ public class TasksController : BaseController
             {
                 Id = jobs.ElementAt(encoderJobs.IndexOf(j)).Id,
                 Priority = jobs.ElementAt(encoderJobs.IndexOf(j)).Priority,
-                PayloadId = j.Id.ToInt(),
+                PayloadId = j.Id,
                 Title = GetTitle(folders, j),
                 Type = j.GetType().Name,
                 Status = j.Status.ToString(),
@@ -280,7 +280,7 @@ public class TasksController : BaseController
 public class QueueJobDto
 {
     [JsonProperty("id")] public int Id { get; set; }
-    [JsonProperty("payload_id")] public int PayloadId { get; set; }
+    [JsonProperty("payload_id")] public string PayloadId { get; set; } = string.Empty;
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("type")] public string Type { get; set; } = string.Empty;
     [JsonProperty("status")] public string Status { get; set; } = string.Empty;

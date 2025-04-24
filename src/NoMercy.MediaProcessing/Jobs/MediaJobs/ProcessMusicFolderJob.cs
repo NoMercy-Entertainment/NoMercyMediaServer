@@ -104,61 +104,57 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
             .ThenBy(x => x.Parsed?.TrackNumber)
             .ToList();
 
-        foreach (EncoderProfile profile in profiles)
+        foreach (MediaFile? mediaFile in files)
         {
-            foreach (MediaFile? mediaFile in files)
+            TagLib.File tagFile = TagLib.File.Create(mediaFile.Path);
+            Tag? tag = tagFile.Tag;
+            string recordingName = tag.Title ?? mediaFile.Name;
+            int albumNumber = tag.Disc.ToInt();
+            int trackNumber = tag.Track > 0 ? tag.Track.ToInt() : files.IndexOf(mediaFile) + 1;
+            MusicBrainzTrack? foundTrack = folderMetaData.MusicBrainzRelease.Media.SelectMany(x => x.Tracks)
+                .FirstOrDefault(x =>
+                    (
+                        x.Title.ContainsSanitized(recordingName) &&
+                        x.Position == trackNumber
+                    ) ||
+                    (
+                        x.Title.ContainsSanitized(mediaFile.Name) &&
+                        x.Title.ContainsSanitized(recordingName) &&
+                        x.Position == trackNumber
+                    ));
+            
+            if (foundTrack is null)
             {
-                TagLib.File tagFile = TagLib.File.Create(mediaFile.Path);
-                Tag? tag = tagFile.Tag;
-                string recordingName = tag.Title ?? mediaFile.Name;
-                int albumNumber = tag.Disc.ToInt();
-                int trackNumber = tag.Track > 0 ? tag.Track.ToInt() : files.IndexOf(mediaFile) + 1;
-                MusicBrainzTrack? foundTrack = folderMetaData.MusicBrainzRelease.Media.SelectMany(x => x.Tracks)
-                    .FirstOrDefault(x =>
-                        (
-                            x.Title.ContainsSanitized(recordingName) &&
-                            x.Position == trackNumber
-                        ) ||
-                        (
-                            x.Title.ContainsSanitized(mediaFile.Name) &&
-                            x.Title.ContainsSanitized(recordingName) &&
-                            x.Position == trackNumber
-                        ));
-                
+                foundTrack = folderMetaData.MusicBrainzRelease.Media
+                    .Where(x => x.Position == albumNumber)
+                    .SelectMany(x => x.Tracks)
+                    .FirstOrDefault(x => x.Position == trackNumber);
                 if (foundTrack is null)
                 {
                     foundTrack = folderMetaData.MusicBrainzRelease.Media
-                        .Where(x => x.Position == albumNumber)
                         .SelectMany(x => x.Tracks)
                         .FirstOrDefault(x => x.Position == trackNumber);
+                    
                     if (foundTrack is null)
                     {
-                        foundTrack = folderMetaData.MusicBrainzRelease.Media
-                            .SelectMany(x => x.Tracks)
-                            .FirstOrDefault(x => x.Position == trackNumber);
-                        
-                        if (foundTrack is null)
-                        {
-                            Logger.Encoder($"Track not found in MusicBrainz: {recordingName}", LogEventLevel.Error);
-                            continue;
-                        }
+                        Logger.Encoder($"Track not found in MusicBrainz: {recordingName}", LogEventLevel.Error);
+                        continue;
                     }
                 }
-                
-                folderMetaData.Files.Clear();
-                
-                jobDispatcher.DispatchJob<EncodeMusicJob>(
-                    foundTrack.Id,
-                    profile,
-                    folder,
-                    folderMetaData,
-                    mediaFile,
-                    foundTrack,
-                    LibraryId,
-                    FilePath,
-                    mediaFile.Path
-                );
             }
+            
+            folderMetaData.Files.Clear();
+            
+            jobDispatcher.DispatchJob<EncodeMusicJob>(
+                foundTrack.Id,
+                folder.Id,
+                folderMetaData,
+                mediaFile,
+                foundTrack,
+                LibraryId,
+                InputFolder,
+                mediaFile.Path
+            );
         }
     }
     
@@ -177,7 +173,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
 
         string artistName = musicBrainzRelease.ArtistCredit.FirstOrDefault()?.Name ?? string.Empty;
         string releaseName = musicBrainzRelease.Title;
-        string year = musicBrainzRelease.DateTime?.Year.ToString() ?? string.Empty;
+        string year = musicBrainzRelease.DateTime?.Year.ToString() ?? DateTime.MinValue.Year.ToString();
         string folderReleaseName = $"[{year}] {releaseName}";
         string folderStartLetter = artistName[..1];
 
@@ -203,7 +199,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
             await mediaScan
                 .EnableFileListing()
                 .FilterByMediaType("music")
-                .Process(FilePath)
+                .Process(InputFolder)
         ).First();
         ConcurrentBag<MediaFile> files = mediaFolder.Files ?? [];
 

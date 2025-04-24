@@ -41,17 +41,17 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
             .ThenInclude(f => f.Folder)
             .FirstAsync();
 
-        Logger.App("Processing music folder " + FilePath);
+        Logger.App("Processing music folder " + InputFolder);
 
         await using MediaScan mediaScan = new();
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             .EnableFileListing()
-            .Process(FilePath, 2);
+            .Process(InputFolder, 2);
 
         if (rootFolders.Count == 0)
         {
-            Logger.App("No folders found in " + FilePath);
+            Logger.App("No folders found in " + InputFolder);
             return;
         }
 

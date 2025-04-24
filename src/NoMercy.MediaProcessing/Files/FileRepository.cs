@@ -506,7 +506,7 @@ public class FileRepository(MediaContext context) : IFileRepository
             TagFile? tagFile = TagFile.Create(mediaFile.Path);
             mediaFile.Tag ??= tagFile.Tag;
             mediaFile.Properties ??= tagFile.Properties;
-            mediaFile.FFprobe ??= FFProbe.Create(mediaFile.Path);
+            mediaFile.FFprobe ??= FfProbe.Create(mediaFile.Path);
 
             Tag? tag = mediaFile.Tag;
             if (tag == null) return;
@@ -859,7 +859,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                     TagFile? tagFile = TagFile.Create(file.Path);
                     file.Tag ??= tagFile.Tag;
                     file.Properties ??= tagFile.Properties;
-                    file.FFprobe ??= FFProbe.Create(file.Path);
+                    file.FFprobe ??= FfProbe.Create(file.Path);
                     
                     int trackIndex = localFiles.ToList().IndexOf(file);
                     bool isMatch = media.Tracks.Any(track =>
