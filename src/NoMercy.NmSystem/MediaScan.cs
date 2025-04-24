@@ -280,7 +280,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 {
                     if (isVideoFile || isAudioFile)
                     {
-                        ffprobe = FFProbe.Create(file);
+                        ffprobe = FfProbe.Create(file);
                         if (isAudioFile)
                             tagFile = TagFile.Create(file);
                     }
