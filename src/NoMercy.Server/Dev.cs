@@ -13,11 +13,22 @@ using Image = SixLabors.ImageSharp.Image;
 
 namespace NoMercy.Server;
 
-public class Dev
+public static class Dev
 {
     public static async Task Run()
     {
-
+        // Logger.Setup("Throwing test exception");
+        // try
+        // {
+        //     SentrySdk.CaptureMessage("Hello Sentry");
+        //     
+        //     throw new("Test Exception");
+        // }
+        // catch (Exception ex)
+        // {
+        //     SentrySdk.CaptureException(ex);
+        // }
+        
         // MediaContext context = new();
         // List<Folder> folders = context.Folders
         //     .Include(l => l.FolderLibraries)
@@ -33,12 +44,12 @@ public class Dev
         //         ProcessM3U8Files(folder.Path);
         //     });
         // }
-        
+
         // OpenSubtitlesClient client = new();
         // OpenSubtitlesClient subtitlesClient = await client.Login();
         // SubtitleSearchResponse? x = await subtitlesClient.SearchSubtitles("Black Panther Wakanda Forever (2022)", "dut");
         // Logger.OpenSubs(x);
-        
+
         // TvdbArtworkClient artworkClient = new(63150614);
         // TvdbArtWorkResponse? artworkDetails = await artworkClient.Details();
         // Logger.Tvdb(artworkDetails);
@@ -63,7 +74,7 @@ public class Dev
         // Logger.Tvdb(tvdbAwardCategoryResponse);
         // TvdbAwardCategoryExtendedResponse? tvdbAwardCategoryExtendedResponse = await awardsCategoriesClient.CategoriesExtended();
         // Logger.Tvdb(tvdbAwardCategoryExtendedResponse);
-        
+
         // TvdbPersonClient personClient = new(64425524);
         // TvdbCharacterResponse? character = await personClient.Character();
         // Logger.Tvdb(character);
@@ -71,9 +82,9 @@ public class Dev
         // Logger.Tvdb(people);
         // TvdbPeopleTypeResponse? peopleTypes = await personClient.Types();
         // Logger.Tvdb(peopleTypes);
-        
-        
-        
+
+
+
         //
         // TvdbCompanyClient companyClient = new(2151);
         // TvdbCompaniesResponse? tvdbCompaniesResponse = await companyClient.Companies();
@@ -104,11 +115,11 @@ public class Dev
         // Logger.Tvdb(genres);
         // TvdbGenreResponse? genre = await client.Details();
         // Logger.Tvdb(genre);
-        
+
         // TvdbInspirationClient inspirationClient = new();
         // TvdbInspirationTypesResponse? inspirationTypes = await inspirationClient.InspirationTypes();
         // Logger.Tvdb(inspirationTypes);
-        
+
         // TvdbLanguagesClient languagesClient = new();
         // TvdbLanguagesResponse? languages = await languagesClient.Languages();
         // Logger.Tvdb(languages);

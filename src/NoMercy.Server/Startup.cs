@@ -40,6 +40,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Server.services;
+
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
@@ -242,6 +243,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
 
         services.AddTransient<DynamicStaticFilesMiddleware>();
         // services.AddSingleton(LibraryFileWatcher.Instance);
+
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -317,7 +319,7 @@ public class Startup(IApiVersionDescriptionProvider provider)
                 options.SwaggerEndpoint(url, name);
             }
         });
-
+        
         // MVC
         app.UseMvcWithDefaultRoute();
 

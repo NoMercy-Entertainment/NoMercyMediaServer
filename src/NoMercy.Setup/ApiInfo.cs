@@ -36,7 +36,7 @@ public partial class ApiInfo
     {
         try
         {
-            System.Net.Http.HttpClient client = HttpClient.WithDns();
+            System.Net.Http.HttpClient client = new();
             client.Timeout = TimeSpan.FromSeconds(120);
             client.BaseAddress = new(Config.ApiBaseUrl);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);

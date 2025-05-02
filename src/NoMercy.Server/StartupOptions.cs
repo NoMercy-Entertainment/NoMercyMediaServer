@@ -10,13 +10,13 @@ public class StartupOptions
 {
     // dev
     [Option('d', "dev", Required = false, HelpText = "Run the server in development mode.")]
-    public bool Dev { get; set; }
+    public bool Development { get; set; }
     
     [Option('l', "loglevel", Required = false, HelpText = "Run the server in development mode.")]
     public string LogLevel { get; set; } = LogEventLevel.Information.ToString();
     
     [Option("seed", Required = false, HelpText = "Run the server in development mode.")]
-    public bool Seed { get; set; }
+    public bool ShouldSeed { get; set; }
     
     [Option('i', "internal-port", Required = false, HelpText = "Internal port to use for the server.")]
     public int InternalPort { get; set; }
@@ -29,12 +29,18 @@ public class StartupOptions
     
     [Option("external-ip", Required = false, HelpText = "External ip to use for the server.")]
     public string? ExternalIp { get; set; }
+    
+    [Option("sentry", Required = false, HelpText = "Enable Sentry.")]
+    public bool Sentry { get; set; }
+    
+    [Option("dsn", Required = false, HelpText = "Sentry DSN.")]
+    public string? SentryDsn { get; set; }
 
     public void ApplySettings(out bool shouldSeedMarvel)
     {
-        shouldSeedMarvel = false;
+        shouldSeedMarvel = ShouldSeed;
 
-        if (Dev)
+        if (Development)
         {
             Config.IsDev = true;
 
@@ -48,10 +54,9 @@ public class StartupOptions
             Logger.App("Running in development mode.");
         }
 
-        if (Seed)
+        if (ShouldSeed)
         {
             Logger.App("Seeding database.");
-            shouldSeedMarvel = true;
         }
 
         if (!string.IsNullOrEmpty(LogLevel))
@@ -82,6 +87,23 @@ public class StartupOptions
         {
             Logger.App("Setting external ip to " + ExternalIp);
             Networking.Networking.ExternalIp = ExternalIp;
+        }
+        
+        if (Sentry)
+        {
+            Config.Sentry = Sentry;
+            
+            if (!string.IsNullOrEmpty(SentryDsn))
+            {
+                Config.SentryDsn = SentryDsn;
+            } 
+            else
+            {
+                Logger.App("Sentry DSN is not set. Sentry will not be enabled.");
+                Config.Sentry = false;
+            }
+            
+            Logger.App("Sentry is enabled.");
         }
        
     }

@@ -52,6 +52,7 @@
         <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.5.0" />
         <PackageReference Include="MimeMapping" Version="3.1.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <PackageReference Include="Sentry" Version="5.6.0" />
         <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="7.2.0" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="7.2.0" />
         <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="7.2.0" />
@@ -87,5 +88,9 @@
     <ItemGroup>
         <None Update="appsettings.json" CopyToOutputDirectory="Never" />
         <None Update="appsettings.Development.json" CopyToOutputDirectory="Never" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="wwwroot\" />
     </ItemGroup>
 </Project>

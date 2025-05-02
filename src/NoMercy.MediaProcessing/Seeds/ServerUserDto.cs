@@ -9,7 +9,7 @@ public class ServerUserDto
 
 public class ServerUserDtoData
 {
-    [JsonProperty("id")] public string UserId { get; set; } = string.Empty;
+    [JsonProperty("user_id")] public string UserId { get; set; } = string.Empty;
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("email")] public string Email { get; set; } = string.Empty;
     [JsonProperty("enabled")] public bool Enabled { get; set; } = true;

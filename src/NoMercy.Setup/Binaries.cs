@@ -44,9 +44,18 @@ public static class Binaries
 
                 if (Directory.Exists(destinationDirectoryName) && days > 0) continue;
 
-                await Download(program);
-                await Extract(program);
-                await Cleanup(program);
+                try
+                {
+                    await Download(program);
+                    await Extract(program);
+                    await Cleanup(program);
+                }
+                catch (Exception e)
+                {
+                    Logger.Setup(e);
+                    throw;
+                }
+
             }
         }).Wait();
 
@@ -80,6 +89,11 @@ public static class Binaries
         if (!program.NoDelete && (string.IsNullOrEmpty(extension) || extension == ".exe"))
         {
             string file = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name + Info.ExecSuffix);
+            
+            if (IsFileLocked(sourceArchiveFileName))
+            {
+                CloseApplicationLockingFile(sourceArchiveFileName);
+            }
             
             if (IsFileLocked(file))
             {

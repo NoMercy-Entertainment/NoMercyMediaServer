@@ -51,6 +51,15 @@ public static class Program
         ConsoleMessages.Logo();
         
         options.ApplySettings(out bool shouldSeedMarvel);
+        
+        if (Config.Sentry)
+        {
+            SentrySdk.Init(config =>
+            {
+                config.Dsn = Config.SentryDsn;
+                config.TracesSampleRate = 1.0;
+            });
+        }
 
         Version version = Assembly.GetExecutingAssembly().GetName().Version!;
         Software.Version = version;
@@ -68,7 +77,9 @@ public static class Program
 
         await Setup.Start.Init(startupTasks);
 
-        IWebHost app = CreateWebHostBuilder(new WebHostBuilder()).Build();
+        WebHostBuilder webHost = new();
+
+        IWebHost app = CreateWebHostBuilder(webHost).Build();
 
         app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStarted.Register(() =>
         {
@@ -90,7 +101,7 @@ public static class Program
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
             });
         });
-
+        
         new Thread(() => app.RunAsync()).Start();
 
         await DriveMonitor.Start();

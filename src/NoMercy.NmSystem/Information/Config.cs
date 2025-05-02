@@ -27,6 +27,10 @@ public static class Config
     public static int ExternalServerPort { get; set; } = 7626;
     
     public static bool Swagger { get; set; } = true;
+    
+    public static bool Sentry { get; set; }
+    public static string SentryDsn { get; set; } = string.Empty;
+    
     public static bool IsDev { get; set; }
     public static bool UpdateAvailable { get; set; }
 

@@ -530,5 +530,4 @@ fabric.properties
 
 output/
 .idea/
-src/NoMercy.App/wwwroot
-src/NoMercy.App/Resources/wwwroot
+src/NoMercy.App/Resources
