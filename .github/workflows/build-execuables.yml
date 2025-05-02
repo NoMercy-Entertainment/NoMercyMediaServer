@@ -208,9 +208,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: NoMercy-Entertainment/NoMercyApp
-          path: ./src/NoMercy.App/Resources
+          path: ./src/NoMercy.App/Resources/wwwroot
           fetch-depth: 0
           ref: gh-pages
+
+      - name: Move App Files
+        run: |
+          mv ./src/NoMercy.App/Resources/wwwroot/* ./src/NoMercy.App/Resources
+          rm -rf ./src/NoMercy.App/Resources/wwwroot
 
       - name: List App Files
         run: |
