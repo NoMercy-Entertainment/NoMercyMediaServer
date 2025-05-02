@@ -57,7 +57,6 @@ jobs:
 
       # Publish the NoMercy.Server project for the target OS
       - name: Publish NoMercy.Server
-        continue-on-error: true
         run: |
           mkdir -p ./output
       
@@ -116,7 +115,10 @@ jobs:
           cp ./src/NoMercy.Server/Assets/MacOS/Info.plist ./output/NoMercyMediaServer.app/Contents/
           cp ./src/NoMercy.Server/Assets/MacOS/icon.icns ./output/NoMercyMediaServer.app/Contents/Resources/AppIcon.icns
           chmod +x ./output/NoMercyMediaServer.app/Contents/MacOS/NoMercyMediaServer
-
+      
+      - name: Create DMG for macOS
+        continue-on-error: true
+        run: |
           npm install -g create-dmg
           npx create-dmg \
             ./output/NoMercyMediaServer.app \
@@ -130,7 +132,6 @@ jobs:
             --app-drop-link 400 150
 
       - name: Publish NoMercy.Updater
-        continue-on-error: true
         run: |
           mkdir -p ./output
       
@@ -190,6 +191,9 @@ jobs:
           cp ./src/NoMercy.Server/Assets/MacOS/icon.icns ./output/NoMercyUpdater.app/Contents/Resources/AppIcon.icns
           chmod +x ./output/NoMercyUpdater.app/Contents/MacOS/NoMercyUpdater
 
+      - name: Create DMG for macOS
+        continue-on-error: true
+        run: |
           npm install -g create-dmg
           npx create-dmg \
             ./output/NoMercyUpdater.app \
@@ -221,7 +225,6 @@ jobs:
 
       # Publish the NoMercy.Server project for the target OS
       - name: Publish NoMercy.App
-        continue-on-error: true
         run: |
           mkdir -p ./output
       
@@ -281,6 +284,9 @@ jobs:
           cp ./src/NoMercy.Server/Assets/MacOS/icon.icns ./output/NoMercyApp.app/Contents/Resources/AppIcon.icns
           chmod +x ./output/NoMercyApp.app/Contents/MacOS/NoMercyApp
 
+      - name: Create DMG for macOS
+        continue-on-error: true
+        run: |
           npm install -g create-dmg
           npx create-dmg \
             ./output/NoMercyApp.app \
@@ -292,6 +298,12 @@ jobs:
             --icon-size 128 \
             --icon AppIcon.icns 100 150 \
             --app-drop-link 400 150
+
+      - name: Move App to output
+        run: |
+          mv ./output/NoMercyApp.dmg ./output/NoMercyApp-macos-x64.dmg
+          mv ./output/NoMercyUpdater.dmg ./output/NoMercyUpdater-macos-x64.dmg
+          mv ./output/NoMercyMediaServer.dmg ./output/NoMercyMediaServer-macos-x64.dmg
 
       - name: List NoMercy.App Output Size
         run: |
