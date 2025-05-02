@@ -4,10 +4,10 @@ Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.34), libicu70 (>= 70.1), libssl3 (>= 3.0.0), libgssapi-krb5-2
 Filename: pool/main/n/nomercyapp/nomercyapp_latest_amd64.deb
-Size: 40941338
-MD5sum: 95df05bb07d45f78862c78cedea85b4a
-SHA1: 6e566799d5d7d73516b91545b43f423571b604df
-SHA256: bbe1c5a0bf7ebacd6863fc72a291eab4ca9fa99d5f9b40a0dba20b898e6e0abf
+Size: 40941336
+MD5sum: d233efe0305a694a5fd0ef20e6cf41f5
+SHA1: f7cac002493013a6f957fe8c4d11d3a0e3dcbd87
+SHA256: ddac10a07afbb6c4281a3b8f56c8620d393d16a9f86f1d1ea2af2191fa8068ce
 Section: multimedia
 Priority: optional
 Description: NoMercy-App
@@ -18,10 +18,10 @@ Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.34), libicu70 (>= 70.1), libssl3 (>= 3.0.0), libgssapi-krb5-2
 Filename: pool/main/n/nomercyapp/nomercyapp_0.1.94_amd64.deb
-Size: 40941338
-MD5sum: 95df05bb07d45f78862c78cedea85b4a
-SHA1: 6e566799d5d7d73516b91545b43f423571b604df
-SHA256: bbe1c5a0bf7ebacd6863fc72a291eab4ca9fa99d5f9b40a0dba20b898e6e0abf
+Size: 40941336
+MD5sum: d233efe0305a694a5fd0ef20e6cf41f5
+SHA1: f7cac002493013a6f957fe8c4d11d3a0e3dcbd87
+SHA256: ddac10a07afbb6c4281a3b8f56c8620d393d16a9f86f1d1ea2af2191fa8068ce
 Section: multimedia
 Priority: optional
 Description: NoMercy-App
@@ -32,10 +32,10 @@ Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.34), libicu70 (>= 70.1), libssl3 (>= 3.0.0), libgssapi-krb5-2
 Filename: pool/main/n/nomercymediaserver/nomercymediaserver_0.1.94_amd64.deb
-Size: 69618696
-MD5sum: 4a532bb52195a6fed137686f5e456e42
-SHA1: bd8444735ba03bebee681482a7feef0b3e959a52
-SHA256: d45698ef3c9f656ed4a3aa759b68a458a61e9df76f77b19624b9ebfa5afca7d5
+Size: 69618680
+MD5sum: 1919fdbf8252a5b21596a21c8b603094
+SHA1: 2d538e0a7f15991e57549defbfbc21f0df07c690
+SHA256: d40394c51a214d975b73728dc55698c5e2e88e1a68b7333ae3201adfdfa29112
 Section: multimedia
 Priority: optional
 Description: NoMercy-MediaServer
@@ -46,10 +46,10 @@ Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.34), libicu70 (>= 70.1), libssl3 (>= 3.0.0), libgssapi-krb5-2
 Filename: pool/main/n/nomercymediaserver/nomercymediaserver_latest_amd64.deb
-Size: 69618696
-MD5sum: 4a532bb52195a6fed137686f5e456e42
-SHA1: bd8444735ba03bebee681482a7feef0b3e959a52
-SHA256: d45698ef3c9f656ed4a3aa759b68a458a61e9df76f77b19624b9ebfa5afca7d5
+Size: 69618680
+MD5sum: 1919fdbf8252a5b21596a21c8b603094
+SHA1: 2d538e0a7f15991e57549defbfbc21f0df07c690
+SHA256: d40394c51a214d975b73728dc55698c5e2e88e1a68b7333ae3201adfdfa29112
 Section: multimedia
 Priority: optional
 Description: NoMercy-MediaServer
@@ -60,10 +60,10 @@ Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.34), libicu70 (>= 70.1), libssl3 (>= 3.0.0), libgssapi-krb5-2
 Filename: pool/main/n/nomercyupdater/nomercyupdater_0.1.94_amd64.deb
-Size: 69668372
-MD5sum: c6cf676e087df79b996463cb6062a188
-SHA1: 081b6a6ad4e8865a48ee1f2a96b26fde83b37b48
-SHA256: 1d43330cf7e08a852177f1dd29ffddd9532c6772af56e745a1315949565fdadc
+Size: 69668244
+MD5sum: 3c513e41c351235500c56b77894bb798
+SHA1: 5872c95483ef1293fda84919b2cfdd935898bdbd
+SHA256: 577f9da76a5450f7f93e1d641051fbfec3c5e283f29918f04914344510e5763b
 Section: multimedia
 Priority: optional
 Description: NoMercy-Updater
@@ -74,10 +74,10 @@ Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.34), libicu70 (>= 70.1), libssl3 (>= 3.0.0), libgssapi-krb5-2
 Filename: pool/main/n/nomercyupdater/nomercyupdater_latest_amd64.deb
-Size: 69668372
-MD5sum: c6cf676e087df79b996463cb6062a188
-SHA1: 081b6a6ad4e8865a48ee1f2a96b26fde83b37b48
-SHA256: 1d43330cf7e08a852177f1dd29ffddd9532c6772af56e745a1315949565fdadc
+Size: 69668244
+MD5sum: 3c513e41c351235500c56b77894bb798
+SHA1: 5872c95483ef1293fda84919b2cfdd935898bdbd
+SHA256: 577f9da76a5450f7f93e1d641051fbfec3c5e283f29918f04914344510e5763b
 Section: multimedia
 Priority: optional
 Description: NoMercy-Updater
