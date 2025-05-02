@@ -20,11 +20,11 @@ class Program
     static void Main(string[] args)
     {
         PhotinoServer
-            .CreateStaticFileServer(args, 7625, 100, "wwwroot", out string baseUrl)
+            .CreateStaticFileServer(args, 7625, 100, "../Resources/wwwroot", out string baseUrl)
             .RunAsync();
 
         string appUrl = Debugger.IsAttached ? "https://app-dev.nomercy.tv" : baseUrl;
-
+        
         string windowTitle = "NoMercy TV";
         
         string iconPath;
@@ -77,7 +77,7 @@ class Program
                         return;
                 }
             })
-            .Load(appUrl);
+            .Load(baseUrl);
         
         Window.WindowCreated += (_, _) =>
         {
