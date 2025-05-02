@@ -1,9 +1,9 @@
 pkgname = nomercyapp
-pkgver = 0.1.94-1
+pkgver = 0.1.95-1
 pkgdesc = NoMercy-App
 url = https://nomercy.tv
-builddate = 1746216397
-size = 48461242
+builddate = 1746222421
+size = 48461238
 arch = x86_64
 license = custom
 depend = glibc
