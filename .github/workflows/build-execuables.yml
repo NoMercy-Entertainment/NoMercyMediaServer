@@ -40,14 +40,6 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore NoMercy.Server.sln
 
-      # Get the version of the project
-      - name: Get Version
-        uses: kzrnm/get-net-sdk-project-versions-action@v2
-        id: get-version
-        with:
-          proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
-      - run: echo "${{steps.get-version.outputs.version}}"
-
       # Publish the NoMercy.Server project for the target OS
       - name: Publish NoMercy.Server
         run: |
@@ -105,13 +97,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: NoMercy-Entertainment/NoMercyApp
-          path: ./src/NoMercy.App/Resources/wwwroot
+          path: ./src/NoMercy.App/Resources
           fetch-depth: 0
           ref: gh-pages
 
       - name: List App Files
         run: |
-          ls -la ./src/NoMercy.App/Resources/wwwroot
+          ls -la ./src/NoMercy.App/Resources
 
       # Publish the NoMercy.Server project for the target OS
       - name: Publish NoMercy.App
@@ -128,7 +120,7 @@ jobs:
       
           # macOS Build
           dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime osx-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp /p:PublishTrimmed=true --output ./output
-          
+
           mkdir -p ./output/NoMercyApp.app/Contents/{MacOS,Resources}
           cp ./output/NoMercyApp ./output/NoMercyApp.app/Contents/MacOS/
           cp ./src/NoMercy.Server/Assets/MacOS/Info.plist.app ./output/NoMercyApp.app/Contents/Info.plist
@@ -145,6 +137,13 @@ jobs:
           du -sh ./output/*
           ls -lh ./output/
       
+      # Get the version of the project
+      - name: Get Version
+        uses: kzrnm/get-net-sdk-project-versions-action@v2
+        id: get-version
+        with:
+          proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
+      - run: echo "${{steps.get-version.outputs.version}}"
           
       - name: Get Short SHA
         id: get_short_sha
