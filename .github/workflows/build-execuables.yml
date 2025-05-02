@@ -65,7 +65,6 @@ jobs:
             --configuration Release \
             --runtime linux-x64 \
             --self-contained true \
-            --output ./output\
             /p:PublishSingleFile=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
@@ -74,7 +73,8 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyMediaServer \
-            /p:PublishTrimmed=true 
+            /p:PublishTrimmed=true \
+            --output ./output
           mv ./output/NoMercyMediaServer ./output/NoMercyMediaServer-linux-x64
       
           # Windows Build
@@ -82,7 +82,6 @@ jobs:
             --configuration Release \
             --runtime win-x64 \
             --self-contained true \
-            --output ./output \
             /p:PublishSingleFile=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
@@ -91,7 +90,8 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyMediaServer \
-            /p:PublishTrimmed=true 
+            /p:PublishTrimmed=true \
+            --output ./output
           mv ./output/NoMercyMediaServer.exe ./output/NoMercyMediaServer-windows-x64.exe
 
           # macOS Build
@@ -99,7 +99,6 @@ jobs:
             --configuration Release \
             --runtime osx-x64 \
             --self-contained true \
-            --output ./output \
             /p:PublishSingleFile=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
@@ -108,7 +107,8 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyMediaServer \
-            /p:PublishTrimmed=true 
+            /p:PublishTrimmed=true \
+            --output ./output
           
           mkdir -p ./output/NoMercyMediaServer.app/Contents/{MacOS,Resources}
           cp ./output/NoMercyMediaServer ./output/NoMercyMediaServer.app/Contents/MacOS/
@@ -121,8 +121,8 @@ jobs:
         run: |
           npm install -g create-dmg
           npx create-dmg \
-            ./output/NoMercyMediaServer.app \
-            ./output \
+            ./output/NoMercyMediaServer-Installer.dmg \
+            ./output/NoMercyMediaServer.app/ \
             --overwrite \
             --dmg-title="NoMercyMediaServer" \
             --window-pos 200 120 \
@@ -140,7 +140,6 @@ jobs:
             --configuration Release \
             --runtime linux-x64 \
             --self-contained true \
-            --output ./output \
             /p:PublishSingleFile=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
@@ -149,7 +148,8 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyUpdater \
-            /p:PublishTrimmed=true 
+            /p:PublishTrimmed=true \
+            --output ./output
           mv ./output/NoMercyUpdater ./output/NoMercyUpdater-linux-x64
       
           # Windows Build
@@ -157,7 +157,6 @@ jobs:
             --configuration Release \
             --runtime win-x64 \
             --self-contained true \
-            --output ./output \
             /p:PublishSingleFile=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
@@ -166,7 +165,8 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyUpdater \
-            /p:PublishTrimmed=true 
+            /p:PublishTrimmed=true \
+            --output ./output
           mv ./output/NoMercyUpdater.exe ./output/NoMercyUpdater-windows-x64.exe
       
           # macOS Build
@@ -174,7 +174,6 @@ jobs:
             --configuration Release \
             --runtime osx-x64 \
             --self-contained true \
-            --output ./output \
             /p:PublishSingleFile=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
@@ -183,7 +182,8 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyUpdater \
-            /p:PublishTrimmed=true 
+            /p:PublishTrimmed=true \
+            --output ./output
 
           mkdir -p ./output/NoMercyUpdater.app/Contents/{MacOS,Resources}
           cp ./output/NoMercyUpdater ./output/NoMercyUpdater.app/Contents/MacOS/
@@ -196,8 +196,8 @@ jobs:
         run: |
           npm install -g create-dmg
           npx create-dmg \
-            ./output/NoMercyUpdater.app \
-            ./output \
+            ./output/NoMercyUpdater-Installer.dmg \
+            ./output/NoMercyUpdater.app/ \
             --overwrite \
             --dmg-title="NoMercyUpdater" \
             --window-pos 200 120 \
@@ -233,7 +233,6 @@ jobs:
             --configuration Release \
             --runtime linux-x64 \
             --self-contained true \
-            --output ./output \
             /p:PublishSingleFile=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
@@ -242,7 +241,8 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyApp \
-            /p:PublishTrimmed=true 
+            /p:PublishTrimmed=true \
+            --output ./output
           mv ./output/NoMercyApp ./output/NoMercyApp-linux-x64
       
           # Windows Build
@@ -250,7 +250,6 @@ jobs:
             --configuration Release \
             --runtime win-x64 \
             --self-contained true \
-            --output ./output \
             /p:PublishSingleFile=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
@@ -259,7 +258,8 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyApp \
-            /p:PublishTrimmed=true 
+            /p:PublishTrimmed=true \
+            --output ./output
           mv ./output/NoMercyApp.exe ./output/NoMercyApp-windows-x64.exe
       
           # macOS Build
@@ -267,7 +267,6 @@ jobs:
             --configuration Release \
             --runtime osx-x64 \
             --self-contained true \
-            --output ./output \
             /p:PublishSingleFile=true \
             /p:IncludeNativeLibrariesForSelfExtract=true \
             /p:IncludeAllContentForSelfExtract=true \
@@ -276,7 +275,8 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyApp \
-            /p:PublishTrimmed=true 
+            /p:PublishTrimmed=true \
+            --output ./output
 
           mkdir -p ./output/NoMercyApp.app/Contents/{MacOS,Resources}
           cp ./output/NoMercyApp ./output/NoMercyApp.app/Contents/MacOS/
@@ -289,8 +289,8 @@ jobs:
         run: |
           npm install -g create-dmg
           npx create-dmg \
+            ./output/NoMercyApp-Installer.dmg \
             ./output/NoMercyApp.app \
-            ./output \
             --overwrite \
             --dmg-title="NoMercyApp" \
             --window-pos 200 120 \
@@ -306,9 +306,9 @@ jobs:
 
       - name: Move App to output
         run: |
-          mv "./output/NoMercy 1.0.0.dmg" ./output/NoMercyApp-macos-x64.dmg
-          mv "./output/NoMercy Updater 1.0.0.dmg" ./output/NoMercyUpdater-macos-x64.dmg
-          mv "./output/NoMercy MediaServer 1.0.0.dmg" ./output/NoMercyMediaServer-macos-x64.dmg
+          mv "./output/NoMercy.dmg" ./output/NoMercyApp-macos-x64.dmg
+          mv "./output/NoMercy Updater.dmg" ./output/NoMercyUpdater-macos-x64.dmg
+          mv "./output/NoMercy MediaServer.dmg" ./output/NoMercyMediaServer-macos-x64.dmg
 
       - name: List NoMercy.App Output Size
         run: |
