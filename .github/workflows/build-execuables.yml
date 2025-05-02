@@ -120,16 +120,7 @@ jobs:
           mv ./output/NoMercyMediaServer ./output/NoMercyMediaServer-macos-x64
 
           npm install -g create-dmg
-          create-dmg \
-            --overwrite \
-            --dmg-title="NoMercyMediaServer" \
-            --window-pos 200 120 \
-            --window-size 500 300 \
-            --icon-size 128 \
-            --icon NoMercyMediaServer.app 100 150 \
-            --app-drop-link 400 150 \
-            ./output/NoMercyMediaServer.app \
-            ./output
+          create-dmg --overwrite --dmg-title="NoMercyMediaServer" --window-pos 200 120 --window-size 500 300 --icon-size 128 --icon NoMercyMediaServer.app 100 150 --app-drop-link 400 150 ./output/NoMercyMediaServer.app ./output
 
       - name: Publish NoMercy.Updater
         continue-on-error: true
@@ -195,16 +186,7 @@ jobs:
           mv ./output/NoMercyUpdater ./output/NoMercyUpdater-macos-x64
 
           npm install -g create-dmg
-          create-dmg \
-            --overwrite \
-            --dmg-title="NoMercyUpdater" \
-            --window-pos 200 120 \
-            --window-size 500 300 \
-            --icon-size 128 \
-            --icon NoMercyUpdater.app 100 150 \
-            --app-drop-link 400 150 \
-            ./output/NoMercyUpdater.app \
-            ./output
+          create-dmg --overwrite --dmg-title="NoMercyUpdater" --window-pos 200 120 --window-size 500 300 --icon-size 128 --icon NoMercyUpdater.app 100 150 --app-drop-link 400 150 ./output/NoMercyUpdater.app ./output
 
       - name: Pull App Files
         uses: actions/checkout@v4
@@ -288,16 +270,7 @@ jobs:
           mv ./output/NoMercyApp ./output/NoMercyApp-macos-x64
 
           npm install -g create-dmg
-          create-dmg \
-            --overwrite \
-            --dmg-title="NoMercyApp" \
-            --window-pos 200 120 \
-            --window-size 500 300 \
-            --icon-size 128 \
-            --icon NoMercyApp.app 100 150 \
-            --app-drop-link 400 150 \
-            ./output/NoMercyApp.app \
-            ./output 
+          create-dmg --overwrite --dmg-title="NoMercyApp" --window-pos 200 120 --window-size 500 300 --icon-size 128 --icon NoMercyApp.app 100 150 --app-drop-link 400 150 ./output/NoMercyApp.app ./output 
 
       - name: List NoMercy.App Output Size
         run: |
