@@ -20,7 +20,7 @@ class Program
     static void Main(string[] args)
     {
         PhotinoServer
-            .CreateStaticFileServer(args, 7625, 100, "../Resources/wwwroot", out string baseUrl)
+            .CreateStaticFileServer(args, 7625, 100, "", out string baseUrl)
             .RunAsync();
 
         string appUrl = Debugger.IsAttached ? "https://app-dev.nomercy.tv" : baseUrl;

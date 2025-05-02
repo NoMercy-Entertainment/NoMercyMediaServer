@@ -52,21 +52,11 @@
     <ItemGroup>
         <EmbeddedResource Include="Resources\**"/>
     </ItemGroup>
-
-<!--    <ItemGroup>-->
-<!--        <None Update="wwwroot\**">-->
-<!--            <CopyToOutputDirectory>Always</CopyToOutputDirectory>-->
-<!--        </None>-->
-<!--    </ItemGroup>-->
     
     <ItemGroup>
         <None Update="Resources\AppIcon\**">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-    </ItemGroup>
-    
-    <ItemGroup>
-      <Folder Include="wwwroot\" />
     </ItemGroup>
 
 </Project>
