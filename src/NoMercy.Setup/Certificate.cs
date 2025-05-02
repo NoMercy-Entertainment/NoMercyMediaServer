@@ -91,9 +91,9 @@ public static class Certificate
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
 
-        string serverUrl = $"{Config.ApiServerBaseUrl}certificate?server_id={Info.DeviceId}";
+        string serverUrl = $"{Config.ApiServerBaseUrl}certificate?id={Info.DeviceId}";
         if (hasExistingCert)
-            serverUrl = $"{Config.ApiServerBaseUrl}renewcertificate?server_id={Info.DeviceId}";
+            serverUrl = $"{Config.ApiServerBaseUrl}renew-certificate?id={Info.DeviceId}";
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {

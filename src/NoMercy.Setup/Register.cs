@@ -24,12 +24,12 @@ public static class Register
     {
         Dictionary<string, string> serverData = new()
         {
-            { "server_id", Info.DeviceId.ToString() },
-            { "server_name", DeviceName() },
+            { "id", Info.DeviceId.ToString() },
+            { "name", DeviceName() },
             { "internal_ip", Networking.Networking.InternalIp },
             { "internal_port", Config.InternalServerPort.ToString() },
             { "external_port", Config.ExternalServerPort.ToString() },
-            { "server_version", Software.Version!.ToString() },
+            { "version", Software.Version!.ToString() },
             { "platform", Info.Platform }
         };
 
@@ -58,9 +58,8 @@ public static class Register
     {
         Dictionary<string, string> serverData = new()
         {
-            { "server_id", Info.DeviceId.ToString() }
+            { "id", Info.DeviceId.ToString() }
         };
-
         
         System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.BaseAddress = new(Config.ApiServerBaseUrl);
@@ -72,14 +71,12 @@ public static class Register
             .PostAsync("assign", new FormUrlEncodedContent(serverData))
             .Result.Content.ReadAsStringAsync().Result;
         
-        ServerRegisterResponse? data = JsonConvert.DeserializeObject<ServerRegisterResponse>(content);
+        ServerRegisterResponseData? data = JsonConvert.DeserializeObject<ServerRegisterResponse>(content)?.Data;
 
         if (data is null || data.Status == "error")
         {
             throw new("Failed to assign Server");
         }
-        
-        Logger.Register(data, LogEventLevel.Verbose);
 
         User user = new()
         {
@@ -137,7 +134,7 @@ public static class Register
         {
             Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                ["server_id"] = Info.DeviceId.ToString()
+                ["id"] = Info.DeviceId.ToString()
             })
         };
 

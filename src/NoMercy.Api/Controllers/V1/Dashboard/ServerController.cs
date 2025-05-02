@@ -378,7 +378,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     ["id"] = Info.DeviceId.ToString(),
-                    ["server_name"] = request.Name
+                    ["name"] = request.Name
                 })
             };
 

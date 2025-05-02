@@ -88,17 +88,19 @@ public class Seed : IDisposable, IAsyncDisposable
         client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
 
-        IDictionary<string, string?> query = new Dictionary<string, string?>();
-        query.Add("server_id", Info.DeviceId.ToString());
+        Dictionary<string, string?> queryParams = new()
+        {
+            ["id"] = Info.DeviceId.ToString(),
+            ["with_self"] = "true",
+        };
 
-        string newUrl = QueryHelpers.AddQueryString("users", query);
+        string newUrl = QueryHelpers.AddQueryString("server-users", queryParams);
 
-        HttpResponseMessage response = await client.GetAsync(newUrl);
-        string? content = await response.Content.ReadAsStringAsync();
+        string response = await client.GetStringAsync(newUrl);
 
-        if (content == null) throw new("Failed to get Server info");
+        if (response == null) throw new("Failed to get Server info");
 
-        ServerUserDto[] serverUsers = content.FromJson<ServerUserDto[]>() ?? [];
+        ServerUserDtoData[] serverUsers = response.FromJson<ServerUserDto>()?.Data ?? [];
 
         Logger.Setup($"Found {serverUsers.Length} users", LogEventLevel.Verbose);
 
