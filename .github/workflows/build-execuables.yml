@@ -115,20 +115,21 @@ jobs:
           cp ./src/NoMercy.Server/Assets/MacOS/Info.plist ./output/NoMercyMediaServer.app/Contents/
           cp ./src/NoMercy.Server/Assets/MacOS/icon.icns ./output/NoMercyMediaServer.app/Contents/Resources/AppIcon.icns
           chmod +x ./output/NoMercyMediaServer.app/Contents/MacOS/NoMercyMediaServer
+          tar -czf ./output/NoMercyMediaServer-macos-x64.tar.gz -C ./output NoMercyMediaServer.app
+          mv ./output/NoMercyMediaServer ./output/NoMercyMediaServer-macos-x64
       
       - name: Create DMG for macOS
         continue-on-error: true
         run: |
           npm install -g create-dmg
           npx create-dmg \
-            ./output/NoMercyMediaServer-Installer.dmg \
-            ./output/NoMercyMediaServer.app/ \
+            ./output/NoMercyMediaServer.app \
+            ./output \
             --overwrite \
             --dmg-title="NoMercyMediaServer" \
-            --window-pos 200 120 \
             --window-size 500 300 \
             --icon-size 128 \
-            --icon AppIcon.icns 100 150 \
+            --icon NoMercyApp.app 100 150 \
             --app-drop-link 400 150
 
       - name: Publish NoMercy.Updater
@@ -190,20 +191,21 @@ jobs:
           cp ./src/NoMercy.Server/Assets/MacOS/Info.plist.updater ./output/NoMercyUpdater.app/Contents/Info.plist
           cp ./src/NoMercy.Server/Assets/MacOS/icon.icns ./output/NoMercyUpdater.app/Contents/Resources/AppIcon.icns
           chmod +x ./output/NoMercyUpdater.app/Contents/MacOS/NoMercyUpdater
+          tar -czf ./output/NoMercyUpdater-macos-x64.tar.gz -C ./output NoMercyUpdater.app
+          mv ./output/NoMercyUpdater ./output/NoMercyUpdater-macos-x64
 
       - name: Create DMG for macOS
         continue-on-error: true
         run: |
           npm install -g create-dmg
           npx create-dmg \
-            ./output/NoMercyUpdater-Installer.dmg \
-            ./output/NoMercyUpdater.app/ \
+            ./output/NoMercyUpdater.app \
+            ./output \
             --overwrite \
             --dmg-title="NoMercyUpdater" \
-            --window-pos 200 120 \
             --window-size 500 300 \
             --icon-size 128 \
-            --icon AppIcon.icns 100 150 \
+            --icon NoMercyApp.app 100 150 \
             --app-drop-link 400 150
 
       - name: Pull App Files
@@ -283,20 +285,21 @@ jobs:
           cp ./src/NoMercy.Server/Assets/MacOS/Info.plist.app ./output/NoMercyApp.app/Contents/Info.plist
           cp ./src/NoMercy.Server/Assets/MacOS/icon.icns ./output/NoMercyApp.app/Contents/Resources/AppIcon.icns
           chmod +x ./output/NoMercyApp.app/Contents/MacOS/NoMercyApp
+          tar -czf ./output/NoMercyApp-macos-x64.tar.gz -C ./output NoMercyApp.app
+          mv ./output/NoMercyApp ./output/NoMercyApp-macos-x64
 
       - name: Create DMG for macOS
         continue-on-error: true
         run: |
           npm install -g create-dmg
           npx create-dmg \
-            ./output/NoMercyApp-Installer.dmg \
             ./output/NoMercyApp.app \
+            ./output \
             --overwrite \
             --dmg-title="NoMercyApp" \
-            --window-pos 200 120 \
             --window-size 500 300 \
             --icon-size 128 \
-            --icon AppIcon.icns 100 150 \
+            --icon NoMercyApp.app 100 150 \
             --app-drop-link 400 150
 
       - name: List NoMercy.App Output Size
@@ -306,9 +309,9 @@ jobs:
 
       - name: Move App to output
         run: |
-          mv "./output/NoMercy.dmg" ./output/NoMercyApp-macos-x64.dmg
-          mv "./output/NoMercy Updater.dmg" ./output/NoMercyUpdater-macos-x64.dmg
-          mv "./output/NoMercy MediaServer.dmg" ./output/NoMercyMediaServer-macos-x64.dmg
+          mv "./output/NoMercy 1.0.0.dmg" ./output/NoMercyApp-macos-x64.dmg
+          mv "./output/NoMercy Updater 1.0.0.dmg" ./output/NoMercyUpdater-macos-x64.dmg
+          mv "./output/NoMercy MediaServer 1.0.0.dmg" ./output/NoMercyMediaServer-macos-x64.dmg
 
       - name: List NoMercy.App Output Size
         run: |
