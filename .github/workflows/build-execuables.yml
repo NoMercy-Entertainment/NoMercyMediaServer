@@ -73,7 +73,6 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyMediaServer \
-            /p:PublishTrimmed=true \
             --output ./output
           mv ./output/NoMercyMediaServer ./output/NoMercyMediaServer-linux-x64
       
@@ -90,7 +89,6 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyMediaServer \
-            /p:PublishTrimmed=true \
             --output ./output
           mv ./output/NoMercyMediaServer.exe ./output/NoMercyMediaServer-windows-x64.exe
 
@@ -107,7 +105,6 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyMediaServer \
-            /p:PublishTrimmed=true \
             --output ./output
           
           mkdir -p ./output/NoMercyMediaServer.app/Contents/{MacOS,Resources}
@@ -149,7 +146,6 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyUpdater \
-            /p:PublishTrimmed=true \
             --output ./output
           mv ./output/NoMercyUpdater ./output/NoMercyUpdater-linux-x64
       
@@ -166,7 +162,6 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyUpdater \
-            /p:PublishTrimmed=true \
             --output ./output
           mv ./output/NoMercyUpdater.exe ./output/NoMercyUpdater-windows-x64.exe
       
@@ -183,7 +178,6 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyUpdater \
-            /p:PublishTrimmed=true \
             --output ./output
 
           mkdir -p ./output/NoMercyUpdater.app/Contents/{MacOS,Resources}
