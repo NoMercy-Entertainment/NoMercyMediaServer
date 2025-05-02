@@ -299,11 +299,16 @@ jobs:
             --icon AppIcon.icns 100 150 \
             --app-drop-link 400 150
 
+      - name: List NoMercy.App Output Size
+        run: |
+          du -sh ./output/*
+          ls -lh ./output/
+
       - name: Move App to output
         run: |
-          mv ./output/NoMercyApp.dmg ./output/NoMercyApp-macos-x64.dmg
-          mv ./output/NoMercyUpdater.dmg ./output/NoMercyUpdater-macos-x64.dmg
-          mv ./output/NoMercyMediaServer.dmg ./output/NoMercyMediaServer-macos-x64.dmg
+          mv "./output/NoMercy 1.0.0.dmg" ./output/NoMercyApp-macos-x64.dmg
+          mv "./output/NoMercy Updater 1.0.0.dmg" ./output/NoMercyUpdater-macos-x64.dmg
+          mv "./output/NoMercy MediaServer 1.0.0.dmg" ./output/NoMercyMediaServer-macos-x64.dmg
 
       - name: List NoMercy.App Output Size
         run: |
