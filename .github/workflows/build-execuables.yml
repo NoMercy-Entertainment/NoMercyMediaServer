@@ -98,15 +98,15 @@ jobs:
           mkdir -p ./output
       
           # Publish for Linux
-          dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime linux-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp --output ./output
+          dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime linux-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp /p:PublishTrimmed=true --output ./output
           mv ./output/NoMercyApp ./output/NoMercyApp-linux-x64
       
           # Windows Build
-          dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp --output ./output
+          dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp /p:PublishTrimmed=true --output ./output
           mv ./output/NoMercyApp.exe ./output/NoMercyApp-windows-x64.exe
       
           # macOS Build
-          dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime osx-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp --output ./output
+          dotnet publish ./src/NoMercy.App/NoMercy.App.csproj --configuration Release --runtime osx-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:IncludeAllContentForSelfExtract=true /p:EnableCompressionInSingleFile=true /p:DebugType=None /p:DebugSymbols=false /p:PublishReadyToRun=false /p:OutputFileName=NoMercyApp /p:PublishTrimmed=true --output ./output
           mkdir -p ./output/NoMercyApp.app/Contents/{MacOS,Resources}
           cp ./output/NoMercyApp ./output/NoMercyApp.app/Contents/MacOS/
           cp ./src/NoMercy.Server/Assets/MacOS/Info.plist.app ./output/NoMercyApp.app/Contents/Info.plist
@@ -114,6 +114,11 @@ jobs:
           chmod +x ./output/NoMercyApp.app/Contents/MacOS/NoMercyApp
           tar -czf ./output/NoMercyApp-macos-x64.tar.gz -C ./output NoMercyApp.app
           mv ./output/NoMercyApp ./output/NoMercyApp-macos-x64
+
+      - name: List NoMercy.App Output Size
+        run: |
+          du -sh ./output/*
+          ls -lh ./output/
         
           
       # Get the version of the project
