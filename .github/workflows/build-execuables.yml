@@ -126,10 +126,10 @@ jobs:
             --window-pos 200 120 \
             --window-size 500 300 \
             --icon-size 128 \
-            --icon ./output/NoMercyMediaServer.app 100 150
+            --icon NoMercyMediaServer.app 100 150 \
             --app-drop-link 400 150 \
-          ./output/NoMercyMediaServer-macos-x64.dmg \
-          ./output/NoMercyMediaServer.app
+            ./output/NoMercyMediaServer.app \
+            ./output
 
       - name: Publish NoMercy.Updater
         continue-on-error: true
@@ -201,10 +201,10 @@ jobs:
             --window-pos 200 120 \
             --window-size 500 300 \
             --icon-size 128 \
-            --icon ./output/NoMercyUpdater.app 100 150
+            --icon NoMercyUpdater.app 100 150 \
             --app-drop-link 400 150 \
-          ./output/NoMercyUpdater-macos-x64.dmg \
-          ./output/NoMercyUpdater.app
+            ./output/NoMercyUpdater.app \
+            ./output
 
       - name: Pull App Files
         uses: actions/checkout@v4
@@ -294,10 +294,10 @@ jobs:
             --window-pos 200 120 \
             --window-size 500 300 \
             --icon-size 128 \
-            --icon ./output/NoMercyApp.app 100 150
+            --icon NoMercyApp.app 100 150 \
             --app-drop-link 400 150 \
-          ./output/NoMercyApp-macos-x64.dmg \
-          ./output/NoMercyApp.app 
+            ./output/NoMercyApp.app \
+            ./output 
 
       - name: List NoMercy.App Output Size
         run: |
