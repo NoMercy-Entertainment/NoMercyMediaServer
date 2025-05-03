@@ -1,12 +1,12 @@
-[ Unit ]
+[Unit]
 Description=NoMercy-Updater Service
 After=network.target
 
-[ Service ]
+[Service]
 Type=simple
 ExecStart=/usr/bin/nomercyupdater
 Restart=on-failure
 RestartSec=5
 
-[ Install ]
+[Install]
 WantedBy=default.target

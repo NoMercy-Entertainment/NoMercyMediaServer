@@ -1,10 +1,10 @@
 #!/bin/sh
 set -e
 
-# Reload systemd user daemon
+# Reload systemd user daemon to recognize the new service file
 systemctl --user daemon-reload || true
 
-# Enable and start service
+# Enable and start the service for the user who ran the installation (using SUDO_USER)
 if [ -n "$SUDO_USER" ]; then
 su - $SUDO_USER -c "systemctl --user enable nomercyapp.service" || true
 su - $SUDO_USER -c "systemctl --user start nomercyapp.service" || true

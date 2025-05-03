@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-# Stop and disable service
+# Stop and disable the service for the user who ran the removal (using SUDO_USER)
 if [ -n "$SUDO_USER" ]; then
 su - $SUDO_USER -c "systemctl --user stop nomercymediaserver.service" || true
 su - $SUDO_USER -c "systemctl --user disable nomercymediaserver.service" || true

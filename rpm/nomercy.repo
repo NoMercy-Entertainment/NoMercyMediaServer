@@ -1,0 +1,6 @@
+[nomercy]
+name=NoMercy Entertainment RPM Repository
+baseurl=https://repo.nomercy.tv/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.nomercy.tv/nomercy_repo.gpg.pub # Points to the public key at the repo root
