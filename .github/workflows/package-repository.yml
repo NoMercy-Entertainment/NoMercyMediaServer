@@ -107,7 +107,7 @@ jobs:
             autoconf automake libtool pkg-config gnupg \
             git libgpgme-dev libarchive-dev libcurl4-openssl-dev libssl-dev curl gettext \
             python3 python3-setuptools dash gawk ca-certificates fakechroot libarchive-tools \
-            libzstd-dev arch-install-scripts pacman-package-manager
+            libzstd-dev arch-install-scripts pacman-package-manager pacman libarchive
 
       - name: Setup Package Directories # Creates the base directory structure for the repository
         run: |
