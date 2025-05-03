@@ -355,27 +355,12 @@ jobs:
             install -Dm644 ./src/NoMercy.Server/Assets/Linux/${desktop_file} ${PKG_DIR}/usr/share/applications/
             install -Dm644 ./src/NoMercy.Server/Assets/Linux/icon.png ${PKG_DIR}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
             
-            # Create the .tar archive of the package contents
-            # --directory .: archive contents of the current directory (PKG_DIR)
-            # --owner=0 --group=0: set owner/group to root
-            # --mode=644: set default file permissions in archive (install overrides for specific files)
-            # --xform="s,^${name}/,," : Remove the initial directory component (${name}/) from paths
-            cd ${PKG_DIR}
-            tar --create \
-            --file ../../pkg.tar \
-            --directory . \
-            --owner=0 --group=0 \
-            --mode=644 \
-            --xform="s,^${name}/,," \
-            . # Archive all contents of the current directory
-            cd ../../.. # Go back to the original directory
-            
-            # Compress the .tar archive using zstd
-            zstd -19 -T0 ${PACKAGE_ROOT}/pkg.tar -o "${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst"
-            # Remove the intermediate .tar file
-            rm ${PACKAGE_ROOT}/pkg.tar
-            
-            # Move the final package file to the Arch pool directory
+            # Create a single pkg.tar in one step
+            tar -C "${PKG_DIR}" -cf "${PACKAGE_ROOT}/pkg.tar" .
+
+            # Compress and move to pool
+            zstd -19 -T0 "${PACKAGE_ROOT}/pkg.tar" -o "${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst"
+            rm "${PACKAGE_ROOT}/pkg.tar"
             mv "${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst" "./packages/arch/pool/x86_64/"
           }
           
