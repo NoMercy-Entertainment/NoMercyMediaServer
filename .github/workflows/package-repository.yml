@@ -27,6 +27,8 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
+      # Build .NET executables (MediaServer, Updater, App)
+      # These steps build single-file executables for linux-x64
       - name: Build NoMercy.Server
         run: |
           mkdir -p ./output
@@ -63,7 +65,7 @@ jobs:
             --output ./output
           chmod +x ./output/NoMercyUpdater
 
-      - name: Pull App Files
+      - name: Pull App Files # This step pulls frontend files from a separate repo
         uses: actions/checkout@v4
         with:
           repository: NoMercy-Entertainment/NoMercyApp
@@ -71,7 +73,7 @@ jobs:
           fetch-depth: 0
           ref: gh-pages
 
-      - name: Build NoMercy.App
+      - name: Build NoMercy.App # Builds the App executable
         run: |
           mkdir -p ./output
           dotnet publish ./src/NoMercy.App/NoMercy.App.csproj \
@@ -89,124 +91,94 @@ jobs:
             --output ./output
           chmod +x ./output/NoMercyApp
 
-      - name: Get Version
+      - name: Get Version # Gets version from the project file
         uses: kzrnm/get-net-sdk-project-versions-action@v2
         id: get-version
         with:
           proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
 
-      - name: Install Package Build Dependencies
+      # Install dependencies for building packages (apt, rpm, arch)
+      # These steps install the necessary tools like rpm, createrepo-c, dpkg-dev, repo-add (via libarchive-tools), gnupg
+      - name: Install Package Build Dependencies (DEB/RPM/Arch)
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm createrepo-c dpkg-dev devscripts fakeroot build-essential binutils autoconf automake libtool pkg-config gnupg
+          sudo apt-get install -y --no-install-recommends \
+            rpm createrepo-c dpkg-dev devscripts fakeroot build-essential binutils \
+            autoconf automake libtool pkg-config gnupg \
+            git libgpgme-dev libarchive-dev libcurl4-openssl-dev libssl-dev curl gettext \
+            python3 python3-setuptools dash gawk ca-certificates fakechroot libarchive-tools \
+            libzstd-dev # Required for zstd compression in Arch packages
+          # makepkg should be available after installing fakeroot and other build essentials
 
-      - name: Install Arch Build Dependencies
+      - name: Setup Package Directories # Creates the base directory structure for the repository
         run: |
-          sudo apt -q -y install --no-install-recommends \
-            git pkg-config meson gcc libtool libgpgme-dev libarchive-dev ninja-build \
-            libcurl4-openssl-dev libssl-dev curl gettext python3 python3-setuptools \
-            dash gawk ca-certificates fakeroot fakechroot libarchive-tools
-
-          # Need a more recent version of Meson
-          sudo mkdir -p /usr/local/meson
-          sudo git clone --depth 1 https://github.com/mesonbuild/meson.git /usr/local/meson
-
-          # Backup existing meson if present
-          if [ -f /usr/bin/meson ]; then
-            mver=$(meson --version)
-            sudo mv /usr/bin/meson "/usr/bin/meson-${mver}"
-          fi
-
-          # Create symlink to new meson
-          if [ -f /usr/local/meson/meson.py ]; then
-            sudo ln -sf /usr/local/meson/meson.py /usr/bin/meson
-          else
-            echo "ERROR: cannot locate /usr/local/meson/meson.py"
-            exit 1
-          fi
-          
-          sudo rm -rf pacman
-          git clone https://gitlab.archlinux.org/pacman/pacman.git
-          cd pacman
-          meson setup -Ddoc=disabled build
-          ninja -C build
-        
-          [ -d build ] || {
-          echo "Directory pacman/build does not exist. Exiting."
-          exit 1
-          }
-          cd build
-          grep mirror scripts/libmakepkg/source/git.sh > /dev/null && {
-          cat scripts/libmakepkg/source/git.sh | sed -e "s/---mirror//" > /tmp/git$$
-          cp /tmp/git$$ scripts/libmakepkg/source/git.sh
-          rm -f /tmp/git$$
-          }
-        
-          sudo meson install --no-rebuild --quiet
-
-      - name: Setup Package Directories
-        run: |
-          VERSION=${{ steps.get-version.outputs.version }}
-          mkdir -p packages/{apt,rpm,arch,debian,redhat}
+          mkdir -p packages/{apt,rpm,arch}
           mkdir -p packages/apt/{pool/main/n,dists/stable/main/binary-amd64}
           mkdir -p packages/rpm/pool/x86_64
-          mkdir -p packages/rpm/repodata
-          mkdir -p packages/redhat/repodata
+          # repodata directory is created by createrepo_c
           mkdir -p packages/arch/pool/x86_64
 
-      - name: Build DEB Packages
+      - name: Import GPG Private Key # Imports the private key for signing repositories
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          # Get the key ID and store in GITHUB_ENV for later use in index.html
+          GPG_KEY_ID=$(gpg --list-secret-keys --batch --with-colons | awk -F: '/^sec:/ { print $5 }' | head -n 1)
+          echo "GPG_KEY_ID=$GPG_KEY_ID" >> "$GITHUB_ENV"
+          echo "Imported GPG key with ID: $GPG_KEY_ID" # Log the key ID for debugging
+
+      - name: Build DEB Packages # Builds .deb files and places them in the pool directory
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
-          
-          # Function to create DEB package
+
+          # Function to create a DEB package
           create_deb_package() {
             local name=$1
             local friendly_name=$2
             local bin_path=$3
             local desktop_file=$4
-            local PACKAGE_ROOT="./packages/debian-${name}"
+            local PACKAGE_ROOT="./packages/debian-${name}" # Temporary build directory
 
             # Clean up any existing package directory
             rm -rf "${PACKAGE_ROOT}"
-          
-            # Create directory structure
+
+            # Create directory structure within the temporary build directory
             mkdir -p "${PACKAGE_ROOT}/DEBIAN"
             mkdir -p "${PACKAGE_ROOT}/usr/bin"
             mkdir -p "${PACKAGE_ROOT}/usr/share/applications"
             mkdir -p "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps"
-            mkdir -p "${PACKAGE_ROOT}/lib/systemd/user"
-      
-            # Copy binary
+            mkdir -p "${PACKAGE_ROOT}/lib/systemd/user" # Directory for user systemd services
+
+            # Copy binary to the package structure and set permissions
             cp "${bin_path}" "${PACKAGE_ROOT}/usr/bin/${name}"
             chmod 755 "${PACKAGE_ROOT}/usr/bin/${name}"
-      
-            # Copy desktop file
+
+            # Copy desktop file and set permissions
             cp "./src/NoMercy.Server/Assets/Linux/${desktop_file}" "${PACKAGE_ROOT}/usr/share/applications/"
             chmod 644 "${PACKAGE_ROOT}/usr/share/applications/${desktop_file}"
-      
-            # Copy icon
+
+            # Copy icon and set permissions
             cp "./src/NoMercy.Server/Assets/Linux/icon.png" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
             chmod 644 "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
-      
-            # Create systemd service file
+
+            # Create systemd user service file
             cat > "${PACKAGE_ROOT}/lib/systemd/user/${name}.service" << EOF
-          [ Unit ]
+          [Unit]
           Description=${friendly_name} Service
           After=network.target
-    
-          [ Service ]
+          
+          [Service]
           Type=simple
           ExecStart=/usr/bin/${name}
           Restart=on-failure
           RestartSec=5
-    
-          [ Install ]
+          
+          [Install]
           WantedBy=default.target
           EOF
-          
             chmod 644 "${PACKAGE_ROOT}/lib/systemd/user/${name}.service"
-          
-            # Create control file with dependencies
+  
+            # Create control file with package metadata and dependencies
+            # Dependencies listed here are examples and might need adjustment based on actual binary requirements
             cat > "${PACKAGE_ROOT}/DEBIAN/control" << EOF
           Package: ${name}
           Version: ${VERSION}
@@ -217,16 +189,16 @@ jobs:
           Priority: optional
           Section: multimedia
           EOF
-      
-            # Create postinst script
+            
+            # Create postinst script to handle service enable/start after installation
             cat > "${PACKAGE_ROOT}/DEBIAN/postinst" << EOF
           #!/bin/sh
           set -e
           
-          # Reload systemd user daemon
+          # Reload systemd user daemon to recognize the new service file
           systemctl --user daemon-reload || true
           
-          # Enable and start service
+          # Enable and start the service for the user who ran the installation (using SUDO_USER)
           if [ -n "\$SUDO_USER" ]; then
           su - \$SUDO_USER -c "systemctl --user enable ${name}.service" || true
           su - \$SUDO_USER -c "systemctl --user start ${name}.service" || true
@@ -234,14 +206,14 @@ jobs:
           
           exit 0
           EOF
-            chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst"
+            chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst" # Make the script executable
             
-            # Create prerm script
+            # Create prerm script to handle service stop/disable before removal
             cat > "${PACKAGE_ROOT}/DEBIAN/prerm" << EOF
           #!/bin/sh
           set -e
           
-          # Stop and disable service
+          # Stop and disable the service for the user who ran the removal (using SUDO_USER)
           if [ -n "\$SUDO_USER" ]; then
           su - \$SUDO_USER -c "systemctl --user stop ${name}.service" || true
           su - \$SUDO_USER -c "systemctl --user disable ${name}.service" || true
@@ -249,243 +221,207 @@ jobs:
           
           exit 0
           EOF
-            chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm"
-  
-            # Build package
+            chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm" # Make the script executable
+            
+            # Build the .deb package using dpkg-deb
             dpkg-deb --build "${PACKAGE_ROOT}"
-      
-            # Create package directory and move package
+            
+            # Create package-specific directory in the pool if it doesn't exist
             mkdir -p "./packages/apt/pool/main/n/${name}"
+            # Move the built package to the pool directory
             mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
             
-            # Create symlink
+            # Create a symlink for the latest version (optional but useful for direct downloads)
             cd "./packages/apt/pool/main/n/${name}"
             ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
-            cd ../../../../../..
+            cd ../../../../../.. # Go back to the repository root directory
           }
-    
-          # Build packages
+          
+          # Build packages for each component
           create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
           create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
           create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
-      
-          # Update package index
-          cd packages/apt
-          rm -f dists/stable/main/binary-amd64/Packages*
-          dpkg-scanpackages --multiversion pool/ > dists/stable/main/binary-amd64/Packages
-          gzip -k -f dists/stable/main/binary-amd64/Packages
-
-      - name: Build RPM Packages and Sign Repository
+        
+      - name: Build RPM Packages # Builds .rpm files and places them in the pool directory
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
-
-          # Setup RPM build environment
+          
+          # Setup RPM build environment in the home directory
           mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-
-          # Function to create RPM package
+          
+          # Function to create an RPM package
           create_rpm_package() {
             local name=$1
             local friendly_name=$2
             local bin_path=$3
             local desktop_file=$4
-
-            # Copy source files
+          
+            # Copy source files (binary, desktop, icon) to the RPM SOURCES directory
             cp "${bin_path}" ~/rpmbuild/SOURCES/"${name}"
             cp "./src/NoMercy.Server/Assets/Linux/${desktop_file}" ~/rpmbuild/SOURCES/
             cp "./src/NoMercy.Server/Assets/Linux/icon.png" ~/rpmbuild/SOURCES/
-
+          
+            # Create the RPM spec file
             cat > ~/rpmbuild/SPECS/"${name}".spec << EOF
           Name: ${name}
           Version: ${VERSION}
-          Release: 1%{?dist}
+          Release: 1%{?dist} # Release number, %{?dist} adds distribution tag if available
           Summary: ${friendly_name}
-          License: Proprietary
+          License: Proprietary # Or the actual license
           URL: https://nomercy.tv
-          BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-    
+          BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root # Temporary build root
+            
           %description
-          Modern Media Server Solution
-    
+          Modern Media Server Solution # Package description
+          
           %install
+          # Create installation directories within the build root
           mkdir -p %{buildroot}/usr/bin
           mkdir -p %{buildroot}/usr/share/applications
           mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
+          # Copy files from SOURCES to the build root and set permissions
           cp %{_sourcedir}/${name} %{buildroot}/usr/bin/
           cp %{_sourcedir}/${desktop_file} %{buildroot}/usr/share/applications/
           cp %{_sourcedir}/icon.png %{buildroot}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-          chmod 755 %{buildroot}/usr/bin/${name}
-    
+          chmod 755 %{buildroot}/usr/bin/${name} # Make binary executable
+          
           %files
+          # List installed files and their permissions/ownership
           %attr(755,root,root) /usr/bin/${name}
           %attr(644,root,root) /usr/share/applications/${desktop_file}
           %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-    
+          
           %clean
+          # Clean up the build root
           rm -rf %{buildroot}
-    
+          
           %changelog
+          # Changelog entries
           * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - ${VERSION}-1
           - Initial package
           EOF
             
-            # Build RPM package
+            # Build the RPM package
             rpmbuild -bb ~/rpmbuild/SPECS/"${name}".spec
             
-            # Move and create symlink
+            # Move the built package to the RPM pool directory
             mv ~/rpmbuild/RPMS/x86_64/"${name}-${VERSION}-1.x86_64.rpm" packages/rpm/pool/x86_64/
+            # Create a symlink for the latest version (optional but useful)
             cd packages/rpm/pool/x86_64
             ln -sf "${name}-${VERSION}-1.x86_64.rpm" "${name}-latest.x86_64.rpm"
-            cd -
+            cd - # Go back to the original directory
           }
             
-          # Build packages
-          create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-          create_rpm_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-          create_rpm_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+            # Build packages for each component
+            create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
+            create_rpm_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
+            create_rpm_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
           
-          # Generate repo metadata
-          createrepo_c packages/rpm
-          
-          # Import GPG private key for RPM signing
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-          
-          # Sign the repository metadata
-          cd packages/rpm
-          gpg --armor --detach-sig -o repodata/repomd.xml.asc repodata/repomd.xml
-          cd ../../..
-
-      - name: Build Arch Packages and Sign Database
+      - name: Build Arch Packages # Builds .pkg.tar.zst files and places them in the pool directory
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
-
+          
           create_arch_package() {
             local name=$1
             local friendly_name=$2
             local bin_path=$3
             local desktop_file=$4
-            local PACKAGE_ROOT=./packages/arch-${name}
-
-            # Clean previous build
+            local PACKAGE_ROOT=./packages/arch-${name} # Temporary build directory
+          
+            # Clean previous build directory
             rm -rf ${PACKAGE_ROOT}
-            mkdir -p ${PACKAGE_ROOT}/pkg/${name}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
-
-            # Copy files
-            install -Dm755 ${bin_path} ${PACKAGE_ROOT}/pkg/${name}/usr/bin/${name}
-            install -Dm644 ./src/NoMercy.Server/Assets/Linux/${desktop_file} ${PACKAGE_ROOT}/pkg/${name}/usr/share/applications/
-            install -Dm644 ./src/NoMercy.Server/Assets/Linux/icon.png ${PACKAGE_ROOT}/pkg/${name}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-
-            # Create .PKGINFO with correct permissions
-            cat > ${PACKAGE_ROOT}/pkg/${name}/.PKGINFO << EOF
+            # Create directory structure within the temporary build directory for makepkg
+            mkdir -p ${PACKAGE_ROOT}/${name}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
+          
+            # Create .PKGBUILD file
+            cat > ${PACKAGE_ROOT}/${name}/.PKGBUILD << EOF
           pkgname = ${name}
-          pkgver = ${VERSION}-1
+          pkgver = ${VERSION}-1 # Arch package version format: pkgver-pkgrel
           pkgdesc = ${friendly_name}
           url = https://nomercy.tv
           builddate = $(date +%s)
-          size = $(du -b ${bin_path} | cut -f1)
+          size = $(du -b ${bin_path} | cut -f1) # Size of the binary
           arch = x86_64
-          license = custom
-          depend = glibc
-          EOF
+          license = custom # Or the actual license
+          depend = glibc # Basic dependency, add others if needed
+          # No source or build steps needed if distributing pre-built binaries
           
-            # Create package with proper permissions
-            cd ${PACKAGE_ROOT}/pkg
-            chmod 644 "${name}/.PKGINFO"
-            
-            # Create tar archive with proper structure
-            tar --create \
-            --file ../pkg.tar \
-            --directory . \
-            --owner=0 --group=0 \
-            --mode=644 \
-            --xform="s,^${name}/,," \
-            "${name}/"
-            
-            cd ..
-            zstd -19 -T0 pkg.tar -o "${name}-${VERSION}-1-x86_64.pkg.tar.zst"
-            rm pkg.tar
-            cd ../..
-            
-            # Move package
-            mv "${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst" "./packages/arch/pool/x86_64/"
+          package() {
+            # Install binary, desktop file, and icon into the package root (${pkgdir})
+            install -Dm755 ${bin_path} \${pkgdir}/usr/bin/${name}
+            install -Dm644 ./src/NoMercy.Server/Assets/Linux/${desktop_file} \${pkgdir}/usr/share/applications/
+            install -Dm644 ./src/NoMercy.Server/Assets/Linux/icon.png \${pkgdir}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
           }
-          
-          # Build packages
-          create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-          create_arch_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-          create_arch_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
-          
-          cd packages/arch/pool/x86_64
-          
-          # Create database
-          repo-add -n -R nomercy.db.tar.gz *.pkg.tar.zst
-          
-          # Create links and sign
-          ln -sf nomercy.db.tar.gz nomercy.db
-          gpg --batch --yes --detach-sign --armor -o nomercy.db.sig nomercy.db
-          
-          # Cleanup
-          rm -f *.old
-          rm -f *.files*
-          rm -f *.db.tar.gz.old*
-          
-          # Verify packages
-          for pkg in *.pkg.tar.zst; do
-          echo "Verifying $pkg..."
-          bsdtar -qxf "$pkg" .PKGINFO && echo "OK" || echo "FAILED"
-          done
-          
-      - name: Create Public Key File
-        run: |
-          echo "${{ vars.GPG_PUBLIC_KEY }}" > packages/nomercy_repo.gpg.pub
-          chmod 644 packages/nomercy_repo.gpg.pub
-
-      - name: Configure Package Signing
-        run: |
-          # Import the GPG key
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-
-          # Move to the correct directory
-          cd packages/arch/pool/x86_64
-
-          # Trust the key
-          gpg --batch --yes --pinentry-mode loopback \
-            -u "${{ vars.GPG_KEY_ID }}" \
-            -o nomercy.db.sig --detach-sign nomercy.db
-
-          # Create pacman.conf
-          cat > ../../pacman.conf << EOF
-          [options]
-          SigLevel = Optional TrustAll
-
-          [nomercy]
-          Server = https://repo.nomercy.tv/arch/pool/$arch
-          SigLevel = Required
           EOF
-
-          cd -
-
-      - name: Export Public Key
+            # Use makepkg to build the package.
+            # --force: Ignore VCS checks, useful in CI
+            # --nodeps: Do not check dependencies (assuming they are handled by the package manager later)
+            # --noextract: Do not extract sources (since we are bundling pre-built binaries)
+            # --nosign: Do not sign the individual package (signing is done for the repository database)
+            cd ${PACKAGE_ROOT}/${name} # makepkg must be run in the directory containing the PKGBUILD
+            makepkg --force --nodeps --noextract --nosign
+            cd - # Go back to the original directory
+            
+            # Move the built package to the Arch pool directory
+            mv ${PACKAGE_ROOT}/${name}/*.pkg.tar.zst "./packages/arch/pool/x86_64/"
+          }
+            
+            # Build packages for each component
+            create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
+            create_arch_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
+            create_arch_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+          
+      - name: Generate RPM Repository Metadata and Sign # Generates the RPM repository metadata and signs it
         run: |
-          gpg --armor --export "${{ vars.GPG_KEY_ID }}" > packages/nomercy_repo.gpg.pub
-          chmod 644 packages/nomercy_repo.gpg.pub
-
-      - name: Generate APT Repository Metadata and Sign
+          cd packages/rpm
+          # Generate repo metadata using createrepo_c
+          createrepo_c .
+          # Sign the repository metadata file (repomd.xml)
+          gpg --batch --yes --armor --detach-sig -o repodata/repomd.xml.asc repodata/repomd.xml
+          # Create the .repo file for users to add the repository
+          cat > nomercy.repo << EOF
+        [nomercy]
+        name=NoMercy Entertainment RPM Repository
+        baseurl=https://repo.nomercy.tv/rpm/
+        enabled=1
+        gpgcheck=1
+        gpgkey=https://repo.nomercy.tv/nomercy_repo.gpg.pub # Points to the public key at the repo root
+        EOF
+          cd ../.. # Go back to the repository root directory
+      
+      - name: Generate Arch Repository Database and Sign # Generates the Arch repository database and signs it
         run: |
-          # Ensure complete directory structure exists
+          cd packages/arch/pool/x86_64
+          # Create/update the database file from all packages in the directory
+          # -n: do not sign packages
+          # -R: regenerate database completely
+          repo-add -n -R nomercy.db.tar.gz *.pkg.tar.zst
+          # Sign the database file (the .tar.gz file)
+          gpg --batch --yes --detach-sign --armor -o nomercy.db.tar.gz.sig nomercy.db.tar.gz
+          # Create symbolic links for the database and its signature (standard convention)
+          ln -sf nomercy.db.tar.gz nomercy.db
+          ln -sf nomercy.db.tar.gz.sig nomercy.db.sig
+          # Cleanup temporary files created by repo-add
+          rm -f *.old *.files* *.db.tar.gz.old*
+          cd ../../.. # Go back to the repository root directory
+      
+      - name: Generate APT Repository Metadata and Sign # Generates the APT repository metadata and signs it
+        run: |
+          # Ensure complete directory structure exists and has correct permissions
           mkdir -p packages/apt/dists/stable/main/binary-amd64
-          chmod -R 755 packages/apt
-
+          chmod -R 755 packages/apt # Ensure permissions are correct for web serving
+          
           cd packages/apt
-
-          # Remove any existing metadata files
+          
+          # Remove any existing metadata and signature files
           rm -rf dists/stable/main/binary-amd64/Packages*
-          rm -f dists/stable/Release*
-
-          # Generate package index
+          rm -f dists/stable/Release* dists/stable/InRelease dists/stable/Release.gpg
+          
+          # Generate package index file (Packages)
           dpkg-scanpackages --multiversion pool/ > dists/stable/main/binary-amd64/Packages
-          gzip -k -f dists/stable/main/binary-amd64/Packages
-
-          # Create Release file in proper location
+          gzip -k -f dists/stable/main/binary-amd64/Packages # Create gzipped version
+          
+          # Create the Release file header
           cd dists/stable
           cat > Release << EOF
           Origin: NoMercy Entertainment
@@ -496,147 +432,198 @@ jobs:
           Architectures: amd64
           Components: main
           Description: NoMercy Entertainment Repository
-          Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')
-          SHA256:
+          Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC') # Current date in required format
           EOF
-
-          # Calculate hashes from root of dists/stable
-          cd .. # Move to dists directory
-          for file in $(find stable/main -type f); do
-            size=$(wc -c < "$file")
-            sha256=$(sha256sum "$file" | cut -d' ' -f1)
-            echo " $sha256 $size ${file#stable/}" >> stable/Release
-          done
-
-          # Sign Release file in correct location
+        
+          # Calculate SHA256 hashes for all files in the repository (excluding signatures)
+          # and append them to the Release file under the SHA256: header
+          cd .. # Move to dists directory to calculate paths correctly
+          { # Use a subshell to group commands for appending
+          echo "SHA256:"
+          # Find all files in the stable/ directory (excluding signature files)
+          # Calculate sha256sum, format output to "hash size filename"
+          # sed is used to format the output to match the required "hash size filename" structure
+          find stable/ -type f ! -name "InRelease" ! -name "Release.gpg" -print0 | xargs -0 sha256sum | sed "s/\s\+/\t/" | sed "s/stable\// /"
+          } >> stable/Release
+          
+          # Sign the Release file
           cd stable
+          # Create the inline signature (InRelease)
           gpg --batch --yes --clear-sign -o InRelease Release
+          # Create the detached signature (Release.gpg)
           gpg --batch --yes --detach-sign --armor -o Release.gpg Release
-
-          cd ../../../..
-
-          # Verify final structure
-          tree packages/apt
+          
+          cd ../../../.. # Go back to the repository root directory
       
-      - name: Generate Repository Index
+      - name: Export GPG Public Key # Exports the public key of the imported private key
         run: |
-          VERSION=${{ steps.get-version.outputs.version }}
-
-          # Function to get package versions
+          # Ensure the packages directory exists
+          mkdir -p packages
+          # Export the public key associated with the imported private key (using the key ID from GITHUB_ENV)
+          gpg --batch --yes --armor --export "${{ env.GPG_KEY_ID }}" > packages/nomercy_repo.gpg.pub
+          # Set permissions for the public key file
+          chmod 644 packages/nomercy_repo.gpg.pub
+      
+      - name: Generate Repository Index # Creates the index.html file with installation instructions and version lists
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }} # Latest version
+          GPG_KEY_ID=${{ env.GPG_KEY_ID }} # GPG key ID for Arch instructions
+          
+          # Function to get package versions from filenames in a directory
           get_versions() {
             local path=$1
             local pattern=$2
-            cd $path
-            ls -1 $pattern | grep -v latest | sed 's/.*[_-]\([0-9.]*\)[_-].*$/\1/' | sort -V
-            cd -
+            # Use find to list files, grep to filter, sed to extract version, sort -V for version sorting
+            find "$path" -maxdepth 1 -name "$pattern" -print | \
+              grep -v latest | \
+              sed -E 's/.*[_-]([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?)[_-].*$/\1/' | \
+              sort -V
           }
-
-          # Get versions for all packages
+          
+          # Get versions for each package and distribution
           MS_DEB_VERSIONS=$(get_versions packages/apt/pool/main/n/nomercymediaserver "*.deb")
           UP_DEB_VERSIONS=$(get_versions packages/apt/pool/main/n/nomercyupdater "*.deb")
           APP_DEB_VERSIONS=$(get_versions packages/apt/pool/main/n/nomercyapp "*.deb")
-
+          
           MS_RPM_VERSIONS=$(get_versions packages/rpm/pool/x86_64 "nomercymediaserver-*.rpm")
           UP_RPM_VERSIONS=$(get_versions packages/rpm/pool/x86_64 "nomercyupdater-*.rpm")
           APP_RPM_VERSIONS=$(get_versions packages/rpm/pool/x86_64 "nomercyapp-*.rpm")
-
+          
           MS_ARCH_VERSIONS=$(get_versions packages/arch/pool/x86_64 "nomercymediaserver-*.pkg.tar.zst")
           UP_ARCH_VERSIONS=$(get_versions packages/arch/pool/x86_64 "nomercyupdater-*.pkg.tar.zst")
           APP_ARCH_VERSIONS=$(get_versions packages/arch/pool/x86_64 "nomercyapp-*.pkg.tar.zst")
-
+          
+          # Generate the index.html file
           cat > packages/index.html << EOF
-          <!DOCTYPE html>
-          <html>
-          <head>
+            <!DOCTYPE html>
+            <html>
+            <head>
             <title>NoMercy Package Repository</title>
-          </head>
-          <body>
+            <style>
+          body { font-family: sans-serif; line-height: 1.6; margin: 20px; }
+          pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+          h1, h2, h3, h4 { color: #333; }
+          ul { list-style-type: disc; margin-left: 20px; }
+          code { font-family: monospace; }
+            </style>
+            </head>
+            <body>
             <h1>NoMercy Package Repository</h1>
+            <p>This repository provides packages for NoMercy Media Server, Updater, and App for various Linux distributions.</p>
+          
             <h2>Installation Instructions</h2>
-
+          
             <h3>Latest Version ($VERSION)</h3>
-
-            <h4>Debian/Ubuntu</h4>
-            <pre>
-          # For latest version
-          echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
-          wget -O - https://repo.nomercy.tv/nomercy_repo.gpg.pub | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
-          sudo apt update
-          sudo apt install nomercymediaserver nomercyupdater nomercyapp
-          </pre>
-
-            <h4>RedHat/Fedora</h4>
-            <pre>
-          # For latest version
-          sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo
-          sudo dnf install nomercymediaserver nomercyupdater nomercyapp
-          </pre>
-
-            <h4>Arch Linux</h4>
-            <pre>
-          # For latest version
-          echo "[nomercy]
-          Server = https://repo.nomercy.tv/arch/pool/x86_64" | sudo tee /etc/pacman.d/nomercy-repo
-          curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub
-          sudo pacman-key --add nomercy.gpg.pub
-          sudo pacman-key --lsign-key 23F1B8BDEE7408FBB2401B66EBBAD4C5328D9E9B
-          sudo pacman -Sy
-          sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
-          </pre>
-
-            <h3>Available Versions</h3>
-
+          
+            <h4>Debian/Ubuntu (APT)</h4>
+            <p>Add the repository and import the GPG key. This sets up your system to receive updates via APT.</p>
+            <pre><code class="language-bash">
+            # Add the repository source list
+            echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list > /dev/null
+            
+            # Create the directory for keyrings if it doesn't exist
+            sudo mkdir -p /etc/apt/keyrings
+            # Download the GPG public key and dearmor it into the keyrings directory
+            wget -O - https://repo.nomercy.tv/nomercy_repo.gpg.pub | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
+            
+            # Update your package list to include the new repository
+            sudo apt update
+            
+            # Install the packages
+            sudo apt install nomercymediaserver nomercyupdater nomercyapp
+            </code></pre>
+          
+            <h4>Fedora/RHEL/CentOS (RPM)</h4>
+            <p>Add the repository file and install the packages. This sets up your system to receive updates via DNF/YUM.</p>
+            <pre><code class="language-bash">
+            # Download the repository file to your system's repository configuration directory
+            sudo wget -O /etc/yum.repos.d/nomercy.repo https://repo.nomercy.tv/rpm/nomercy.repo
+            
+            # Import the GPG public key (if not already trusted on your system)
+            sudo rpm --import https://repo.nomercy.tv/nomercy_repo.gpg.pub
+            
+            # Install packages using dnf (Fedora 22+ / RHEL 8+) or yum (older systems)
+            sudo dnf install nomercymediaserver nomercyupdater nomercyapp
+            # Or for older systems: sudo yum install nomercymediaserver nomercyupdater nomercyapp
+            </code></pre>
+          
+            <h4>Arch Linux (pacman)</h4>
+            <p>Add the repository to your pacman configuration and import the GPG key. This sets up your system to receive updates via pacman.</p>
+            <pre><code class="language-bash">
+            # Add the repository section to your /etc/pacman.conf file
+            # You can add this block directly or save it as a separate file like /etc/pacman.d/nomercy-repo and Include it in pacman.conf
+            printf "[nomercy]\nServer = https://repo.nomercy.tv/arch/pool/\$arch\nSigLevel = Required\n" | sudo tee -a /etc/pacman.conf # Or use /etc/pacman.d/nomercy-repo
+            
+            # Download the GPG public key
+            curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub
+            
+            # Add the key to the pacman keyring and then locally sign it to trust it
+            # Replace GPG_KEY_ID below with the actual key ID shown in the output or on this page.
+            sudo pacman-key --add nomercy.gpg.pub
+            sudo pacman-key --lsign-key ${GPG_KEY_ID} # Use the dynamically obtained key ID
+            rm nomercy.gpg.pub # Clean up the downloaded key file
+            
+            # Sync your package databases to include the new repository
+            sudo pacman -Sy
+            
+            # Install the packages
+            sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
+            </code></pre>
+          
+            <h2>Available Versions</h2>
+            <p>The repository keeps all published versions. You can install a specific version using your package manager's syntax (e.g., <code>sudo apt install nomercymediaserver=1.2.3</code>, <code>sudo dnf install nomercymediaserver-1.2.3</code>, <code>sudo pacman -S nomercymediaserver=1.2.3-1</code>).</p>
+          
             <h4>DEB Packages - MediaServer</h4>
             <ul>
             $(for ver in $MS_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
             </ul>
-
+          
             <h4>DEB Packages - Updater</h4>
             <ul>
             $(for ver in $UP_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
             </ul>
-
+          
             <h4>DEB Packages - App</h4>
             <ul>
             $(for ver in $APP_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
             </ul>
-
+          
             <h4>RPM Packages - MediaServer</h4>
             <ul>
             $(for ver in $MS_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
             </ul>
-
+          
             <h4>RPM Packages - Updater</h4>
             <ul>
             $(for ver in $UP_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
             </ul>
-
+          
             <h4>RPM Packages - App</h4>
             <ul>
             $(for ver in $APP_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
             </ul>
-
+          
             <h4>Arch Packages - MediaServer</h4>
             <ul>
             $(for ver in $MS_ARCH_VERSIONS; do echo "<li>$ver</li>"; done)
             </ul>
-
+          
             <h4>Arch Packages - Updater</h4>
             <ul>
             $(for ver in $UP_ARCH_VERSIONS; do echo "<li>$ver</li>"; done)
             </ul>
-
+          
             <h4>Arch Packages - App</h4>
             <ul>
             $(for ver in $APP_ARCH_VERSIONS; do echo "<li>$ver</li>"; done)
             </ul>
-          </body>
-          </html>
-          EOF
-
-      - name: Deploy to GitHub Pages
+            </body>
+            </html>
+            EOF
+      
+      - name: Deploy to GitHub Pages # Deploys the 'packages' directory to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./packages
-          cname: repo.nomercy.tv
+          publish_dir: ./packages # Publish the 'packages' directory
+          cname: repo.nomercy.tv # Set the custom domain
