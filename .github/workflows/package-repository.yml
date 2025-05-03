@@ -265,7 +265,7 @@ jobs:
             cat > ~/rpmbuild/SPECS/"${name}".spec << EOF
           Name: ${name}
           Version: ${VERSION}
-          Release: 1%{?dist} # Release number, %{?dist} adds distribution tag if available
+          Release: 1%{?dist}
           Summary: ${friendly_name}
           License: Proprietary # Or the actual license
           URL: https://nomercy.tv
