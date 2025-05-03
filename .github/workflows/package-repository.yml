@@ -380,13 +380,13 @@ jobs:
           gpg --batch --yes --armor --detach-sig -o repodata/repomd.xml.asc repodata/repomd.xml
           # Create the .repo file for users to add the repository
           cat > nomercy.repo << EOF
-        [nomercy]
-        name=NoMercy Entertainment RPM Repository
-        baseurl=https://repo.nomercy.tv/rpm/
-        enabled=1
-        gpgcheck=1
-        gpgkey=https://repo.nomercy.tv/nomercy_repo.gpg.pub # Points to the public key at the repo root
-        EOF
+          [nomercy]
+          name=NoMercy Entertainment RPM Repository
+          baseurl=https://repo.nomercy.tv/rpm/
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://repo.nomercy.tv/nomercy_repo.gpg.pub # Points to the public key at the repo root
+          EOF
           cd ../.. # Go back to the repository root directory
       
       - name: Generate Arch Repository Database and Sign # Generates the Arch repository database and signs it
