@@ -107,7 +107,7 @@ jobs:
             autoconf automake libtool pkg-config gnupg \
             git libgpgme-dev libarchive-dev libcurl4-openssl-dev libssl-dev curl gettext \
             python3 python3-setuptools dash gawk ca-certificates fakechroot libarchive-tools \
-            libzstd-dev arch-install-scripts makepkg 
+            libzstd-dev
 
       - name: Setup Package Directories # Creates the base directory structure for the repository
         run: |
@@ -319,21 +319,23 @@ jobs:
       - name: Build Arch Packages # Builds .pkg.tar.zst files and places them in the pool directory
         run: |
           VERSION=${{ steps.get-version.outputs.version }}
-          
+
+          # Function to create an Arch package manually
           create_arch_package() {
             local name=$1
             local friendly_name=$2
             local bin_path=$3
             local desktop_file=$4
             local PACKAGE_ROOT=./packages/arch-${name} # Temporary build directory
-          
+            local PKG_DIR=${PACKAGE_ROOT}/pkg/${name} # Staging directory for package contents
+
             # Clean previous build directory
             rm -rf ${PACKAGE_ROOT}
-            # Create directory structure within the temporary build directory for makepkg
-            mkdir -p ${PACKAGE_ROOT}/${name}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
-          
-            # Create .PKGBUILD file
-            cat > ${PACKAGE_ROOT}/${name}/.PKGBUILD << EOF
+            # Create the staging directory structure
+            mkdir -p ${PKG_DIR}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
+
+            # Create the .PKGBUILD file in the staging directory
+            cat > ${PKG_DIR}/.PKGBUILD << EOF
           pkgname = ${name}
           pkgver = ${VERSION}-1 # Arch package version format: pkgver-pkgrel
           pkgdesc = ${friendly_name}
@@ -343,33 +345,45 @@ jobs:
           arch = x86_64
           license = custom # Or the actual license
           depend = glibc # Basic dependency, add others if needed
-          # No source or build steps needed if distributing pre-built binaries
-          
-          package() {
-            # Install binary, desktop file, and icon into the package root (${pkgdir})
-            install -Dm755 ${bin_path} \${pkgdir}/usr/bin/${name}
-            install -Dm644 ./src/NoMercy.Server/Assets/Linux/${desktop_file} \${pkgdir}/usr/share/applications/
-            install -Dm644 ./src/NoMercy.Server/Assets/Linux/icon.png \${pkgdir}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-          }
+          # No source or build steps needed as we are packaging pre-built binaries
           EOF
-            # Use makepkg to build the package.
-            # --force: Ignore VCS checks, useful in CI
-            # --nodeps: Do not check dependencies (assuming they are handled by the package manager later)
-            # --noextract: Do not extract sources (since we are bundling pre-built binaries)
-            # --nosign: Do not sign the individual package (signing is done for the repository database)
-            cd ${PACKAGE_ROOT}/${name} # makepkg must be run in the directory containing the PKGBUILD
-            makepkg --force --nodeps --noextract --nosign
-            cd - # Go back to the original directory
+            # Ensure .PKGBUILD has correct permissions
+            chmod 644 "${PKG_DIR}/.PKGBUILD"
             
-            # Move the built package to the Arch pool directory
-            mv ${PACKAGE_ROOT}/${name}/*.pkg.tar.zst "./packages/arch/pool/x86_64/"
+            # Copy binary, desktop file, and icon into the staging directory
+            install -Dm755 ${bin_path} ${PKG_DIR}/usr/bin/${name}
+            install -Dm644 ./src/NoMercy.Server/Assets/Linux/${desktop_file} ${PKG_DIR}/usr/share/applications/
+            install -Dm644 ./src/NoMercy.Server/Assets/Linux/icon.png ${PKG_DIR}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
+            
+            # Create the .tar archive of the package contents
+            # --directory .: archive contents of the current directory (PKG_DIR)
+            # --owner=0 --group=0: set owner/group to root
+            # --mode=644: set default file permissions in archive (install overrides for specific files)
+            # --xform="s,^${name}/,," : Remove the initial directory component (${name}/) from paths
+            cd ${PKG_DIR}
+            tar --create \
+            --file ../../pkg.tar \
+            --directory . \
+            --owner=0 --group=0 \
+            --mode=644 \
+            --xform="s,^${name}/,," \
+            . # Archive all contents of the current directory
+            cd ../../.. # Go back to the original directory
+            
+            # Compress the .tar archive using zstd
+            zstd -19 -T0 ${PACKAGE_ROOT}/pkg.tar -o "${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst"
+            # Remove the intermediate .tar file
+            rm ${PACKAGE_ROOT}/pkg.tar
+            
+            # Move the final package file to the Arch pool directory
+            mv "${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst" "./packages/arch/pool/x86_64/"
           }
-            
-            # Build packages for each component
-            create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-            create_arch_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-            create_arch_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
           
+          # Build packages for each component using the manual method
+          create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
+          create_arch_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
+          create_arch_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+
       - name: Generate RPM Repository Metadata and Sign # Generates the RPM repository metadata and signs it
         run: |
           cd packages/rpm
