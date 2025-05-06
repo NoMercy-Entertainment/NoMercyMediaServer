@@ -51,7 +51,7 @@ public class ServerRegistrationService : IHostedService, IDisposable
                 Logger.Setup("You don't have access to our Cloudflare tunnel service, this is a paid feature.");
                 
                 Logger.Setup($"You need to manually forward port {Config.InternalServerPort} to {Config.ExternalServerPort} if you want to use the server outside your local network");
-                Logger.Setup($"For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide");
+                Logger.Setup("For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide");
                 return;
             }
             

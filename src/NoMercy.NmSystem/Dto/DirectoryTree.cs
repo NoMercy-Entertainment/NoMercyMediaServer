@@ -1,4 +1,6 @@
 using Newtonsoft.Json;
+using NoMercy.NmSystem.FileSystem;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.NmSystem.Dto;
 
@@ -20,23 +22,26 @@ public class DirectoryTree
     {
         string fullPath = System.IO.Path.Combine(parent, path);
 
+        DirectoryInfo pathInfo = new(fullPath);
         FileInfo fileInfo = new(fullPath);
 
-        string type = fileInfo.Attributes.HasFlag(FileAttributes.Directory) ? "folder" : "file";
+        string type = pathInfo.Attributes.HasFlag(FileAttributes.Directory) ? "folder" : "file";
 
-        string newPath = string.IsNullOrEmpty(fileInfo.Name)
+        string newPath = string.IsNullOrEmpty(pathInfo.Name)
             ? path
-            : fileInfo.Name;
+            : pathInfo.Name;
 
         string parentPath = string.IsNullOrEmpty(parent)
             ? "/"
             : System.IO.Path.Combine(fullPath, @"..\..");
+        
+        // double dirSize = Task.Run(() => pathInfo.GetDirectorySize())?.Result ?? 0.0;
 
         Path = newPath;
         Parent = parentPath;
         FullPath = fullPath.Replace(@"..\", "");
-        Mode = (int)fileInfo.Attributes;
-        Size = type == "file" ? int.Parse(fileInfo.Length.ToString()) : null;
+        Mode = (int)pathInfo.Attributes;
+        Size = type == "file" ? (int?)fileInfo.Length : null;
         Type = type;
     }
 }

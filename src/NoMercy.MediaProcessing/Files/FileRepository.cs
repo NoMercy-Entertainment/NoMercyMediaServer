@@ -25,10 +25,11 @@ using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Files;
 
-public class FileRepository(MediaContext context) : IFileRepository
+public class FileRepository() : IFileRepository
 {
     public Task StoreVideoFile(VideoFile videoFile)
     {
+        MediaContext context = new();
         return context.VideoFiles.Upsert(videoFile)
             .On(vf => vf.Filename)
             .WhenMatched((vs, vi) => new()
@@ -53,6 +54,7 @@ public class FileRepository(MediaContext context) : IFileRepository
 
     public async Task<Ulid> StoreMetadata(Metadata metadata)
     {
+        MediaContext context = new();
         await context.Metadata.Upsert(metadata)
             .On(mf => new { mf.Filename, mf.HostFolder })
             .WhenMatched((ms, mi) => new()
@@ -85,6 +87,7 @@ public class FileRepository(MediaContext context) : IFileRepository
     {
         if (item.Parsed == null) return null;
 
+        MediaContext context = new();
         return await context.Episodes
             .Where(e => e.TvId == showId)
             .Where(e => e.SeasonNumber == item.Parsed!.Season)
@@ -94,6 +97,7 @@ public class FileRepository(MediaContext context) : IFileRepository
 
     public async Task<(Movie? movie, Tv? show, string type)> MediaType(int id, Library library)
     {
+        MediaContext context = new();
         Movie? movie = null;
         Tv? show = null;
         string type = "";
@@ -130,6 +134,7 @@ public class FileRepository(MediaContext context) : IFileRepository
 
         if (videoFile.CreatedAt == createdDateTime) return;
         
+        MediaContext context = new();
         if (videoFile.EpisodeId is not null)
         {
             Tv? tv = await context.Tvs.FindAsync(videoFile.EpisodeId);
@@ -254,6 +259,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                             TmdbTvShow? show = shows?.Results.FirstOrDefault();
                             if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) return;
 
+                            MediaContext context = new();
                             bool hasShow = context.Tvs
                                 .Any(item => item.Id == show.Id);
 
@@ -347,6 +353,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                             TmdbMovie? movie = movies?.Results.FirstOrDefault();
                             if (movie == null) return;
 
+                            MediaContext context = new();
                             Movie? movieItem = context.Movies
                                 .FirstOrDefault(item => item.Id == movie.Id);
 

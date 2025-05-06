@@ -27,7 +27,7 @@ public class AddMovieJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        FileRepository fileRepository = new(context);
+        FileRepository fileRepository = new();
         FileManager fileManager = new(fileRepository);
 
         MovieRepository movieRepository = new(context);

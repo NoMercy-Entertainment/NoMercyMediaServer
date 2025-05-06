@@ -29,7 +29,7 @@ public class EncodeVideoJob : AbstractEncoderJob
         await using QueueContext queueContext = new();
 
         await using LibraryRepository libraryRepository = new(context);
-        FileRepository fileRepository = new(context);
+        FileRepository fileRepository = new();
         FileManager fileManager = new(fileRepository);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);

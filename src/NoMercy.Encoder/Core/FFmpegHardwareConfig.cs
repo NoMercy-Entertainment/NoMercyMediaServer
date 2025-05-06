@@ -83,7 +83,7 @@ public static class FFmpegHardwareConfig
             {
                 int index = gpuCounts[GpuVendor.Nvidia];
                 string arg =
-                    $"-hwaccel cuda -init_hw_device cuda=cu:{index} -filter_hw_device cu -extra_hw_frames 8 -hwaccel_output_format cuda";
+                    $" -init_hw_device cuda=cu:{index} -filter_hw_device cu -extra_hw_frames 8 -hwaccel_output_format cuda";
                 bool supported = CheckAccel(arg);
                 if (supported)
                 {
@@ -103,8 +103,8 @@ public static class FFmpegHardwareConfig
             {
                 int index = gpuCounts[GpuVendor.Amd];
                 string arg = (OperatingSystem.IsLinux())
-                    ? $"-hwaccel vaapi -init_hw_device vaapi=hw{index}:/dev/dri/renderD128 -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format vaapi"
-                    : $"-hwaccel dxva2 -init_hw_device dxva2=hw{index} -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format dxva2";
+                    ? $" -init_hw_device vaapi=hw{index}:/dev/dri/renderD128 -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format vaapi"
+                    : $" -init_hw_device dxva2=hw{index} -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format dxva2";
                 
                 bool supported = CheckAccel(arg);
                 if (supported)
@@ -126,8 +126,8 @@ public static class FFmpegHardwareConfig
             {
                 int index = gpuCounts[GpuVendor.Intel];
                 string arg = (OperatingSystem.IsLinux())
-                    ? $"-hwaccel vaapi -init_hw_device vaapi=hw{index}:/dev/dri/renderD128 -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format vaapi"
-                    : $"-hwaccel dxva2 -init_hw_device dxva2=hw{index} -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format dxva2";
+                    ? $" -init_hw_device vaapi=hw{index}:/dev/dri/renderD128 -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format vaapi"
+                    : $" -init_hw_device dxva2=hw{index} -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format dxva2";
 
                 bool supported = CheckAccel(arg);
                 if (supported)
@@ -148,7 +148,7 @@ public static class FFmpegHardwareConfig
             else if (vendor.Contains("apple"))
             {
                 int index = gpuCounts[GpuVendor.Apple];
-                string arg = $"-hwaccel videotoolbox -init_hw_device videotoolbox=hw{index} -filter_hw_device hw -extra_hw_frames 8 -hwaccel_output_format videotoolbox";
+                string arg = $" -init_hw_device videotoolbox=hw{index} -filter_hw_device hw -extra_hw_frames 8 -hwaccel_output_format videotoolbox";
                 bool supported = CheckAccel(arg);
                 if (supported)
                 {

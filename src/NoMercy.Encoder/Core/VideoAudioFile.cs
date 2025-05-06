@@ -20,7 +20,9 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
     public VideoAudioFile AddContainer(BaseContainer container)
     {
-        string cropValue = container.IsVideo ? CropDetect(fMediaAnalysis.Path) : string.Empty;
+        string cropValue = fMediaAnalysis.PrimaryVideoStream is { Width: not 0, Height: not 0 } 
+            ? CropDetect(fMediaAnalysis.Path) 
+            : string.Empty;
 
         Container = container;
         Container.Title = Title;
@@ -218,7 +220,20 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         foreach (BaseVideo stream in Container.VideoStreams)
         {
             int index = Container.VideoStreams.IndexOf(stream);
+            
+            Logger.Encoder(stream.Scale);
+            
+            if (stream.Scale.H == 0)
+            {
+                stream.Scale = new()
+                {
+                    W = stream.VideoStream.Width,
+                    H = stream.Scale.W * (fMediaAnalysis.PrimaryVideoStream!.Height / fMediaAnalysis.PrimaryVideoStream!.Width)
+                };
+            }
 
+            Logger.Encoder(stream.Scale);
+            
             // if source is smaller than requested size, don't upscale
             if (stream.Scale.W > stream.VideoStream!.Width || stream.Scale.H > stream.VideoStream.Height)
             {
@@ -446,7 +461,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             string orcFile = Path.Combine(BasePath, "subtitles", "temp.txt");
             string output = Path.Combine(BasePath, $"{subtitle.HlsPlaylistFilename}.vtt");
 
-            string ocrCommand = $" -i \"{input}\" -f lavfi -i color=black:s=hd720 -filter_complex [0:s:0]ocr=language={subtitle.Language},metadata=print:key=lavfi.ocr.text:file=\"temp.txt\" -an -f null -";
+            string ocrCommand = $" -i \"{input}\" -f lavfi -i color=black:s=hd720 -filter_complex \"[0:s:0]ocr=language={subtitle.Language},metadata=print:key=lavfi.ocr.text:file=temp.txt\" -an -f null -";
 
             Networking.Networking.SendToAll("encoder-progress", "dashboardHub",  new Progress
             {
@@ -462,7 +477,11 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
             Task<string> execTask = Shell.ExecStdErrAsync(AppFiles.FfmpegPath, ocrCommand, new()
             {
-                WorkingDirectory = Path.Combine(BasePath, "subtitles")
+                WorkingDirectory = Path.Combine(BasePath, "subtitles"),
+                EnvironmentVariables = new()
+                {
+                    ["TESSDATA_PREFIX"] = AppFiles.TesseractModelsFolder
+                }
             });
 
             Task progressTask = Task.Run(async () =>
@@ -485,6 +504,8 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             await Task.WhenAll(execTask, progressTask);
             
             Logger.Encoder($"Converting {IsoLanguageMapper.IsoToLanguage[subtitle.Language]} subtitle to WebVtt");
+
+            if (!File.Exists(orcFile)) return;
             
             Subtitle[] parsedSubtitles = SubtitleParser.ParseSubtitles(orcFile);
             

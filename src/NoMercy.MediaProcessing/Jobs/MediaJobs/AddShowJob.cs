@@ -30,7 +30,7 @@ public class AddShowJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        FileRepository fileRepository = new(context);
+        FileRepository fileRepository = new();
         FileManager fileManager = new(fileRepository);
 
         ShowRepository showRepository = new(context);

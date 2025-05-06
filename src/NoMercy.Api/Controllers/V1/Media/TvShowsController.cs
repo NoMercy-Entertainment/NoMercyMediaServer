@@ -169,7 +169,7 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
 
         try
         {
-            FileRepository fileRepository = new(mediaContext);
+            FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);
             
             await fileManager.FindFiles(id, tv.Library);

@@ -272,14 +272,14 @@ public class LibrariesController(
         {
             foreach (LibraryMovie movie in library.LibraryMovies)
             {
-                FileRepository fileRepository = new(mediaContext);
+                FileRepository fileRepository = new();
                 FileManager fileManager = new(fileRepository);
                 await fileManager.FindFiles(movie.MovieId, library);
             }
 
             foreach (LibraryTv show in library.LibraryTvs)
             {
-                FileRepository fileRepository = new(mediaContext);
+                FileRepository fileRepository = new();
                 FileManager fileManager = new(fileRepository);
                 await fileManager.FindFiles(show.TvId, library);
             }
@@ -307,14 +307,14 @@ public class LibrariesController(
 
         foreach (LibraryMovie movie in library.LibraryMovies)
         {
-            FileRepository fileRepository = new(mediaContext);
+            FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);
             await fileManager.FindFiles(movie.MovieId, library);
         }
 
         foreach (LibraryTv show in library.LibraryTvs)
         {
-            FileRepository fileRepository = new(mediaContext);
+            FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);
             await fileManager.FindFiles(show.TvId, library);
         }
@@ -564,7 +564,7 @@ public class LibrariesController(
         {
             await using MediaContext mediaContext = new();
             
-            FileRepository fileRepository = new(mediaContext);
+            FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);
             
             await fileManager.MoveToLibraryFolder(request.Id, folder);

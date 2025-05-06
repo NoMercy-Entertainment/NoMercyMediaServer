@@ -159,7 +159,7 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
         {
             Logger.MovieDb("Rescanning {movie.Title} for files", LogEventLevel.Debug);
             
-            FileRepository fileRepository = new(mediaContext);
+            FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);
             
             await fileManager.FindFiles(id, movie.Library);

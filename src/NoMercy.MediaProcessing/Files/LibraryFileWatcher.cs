@@ -27,7 +27,7 @@ public class LibraryFileWatcher
     private static readonly Lock LockObject = new();
 
     private static readonly JobDispatcher JobDispatcher = new();
-    private static readonly FileRepository FileRepository = new(MediaContext);
+    private static readonly FileRepository FileRepository = new();
     private static readonly FileManager FileManager = new(FileRepository);
 
     private const int Delay = 10;

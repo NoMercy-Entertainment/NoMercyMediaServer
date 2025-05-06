@@ -17,4 +17,28 @@ public static class Folders
             subDirectory.Delete(true);
         }
     }
+    
+    public static long GetDirectorySize(this DirectoryInfo directoryInfo, bool recursive = true)
+    {
+        long startDirectorySize = 0;
+        if (!directoryInfo.Exists)
+            return startDirectorySize;
+        
+        try
+        {
+            foreach (FileInfo fileInfo in directoryInfo.GetFiles())
+                Interlocked.Add(ref startDirectorySize, fileInfo.Length);
+
+            if (recursive)
+                Parallel.ForEach(directoryInfo.GetDirectories(), (subDirectory) =>
+                    Interlocked.Add(ref startDirectorySize, GetDirectorySize(subDirectory, recursive)));
+
+            return startDirectorySize;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return 0;
+        }
+        
+    }
 }

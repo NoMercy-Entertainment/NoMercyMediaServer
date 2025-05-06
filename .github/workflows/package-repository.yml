@@ -648,7 +648,7 @@ jobs:
             </ul>
             </body>
             </html>
-            EOF
+          EOF
       
       - name: Deploy to GitHub Pages # Deploys the 'packages' directory to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

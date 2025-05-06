@@ -40,9 +40,12 @@ public static class AppFiles
 
     public static string RootPath => Path.Combine(AppPath, "root");
     public static string BinariesPath => Path.Combine(RootPath, "binaries");
-    public static string FfmpegFolder => Path.Combine(RootPath, "binaries", "ffmpeg");
+    public static string FfmpegFolder => Path.Combine(BinariesPath, "ffmpeg");
     public static string FfmpegPath => Path.Combine(FfmpegFolder, "ffmpeg" + Info.ExecSuffix);
     public static string FfProbePath => Path.Combine(FfmpegFolder, "ffprobe" + Info.ExecSuffix);
+    
+    public static string TesseractFolder => Path.Combine(BinariesPath, "tesseract");
+    public static string TesseractModelsFolder => Path.Combine(TesseractFolder, "tessdata");
     
     public static string CloudflareDPath => Path.Combine(BinariesPath, "cloudflared" + Info.ExecSuffix);
 
