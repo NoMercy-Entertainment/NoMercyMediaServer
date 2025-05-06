@@ -1,125 +1,96 @@
-  <!DOCTYPE html>
-  <html>
-  <head>
+<!DOCTYPE html>
+<html>
+<head>
   <title>NoMercy Package Repository</title>
-  <style>
-body { font-family: sans-serif; line-height: 1.6; margin: 20px; }
-pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
-h1, h2, h3, h4 { color: #333; }
-ul { list-style-type: disc; margin-left: 20px; }
-code { font-family: monospace; }
-  </style>
-  </head>
-  <body>
+</head>
+<body>
   <h1>NoMercy Package Repository</h1>
-  <p>This repository provides packages for NoMercy Media Server, Updater, and App for various Linux distributions.</p>
-
   <h2>Installation Instructions</h2>
 
   <h3>Latest Version (0.1.96)</h3>
 
-  <h4>Debian/Ubuntu (APT)</h4>
-  <p>Add the repository and import the GPG key. This sets up your system to receive updates via APT.</p>
-  <pre><code class="language-bash">
-  # Add the repository source list
-  echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list > /dev/null
-  
-  # Create the directory for keyrings if it doesn't exist
-  sudo mkdir -p /etc/apt/keyrings
-  # Download the GPG public key and dearmor it into the keyrings directory
-  wget -O - https://repo.nomercy.tv/nomercy_repo.gpg.pub | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
-  
-  # Update your package list to include the new repository
-  sudo apt update
-  
-  # Install the packages
-  sudo apt install nomercymediaserver nomercyupdater nomercyapp
-  </code></pre>
+  <h4>Debian/Ubuntu</h4>
+  <pre>
+# For latest version
+echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
+wget -O - https://repo.nomercy.tv/nomercy_repo.gpg.pub | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
+sudo apt update
+sudo apt install nomercymediaserver nomercyupdater nomercyapp
+</pre>
 
-  <h4>Fedora/RHEL/CentOS (RPM)</h4>
-  <p>Add the repository file and install the packages. This sets up your system to receive updates via DNF/YUM.</p>
-  <pre><code class="language-bash">
-  # Download the repository file to your system's repository configuration directory
-  sudo wget -O /etc/yum.repos.d/nomercy.repo https://repo.nomercy.tv/rpm/nomercy.repo
-  
-  # Import the GPG public key (if not already trusted on your system)
-  sudo rpm --import https://repo.nomercy.tv/nomercy_repo.gpg.pub
-  
-  # Install packages using dnf (Fedora 22+ / RHEL 8+) or yum (older systems)
-  sudo dnf install nomercymediaserver nomercyupdater nomercyapp
-  # Or for older systems: sudo yum install nomercymediaserver nomercyupdater nomercyapp
-  </code></pre>
+  <h4>RedHat/Fedora</h4>
+  <pre>
+# For latest version
+sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo
+sudo dnf install nomercymediaserver nomercyupdater nomercyapp
+</pre>
 
-  <h4>Arch Linux (pacman)</h4>
-  <p>Add the repository to your pacman configuration and import the GPG key. This sets up your system to receive updates via pacman.</p>
-  <pre><code class="language-bash">
-  # Add the repository section to your /etc/pacman.conf file
-  # You can add this block directly or save it as a separate file like /etc/pacman.d/nomercy-repo and Include it in pacman.conf
-  printf "[nomercy]\nServer = https://repo.nomercy.tv/arch/pool/$arch\nSigLevel = Required\n" | sudo tee -a /etc/pacman.conf # Or use /etc/pacman.d/nomercy-repo
-  
-  # Download the GPG public key
-  curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub
-  
-  # Add the key to the pacman keyring and then locally sign it to trust it
-  # Replace GPG_KEY_ID below with the actual key ID shown in the output or on this page.
-  sudo pacman-key --add nomercy.gpg.pub
-  sudo pacman-key --lsign-key EBBAD4C5328D9E9B # Use the dynamically obtained key ID
-  rm nomercy.gpg.pub # Clean up the downloaded key file
-  
-  # Sync your package databases to include the new repository
-  sudo pacman -Sy
-  
-  # Install the packages
-  sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
-  </code></pre>
+  <h4>Arch Linux</h4>
+  <pre>
+# For latest version
+echo "[nomercy]
+Server = https://repo.nomercy.tv/arch/pool/x86_64" | sudo tee /etc/pacman.d/nomercy-repo
+curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub
+sudo pacman-key --add nomercy.gpg.pub
+sudo pacman-key --lsign-key 23F1B8BDEE7408FBB2401B66EBBAD4C5328D9E9B
+sudo pacman -Sy
+sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
+</pre>
 
-  <h2>Available Versions</h2>
-  <p>The repository keeps all published versions. You can install a specific version using your package manager's syntax (e.g., <code>sudo apt install nomercymediaserver=1.2.3</code>, <code>sudo dnf install nomercymediaserver-1.2.3</code>, <code>sudo pacman -S nomercymediaserver=1.2.3-1</code>).</p>
+  <h3>Available Versions</h3>
 
   <h4>DEB Packages - MediaServer</h4>
   <ul>
   <li>0.1.96</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
 
   <h4>DEB Packages - Updater</h4>
   <ul>
   <li>0.1.96</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
 
   <h4>DEB Packages - App</h4>
   <ul>
   <li>0.1.96</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
 
   <h4>RPM Packages - MediaServer</h4>
   <ul>
   <li>0.1.96</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
 
   <h4>RPM Packages - Updater</h4>
   <ul>
   <li>0.1.96</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
 
   <h4>RPM Packages - App</h4>
   <ul>
   <li>0.1.96</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
 
   <h4>Arch Packages - MediaServer</h4>
   <ul>
-  <li>0.1.96</li>
+  <li>1</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
 
   <h4>Arch Packages - Updater</h4>
   <ul>
-  <li>0.1.96</li>
+  <li>1</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
 
   <h4>Arch Packages - App</h4>
   <ul>
-  <li>0.1.96</li>
+  <li>1</li>
+<li>/home/runner/work/NoMercyMediaServer/NoMercyMediaServer</li>
   </ul>
-  </body>
-  </html>
-  EOF
+</body>
+</html>
