@@ -608,9 +608,7 @@ jobs:
 
       - name: Clean Up
         run: |
-          rm -f *.old
-          rm -f *.files.tar.gz*
-          rm -f *.db*
+          rm -f arch/pool/x86_64/nomercy.db
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
