@@ -405,11 +405,6 @@ jobs:
           # Generate repo database
           cd packages/arch/pool/x86_64
           tar --use-compress-program=zstd -cf nomercy.db *.pkg.tar.zst
-          
-          # Cleanup old files but keep necessary ones
-          rm -f *.old
-          rm -f *.files.tar.gz*
-          rm -f *.db*
 
       - name: Create Public Key File
         run: |
@@ -610,6 +605,12 @@ jobs:
           </body>
           </html>
           EOF
+
+      - name: Clean Up
+        run: |
+          rm -f *.old
+          rm -f *.files.tar.gz*
+          rm -f *.db*
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
