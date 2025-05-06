@@ -406,6 +406,11 @@ jobs:
           cd packages/arch/pool/x86_64
           tar --use-compress-program=zstd -cf nomercy.db *.pkg.tar.zst
           
+          # Cleanup old files but keep necessary ones
+          rm -f *.old
+          rm -f *.files.tar.gz*
+          rm -f *.db*
+
       - name: Create Public Key File
         run: |
           echo "${{ vars.GPG_PUBLIC_KEY }}" > packages/nomercy_repo.gpg.pub
