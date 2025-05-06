@@ -1,12 +1,12 @@
-[ Unit ]
+[Unit]
 Description=NoMercy-App Service
 After=network.target
 
-[ Service ]
+[Service]
 Type=simple
 ExecStart=/usr/bin/nomercyapp
 Restart=on-failure
 RestartSec=5
 
-[ Install ]
+[Install]
 WantedBy=default.target

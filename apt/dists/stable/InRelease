@@ -9,22 +9,22 @@ Version: 1.0
 Architectures: amd64
 Components: main
 Description: NoMercy Entertainment Repository
-Date: Tue, 06 May 2025 14:50:19 UTC # Current date in required format
+Date: Tue, 06 May 2025 15:32:41 UTC # Current date in required format
 SHA256:
-1c28d304212cdaea68e4a37f083258706efe671cd936de83af1fa319ddc13448	 Release
-fcd5cb3c9deecddc25114259ff5ddc6caa75bdddff73d0c7115c8f0e8ded9e8e	 main/binary-amd64/Packages.gz
-17937fade21977da2fe18bd778ff61858909951f30c0c8b2a0e6872fab552312	 main/binary-amd64/Packages
+06eb306141a33239e2be2988b9e14fd889e903211a9bf9f1dde9ded83a2090bc	 Release
+a4d6117bdad8bb5db62d93ec6b14caa5c5ca0bba70f0c0e1ceea8f7c0caa1f46	 main/binary-amd64/Packages
+40788ae8f80083b5c88713b2a191c1f7f6dd8a67c6fd973949ac85ce5ad5cd8a	 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQGzBAEBCgAdFiEEI/G4ve50CPuyQBtm67rUxTKNnpsFAmgaIasACgkQ67rUxTKN
-npv0xgv/SZDkKtZMEhU2YURHWityrH7PoxYXD3/IhD5pFeuZrIrJnxBagAK4PbwH
-JkePyJ92ilheMUdC4n8oh24LHd7PDy4r8H1j8E757oB7T11nN/YK8SyJdBqhBxBU
-Js2iD1Y38QMUVU8gEUlBjAG17vweMA3yMDtbc5YX7NeynmIl0OxrGsh318TtmBAc
-0Fb0H+XnxrTFuEGESxLlfI/C2nvK2V8SiRX7pmtrQNkw12cBMg2lDbsexyu0uLY/
-oCj8sVbEng0gHpA/UI+ZPWJuHGKXjDlkhTr896vPcs9AeBthemgZVC2XHAHDV4Vq
-XfK8dYZLiTBYFlWeLU6MIhzC5TIVzP6/vf00G7T7e+9axV08a3KsfjXcvAqMrXw6
-dIlvE5FkFfoo7MdN2Qrc9YiI8nl2YP8vKZEHha22xAyEVIi4Rml38lvyyNQ1ekzi
-4c3/L42HD+Gahzf8oKEEepoLYyc5UzHr4/ahiU8dxqtplTP/hvgOyahGS0zjL0Ju
-dTH7Syac
-=cBGt
+iQGzBAEBCgAdFiEEI/G4ve50CPuyQBtm67rUxTKNnpsFAmgaK5kACgkQ67rUxTKN
+npu0Pgv/Xukii1+xTOOryH3snYGsnnYXpYkfKqCoaIuwWHX/RaxemF0c04XUCh3I
+L4VrZodAgzoQAJtnR0wA4cEVVrZx85+90bH9PDvevx6Ddp5ybqeZ7LBAGThvRo81
+iA6qX86e/HGprH/dQtaXB8TCpdXAvdHHri+l7NFxG6u5FFYTbRh4VL58kkM2sbfM
+tvb2EeF1yE6+8dyKwatJt2pYzavfmovujF+6imazAf/bfHoyMZG72DrUvFwRxdNr
+sPSoU+5GkEOK1dUE7rCgaHDbB3uiRH8cQ6gvlfiU/4BpoessJUgA0C8mZF4IYRvU
+NgnQB/k0jpluwu3ffPt4NAqml521ISVO0eTQs7BgqXhbhtWkilJzWbDqzjIF06L+
+b9q85XPsy9L3435qQlJwyau29edqYFeDkppl0bzDSICGVVVAf4cpdaRdVssboVaT
+ZJEA+3UQ/q0MUFCdVbuWg0mXIiXfvGD2GLDxVUbGtCEdUle6d/ZsKh2MlRkVYigS
+Hc7cL2si
+=PxVH
 -----END PGP SIGNATURE-----

@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+
+# Stop and disable the service for the user who ran the removal (using SUDO_USER)
+if [ -n "$SUDO_USER" ]; then
+su - $SUDO_USER -c "systemctl --user stop nomercyupdater.service" || true
+su - $SUDO_USER -c "systemctl --user disable nomercyupdater.service" || true
+fi
+
+exit 0
