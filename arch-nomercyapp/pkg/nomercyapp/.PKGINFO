@@ -2,12 +2,12 @@
 # For use with repo-add
 pkgname = nomercyapp
 pkgbase = nomercyapp
-pkgver = 0.1.95-1
+pkgver = 0.1.96-1
 pkgdesc = NoMercy-App
 url = https://nomercy.tv
-builddate = 1746298071
+builddate = 1746539240
 packager = GitHub Actions <actions@github.com>
-size = 48461247
+size = 48461246
 arch = x86_64
 license = custom
 depend = glibc

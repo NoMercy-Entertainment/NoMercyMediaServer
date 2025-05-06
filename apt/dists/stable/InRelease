@@ -9,22 +9,22 @@ Version: 1.0
 Architectures: amd64
 Components: main
 Description: NoMercy Entertainment Repository
-Date: Sat, 03 May 2025 18:48:04 UTC # Current date in required format
+Date: Tue, 06 May 2025 13:47:31 UTC # Current date in required format
 SHA256:
-1b9297998b786ac5d333fe474cc833fe1c2042abe4244f2f05e79780339e6720	 Release
-5d9dd729a2bbdf47b9985a4b4e44c09de274418078e95d9e72be52a7766c1224	 main/binary-amd64/Packages
-479ce6e643532ef4d977df052d8d9d739283807f09d827bf99d80b41bac00624	 main/binary-amd64/Packages.gz
+7cef629f7a02411229159cd2f09d715a7c40275dfc5e798cc82c17839e3dcd7d	 Release
+bfa18fa0bbdc47ecda120f8ad0cb137cc127a5af933d1492fdea27765b58dcf7	 main/binary-amd64/Packages
+884720d2238fcda2a2b3331fb6eb6c176d1d961750cd4a91cf001601f9ed9645	 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQGzBAEBCgAdFiEEI/G4ve50CPuyQBtm67rUxTKNnpsFAmgWZOQACgkQ67rUxTKN
-npteEQv/TYHJpL0f/T1m+8klgOcwJbXwM+dUkpy60R9cCNpTfIwtFdtuHa3PRljE
-DtCFN4b2MqAGiW/+mi42HY8JFFVDMtkKU5ozADoCB4QLAbPa//onhCHdwNhZKGxU
-LiCB+bjVVDgmrnHXRy8u0oApQTOxwQCvnt88GF+Jao6BqBpd9WpfYZA0eTNwO9cq
-idAiAX+zqSptN3weCyjSiWWVp4de1BjbmMv4WHzYL/KJS1xW5qKH0Ivt1RCbvU0R
-sSgX7omo4+6A9eT6DWhafHtG85cunBcazPSgvIdgC5CKnDS7SqkBH35YyVofEnIw
-2xvLSgKcotYvJ4Ja7CmVUu1reGwboN5vI8RlgFC3HB9UtqoOm0ceSSuzEQ/w3M3+
-9FU1Zh2IkbXiysyBqKhUG2LcQzIROg9bGRYt76dbXlSBVxY1U6VQDWfHplLy5+9O
-O9hW6skWmVECeQFdly9QOUm8064K8vaDI/2ApnuETvWo+RtkuTCRjvFG9U8kNs3t
-jTydb7Sj
-=ckBg
+iQGzBAEBCgAdFiEEI/G4ve50CPuyQBtm67rUxTKNnpsFAmgaEvMACgkQ67rUxTKN
+npsE/gv/TION2zZUUBII1lswancRXppOPbp9ufXzKqjcoY/hSWNf6EYCOYeSqKdW
+b0z+B8TJnkFn3/ApT3bszzkPLbe1rb3jesZx6NNxO5e9WkO1+vW9q2NA1+SenhEh
+xUd3ysu3pC0FlpG3kg08E/LAKKV9OoWFRGzvhx7bptQdfoNHxquxzGBh4F+qiV4l
+QIICDMBRAUrA3V7YQ75DtcPadUwYjb6Ksup3ziACbk5iz2pFE3z5aCY3HHD9exMb
+qBjNvci7KsfU3eYzR8p4xofle3Z83axQPsofXGvMz+JJ6y6VdcXbbGg3jSML8k5S
+8Z/+n0GeKsgNxfmIOfYld+BYpIf6KWLGj7ukUn4NKNpLnIvbbpnt3EkL5ER0PS/R
+JaK+L3zsCJ5CYkLFuK3IBj1pEByxnws/YaLj4iTCNdYz6MOqGcQH9xZiCOzZxC1p
+PA8hv0vtdp1Bnjj4HCivTcN+6VlSrDbd3vmobsSFnbYcK7kvRVUifj8tL5/dEje+
+NJVcLWdl
+=gIK1
 -----END PGP SIGNATURE-----

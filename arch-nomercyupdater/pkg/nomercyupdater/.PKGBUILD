@@ -1,9 +1,9 @@
 pkgname = nomercyupdater
-pkgver = 0.1.95-1 # Arch package version format: pkgver-pkgrel
+pkgver = 0.1.96-1 # Arch package version format: pkgver-pkgrel
 pkgdesc = NoMercy-Updater
 url = https://nomercy.tv
-builddate = 1746298060
-size = 79105476 # Size of the binary
+builddate = 1746539229
+size = 79105899 # Size of the binary
 arch = x86_64
 license = custom # Or the actual license
 depend = glibc # Basic dependency, add others if needed
