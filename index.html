@@ -12,7 +12,7 @@ code { font-family: monospace; }
   </head>
   <body>
   <h1>NoMercy Package Repository</h1>
-  <p>This repository provides packages for NoMercy Media Server, Updater, and App for various Linux distributions.</p>
+  <p>This repository provides packages for NoMercy Media Server, and App for various Linux distributions.</p>
 
   <h2>Installation Instructions</h2>
 
@@ -33,7 +33,7 @@ code { font-family: monospace; }
   sudo apt update
   
   # Install the packages
-  sudo apt install nomercymediaserver nomercyupdater nomercyapp
+  sudo apt install nomercymediaserver nomercyapp
   </code></pre>
 
   <h4>Fedora/RHEL/CentOS (RPM)</h4>
@@ -46,8 +46,8 @@ code { font-family: monospace; }
   sudo rpm --import https://repo.nomercy.tv/nomercy_repo.gpg.pub
   
   # Install packages using dnf (Fedora 22+ / RHEL 8+) or yum (older systems)
-  sudo dnf install nomercymediaserver nomercyupdater nomercyapp
-  # Or for older systems: sudo yum install nomercymediaserver nomercyupdater nomercyapp
+  sudo dnf install nomercymediaserver nomercyapp
+  # Or for older systems: sudo yum install nomercymediaserver nomercyapp
   </code></pre>
 
   <h4>Arch Linux (pacman)</h4>
@@ -70,18 +70,13 @@ code { font-family: monospace; }
   sudo pacman -Sy
   
   # Install the packages
-  sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
+  sudo pacman -S nomercymediaserver nomercyapp
   </code></pre>
 
   <h2>Available Versions</h2>
   <p>The repository keeps all published versions. You can install a specific version using your package manager's syntax (e.g., <code>sudo apt install nomercymediaserver=1.2.3</code>, <code>sudo dnf install nomercymediaserver-1.2.3</code>, <code>sudo pacman -S nomercymediaserver=1.2.3-1</code>).</p>
 
   <h4>DEB Packages - MediaServer</h4>
-  <ul>
-  <li>0.1.96</li>
-  </ul>
-
-  <h4>DEB Packages - Updater</h4>
   <ul>
   <li>0.1.96</li>
   </ul>
@@ -96,22 +91,12 @@ code { font-family: monospace; }
   <li>0.1.96</li>
   </ul>
 
-  <h4>RPM Packages - Updater</h4>
-  <ul>
-  <li>0.1.96</li>
-  </ul>
-
   <h4>RPM Packages - App</h4>
   <ul>
   <li>0.1.96</li>
   </ul>
 
   <h4>Arch Packages - MediaServer</h4>
-  <ul>
-  <li>0.1.96</li>
-  </ul>
-
-  <h4>Arch Packages - Updater</h4>
   <ul>
   <li>0.1.96</li>
   </ul>
