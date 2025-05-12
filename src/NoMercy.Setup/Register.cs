@@ -4,10 +4,12 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using Serilog.Events;
 using NoMercy.Helpers;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
-using HttpClient = NoMercy.NmSystem.Extensions.HttpClient;
+using Config = NoMercy.NmSystem.Information.Config;
 
 namespace NoMercy.Setup;
 
@@ -35,43 +37,32 @@ public static class Register
 
         Logger.Register("Registering Server, this takes a moment...");
         
-        System.Net.Http.HttpClient client = HttpClient.WithDns();
-        client.BaseAddress = new(Config.ApiServerBaseUrl);
-        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
+        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "register", new FormUrlEncodedContent(serverData));
 
-        string content = client.PostAsync("register",
-                new FormUrlEncodedContent(serverData))
-            .Result.Content.ReadAsStringAsync().Result;
-
-        object? data = JsonConvert.DeserializeObject(content);
+        object? data = JsonConvert.DeserializeObject(response);
         
         if (data == null) throw new("Failed to register Server");
 
         Logger.Register("Server registered successfully");
 
-        await AssignServer();
+        // await AssignServer();
     }
 
-    private static Task AssignServer()
+    private static async Task AssignServer()
     {
         Dictionary<string, string> serverData = new()
         {
             { "id", Info.DeviceId.ToString() }
         };
         
-        System.Net.Http.HttpClient client = HttpClient.WithDns();
-        client.BaseAddress = new(Config.ApiServerBaseUrl);
-        client.DefaultRequestHeaders.Add("Accept", "application/json");
-        client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
-        
-        string content = client
-            .PostAsync("assign", new FormUrlEncodedContent(serverData))
-            .Result.Content.ReadAsStringAsync().Result;
-        
-        ServerRegisterResponseData? data = JsonConvert.DeserializeObject<ServerRegisterResponse>(content)?.Data;
+        Logger.Register("Assigning Server, this takes a moment...");
+        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "assign", new FormUrlEncodedContent(serverData));
+
+        ServerRegisterResponseData? data = response.FromJson<ServerRegisterResponse>()?.Data;
 
         if (data is null || data.Status == "error")
         {
@@ -93,8 +84,8 @@ public static class Register
             VideoTranscoding = true
         };
 
-        using MediaContext mediaContext = new();
-        mediaContext.Users.Upsert(user)
+        await using MediaContext mediaContext = new();
+        await mediaContext.Users.Upsert(user)
             .On(x => x.Id)
             .WhenMatched((oldUser, newUser) => new()
             {
@@ -109,7 +100,7 @@ public static class Register
                 Manage = newUser.Manage,
                 UpdatedAt = newUser.UpdatedAt,
             })
-            .Run();
+            .RunAsync();
 
         ClaimsPrincipleExtensions.AddUser(user);
 
@@ -119,37 +110,25 @@ public static class Register
         Certificate.RenewSslCertificate().Wait();
 #pragma warning restore CS0618 // Type or member is obsolete
 
-        return Task.CompletedTask;
     }
 
-    public static Task GetTunnelAvailability()
+    public static async Task GetTunnelAvailability()
     {
-        System.Net.Http.HttpClient client = HttpClient.WithDns();
-        client.BaseAddress = new(Config.ApiServerBaseUrl);
-        client.DefaultRequestHeaders.Add("Accept", "application/json");
-        client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
-        
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "tunnel")
+        Dictionary<string, string> serverData = new()
         {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["id"] = Info.DeviceId.ToString()
-            })
+            ["server_id"] = Info.DeviceId.ToString()
         };
 
-        string response = client
-            .SendAsync(httpRequestMessage)
-            .Result.Content.ReadAsStringAsync().Result;
-
+        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "tunnel", new FormUrlEncodedContent(serverData));
+        
         ServerTunnelAvailabilityResponse? data = JsonConvert.DeserializeObject<ServerTunnelAvailabilityResponse>(response);
 
-        if (data is null || !data.Allowed) return Task.CompletedTask;
+        if (data is null || !data.Allowed || data.Token is null) return;
         
         Config.CloudflareTunnelToken = data.Token;
         Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
 
-        return Task.CompletedTask;
-        
     }
 }

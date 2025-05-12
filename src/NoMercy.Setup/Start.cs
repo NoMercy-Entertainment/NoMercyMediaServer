@@ -30,15 +30,16 @@ public class Start
     
     public static async Task Init(List<TaskDelegate> tasks)
     {
-        await ApiInfo.RequestInfo();
-
         if (UserSettings.TryGetUserSettings(out Dictionary<string, string>? settings))
         {
             UserSettings.ApplySettings(settings);
         }
-
+        
+        await ApiInfo.RequestInfo();
+        
         List<TaskDelegate> startupTasks =
         [
+            // new (ApiInfo.RequestInfo),
             new (AppFiles.CreateAppFolders),
             new (Networking.Networking.Discover),
             new (Auth.Init),

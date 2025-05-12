@@ -604,7 +604,7 @@ public class FileRepository() : IFileRepository
                 {
                     Audio =
                     [
-                        new Audio
+                        new()
                         {
                             Index = 0,
                             Language = $"Best Match {string.Join(", ", Enumerable.Select<MusicBrainzMedia, string>(bestResult.Media, m => m.Format))}"
@@ -645,7 +645,7 @@ public class FileRepository() : IFileRepository
                 {
                     Audio =
                     [
-                        new Audio
+                        new()
                         {
                             Index = 0,
                             Language = $"Formats: {string.Join(", ", release.Media.Select(m => m.Format))}"

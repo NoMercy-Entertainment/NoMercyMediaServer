@@ -13,7 +13,7 @@ public static class Config
     public static string ApiBaseUrl = "https://api.nomercy.tv/";
     public static string ApiServerBaseUrl = $"{ApiBaseUrl}v1/server/";
     
-    public static string DnsServer = "1.1.1.1";
+    public static readonly string DnsServer = "1.1.1.1";
     
     public static string UserAgent => $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
 

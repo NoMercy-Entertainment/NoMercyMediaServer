@@ -64,8 +64,7 @@ public static class Program
         Version version = Assembly.GetExecutingAssembly().GetName().Version!;
         Software.Version = version;
         Logger.App($"NoMercy MediaServer version: v{version.Major}.{version.Minor}.{version.Build}");
-
-
+        
         Stopwatch stopWatch = new();
         stopWatch.Start();
         

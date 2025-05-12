@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -10,6 +11,7 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Certifications;
 using Serilog.Events;
 using Certification = NoMercy.Database.Models.Certification;
+using Config = NoMercy.NmSystem.Information.Config;
 using File = System.IO.File;
 
 namespace NoMercy.MediaProcessing.Seeds;
@@ -82,21 +84,15 @@ public class Seed : IDisposable, IAsyncDisposable
     {
         Logger.Setup("Adding Users", LogEventLevel.Verbose);
 
-        HttpClient client = new();
-        client.BaseAddress = new(Config.ApiServerBaseUrl);
-        client.DefaultRequestHeaders.Add("Accept", "application/json");
-        client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
-
-        Dictionary<string, string?> queryParams = new()
+        Dictionary<string, string> queryParams = new()
         {
             ["id"] = Info.DeviceId.ToString(),
             ["with_self"] = "true",
         };
-
-        string newUrl = QueryHelpers.AddQueryString("server-users", queryParams);
-
-        string response = await client.GetStringAsync(newUrl);
+        
+        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+        string response = await authClient.SendAndReadAsync(HttpMethod.Get, "server-users", null, queryParams);
 
         if (response == null) throw new("Failed to get Server info");
 

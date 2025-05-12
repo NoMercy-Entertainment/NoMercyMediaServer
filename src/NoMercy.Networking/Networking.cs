@@ -8,10 +8,12 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Mono.Nat;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
+using Config = NoMercy.NmSystem.Information.Config;
 
 namespace NoMercy.Networking;
 
@@ -43,12 +45,19 @@ public class Networking
         NatUtility.DeviceFound += DeviceFound;
         NatUtility.UnknownDeviceFound += UnknownDeviceFound;
         
+        Logger.Setup("Discovering UPNP devices");
         NatUtility.StartDiscovery();
+
+        if (!HasFoundDevice)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
+        if (!HasFoundDevice)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10));
+        }
         
-        await Task.Delay(TimeSpan.FromSeconds(10));
-        
-        if (ExternalIp == "")
-            ExternalIp = GetExternalIp();
+        ExternalIp = await GetExternalIp();
 
         if (!HasFoundDevice)
         {
@@ -68,7 +77,7 @@ public class Networking
 
     public static string ExternalIp
     {
-        get => _externalIp ?? GetExternalIp();
+        get => _externalIp ?? GetExternalIp().Result;
         set => _externalIp = value;
     }
 
@@ -98,17 +107,24 @@ public class Networking
         return localIp;
     }
 
-    private static string GetExternalIp()
+    private static async Task<string> GetExternalIp()
     {
-        HttpClient client = new();
-        client.BaseAddress = new(Config.ApiBaseUrl);
+        Logger.Setup("Getting external IP address");
+        
+        GenericHttpClient apiClient = new(Config.ApiBaseUrl);
+        apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+        HttpResponseMessage response = await apiClient.SendAsync(HttpMethod.Get, "v1/ip");
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new("The NoMercy API is not available");
+        }
+        
+        string externalIp = await response.Content.ReadAsStringAsync();
 
-        string externalIp = client.GetStringAsync("v1/ip").Result.Replace("\"", "");
-
-        ExternalDomain = $"{Regex.Replace(externalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        ExternalDomain = $"{Regex.Replace(externalIp.Replace("\"", ""), "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
         ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
 
-        return externalIp;
+        return externalIp.Replace("\"", "");
     }
 
     private static void DeviceFound(object? sender, DeviceEventArgs args)
@@ -122,9 +138,6 @@ public class Networking
         GetNatStatus();
 
         NatUtility.StopDiscovery();
-        
-        if (ExternalIp == "")
-            ExternalIp = GetExternalIp();
 
         ExternalDomain = $"{Regex.Replace(ExternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
         ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
@@ -132,8 +145,7 @@ public class Networking
     
     private static void UnknownDeviceFound(object? sender, DeviceEventUnknownArgs args)
     {
-        if (ExternalIp == "")
-            ExternalIp = GetExternalIp();
+        
     }
 
     public static bool SendToAll(string name, string endpoint, object? data = null)
@@ -213,12 +225,6 @@ public class Networking
         if (_device == null)
         {
             Config.NatStatus = NatStatus.None;
-            return;
-        }
-
-        if (HasFoundDevice)
-        {
-            Config.NatStatus = NatStatus.Open;
             return;
         }
 

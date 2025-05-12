@@ -1,10 +1,10 @@
 using Newtonsoft.Json;
-using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using Serilog.Events;
-using HttpClient = NoMercy.NmSystem.Extensions.HttpClient;
+using Config = NoMercy.NmSystem.Information.Config;
 
 namespace NoMercy.Setup;
 
@@ -36,19 +36,11 @@ public partial class ApiInfo
     {
         try
         {
-            System.Net.Http.HttpClient client = new();
-            client.Timeout = TimeSpan.FromSeconds(120);
-            client.BaseAddress = new(Config.ApiBaseUrl);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+            Logger.Setup("Requesting server info");
+            GenericHttpClient apiClient = new(Config.ApiBaseUrl);
+            apiClient.SetDefaultHeaders(Config.UserAgent);
+            string content = await apiClient.SendAndReadAsync(HttpMethod.Get, "v1/info");
             
-            HttpResponseMessage response = await client.GetAsync("v1/info");
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new("The NoMercy API is not available");
-            }
-            
-            string? content = await response.Content.ReadAsStringAsync();
-
             if (content == null) throw new("Failed to get server info");
 
             ApiInfo? data = content.FromJson<ApiInfo>();

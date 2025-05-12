@@ -22,7 +22,7 @@ public static class FfProbe
         }
         catch (Exception ex)
         {
-            return new FfProbeData
+            return new()
             {
                 ErrorData = new List<string> { ex.Message }
             };

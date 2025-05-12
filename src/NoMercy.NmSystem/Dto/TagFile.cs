@@ -10,7 +10,7 @@ public class TagFile
     {
         FileTag? fileTag = FileTag.Create(path);
         fileTag.Tag.Pictures = [];
-        return new TagFile()
+        return new()
         {
             Tag = fileTag.Tag,
             Properties = fileTag.Properties

@@ -10,7 +10,7 @@ public static class FingerPrint
     
     static FingerPrint()
     {
-        AcoustIdFingerprintClient = new AcoustIdFingerprintClient();
+        AcoustIdFingerprintClient = new();
     }
 
     private static async Task<AcoustIdFingerprint?> GetFingerprint(string file, bool priority = false)

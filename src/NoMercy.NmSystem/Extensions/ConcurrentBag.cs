@@ -11,7 +11,7 @@ public static class ConcurrentBag
         {
             return concurrentBag;
         }
-        return new ConcurrentBag<T>(self);
+        return new(self);
     }
     
     public static ConcurrentBag<MediaFile> FilterConcurrentBag(this ConcurrentBag<MediaFile> self, string[] filterFiles)

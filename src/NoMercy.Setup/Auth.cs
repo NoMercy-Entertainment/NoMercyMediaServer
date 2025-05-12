@@ -5,19 +5,18 @@ using System.Text;
 using System.Web;
 using Microsoft.AspNetCore.Hosting;
 using Newtonsoft.Json;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using Serilog.Events;
-using HttpClient = NoMercy.NmSystem.Extensions.HttpClient;
+using Config = NoMercy.NmSystem.Information.Config;
 
 namespace NoMercy.Setup;
 
 public static class Auth
 {
-    private static string BaseUrl => Config.AuthBaseUrl;
-    private static readonly string TokenUrl = $"{BaseUrl}protocol/openid-connect/token";
     private static string? PublicKey { get; set; }
     private static string? RefreshToken { get; set; }
     private static int? ExpiresIn { get; set; }
@@ -27,14 +26,14 @@ public static class Auth
 
     private static IWebHost? TempServerInstance { get; set; }
 
-    public static Task Init()
+    public static async Task Init()
     {
         if (!File.Exists(AppFiles.TokenFile))
         {
-            File.WriteAllText(AppFiles.TokenFile, "{}");
+            await File.WriteAllTextAsync(AppFiles.TokenFile, "{}");
         }
 
-        AuthKeys();
+        await AuthKeys();
 
         Globals.Globals.AccessToken = GetAccessToken();
         RefreshToken = GetRefreshToken();
@@ -43,8 +42,8 @@ public static class Auth
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
         {
-            TokenByBrowserOrPassword();
-            return Task.CompletedTask;
+            await TokenByBrowserOrPassword();
+            return;
         }
 
         JwtSecurityTokenHandler tokenHandler = new();
@@ -55,17 +54,15 @@ public static class Auth
         bool expired = NotBefore == null && expiresInDays >= 0;
         
         if (!expired)
-            TokenByRefreshGrand();
+            await TokenByRefreshGrand();
         else
-            TokenByBrowserOrPassword();
+            await TokenByBrowserOrPassword();
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
             throw new("Failed to get tokens");
-
-        return Task.CompletedTask;
     }
 
-    private static void TokenByBrowserOrPassword()
+    private static async Task TokenByBrowserOrPassword()
     {
         Logger.Auth("Trying to authenticate by browser, QR code or password", LogEventLevel.Verbose);
 
@@ -94,7 +91,7 @@ public static class Auth
 
         if (completedTask == timeoutTask || inputTask.Result == default)
         {
-            TokenByDeviceGrant();
+            await TokenByDeviceGrant();
             return;
         }
 
@@ -104,35 +101,30 @@ public static class Auth
         switch (key.KeyChar)
         {
             case '2':
-                TokenByPassword();
+                await TokenByPassword();
                 break;
-            case '1':
             default:
-                TokenByDeviceGrant();
+                await TokenByDeviceGrant();
                 break;
         }
     }
     
-    private static void TokenByDeviceGrant()
+    private static async Task TokenByDeviceGrant()
     {
         if (Config.TokenClientId == null)
             throw new("Auth keys not initialized");
 
         Logger.Auth("Authenticating via device grant", LogEventLevel.Verbose);
-
-        using 
-        System.Net.Http.HttpClient client = HttpClient.WithDns();
-        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-
+        
         List<KeyValuePair<string, string>> deviceCodeBody =
         [
             new("client_id", Config.TokenClientId),
             new("scope", "openid offline_access email profile")
         ];
-
-        string deviceCodeResponse = client.PostAsync($"{BaseUrl}protocol/openid-connect/auth/device",
-                new FormUrlEncodedContent(deviceCodeBody))
-            .Result.Content.ReadAsStringAsync().Result;
+        
+        GenericHttpClient authClient = new(Config.AuthBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent);
+        string deviceCodeResponse = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/auth/device", new FormUrlEncodedContent(deviceCodeBody));
         
         DeviceAuthResponse deviceData = deviceCodeResponse.FromJson<DeviceAuthResponse>()
                                       ?? throw new("Failed to get device code");
@@ -156,8 +148,7 @@ public static class Auth
             Thread.Sleep(deviceData.Interval * 1000);
             try
             {
-                HttpResponseMessage response = client.PostAsync(TokenUrl, new FormUrlEncodedContent(tokenBody))
-                    .Result;
+                HttpResponseMessage response = await authClient.SendAsync(HttpMethod.Post, "protocol/openid-connect/token", new FormUrlEncodedContent(tokenBody));
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -219,7 +210,7 @@ public static class Auth
 
     private static void TokenByBrowser()
     {
-        Uri baseUrl = new($"{BaseUrl}protocol/openid-connect/auth");
+        Uri baseUrl = new("protocol/openid-connect/auth");
         string redirectUri = HttpUtility.UrlEncode($"http://localhost:{Config.InternalServerPort}/sso-callback");
         string scope = HttpUtility.UrlEncode("openid offline_access email profile");
 
@@ -304,22 +295,21 @@ public static class Auth
         return data.NotBeforePolicy;
     }
 
-    private static void AuthKeys()
+    private static async Task AuthKeys()
     {
         Logger.Auth("Getting auth keys", LogEventLevel.Verbose);
         
-        System.Net.Http.HttpClient client = HttpClient.WithDns();
-        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-
-        string response = client.GetStringAsync(BaseUrl).Result;
+        GenericHttpClient authClient = new();
+        authClient.SetDefaultHeaders(Config.UserAgent);
+        string response = await authClient.SendAndReadAsync(HttpMethod.Get, Config.AuthBaseUrl);
 
         AuthKeysResponse data = JsonConvert.DeserializeObject<AuthKeysResponse>(response)
                                 ?? throw new("Failed to deserialize JSON");
-
+        
         PublicKey = data.PublicKey;
     }
 
-    private static void TokenByPassword()
+    private static async Task TokenByPassword()
     {
         while (true)
         {
@@ -345,19 +335,16 @@ public static class Auth
                 "Enter your 2 factor authentication code (if enabled, hit enter if you don't have it setup):");
             string? otp = Console.ReadLine();
 
-            TokenByPasswordGrant(email, password, otp);
+            await TokenByPasswordGrant(email, password, otp);
             break;
         }
     }
 
-    private static void TokenByPasswordGrant(string username, string password, string? otp = "")
+    private static async Task TokenByPasswordGrant(string username, string password, string? otp = "")
     {
         if (Config.TokenClientId == null || Config.TokenClientSecret == null)
             throw new("Auth keys not initialized");
         
-        System.Net.Http.HttpClient client = HttpClient.WithDns();
-        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-
         List<KeyValuePair<string, string>> body =
         [
             new("grant_type", "password"),
@@ -369,24 +356,21 @@ public static class Auth
 
         if (!string.IsNullOrEmpty(otp))
             body.Add(new("totp", otp));
-
-        string response = client.PostAsync(TokenUrl, new FormUrlEncodedContent(body))
-            .Result.Content.ReadAsStringAsync().Result;
+        
+        GenericHttpClient authClient = new(Config.AuthBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent);
+        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token", new FormUrlEncodedContent(body));
 
         SetTokens(response);
     }
 
-    private static void TokenByRefreshGrand()
+    private static async Task TokenByRefreshGrand()
     {
         if (Config.TokenClientId == null || Config.TokenClientSecret == null || RefreshToken == null || _jwtSecurityToken == null)
             throw new("Auth keys not initialized");
 
         Logger.Auth("Refreshing token");
-
         
-        System.Net.Http.HttpClient client = HttpClient.WithDns();
-        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-
         List<KeyValuePair<string, string>> body =
         [
             new("grant_type", "refresh_token"),
@@ -395,23 +379,19 @@ public static class Auth
             new("refresh_token", RefreshToken),
             new("scope", "openid offline_access email profile")
         ];
-
-        string response = client.PostAsync(TokenUrl, new FormUrlEncodedContent(body))
-            .Result.Content.ReadAsStringAsync().Result;
-
+        
+        GenericHttpClient authClient = new(Config.AuthBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent);
+        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token", new FormUrlEncodedContent(body));
         SetTokens(response);
     }
 
-    public static void TokenByAuthorizationCode(string code)
+    public static async Task TokenByAuthorizationCode(string code)
     {
         Logger.Auth("Getting token by authorization code", LogEventLevel.Verbose);
         if (Config.TokenClientId == null || Config.TokenClientSecret == null)
             throw new("Auth keys not initialized");
-
         
-        System.Net.Http.HttpClient client = HttpClient.WithDns();
-        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-
         List<KeyValuePair<string, string>> body =
         [
             new("grant_type", "authorization_code"),
@@ -421,10 +401,11 @@ public static class Auth
             new("redirect_uri", $"http://localhost:{Config.InternalServerPort}/sso-callback"),
             new("code", code)
         ];
-
-        string response = client.PostAsync(TokenUrl, new FormUrlEncodedContent(body))
-            .Result.Content.ReadAsStringAsync().Result;
-
+        
+        GenericHttpClient authClient = new(Config.AuthBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent);
+        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token", new FormUrlEncodedContent(body));
+        
         SetTokens(response);
     }
 
