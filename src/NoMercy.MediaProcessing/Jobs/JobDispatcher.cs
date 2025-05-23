@@ -8,10 +8,10 @@ namespace NoMercy.MediaProcessing.Jobs;
 
 public class JobDispatcher
 {
-    public void DispatchJob<TJob>(Ulid folderId, string id, string inputFile)
+    public void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string id, string inputFile)
         where TJob : AbstractEncoderJob, new()
     {
-        TJob job = new() { FolderId = folderId, Id = id, InputFile = inputFile };
+        TJob job = new() { LibraryId = libraryId, FolderId = folderId, Id = id, InputFile = inputFile };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
     

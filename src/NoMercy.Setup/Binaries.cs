@@ -37,12 +37,12 @@ public static class Binaries
             {
                 if (program.Url == null) continue;
                 
-                string destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name);
+                string destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name + Info.ExecSuffix);
                 DateTime creationTime = Directory.GetCreationTimeUtc(destinationDirectoryName);
 
-                int days = creationTime.Subtract(program.LastUpdated).Days;
+                int days = (program.LastUpdated - creationTime).Days;
 
-                if (Directory.Exists(destinationDirectoryName) && days > 0) continue;
+                if (days > 0) continue;
 
                 try
                 {

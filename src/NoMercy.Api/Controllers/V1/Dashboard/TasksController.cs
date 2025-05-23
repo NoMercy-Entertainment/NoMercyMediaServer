@@ -145,9 +145,13 @@ public class TasksController : BaseController
         List<EncodeVideoJob> encoderJobs = jobs
             .Select(job => job.Payload.FromJson<EncodeVideoJob>()!)
             .ToList();
-
+        
+        List<Ulid> folderIds = encoderJobs.Select(j => j.FolderId).ToList();
+        
         // Load folders into memory first
         List<Folder> folders = await mediaContext.Folders
+            .Where(f => folderIds.Contains(f.Id))
+            
             .Include(f => f.EncoderProfileFolder)
                 .ThenInclude(e => e.EncoderProfile)
             .Include(f => f.FolderLibraries)
@@ -166,10 +170,6 @@ public class TasksController : BaseController
                             .ThenInclude(track => track.AlbumTrack)
                                 .ThenInclude(albumTrack => albumTrack.Album)
             .ToListAsync();
-
-        folders = folders
-            .Where(f => encoderJobs.Any(job => job.FolderId == f.Id))
-            .ToList();
 
         QueueJobDto[] queueJobs = encoderJobs
             .Select(j => new QueueJobDto

@@ -25,6 +25,8 @@ public class ConnectionHub : Hub
 
     public override async Task OnConnectedAsync()
     {
+        await base.OnConnectedAsync();
+        
         User? user = Context.User.User();
         if (user is null) return;
 
@@ -38,7 +40,8 @@ public class ConnectionHub : Hub
             Sub = user.Id,
             Ip = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
             Socket = Clients.Caller,
-            Endpoint = Endpoint
+            Endpoint = Endpoint,
+            IsActive = true
         };
 
         foreach (string item in result)
@@ -77,6 +80,9 @@ public class ConnectionHub : Hub
                 case "custom_name":
                     client.CustomName = keyValue[1];
                     break;
+                case "client_volume":
+                    client.VolumePercent = int.Parse(keyValue[1]);
+                    break;
             }
         }
 
@@ -94,16 +100,24 @@ public class ConnectionHub : Hub
                 Os = di.Os,
                 Type = di.Type,
                 Version = di.Version,
-                UpdatedAt = di.UpdatedAt
+                UpdatedAt = di.UpdatedAt,
+                VolumePercent = di.VolumePercent,
             })
             .RunAsync();
 
         Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
 
         client.CustomName = device?.CustomName;
+        client.VolumePercent = device?.VolumePercent ?? 0;
+        client.IsActive = true;
         
         if (device is not null)
         {
+            await mediaContext.Devices
+                .Where(x => x.DeviceId == device.DeviceId)
+                .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, true));
+            await mediaContext.SaveChangesAsync();
+
             await SaveActivityLog(mediaContext, new()
             {
                 DeviceId = device.Id,
@@ -115,19 +129,24 @@ public class ConnectionHub : Hub
 
         Networking.SocketClients.TryAdd(Context.ConnectionId, client);
 
-        await Clients.All.SendAsync("ConnectedDevices", Devices());
-
-        await base.OnConnectedAsync();
+        await Clients.All.SendAsync("ConnectedDevicesState", Devices());
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        await base.OnDisconnectedAsync(exception);
+        
         if (Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
         {
             await using MediaContext mediaContext = new();
             Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
             if (device is not null)
             {
+                await mediaContext.Devices
+                    .Where(x => x.DeviceId == device.DeviceId)
+                    .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, false));
+                await mediaContext.SaveChangesAsync();
+                
                 await SaveActivityLog(mediaContext, new()
                 {
                     DeviceId = device.Id,
@@ -139,10 +158,8 @@ public class ConnectionHub : Hub
 
             Networking.SocketClients.Remove(Context.ConnectionId, out _);
 
-            await Clients.All.SendAsync("ConnectedDevices", Devices());
+            await Clients.All.SendAsync("ConnectedDevicesState", Devices());
         }
-
-        await base.OnDisconnectedAsync(exception);
     }
 
     private static async Task SaveActivityLog(MediaContext mediaContext, ActivityLog log, int count = 0)
@@ -162,12 +179,14 @@ public class ConnectionHub : Hub
         }
     }
 
-    private List<Device> Devices()
+    public List<Device> Devices()
     {
         User? user = Context.User.User();
+        if (user is null) return [];
 
         return Networking.SocketClients.Values
-            .Where(x => x.Sub.Equals(user?.Id))
+            .Where(x => x.Sub.Equals(user.Id))
+            .Where(x => x.Endpoint == Endpoint)
             .Select(c => new Device
             {
                 Name = c.Name,
@@ -179,7 +198,8 @@ public class ConnectionHub : Hub
                 Type = c.Type,
                 Version = c.Version,
                 Id = c.Id,
-                CustomName = c.CustomName
+                CustomName = c.CustomName,
+                VolumePercent = c.VolumePercent,
             })
             .ToList();
     }

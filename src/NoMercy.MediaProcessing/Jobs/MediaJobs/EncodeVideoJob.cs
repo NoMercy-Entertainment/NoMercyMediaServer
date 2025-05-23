@@ -68,7 +68,7 @@ public class EncodeVideoJob : AbstractEncoderJob
 
                 ffmpeg.AddContainer(container);
 
-                ffmpeg.Prioritize();
+                // ffmpeg.Prioritize();
 
                 ffmpeg.Build();
 

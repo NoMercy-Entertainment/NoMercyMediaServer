@@ -321,7 +321,7 @@ public class MusicController : BaseController
         
         string title = topTrack?.Name ?? topArtist?.Name ?? topAlbum?.Name ?? "Top Result";
         string? cover = topTrack?.Cover ?? topArtist?.Cover ?? topAlbum?.Cover;
-        string type = topTrack != null ? "Track" : topArtist != null ? "Artist" : topAlbum != null ? "Album" : "Top Result";
+        string type = topTrack != null ? "Track" : topArtist != null ? "Artist" : topAlbum != null ? "Albums" : "Top Result";
         List<ArtistDto> artistsList = topTrack?.ArtistTrack.Select(artistTrack => new ArtistDto(artistTrack, country)).ToList() ?? new List<ArtistDto>();
         Track? topTrackItem = topTrack?.ArtistTrack.FirstOrDefault()?.Track;
         if (topTrackItem != null)

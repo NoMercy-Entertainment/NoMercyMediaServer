@@ -47,6 +47,10 @@ public static class Register
 
         Logger.Register("Server registered successfully");
 
+#pragma warning disable CS0618 // Type or member is obsolete
+        Certificate.RenewSslCertificate().Wait();
+#pragma warning restore CS0618 // Type or member is obsolete
+
         // await AssignServer();
     }
 

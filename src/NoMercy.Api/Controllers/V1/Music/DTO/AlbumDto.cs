@@ -13,7 +13,7 @@ public record AlbumDto
     [JsonProperty("link")] public Uri Link { get; set; }
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("description")] public string? Description { get; set; }
-    [JsonProperty("tracks")] public int Tracks { get; set; }
+    // [JsonProperty("tracks")] public IEnumerable<Track> Tracks { get; set; }
     [JsonProperty("year")] public int? Year { get; set; }
     [JsonProperty("album_artist")] public Guid? AlbumArtist { get; set; }
     [JsonProperty("type")] public string Type { get; set; }
@@ -26,8 +26,7 @@ public record AlbumDto
 
         Id = albumArtist.Album.Id;
         Name = albumArtist.Album.Name;
-        Cover = albumArtist.Album.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = albumArtist.Album.Cover is not null ? new Uri($"/images/music{albumArtist.Album.Cover}", UriKind.Relative).ToString() : null;
         Disambiguation = albumArtist.Album.Disambiguation;
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
@@ -35,11 +34,12 @@ public record AlbumDto
             : albumArtist.Album.Description;
         Type = "albums";
         ColorPalette = albumArtist.Album.ColorPalette;
-        Tracks = albumArtist.Album.AlbumTrack.Count;
+        // Tracks = albumArtist.Albums.AlbumTrack.Select(a => a.Track);
         Year = albumArtist.Album.Year;
 
         AlbumArtist = albumArtist.ArtistId;
     }
+    
 
     public AlbumDto(AlbumTrack albumTrack, string country)
     {
@@ -49,8 +49,7 @@ public record AlbumDto
 
         Id = albumTrack.Album.Id;
         Name = albumTrack.Album.Name;
-        Cover = albumTrack.Album.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = albumTrack.Album.Cover is not null ? new Uri($"/images/music{albumTrack.Album.Cover}", UriKind.Relative).ToString() : null;
         Disambiguation = albumTrack.Album.Disambiguation;
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
@@ -60,15 +59,10 @@ public record AlbumDto
         ColorPalette = albumTrack.Album.ColorPalette;
         Year = albumTrack.Album.Year;
 
-        using MediaContext mediaContext = new();
-        int? tracks = mediaContext.Albums
-            .Include(a => a.AlbumTrack)
-            .ThenInclude(at => at.Track)
-            .FirstOrDefault(a => a.Id == albumTrack.AlbumId)?.AlbumTrack
-            .Count(at => at.Track.Folder != null);
-        Tracks = tracks ?? 0;
+        // using MediaContext mediaContext = new();
+        // Tracks =  albumTrack.Albums.AlbumTrack.Select(a => a.Track);
 
-        AlbumArtist = albumTrack.Album.AlbumArtist.MaxBy(at => at.ArtistId)?.ArtistId;
+        AlbumArtist =  albumTrack.Album.AlbumArtist.MaxBy(at => at.ArtistId)?.ArtistId;
     }
 
     public AlbumDto(Album album, string country)
@@ -79,8 +73,7 @@ public record AlbumDto
 
         Id = album.Id;
         Name = album.Name;
-        Cover = album.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = album.Cover is not null ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() : null;
         Disambiguation = album.Disambiguation;
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
@@ -89,7 +82,7 @@ public record AlbumDto
         Type = "albums";
         ColorPalette = album.ColorPalette;
         Disambiguation = album.Disambiguation;
-        Tracks = album.AlbumTrack.Count(at => at.Track.Folder != null);
+        // Tracks = album.AlbumTrack.Select(a => a.Track);
         Year = album.Year;
 
         List<IGrouping<Guid, AlbumArtist>> artists = album.AlbumArtist
@@ -103,15 +96,6 @@ public record AlbumDto
             .Select(albumTrack => albumTrack.Track)
             .SelectMany(track => track.ArtistTrack)
             .Count();
-
-        using MediaContext mediaContext = new();
-        int? tracks = mediaContext.Albums
-            .Include(a => a.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Track)
-            .FirstOrDefault(a => a.Id == album.Id)?.AlbumTrack
-            .Count(at => at.Track.Folder != null);
-
-        Tracks = tracks ?? 0;
 
         bool isAlbumArtist = artistTrackCount >= trackCount * 0.45;
 

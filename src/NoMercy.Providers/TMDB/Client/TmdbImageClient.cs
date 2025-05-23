@@ -40,8 +40,11 @@ public abstract class TmdbImageClient : TmdbBaseClient
                 string filePath = Path.Join(folder, path.Replace("/", ""));
                 if (File.Exists(filePath))
                     return isSvg ? null : await Image.LoadAsync<Rgba32>(filePath);
+                
+                using HttpClientHandler handler = new();
+                handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
 
-                using HttpClient httpClient = new();
+                using HttpClient httpClient = new(handler);
                 httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
                 httpClient.BaseAddress = new("https://image.tmdb.org/t/p/");
                 httpClient.DefaultRequestHeaders.Add("Accept", "image/*");

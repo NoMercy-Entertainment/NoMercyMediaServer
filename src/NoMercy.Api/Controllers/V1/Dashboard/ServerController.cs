@@ -198,6 +198,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
             foreach (AddFile file in request.Files)
             {
                 jobDispatcher.DispatchJob<EncodeVideoJob>(
+                    library.Id,
                     request.FolderId,
                     file.Id,
                     file.Path
@@ -481,8 +482,8 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view server paths");
         
-        StorageJob storageJob = new(StorageMonitor.Storage);
-        JobDispatcher.Dispatch(storageJob, "data", 1000);
+        // StorageJob storageJob = new(StorageMonitor.Storage);
+        // JobDispatcher.Dispatch(storageJob, "data", 1000);
         
         return Ok(StorageMonitor.Storage);
     }

@@ -176,7 +176,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         int threadCount = Environment.ProcessorCount;
 
         StringBuilder command = new();
-
+        
         command.Append(" -hide_banner ");
 
         if (Container.IsVideo)
@@ -189,7 +189,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             }
             else
             {
-                command.Append($" -threads {Math.Floor(threadCount * 0.5)} ");
+                command.Append(" -threads 0 ");
             }
 
             foreach (GpuAccelerator accelerator in Accelerators)
@@ -213,7 +213,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         // {
         //     command.Append(" -f lavfi -i color=black:s=hd720 ");
         // }
-
+        
         bool isHdr = false;
 
         StringBuilder complexString = new();
@@ -221,18 +221,14 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         {
             int index = Container.VideoStreams.IndexOf(stream);
             
-            Logger.Encoder(stream.Scale);
-            
             if (stream.Scale.H == 0)
             {
                 stream.Scale = new()
                 {
-                    W = stream.VideoStream.Width,
+                    W = stream.VideoStream?.Width ?? fMediaAnalysis.PrimaryVideoStream!.Width,
                     H = stream.Scale.W * (fMediaAnalysis.PrimaryVideoStream!.Height / fMediaAnalysis.PrimaryVideoStream!.Width)
                 };
             }
-
-            Logger.Encoder(stream.Scale);
             
             // if source is smaller than requested size, don't upscale
             if (stream.Scale.W > stream.VideoStream!.Width || stream.Scale.H > stream.VideoStream.Height)
@@ -271,7 +267,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         {
             int index = Container.AudioStreams.IndexOf(stream);
 
-            complexString.Append($"[a:{stream.Index}]volume=3,loudnorm[a{index}_hls_0]");
+            complexString.Append($"[a:{stream.Index}]volume=3[a{index}_hls_0]");
 
             if (index != Container.AudioStreams.Count - 1 && complexString.Length > 0) complexString.Append(';');
         }
@@ -310,7 +306,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
             if (index != Container.ImageStreams.Count - 1 && complexString.Length > 0) complexString.Append(';');
         }
-
+        
         if (complexString.Length > 0)
         {
             command.Append(" -filter_complex \"");
@@ -322,6 +318,13 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             // if source is smaller than requested size, don't upscale
             // if (stream.Scale.W > stream.VideoStream!.Width || stream.Scale.H > stream.VideoStream.Height) continue;
             if (stream.Scale.W > stream.VideoStream!.Width || stream.Scale.H > stream.VideoStream.Height)
+            {
+                stream.Scale.W = stream.VideoStream.Width;
+                stream.Scale.H = stream.VideoStream.Height;
+            }
+            
+            // if the source is smaller than the requested size by more than 5%, don't upscale
+            if (stream.Scale.W < stream.VideoStream.Width * 0.95 && stream.Scale.H < stream.VideoStream.Height * 0.95)
             {
                 stream.Scale.W = stream.VideoStream.Width;
                 stream.Scale.H = stream.VideoStream.Height;

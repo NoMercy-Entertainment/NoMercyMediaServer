@@ -31,8 +31,7 @@ public record TracksResponseItemDto
     {
         Id = track.Id;
         Name = track.Name;
-        Cover = track.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = track.Cover is not null ? new Uri($"/images/music{track.Cover}", UriKind.Relative).ToString() : null;
         Link = new($"/music/tracks/{track.Id}", UriKind.Relative);
         
         ColorPalette = track.ColorPalette;

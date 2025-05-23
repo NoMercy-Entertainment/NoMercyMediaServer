@@ -12,7 +12,9 @@ using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Other;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.TV;
 using Serilog.Events;
@@ -166,13 +168,25 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
 
         if (tv is null)
             return UnprocessableEntityResponse("Tv show not found");
+        
+        TmdbTvClient tvClient = new(id);
+        TmdbTvShowDetails? show = await tvClient.Details(true);
+        if (show == null) return NotFoundResponse("Tv show not found");
+        
+        bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+        
+        Library? tvLibrary = await mediaContext.Libraries
+            .Where(f => f.Type == (isAnime ? "anime" : "tv"))
+            .FirstOrDefaultAsync() ?? await mediaContext.Libraries
+            .Where(f => f.Type == "tv")
+            .FirstOrDefaultAsync();
 
         try
         {
             FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);
             
-            await fileManager.FindFiles(id, tv.Library);
+            await fileManager.FindFiles(id, tvLibrary ?? tv.Library);
         }
         catch (Exception e)
         {
@@ -206,9 +220,21 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
 
         if (tv is null)
             return UnprocessableEntityResponse("Tv show not found");
+        
+        TmdbTvClient tvClient = new(id);
+        TmdbTvShowDetails? show = await tvClient.Details(true);
+        if (show == null) return NotFoundResponse("Tv show not found");
+        
+        bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+        
+        Library? tvLibrary = await mediaContext.Libraries
+            .Where(f => f.Type == (isAnime ? "anime" : "tv"))
+            .FirstOrDefaultAsync() ?? await mediaContext.Libraries
+            .Where(f => f.Type == "tv")
+            .FirstOrDefaultAsync();
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<AddShowJob>(id, tv.Library.Id);
+        jobDispatcher.DispatchJob<AddShowJob>(id, tvLibrary?.Id ?? tv.Library.Id);
 
         return Ok(new StatusResponseDto<string>
         {

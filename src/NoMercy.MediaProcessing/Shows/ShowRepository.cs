@@ -278,11 +278,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
 
     public string GetMediaType(TmdbTvShowAppends show)
     {
-        string searchName = string.IsNullOrEmpty(show.OriginalName)
-            ? show.Name
-            : show.OriginalName;
-
-        bool isAnime = KitsuIo.IsAnime(searchName, show.FirstAirDate.ParseYear()).Result;
+        bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
 
         return isAnime ? "anime" : "tv";
     }

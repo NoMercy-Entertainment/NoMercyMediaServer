@@ -86,12 +86,6 @@ public class ShowManager(
         await showRepository.LinkToLibrary(library, show);
         Logger.MovieDb($"Show {show.Title}: Linked to Library {library.Title}", LogEventLevel.Debug);
 
-        await Task.WhenAll(
-            StoreTranslations(showAppends),
-            StoreGenres(showAppends),
-            StoreContentRatings(showAppends)
-        );
-
         Logger.MovieDb($"Show {showAppends.Name}: Added to Library {library.Title}");
 
         jobDispatcher.DispatchJob<AddShowExtraDataJob, TmdbTvShowAppends>(showAppends);

@@ -218,7 +218,7 @@ public class FileRepository() : IFileRepository
         }
         else if (videoFiles.Length > 0)
         {
-            await Parallel.ForEachAsync(videoFiles, async (file, token) =>
+            foreach (FileInfo file in videoFiles)
             {
                 try
                 {
@@ -230,14 +230,14 @@ public class FileRepository() : IFileRepository
                     // remove any text in square brackets that may cause year to match incorrectly
                     title = Str.RemoveBracketedString().Replace(title, string.Empty);
 
-                    FFMpegCore.IMediaAnalysis mediaAnalysis = await FFMpegCore.FFProbe.AnalyseAsync(file.FullName, cancellationToken: token);
+                    FFMpegCore.IMediaAnalysis mediaAnalysis = await FFMpegCore.FFProbe.AnalyseAsync(file.FullName);
 
                     MovieFile parsed = movieDetector.GetInfo(title);
 
                     parsed.Year ??= title.TryGetYear();
 
 
-                    if (parsed.Title == null) return;
+                    if (parsed.Title == null) continue;
 
                     Regex regex = Str.MatchNumbers();
                     Match match2 = regex.Match(parsed.Title);
@@ -255,9 +255,9 @@ public class FileRepository() : IFileRepository
                         case "anime" or "tv":
                         {
                             TmdbPaginatedResponse<TmdbTvShow>? shows =
-                                await searchClient.TvShow(parsed.Title ?? "", parsed.Year ?? "");
+                                await searchClient.TvShow(parsed.Title ?? "", parsed.Year ?? "", priority: true);
                             TmdbTvShow? show = shows?.Results.FirstOrDefault();
-                            if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) return;
+                            if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) continue;
 
                             MediaContext context = new();
                             bool hasShow = context.Tvs
@@ -305,8 +305,8 @@ public class FileRepository() : IFileRepository
                             {
                                 TmdbEpisodeClient episodeClient =
                                     new(show.Id, parsed.Season.Value, parsed.Episode.Value);
-                                TmdbEpisodeDetails? details = await episodeClient.Details();
-                                if (details == null) return;
+                                TmdbEpisodeDetails? details = await episodeClient.Details(priority: true);
+                                if (details == null) continue;
 
                                 Season? season = await context.Seasons
                                     .FirstOrDefaultAsync(season =>
@@ -349,9 +349,9 @@ public class FileRepository() : IFileRepository
                         case "movie":
                         {
                             TmdbPaginatedResponse<TmdbMovie>? movies =
-                                await searchClient.Movie(parsed.Title ?? "", parsed.Year ?? "");
+                                await searchClient.Movie(parsed.Title ?? "", parsed.Year ?? "", priority: true);
                             TmdbMovie? movie = movies?.Results.FirstOrDefault();
-                            if (movie == null) return;
+                            if (movie == null) continue;
 
                             MediaContext context = new();
                             Movie? movieItem = context.Movies
@@ -360,8 +360,8 @@ public class FileRepository() : IFileRepository
                             if (movieItem == null)
                             {
                                 TmdbMovieClient movieClient = new(movie.Id);
-                                TmdbMovieDetails? details = await movieClient.Details();
-                                if (details == null) return;
+                                TmdbMovieDetails? details = await movieClient.Details(priority: true);
+                                if (details == null) continue;
 
                                 bool hasMovie = context.Movies
                                     .Any(item => item.Id == movie.Id);
@@ -429,8 +429,8 @@ public class FileRepository() : IFileRepository
                                 .Select(video => new Video
                                 {
                                     Index = video.Index,
-                                    Width = video.Height,
-                                    Height = video.Width
+                                    Width = video.Width,
+                                    Height = video.Height
                                 }),
                             Audio = mediaAnalysis.AudioStreams
                                 .Select(stream => new Audio
@@ -451,7 +451,7 @@ public class FileRepository() : IFileRepository
                 {
                     Logger.App(e.Message, LogEventLevel.Error);
                 }
-            });
+            }
         }
 
         return fileList.OrderBy(file => file.Name).ToList();

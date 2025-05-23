@@ -64,6 +64,13 @@ public record ArtistResponseDto
                     .Where(trackUser => trackUser.UserId.Equals(userId))
                 )
                 .ThenInclude(trackUser => trackUser.User)
+                
+                .Include(artist => artist.ArtistTrack)
+                .ThenInclude(artistTrack => artistTrack.Track)
+                .ThenInclude(track => track.MusicPlays
+                    .Where(trackUser => trackUser.UserId.Equals(userId))
+                )
+                .ThenInclude(trackUser => trackUser.User)
 
                 .Include(artist => artist.ArtistReleaseGroup)
                 .ThenInclude(artistReleaseGroup => artistReleaseGroup.ReleaseGroup)

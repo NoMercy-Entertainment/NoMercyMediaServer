@@ -77,8 +77,8 @@
     <Value lang="nl">An error occurred while saving the entity changes. See the inner exception for details.</Value>
   </Entry>
   <Entry>
-    <Key>Album not found</Key>
-    <Value lang="nl">Album not found</Value>
+    <Key>Albums not found</Key>
+    <Value lang="nl">Albums not found</Value>
   </Entry>
   <Entry>
     <Key>Artist not found</Key>

@@ -63,7 +63,7 @@ public class AlbumsController : BaseController
         Album? album = await AlbumResponseDto.GetAlbum(mediaContext, userId, id);
 
         if (album is null)
-            return NotFoundResponse("Album not found");
+            return NotFoundResponse("Albums not found");
 
         return Ok(new AlbumResponseDto
         {
@@ -86,7 +86,7 @@ public class AlbumsController : BaseController
             .FirstOrDefaultAsync();
 
         if (album is null)
-            return UnprocessableEntityResponse("Album not found");
+            return UnprocessableEntityResponse("Albums not found");
 
         if (request.Value)
         {

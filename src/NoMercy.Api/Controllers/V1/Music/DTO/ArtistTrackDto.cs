@@ -29,8 +29,7 @@ public record ArtistTrackDto
     {
         Id = artistTrack.Track.Id;
         Name = artistTrack.Track.Name;
-        Cover = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover is not null ? new Uri($"/images/music{artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover}", UriKind.Relative).ToString() : null;
         Link = new($"/music/tracks/{artistTrack.Track.Id}", UriKind.Relative);
         Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}", UriKind.Relative).ToString();
         Type = "tracks";
@@ -48,7 +47,7 @@ public record ArtistTrackDto
         Album = artistTrack.Track.AlbumTrack
             .DistinctBy(trackAlbum => trackAlbum.AlbumId)
             .Select(albumTrack => new AlbumDto(albumTrack, country));
-
+        
         Artist = artistTrack.Track.ArtistTrack
             .Select(albumTrack => new ArtistDto(albumTrack, country));
     }

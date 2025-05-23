@@ -29,8 +29,7 @@ public record AlbumsResponseItemDto
             : album.Description;
 
         ColorPalette = album.ColorPalette;
-        Cover = album.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = album.Cover is not null ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() : null;
         Disambiguation = album.Disambiguation;
         Folder = album.Folder;
         Id = album.Id;

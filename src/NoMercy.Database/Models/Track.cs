@@ -22,7 +22,7 @@ public class Track : ColorPaletteTimeStamps
     [JsonProperty("cover")] public string? Cover { get; set; }
     [JsonProperty("date")] public DateTime? Date { get; set; }
     [JsonProperty("filename")] public string? Filename { get; set; }
-    [JsonProperty("duration")] public string? Duration { get; set; }
+    [JsonProperty("duration")] public string Duration { get; set; } = string.Empty;
     [JsonProperty("quality")] public int? Quality { get; set; }
 
     [Column("Lyrics")]

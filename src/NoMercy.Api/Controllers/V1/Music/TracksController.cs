@@ -175,7 +175,7 @@ public class TracksController : BaseController
             {
                 parameters = new()
                 {
-                    // Album = track.AlbumTrack.FirstOrDefault()?.Album.Name ?? "",
+                    // Albums = track.AlbumTrack.FirstOrDefault()?.Albums.Name ?? "",
                     Artist = track.ArtistTrack.FirstOrDefault()?.Artist.Name ?? "",
                     // Artists = track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
                     Title = track.Name,

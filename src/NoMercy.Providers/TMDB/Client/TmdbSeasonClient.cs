@@ -19,22 +19,22 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
         return new TmdbEpisodeClient(Id, _seasonNumber, episodeNumber);
     }
 
-    public Task<TmdbSeasonDetails?> Details()
+    public Task<TmdbSeasonDetails?> Details(bool? priority = false)
     {
-        return Get<TmdbSeasonDetails>("tv/" + Id + "/season/" + _seasonNumber);
+        return Get<TmdbSeasonDetails>("tv/" + Id + "/season/" + _seasonNumber, priority: priority);
     }
 
-    public Task<TmdbSeasonAppends?> WithAppends(string[] appendices)
+    public Task<TmdbSeasonAppends?> WithAppends(string[] appendices,bool? priority = false)
     {
         Dictionary<string, string?> queryParams = new()
         {
             ["append_to_response"] = string.Join(",", appendices)
         };
 
-        return Get<TmdbSeasonAppends>("tv/" + Id + "/season/" + _seasonNumber, queryParams);
+        return Get<TmdbSeasonAppends>("tv/" + Id + "/season/" + _seasonNumber, queryParams, priority: priority);
     }
 
-    public Task<TmdbSeasonAppends?> WithAllAppends()
+    public Task<TmdbSeasonAppends?> WithAllAppends(bool? priority = false)
     {
         return WithAppends([
             "aggregate_credits",
@@ -43,7 +43,7 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
             "external_ids",
             "images",
             "translations"
-        ]);
+        ], priority);
     }
 
     //public Task<AccountStates?> AccountStates()
@@ -52,12 +52,12 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
     //    
     //}
 
-    public Task<TmdbSeasonAggregatedCredits?> AggregatedCredits()
+    public Task<TmdbSeasonAggregatedCredits?> AggregatedCredits(bool? priority = false)
     {
-        return Get<TmdbSeasonAggregatedCredits>("tv/" + Id + "/season/" + _seasonNumber + "/aggregate_credits");
+        return Get<TmdbSeasonAggregatedCredits>("tv/" + Id + "/season/" + _seasonNumber + "/aggregate_credits", priority: priority);
     }
 
-    public Task<TmdbSeasonChanges?> Changes(string startDate, string endDate)
+    public Task<TmdbSeasonChanges?> Changes(string startDate, string endDate, bool? priority = false)
     {
         Dictionary<string, string?> queryParams = new()
         {
@@ -65,32 +65,32 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
             ["end_date"] = endDate
         };
 
-        return Get<TmdbSeasonChanges>("tv/" + Id + "/season/" + _seasonNumber + "/changes", queryParams);
+        return Get<TmdbSeasonChanges>("tv/" + Id + "/season/" + _seasonNumber + "/changes", queryParams, priority: priority);
     }
 
-    public Task<TmdbSeasonCredits?> Credits()
+    public Task<TmdbSeasonCredits?> Credits(bool? priority = false)
     {
-        return Get<TmdbSeasonCredits>("tv/" + Id + "/season/" + _seasonNumber + "/credits");
+        return Get<TmdbSeasonCredits>("tv/" + Id + "/season/" + _seasonNumber + "/credits", priority: priority);
     }
 
-    public Task<TmdbSeasonExternalIds?> ExternalIds()
+    public Task<TmdbSeasonExternalIds?> ExternalIds(bool? priority = false)
     {
-        return Get<TmdbSeasonExternalIds>("tv/" + Id + "/season/" + _seasonNumber + "/external_ids");
+        return Get<TmdbSeasonExternalIds>("tv/" + Id + "/season/" + _seasonNumber + "/external_ids", priority: priority);
     }
 
-    public Task<TmdbSeasonImages?> Images()
+    public Task<TmdbSeasonImages?> Images(bool? priority = false)
     {
-        return Get<TmdbSeasonImages>("tv/" + Id + "/season/" + _seasonNumber + "/images");
+        return Get<TmdbSeasonImages>("tv/" + Id + "/season/" + _seasonNumber + "/images", priority: priority);
     }
 
-    public Task<TmdbSharedTranslations?> Translations()
+    public Task<TmdbSharedTranslations?> Translations(bool? priority = false)
     {
-        return Get<TmdbSharedTranslations>("tv/" + Id + "/season/" + _seasonNumber + "/translations");
+        return Get<TmdbSharedTranslations>("tv/" + Id + "/season/" + _seasonNumber + "/translations", priority: priority);
     }
 
-    public Task<TmdbSeasonVideos?> Videos()
+    public Task<TmdbSeasonVideos?> Videos(bool? priority = false)
     {
-        return Get<TmdbSeasonVideos>("tv/" + Id + "/season/" + _seasonNumber + "/videos");
+        return Get<TmdbSeasonVideos>("tv/" + Id + "/season/" + _seasonNumber + "/videos", priority: priority);
     }
 
     public new void Dispose()

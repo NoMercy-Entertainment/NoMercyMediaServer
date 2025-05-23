@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
-
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
@@ -21,10 +20,13 @@ public class Device : Timestamps
     [JsonProperty("model")]
     public string Model { get; set; } = string.Empty;
 
-    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
+    [JsonProperty("type")] public string Type { get; set; } = null!;
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("custom_name")] public string? CustomName { get; set; }
     [JsonProperty("version")] public string Version { get; set; } = string.Empty;
     [JsonProperty("ip")] public string Ip { get; set; } = string.Empty;
     [JsonProperty("activity_logs")] public virtual ICollection<ActivityLog> ActivityLogs { get; set; } = [];
+    
+    [JsonProperty("is_active")] public bool IsActive { get; set; }
+    [JsonProperty("volume_percent")] public int VolumePercent { get; set; }
 }

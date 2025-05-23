@@ -3,6 +3,11 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.Providers.Other;
+using NoMercy.Providers.TMDB.Client;
+using NoMercy.Providers.TMDB.Models.Shared;
+using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.Data.Repositories;
 
@@ -163,7 +168,15 @@ public class TvShowRepository(MediaContext context)
 
     public async Task AddTvShowAsync(int id)
     {
+        TmdbTvClient tvClient = new(id);
+        TmdbTvShowDetails? show = await tvClient.Details(true);
+        if (show == null) return;
+        
+        bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+        
         Library? tvLibrary = await context.Libraries
+            .Where(f => f.Type == (isAnime ? "anime" : "tv"))
+            .FirstOrDefaultAsync() ?? await context.Libraries
             .Where(f => f.Type == "tv")
             .FirstOrDefaultAsync();
 

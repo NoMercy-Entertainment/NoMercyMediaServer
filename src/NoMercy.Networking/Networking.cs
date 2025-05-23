@@ -166,44 +166,47 @@ public class Networking
         return true;
     }
 
-    private static bool SendTo(string name, string endpoint, Guid userId, object? data = null)
+    public static async Task SendTo(string name, string endpoint, Guid userId, object? data = null)
     {
         foreach ((string _, Client client) in SocketClients.Where(client =>
                      client.Value.Sub.Equals(userId) && client.Value.Endpoint == "/" + endpoint))
+        {
             try
             {
                 if (data != null)
-                    client.Socket.SendAsync(name, data).Wait();
+                    await client.Socket.SendAsync(name, data);
                 else
-                    client.Socket.SendAsync(name).Wait();
+                    await client.Socket.SendAsync(name);
             }
             catch (Exception)
             {
-                return false;
+                return;
             }
-
-        return true;
+        }
+        await Task.CompletedTask;
     }
 
-    private static bool Reply(string name, string endpoint, HttpContext context, object? data = null)
+    private static async Task Reply(string name, string endpoint, HttpContext context, object? data = null)
     {
         Guid userId = Guid.Parse(context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty);
 
         foreach ((string _, Client client) in SocketClients.Where(client =>
                      client.Value.Sub.Equals(userId) && client.Value.Endpoint == "/" + endpoint))
+        {
             try
             {
                 if (data != null)
-                    client.Socket.SendAsync(name, data).Wait();
+                    await client.Socket.SendAsync(name, data);
                 else
-                    client.Socket.SendAsync(name).Wait();
+                    await client.Socket.SendAsync(name);
             }
             catch (Exception)
             {
-                return false;
+                return;
             }
+        }
 
-        return true;
+        await Task.CompletedTask;
     }
 
     private static bool CheckIpv6()

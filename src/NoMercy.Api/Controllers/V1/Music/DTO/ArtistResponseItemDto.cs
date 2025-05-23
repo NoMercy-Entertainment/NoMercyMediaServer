@@ -25,11 +25,11 @@ public record ArtistResponseItemDto
 
     [JsonProperty("playlists")] public IEnumerable<AlbumDto> Playlists { get; set; }
     [JsonProperty("tracks")] public IEnumerable<ArtistTrackDto> Tracks { get; set; }
-    [JsonProperty("favorite_tracks")] public IEnumerable<ArtistTrackDto> FavoriteTracks { get; set; }
+    [JsonProperty("favorite_tracks")] public List<FavoriteTrackDto> FavoriteTracks { get; set; }
     [JsonProperty("images")] public IEnumerable<ImageDto> Images { get; set; }
     [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; }
     [JsonProperty("albums")] public IEnumerable<AlbumDto> Albums { get; set; }
-    [JsonProperty("featured")] public IEnumerable<AlbumDto> Featured { get; set; }
+    [JsonProperty("featured")] public List<FeaturedDto> Featured { get; set; }
 
     public ArtistResponseItemDto(Artist artist, Guid userId, string? country = "US")
     {
@@ -63,7 +63,7 @@ public record ArtistResponseItemDto
             .Select(album => album.First())
             .OrderBy(album => album.Year)
             .Where(album => Albums.All(albumDto => albumDto.Id != album.Id))
-            .Select(album => new AlbumDto(album, country!))
+            .Select(album => new FeaturedDto(album, country!))
             .OrderBy(artistTrack => artistTrack.Year)
             .ToList();
 
@@ -77,35 +77,14 @@ public record ArtistResponseItemDto
             .Select(artistTrack => new ArtistTrackDto(artistTrack, country!))
             .GroupBy(artistTrack => artistTrack.AlbumName + artistTrack.Name)
             .Select(artistTrack => artistTrack.First())
+            .DistinctBy(artistTrack => artistTrack.Id)
             .OrderBy(artistTrack => artistTrack.AlbumName)
             .ThenBy(artistTrack => artistTrack.Disc)
             .ThenBy(artistTrack => artistTrack.Track);
-
-        // TODO replace inner-query....
-        MediaContext context = new();
-        List<ArtistTrackDto> favorites = context.MusicPlays
-            .AsNoTracking()
-            .Where(musicPlay => musicPlay.UserId.Equals(userId))
-            .Where(musicPlay => musicPlay.Track.ArtistTrack
-                .Any(artistTrack => artistTrack.ArtistId == artist.Id))
-
-            .Include(musicPlay => musicPlay.Track)
-            .ThenInclude(track => track.TrackUser)
-
-            .Include(musicPlay => musicPlay.Track)
-            .ThenInclude(track => track.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Album)
-            .ThenInclude(albumTrack => albumTrack.Translations)
-
-            .Include(musicPlay => musicPlay.Track)
-            .ThenInclude(track => track.ArtistTrack)
-            .ThenInclude(albumTrack => albumTrack.Artist)
-            .ThenInclude(album => album.Translations)
-            .Select(artistTrack => new ArtistTrackDto(artistTrack.Track, country!))
+        
+        FavoriteTracks = artist.ArtistTrack
+            .Where(artistTrack => artistTrack.Track.MusicPlays.Count > 0)
+            .Select(artistTrack => new FavoriteTrackDto(artistTrack, country!))
             .ToList();
-
-        FavoriteTracks = favorites.GroupBy(musicPlay => musicPlay.Id)
-            .OrderByDescending(musicPlay => musicPlay.Count())
-            .Select(musicPlay => musicPlay.First());
     }
 }

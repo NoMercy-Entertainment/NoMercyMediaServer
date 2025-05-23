@@ -379,6 +379,11 @@ public static partial class Str
         return parts[0] * 60 * 60 + parts[1] * 60 + parts[2];
     }
 
+    public static int ToMilliSeconds(this string hms)
+    {
+        return hms.ToSeconds() * 1000;
+    }
+
     public static string TitleSort<T>(this T? self, DateTime? date = null)
     {
         return _parseTitleSort(self?.ToString(), date);

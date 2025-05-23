@@ -225,6 +225,8 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo SetPreset(string value)
     {
+        if(string.IsNullOrEmpty(value))
+            return this;
         if (!AvailablePresets.Contains(value))
             throw new($"Wrong preset value for {value}, available formats are {string.Join(", ", AvailablePresets)}");
         Preset = value;
@@ -233,6 +235,8 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo SetProfile(string value)
     {
+        if(string.IsNullOrEmpty(value))
+            return this;
         if (!AvailableProfiles.Contains(value))
             throw new($"Wrong profile value for {value}, available formats are {string.Join(", ", AvailableProfiles)}");
         Profile = value;
@@ -241,6 +245,8 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo SetTune(string value)
     {
+        if(string.IsNullOrEmpty(value))
+            return this;
         if (!AvailableTune.Contains(value))
             throw new($"Wrong tune value for {value}, available formats are {string.Join(", ", AvailableTune)}");
         Tune = value;

@@ -21,8 +21,7 @@ public record PlaylistResponseItemDto
         Id = playlist.Id;
         Name = playlist.Name;
         Description = playlist.Description;
-        Cover = playlist.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = playlist.Cover is not null ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString() : null;
         ColorPalette = playlist.ColorPalette;
         CreatedAt = playlist.CreatedAt;
         UpdatedAt = playlist.UpdatedAt;

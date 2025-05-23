@@ -20,15 +20,14 @@ public record AlbumTrackDto
     [JsonProperty("track")] public int? Track { get; set; }
     [JsonProperty("lyrics")] public Lyric[]? Lyrics { get; set; }
     [JsonProperty("type")] public string Type { get; set; }
-    [JsonProperty("artist_track")] public IEnumerable<ArtistDto> Artist { get; set; }
-    [JsonProperty("album_track")] public IEnumerable<AlbumDto> Album { get; set; }
+    [JsonProperty("artist_track")] public IEnumerable<ArtistDto> Artists { get; set; }
+    [JsonProperty("album_track")] public IEnumerable<AlbumDto> Albums { get; set; }
 
     public AlbumTrackDto(AlbumTrack albumTrack, string country)
     {
         Id = albumTrack.Track.Id;
         Name = albumTrack.Track.Name;
-        Cover = albumTrack.Album.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = albumTrack.Album.Cover is not null ? new Uri($"/images/music{albumTrack.Album.Cover}", UriKind.Relative).ToString() : null;
         Path = new Uri($"/{albumTrack.Track.FolderId}{albumTrack.Track.Folder}{albumTrack.Track.Filename}", UriKind.Relative).ToString();
         Type = "tracks";
         ColorPalette = albumTrack.Album.ColorPalette;
@@ -41,16 +40,10 @@ public record AlbumTrackDto
         Lyrics = albumTrack.Track.Lyrics;
         Link = new($"/music/tracks/{Id}", UriKind.Relative);
 
-        using MediaContext mediaContext = new();
-        List<ArtistTrack> artists = mediaContext.ArtistTrack
-            .Where(at => at.TrackId == albumTrack.TrackId)
-            .Include(at => at.Artist)
-            .ToList();
-
-        Artist = artists
+        Artists = albumTrack.Track.ArtistTrack
             .Select(artistTrack => new ArtistDto(artistTrack, country));
-
-        Album = albumTrack.Track.AlbumTrack
+        
+        Albums = albumTrack.Track.AlbumTrack
             .Select(trackAlbum => new AlbumDto(trackAlbum, country));
     }
 }
