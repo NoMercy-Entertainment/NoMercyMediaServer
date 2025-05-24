@@ -23,6 +23,9 @@ public class ConnectionHub : Hub
         // Logger.Socket($"Connected to {Endpoint}");
     }
 
+    public string GetCountryFromContext() =>
+        _httpContextAccessor.HttpContext?.Request.Headers["country"].FirstOrDefault() ?? "US";
+    
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();

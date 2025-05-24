@@ -1,8 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.Music.DTO;
-using NoMercy.Database.Models;
 
-namespace NoMercy.Api.Controllers.Socket;
+namespace NoMercy.Api.Controllers.Socket.music;
 
 public class PlayerState
 {
@@ -16,6 +15,7 @@ public class PlayerState
     [JsonProperty("repeat_state")] public string Repeat { get; set; } = "off";
     [JsonProperty("current_list")] public string CurrentList { get; set; } = null!;
     [JsonProperty("shuffle_state")] public bool Shuffle { get; set; }
+    [JsonProperty("muted_state")] public bool Muted { get; set; }
     [JsonProperty("timestamp")] public long Timestamp { get; set; }
     [JsonProperty("volume_percentage")] public int VolumePercentage { get; set; }
     [JsonProperty("seek_offset")] public int SeekOffset { get; set; }

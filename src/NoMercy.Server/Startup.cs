@@ -107,6 +107,8 @@ public class Startup(IApiVersionDescriptionProvider provider)
         
         services.AddScoped<JobDispatcher>();
         
+        services.AddMusicHubServices();
+        
         services.AddHostedService<ServerRegistrationService>(_ =>
         {
             ServerRegistrationService service = new();

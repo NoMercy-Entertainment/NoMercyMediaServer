@@ -1,0 +1,107 @@
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Database;
+using NoMercy.Database.Models;
+
+namespace NoMercy.Api.Controllers.Socket.music;
+
+public class PlaylistManager
+{
+    private readonly MediaContext _mediaContext;
+
+    public PlaylistManager(MediaContext mediaContext)
+    {
+        _mediaContext = mediaContext;
+    }
+    public async Task<(PlaylistTrackDto item, List<PlaylistTrackDto> playlist)> GetPlaylist(
+        string type, Guid listId, Guid trackId, string country)
+    {
+        return type switch
+        {
+            "playlist" => await GetPlaylistTracks(listId, trackId, country),
+            "album" => await GetAlbumTracks(listId, trackId, country),
+            "artist" => await GetArtistTracks(listId, trackId, country),
+            _ => throw new ArgumentException("Invalid playlist type", nameof(type))
+        };
+    }
+
+    private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetPlaylistTracks(
+        Guid listId, Guid trackId, string country)
+    {
+        PlaylistTrack? playlistTrack = await _mediaContext.PlaylistTrack
+            .Include(x => x.Track)
+            .ThenInclude(x => x.PlaylistTrack)
+            .ThenInclude(x => x.Track)
+            .ThenInclude(x => x.PlaylistTrack)
+            .ThenInclude(x => x.Track)
+            .FirstOrDefaultAsync(x => x.PlaylistId == listId && x.TrackId == trackId);
+
+        if (playlistTrack is null)
+            throw new ("Playlist track not found");
+
+        List<PlaylistTrackDto> playlist = playlistTrack.Track.PlaylistTrack
+            .SelectMany(x => x.Track.PlaylistTrack)
+            .Select(x =>  new PlaylistTrackDto(x, country))
+            .ToList();
+
+        PlaylistTrackDto item = playlist.First(p => p.Id == playlistTrack.TrackId);
+        return (item, playlist);
+    }
+    
+    private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetAlbumTracks(
+        Guid listId, Guid trackId, string country)
+    {
+        AlbumTrack? albumTrack = await _mediaContext.AlbumTrack
+            .Include(x => x.Track)
+            .ThenInclude(x => x.AlbumTrack)
+            .ThenInclude(x => x.Album)
+            .ThenInclude(x => x.AlbumTrack)
+            .ThenInclude(x => x.Track)
+            .ThenInclude(x => x.ArtistTrack)
+            .ThenInclude(x => x.Artist)
+            .FirstOrDefaultAsync(x => x.AlbumId == listId && x.TrackId == trackId);
+
+        if (albumTrack is null)
+            throw new ("Album track not found");
+
+        List<PlaylistTrackDto> playlist = albumTrack.Track.AlbumTrack
+                .SelectMany(x => x.Album.AlbumTrack)
+                .Select(x =>  new PlaylistTrackDto(x, country))
+                .OrderBy(x => x.Disc)
+                .ThenBy(x => x.Track)
+                .ToList();
+        
+        PlaylistTrackDto item = playlist.First(p => p.Id == albumTrack.TrackId);
+        return (item, playlist);
+    }
+    
+    private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetArtistTracks(
+        Guid listId, Guid trackId, string country)
+    {
+        ArtistTrack? artistTrack = await _mediaContext.ArtistTrack
+            .Include(x => x.Track)
+            .ThenInclude(x => x.ArtistTrack)
+            .ThenInclude(x => x.Artist)
+            .ThenInclude(x => x.ArtistTrack)
+            .ThenInclude(x => x.Track)
+            .ThenInclude(track => track.AlbumTrack)
+            .ThenInclude(albumTrack => albumTrack.Album)
+            .ThenInclude(artist => artist.Translations)
+            .FirstOrDefaultAsync(x => x.ArtistId == listId && x.TrackId == trackId);
+
+        if (artistTrack is null)
+            throw new ("Artist track not found");
+
+        List<PlaylistTrackDto> playlist = artistTrack.Track.ArtistTrack
+            .SelectMany(x => x.Artist.ArtistTrack)
+            .Select(x =>  new PlaylistTrackDto(x, country))
+            .DistinctBy(x => x.Id)
+            .OrderBy(x => x.AlbumName)
+            .ThenBy(x => x.Disc)
+            .ThenBy(x => x.Track)
+            .ToList();
+
+        PlaylistTrackDto item = playlist.First(p => p.Id == artistTrack.TrackId);
+        return (item, playlist);
+    }
+}
