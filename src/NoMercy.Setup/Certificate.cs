@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using HttpClient = NoMercy.NmSystem.Extensions.HttpClient;
 
@@ -25,11 +26,11 @@ public static class Certificate
     [Obsolete("Obsolete")]
     private static X509Certificate2 CombinePublicAndPrivateCerts()
     {
-        byte[] publicPemBytes = File.ReadAllBytes(Path.Combine(AppFiles.CertFile));
+        byte[] publicPemBytes = File.ReadAllBytes(AppFiles.CertFile);
 
         using X509Certificate2 publicX509 = new(publicPemBytes);
 
-        string privateKeyText = File.ReadAllText(Path.Combine(AppFiles.KeyFile));
+        string privateKeyText = File.ReadAllText(AppFiles.KeyFile);
         string[] privateKeyBlocks = privateKeyText.Split("-", StringSplitOptions.RemoveEmptyEntries);
         byte[] privateKeyBytes = Convert.FromBase64String(privateKeyBlocks[1]);
 
@@ -61,7 +62,7 @@ public static class Certificate
     [Obsolete("Obsolete")]
     private static bool ValidateSslCertificate()
     {
-        if (!File.Exists(Path.Combine(AppFiles.CertFile)))
+        if (!File.Exists(AppFiles.CertFile))
             return false;
 
         X509Certificate2 certificate = CombinePublicAndPrivateCerts();
@@ -75,7 +76,7 @@ public static class Certificate
     [Obsolete("Obsolete")]
     public static async Task RenewSslCertificate(int maxRetries = 3, int delaySeconds = 5)
     {
-        bool hasExistingCert = File.Exists(Path.Combine(AppFiles.CertFile));
+        bool hasExistingCert = File.Exists(AppFiles.CertFile);
         if (ValidateSslCertificate())
         {
             Logger.Certificate("SSL Certificate is valid");
@@ -112,8 +113,8 @@ public static class Certificate
 
                 response.EnsureSuccessStatusCode();
                 string content = await response.Content.ReadAsStringAsync();
-                CertificateResponse data = JsonConvert.DeserializeObject<CertificateResponse>(content)
-                                           ?? throw new("Failed to deserialize JSON");
+                ApiResponse<CertificateResponse> data = content.FromJson<ApiResponse<CertificateResponse>>()
+                                                      ?? throw new("Failed to deserialize JSON");
 
                 if (File.Exists(AppFiles.KeyFile))
                     File.Delete(AppFiles.KeyFile);
@@ -122,9 +123,9 @@ public static class Certificate
                 if (File.Exists(AppFiles.CertFile))
                     File.Delete(AppFiles.CertFile);
 
-                await File.WriteAllTextAsync(AppFiles.KeyFile, data.PrivateKey);
-                await File.WriteAllTextAsync(AppFiles.CaFile, data.CertificateAuthority);
-                await File.WriteAllTextAsync(AppFiles.CertFile, $"{data.Certificate}\n{data.IssuerCertificate}");
+                await File.WriteAllTextAsync(AppFiles.KeyFile, data.Data.PrivateKey);
+                await File.WriteAllTextAsync(AppFiles.CaFile, data.Data.CertificateAuthority);
+                await File.WriteAllTextAsync(AppFiles.CertFile, $"{data.Data.Certificate}\n{data.Data.IssuerCertificate}");
 
                 Logger.Certificate(!hasExistingCert
                     ? "SSL Certificate created"
@@ -138,15 +139,22 @@ public static class Certificate
             }
         }
     }
+    
+    public class ApiResponse<T>
+    {
+        [JsonProperty("status")] public string? Status { get; set; }
+        [JsonProperty("message")] public string? Message { get; set; }
+        [JsonProperty("data")] public T Data { get; set; } = default!;
+    }
 
     public class CertificateResponse
     {
-        [JsonProperty("status")] public string Status { get; set; } = string.Empty;
-        [JsonProperty("certificate")] public string Certificate { get; set; } = string.Empty;
-        [JsonProperty("private_key")] public string PrivateKey { get; set; } = string.Empty;
-        [JsonProperty("issuer_certificate")] public string IssuerCertificate { get; set; } = string.Empty;
+        [JsonProperty("status")] public string Status { get; set; } = null!;
+        [JsonProperty("certificate")] public string Certificate { get; set; } = null!;
+        [JsonProperty("private_key")] public string PrivateKey { get; set; } = null!;
+        [JsonProperty("issuer_certificate")] public string IssuerCertificate { get; set; } = null!;
 
         [JsonProperty("certificate_authority")]
-        public string CertificateAuthority { get; set; } = string.Empty;
+        public string CertificateAuthority { get; set; } = null!;
     }
 }

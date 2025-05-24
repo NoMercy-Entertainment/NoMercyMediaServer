@@ -90,7 +90,7 @@ public class Seed : IDisposable, IAsyncDisposable
             ["with_self"] = "true",
         };
         
-        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+        GenericHttpClient authClient = new(Config.ApiServerBaseUrl, 10, 0);
         authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
         string response = await authClient.SendAndReadAsync(HttpMethod.Get, "server-users", null, queryParams);
 
