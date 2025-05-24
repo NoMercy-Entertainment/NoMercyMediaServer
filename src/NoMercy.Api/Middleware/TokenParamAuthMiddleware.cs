@@ -11,7 +11,7 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context)
     {
-        context.Request.Headers.Authorization = context.Request.Headers.Authorization.ToString().Split(",")[0];
+        context.Request.Headers.Authorization = context.Request.Headers.Authorization.ToString().Split(",").ElementAt(0).Split("&").ElementAt(0);
 
         string url = context.Request.Path;
 

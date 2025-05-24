@@ -25,12 +25,13 @@ public static class UpdateChecker
     {
         try
         {
-            string output = SystemCalls.Shell.ExecStdOutSync(AppFiles.UpdaterExePath, "--check");
-
-            if (string.IsNullOrEmpty(output)) return false;
-
-            UpdateCheckResult? result = JsonConvert.DeserializeObject<UpdateCheckResult>(output);
-            return result?.UpdateAvailable ?? false;
+            return false;
+            // string output = SystemCalls.Shell.ExecStdOutSync(AppFiles.UpdaterExePath, "--check");
+            //
+            // if (string.IsNullOrEmpty(output)) return false;
+            //
+            // UpdateCheckResult? result = JsonConvert.DeserializeObject<UpdateCheckResult>(output);
+            // return result?.UpdateAvailable ?? false;
         }
         catch
         {

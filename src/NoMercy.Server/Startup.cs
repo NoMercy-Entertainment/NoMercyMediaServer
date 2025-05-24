@@ -212,8 +212,8 @@ public class Startup(IApiVersionDescriptionProvider provider)
                 o.EnableDetailedErrors = true;
                 o.MaximumReceiveMessageSize = 1024 * 1000 * 100;
                 
-                o.ClientTimeoutInterval = TimeSpan.FromSeconds(5);
-                o.KeepAliveInterval = TimeSpan.FromSeconds(10);
+                o.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+                o.KeepAliveInterval = TimeSpan.FromSeconds(15);
             })
             .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings = JsonHelper.Settings; });
 
@@ -330,31 +330,31 @@ public class Startup(IApiVersionDescriptionProvider provider)
             {
                 endpoints.MapHub<VideoHub>("/socket", options =>
                 {
-                    // options.Transports = HttpTransportType.WebSockets;
+                    options.Transports = HttpTransportType.WebSockets;
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
                 endpoints.MapHub<DashboardHub>("/dashboardHub", options =>
                 {
-                    // options.Transports = HttpTransportType.WebSockets;
+                    options.Transports = HttpTransportType.WebSockets;
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
                 endpoints.MapHub<CastHub>("/castHub", options =>
                 {
-                    // options.Transports = HttpTransportType.WebSockets;
+                    options.Transports = HttpTransportType.WebSockets;
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
                 endpoints.MapHub<MusicHub>("/musicHub", options =>
                 {
-                    // options.Transports = HttpTransportType.WebSockets;
+                    options.Transports = HttpTransportType.WebSockets;
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
                 endpoints.MapHub<RipperHub>("/ripperHub", options =>
                 {
-                    // options.Transports = HttpTransportType.WebSockets;
+                    options.Transports = HttpTransportType.WebSockets;
                     options.CloseOnAuthenticationExpiration = true;
                 });
             });

@@ -27,7 +27,7 @@ public class VideoHub(IHttpContextAccessor httpContextAccessor) : ConnectionHub(
             Audio = request.Audio,
             Subtitle = request.Subtitle,
             SubtitleType = request.SubtitleType,
-            VideoFileId = Ulid.Parse(request.VideoId),
+            VideoFileId = request.VideoId,
             MovieId = request.VideoType == "movie" ? request.TmdbId : null,
             TvId = request.VideoType == "tv" ? request.TmdbId : null,
             CollectionId = request.CollectionId,
@@ -84,7 +84,7 @@ public class VideoHub(IHttpContextAccessor httpContextAccessor) : ConnectionHub(
     public class VideoProgressRequest
     {
         [JsonProperty("app")] public int AppId { get; set; }
-        [JsonProperty("video_id")] public string VideoId { get; set; } = string.Empty;
+        [JsonProperty("video_id")] public Ulid VideoId { get; set; }
         [JsonProperty("tmdb_id")] public int TmdbId { get; set; }
         [JsonProperty("playlist_type")] public string PlaylistType { get; set; } = string.Empty;
         [JsonProperty("video_type")] public string VideoType { get; set; } = string.Empty;

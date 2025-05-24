@@ -210,7 +210,7 @@ public static class Auth
 
     private static void TokenByBrowser()
     {
-        Uri baseUrl = new("protocol/openid-connect/auth");
+        Uri baseUrl = new(Config.AuthBaseUrl + "protocol/openid-connect/auth");
         string redirectUri = HttpUtility.UrlEncode($"http://localhost:{Config.InternalServerPort}/sso-callback");
         string scope = HttpUtility.UrlEncode("openid offline_access email profile");
 
