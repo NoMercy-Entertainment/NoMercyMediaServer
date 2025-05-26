@@ -11,7 +11,7 @@ public class PlayerStateManager
         _playerStates.Values;
     
     public PlayerState? GetState(Guid userId) =>
-        _playerStates.TryGetValue(userId, out var state) ? state : null;
+        _playerStates.TryGetValue(userId, out PlayerState? state) ? state : null;
 
     public void UpdateState(Guid userId, PlayerState state) =>
         _playerStates.AddOrUpdate(userId, state, (_, _) => state);
@@ -27,7 +27,7 @@ public class PlayerStateManager
     
     public void UpdateStateProperty(Guid userId, Action<PlayerState> updateAction)
     {
-        if (_playerStates.TryGetValue(userId, out var state))
+        if (_playerStates.TryGetValue(userId, out PlayerState? state))
         {
             updateAction(state);
             _playerStates[userId] = state;

@@ -28,7 +28,7 @@ public record ContinueWatchingItemDto
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
     [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
     [JsonProperty("link")] public Uri Link { get; set; } = null!;
-
+    
     public ContinueWatchingItemDto(UserData item, string country)
     {
         Id = item.SpecialId?.ToString() 

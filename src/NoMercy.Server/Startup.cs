@@ -30,6 +30,7 @@ using NoMercy.Server.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
+using NoMercy.Api.Services;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaProcessing.Files;
@@ -102,7 +103,8 @@ public class Startup(IApiVersionDescriptionProvider provider)
         services.AddScoped<SeasonManager>();
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();
-
+        
+        services.AddScoped<HomeService>();
         services.AddScoped<HomeController>();
         
         services.AddScoped<JobDispatcher>();

@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
@@ -29,15 +28,18 @@ public record ArtistResponseItemDto
     [JsonProperty("images")] public IEnumerable<ImageDto> Images { get; set; }
     [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; }
     [JsonProperty("albums")] public IEnumerable<AlbumDto> Albums { get; set; }
-    [JsonProperty("featured")] public List<FeaturedDto> Featured { get; set; }
+    [JsonProperty("featured")] public List<AlbumDto> Featured { get; set; }
 
     public ArtistResponseItemDto(Artist artist, Guid userId, string? country = "US")
     {
+        string? description = artist.Translations
+            .FirstOrDefault(translation => translation.Iso31661 == country)?.Description ?? artist.Description;
+        
         ColorPalette = artist.ColorPalette;
         Cover = artist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Disambiguation = artist.Disambiguation;
-        Description = artist.Description;
+        Description = description;
         Favorite = artist.ArtistUser.Any();
         Folder = artist.Folder;
         Id = artist.Id;
@@ -63,7 +65,7 @@ public record ArtistResponseItemDto
             .Select(album => album.First())
             .OrderBy(album => album.Year)
             .Where(album => Albums.All(albumDto => albumDto.Id != album.Id))
-            .Select(album => new FeaturedDto(album, country!))
+            .Select(album => new AlbumDto(album, country!))
             .OrderBy(artistTrack => artistTrack.Year)
             .ToList();
 

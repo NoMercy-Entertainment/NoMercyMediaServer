@@ -16,6 +16,7 @@ using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
+using NoMercy.Queue;
 
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -279,6 +280,55 @@ public class TasksController : BaseController
         {
             Message = "Priority updated",
             Status = "success"
+        });
+    }
+    
+    [HttpPost]
+    [Route("failed/retry/{id:long?}")]
+    public async Task<IActionResult> RetryFailedJobs(long? id = null)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to retry failed jobs");
+
+        await using QueueContext queueContext = new();
+        JobQueue jobQueue = new(queueContext);
+
+        if (id.HasValue)
+        {
+            FailedJob? failedJob = await queueContext.FailedJobs.FindAsync(id.Value);
+            if (failedJob == null)
+                return NotFoundResponse("Failed job not found");
+        }
+
+        jobQueue.RetryFailedJobs(id);
+
+        string message = id.HasValue 
+            ? "Failed job has been queued for retry" 
+            : "All failed jobs have been queued for retry";
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Message = message,
+            Status = "success"
+        });
+    }
+
+    [HttpGet]
+    [Route("failed")]
+    public async Task<IActionResult> GetFailedJobs()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view failed jobs");
+
+        await using QueueContext queueContext = new();
+    
+        List<FailedJob> failedJobs = await queueContext.FailedJobs
+            .OrderByDescending(j => j.FailedAt)
+            .ToListAsync();
+
+        return Ok(new DataResponseDto<List<FailedJob>>
+        {
+            Data = failedJobs
         });
     }
 }

@@ -124,18 +124,16 @@ public static class Queries
             })
             .ToHashSet();
 
-    public static readonly Func<MediaContext, Guid, HashSet<Image>> GetScreensaverImages =
+    public static readonly Func<MediaContext, Guid, Task<HashSet<Image>>> GetScreensaverImages =
         (mediaContext, userId) =>
             mediaContext.Images.AsNoTracking()
                 .Where(image => image.Movie!.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)) ||
                                 image.Tv!.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
-                .Where(image => image.Height > 1080)
-                .Where(image => image.Width > image.Height)
                 .Where(image => image._colorPalette != "")
                 .Where(image =>
-                    (image.Type == "backdrop" && image.VoteAverage > 2 && image.Iso6391 == null) ||
-                    (image.Type == "logo" && image.Iso6391 == "en"))
-                .ToHashSet();
+                    (image.Type == "backdrop" && image.VoteAverage > 2 && image.Iso6391 == null && image.Height >= 1080) ||
+                    (image.Type == "logo" && image.Iso6391 == "en" && image.Width >= image.Height))
+                .ToHashSetAsync();
 
     public static HashSet<Genre> GetHome(MediaContext mediaContext, Guid userId, string? language, int take, int page = 0)
     {

@@ -25,7 +25,6 @@ public record ArtistsResponseDto
                     .Where(image => image.Type == "thumb")
                     .OrderByDescending(image => image.VoteCount)
                 )
-                .Where(artist => artist.ArtistTrack.Any(artistTrack => artistTrack.Track.Duration != null))
                 .GroupBy(artist => artist.Name).Select(x => x.First())
         );
 }

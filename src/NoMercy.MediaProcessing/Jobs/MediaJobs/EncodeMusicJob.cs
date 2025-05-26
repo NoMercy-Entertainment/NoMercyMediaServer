@@ -1,4 +1,3 @@
-using MusixmatchClientLib.API.Model.Requests;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Encoder;
@@ -6,7 +5,6 @@ using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Audio;
 using NoMercy.Encoder.Format.Container;
 using NoMercy.MediaProcessing.Artists;
-using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.MusicGenres;

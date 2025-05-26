@@ -32,6 +32,6 @@ public record ArtistsResponseItemDto
 
         Tracks = artist.ArtistTrack
             .Select(artistTrack => artistTrack.Track)
-            .Count(artistTrack => artistTrack.Duration != null);
+            .Count();
     }
 }

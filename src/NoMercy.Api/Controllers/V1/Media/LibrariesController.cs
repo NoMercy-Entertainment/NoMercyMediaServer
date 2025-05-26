@@ -106,39 +106,32 @@ public class LibrariesController(
         return Ok(new Render
         {
             Data = [
-
-                new ComponentDto<GenreRowItemDto>
-                {
-                    Component = "NMHomeCard",
-                    Update =
-                    {
-                        When = "pageLoad",
-                        Link = new("/home/card", UriKind.Relative),
-                    },
-                    Props =
-                    {
-                        Data = homeCardItem
-                    }
-                },
-
-                ..list.Select(genre => new ComponentDto<GenreRowItemDto>
-                {
-                    Component = "NMCarousel",
-                    Props =
-                    {
-                        Title = genre.Title,
-                        MoreLink = genre.MoreLink,
-                        Items = genre.Items.Select(item => new ComponentDto<GenreRowItemDto>
-                        {
-                            Component = "NMCard",
-                            Props =
-                            {
-                                Data = item,
-                                Watch = true,
-                            }
-                        })
-                    }
-                }),
+                new ComponentBuilder<GenreRowItemDto>()
+                    .WithComponent("NMHomeCard")
+                    .WithUpdate("pageLoad", "/home/card")
+                    .WithProps(props => props
+                        .WithNextId("continue")
+                        .WithPreviousId("")
+                        .WithData(homeCardItem))
+                    .Build(),
+                
+                ..list.Select(genre => new ComponentBuilder<GenreRowItemDto>()
+                    .WithComponent("NMCarousel")
+                    .WithProps(props => props
+                        .WithId(genre.Id)
+                        .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
+                        .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
+                        .WithTitle(genre.Title)
+                        .WithMoreLink(genre.MoreLink)
+                        .WithItems(
+                            genre.Items.Select(item =>
+                                new ComponentBuilder<GenreRowItemDto>()
+                                    .WithComponent("NMCard")
+                                    .WithProps(cardProps => cardProps
+                                        .WithData(item ?? new GenreRowItemDto())
+                                        .WithWatch())
+                                    .Build())))
+                    .Build()),
             ]
         });
     }
@@ -208,39 +201,32 @@ public class LibrariesController(
         return Ok(new Render
         {
             Data = [
+                new ComponentBuilder<GenreRowItemDto>()
+                    .WithComponent("NMHomeCard")
+                    .WithUpdate("pageLoad", "/home/card")
+                    .WithProps(props => props
+                        .WithNextId("continue")
+                        .WithPreviousId("")
+                        .WithData(homeCardItem))
+                    .Build(),
 
-                new ComponentDto<GenreRowItemDto>
-                {
-                    Component = "NMHomeCard",
-                    Update =
-                    {
-                        When = "pageLoad",
-                        Link = new("/home/card", UriKind.Relative),
-                    },
-                    Props =
-                    {
-                        Data = homeCardItem
-                    }
-                },
-
-                ..list.Select(genre => new ComponentDto<GenreRowItemDto>
-                {
-                    Component = "NMCarousel",
-                    Props =
-                    {
-                        Title = genre.Title,
-                        MoreLink = genre.MoreLink,
-                        Items = genre.Items.Select(item => new ComponentDto<GenreRowItemDto>
-                        {
-                            Component = "NMCard",
-                            Props =
-                            {
-                                Data = item ?? new GenreRowItemDto(),
-                                Watch = true,
-                            }
-                        })
-                    }
-                }),
+                ..list.Select(genre => new ComponentBuilder<GenreRowItemDto>()
+                    .WithComponent("NMCarousel")
+                    .WithProps(props => props
+                        .WithId(genre.Id)
+                        .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
+                        .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
+                        .WithTitle(genre.Title)
+                        .WithMoreLink(genre.MoreLink)
+                        .WithItems(
+                            genre.Items.Select(item =>
+                                new ComponentBuilder<GenreRowItemDto>()
+                                    .WithComponent("NMCard")
+                                    .WithProps(cardProps => cardProps
+                                        .WithData(item ?? new GenreRowItemDto())
+                                        .WithWatch())
+                                    .Build())))
+                    .Build()),
             ]
         });
     }
@@ -276,20 +262,26 @@ public class LibrariesController(
             "#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
             "U", "V", "W", "X", "Y", "Z"
         ];
-
-        return Ok(new LoloMoResponseDto<LibraryResponseItemDto>
+        
+        return Ok(new Render
         {
-            Data = letters.Select(genre => new LoloMoRowDto<LibraryResponseItemDto>
-            {
-                Title = genre,
-                Id = genre,
-                Items = movies.Select(movie => new LibraryResponseItemDto(movie))
-                    .Where(item =>
-                        genre == "#" ? numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre))
-                    .Concat(shows.Select(tv => new LibraryResponseItemDto(tv))
-                        .Where(item =>
-                            genre == "#" ? numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre)))
-            })
+            Data = letters.Select(genre => new ComponentBuilder<LibraryResponseItemDto>()
+                .WithComponent("NMCarousel")
+                .WithProps(props => props
+                    .WithId(genre)
+                    .WithTitle(genre)
+                    .WithItems(
+                        movies.Select(movie => new LibraryResponseItemDto(movie))
+                            .Where(item => genre == "#" ? numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre))
+                            .Concat(shows.Select(tv => new LibraryResponseItemDto(tv))
+                                .Where(item => genre == "#" ? numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre)))
+                            .Select(item => new ComponentBuilder<LibraryResponseItemDto>()
+                                .WithComponent("NMCard")
+                                .WithProps(cardProps => cardProps
+                                    .WithData(item)
+                                    .WithWatch())
+                                .Build())))
+                .Build())
         });
     }
 }

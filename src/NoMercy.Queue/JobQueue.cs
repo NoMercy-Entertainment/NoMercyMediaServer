@@ -207,6 +207,39 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
             }
         }
     }
+    
+    public void RetryFailedJobs(long? failedJobId = null)
+    {
+        lock (Context)
+        {
+            IQueryable<FailedJob> failedJobsQuery = Context.FailedJobs;
+        
+            if (failedJobId.HasValue)
+            {
+                failedJobsQuery = failedJobsQuery.Where(j => j.Id == failedJobId.Value);
+            }
+
+            List<FailedJob> failedJobs = failedJobsQuery.ToList();
+
+            foreach (FailedJob failedJob in failedJobs)
+            {
+                Context.QueueJobs.Add(new()
+                {
+                    Queue = failedJob.Queue,
+                    Payload = failedJob.Payload,
+                    AvailableAt = DateTime.UtcNow,
+                    Attempts = 0
+                });
+
+                Context.FailedJobs.Remove(failedJob);
+            }
+
+            if (Context.ChangeTracker.HasChanges())
+            {
+                Context.SaveChanges();
+            }
+        }
+    }
 
     private static readonly Func<QueueContext, string, Task<bool>> ExistsQuery =
         EF.CompileAsyncQuery((QueueContext queueContext, string payloadString) =>

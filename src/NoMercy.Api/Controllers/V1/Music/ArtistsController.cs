@@ -34,8 +34,9 @@ public class ArtistsController : BaseController
             artists.Add(new(artist));
 
         List<ArtistTrack> tracks = mediaContext.ArtistTrack
-            .Where(artistTrack => artists.Select(a => a.Id).Contains(artistTrack.ArtistId))
-            .Where(artistTrack => artistTrack.Track.Duration != null)
+            .Where(artistTrack => artists
+                .Select(a => a.Id)
+                .Contains(artistTrack.ArtistId))
             .ToList();
 
         foreach (ArtistsResponseItemDto artist in artists)
@@ -60,14 +61,14 @@ public class ArtistsController : BaseController
         await using MediaContext mediaContext = new();
         Artist? artist = await ArtistResponseDto.GetArtist(mediaContext, userId, id);
 
-        string language = Language();
+        string country = Country();
 
         if (artist is null)
             return NotFoundResponse("Artist not found");
 
         return Ok(new ArtistResponseDto
         {
-            Data = new(artist, userId, language)
+            Data = new(artist, userId, country)
         });
     }
 

@@ -16,7 +16,7 @@ public class DeviceManager
     }
 
     public Device? GetUserDevice(Guid userId) =>
-        _currentDevices.TryGetValue(userId, out var device) ? device : null;
+        _currentDevices.TryGetValue(userId, out Device? device) ? device : null;
 
     public void SetUserDevice(Guid userId, Device device) =>
         _currentDevices.AddOrUpdate(userId, device, (_, _) => device);
