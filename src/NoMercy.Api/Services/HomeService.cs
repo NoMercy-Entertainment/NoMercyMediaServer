@@ -21,62 +21,226 @@ public class HomeService
         _mediaContext = mediaContext;
     }
 
-    public async Task<Render> GetHomePageContent(Guid userId, string language, string country, PageRequestDto request)
+    public async Task<List<GenreRowDto<GenreRowItemDto>>> GetHomePageContent(Guid userId, string language, string country, PageRequestDto request)
     {
-        IEnumerable<UserData> continueWatching = Queries
-            .GetContinueWatching(_mediaContext, userId, language, country);
-    
+        // IEnumerable<UserData> continueWatching = Queries
+        //     .GetContinueWatching(_mediaContext, userId, language, country);
+        //
+        // List<GenreRowDto<GenreRowItemDto>> genres = [];
+        //
+        // List<int> movieIds = [];
+        // List<int> tvIds = [];
+        //
+        // HashSet<Genre> genreItems = Queries
+        //     .GetHome(_mediaContext, userId, language, 300);
+        //
+        // foreach (Genre genre in genreItems)
+        // {
+        //     IEnumerable<HomeSourceDto> movies = genre
+        //         .GenreMovies.Select(movie => new HomeSourceDto(movie.MovieId, "movie"));
+        //
+        //     IEnumerable<HomeSourceDto> tvs = genre
+        //         .GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, "tv"));
+        //
+        //     string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
+        //     GenreRowDto<GenreRowItemDto> genreRowDto = new()
+        //     {
+        //         Title = name,
+        //         MoreLink = new($"/genre/{genre.Id}", UriKind.Relative),
+        //         Id = genre.Id.ToString(),
+        //         Source = movies
+        //             .Concat(tvs)
+        //             .Randomize()
+        //             .Take(28)
+        //     };
+        //
+        //     tvIds.AddRange(genreRowDto.Source
+        //         .Where(source => source.MediaType == "tv")
+        //         .Select(source => source.Id));
+        //
+        //     movieIds.AddRange(genreRowDto.Source
+        //         .Where(source => source.MediaType == "movie")
+        //         .Select(source => source.Id));
+        //
+        //     genres.Add(genreRowDto);
+        // }
+        //
+        // List<Tv> tvData = [];
+        // await foreach (Tv tv in Queries.GetHomeTvs(_mediaContext, tvIds, language))
+        // {
+        //     tvData.Add(tv);
+        // }
+        //
+        // List<Movie> movieData = [];
+        // await foreach (Movie movie in Queries.GetHomeMovies(_mediaContext, movieIds, language))
+        // {
+        //     movieData.Add(movie);
+        // }
+        //
+        // foreach (GenreRowDto<GenreRowItemDto> genre in genres)
+        //     genre.Items = genre.Source
+        //         .Select(source =>
+        //         {
+        //             switch (source.MediaType)
+        //             {
+        //                 case "tv":
+        //                 {
+        //                     Tv? tv = tvData.FirstOrDefault(tv => tv.Id == source.Id);
+        //                     return tv?.Id == null
+        //                         ? null
+        //                         : new GenreRowItemDto(tv, language);
+        //                 }
+        //                 case "movie":
+        //                 {
+        //                     Movie? movie = movieData.FirstOrDefault(movie => movie.Id == source.Id);
+        //                     return movie?.Id == null
+        //                         ? null
+        //                         : new GenreRowItemDto(movie, language);
+        //                 }
+        //                 default:
+        //                 {
+        //                     return null;
+        //                 }
+        //             }
+        //         })
+        //         .Where(genreRow => genreRow != null);
+        //
+        // genres = genres.Where(genre => genre.Items.Any()).ToList();
+        //
+        // GenreRowItemDto? homeCardItem = genres.Where(g => g.Title != String.Empty)
+        //     .Randomize().FirstOrDefault()
+        //     ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != String.Empty)
+        //     .Randomize().FirstOrDefault()
+        //     ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != String.Empty)
+        //     .Randomize().FirstOrDefault()
+        //     ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != String.Empty)
+        //     .Randomize().FirstOrDefault()
+        //     ?.Items.Randomize().FirstOrDefault();
+        //
+        // IQueryable<Library> libraries = _libraryRepository.GetLibraries(userId);
+        // List<GenreRowDto<dynamic>> list = [];
+        //
+        // foreach (Library library in libraries)
+        // {
+        //     IEnumerable<Movie> movies = _libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
+        //     IEnumerable<Tv> shows = _libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
+        //
+        //     list.Add(new()
+        //     {
+        //         Title = library.Title,
+        //         MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+        //         Items = movies.Select(movie => new GenreRowItemDto(movie, country))
+        //             .Concat(shows.Select(tv => new GenreRowItemDto(tv, country)))
+        //     });
+        // }
+        //
+        // return new()
+        // {
+        //     Data =
+        //     [
+        //         new ComponentBuilder<GenreRowItemDto>()
+        //             .WithComponent("NMHomeCard")
+        //             .WithUpdate("pageLoad", "/home/card")
+        //             .WithProps(props => props
+        //                 .WithNextId("continue")
+        //                 .WithPreviousId("")
+        //                 .WithData(homeCardItem))
+        //             .Build(),
+        //
+        //         new ComponentBuilder<ContinueWatchingItemDto>()
+        //             .WithComponent("NMCarousel")
+        //             .WithUpdate("pageLoad", "/home/continue")
+        //             .WithProps(props => props
+        //                 .WithNextId(genres.ElementAtOrDefault(0)?.Id ?? "continue")
+        //                 .WithPreviousId("continue")
+        //                 .WithTitle("Continue watching".Localize())
+        //                 .WithMoreLink(null)
+        //                 .WithItems(GetContinueWatchingItems(continueWatching, country)))
+        //             .Build(),
+        //
+        //         ..list.Select(genre => new ComponentBuilder<GenreRowItemDto>()
+        //             .WithComponent("NMCarousel")
+        //             .WithProps(props => props
+        //                 .WithId(genre.Id)
+        //                 .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
+        //                 .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
+        //                 .WithTitle("Latest in " + genre.Title)
+        //                 .WithMoreLink(genre.MoreLink)
+        //                 .WithItems(
+        //                     genre.Items.Select(item =>
+        //                         new ComponentBuilder<GenreRowItemDto>()
+        //                             .WithComponent("NMCard")
+        //                             .WithProps(cardProps => cardProps
+        //                                 .WithData(item ?? new GenreRowItemDto())
+        //                                 .WithWatch())
+        //                             .Build())))
+        //             .Build()),
+        //         
+        //         ..genres.Select(genre => new ComponentBuilder<GenreRowItemDto>()
+        //             .WithComponent("NMCarousel")
+        //             .WithProps(props => props
+        //                 .WithId(genre.Id)
+        //                 .WithNextId(genres.ElementAtOrDefault(genres.IndexOf(genre) + 1)?.Id ?? "continue")
+        //                 .WithPreviousId(genres.ElementAtOrDefault(genres.IndexOf(genre) - 1)?.Id ?? "continue")
+        //                 .WithTitle(genre.Title)
+        //                 .WithMoreLink(genre.MoreLink)
+        //                 .WithItems(
+        //                     genre.Items.Select(item =>
+        //                         new ComponentBuilder<GenreRowItemDto>()
+        //                             .WithComponent("NMCard")
+        //                             .WithProps(cardProps => cardProps
+        //                                 .WithData(item ?? new GenreRowItemDto())
+        //                                 .WithWatch())
+        //                             .Build())))
+        //             .Build()),
+        //     ]
+        // };
+        
         List<GenreRowDto<GenreRowItemDto>> genres = [];
-    
         List<int> movieIds = [];
         List<int> tvIds = [];
-    
-        HashSet<Genre> genreItems = Queries
-            .GetHome(_mediaContext, userId, language, 300);
-    
+        
+        List<Genre> genreItems = await HomeResponseDto
+            .GetHome(_mediaContext, userId, language, request.Take, request.Page);
+
         foreach (Genre genre in genreItems)
         {
-            IEnumerable<HomeSourceDto> movies = genre
-                .GenreMovies.Select(movie => new HomeSourceDto(movie.MovieId, "movie"));
-    
-            IEnumerable<HomeSourceDto> tvs = genre
-                .GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, "tv"));
-    
             string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
             GenreRowDto<GenreRowItemDto> genreRowDto = new()
             {
                 Title = name,
                 MoreLink = new($"/genre/{genre.Id}", UriKind.Relative),
                 Id = genre.Id.ToString(),
-                Source = movies
-                    .Concat(tvs)
+
+                Source = genre.GenreMovies.Select(movie => new HomeSourceDto(movie.MovieId, "movie"))
+                    .Concat(genre.GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, "tv")))
                     .Randomize()
-                    .Take(28)
+                    .Take(36)
             };
-    
+
             tvIds.AddRange(genreRowDto.Source
                 .Where(source => source.MediaType == "tv")
                 .Select(source => source.Id));
-    
+
             movieIds.AddRange(genreRowDto.Source
                 .Where(source => source.MediaType == "movie")
                 .Select(source => source.Id));
-    
+
             genres.Add(genreRowDto);
         }
-    
+
         List<Tv> tvData = [];
         await foreach (Tv tv in Queries.GetHomeTvs(_mediaContext, tvIds, language))
         {
             tvData.Add(tv);
         }
-    
+
         List<Movie> movieData = [];
         await foreach (Movie movie in Queries.GetHomeMovies(_mediaContext, movieIds, language))
         {
             movieData.Add(movie);
         }
-    
+
         foreach (GenreRowDto<GenreRowItemDto> genre in genres)
             genre.Items = genre.Source
                 .Select(source =>
@@ -88,14 +252,16 @@ public class HomeService
                             Tv? tv = tvData.FirstOrDefault(tv => tv.Id == source.Id);
                             return tv?.Id == null
                                 ? null
-                                : new GenreRowItemDto(tv, language);
+                                : new GenreRowItemDto(tv,
+                                    language);
                         }
                         case "movie":
                         {
                             Movie? movie = movieData.FirstOrDefault(movie => movie.Id == source.Id);
                             return movie?.Id == null
                                 ? null
-                                : new GenreRowItemDto(movie, language);
+                                : new GenreRowItemDto(movie,
+                                    language);
                         }
                         default:
                         {
@@ -104,97 +270,8 @@ public class HomeService
                     }
                 })
                 .Where(genreRow => genreRow != null);
-    
-        genres = genres.Where(genre => genre.Items.Any()).ToList();
-    
-        GenreRowItemDto? homeCardItem = genres.Where(g => g.Title != String.Empty)
-            .Randomize().FirstOrDefault()
-            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != String.Empty)
-            .Randomize().FirstOrDefault()
-            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != String.Empty)
-            .Randomize().FirstOrDefault()
-            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != String.Empty)
-            .Randomize().FirstOrDefault()
-            ?.Items.Randomize().FirstOrDefault();
         
-        IQueryable<Library> libraries = _libraryRepository.GetLibraries(userId);
-        List<GenreRowDto<dynamic>> list = [];
-    
-        foreach (Library library in libraries)
-        {
-            IEnumerable<Movie> movies = _libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
-            IEnumerable<Tv> shows = _libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
-    
-            list.Add(new()
-            {
-                Title = library.Title,
-                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
-                Items = movies.Select(movie => new GenreRowItemDto(movie, country))
-                    .Concat(shows.Select(tv => new GenreRowItemDto(tv, country)))
-            });
-        }
-    
-        return new()
-        {
-            Data =
-            [
-                new ComponentBuilder<GenreRowItemDto>()
-                    .WithComponent("NMHomeCard")
-                    .WithUpdate("pageLoad", "/home/card")
-                    .WithProps(props => props
-                        .WithNextId("continue")
-                        .WithPreviousId("")
-                        .WithData(homeCardItem))
-                    .Build(),
-    
-                new ComponentBuilder<ContinueWatchingItemDto>()
-                    .WithComponent("NMCarousel")
-                    .WithUpdate("pageLoad", "/home/continue")
-                    .WithProps(props => props
-                        .WithNextId(genres.ElementAtOrDefault(0)?.Id ?? "continue")
-                        .WithPreviousId("continue")
-                        .WithTitle("Continue watching".Localize())
-                        .WithMoreLink(null)
-                        .WithItems(GetContinueWatchingItems(continueWatching, country)))
-                    .Build(),
-    
-                ..list.Select(genre => new ComponentBuilder<GenreRowItemDto>()
-                    .WithComponent("NMCarousel")
-                    .WithProps(props => props
-                        .WithId(genre.Id)
-                        .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
-                        .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
-                        .WithTitle("Latest in " + genre.Title)
-                        .WithMoreLink(genre.MoreLink)
-                        .WithItems(
-                            genre.Items.Select(item =>
-                                new ComponentBuilder<GenreRowItemDto>()
-                                    .WithComponent("NMCard")
-                                    .WithProps(cardProps => cardProps
-                                        .WithData(item ?? new GenreRowItemDto())
-                                        .WithWatch())
-                                    .Build())))
-                    .Build()),
-                
-                ..genres.Select(genre => new ComponentBuilder<GenreRowItemDto>()
-                    .WithComponent("NMCarousel")
-                    .WithProps(props => props
-                        .WithId(genre.Id)
-                        .WithNextId(genres.ElementAtOrDefault(genres.IndexOf(genre) + 1)?.Id ?? "continue")
-                        .WithPreviousId(genres.ElementAtOrDefault(genres.IndexOf(genre) - 1)?.Id ?? "continue")
-                        .WithTitle(genre.Title)
-                        .WithMoreLink(genre.MoreLink)
-                        .WithItems(
-                            genre.Items.Select(item =>
-                                new ComponentBuilder<GenreRowItemDto>()
-                                    .WithComponent("NMCard")
-                                    .WithProps(cardProps => cardProps
-                                        .WithData(item ?? new GenreRowItemDto())
-                                        .WithWatch())
-                                    .Build())))
-                    .Build()),
-            ]
-        };
+        return genres.Where(genre => genre.Items.Any()).ToList();
     }
 
     public async Task<Render> GetContinueWatchingContent(Guid userId, string language, string country)

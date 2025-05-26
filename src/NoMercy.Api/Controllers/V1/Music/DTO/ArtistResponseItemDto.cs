@@ -10,6 +10,7 @@ public record ArtistResponseItemDto
 {
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("country")] public string? Country { get; set; }
+    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("cover")] public string? Cover { get; set; }
     [JsonProperty("disambiguation")] public string? Disambiguation { get; set; }
     [JsonProperty("description")] public string? Description { get; set; }
@@ -36,6 +37,8 @@ public record ArtistResponseItemDto
             .FirstOrDefault(translation => translation.Iso31661 == country)?.Description ?? artist.Description;
         
         ColorPalette = artist.ColorPalette;
+        Backdrop = artist.Images.FirstOrDefault(image => image.Type == "background")?.FilePath;
+        Backdrop = Backdrop is not null ? new Uri($"/images/music{Backdrop}", UriKind.Relative).ToString() : null;
         Cover = artist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Disambiguation = artist.Disambiguation;

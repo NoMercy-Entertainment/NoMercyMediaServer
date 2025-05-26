@@ -7,6 +7,7 @@ public record PlaylistTrackDto
 {
     [JsonProperty("id")] public Guid Id { get; set; }
     [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("cover")] public string? Cover { get; set; }
     [JsonProperty("path")] public string Path { get; set; }
     [JsonProperty("link")] public Uri Link { get; set; }
@@ -29,6 +30,8 @@ public record PlaylistTrackDto
     {
         Id = artistTrack.Track.Id;
         Name = artistTrack.Track.Name;
+        Backdrop = artistTrack.Artist.Images.FirstOrDefault(image => image.Type == "background")?.FilePath;
+        Backdrop = Backdrop is not null ? new Uri($"/images/music{Backdrop}", UriKind.Relative).ToString() : null;
         Cover = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? artistTrack.Track.Cover;
         Cover = Cover is not null 
             ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() 
@@ -62,6 +65,8 @@ public record PlaylistTrackDto
     {
         Id = trackTrack.Track.Id;
         Name = trackTrack.Track.Name;
+        Backdrop = trackTrack.Track.Images.FirstOrDefault(image => image.Type == "background")?.FilePath;
+        Backdrop = Backdrop is not null ? new Uri($"/images/music{Backdrop}", UriKind.Relative).ToString() : null;
         Cover = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? trackTrack.Track.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Path = new Uri($"/{trackTrack.Track.FolderId}{trackTrack.Track.Folder}{trackTrack.Track.Filename}", UriKind.Relative).ToString();
@@ -91,6 +96,8 @@ public record PlaylistTrackDto
     {
         Id = artistTrack.Track.Id;
         Name = artistTrack.Track.Name;
+        Backdrop = artistTrack.Album.Images.FirstOrDefault(image => image.Type == "background")?.FilePath;
+        Backdrop = Backdrop is not null ? new Uri($"/images/music{Backdrop}", UriKind.Relative).ToString() : null;
         Cover = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? artistTrack.Track.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}", UriKind.Relative).ToString();

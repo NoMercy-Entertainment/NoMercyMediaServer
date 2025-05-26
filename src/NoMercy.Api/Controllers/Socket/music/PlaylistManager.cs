@@ -34,6 +34,7 @@ public class PlaylistManager
             .ThenInclude(x => x.Track)
             .ThenInclude(x => x.PlaylistTrack)
             .ThenInclude(x => x.Track)
+            .ThenInclude(x => x.Images)
             .FirstOrDefaultAsync(x => x.PlaylistId == listId && x.TrackId == trackId);
 
         if (playlistTrack is null)
@@ -59,6 +60,7 @@ public class PlaylistManager
             .ThenInclude(x => x.Track)
             .ThenInclude(x => x.ArtistTrack)
             .ThenInclude(x => x.Artist)
+            .ThenInclude(x => x.Images)
             .FirstOrDefaultAsync(x => x.AlbumId == listId && x.TrackId == trackId);
 
         if (albumTrack is null)
@@ -87,6 +89,10 @@ public class PlaylistManager
             .ThenInclude(track => track.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Album)
             .ThenInclude(artist => artist.Translations)
+            .Include(x => x.Track)
+            .ThenInclude(x => x.ArtistTrack)
+            .ThenInclude(x => x.Artist)
+            .ThenInclude(x => x.Images)
             .FirstOrDefaultAsync(x => x.ArtistId == listId && x.TrackId == trackId);
 
         if (artistTrack is null)
