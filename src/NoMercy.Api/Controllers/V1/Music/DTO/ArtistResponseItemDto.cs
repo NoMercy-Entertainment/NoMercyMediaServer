@@ -36,11 +36,15 @@ public record ArtistResponseItemDto
         string? description = artist.Translations
             .FirstOrDefault(translation => translation.Iso31661 == country)?.Description ?? artist.Description;
         
-        ColorPalette = artist.ColorPalette;
-        Backdrop = artist.Images.FirstOrDefault(image => image.Type == "background")?.FilePath;
-        Backdrop = Backdrop is not null ? new Uri($"/images/music{Backdrop}", UriKind.Relative).ToString() : null;
+        Image? img = artist.Images.FirstOrDefault(image => image.Type == "background");
+        Backdrop = img?.FilePath is not null ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString() : null;
         Cover = artist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        ColorPalette = artist.ColorPalette;
+        if(ColorPalette is not null)
+        {
+            ColorPalette.Backdrop = img?.ColorPalette?.Image;
+        }
         Disambiguation = artist.Disambiguation;
         Description = description;
         Favorite = artist.ArtistUser.Any();

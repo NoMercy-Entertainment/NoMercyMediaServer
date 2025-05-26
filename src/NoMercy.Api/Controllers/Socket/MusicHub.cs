@@ -54,11 +54,11 @@ public class MusicHub : ConnectionHub
         }
         catch (ArgumentException ex)
         {
-            Logger.Error($"Invalid playlist type: {ex.Message}");
+            Logger.App($"Invalid playlist type: {ex.Message}");
         }
         catch (Exception ex)
         {
-            Logger.Error($"Error in StartPlaybackCommand: {ex.Message}");
+            Logger.App($"Error in StartPlaybackCommand: {ex.Message}");
         }
     }
 

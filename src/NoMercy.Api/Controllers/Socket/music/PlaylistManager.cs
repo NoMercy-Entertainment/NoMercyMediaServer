@@ -54,9 +54,11 @@ public class PlaylistManager
     {
         AlbumTrack? albumTrack = await _mediaContext.AlbumTrack
             .Include(x => x.Track)
-            .ThenInclude(x => x.AlbumTrack)
+            .ThenInclude(x => x.AlbumTrack
+                .Where(x => x.AlbumId == listId))
             .ThenInclude(x => x.Album)
-            .ThenInclude(x => x.AlbumTrack)
+            .ThenInclude(x => x.AlbumTrack
+                .Where(x => x.AlbumId == listId))
             .ThenInclude(x => x.Track)
             .ThenInclude(x => x.ArtistTrack)
             .ThenInclude(x => x.Artist)
@@ -82,9 +84,11 @@ public class PlaylistManager
     {
         ArtistTrack? artistTrack = await _mediaContext.ArtistTrack
             .Include(x => x.Track)
-            .ThenInclude(x => x.ArtistTrack)
+            .ThenInclude(x => x.ArtistTrack
+                .Where(x => x.ArtistId == listId))
             .ThenInclude(x => x.Artist)
-            .ThenInclude(x => x.ArtistTrack)
+            .ThenInclude(x => x.ArtistTrack
+                .Where(x => x.ArtistId == listId))
             .ThenInclude(x => x.Track)
             .ThenInclude(track => track.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Album)

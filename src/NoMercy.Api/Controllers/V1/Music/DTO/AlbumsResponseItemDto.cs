@@ -24,15 +24,19 @@ public record AlbumsResponseItemDto
         string? description = album.Translations
             .FirstOrDefault(translation => translation.Iso31661 == country)?
             .Description;
+        Image? img = album.Images.FirstOrDefault(image => image.Type == "background");
 
         Description = !string.IsNullOrEmpty(description)
             ? description
             : album.Description;
 
-        ColorPalette = album.ColorPalette;
-        Backdrop = album.Images.FirstOrDefault(image => image.Type == "background")?.FilePath;
-        Backdrop = Backdrop is not null ? new Uri($"/images/music{Backdrop}", UriKind.Relative).ToString() : null;
+        Backdrop = img?.FilePath is not null ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString() : null;
         Cover = album.Cover is not null ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() : null;
+        ColorPalette = album.ColorPalette;
+        if(ColorPalette is not null)
+        {
+            ColorPalette.Backdrop = img?.ColorPalette?.Image;
+        }
         Disambiguation = album.Disambiguation;
         Folder = album.Folder;
         Id = album.Id;

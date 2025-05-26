@@ -23,7 +23,7 @@ public class ImageConvertArguments
             catch (Exception e)
             {
                 result = Images.Parse("png");
-                Logger.Error(e.Message, LogEventLevel.Error);
+                Logger.App(e.Message, LogEventLevel.Error);
             }
 
             return result;

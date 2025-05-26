@@ -31,7 +31,7 @@ public class Wip
         }
         catch (Exception e)
         {
-            Logger.Error(e.Message, LogEventLevel.Error);
+            Logger.App(e.Message, LogEventLevel.Error);
         }
 
         XDocument doc = XDocument.Parse(xmlContent);
