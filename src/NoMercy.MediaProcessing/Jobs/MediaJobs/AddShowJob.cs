@@ -24,6 +24,8 @@ public class AddShowJob : AbstractMediaJob
 {
     public override string QueueName => "queue";
     public override int Priority => 5;
+    
+    public bool HighPriority { get; set; }
 
     public override async Task Handle()
     {
@@ -48,11 +50,11 @@ public class AddShowJob : AbstractMediaJob
             .ThenInclude(f => f.Folder)
             .FirstAsync();
 
-        TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary);
+        TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary, priority: HighPriority);
         if (show == null) return;
 
-        IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(show);
-        foreach (TmdbSeasonAppends season in seasons) await episodeManager.Add(show, season);
+        IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(show, priority: HighPriority);
+        foreach (TmdbSeasonAppends season in seasons) await episodeManager.Add(show, season, priority: HighPriority);
 
         await fileManager.FindFiles(Id, tvLibrary);
 

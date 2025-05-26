@@ -17,7 +17,7 @@ public class SeasonManager(
     JobDispatcher jobDispatcher
 ) : BaseManager, ISeasonManager
 {
-    public async Task<IEnumerable<TmdbSeasonAppends>> StoreSeasonsAsync(TmdbTvShowAppends show)
+    public async Task<IEnumerable<TmdbSeasonAppends>> StoreSeasonsAsync(TmdbTvShowAppends show, bool? priority = false)
     {
         List<TmdbSeasonAppends> seasonAppends = [];
 
@@ -32,7 +32,7 @@ public class SeasonManager(
                     "external_ids",
                     "images",
                     "translations"
-                ]);
+                ], priority: priority);
                 if (seasonTask is null) return;
 
                 seasonAppends.Add(seasonTask);

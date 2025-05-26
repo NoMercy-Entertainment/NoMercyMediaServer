@@ -50,6 +50,22 @@ public class EncodeVideoJob : AbstractEncoderJob
             {
                 BaseContainer container = BaseContainer.Create(profile.Container);
 
+                Networking.Networking.SendToAll("encoder-progress", "dashboardHub",  new Progress
+                {
+                    Message = "Preparing to encode",
+                    Status = "running",
+                    Id = Id,
+                    Title = fileMetadata.Title,
+                    BaseFolder = fileMetadata.Path,
+                    ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
+                    AudioStreams = container.AudioStreams.Select(x => $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}").Distinct().ToList(),
+                    VideoStreams = container.VideoStreams.Select(x => $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}").Distinct().ToList(),
+                    SubtitleStreams = container.SubtitleStreams.Select(x => $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}").Distinct().ToList(),
+                    HasGpu = container.VideoStreams.Any(x =>
+                        x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value || x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value),
+                    IsHdr = container.VideoStreams.Any(x => x.IsHdr)
+                });
+
                 BuildVideoStreams(profile, ref container);
                 BuildAudioStreams(profile, ref container);
                 BuildSubtitleStreams(profile, ref container);

@@ -17,12 +17,12 @@ public class ShowManager(
     JobDispatcher jobDispatcher
 ) : BaseManager, IShowManager
 {
-    public async Task<TmdbTvShowAppends?> AddShowAsync(int id, Library library)
+    public async Task<TmdbTvShowAppends?> AddShowAsync(int id, Library library, bool? priority = false)
     {
         Logger.MovieDb($"Show {id}: Adding to Library {library.Title}");
 
         using TmdbTvClient showClient = new(id);
-        TmdbTvShowAppends? showAppends = await showClient.WithAllAppends();
+        TmdbTvShowAppends? showAppends = await showClient.WithAllAppends(priority: priority);
 
         if (showAppends == null) return null;
 

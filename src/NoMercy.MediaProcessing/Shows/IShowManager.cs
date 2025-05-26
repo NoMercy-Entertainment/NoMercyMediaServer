@@ -5,7 +5,7 @@ namespace NoMercy.MediaProcessing.Shows;
 
 public interface IShowManager
 {
-    Task<TmdbTvShowAppends?> AddShowAsync(int id, Library library);
+    Task<TmdbTvShowAppends?> AddShowAsync(int id, Library library, bool? priority = false);
     Task UpdateShowAsync(int id, Library library);
     Task RemoveShowAsync(int id);
 }

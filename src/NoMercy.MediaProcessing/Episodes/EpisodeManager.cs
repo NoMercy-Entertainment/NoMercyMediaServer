@@ -19,9 +19,9 @@ public class EpisodeManager(
     JobDispatcher jobDispatcher
 ) : BaseManager, IEpisodeManager
 {
-    public async Task Add(TmdbTvShow show, TmdbSeasonAppends season)
+    public async Task Add(TmdbTvShow show, TmdbSeasonAppends season, bool? priority = false)
     {
-        IEnumerable<TmdbEpisodeAppends> episodeAppends = await Collect(show, season);
+        IEnumerable<TmdbEpisodeAppends> episodeAppends = await Collect(show, season, priority);
         
         IEnumerable<Episode> episodes = episodeAppends
             .Select(episode => new Episode
@@ -51,7 +51,7 @@ public class EpisodeManager(
     }
 
     private static async Task<List<TmdbEpisodeAppends>> Collect(
-        TmdbTvShow show, TmdbSeasonAppends season)
+        TmdbTvShow show, TmdbSeasonAppends season, bool? priority = false)
     {
         List<TmdbEpisodeAppends> episodeAppends = [];
 
@@ -60,7 +60,7 @@ public class EpisodeManager(
             try
             {
                 using TmdbEpisodeClient tmdbEpisodeClient = new(show.Id, episode.SeasonNumber, episode.EpisodeNumber);
-                TmdbEpisodeAppends? seasonTask = await tmdbEpisodeClient.WithAllAppends();
+                TmdbEpisodeAppends? seasonTask = await tmdbEpisodeClient.WithAllAppends(priority);
                 if (seasonTask is null) return;
 
                 episodeAppends.Add(seasonTask);
