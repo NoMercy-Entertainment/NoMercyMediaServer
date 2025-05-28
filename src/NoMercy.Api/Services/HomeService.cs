@@ -378,13 +378,17 @@ public class HomeService
             IEnumerable<Movie> movies = _libraryRepository.GetLibraryMovies(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc");
             IEnumerable<Tv> shows = _libraryRepository.GetLibraryShows(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc");
 
-            list.Add(new()
+            GenreRowDto<dynamic> item = new()
             {
+                Id = library.Id.ToString(),
                 Title = library.Title,
                 MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
                 Items = movies.Select(movie => new GenreRowItemDto(movie, country))
                     .Concat(shows.Select(tv => new GenreRowItemDto(tv, country)))
-            });
+            };
+            
+            if (item.Items.Any())
+                list.Add(item);
         }
         
         return new()
@@ -404,19 +408,19 @@ public class HomeService
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/home/continue")
                     .WithProps(props => props
-                        .WithNextId(genres.ElementAtOrDefault(0)?.Id ?? "continue")
-                        .WithPreviousId("continue")
+                        .WithId("continue")
+                        .WithNextId($"library_{list.ElementAtOrDefault(0)?.Id}")
                         .WithTitle("Continue watching".Localize())
                         .WithMoreLink(null)
                         .WithItems(GetContinueWatchingItems(continueWatching, country)))
                     .Build(),
                 
-                ..list.Select(genre => new ComponentBuilder<GenreRowItemDto>()
+                ..list.Select((genre, index) => new ComponentBuilder<GenreRowItemDto>()
                     .WithComponent("NMCarousel")
                     .WithProps(props => props
-                        .WithId(genre.Id)
-                        .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
-                        .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
+                        .WithId($"library_{genre.Id}")
+                        .WithPreviousId(index == 0 ? "continue" : $"library_{list.ElementAtOrDefault(index - 1)?.Id}")
+                        .WithNextId(index == list.Count - 1 ? genres.FirstOrDefault()?.Id : $"library_{list.ElementAtOrDefault(index + 1)?.Id}")
                         .WithTitle("Latest in " + genre.Title)
                         .WithMoreLink(genre.MoreLink)
                         .WithItems(
@@ -429,12 +433,12 @@ public class HomeService
                                     .Build())))
                     .Build()),
                 
-                ..genres.Select(genre => new ComponentBuilder<GenreRowItemDto>()
+                ..genres.Select((genre, index) => new ComponentBuilder<GenreRowItemDto>()
                     .WithComponent("NMCarousel")
                     .WithProps(props => props
                         .WithId(genre.Id)
-                        .WithNextId(genres.ElementAtOrDefault(genres.IndexOf(genre) + 1)?.Id ?? "continue")
-                        .WithPreviousId(genres.ElementAtOrDefault(genres.IndexOf(genre) - 1)?.Id ?? "continue")
+                        .WithPreviousId(index == 0 ? $"library_{list.LastOrDefault()?.Id}" : genres.ElementAtOrDefault(index - 1)?.Id)
+                        .WithNextId(index == genres.Count - 1 ? "continue" : genres.ElementAtOrDefault(index + 1)?.Id)
                         .WithTitle(genre.Title)
                         .WithMoreLink(genre.MoreLink)
                         .WithItems(
@@ -627,12 +631,14 @@ public class HomeService
                         .WithItems(GetContinueWatchingItems(continueWatching, country)))
                     .Build(),
 
-                ..list.Select(genre => new ComponentBuilder<GenreRowItemDto>()
+                ..list.Select((genre, index) => new ComponentBuilder<GenreRowItemDto>()
                     .WithComponent("NMCarousel")
                     .WithProps(props => props
                         .WithId(genre.Id)
-                        .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
-                        .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
+                        .WithPreviousId(index == 0 ? "continue" : $"library_{list.ElementAtOrDefault(index - 1)?.Id}")
+                        .WithNextId(index == list.Count - 1 ? 
+                            (genres.FirstOrDefault()?.Id ?? "continue") : 
+                            $"library_{list.ElementAtOrDefault(index + 1)?.Id}")
                         .WithTitle("Latest in " + genre.Title)
                         .WithMoreLink(genre.MoreLink)
                         .WithItems(
@@ -645,12 +651,16 @@ public class HomeService
                                     .Build())))
                     .Build()),
                 
-                ..genres.Select(genre => new ComponentBuilder<GenreRowItemDto>()
+                ..genres.Select((genre, index) => new ComponentBuilder<GenreRowItemDto>()
                     .WithComponent("NMCarousel")
                     .WithProps(props => props
                         .WithId(genre.Id)
-                        .WithNextId(genres.ElementAtOrDefault(genres.IndexOf(genre) + 1)?.Id ?? "continue")
-                        .WithPreviousId(genres.ElementAtOrDefault(genres.IndexOf(genre) - 1)?.Id ?? "continue")
+                        .WithPreviousId(index == 0 ? 
+                            $"library_{list.LastOrDefault()?.Id ?? "continue"}" : 
+                            genres.ElementAtOrDefault(index - 1)?.Id ?? "continue")
+                        .WithNextId(index == genres.Count - 1 ? 
+                            "continue" : 
+                            genres.ElementAtOrDefault(index + 1)?.Id ?? "continue")
                         .WithTitle(genre.Title)
                         .WithMoreLink(genre.MoreLink)
                         .WithItems(

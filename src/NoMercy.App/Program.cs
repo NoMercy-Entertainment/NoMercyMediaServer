@@ -43,8 +43,8 @@ class Program
             {
                 Centered = true,
                 Title = windowTitle,
-                MinHeight = WindowHeight,
-                MinWidth = WindowWidth,
+                MinHeight = 540 + 39,
+                MinWidth = 960 + 16,
                 Resizable = true,
                 IconFile = iconPath,
                 UseOsDefaultSize = false,
@@ -77,7 +77,7 @@ class Program
                         return;
                 }
             })
-            .Load(baseUrl);
+            .Load(appUrl);
         
         Window.WindowCreated += (_, _) =>
         {

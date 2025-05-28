@@ -66,7 +66,7 @@ public class MusicHub : ConnectionHub
     {
         PlayerState? playerState = _playerStateManager.GetState(user.Id);
         
-        if (playerState is null)
+        if (playerState is null || playerState.CurrentItem is null || playerState.Playlist.Count == 0)
         {
             await HandleNewPlayerState(user, type, listId, item, playlist);
         }
@@ -287,8 +287,6 @@ public class MusicHub : ConnectionHub
     
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await base.OnDisconnectedAsync(exception);
-        
         User? user = Context.User.User();
         if (user == null) return;
 
@@ -296,16 +294,21 @@ public class MusicHub : ConnectionHub
         
         if (Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
         {
-            if (CurrentDevice.TryGetValue(user.Id, out Device? device) && device.DeviceId == client.DeviceId)
+            if (CurrentDevice.TryGetValue(user.Id, out Device? device))
             {
-                _playbackService.RemoveTimer(user.Id);
+                if(device.DeviceId == client.DeviceId)
+                {
+                    _playbackService.RemoveTimer(user.Id);
 
-                _deviceManager.RemoveUserDevice(user.Id);
+                    _deviceManager.RemoveUserDevice(user.Id);
 
-                playerState.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                playerState.PlayState = false;
+                    playerState.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    playerState.PlayState = false;
+                }
             }
         }
+        
+        await base.OnDisconnectedAsync(exception);
         
         List<Device> connectedDevices = Devices();
         

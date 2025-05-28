@@ -133,7 +133,8 @@ public class HomeController : BaseController
     }
     
     [HttpGet]
-    [Route("status")]
+    [AllowAnonymous]
+    [Route("/status")]
     public IActionResult Status()
     {
         return Ok(new
@@ -144,5 +145,5 @@ public class HomeController : BaseController
             Timestamp = DateTime.UtcNow
         });
     }
-    
+
 }

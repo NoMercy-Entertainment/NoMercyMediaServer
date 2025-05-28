@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Information;
@@ -29,37 +30,58 @@ public static class Binaries
 
     public static Task DownloadAll()
     {
-        Task.Run(async () =>
+        return Task.Run(async () =>
         {
             Logger.Setup("Downloading Binaries");
-            
+
             foreach (Download program in Downloads)
             {
                 if (program.Url == null) continue;
-                
+
                 string destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name + Info.ExecSuffix);
-                DateTime creationTime = Directory.GetCreationTimeUtc(destinationDirectoryName);
+                bool fileExists = File.Exists(destinationDirectoryName);
+                if (!fileExists)
+                {
+                    destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name);
+                    fileExists = Directory.Exists(destinationDirectoryName);
+                }
 
-                int days = (program.LastUpdated - creationTime).Days;
+                // Parse the LastUpdated date using the correct parameter types
+                if (!DateTimeOffset.TryParse(program.LastUpdated, out DateTimeOffset lastUpdatedOffset))
+                {
+                    Logger.Setup($"Invalid last_updated date format for {program.Name}", LogEventLevel.Warning);
+                    continue;
+                }
 
-                if (days > 0) continue;
+                // If file exists, compare dates to check if update is needed
+                if (fileExists)
+                {
+                    DateTime fileDate = File.GetCreationTimeUtc(destinationDirectoryName);
+                    if (fileDate >= lastUpdatedOffset.UtcDateTime)
+                    {
+                        continue; // Skip if file is newer or same age
+                    }
+                }
 
                 try
                 {
                     await Download(program);
                     await Extract(program);
                     await Cleanup(program);
+
+                    // Set the creation time to match the last_updated time
+                    if (File.Exists(destinationDirectoryName))
+                    {
+                        File.SetCreationTimeUtc(destinationDirectoryName, lastUpdatedOffset.UtcDateTime);
+                    }
                 }
                 catch (Exception e)
                 {
                     Logger.Setup(e);
                     throw;
                 }
-
             }
-        }).Wait();
-
-        return Task.CompletedTask;
+        });
     }
 
     private static async Task Download(Download program)
