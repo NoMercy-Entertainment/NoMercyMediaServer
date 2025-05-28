@@ -132,4 +132,17 @@ public class HomeController : BaseController
         return Ok(result);
     }
     
+    [HttpGet]
+    [Route("status")]
+    public IActionResult Status()
+    {
+        return Ok(new
+        {
+            Status = "ok",
+            Version = "1.0",
+            Message = "NoMercy MediaServer API is running",
+            Timestamp = DateTime.UtcNow
+        });
+    }
+    
 }
