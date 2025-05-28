@@ -284,6 +284,7 @@ public class TasksController : BaseController
     }
     
     [HttpPost]
+    [Route("failed/retry")]
     [Route("failed/retry/{id:long?}")]
     public async Task<IActionResult> RetryFailedJobs(long? id = null)
     {

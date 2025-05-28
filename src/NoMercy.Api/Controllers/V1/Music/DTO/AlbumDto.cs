@@ -7,6 +7,7 @@ public record AlbumDto
 {
     [JsonProperty("id")] public Guid Id { get; set; }
     [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("cover")] public string? Cover { get; set; }
     [JsonProperty("disambiguation")] public string? Disambiguation { get; set; }
     [JsonProperty("link")] public Uri Link { get; set; }
@@ -23,9 +24,12 @@ public record AlbumDto
             .FirstOrDefault(translation => translation.Iso31661 == country)?
             .Description;
 
+        Image? img = albumArtist.Artist.Images.FirstOrDefault(image => image.Type == "background");
+        
         Id = albumArtist.Album.Id;
         Name = albumArtist.Album.Name;
         Cover = albumArtist.Album.Cover is not null ? new Uri($"/images/music{albumArtist.Album.Cover}", UriKind.Relative).ToString() : null;
+        Backdrop = img?.FilePath is not null ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString() : null;
         Disambiguation = albumArtist.Album.Disambiguation;
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
@@ -46,9 +50,11 @@ public record AlbumDto
             .FirstOrDefault(translation => translation.Iso31661 == country)?
             .Description;
 
+        Image? img = albumTrack.Album.AlbumArtist.FirstOrDefault()?.Album.Images.FirstOrDefault(image => image.Type == "background");
         Id = albumTrack.Album.Id;
         Name = albumTrack.Album.Name;
         Cover = albumTrack.Album.Cover is not null ? new Uri($"/images/music{albumTrack.Album.Cover}", UriKind.Relative).ToString() : null;
+        Backdrop = img?.FilePath is not null ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString() : null;
         Disambiguation = albumTrack.Album.Disambiguation;
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
@@ -69,10 +75,12 @@ public record AlbumDto
         string? description = album.Translations
             .FirstOrDefault(translation => translation.Iso31661 == country)?
             .Description;
+        Image? img = album.AlbumArtist.FirstOrDefault()?.Artist.Images.FirstOrDefault(image => image.Type == "background");
 
         Id = album.Id;
         Name = album.Name;
         Cover = album.Cover is not null ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() : null;
+        Backdrop = img?.FilePath is not null ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString() : null;
         Disambiguation = album.Disambiguation;
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)

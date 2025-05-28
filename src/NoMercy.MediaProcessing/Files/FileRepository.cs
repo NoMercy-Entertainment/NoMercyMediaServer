@@ -218,18 +218,7 @@ public class FileRepository() : IFileRepository
         }
         else if (videoFiles.Length > 0)
         {
-            foreach (FileInfo file in videoFiles.GroupBy(f => f.Directory).Select(g => g.First()))
-            {
-                try
-                {
-                    await ProcessVideoFileInfo(libraryType, file, fileList);
-                }
-                catch (Exception e)
-                {
-                    Logger.App(e.Message, LogEventLevel.Error);
-                }
-            }
-            await Parallel.ForEachAsync(videoFiles.Skip(1), async (file, _) =>
+            await Parallel.ForEachAsync(videoFiles, async (file, _) =>
             {
                 try
                 {

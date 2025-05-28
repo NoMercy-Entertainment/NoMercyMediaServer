@@ -270,26 +270,39 @@ public static partial class Str
     private static string _cleanFileName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "";
-        // Replace forbidden characters with a dot or remove them
-        name = Regex.Replace(name, @"[/\\|:*?\""<>{}]", ".");
-        // Remove unwanted punctuation
-        name = Regex.Replace(name, "[!'’`]", "");
-        // Replace ampersand
-        name = Regex.Replace(name, "&", "and");
-        // Replace spaces with dots
+        
+        // Replace invalid file system characters with dots
+        string invalidChars = $"{string.Join("", Path.GetInvalidFileNameChars())}:?*<>|\"";
+        string pattern = $"[{Regex.Escape(invalidChars)}]";
+        name = Regex.Replace(name, pattern, ".");
+        
+        // Replace whitespace with dots
         name = Regex.Replace(name, @"\s+", ".");
+        
+        // Replace special characters and symbols
+        name = name
+            .Replace("‐", "-")  // Hyphen
+            .Replace("–", "-")  // En dash
+            .Replace("—", "-")  // Em dash
+            .Replace("−", "-")  // Minus sign
+            .Replace("°", ".Degrees")
+            .Replace("&", "and")
+            .Replace("!", ".")
+            .Replace("’", ".")
+            .Replace("?", ".")
+            .Replace("~", ".")
+            .Replace("`", ".");
+
+        // Replace any remaining non-ASCII characters with dots
+        name = Regex.Replace(name, @"[^\u0000-\u007F]+", ".");
+
         // Collapse multiple dots
         name = Regex.Replace(name, @"\.+", ".");
-        name = Regex.Replace(name, @"°", ".Degrees");
-        // Trim leading/trailing dots
-        name = Regex.Replace(name, @"^\.+|\.+$", "");
+    
+        // Remove leading/trailing dots
+        name = name.Trim('.');
 
-        return name
-            .Replace("‐", "-") // Hyphen
-            .Replace("–", "-") // En dash
-            .Replace("—", "-") // Em dash
-            .Replace("−", "-") // Minus sign
-            .Trim();
+        return name;
     }
     
     public static string SanitizeFileName(this string filePath)

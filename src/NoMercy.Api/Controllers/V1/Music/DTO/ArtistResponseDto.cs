@@ -37,12 +37,13 @@ public record ArtistResponseDto
                 .Include(artist => artist.ArtistTrack
                     .OrderBy(artistTrack => artistTrack.Track.TrackNumber)
                     .ThenBy(artistTrack => artistTrack.Track.DiscNumber)
-                    .Where(artistTrack => artistTrack.Track.Duration != null)
                 )
                 .ThenInclude(artistTrack => artistTrack.Track)
                 .ThenInclude(track => track.AlbumTrack)
                 .ThenInclude(albumTrack => albumTrack.Album)
                 .ThenInclude(album => album.AlbumArtist)
+                .ThenInclude(album => album.Artist)
+                .ThenInclude(artist => artist.Images)
 
                 .Include(artist => artist.ArtistTrack)
                 .ThenInclude(artistTrack => artistTrack.Track)

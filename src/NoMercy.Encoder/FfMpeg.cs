@@ -241,8 +241,7 @@ public class FfMpeg : Classes
                 };
 
                 progressData.RemainingSplit = progressData.RemainingHms
-                    .Split(":")
-                    .ToArray();
+                    .Split(":");
 
                 if (progressData.Speed == 0) return;
 
