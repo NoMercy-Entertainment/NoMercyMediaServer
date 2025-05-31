@@ -19,7 +19,7 @@ public class ComponentBuilder<T>
 
     public ComponentBuilder<T> WithProps(Action<ComponentPropsBuilder<T>> propsBuilder)
     {
-        var builder = new ComponentPropsBuilder<T>(_component.Props);
+        ComponentPropsBuilder<T> builder = new(_component.Props);
         propsBuilder(builder);
         return this;
     }

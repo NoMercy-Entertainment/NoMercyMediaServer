@@ -549,7 +549,7 @@ public class HomeService
             IEnumerable<HomeSourceDto> tvs = genre.GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, "tv"));
 
             string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
-            GenreRowDto<GenreRowItemDto> genreRowDto = new GenreRowDto<GenreRowItemDto>
+            GenreRowDto<GenreRowItemDto> genreRowDto = new()
             {
                 Title = name,
                 MoreLink = new($"/genre/{genre.Id}", UriKind.Relative),
