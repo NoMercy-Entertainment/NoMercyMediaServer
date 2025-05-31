@@ -210,19 +210,26 @@ public static class Auth
 
     private static void TokenByBrowser()
     {
-        Uri baseUrl = new(Config.AuthBaseUrl + "protocol/openid-connect/auth");
-        string redirectUri = HttpUtility.UrlEncode($"http://localhost:{Config.InternalServerPort}/sso-callback");
-        string scope = HttpUtility.UrlEncode("openid offline_access email profile");
+        if (string.IsNullOrEmpty(Config.AuthBaseUrl) || string.IsNullOrEmpty(Config.TokenClientId))
+            throw new ArgumentException("Auth base URL or client ID is not initialized");
 
-        IEnumerable<string> query = new Dictionary<string, string>
+        string baseUrl = Config.AuthBaseUrl.TrimEnd('/') + "/protocol/openid-connect/auth";
+        string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
+        string scope = "openid offline_access email profile";
+
+        Dictionary<string, string> queryParams = new()
         {
-            ["redirect_uri"] = redirectUri,
             ["client_id"] = Config.TokenClientId,
+            ["redirect_uri"] = redirectUri,
             ["response_type"] = "code",
             ["scope"] = scope
-        }.Select(x => $"{x.Key}={x.Value}");
+        };
 
-        string url = new Uri($"{baseUrl}?{string.Join("&", query)}").ToString();
+        string queryString = string.Join("&", queryParams.Select(kvp => 
+            $"{HttpUtility.UrlEncode(kvp.Key)}={HttpUtility.UrlEncode(kvp.Value)}"));
+    
+        string url = $"{baseUrl}?{queryString}";
+        Logger.Setup($"Opening browser for authentication: {url}", LogEventLevel.Verbose);
 
         TempServerInstance = TempServer.Start();
         TempServerInstance.StartAsync().Wait();
