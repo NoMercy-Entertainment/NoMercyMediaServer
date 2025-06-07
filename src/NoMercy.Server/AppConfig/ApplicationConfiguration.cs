@@ -108,30 +108,35 @@ public static class ApplicationConfiguration
                 endpoints.MapHub<VideoHub>("/socket", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
                 endpoints.MapHub<DashboardHub>("/dashboardHub", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
                 endpoints.MapHub<CastHub>("/castHub", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
                 endpoints.MapHub<MusicHub>("/musicHub", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
                 endpoints.MapHub<RipperHub>("/ripperHub", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
+                    options.TransportSendTimeout = TimeSpan.FromSeconds(40);
                     options.CloseOnAuthenticationExpiration = true;
                 });
             });

@@ -8,6 +8,7 @@ using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
+using NoMercy.Networking.Dto;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -170,6 +171,11 @@ public class UserDataController : BaseController
         
         mediaContext.UserData.RemoveRange(userData);
         await mediaContext.SaveChangesAsync();
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
+        {
+            QueryKey = ["home"]
+        });
 
         return Ok(new StatusResponseDto<string>
         {
