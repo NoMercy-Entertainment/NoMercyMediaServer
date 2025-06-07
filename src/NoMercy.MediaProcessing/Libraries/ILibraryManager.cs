@@ -1,6 +1,8 @@
+using NoMercy.NmSystem.Dto;
+
 namespace NoMercy.MediaProcessing.Libraries;
 
-public interface ILibraryManager
+public interface ILibraryManager: IDisposable, IAsyncDisposable
 {
-    Task ProcessLibrary(Ulid id);
+    public Task ProcessLibrary(Ulid id);
 }

@@ -14,7 +14,7 @@ using NoMercy.Setup;
 namespace NoMercy.Server;
 public static class Program
 {
-    public static Task Main(string[] args)
+    public static async Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
         {
@@ -28,8 +28,9 @@ public static class Program
             Environment.Exit(0);
         };
 
-        return Parser.Default.ParseArguments<StartupOptions>(args)
+        await Parser.Default.ParseArguments<StartupOptions>(args)
             .MapResult(Start, ErrorParsingArguments);
+
 
         static Task ErrorParsingArguments(IEnumerable<Error> errors)
         {
@@ -76,9 +77,7 @@ public static class Program
 
         await Setup.Start.Init(startupTasks);
 
-        WebHostBuilder webHost = new();
-
-        IWebHost app = CreateWebHostBuilder(webHost).Build();
+        IWebHost app = CreateWebHostBuilder(options).Build();
 
         app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStarted.Register(() =>
         {
@@ -118,7 +117,7 @@ public static class Program
         await Task.CompletedTask;
     }
 
-    private static IWebHostBuilder CreateWebHostBuilder(this IWebHostBuilder _)
+    private static IWebHostBuilder CreateWebHostBuilder(StartupOptions options)
     {
         UriBuilder localhostIPv4Url = new()
         {
@@ -136,7 +135,8 @@ public static class Program
                 logging.AddFilter("Microsoft", LogLevel.None);
             })
             .ConfigureServices(services =>
-            {
+            {                
+                services.AddSingleton<StartupOptions>(options);
                 services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
                 services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
             })

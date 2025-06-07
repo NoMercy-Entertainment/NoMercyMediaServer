@@ -14,7 +14,7 @@ using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 namespace NoMercy.MediaProcessing.Libraries;
 
 public class LibraryManager(
-    ILibraryRepository libraryRepository,
+    LibraryRepository libraryRepository,
     JobDispatcher jobDispatcher
 )
     : BaseManager, ILibraryManager
@@ -154,5 +154,15 @@ public class LibraryManager(
             "music" => 2,
             _ => 1
         };
+    }
+
+    public void Dispose()
+    {
+        libraryRepository.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await libraryRepository.DisposeAsync();
     }
 }
