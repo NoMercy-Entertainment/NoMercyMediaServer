@@ -6,7 +6,7 @@ Version: 1.0
 Architectures: amd64
 Components: main
 Description: NoMercy Entertainment Repository
-Date: Sat, 07 Jun 2025 22:43:48 UTC
+Date: Sat, 07 Jun 2025 23:25:15 UTC
 SHA256:
- 0c095c528a16c7038af6f0d3f63efe81f07f8d592ea0eb2e7dfe72a6821de4ff 3081 main/binary-amd64/Packages
- 6ed2f73cf63cb527b22a65b72622caf4a9f67d761846b19bbfb0082ee5d3f3ff 653 main/binary-amd64/Packages.gz
+ 92f6185290b3d457d78790036880ece006603d2740db1686ab702e133825a718 3081 main/binary-amd64/Packages
+ ae6a53f7cc63fd51e063dd6d880bc01fcc5642d540cf50e078e4430e2b357eab 654 main/binary-amd64/Packages.gz
