@@ -19,6 +19,7 @@ public record ContinueWatchingItemDto
     [JsonProperty("created_at")] public DateTime? CreatedAt { get; set; }
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("year")] public int Year { get; set; }
+    [JsonProperty("duration")] public int? Duration { get; set; }
     [JsonProperty("overview")] public string? Overview { get; set; }
     [JsonProperty("logo")] public string? Logo { get; set; }
     [JsonProperty("rating")] public RatingDto? Rating { get; set; }
@@ -48,6 +49,7 @@ public record ContinueWatchingItemDto
             Title = item.Special.Title;
             TitleSort = item.Special.Title.TitleSort();
             Overview = item.Special.Overview;
+            Duration = item.VideoFile.Duration?.ToSeconds();
 
             MediaType = "specials";
             Type = "specials";
@@ -91,6 +93,7 @@ public record ContinueWatchingItemDto
             Title = item.Collection.Title;
             TitleSort = item.Collection.Title.TitleSort();
             Overview = item.Collection.Overview;
+            Duration = item.VideoFile.Duration?.ToSeconds();
             Year = item.Collection.CollectionMovies
                 .MinBy(movie => movie.Movie.ReleaseDate?.ParseYear())
                 ?.Movie.ReleaseDate.ParseYear() ?? 0;
@@ -128,6 +131,7 @@ public record ContinueWatchingItemDto
             Title = item.Movie.Title;
             TitleSort = item.Movie.Title.TitleSort(item.Movie.ReleaseDate);
             Overview = item.Movie.Overview;
+            Duration = item.VideoFile.Duration?.ToSeconds();
             MediaType = "movie";
             Type = "movie";
             Link = new($"/movie/{Id}/watch", UriKind.Relative);
@@ -158,6 +162,7 @@ public record ContinueWatchingItemDto
             TitleSort = item.Tv.Title.TitleSort(item.Tv.FirstAirDate);
             HaveItems = item.Tv.HaveEpisodes;
             Overview = item.Tv.Overview;
+            Duration = item.VideoFile.Duration?.ToSeconds();
             Type = item.Tv.Type;
 
             MediaType = "tv";
