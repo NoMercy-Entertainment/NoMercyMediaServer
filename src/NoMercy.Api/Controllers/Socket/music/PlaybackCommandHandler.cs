@@ -1,3 +1,4 @@
+using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.Socket.music;
@@ -38,8 +39,6 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
                 state.Muted = !state.Muted;
                 break;
         }
-
-        state.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 
     private void HandlePlay(User user, PlayerState state)
@@ -57,39 +56,69 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
         int seekTime = int.Parse(data?.ToString() ?? "0") * 1000;
         state.Time = seekTime;
     }
+    
     private void HandleNext(User user, PlayerState state)
     {
         if (state.CurrentItem == null) return;
         playbackService.RemoveTimer(user.Id);
-        
-        int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
+
+        // Add current item to backlog
+        state.Backlog.Add(state.CurrentItem);
+
+        // Move to the next track
+        if (state.Playlist.Count > 0)
+        {
+            state.CurrentItem = state.Playlist.First();
+            state.Playlist.RemoveAt(0);
+            state.Time = 0;
+        }
+        else
+        {
+            HandlePlaylistCompletion(user, state);
+            return;
+        }
+
+        playbackService.StartPlaybackTimer(user);
+    }
+    
+    private void HandlePlaylistCompletion(User user, PlayerState state)
+    {
         switch (state.Repeat)
         {
             case "one":
+                // If repeat one, play the same item again
                 state.Time = 0;
+                playbackService.StartPlaybackTimer(user);
                 break;
-            case "all" when currentIndex == state.Playlist.Count - 1:
-                state.Time = 0;
-                state.CurrentItem = state.Playlist.FirstOrDefault();
-                break;
-            default:
-                if (currentIndex + 1 < state.Playlist.Count)
+            case "all":
+                // If repeat all, move the backlog to the playlist and start from the beginning
+                state.Playlist = [.. state.Backlog];
+                state.Backlog.Clear();
+                if (state.Playlist.Count > 0)
                 {
-                    state.PlayState = true;
+                    state.CurrentItem = state.Playlist.First();
+                    state.Playlist.RemoveAt(0);
                     state.Time = 0;
-                    state.CurrentItem = state.Playlist[currentIndex + 1];
-                    // Task.Delay(100).Wait();
+                    state.PlayState = true;
+                    playbackService.StartPlaybackTimer(user);
                 }
                 else
                 {
+                    // If the playlist is empty, stop playback
                     state.PlayState = false;
                     state.Time = 0;
                     state.CurrentItem = null;
                 }
                 break;
+            default:
+                // If repeat is off, stop playback
+                state.PlayState = false;
+                state.Time = 0;
+                state.CurrentItem = null;
+                break;
         }
-        playbackService.StartPlaybackTimer(user);
     }
+    
     private void HandlePrevious(User user, PlayerState state)
     {
         if (state.CurrentItem == null) return;
@@ -99,12 +128,31 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
             state.Time = 0;
             return;
         }
-        
-        int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
-        if (currentIndex <= 0) return;
-        state.CurrentItem = state.Playlist[currentIndex - 1];
-        state.Time = 0;
+
+        playbackService.RemoveTimer(user.Id);
+
+        // Move current item to playlist
+        state.Playlist.Insert(0, state.CurrentItem);
+
+        // Move last backlog item to current
+        if (state.Backlog.Count > 0)
+        {
+            state.CurrentItem = state.Backlog.Last();
+            state.Backlog.RemoveAt(state.Backlog.Count - 1);
+            state.Time = 0;
+        }
+        else
+        {
+            // If backlog is empty, stop or go to the start of the playlist
+            state.Playlist.RemoveAt(0);
+            state.PlayState = false;
+            state.Time = 0;
+            state.CurrentItem = null;
+        }
+
+        playbackService.StartPlaybackTimer(user);
     }
+    
     private void HandleRepeat(PlayerState state)
     {
         int currentIndex = Array.IndexOf(_repeatStates, state.Repeat);

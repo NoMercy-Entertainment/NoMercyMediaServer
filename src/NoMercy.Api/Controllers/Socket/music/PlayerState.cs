@@ -10,6 +10,7 @@ public class PlayerState
     [JsonProperty("is_playing")] public bool PlayState { get; set; }
     [JsonProperty("item")] public PlaylistTrackDto? CurrentItem { get; set; } = null!;
     [JsonProperty("playlist")] public List<PlaylistTrackDto> Playlist { get; set; } = [];
+    [JsonProperty("backlog")] public List<PlaylistTrackDto> Backlog { get; set; } = [];
     [JsonProperty("progress_ms")] public int Time { get; set; }
     [JsonProperty("duration_ms")] public int Duration { get; set; }
     [JsonProperty("repeat_state")] public string Repeat { get; set; } = "off";

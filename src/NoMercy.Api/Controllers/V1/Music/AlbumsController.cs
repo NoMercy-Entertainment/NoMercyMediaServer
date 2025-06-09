@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.Controllers.Socket;
+using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database;
@@ -17,6 +20,8 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/album")]
 public class AlbumsController : BaseController
 {
+    public static event EventHandler<LikeEventDto> OnLikeEvent;
+    
     [HttpGet]
     [Route("/api/v{version:apiVersion}/music/albums/{letter}")]
     public async Task<IActionResult> Index(string letter)
@@ -113,8 +118,18 @@ public class AlbumsController : BaseController
 
         Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
         {
-            QueryKey = ["music", "albums", album.Id]
+            QueryKey = ["music", "album", album.Id]
         });
+        
+        LikeEventDto likeEventDto = new()
+        {
+            Id = album.Id,
+            Type = "album",
+            Liked = request.Value,
+            User = User.User()
+        };
+        
+        OnLikeEvent.Invoke(this, likeEventDto);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -145,3 +160,5 @@ public class AlbumsController : BaseController
         });
     }
 }
+
+

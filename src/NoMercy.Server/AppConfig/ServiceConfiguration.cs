@@ -73,7 +73,7 @@ public static class ServiceConfiguration
         // Add DbContexts
         services.AddDbContext<QueueContext>(optionsAction =>
         {
-            optionsAction.UseSqlite($"Data Source={AppFiles.QueueDatabase}");
+            optionsAction.UseSqlite($"Data Source={AppFiles.QueueDatabase} Pooling=True");
         });
         services.AddTransient<QueueContext>();
 
@@ -109,8 +109,10 @@ public static class ServiceConfiguration
 
         services.AddScoped<HomeService>();
         services.AddScoped<HomeController>();
-
-        services.AddScoped<JobDispatcher>();
+        
+        services.AddSingleton<JobQueue>();
+        services.AddSingleton<JobDispatcher>();
+        services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
 
         services.AddMusicHubServices();
 

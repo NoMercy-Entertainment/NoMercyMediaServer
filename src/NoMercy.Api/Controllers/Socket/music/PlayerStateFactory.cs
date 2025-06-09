@@ -18,13 +18,13 @@ public class PlayerStateFactory
             DeviceId = device.DeviceId,
             VolumePercentage = device.VolumePercent,
             CurrentItem = item,
+            Backlog = [item],
             Playlist = playlist,
             PlayState = true,
             Time = 0,
             Duration = item.Duration.ToMilliSeconds(),
             Shuffle = false,
             Repeat = "off",
-            Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             CurrentList = $"{type}/{listId}",
             Actions = new()
             {

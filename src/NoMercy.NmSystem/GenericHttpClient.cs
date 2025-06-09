@@ -21,7 +21,7 @@ public class GenericHttpClient
             [
                 Policy.HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
                     .Or<HttpRequestException>()
-                    .WaitAndRetryAsync(retryCount, _ => TimeSpan.FromSeconds(0),
+                    .WaitAndRetryAsync(retryCount, _ => TimeSpan.FromSeconds(2),
                         (result, timeSpan, rtCount, context) =>
                         {
                             Console.WriteLine($"Retry {rtCount}: {baseUrl} after {timeSpan.TotalSeconds} seconds due to: {result.Exception?.Message ?? result.Result?.StatusCode.ToString()}");

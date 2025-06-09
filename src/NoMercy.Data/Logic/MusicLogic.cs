@@ -390,7 +390,7 @@ public partial class MusicLogic : IAsyncDisposable
 
             Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
             {
-                QueryKey = ["music", "albums", musicBrainzRelease.Id.ToString()]
+                QueryKey = ["music", "album", musicBrainzRelease.Id.ToString()]
             });
         }
         catch (Exception e)
@@ -474,7 +474,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
         {
-            QueryKey = ["music", "artists", musicBrainzArtist.Id.ToString()]
+            QueryKey = ["music", "artist", musicBrainzArtist.Id.ToString()]
         });
     }
 

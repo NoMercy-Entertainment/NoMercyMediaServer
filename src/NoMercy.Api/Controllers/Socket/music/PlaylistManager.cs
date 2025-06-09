@@ -25,6 +25,20 @@ public class PlaylistManager
         };
     }
 
+    public (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) SplitPlaylist(List<PlaylistTrackDto> playlist, Guid currentTrackId)
+    {
+        int index = playlist.FindIndex(p => p.Id == currentTrackId);
+        if (index == -1)
+        {
+            return ([], playlist);
+        }
+
+        List<PlaylistTrackDto> before = playlist.GetRange(0, index);
+        List<PlaylistTrackDto> after = playlist.GetRange(index + 1, playlist.Count - index - 1);
+
+        return (before, after);
+    }
+    
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetPlaylistTracks(
         Guid listId, Guid trackId, string country)
     {
@@ -46,7 +60,12 @@ public class PlaylistManager
             .ToList();
 
         PlaylistTrackDto item = playlist.First(p => p.Id == playlistTrack.TrackId);
-        return (item, playlist);
+        (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) = SplitPlaylist(playlist, playlistTrack.TrackId);
+        List<PlaylistTrackDto> sortedPlaylist = [];
+        sortedPlaylist.AddRange(after);
+        sortedPlaylist.AddRange(before);
+    
+        return (item, sortedPlaylist);
     }
     
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetAlbumTracks(
@@ -76,7 +95,12 @@ public class PlaylistManager
                 .ToList();
         
         PlaylistTrackDto item = playlist.First(p => p.Id == albumTrack.TrackId);
-        return (item, playlist);
+        (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) = SplitPlaylist(playlist, albumTrack.TrackId);
+        List<PlaylistTrackDto> sortedPlaylist = [];
+        sortedPlaylist.AddRange(after);
+        sortedPlaylist.AddRange(before);
+    
+        return (item, sortedPlaylist);
     }
     
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetArtistTracks(
@@ -112,6 +136,11 @@ public class PlaylistManager
             .ToList();
 
         PlaylistTrackDto item = playlist.First(p => p.Id == artistTrack.TrackId);
-        return (item, playlist);
+        (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) = SplitPlaylist(playlist, artistTrack.TrackId);
+        List<PlaylistTrackDto> sortedPlaylist = [];
+        sortedPlaylist.AddRange(after);
+        sortedPlaylist.AddRange(before);
+    
+        return (item, sortedPlaylist);
     }
 }

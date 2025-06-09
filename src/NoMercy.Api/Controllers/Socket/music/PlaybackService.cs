@@ -54,11 +54,11 @@ public class PlaybackService
         }
     }
 
-    public async Task HandleTrackCompletion(User user, PlayerState state)
+    private async Task HandleTrackCompletion(User user, PlayerState state)
     {
         if (state.CurrentItem == null) return;
         RemoveTimer(user.Id);
-
+        
         int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
         UpdateStateBasedOnRepeatMode(state, currentIndex);
 
@@ -68,6 +68,11 @@ public class PlaybackService
 
     public async Task UpdatePlaybackState(User user, PlayerState? state)
     {
+        if(state is not null)
+        {
+            state.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        }
+        
         EventPayload<PlayerStateEventElement> payload = new()
         {
             Events =
@@ -91,37 +96,69 @@ public class PlaybackService
 
     private void UpdateStateBasedOnRepeatMode(PlayerState state, int currentIndex)
     {
-        state.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        
         switch (state.Repeat)
         {
             case "one":
                 state.Time = 0;
                 break;
-            case "all" when currentIndex == state.Playlist.Count - 1:
-                state.Time = 0;
-                state.CurrentItem = state.Playlist.FirstOrDefault();
+            case "all":
+                if (currentIndex == state.Playlist.Count - 1)
+                {
+                    // Move the current item to the backlog
+                    if (state.CurrentItem != null)
+                    {
+                        state.Backlog.Add(state.CurrentItem);
+                    }
+
+                    // Move the backlog to the playlist and start from the beginning
+                    state.Playlist = [.. state.Backlog];
+                    state.Backlog.Clear();
+
+                    if (state.Playlist.Count > 0)
+                    {
+                        state.CurrentItem = state.Playlist.First();
+                        state.Playlist.RemoveAt(0);
+                        state.Time = 0;
+                        state.PlayState = true;
+                    }
+                    else
+                    {
+                        // If the playlist is empty, stop playback
+                        state.PlayState = false;
+                        state.Time = 0;
+                        state.CurrentItem = null;
+                    }
+                }
+                else
+                {
+                    if (state.CurrentItem != null)
+                    {
+                        state.Backlog.Add(state.CurrentItem);
+                    }
+                    state.CurrentItem = state.Playlist[currentIndex + 1];
+                    state.Playlist.RemoveAt(currentIndex + 1);
+                    state.Time = 0;
+                }
                 break;
             default:
-                HandleDefaultRepeatMode(state, currentIndex);
+                if (state.CurrentItem != null)
+                {
+                    state.Backlog.Add(state.CurrentItem);
+                }
+                if (currentIndex + 1 < state.Playlist.Count)
+                {
+                    state.PlayState = true;
+                    state.Time = 0;
+                    state.CurrentItem = state.Playlist[currentIndex + 1];
+                    state.Playlist.RemoveAt(currentIndex + 1);
+                }
+                else
+                {
+                    state.PlayState = false;
+                    state.Time = 0;
+                    state.CurrentItem = null;
+                }
                 break;
         }
     }
-
-    private static void HandleDefaultRepeatMode(PlayerState state, int currentIndex)
-    {
-        if (currentIndex + 1 < state.Playlist.Count)
-        {
-            state.PlayState = true;
-            state.Time = 0;
-            state.CurrentItem = state.Playlist[currentIndex + 1];
-        }
-        else
-        {
-            state.PlayState = false;
-            state.Time = 0;
-            state.CurrentItem = null;
-        }
-    }
-
 }

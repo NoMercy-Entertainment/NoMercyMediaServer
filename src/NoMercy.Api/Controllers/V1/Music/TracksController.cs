@@ -2,8 +2,11 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Api.Controllers.Socket;
+using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database;
@@ -22,6 +25,8 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/tracks")]
 public class TracksController : BaseController
 {
+    public static event EventHandler<LikeEventDto> OnLikeEvent;
+    
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -52,7 +57,7 @@ public class TracksController : BaseController
 
     [HttpPost]
     [Route("{id:guid}/like")]
-    public async Task<IActionResult> Value(Guid id)
+    public async Task<IActionResult> Value(Guid id, [FromBody] LikeRequestDto request)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -73,9 +78,7 @@ public class TracksController : BaseController
         if (track is null)
             return NotFoundResponse("Track not found");
 
-        bool liked = false;
-
-        if (track.TrackUser.Count == 0)
+        if (request.Value)
         {
             await mediaContext.TrackUser
                 .Upsert(new(track.Id, userId))
@@ -86,7 +89,6 @@ public class TracksController : BaseController
                     UserId = m.UserId
                 })
                 .RunAsync();
-            liked = true;
         }
         else
         {
@@ -101,12 +103,23 @@ public class TracksController : BaseController
 
         Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
         {
-            QueryKey = ["music", "albums", track.AlbumTrack.FirstOrDefault()?.Album.Id]
+            QueryKey = ["music", "album", track.AlbumTrack.FirstOrDefault()?.Album.Id]
         });
         Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
         {
-            QueryKey = ["music", "artists", track.ArtistTrack.FirstOrDefault()?.Artist.Id]
+            QueryKey = ["music", "artist", track.ArtistTrack.FirstOrDefault()?.Artist.Id]
         });
+        
+        
+        LikeEventDto likeEventDto = new()
+        {
+            Id = track.Id,
+            Type = "track",
+            Liked = request.Value,
+            User = User.User()
+        };
+        
+        OnLikeEvent.Invoke(this, likeEventDto);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -115,7 +128,7 @@ public class TracksController : BaseController
             Args = new object[]
             {
                 track.Name,
-                liked ? "liked" : "unliked"
+                request.Value ? "liked" : "unliked"
             }
         });
     }

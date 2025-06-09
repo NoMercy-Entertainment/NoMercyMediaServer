@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.Socket.music;
+using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -98,6 +99,7 @@ public class MusicHub : ConnectionHub
         device = Networking.Networking.SocketClients
             .FirstOrDefault(d => d.Key == Context.ConnectionId).Value;
         CurrentDevice[user.Id] = device;
+        
         return device;
     }
 
@@ -127,15 +129,20 @@ public class MusicHub : ConnectionHub
         state.VolumePercentage = device.VolumePercent;
     }
 
-    private static void UpdatePlaylistInfo(PlayerState state, string type, Guid listId, PlaylistTrackDto item, List<PlaylistTrackDto> playlist)
+    private void UpdatePlaylistInfo(PlayerState state, string type, Guid listId, PlaylistTrackDto item, List<PlaylistTrackDto> playlist)
     {
+        (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) = _playlistManager.SplitPlaylist(playlist, item.Id);
+        List<PlaylistTrackDto> sortedPlaylist = [];
+        sortedPlaylist.AddRange(after);
+        sortedPlaylist.AddRange(before);
+        
         state.CurrentItem = item;
         state.PlayState = true;
-        state.Playlist = playlist;
+        state.Playlist = sortedPlaylist;
         state.CurrentList = $"{type}/{listId}";
+        state.Backlog.Add(item);
         state.Time = 0;
         state.Duration = item.Duration.ToMilliSeconds();
-        state.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         state.Actions = new()
         {
             Disallows = new()
@@ -154,7 +161,6 @@ public class MusicHub : ConnectionHub
         _playerStateManager.TryGetValue(user.Id, out PlayerState? playerState);
         if (playerState is null) return null;
         
-        playerState.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         return playerState;
     }
     
@@ -171,6 +177,15 @@ public class MusicHub : ConnectionHub
 
         _commandHandler.HandleCommand(user, command, data, state);
         
+        if (state.DeviceId == null)
+        {
+            if (Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? device))
+            {
+                state.DeviceId = device.DeviceId;
+                state.VolumePercentage = device.VolumePercent;
+            }
+        }
+        
         await _playbackService.UpdatePlaybackState(user, state);
     }
     
@@ -182,7 +197,6 @@ public class MusicHub : ConnectionHub
         if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
         {
             playerState.Time = time * 1000;
-            playerState.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             
             await _playbackService.UpdatePlaybackState(user, playerState);
         }
@@ -237,7 +251,6 @@ public class MusicHub : ConnectionHub
         
         if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
         {
-            playerState.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             playerState.VolumePercentage = volume;
             await _playbackService.UpdatePlaybackState(user, playerState);
         }
@@ -260,6 +273,35 @@ public class MusicHub : ConnectionHub
             }
         }
     }
+
+    private async Task LikeEvent(LikeEventDto likeEvent)
+    {
+        User? user = likeEvent.User;
+        if (user is null) return;
+
+        if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
+        {
+            if (playerState.CurrentItem != null && playerState.CurrentItem.Id == likeEvent.Id)
+            {
+                playerState.CurrentItem.Favorite = likeEvent.Liked;
+            }
+
+            foreach (PlaylistTrackDto track in playerState.Playlist)
+            {
+                if (track.Id == likeEvent.Id)
+                {
+                    track.Favorite = likeEvent.Liked;
+                }
+            }
+
+            await _playbackService.UpdatePlaybackState(user, playerState);
+        }
+    }
+
+    private void OnLikeEvent(object? sender, LikeEventDto e)
+    {
+        LikeEvent(e).Wait();
+    }
     
     public override async Task OnConnectedAsync()
     {
@@ -272,14 +314,16 @@ public class MusicHub : ConnectionHub
         
         if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
         {
-            playerState.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
             await _playbackService.UpdatePlaybackState(user, playerState);
         }
         else
         {
             await _playbackService.UpdatePlaybackState(user, new());
-            return;
+        
+            // Subscribe to the OnLikeEvent
+            AlbumsController.OnLikeEvent += OnLikeEvent;
+            ArtistsController.OnLikeEvent += OnLikeEvent;
+            TracksController.OnLikeEvent += OnLikeEvent;
         }
         
         Logger.Socket("Music client connected");
@@ -289,42 +333,62 @@ public class MusicHub : ConnectionHub
     {
         User? user = Context.User.User();
         if (user == null) return;
-
-        if (!_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState)) return;
+        
+        bool stopPlayback = false;
         
         if (Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
         {
-            if (CurrentDevice.TryGetValue(user.Id, out Device? device))
+            if (_playerStateManager.TryGetValue(user.Id, out PlayerState? state))
             {
-                if(device.DeviceId == client.DeviceId)
+                if(state.DeviceId == client.DeviceId)
                 {
                     _playbackService.RemoveTimer(user.Id);
 
                     _deviceManager.RemoveUserDevice(user.Id);
-
-                    playerState.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                    playerState.PlayState = false;
+                    
+                    stopPlayback = true;
                 }
             }
         }
         
         await base.OnDisconnectedAsync(exception);
-        
-        List<Device> connectedDevices = Devices();
-        
-        if (connectedDevices.Count == 0)
+
+        if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
         {
-            playerState.DeviceId = null;
-            playerState.PlayState = false;
-            playerState.Actions = new()
+            List<Device> connectedDevices = Devices();
+            
+            if (connectedDevices.Count == 0)
             {
-                Disallows = new()
+                // Unsubscribe from the OnLikeEvent
+                AlbumsController.OnLikeEvent -= OnLikeEvent;
+                ArtistsController.OnLikeEvent -= OnLikeEvent;
+                TracksController.OnLikeEvent -= OnLikeEvent;
+
+                playerState.DeviceId = null;
+                playerState.PlayState = false;
+                playerState.Actions = new()
                 {
-                    Previous = true,
-                    Resuming = true,
-                    Pausing = true,
-                }
-            };
+                    Disallows = new()
+                    {
+                        Previous = true,
+                        Resuming = true,
+                        Pausing = true,
+                    }
+                };
+            }
+            else if (stopPlayback)
+            {
+                playerState.PlayState = false;
+                playerState.Actions = new()
+                {
+                    Disallows = new()
+                    {
+                        Previous = true,
+                        Resuming = true,
+                        Pausing = true,
+                    }
+                };
+            }
         }
 
         await _playbackService.UpdatePlaybackState(user, playerState);

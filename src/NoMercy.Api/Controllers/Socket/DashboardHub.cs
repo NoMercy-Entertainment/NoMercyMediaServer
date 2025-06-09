@@ -9,6 +9,12 @@ public class DashboardHub : ConnectionHub
     public DashboardHub(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
     {
     }
+    
+    public override async Task OnConnectedAsync()
+    {
+        await base.OnConnectedAsync();
+        Logger.Socket("Dashboard client connected");
+    }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {

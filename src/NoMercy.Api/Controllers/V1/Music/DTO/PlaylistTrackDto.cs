@@ -37,7 +37,7 @@ public record PlaylistTrackDto
             ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() 
             : null;
         Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}", UriKind.Relative).ToString();
-        Link = new($"/music/artist/{artistTrack.ArtistId}", UriKind.Relative);
+        Link = new($"/music/tracks/{artistTrack.Track.Id}", UriKind.Relative);
         
         ColorPalette = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
         if(ColorPalette is not null)
@@ -74,7 +74,7 @@ public record PlaylistTrackDto
         Cover = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? trackTrack.Track.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Path = new Uri($"/{trackTrack.Track.FolderId}{trackTrack.Track.Folder}{trackTrack.Track.Filename}", UriKind.Relative).ToString();
-        Link = new($"/music/playlist/{trackTrack.PlaylistId}", UriKind.Relative);
+        Link = new($"/music/tracks/{trackTrack.Track.Id}", UriKind.Relative);
         ColorPalette = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
         if(ColorPalette is not null)
         {
@@ -109,7 +109,7 @@ public record PlaylistTrackDto
         Cover = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? artistTrack.Track.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}", UriKind.Relative).ToString();
-        Link = new($"/music/album/{artistTrack.AlbumId}", UriKind.Relative);
+        Link = new($"/music/tracks/{artistTrack.Track.Id}", UriKind.Relative);
         
         ColorPalette = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
         if(ColorPalette is not null)

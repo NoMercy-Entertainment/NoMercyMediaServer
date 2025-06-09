@@ -96,4 +96,15 @@ public class VideoHub(IHttpContextAccessor httpContextAccessor) : ConnectionHub(
         [JsonProperty("collection_id")] public int? CollectionId { get; set; }
     }
 
+    public override async Task OnConnectedAsync()
+    {
+        await base.OnConnectedAsync();
+        Logger.Socket("Video client connected");
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        await base.OnDisconnectedAsync(exception);
+        Logger.Socket("Video client disconnected");
+    }
 }

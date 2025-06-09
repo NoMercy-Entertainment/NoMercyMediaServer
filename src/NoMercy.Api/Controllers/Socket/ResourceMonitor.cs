@@ -41,6 +41,7 @@ public static class ResourceMonitor
             }
             catch (Exception e)
             {
+                if (e.Message == "A task was canceled.") return;
                 Logger.Socket($"Error broadcasting resource data: {e.Message}", LogEventLevel.Error);
             }
         }
