@@ -24,8 +24,6 @@ public record CarouselResponseItemDto
     public static readonly Func<MediaContext, Guid, Task<List<CarouselResponseItemDto>>> GetPlaylists =
         (mediaContext, userId) => mediaContext.Playlists
             .Where(playlist => playlist.UserId.Equals(userId))
-            .Where(playlist => playlist.Tracks
-                .Any(artistTrack => artistTrack.Track.Duration != null))
             .Select(playlist => new CarouselResponseItemDto(playlist))
             .Take(36)
             .ToListAsync();
@@ -33,8 +31,6 @@ public record CarouselResponseItemDto
     public static readonly Func<MediaContext, Task<List<CarouselResponseItemDto>>> GetLatestAlbums =
         (mediaContext) => mediaContext.Albums
             .Where(album => album.Cover != null && album.AlbumTrack.Count > 0)
-            .Where(album => album.AlbumTrack
-                .Any(artistTrack => artistTrack.Track.Duration != null))
             .Include(album => album.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Track)
             .OrderByDescending(album => album.CreatedAt)
@@ -45,8 +41,6 @@ public record CarouselResponseItemDto
     public static readonly Func<MediaContext, Task<List<CarouselResponseItemDto>>> GetLatestArtists =
         (mediaContext) => mediaContext.Artists
             .Where(artist => artist.Cover != null && artist.ArtistTrack.Count > 0)
-            .Where(artist => artist.ArtistTrack
-                .Any(artistTrack => artistTrack.Track.Duration != null))
             .Include(artist => artist.Images
                 .Where(image => image.Type == "thumb")
                 .OrderByDescending(image => image.VoteCount)

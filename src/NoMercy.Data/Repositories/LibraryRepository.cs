@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.MediaProcessing.Libraries;
 
 namespace NoMercy.Data.Repositories;
 
@@ -16,11 +15,13 @@ public class LibraryRepository(MediaContext context)
                 .FirstOrDefault(u => u.UserId.Equals(userId)) != null
             )
             .Include(library => library.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Folder)
-                    .ThenInclude(folder => folder.EncoderProfileFolder)
-                        .ThenInclude(library => library.EncoderProfile)
+            .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .ThenInclude(folder => folder.EncoderProfileFolder)
+            .ThenInclude(library => library.EncoderProfile)
             .Include(library => library.LanguageLibraries)
-                .ThenInclude(languageLibrary => languageLibrary.Language);
+            .ThenInclude(languageLibrary => languageLibrary.Language)
+            .Include(library => library.LibraryMovies)
+            .Include(library => library.LibraryTvs);
     }
 
     public Task<Library> GetLibraryByIdAsync(Ulid libraryId, Guid userId, string language, int take, int page)
@@ -174,7 +175,110 @@ public class LibraryRepository(MediaContext context)
             .Take(take);
 
     }
+    
+    private static readonly string[] Letters = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
+    public IQueryable<Movie> GetPaginatedLibraryMovies(Guid userId, Ulid libraryId, string letter, string language, int take, int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)
+    {
+        IIncludableQueryable<Movie, Certification> x =  context.Movies
+            .AsNoTracking()
+            .Where(movie => movie.Library.Id == libraryId)
+            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(libraryMovie => libraryMovie.VideoFiles
+                .Any(videoFile => videoFile.Folder != null) == true
+            )
+            .Where(movie => letter == "_"
+                ? Letters.Any(p => movie.Title.StartsWith(p))
+                : movie.Title.StartsWith(letter)
+            )
+            .Include(movie => movie.VideoFiles)
+            .Include(movie => movie.Media
+                .Where(media => media.Iso6391 == language || media.Iso6391 == "en")
+            )
+            .Include(movie => movie.Images
+                .Where(image => image.Iso6391 == language || image.Iso6391 == "en")
+            )
+            .Include(movie => movie.GenreMovies)
+            .ThenInclude(genreMovie => genreMovie.Genre)
+            .Include(movie => movie.Translations
+                .Where(translation => translation.Iso6391 == language || translation.Iso6391 == "en")
+            )
+            .Include(movie => movie.KeywordMovies)
+            .ThenInclude(keywordMovie => keywordMovie.Keyword)
+            .Include(movie => movie.CertificationMovies)
+            .ThenInclude(certificationMovie => certificationMovie.Certification);
+
+        if (orderByExpression is not null && direction == "desc")
+        {
+            return x.OrderByDescending(orderByExpression)
+                .Skip(page * take)
+                .Take(take);
+        }
+        if (orderByExpression is not null)
+        {
+            return x.OrderBy(orderByExpression)
+                .Skip(page * take)
+                .Take(take);
+        }
+
+        return x.OrderBy(movie => movie.TitleSort)
+            .Skip(page * take)
+            .Take(take);
+    }
+
+    public IQueryable<Tv> GetPaginatedLibraryShows(Guid userId, Ulid libraryId, string letter, string language, int take, int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null)
+    {
+        IIncludableQueryable<Tv, Certification> x = context.Tvs
+            .AsNoTracking()
+            .Where(tv => tv.Library.Id == libraryId)
+            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(libraryTv => libraryTv.Episodes
+                .Any(episode => episode.VideoFiles
+                    .Any(videoFile => videoFile.Folder != null) == true
+                ) == true)
+            .Where(movie => letter == "_"
+                ? Letters.Any(p => movie.Title.StartsWith(p))
+                : movie.Title.StartsWith(letter)
+            )
+            .Include(tv => tv.Episodes
+                .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0)
+            )
+            .ThenInclude(episode => episode.VideoFiles)
+            .Include(tv => tv.Media
+                .Where(media => media.Iso6391 == language || media.Iso6391 == "en")
+            )
+            .Include(tv => tv.Images
+                .Where(image => image.Iso6391 == language || image.Iso6391 == "en")
+            )
+            .Include(tv => tv.GenreTvs)
+            .ThenInclude(genreTv => genreTv.Genre)
+            .Include(tv => tv.Translations
+                .Where(translation => translation.Iso6391 == language || translation.Iso6391 == "en")
+            )
+            .Include(tv => tv.KeywordTvs)
+            .ThenInclude(keywordTv => keywordTv.Keyword)
+            .Include(tv => tv.CertificationTvs)
+            .ThenInclude(certificationTv => certificationTv.Certification);
+
+        if (orderByExpression is not null && direction == "desc")
+        {
+            return x.OrderByDescending(orderByExpression)
+                .Skip(page * take)
+                .Take(take);
+        }
+        if (orderByExpression is not null)
+        {
+            return x.OrderBy(orderByExpression)
+                .Skip(page * take)
+                .Take(take);
+        }
+
+        return x.OrderBy(tv => tv.TitleSort)
+            .Skip(page * take)
+            .Take(take);
+
+    }
+    
     public IOrderedQueryable<Library> GetDashboardLibrariesAsync(Guid userId)
     {
         return context.Libraries
@@ -333,5 +437,32 @@ public class LibraryRepository(MediaContext context)
                     .ToArray()
             })
             .ToList();
+    }
+    
+    public async Task<int> GetAnimeCount(Guid userId, string language)
+    {
+        return await context.Tvs
+            .AsNoTracking()
+            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(tv => tv.Library.Type == "anime")
+            .CountAsync();
+    }
+    
+    public async Task<int> GetMovieCount(Guid userId, string language)
+    {
+        return await context.Movies
+            .AsNoTracking()
+            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(movie => movie.Library.Type == "movie")
+            .CountAsync();
+    }
+    
+    public async Task<int> GetTvCount(Guid userId, string language)
+    {
+        return await context.Tvs
+            .AsNoTracking()
+            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(tv => tv.Library.Type == "tv")
+            .CountAsync();
     }
 }

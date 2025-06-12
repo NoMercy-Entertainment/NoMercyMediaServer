@@ -39,6 +39,19 @@ public class LibrariesController(
         {
             Data = response.OrderBy(library => library.Order)
         });
+        
+        return Ok(new Render
+        {
+            Data = [
+                ..response
+                    .OrderBy(library => library.Order)
+                    .Select(item => new ComponentBuilder<LibrariesResponseItemDto>()
+                        .WithComponent("NMCard")
+                        .WithProps(cardProps => cardProps
+                            .WithData(item))
+                        .Build())
+            ]
+        });
     }
 
     [HttpGet]
@@ -252,29 +265,38 @@ public class LibrariesController(
                 .Select(movie => new LibraryResponseItemDto(movie))
                 .Concat(shows.Select(tv => new LibraryResponseItemDto(tv)))
                 .OrderBy(item => item.TitleSort);
-
-            return GetPaginatedResponse(concat, request);
+            
+            return Ok(new Render
+            {
+                Data = [
+                    new ComponentBuilder<LibraryResponseItemDto>()
+                        .WithComponent("NMGrid")
+                        .WithProps(props => props
+                            .WithItems(
+                                concat.Select(item =>
+                                    new ComponentBuilder<LibraryResponseItemDto>()
+                                        .WithComponent("NMCard")
+                                        .WithProps(cardProps => cardProps
+                                            .WithData(item)
+                                            .WithWatch())
+                                        .Build())))
+                        .Build(),
+                ]
+            });
         }
 
-        string[] numbers = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-        string[] letters =
-        [
-            "#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
-            "U", "V", "W", "X", "Y", "Z"
-        ];
-        
         return Ok(new Render
         {
-            Data = letters.Select(genre => new ComponentBuilder<LibraryResponseItemDto>()
+            Data = Letters.Select(genre => new ComponentBuilder<LibraryResponseItemDto>()
                 .WithComponent("NMCarousel")
                 .WithProps(props => props
                     .WithId(genre)
                     .WithTitle(genre)
                     .WithItems(
                         movies.Select(movie => new LibraryResponseItemDto(movie))
-                            .Where(item => genre == "#" ? numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre))
+                            .Where(item => genre == "#" ? Numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre))
                             .Concat(shows.Select(tv => new LibraryResponseItemDto(tv))
-                                .Where(item => genre == "#" ? numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre)))
+                                .Where(item => genre == "#" ? Numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre)))
                             .Select(item => new ComponentBuilder<LibraryResponseItemDto>()
                                 .WithComponent("NMCard")
                                 .WithProps(cardProps => cardProps
@@ -282,6 +304,47 @@ public class LibrariesController(
                                     .WithWatch())
                                 .Build())))
                 .Build())
+        });
+    }
+    
+    [HttpGet]
+    [Route("{libraryId:ulid}/letter/{letter}")]
+    public IActionResult LibraryByLetter(Ulid libraryId, string letter, [FromQuery] PageRequestDto request)
+    {
+        Guid userId = User.UserId();
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view library");
+
+        string language = Language();
+        
+        IEnumerable<Movie> movies = libraryRepository
+            .GetPaginatedLibraryMovies(userId, libraryId, letter, language, request.Take, request.Page);
+
+        IEnumerable<Tv> shows = libraryRepository
+            .GetPaginatedLibraryShows(userId, libraryId, letter, language, request.Take, request.Page);
+
+        List<LibraryResponseItemDto> concat = movies
+            .Select(movie => new LibraryResponseItemDto(movie))
+            .Concat(shows.Select(tv => new LibraryResponseItemDto(tv)))
+            .OrderBy(item => item.TitleSort)
+            .ToList();
+        
+        return Ok(new Render
+        {
+            Data = [
+                new ComponentBuilder<LibraryResponseItemDto>()
+                    .WithComponent("NMGrid")
+                    .WithProps(props => props
+                        .WithItems(
+                            concat.Select(item =>
+                                new ComponentBuilder<LibraryResponseItemDto>()
+                                    .WithComponent("NMCard")
+                                    .WithProps(cardProps => cardProps
+                                        .WithData(item)
+                                        .WithWatch())
+                                    .Build())))
+                    .Build(),
+            ]
         });
     }
 }

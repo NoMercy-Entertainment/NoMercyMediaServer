@@ -9,18 +9,17 @@ public record AlbumsResponseDto
 {
     [JsonProperty("data")] public IEnumerable<AlbumsResponseItemDto> Data { get; set; } = [];
 
-    private static readonly string[] Letters = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+    private static readonly string[] Numbers = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
     public static readonly Func<MediaContext, Guid, string, IAsyncEnumerable<Album>> GetAlbums =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, string letter = "_") => mediaContext.Albums
             .AsNoTracking()
             .OrderBy(album => album.Name)
             .Where(album => letter == "_"
-                ? Letters.Any(p => album.Name.StartsWith(p))
+                ? Numbers.Any(p => album.Name.StartsWith(p))
                 : album.Name.StartsWith(letter)
             )
             .Include(album => album.Translations)
-            .Where(album => album.AlbumTrack.Any(albumTrack => albumTrack.Track.Duration != null))
             .GroupBy(artist => artist.Name).Select(x => x.First())
         );
 }

@@ -32,8 +32,8 @@ public record PersonResponseItemDto
 
     [JsonProperty("external_ids")] public Database.Models.TmdbPersonExternalIds? ExternalIds { get; set; }
     [JsonProperty("translations")] public TranslationsDto TranslationsDto { get; set; } = new();
-    [JsonProperty("known_for")] public KnownFor[] KnownFor { get; set; } = [];
-    [JsonProperty("images")] public Images Images { get; set; } = new();
+    [JsonProperty("known_for")] public KnownForDto[] KnownFor { get; set; } = [];
+    [JsonProperty("images")] public ImagesDto ImagesDto { get; set; } = new();
 
     public PersonResponseItemDto(Person person)
     {
@@ -64,7 +64,7 @@ public record PersonResponseItemDto
         Gender = person.Gender;
         Link = new($"/person/{Id}", UriKind.Relative);
 
-        Images = new()
+        ImagesDto = new()
         {
             Profiles = person.Images
                 .Select(image => new ImageDto(image))
@@ -74,20 +74,20 @@ public record PersonResponseItemDto
         CombinedCredits = new()
         {
             Cast = person.Casts
-                .Select(cast => new KnownFor(cast))
+                .Select(cast => new KnownForDto(cast))
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
 
             Crew = person.Crews
-                .Select(crew => new KnownFor(crew))
+                .Select(crew => new KnownForDto(crew))
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray()
         };
 
         KnownFor = person.Casts
-            .Select(crew => new KnownFor(crew))
+            .Select(crew => new KnownForDto(crew))
             .Concat(person.Crews
-                .Select(crew => new KnownFor(crew)))
+                .Select(crew => new KnownForDto(crew)))
             .OrderByDescending(knownFor => knownFor.Popularity)
             .ToArray();
     }
@@ -137,7 +137,7 @@ public record PersonResponseItemDto
         Gender = Enum.Parse<TmdbGender>(tmdbPersonAppends.TmdbGender.ToString(), true).ToString();
         Link = new($"/person/{Id}", UriKind.Relative);
 
-        Images = new()
+        ImagesDto = new()
         {
             Profiles = tmdbPersonAppends.Images.Profiles
                 .Select(image => new ImageDto(image))
@@ -147,23 +147,23 @@ public record PersonResponseItemDto
         CombinedCredits = new()
         {
             Cast = tmdbPersonAppends.CombinedCredits.Cast
-                .Select(cast => new KnownFor(cast, person))
+                .Select(cast => new KnownForDto(cast, person))
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
 
             Crew = tmdbPersonAppends.CombinedCredits.Crew
-                .Select(crew => new KnownFor(crew, person))
+                .Select(crew => new KnownForDto(crew, person))
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray()
         };
 
-        KnownFor[] cast = tmdbPersonAppends.CombinedCredits.Cast
-            .Select(cast => new KnownFor(cast, person))
+        KnownForDto[] cast = tmdbPersonAppends.CombinedCredits.Cast
+            .Select(cast => new KnownForDto(cast, person))
             .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 
-        KnownFor[] crew = tmdbPersonAppends.CombinedCredits.Crew
-            .Select(crew => new KnownFor(crew, person))
+        KnownForDto[] crew = tmdbPersonAppends.CombinedCredits.Crew
+            .Select(crew => new KnownForDto(crew, person))
             .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 

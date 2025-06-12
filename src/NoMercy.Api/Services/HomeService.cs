@@ -102,7 +102,7 @@ public class HomeService
         return genres.Where(genre => genre.Items.Any()).ToList();
     }
 
-    public async Task<Render> GetContinueWatchingContent(Guid userId, string language, string country)
+    public async Task<Render> GetHomeData(Guid userId, string language, string country)
     {
         IEnumerable<UserData> continueWatching = Queries.GetContinueWatching(_mediaContext, userId, language, country)
             .Where(item => item.Time < item.VideoFile.Duration?.ToSeconds() * 0.8);
@@ -198,19 +198,29 @@ public class HomeService
             .Randomize().FirstOrDefault()
             ?.Items.Randomize().FirstOrDefault();
 
-        IQueryable<Library> libraries = _libraryRepository.GetLibraries(userId);
+        List<Library> libraries = await Queries.GetLibraries(_mediaContext, userId);
         List<GenreRowDto<dynamic>> list = [];
+
+        int animeCount = await Queries.GetAnimeCount(_mediaContext, userId);
+        int movieCount = await Queries.GetMovieCount(_mediaContext, userId);
+        int tvCount = await Queries.GetTvCount(_mediaContext, userId);
 
         foreach (Library library in libraries)
         {
             IEnumerable<Movie> movies = _libraryRepository.GetLibraryMovies(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc");
             IEnumerable<Tv> shows = _libraryRepository.GetLibraryShows(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc");
+            
+            bool shouldPaginate = (library.Type == "movie" && movieCount > 300)
+                                  || (library.Type == "tv" && tvCount > 300) 
+                                  || (library.Type == "anime" && animeCount > 300);
 
             GenreRowDto<dynamic> item = new()
             {
                 Id = library.Id.ToString(),
                 Title = library.Title,
-                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+                MoreLink = shouldPaginate 
+                    ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative) 
+                    : new($"/libraries/{library.Id}", UriKind.Relative),
                 Items = movies.Select(movie => new GenreRowItemDto(movie, country))
                     .Concat(shows.Select(tv => new GenreRowItemDto(tv, country)))
             };

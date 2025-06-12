@@ -10,7 +10,6 @@ using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using NoMercy.Api.Constraints;
 using NoMercy.Api.Controllers.V1.Media;
-using NoMercy.Api.Middleware;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;

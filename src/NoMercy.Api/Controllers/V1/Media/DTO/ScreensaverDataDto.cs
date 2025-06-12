@@ -11,7 +11,7 @@ public record ScreensaverDataDto
 
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
 
-    [JsonProperty("meta")] public Meta? Meta { get; set; }
+    [JsonProperty("meta")] public MetaDto? Meta { get; set; }
 
     public ScreensaverDataDto(Image image, IEnumerable<Image> logos, string type)
     {
@@ -24,8 +24,8 @@ public record ScreensaverDataDto
         ColorPalette = image.ColorPalette;
         Meta = new()
         {
-            Logo = logo != null
-                ? new Logo
+            Logo = logo is not null
+                ? new LogoDto
                 {
                     AspectRatio = logo.AspectRatio,
                     Src = logo.FilePath

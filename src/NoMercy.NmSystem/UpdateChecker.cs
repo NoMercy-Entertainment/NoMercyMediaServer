@@ -1,6 +1,3 @@
-using Newtonsoft.Json;
-using NoMercy.NmSystem.Information;
-
 namespace NoMercy.NmSystem;
 
 public static class UpdateChecker

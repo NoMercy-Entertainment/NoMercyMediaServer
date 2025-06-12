@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
-public record Profile
+public record ProfileDto
 {
     [JsonProperty("aspect_ratio")] public double AspectRatio { get; set; }
     [JsonProperty("height")] public long Height { get; set; }

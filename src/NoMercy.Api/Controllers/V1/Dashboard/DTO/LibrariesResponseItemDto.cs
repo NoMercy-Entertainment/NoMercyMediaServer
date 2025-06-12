@@ -1,7 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.Helpers;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
 public record LibrariesResponseItemDto
@@ -18,6 +17,8 @@ public record LibrariesResponseItemDto
     [JsonProperty("order")] public int? Order { get; set; }
 
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
+    [JsonProperty("pagination")] public string Pagination { get; set; } = "auto";
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
     [JsonProperty("created_at")] public DateTime? CreatedAt { get; set; }
     [JsonProperty("updated_at")] public DateTime? UpdatedAt { get; set; }
@@ -26,20 +27,9 @@ public record LibrariesResponseItemDto
 
     public LibrariesResponseItemDto(Library library)
     {
-        string image = library.Type switch
-        {
-            "anime" => library.LibraryTvs.Randomize().FirstOrDefault(lt => lt.Library.Type == "anime")?.Tv.Backdrop ??
-                library.Image ?? "",
-            "movie" => library.LibraryMovies.Randomize().FirstOrDefault(lm => lm.Library.Type == "movie")?.Movie
-                .Backdrop ?? library.Image ?? "",
-            "tv" => library.LibraryTvs.Randomize().FirstOrDefault(lt => lt.Library.Type == "tv")?.Tv.Backdrop ??
-                library.Image ?? "",
-            _ => library.Image ?? ""
-        };
-
         Id = library.Id;
         AutoRefreshInterval = library.AutoRefreshInterval;
-        Image = image;
+        Image = library.Image;
         PerfectSubtitleMatch = library.PerfectSubtitleMatch;
         Realtime = library.Realtime;
         SpecialSeasonName = library.SpecialSeasonName;
@@ -48,6 +38,10 @@ public record LibrariesResponseItemDto
         Order = library.Order;
         CreatedAt = library.CreatedAt;
         UpdatedAt = library.UpdatedAt;
+        Pagination = library.LibraryMovies.Count + library.LibraryTvs.Count > 300 ? "letter" : "auto";
+        Link = library.LibraryMovies.Count + library.LibraryTvs.Count > 300 
+            ? new($"/{Id}/letter/A", UriKind.Relative) 
+            : new($"/{Id}", UriKind.Relative);
 
         Subtitles = library.LanguageLibraries
             .Select(languageLibrary => languageLibrary.Language.Iso6391)

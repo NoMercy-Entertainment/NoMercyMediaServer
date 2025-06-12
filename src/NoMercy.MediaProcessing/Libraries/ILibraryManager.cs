@@ -1,5 +1,3 @@
-using NoMercy.NmSystem.Dto;
-
 namespace NoMercy.MediaProcessing.Libraries;
 
 public interface ILibraryManager: IDisposable, IAsyncDisposable

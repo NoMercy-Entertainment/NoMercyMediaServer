@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;

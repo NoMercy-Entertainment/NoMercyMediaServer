@@ -31,32 +31,45 @@ public class SpecialController(SpecialRepository specialRepository) : BaseContro
         List<Special> specials = await specialRepository.GetSpecialsAsync(userId, language, request.Take, request.Page);
 
         if (request.Version != "lolomo")
-            return Ok(new SpecialsResponseDto
-            {
-                Data = specials
-                    .Select(special => new SpecialsResponseItemDto(special))
-            });
-
-        string[] numbers = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-        string[] letters =
-        [
-            "#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
-            "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
-        ];
-
-        return Ok(new LoloMoResponseDto<SpecialsResponseItemDto>
         {
-            Data = letters.Select(genre => new LoloMoRowDto<SpecialsResponseItemDto>
+            return Ok(new Render
             {
-                Title = genre,
-                Id = genre,
+                Data = [
+                    new ComponentBuilder<SpecialsResponseItemDto>()
+                        .WithComponent("NMGrid")
+                        .WithProps(props => props
+                            .WithItems(
+                                specials
+                                    .Select(special => new SpecialsResponseItemDto(special))
+                                    .Select(item =>
+                                        new ComponentBuilder<SpecialsResponseItemDto>()
+                                            .WithComponent("NMCard")
+                                            .WithProps(cardProps => cardProps
+                                                .WithData(item)
+                                                .WithWatch())
+                                            .Build())))
+                        .Build(),
+                ]
+            });
+        }
 
-                Items = specials.Where(special => genre == "#"
-                        ? numbers.Any(p => special.Title.StartsWith(p))
-                        : special.Title.StartsWith(genre))
-                    .Select(special => new SpecialsResponseItemDto(special))
-                    .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort)
-            })
+        return Ok(new Render
+        {
+            Data = Letters.Select(genre => new ComponentBuilder<LibraryResponseItemDto>()
+                .WithComponent("NMCarousel")
+                .WithProps(props => props
+                    .WithId(genre)
+                    .WithTitle(genre)
+                    .WithItems(
+                        specials.Select(movie => new LibraryResponseItemDto(movie))
+                            .Where(item => genre == "#" ? Numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre))
+                            .Select(item => new ComponentBuilder<LibraryResponseItemDto>()
+                                .WithComponent("NMCard")
+                                .WithProps(cardProps => cardProps
+                                    .WithData(item)
+                                    .WithWatch())
+                                .Build())))
+                .Build())
         });
     }
 

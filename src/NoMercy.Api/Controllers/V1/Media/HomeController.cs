@@ -82,7 +82,7 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view continue watching");
 
-        Render result = await _homeService.GetContinueWatchingContent(User.UserId(), Language(), Country());
+        Render result = await _homeService.GetHomeData(User.UserId(), Language(), Country());
         
         return Ok(result);
     }
@@ -143,6 +143,21 @@ public class HomeController : BaseController
             Version = "1.0",
             Message = "NoMercy MediaServer API is running",
             Timestamp = DateTime.UtcNow
+        });
+    }
+    
+    [HttpGet]
+    [Route("permissions")]
+    public IActionResult Permissions()
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have access to this server");
+        
+        return Ok(new
+        {
+            owner = User.IsOwner(),
+            manager = User.IsModerator(),
+            allowed = User.IsAllowed(),
         });
     }
 

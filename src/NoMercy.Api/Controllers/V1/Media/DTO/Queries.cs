@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 
@@ -131,8 +132,9 @@ public static class Queries
                                 image.Tv!.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
                 .Where(image => image._colorPalette != "")
                 .Where(image =>
-                    (image.Type == "backdrop" && image.VoteAverage > 2 && image.Iso6391 == null && image.Height >= 1080) ||
+                    (image.Type == "backdrop" && image.VoteAverage > 5 && image.Iso6391 == null && image.Height >= 1080) ||
                     (image.Type == "logo" && image.Iso6391 == "en" && image.Width >= image.Height))
+                .OrderByDescending(image => image.Width)
                 .ToHashSetAsync();
 
     public static HashSet<Genre> GetHome(MediaContext mediaContext, Guid userId, string? language, int take, int page = 0)
@@ -152,4 +154,40 @@ public static class Queries
             .ToHashSet();
 
     }
+    
+    public static readonly Func<MediaContext, Guid, Task<List<Library>>> GetLibraries =
+        (mediaContext, userId) => mediaContext.Libraries
+            .Where(library => library.LibraryUsers
+                .FirstOrDefault(u => u.UserId.Equals(userId)) != null
+            )
+            .Include(library => library.FolderLibraries)
+            .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .ThenInclude(folder => folder.EncoderProfileFolder)
+            .ThenInclude(library => library.EncoderProfile)
+            .Include(library => library.LanguageLibraries)
+            .ThenInclude(languageLibrary => languageLibrary.Language)
+            .Include(library => library.LibraryMovies)
+            .Include(library => library.LibraryTvs)
+            .ToListAsync();
+    
+    public static readonly Func<MediaContext, Guid, Task<int>> GetAnimeCount =
+        (mediaContext, userId) => mediaContext.Tvs
+            .AsNoTracking()
+            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(tv => tv.Library.Type == "anime")
+            .CountAsync();
+    
+    public static readonly Func<MediaContext, Guid, Task<int>> GetMovieCount =
+        (mediaContext, userId) => mediaContext.Movies
+            .AsNoTracking()
+            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(movie => movie.Library.Type == "movie")
+            .CountAsync();
+    
+    public static readonly Func<MediaContext, Guid, Task<int>> GetTvCount =
+        (mediaContext, userId) => mediaContext.Tvs
+            .AsNoTracking()
+            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(tv => tv.Library.Type == "tv")
+            .CountAsync();
 }

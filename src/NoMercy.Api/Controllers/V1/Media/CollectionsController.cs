@@ -35,29 +35,43 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
         {
             IEnumerable<CollectionsResponseItemDto> concat = collections
                 .Select(collection => new CollectionsResponseItemDto(collection));
-
-            return GetPaginatedResponse(concat, request);
+            
+            return Ok(new Render
+            {
+                Data = [
+                    new ComponentBuilder<CollectionsResponseItemDto>()
+                        .WithComponent("NMGrid")
+                        .WithProps(props => props
+                            .WithItems(
+                                concat.Select(item =>
+                                    new ComponentBuilder<CollectionsResponseItemDto>()
+                                        .WithComponent("NMCard")
+                                        .WithProps(cardProps => cardProps
+                                            .WithData(item)
+                                            .WithWatch())
+                                        .Build())))
+                        .Build(),
+                ]
+            });
         }
 
-        string[] numbers = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-        string[] letters =
-        [
-            "#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
-            "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
-        ];
-
-        return Ok(new LoloMoResponseDto<LibraryResponseItemDto>
+        return Ok(new Render
         {
-            Data = letters.Select(genre => new LoloMoRowDto<LibraryResponseItemDto>
-            {
-                Title = genre,
-                Id = genre,
-
-                Items = collections.Where(collection => genre == "#"
-                        ? numbers.Any(p => collection.Title.StartsWith(p))
-                        : collection.Title.StartsWith(genre))
-                    .Select(collection => new LibraryResponseItemDto(collection))
-            })
+            Data = Letters.Select(genre => new ComponentBuilder<LibraryResponseItemDto>()
+                .WithComponent("NMCarousel")
+                .WithProps(props => props
+                    .WithId(genre)
+                    .WithTitle(genre)
+                    .WithItems(
+                        collections.Select(movie => new LibraryResponseItemDto(movie))
+                            .Where(item => genre == "#" ? Numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre))
+                            .Select(item => new ComponentBuilder<LibraryResponseItemDto>()
+                                .WithComponent("NMCard")
+                                .WithProps(cardProps => cardProps
+                                    .WithData(item)
+                                    .WithWatch())
+                                .Build())))
+                .Build())
         });
     }
 
@@ -75,10 +89,12 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
         Collection? collection = await collectionRepository.GetCollectionAsync(userId, id, language, country);
 
         if (collection is not null && collection.CollectionMovies.Count > 0 && collection.Images.Count > 0)
+        {
             return Ok(new CollectionResponseDto
             {
                 Data = new(collection)
             });
+        }
 
         TmdbCollectionClient tmdbCollectionsClient = new(id);
         TmdbCollectionAppends? collectionAppends = await tmdbCollectionsClient.WithAllAppends(true);
@@ -97,7 +113,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
         // TmdbCollectionJob tmdbJob = new(collectionAppends.Id, library);
         // jobDispatcher.Dispatch(tmdbJob, "queue", 10);
-
+        
         return Ok(new CollectionResponseDto
         {
             Data = new(collectionAppends)

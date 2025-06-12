@@ -4,7 +4,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.People;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
-public record KnownFor
+public record KnownForDto
 {
     [JsonProperty("adult")] public bool Adult { get; set; }
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
@@ -39,7 +39,7 @@ public record KnownFor
 
     [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
-    public KnownFor(Cast cast)
+    public KnownForDto(Cast cast)
     {
         Character = cast.Role.Character;
         Title = cast.Movie?.Title ?? cast.Tv?.Title;
@@ -61,7 +61,7 @@ public record KnownFor
         HaveItems = cast.Movie?.VideoFiles.Count != 0 ? 1 : cast.Tv?.Episodes.Count(e => e.VideoFiles.Count != 0) ?? 0;
     }
 
-    public KnownFor(Crew crew)
+    public KnownForDto(Crew crew)
     {
         Title = crew.Movie?.Title ?? crew.Tv!.Title;
         MediaType = crew.Movie is not null ? "movie" : "tv";
@@ -83,7 +83,7 @@ public record KnownFor
         HaveItems = crew.Movie?.VideoFiles.Count != 0 ? 1 : crew.Tv?.Episodes.Count(e => e.VideoFiles.Count > 0) ?? 0;
     }
 
-    public KnownFor(TmdbPersonCredit crew, Person? person)
+    public KnownForDto(TmdbPersonCredit crew, Person? person)
     {
         int year = crew.ReleaseDate.ParseYear();
         if (year == 0) year = crew.FirstAirDate.ParseYear();
@@ -125,7 +125,7 @@ public record KnownFor
                 + (c.Tv != null ? c.Tv.Episodes.Count(e => e.VideoFiles.Count != 0) : 0)) ?? 0;
     }
 
-    public KnownFor(TmdbPersonCredit crew, string type, Person? person)
+    public KnownForDto(TmdbPersonCredit crew, string type, Person? person)
     {
         int year = crew.ReleaseDate.ParseYear();
         if (year == 0) year = crew.FirstAirDate.ParseYear();

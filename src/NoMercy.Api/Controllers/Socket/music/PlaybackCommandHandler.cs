@@ -1,4 +1,3 @@
-using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.Socket.music;
