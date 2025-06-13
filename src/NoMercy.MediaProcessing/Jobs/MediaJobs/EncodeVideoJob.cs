@@ -117,9 +117,10 @@ public class EncodeVideoJob : AbstractEncoderJob
 
                 if (ffmpeg.ConvertSubtitle)
                 {
-                    await ffmpeg.ConvertSubtitles(ffmpeg.Container.SubtitleStreams
+                    List<BaseSubtitle> streams = ffmpeg.Container.SubtitleStreams
                         .Where(x => x.ConvertSubtitle)
-                        .ToList(), Id.ToInt(), fileMetadata.Title, fileMetadata.ImgPath);
+                        .ToList();
+                    await ffmpeg.ConvertSubtitles(streams, Id.ToInt(), fileMetadata.Title, fileMetadata.ImgPath);
                 }
 
                 Networking.Networking.SendToAll("encoder-progress", "dashboardHub",  new Progress

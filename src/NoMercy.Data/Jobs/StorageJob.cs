@@ -125,10 +125,10 @@ public class StorageJob : IShouldQueue
         return totalSize;
     }
     
-    private static async Task CountFolder(List<string> folders, string library, StorageDto storage, CancellationToken ct = default)
+    private static async Task CountFolder(List<string> folders, string library, StorageDto storage, CancellationToken cancellationToken = default)
     {
         
-        await Parallel.ForEachAsync(folders, ct,(folder, _) =>
+        await Parallel.ForEachAsync(folders, cancellationToken,(folder, _) =>
         {
             long size = GetDirectorySize(new(folder));
 

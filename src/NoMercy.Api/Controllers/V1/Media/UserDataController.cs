@@ -55,6 +55,7 @@ public class UserDataController : BaseController
         List<UserData> continueWatching = await mediaContext.UserData
             .AsNoTracking()
             .Where(user => user.UserId.Equals(userId))
+            .Include(movie => movie.VideoFile)
             
             .Include(userData => userData.Movie!)
             .ThenInclude(movie => movie.Media
@@ -115,8 +116,7 @@ public class UserDataController : BaseController
         return Ok(new ContinueWatchingDto
         {
             Data = filteredContinueWatching
-                .Select(item => new ContinueWatchingItemDto(item,
-                    country))
+                .Select(item => new ContinueWatchingItemDto(item, country))
                 .DistinctBy(item => item.Link),
         });
     }

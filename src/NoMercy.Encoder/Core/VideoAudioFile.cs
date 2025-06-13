@@ -458,7 +458,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
     public async Task ConvertSubtitles(List<BaseSubtitle> subtitles, int id, string title, string? imgPath)
     {
-        foreach (BaseSubtitle? subtitle in subtitles.DistinctBy(x => x.HlsPlaylistFilename))
+        foreach (BaseSubtitle? subtitle in subtitles)
         {
             string input = Path.Combine(BasePath, $"{subtitle.HlsPlaylistFilename}.{subtitle.Extension}");
             string orcFile = Path.Combine(BasePath, "subtitles", "temp.txt");
