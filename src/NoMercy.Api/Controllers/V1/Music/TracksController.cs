@@ -11,6 +11,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.Networking.Dto;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.MusixMatch.Client;
 using NoMercy.Providers.MusixMatch.Models;
@@ -47,6 +48,9 @@ public class TracksController : BaseController
         {
             Data = new()
             {
+                Name = "Favorite Tracks".Localize(),
+                Link = new("music/tracks", UriKind.Relative),
+                Type = "playlist",
                 ColorPalette = new(),
                 Tracks = tracks
             }
