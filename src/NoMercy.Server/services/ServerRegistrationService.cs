@@ -23,38 +23,39 @@ public class ServerRegistrationService : IHostedService, IDisposable
         try
         {
             while (!Config.Started && !cancellationToken.IsCancellationRequested)
-            {
                 await Task.Delay(1000, cancellationToken);
-            }
 
             if (cancellationToken.IsCancellationRequested) return;
-        
+
             if (Config.NatStatus == NatStatus.Open)
             {
                 Logger.Setup("NAT status is open, you can access your server from outside your local network.");
                 return;
             }
-            
+
             // Test if the server is reachable from the outside
             Config.PortForwarded = await Networking.Networking.IsPortOpenAsync();
             if (Config.PortForwarded)
             {
-                Logger.Setup("Your server is port forwarded, you can access your server from outside your local network.");
+                Logger.Setup(
+                    "Your server is port forwarded, you can access your server from outside your local network.");
                 return;
             }
-            
+
             await Register.GetTunnelAvailability();
-            
+
             // Cloudflare token is not available
             if (string.IsNullOrEmpty(Config.CloudflareTunnelToken))
             {
                 Logger.Setup("You don't have access to our Cloudflare tunnel service, this is a paid feature.");
-                
-                Logger.Setup($"You need to manually forward port {Config.InternalServerPort} to {Config.ExternalServerPort} if you want to use the server outside your local network");
-                Logger.Setup("For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide");
+
+                Logger.Setup(
+                    $"You need to manually forward port {Config.InternalServerPort} to {Config.ExternalServerPort} if you want to use the server outside your local network");
+                Logger.Setup(
+                    "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide");
                 return;
             }
-            
+
             _tunnelService = new(
                 Config.CloudflareTunnelToken,
                 $"nomercy-mediaserver-{Info.DeviceId}"

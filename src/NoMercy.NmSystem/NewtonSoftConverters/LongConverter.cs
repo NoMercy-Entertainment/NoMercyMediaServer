@@ -12,19 +12,14 @@ public class LongConverter : JsonConverter
     public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
     {
         if (value is long longValue)
-        {
             writer.WriteValue(longValue);
-        }
         else
-        {
             writer.WriteNull();
-        }
     }
 
     public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue,
         JsonSerializer serializer)
     {
-
         if (reader.Value is null) return null;
 
         return reader.TokenType switch

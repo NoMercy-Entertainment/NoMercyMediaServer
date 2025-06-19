@@ -3,9 +3,10 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Providers.TMDB.Models.People;
-using TmdbGender=NoMercy.Providers.TMDB.Models.People.TmdbGender;
+using TmdbGender = NoMercy.Providers.TMDB.Models.People.TmdbGender;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record PersonResponseItemDto
 {
     [JsonProperty("id")] public long Id { get; set; }

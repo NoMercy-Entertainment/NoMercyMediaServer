@@ -12,9 +12,9 @@ public class GenreRepository(MediaContext context)
             .Where(genre => genre.Id == id)
             .Include(genre => genre.GenreMovies
                 .OrderBy(genreMovie => genreMovie.Movie.TitleSort)
+                .Where(genreMovie => genreMovie.Movie.Library.LibraryUsers
+                    .Any(libraryUser => libraryUser.UserId.Equals(userId)))
                 .Where(genreMovie => genreMovie.Movie.VideoFiles.Any(videoFile => videoFile.Folder != null))
-                .Skip(page * take)
-                .Take(take)
             )
             .ThenInclude(genreMovie => genreMovie.Movie)
             .ThenInclude(movie => movie.VideoFiles)
@@ -30,10 +30,10 @@ public class GenreRepository(MediaContext context)
             .ThenInclude(certificationMovie => certificationMovie.Certification)
             .Include(genre => genre.GenreTvShows
                 .OrderBy(genreTv => genreTv.Tv.TitleSort)
+                .Where(genreTv => genreTv.Tv.Library.LibraryUsers
+                    .Any(libraryUser => libraryUser.UserId.Equals(userId)))
                 .Where(genreTv => genreTv.Tv.Episodes
                     .Any(episode => episode.VideoFiles.Any(videoFile => videoFile.Folder != null)))
-                .Skip(page * take)
-                .Take(take)
             )
             .ThenInclude(genreTv => genreTv.Tv)
             .ThenInclude(tv => tv.Episodes.Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
@@ -123,5 +123,16 @@ public class GenreRepository(MediaContext context)
             .OrderBy(genre => genre.Name)
             .Skip(page * take)
             .Take(take);
+    }
+
+    public Task<List<MusicGenre>> GetMusicGenresAsync(Guid userId)
+    {
+        return context.MusicGenres.AsNoTracking()
+            .Where(genre =>
+                genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId.Equals(userId))) ||
+                genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId.Equals(userId))))
+            .Where(genre => genre.AlbumMusicGenres.Any(musicGenre => musicGenre.Album.AlbumTrack.Count > 0) || 
+                            genre.ArtistMusicGenres.Any(musicGenre => musicGenre.Artist.ArtistTrack.Count > 0))
+            .ToListAsync();
     }
 }

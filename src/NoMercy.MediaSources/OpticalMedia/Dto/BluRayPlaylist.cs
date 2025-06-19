@@ -40,13 +40,21 @@ public partial class BluRayPlaylist
                     ?.Split('.').FirstOrDefault() ?? string.Empty;
             }
             else if (line.StartsWith("Format "))
+            {
                 playlist.Format = value;
+            }
             else if (line.StartsWith("File size"))
+            {
                 playlist.FileSize = ParseInt(value);
+            }
             else if (line.StartsWith("Duration"))
+            {
                 playlist.Duration = ParseDuration(value);
+            }
             else if (line.StartsWith("Overall bit rate"))
+            {
                 playlist.OverallBitRate = value;
+            }
             else if (line.StartsWith("Video"))
             {
                 currentVideo = new()
@@ -69,22 +77,36 @@ public partial class BluRayPlaylist
                 };
             }
             else if (line.StartsWith("Menu"))
+            {
                 currentChapter = new();
+            }
 
             if (currentVideo != null)
             {
                 if (line.StartsWith("ID"))
+                {
                     currentVideo.Id = ParseInt(value);
+                }
                 else if (line.StartsWith("Format") && currentVideo.Format == null)
+                {
                     currentVideo.Format = value;
+                }
                 else if (line.StartsWith("Format/Info"))
+                {
                     currentVideo.FormatInfo = value;
+                }
                 else if (line.StartsWith("Width"))
+                {
                     currentVideo.Width = ParseInt(value);
+                }
                 else if (line.StartsWith("Height"))
+                {
                     currentVideo.Height = ParseInt(value);
+                }
                 else if (line.StartsWith("Display aspect ratio"))
+                {
                     currentVideo.DisplayAspectRatio = value;
+                }
                 else if (line.StartsWith("Frame rate"))
                 {
                     currentVideo.FrameRate =
@@ -97,19 +119,33 @@ public partial class BluRayPlaylist
             if (currentAudio != null)
             {
                 if (line.StartsWith("ID"))
+                {
                     currentAudio.Id = ParseInt(value);
+                }
                 else if (line.StartsWith("Format") && currentAudio.Format == null)
+                {
                     currentAudio.Format = value;
+                }
                 else if (line.StartsWith("Format/Info"))
+                {
                     currentAudio.FormatInfo = value;
+                }
                 else if (line.StartsWith("Channel(s)"))
+                {
                     currentAudio.Channels = ParseInt(value);
+                }
                 else if (line.StartsWith("Sampling rate"))
+                {
                     currentAudio.SamplingRate = ParseInt(value);
+                }
                 else if (line.StartsWith("Compression mode"))
+                {
                     currentAudio.CompressionMode = value;
+                }
                 else if (line.StartsWith("Duration"))
+                {
                     currentAudio.Duration = ParseDuration(value);
+                }
                 else if (line.StartsWith("Language"))
                 {
                     currentAudio.Language = value;
@@ -122,11 +158,17 @@ public partial class BluRayPlaylist
             if (currentSubtitle != null)
             {
                 if (line.StartsWith("ID"))
+                {
                     currentSubtitle.Id = ParseInt(value);
+                }
                 else if (line.StartsWith("Format"))
+                {
                     currentSubtitle.Format = value;
+                }
                 else if (line.StartsWith("Duration"))
+                {
                     currentSubtitle.Duration = ParseDuration(value);
+                }
                 else if (line.StartsWith("Language"))
                 {
                     currentSubtitle.Language = value;
@@ -136,12 +178,9 @@ public partial class BluRayPlaylist
             }
 
             if (currentChapter == null) continue;
-            
+
             Chapter? chapter = ParseChapter(line);
-            if (chapter != null)
-            {
-                playlist.Chapters.Add(chapter);
-            }
+            if (chapter != null) playlist.Chapters.Add(chapter);
         }
 
         return playlist;
@@ -165,13 +204,11 @@ public partial class BluRayPlaylist
     {
         Match match = Regex.Match(line, @"(\d+:\d+:\d+.\d+)\s*:\s(.*)");
         if (match.Success)
-        {
-            return new ()
+            return new()
             {
                 Timestamp = TimeSpan.Parse(match.Groups[1].Value),
                 Title = match.Groups[2].Value
             };
-        }
 
         return null;
     }

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.Other;
+
 public class Titles
 {
     [JsonProperty("en")] public string? En { get; set; }

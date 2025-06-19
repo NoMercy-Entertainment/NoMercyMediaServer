@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.AcoustId.Client;
+
 public class FingerPrintData
 {
     // ReSharper disable once InconsistentNaming

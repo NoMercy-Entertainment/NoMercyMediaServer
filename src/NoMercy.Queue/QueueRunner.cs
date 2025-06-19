@@ -41,7 +41,7 @@ public static class QueueRunner
                      _cancellationTokenSource)> keyValuePair in Workers)
             for (int i = 0; i < keyValuePair.Value.count; i++)
                 taskList.Add(Task.Run(() => new Thread(() => SpawnWorker(keyValuePair.Key)).Start()));
-        
+
         await Task.WhenAll(taskList);
     }
 
@@ -149,7 +149,7 @@ public static class QueueRunner
     public static async Task<bool> SetWorkerCount(string name, int max, Guid? userId)
     {
         if (!Workers.ContainsKey(name)) return false;
-        
+
         await using MediaContext context = new();
         await context.Configuration
             .Upsert(new()

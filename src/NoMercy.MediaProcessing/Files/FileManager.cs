@@ -13,6 +13,7 @@ using Image = SixLabors.ImageSharp.Image;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.MediaProcessing.Files;
+
 public partial class FileManager(
     IFileRepository fileRepository
 ) : IFileManager
@@ -24,7 +25,7 @@ public partial class FileManager(
     private List<Folder> Folders { get; set; } = [];
     private List<MediaFolderExtend> Files { get; set; } = [];
     public string Type { get; set; } = "";
-    
+
     private string? Filter { get; set; }
 
     public async Task FindFiles(int id, Library library)
@@ -58,7 +59,7 @@ public partial class FileManager(
                 break;
         }
     }
-    
+
     public void FilterFiles(string filter)
     {
         Filter = filter;
@@ -67,7 +68,7 @@ public partial class FileManager(
     public async Task MoveToLibraryFolder(int id, Folder folder)
     {
         await using MediaContext context = new();
-        
+
         Tv? tv = await context.Tvs
             .Include(tv => tv.Library)
             .ThenInclude(lib => lib.FolderLibraries)
@@ -75,7 +76,7 @@ public partial class FileManager(
             .Include(tv => tv.Episodes)
             .ThenInclude(e => e.VideoFiles)
             .FirstOrDefaultAsync(t => t.Id == id);
-        
+
         Movie? movie = await context.Movies
             .Include(movie => movie.Library)
             .ThenInclude(lib => lib.FolderLibraries)
@@ -87,63 +88,56 @@ public partial class FileManager(
         string sourceFolder = "";
 
         if (tv?.Folder is not null)
-        {
             foreach (FolderLibrary libraryFolder in tv.Library.FolderLibraries)
             {
                 string path = libraryFolder.Folder.Path + tv.Folder;
                 if (!Directory.Exists(path)) continue;
-                
+
                 folderName = tv.Folder;
                 sourceFolder = path;
-                
+
                 break;
             }
-        }
         else if (movie?.Folder is not null)
-        {
             foreach (FolderLibrary libraryFolder in movie.Library.FolderLibraries)
             {
                 string path = libraryFolder.Folder.Path + movie.Folder;
                 if (!Directory.Exists(path)) continue;
-                
+
                 folderName = movie.Folder;
                 sourceFolder = path;
-                
+
                 break;
             }
-        }
-        
+
         if (string.IsNullOrEmpty(folderName) || string.IsNullOrEmpty(sourceFolder))
         {
             Logger.App("Folder not found");
             return;
         }
-        
+
         string destinationFolder = folder.Path + folderName;
-        
+
         Logger.App($"Moving {sourceFolder} to {destinationFolder}");
 
         MoveFolder(sourceFolder, destinationFolder);
-        
+
         FolderLibrary? newFolderLibrary = await context.FolderLibrary
             .Include(fl => fl.Library)
             .Include(fl => fl.Folder)
             .FirstOrDefaultAsync(fl => fl.FolderId == folder.Id);
-        
+
         if (newFolderLibrary is null) return;
-        
+
         if (tv?.Folder is not null)
         {
             tv.Folder = folderName;
             tv.LibraryId = newFolderLibrary.LibraryId;
-            
+
             LibraryTv? libraryTv = await context.LibraryTv
                 .FirstOrDefaultAsync(lt => lt.TvId == tv.Id);
 
-            if (libraryTv is not null)
-            {
-                libraryTv.LibraryId = newFolderLibrary.LibraryId;
-            }
+            if (libraryTv is not null) libraryTv.LibraryId = newFolderLibrary.LibraryId;
 
             await context.SaveChangesAsync();
         }
@@ -151,20 +145,16 @@ public partial class FileManager(
         {
             movie.Folder = folderName;
             movie.LibraryId = newFolderLibrary.LibraryId;
-            
+
             LibraryMovie? libraryMovie = await context.LibraryMovie
                 .FirstOrDefaultAsync(lm => lm.MovieId == movie.Id);
 
-            if (libraryMovie is not null)
-            {
-                libraryMovie.LibraryId = newFolderLibrary.LibraryId;
-            }
+            if (libraryMovie is not null) libraryMovie.LibraryId = newFolderLibrary.LibraryId;
 
             await context.SaveChangesAsync();
         }
 
         await FindFiles(id, newFolderLibrary.Library);
-        
     }
 
     private async Task StoreMusic()
@@ -203,7 +193,10 @@ public partial class FileManager(
 
         if (items.Count == 0) return;
 
-        foreach (MediaFile item in items) await StoreVideoItem(item);
+        await Parallel.ForEachAsync(items, async (item, _) =>
+        {
+            await StoreVideoItem(item);
+        });
 
         Logger.App($"Found {items.Count} files for {Show?.Title}");
     }
@@ -218,7 +211,7 @@ public partial class FileManager(
         await Task.CompletedTask;
     }
 
-    internal async Task StoreVideoItem(MediaFile item)
+    private async Task StoreVideoItem(MediaFile item)
     {
         Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
         if (folder == null) return;
@@ -227,7 +220,7 @@ public partial class FileManager(
         string hostFolder = item.Path.Replace(fileName, "");
         string baseFolder = (Path.DirectorySeparatorChar + (Movie?.Folder ?? Show?.Folder ?? "").Replace("/", "")
                                                          + item.Path.Replace(folder.Path, ""))
-                                                            .Replace(fileName, "");
+            .Replace(fileName, "");
 
         List<Subtitle> subtitles = GetSubtitles(hostFolder);
 
@@ -236,7 +229,7 @@ public partial class FileManager(
         Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
 
         Metadata metadata = MakeMetadata(item, fileName, baseFolder, hostFolder, tracks);
-        
+
         Ulid metadataId = await fileRepository.StoreMetadata(metadata);
 
         try
@@ -261,7 +254,7 @@ public partial class FileManager(
                 Quality = item.FFprobe?.VideoStreams.FirstOrDefault()?.Width.ToString() ?? "",
                 Subtitles = JsonConvert.SerializeObject(subtitles),
                 Tracks = tracks.ToArray(),
-                MetadataId = metadataId,
+                MetadataId = metadataId
             };
 
             await fileRepository.StoreVideoFile(videoFile);
@@ -274,24 +267,25 @@ public partial class FileManager(
         }
     }
 
-    private Metadata MakeMetadata(MediaFile item, string fileName, string baseFolder, string hostFolder, List<IVideoTrack> extraFiles)
+    private Metadata MakeMetadata(MediaFile item, string fileName, string baseFolder, string hostFolder,
+        List<IVideoTrack> extraFiles)
     {
         List<IVideo> video = GetVideoHashList(hostFolder);
         List<IAudio> audio = GetAudioHashList(hostFolder);
         List<ISubtitle> subtitles = GetSubtitleHashList(hostFolder);
         List<IFont> fonts = GetFontHashList(hostFolder);
         List<IPreview> previews = GetPreviewHashList(hostFolder, extraFiles);
-        
+
         IChaptersFile? chapters = GetMetaDataItem<IChaptersFile>(hostFolder, "chapters", extraFiles);
-        
+
         IFontsFile? fontsFile = extraFiles.Where(file => file.Kind == "fonts")
             .Select(file => new IFontsFile
             {
                 FileName = (Path.GetFileName(file.File) ?? "").Replace("\\", "/"),
                 FileSize = GetFileSize(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? "")),
-                FileHash = ComputeFileHash(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? "")),
+                FileHash = ComputeFileHash(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? ""))
             }).FirstOrDefault();
-        
+
         Metadata metadata = new()
         {
             Filename = fileName.Replace("\\", "/"),
@@ -299,18 +293,18 @@ public partial class FileManager(
             Folder = baseFolder.Replace("\\", "/"),
             HostFolder = hostFolder.Replace("\\", "/"),
             FolderSize = GetDirectorySize(hostFolder),
-            
-            Type = Movie?.Id is not null 
-                ? Database.Models.MediaType.Movie 
+
+            Type = Movie?.Id is not null
+                ? Database.Models.MediaType.Movie
                 : Database.Models.MediaType.Tv,
-            
+
             Audio = audio,
             Fonts = fonts,
             Previews = previews,
             Subtitles = subtitles,
             Video = video,
             Chapters = chapters,
-            FontsFile = fontsFile,
+            FontsFile = fontsFile
         };
         return metadata;
     }
@@ -319,15 +313,15 @@ public partial class FileManager(
     {
         List<IVideo> videos = [];
 
-        string[] videoFolders = Directory.GetDirectories(hostFolder).Where(folder => Path.GetFileName(folder).StartsWith("video")).ToArray();
+        string[] videoFolders = Directory.GetDirectories(hostFolder)
+            .Where(folder => Path.GetFileName(folder).StartsWith("video")).ToArray();
 
         foreach (string videoFolder in videoFolders)
         {
             string path = Path.Combine(hostFolder, videoFolder);
-            
+
             string[] videoFiles = Directory.GetFiles(path).Where(file => file.EndsWith("m3u8")).ToArray();
             foreach (string videoFile in videoFiles)
-            {
                 try
                 {
                     FFMpegCore.IMediaAnalysis ffprobe = FFMpegCore.FFProbe.Analyse(videoFile);
@@ -339,35 +333,34 @@ public partial class FileManager(
                         Width = ffprobe.VideoStreams.FirstOrDefault()?.Width ?? 0,
                         Height = ffprobe.VideoStreams.FirstOrDefault()?.Height ?? 0,
                         Codec = ffprobe.AudioStreams.FirstOrDefault()?.CodecName ?? "",
-                        BitRate = ffprobe.AudioStreams.FirstOrDefault()?.BitRate ?? 0,
+                        BitRate = ffprobe.AudioStreams.FirstOrDefault()?.BitRate ?? 0
                     });
                 }
                 catch (Exception)
                 {
                     //
                 }
-            }
         }
-        
+
         return videos;
     }
-    
+
     private static List<IAudio> GetAudioHashList(string hostFolder)
     {
         List<IAudio> audios = [];
-        
-        string[] audioFolders = Directory.GetDirectories(hostFolder).Where(folder => Path.GetFileName(folder).StartsWith("audio")).ToArray();
+
+        string[] audioFolders = Directory.GetDirectories(hostFolder)
+            .Where(folder => Path.GetFileName(folder).StartsWith("audio")).ToArray();
         foreach (string audioFolder in audioFolders)
         {
             string path = Path.Combine(hostFolder, audioFolder);
-            
+
             string[] audioFiles = Directory.GetFiles(path).Where(file => file.EndsWith("m3u8")).ToArray();
             foreach (string audioFile in audioFiles)
-            {
                 try
                 {
                     FFMpegCore.IMediaAnalysis ffprobe = FFMpegCore.FFProbe.Analyse(audioFile);
-                
+
                     audios.Add(new()
                     {
                         FileName = Path.Combine(Path.GetFileName(path), Path.GetFileName(audioFile)).Replace("\\", "/"),
@@ -378,39 +371,39 @@ public partial class FileManager(
                         Channels = ffprobe.AudioStreams.FirstOrDefault()?.Channels ?? 0,
                         BitRate = ffprobe.AudioStreams.FirstOrDefault()?.BitRate ?? 0,
                         ChannelLayout = ffprobe.AudioStreams.FirstOrDefault()?.ChannelLayout ?? "",
-                        SampleRate = ffprobe.AudioStreams.FirstOrDefault()?.SampleRateHz ?? 0,
+                        SampleRate = ffprobe.AudioStreams.FirstOrDefault()?.SampleRateHz ?? 0
                     });
                 }
                 catch (Exception)
                 {
-                   //
+                    //
                 }
-            }
         }
+
         return audios;
     }
 
     private static List<ISubtitle> GetSubtitleHashList(string hostFolder)
     {
         List<ISubtitle> subtitles = [];
-        
+
         string subtitleFolder = Path.Combine(hostFolder, "subtitles");
 
         if (!Directory.Exists(subtitleFolder)) return subtitles;
-        
+
         string[] subtitleFiles = Directory.GetFiles(subtitleFolder);
         foreach (string subtitleFile in subtitleFiles)
         {
             Regex regex = SubtitleFileRegex();
             Match match = regex.Match(subtitleFile);
-                
+
             string path = Path.Combine(hostFolder, subtitleFile);
 
             if (match.Groups["type"].Value != "sign" && match.Groups["type"].Value != "song" &&
                 match.Groups["type"].Value != "full") continue;
 
-            if(match.Groups["ext"].Value == "sup") continue;
-            if(match.Groups["ext"].Value == "vob") continue;
+            if (match.Groups["ext"].Value == "sup") continue;
+            if (match.Groups["ext"].Value == "vob") continue;
 
             subtitles.Add(new()
             {
@@ -433,10 +426,9 @@ public partial class FileManager(
             {
                 ImageFileName = (Path.GetFileName(file.File) ?? "").Replace("\\", "/"),
                 ImageFileSize = GetFileSize(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? "")),
-                ImageFileHash = ComputeFileHash(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? "")),
-
+                ImageFileHash = ComputeFileHash(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? ""))
             });
-        
+
         IEnumerable<IPreview> times = extraFiles.Where(file => file.Kind == "thumbnails")
             .Select(file => new IPreview
             {
@@ -444,9 +436,9 @@ public partial class FileManager(
                 Height = GetImageDimensionsFromVtt(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? "")).Height,
                 TimeFileName = (Path.GetFileName(file.File) ?? "").Replace("\\", "/"),
                 TimeFileSize = GetFileSize(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? "")),
-                TimeFileHash = ComputeFileHash(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? "")),
+                TimeFileHash = ComputeFileHash(Path.Combine(hostFolder, Path.GetFileName(file.File) ?? ""))
             });
-       
+
         List<IPreview> previews = sprites.Zip(times, (sprite, time) => new IPreview
         {
             Width = time.Width,
@@ -460,7 +452,7 @@ public partial class FileManager(
         }).ToList();
         return previews;
     }
-    
+
     private static List<IFont> GetFontHashList(string hostFolder)
     {
         string fontFolder = Path.Combine(hostFolder, "fonts");
@@ -468,7 +460,7 @@ public partial class FileManager(
         List<IFont> fonts = [];
 
         if (!Directory.Exists(fontFolder)) return fonts;
-        
+
         string[] fontFiles = Directory.GetFiles(fontFolder);
         foreach (string fontFile in fontFiles)
         {
@@ -487,27 +479,21 @@ public partial class FileManager(
     private static long GetDirectorySize(string folder)
     {
         DirectoryInfo directoryInfo = new(folder);
-        
-        if (!directoryInfo.Exists)
-        {
-            return 0;
-        }
+
+        if (!directoryInfo.Exists) return 0;
 
         FileInfo[] dirs = directoryInfo.GetFiles("*", SearchOption.AllDirectories);
-            
+
         long totalSize = dirs.Sum(file => file.Length);
 
         return totalSize;
     }
-    
+
     private static long GetFileSize(string file)
     {
         FileInfo fileInfo = new(file);
-        
-        if (!fileInfo.Exists)
-        {
-            return 0;
-        }
+
+        if (!fileInfo.Exists) return 0;
 
         return fileInfo.Length;
     }
@@ -517,7 +503,7 @@ public partial class FileManager(
         if (Directory.Exists(sourceFolder))
         {
             Directory.Move(sourceFolder, destinationFolder);
-            
+
             Logger.App($"Moved {sourceFolder} to {destinationFolder}");
         }
         else
@@ -525,11 +511,11 @@ public partial class FileManager(
             throw new DirectoryNotFoundException($"Source folder not found: {sourceFolder}");
         }
     }
-    
+
     private static (int Width, int Height) GetImageDimensions(string filePath)
     {
         Image image = Image.Load(filePath);
-        
+
         return (image.Width, image.Height);
     }
 
@@ -545,19 +531,19 @@ public partial class FileManager(
             int height = int.Parse(match.Groups["height"].Value);
             return (width, height);
         }
-        
+
         return (0, 0);
     }
-    
+
     private T? GetMetaDataItem<T>(string hostFolder, string key, IEnumerable<IVideoTrack> extraFiles) where T : class
     {
         IVideoTrack? item = extraFiles.FirstOrDefault(file => file.Kind == key);
         if (item != null)
         {
             string path = Path.Combine(hostFolder, (Path.GetFileName(item.File) ?? "").Replace("/", ""));
-            return new IHash()
+            return new IHash
             {
-                FileName =  Path.DirectorySeparatorChar + Path.GetFileName(item.File),
+                FileName = Path.DirectorySeparatorChar + Path.GetFileName(item.File),
                 FileSize = GetFileSize(path),
                 FileHash = ComputeFileHash(path)
             } as T;
@@ -569,51 +555,42 @@ public partial class FileManager(
     private static List<IVideoTrack> GetExtraFiles(string hostFolder)
     {
         List<IVideoTrack> tracks = [];
-        
+
         string[] files = Directory.GetFiles(hostFolder);
         foreach (string file in files)
         {
             string name = Path.GetFileName(file);
             if (name.StartsWith("chapter"))
-            {
                 tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "chapters"
                 });
-            }
             else if (name.StartsWith("skipper"))
-            {
                 tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "skippers"
                 });
-            }
-            else if ((name.StartsWith("sprite") || name.StartsWith("preview") || name.StartsWith("thumb")) && file.EndsWith("vtt"))
-            {
+            else if ((name.StartsWith("sprite") || name.StartsWith("preview") || name.StartsWith("thumb")) &&
+                     file.EndsWith("vtt"))
                 tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "thumbnails"
                 });
-            }
             else if ((name.StartsWith("sprite") || name.StartsWith("thumb")) && file.EndsWith("webp"))
-            {
                 tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "sprite"
                 });
-            }
             else if (name.StartsWith("fonts"))
-            {
                 tracks.Add(new()
                 {
                     File = "/" + name,
                     Kind = "fonts"
                 });
-            }
         }
 
         return tracks;
@@ -636,8 +613,8 @@ public partial class FileManager(
                 if (match.Groups["type"].Value != "sign" && match.Groups["type"].Value != "song" &&
                     match.Groups["type"].Value != "full") continue;
 
-                if(match.Groups["ext"].Value == "sup") continue;
-                if(match.Groups["ext"].Value == "vob") continue;
+                if (match.Groups["ext"].Value == "sup") continue;
+                if (match.Groups["ext"].Value == "vob") continue;
 
                 subtitles.Add(new()
                 {
@@ -650,7 +627,7 @@ public partial class FileManager(
 
         return subtitles;
     }
-    
+
     private async Task MediaType(int id, Library library)
     {
         (Movie, Show, Type) = await fileRepository.MediaType(id, library);
@@ -705,13 +682,11 @@ public partial class FileManager(
             string path = Path.Combine(rootFolder.Path, folder);
 
             if (Directory.Exists(path))
-            {
                 folders.Add(new()
                 {
                     Path = path,
                     Id = rootFolder.Id
                 });
-            }
         }
 
         return folders;
@@ -721,19 +696,15 @@ public partial class FileManager(
     {
         using SHA256 sha256 = SHA256.Create();
         using FileStream fileStream = File.OpenRead(filePath);
-        
+
         byte[] hashBytes = sha256.ComputeHash(fileStream);
-        
+
         StringBuilder hashStringBuilder = new(64);
-        
-        foreach (byte b in hashBytes)
-        {
-            hashStringBuilder.Append(b.ToString("x2"));
-        }
+
+        foreach (byte b in hashBytes) hashStringBuilder.Append(b.ToString("x2"));
         return hashStringBuilder.ToString();
     }
 
     [GeneratedRegex(@"(?<lang>\w{3}).(?<type>\w{3,4}).(?<ext>\w{3})$")]
     private static partial Regex SubtitleFileRegex();
-
 }

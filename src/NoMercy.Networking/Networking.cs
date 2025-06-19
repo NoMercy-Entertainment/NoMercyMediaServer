@@ -1,4 +1,3 @@
-
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -20,7 +19,7 @@ namespace NoMercy.Networking;
 public class Networking
 {
     private static IHubContext<ConnectionHub> HubContext { get; set; } = null!;
-    
+
     public Networking(IHubContext<ConnectionHub> hubContext)
     {
         HubContext = hubContext;
@@ -32,7 +31,7 @@ public class Networking
     }
 
     private static INatDevice? _device;
-    
+
     private static bool HasFoundDevice { get; set; } = false;
 
     public static readonly ConcurrentDictionary<string, Client> SocketClients = new();
@@ -41,28 +40,19 @@ public class Networking
     public static async Task Discover()
     {
         Logger.Setup("Discovering Networking");
-        
+
         NatUtility.DeviceFound += DeviceFound;
         NatUtility.UnknownDeviceFound += UnknownDeviceFound;
-        
+
         Logger.Setup("Discovering UPNP devices");
         NatUtility.StartDiscovery();
 
-        if (!HasFoundDevice)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(5));
-        }
-        if (!HasFoundDevice)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(10));
-        }
-        
+        if (!HasFoundDevice) await Task.Delay(TimeSpan.FromSeconds(5));
+        if (!HasFoundDevice) await Task.Delay(TimeSpan.FromSeconds(10));
+
         ExternalIp = await GetExternalIp();
 
-        if (!HasFoundDevice)
-        {
-            Logger.Setup("No UPNP device found");
-        }
+        if (!HasFoundDevice) Logger.Setup("No UPNP device found");
     }
 
     private static string? _internalIp;
@@ -110,15 +100,12 @@ public class Networking
     private static async Task<string> GetExternalIp()
     {
         Logger.Setup("Getting external IP address");
-        
+
         GenericHttpClient apiClient = new(Config.ApiBaseUrl);
         apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
         HttpResponseMessage response = await apiClient.SendAsync(HttpMethod.Get, "v1/ip");
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new("The NoMercy API is not available");
-        }
-        
+        if (!response.IsSuccessStatusCode) throw new("The NoMercy API is not available");
+
         string externalIp = await response.Content.ReadAsStringAsync();
 
         ExternalDomain = $"{Regex.Replace(externalIp.Replace("\"", ""), "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
@@ -130,9 +117,9 @@ public class Networking
     private static void DeviceFound(object? sender, DeviceEventArgs args)
     {
         Logger.Setup("UPNP router Found: " + args.Device.DeviceEndpoint);
-        
+
         _device = args.Device;
-        
+
         HasFoundDevice = true;
 
         GetNatStatus();
@@ -142,10 +129,9 @@ public class Networking
         ExternalDomain = $"{Regex.Replace(ExternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
         ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
     }
-    
+
     private static void UnknownDeviceFound(object? sender, DeviceEventUnknownArgs args)
     {
-        
     }
 
     public static bool SendToAll(string name, string endpoint, object? data = null)
@@ -170,7 +156,6 @@ public class Networking
     {
         foreach ((string _, Client client) in SocketClients.Where(client =>
                      client.Value.Sub.Equals(userId) && client.Value.Endpoint == "/" + endpoint))
-        {
             try
             {
                 if (data != null)
@@ -182,7 +167,7 @@ public class Networking
             {
                 return;
             }
-        }
+
         await Task.CompletedTask;
     }
 
@@ -192,7 +177,6 @@ public class Networking
 
         foreach ((string _, Client client) in SocketClients.Where(client =>
                      client.Value.Sub.Equals(userId) && client.Value.Endpoint == "/" + endpoint))
-        {
             try
             {
                 if (data != null)
@@ -204,7 +188,6 @@ public class Networking
             {
                 return;
             }
-        }
 
         await Task.CompletedTask;
     }
@@ -214,12 +197,9 @@ public class Networking
         if (!Socket.OSSupportsIPv6) return false;
 
         foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
-        {
             if (nic.Supports(NetworkInterfaceComponent.IPv6))
-            {
                 return true;
-            }
-        }
+
         return false;
     }
 
@@ -234,23 +214,23 @@ public class Networking
         try
         {
             Logger.Setup("Trying to add UPNP records");
-            
-            _device.CreatePortMap(new(
-                protocol:Protocol.Tcp,
-                privatePort: Config.InternalServerPort,
-                publicPort: Config.ExternalServerPort,
-                lifetime: 0,
-                description: "NoMercy MediaServer (TCP)"));
 
             _device.CreatePortMap(new(
-                protocol:Protocol.Udp,
-                privatePort: Config.InternalServerPort,
-                publicPort: Config.ExternalServerPort,
-                lifetime: 0,
-                description: "NoMercy MediaServer (UDP)"));
+                Protocol.Tcp,
+                Config.InternalServerPort,
+                Config.ExternalServerPort,
+                0,
+                "NoMercy MediaServer (TCP)"));
+
+            _device.CreatePortMap(new(
+                Protocol.Udp,
+                Config.InternalServerPort,
+                Config.ExternalServerPort,
+                0,
+                "NoMercy MediaServer (UDP)"));
 
             ExternalIp = _device.GetExternalIP().ToString();
-            
+
             Logger.Setup($"IP address obtained from UPNP: {ExternalIp}");
         }
         catch (Exception e)
@@ -263,21 +243,23 @@ public class Networking
 
         Config.NatStatus = NatStatus.Filtered;
     }
-    
+
     public static async Task<bool> IsPortOpenAsync()
     {
         int timeoutMilliseconds = 1500;
-    
-        using TcpClient client = new ();
+
+        using TcpClient client = new();
         Task connectTask = client.ConnectAsync(ExternalIp, Config.ExternalServerPort);
         Task delayTask = Task.Delay(timeoutMilliseconds);
         Task completedTask = await Task.WhenAny(connectTask, delayTask);
 
         if (completedTask == delayTask)
         {
-            Logger.Setup($"Timeout checking {ExternalIp}:{Config.ExternalServerPort} after {timeoutMilliseconds}ms.", LogEventLevel.Verbose);
+            Logger.Setup($"Timeout checking {ExternalIp}:{Config.ExternalServerPort} after {timeoutMilliseconds}ms.",
+                LogEventLevel.Verbose);
             return false;
         }
+
         try
         {
             await connectTask;
@@ -285,12 +267,15 @@ public class Networking
         }
         catch (SocketException ex)
         {
-            Logger.Setup($"SocketException checking {ExternalIp}:{Config.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})", LogEventLevel.Error);
+            Logger.Setup(
+                $"SocketException checking {ExternalIp}:{Config.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})",
+                LogEventLevel.Error);
             return false;
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Exception checking {ExternalIp}:{Config.ExternalServerPort}: {ex.Message}", LogEventLevel.Error);
+            Logger.Setup($"Exception checking {ExternalIp}:{Config.ExternalServerPort}: {ex.Message}",
+                LogEventLevel.Error);
             return false;
         }
     }

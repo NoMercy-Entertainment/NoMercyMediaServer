@@ -1,6 +1,5 @@
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 
-
 public class ComponentPropsBuilder<T>
 {
     private readonly RenderProps<T> _props;
@@ -40,7 +39,7 @@ public class ComponentPropsBuilder<T>
         return this;
     }
 
-    public ComponentPropsBuilder<T> WithData(T? data)
+    public ComponentPropsBuilder<T> WithData(T data)
     {
         _props.Data = data;
         return this;

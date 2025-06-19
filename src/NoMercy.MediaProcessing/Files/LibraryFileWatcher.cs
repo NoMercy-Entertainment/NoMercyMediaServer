@@ -47,10 +47,7 @@ public class LibraryFileWatcher
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .ToList();
 
-        foreach (Library library in libraries)
-        {
-            AddLibraryWatcher(library);
-        }
+        foreach (Library library in libraries) AddLibraryWatcher(library);
     }
 
     // ReSharper disable once MemberCanBePrivate.Global
@@ -59,10 +56,7 @@ public class LibraryFileWatcher
         List<string> paths = library.FolderLibraries.Select(folderLibrary => folderLibrary.Folder.Path).ToList();
         List<Action> disposers = [];
 
-        Task.Run(() =>
-        {
-            disposers = Fs.Watch(paths);
-        }).Wait();
+        Task.Run(() => { disposers = Fs.Watch(paths); }).Wait();
 
         return () =>
         {
@@ -98,7 +92,6 @@ public class LibraryFileWatcher
 
     private Library? GetLibraryByPath(string path)
     {
-
         using MediaContext mediaContext = new(); // concurrent lock issue
         return mediaContext.Libraries
             .Include(library => library.FolderLibraries)

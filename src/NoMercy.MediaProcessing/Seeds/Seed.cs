@@ -86,9 +86,9 @@ public class Seed : IDisposable, IAsyncDisposable
         Dictionary<string, string> queryParams = new()
         {
             ["id"] = Info.DeviceId.ToString(),
-            ["with_self"] = "true",
+            ["with_self"] = "true"
         };
-        
+
         GenericHttpClient authClient = new(Config.ApiServerBaseUrl, 10, 0);
         authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
         string response = await authClient.SendAndReadAsync(HttpMethod.Get, "server-users", null, queryParams);
@@ -169,7 +169,7 @@ public class Seed : IDisposable, IAsyncDisposable
             .Genres.Select(genre => new Genre
             {
                 Id = genre.Id,
-                Name = genre.Name ?? string.Empty,
+                Name = genre.Name ?? string.Empty
             })
             .ToList();
         genres.AddRange(movieGenres ?? []);
@@ -178,7 +178,7 @@ public class Seed : IDisposable, IAsyncDisposable
             .Genres.Select(genre => new Genre
             {
                 Id = genre.Id,
-                Name = genre.Name ?? string.Empty,
+                Name = genre.Name ?? string.Empty
             })
             .ToList();
         genres.AddRange(tvGenres ?? []);
@@ -204,7 +204,7 @@ public class Seed : IDisposable, IAsyncDisposable
                 {
                     GenreId = genre.Id,
                     Name = genre.Name ?? string.Empty,
-                    Iso6391 = language.Iso6391,
+                    Iso6391 = language.Iso6391
                 })
                 .ToList();
 
@@ -216,10 +216,10 @@ public class Seed : IDisposable, IAsyncDisposable
                 {
                     GenreId = genre.Id,
                     Name = genre.Name ?? string.Empty,
-                    Iso6391 = language.Iso6391,
+                    Iso6391 = language.Iso6391
                 })
                 .ToList();
-            
+
             translations.AddRange(tg ?? []);
         });
 
@@ -365,14 +365,10 @@ public class Seed : IDisposable, IAsyncDisposable
 
         List<EncoderProfile> encoderProfiles;
         if (File.Exists(AppFiles.EncoderProfilesSeedFile))
-        {
             encoderProfiles = File.ReadAllTextAsync(AppFiles.EncoderProfilesSeedFile).Result
                 .FromJson<List<EncoderProfile>>()!;
-        }
         else
-        {
             encoderProfiles = EncoderProfileSeedData.GetEncoderProfiles();
-        }
 
         await File.WriteAllTextAsync(AppFiles.EncoderProfilesSeedFile, encoderProfiles.ToJson());
 
@@ -387,20 +383,18 @@ public class Seed : IDisposable, IAsyncDisposable
                 _videoProfiles = vi._videoProfiles,
                 _audioProfiles = vi._audioProfiles,
                 _subtitleProfiles = vi._subtitleProfiles,
-                UpdatedAt = vi.UpdatedAt,
+                UpdatedAt = vi.UpdatedAt
             })
             .RunAsync();
 
         List<EncoderProfileFolder> encoderProfileFolders = [];
         foreach (EncoderProfile? encoderProfile in encoderProfiles)
-        {
             encoderProfileFolders.AddRange(encoderProfile.EncoderProfileFolder.ToList()
                 .Select(encoderProfileFolder => new EncoderProfileFolder
                 {
                     EncoderProfileId = encoderProfile.Id,
                     FolderId = encoderProfileFolder.FolderId
                 }));
-        }
 
         await MediaContext.EncoderProfileFolder
             .UpsertRange(encoderProfileFolders)
@@ -450,7 +444,7 @@ public class Seed : IDisposable, IAsyncDisposable
             LibrarySeedDto[] librarySeed = File.ReadAllTextAsync(AppFiles.LibrariesSeedFile)
                 .Result.FromJson<LibrarySeedDto[]>() ?? [];
 
-            List<Library> libraries = librarySeed.Select(librarySeedDto => new Library()
+            List<Library> libraries = librarySeed.Select(librarySeedDto => new Library
             {
                 Id = librarySeedDto.Id,
                 AutoRefreshInterval = librarySeedDto.AutoRefreshInterval,

@@ -1,5 +1,4 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
 

@@ -24,7 +24,8 @@ public class PersonManager(
 {
     public async Task Store(TmdbTvShowAppends show)
     {
-        (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) = CollectPeople(show);
+        (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) =
+            CollectPeople(show);
 
         List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(peopleIds);
 
@@ -59,19 +60,20 @@ public class PersonManager(
         Logger.MovieDb($"Show {show.Name}: Jobs stored", LogEventLevel.Debug);
 
         List<int> ids = personRepository.GetIds();
-        
+
         await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.TvShow);
         Logger.MovieDb($"Show {show.Name}: Cast stored", LogEventLevel.Debug);
-        
+
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.TvShow);
         Logger.MovieDb($"Show {show.Name}: Crew stored", LogEventLevel.Debug);
 
         jobDispatcher.DispatchJob<AddPersonExtraDataJob, TmdbPersonAppends>(peopleAppends, show.Name);
     }
-    
+
     public async Task Store(TmdbSeasonAppends season)
     {
-        (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) = CollectPeople(season);
+        (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) =
+            CollectPeople(season);
 
         List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(peopleIds);
 
@@ -106,17 +108,18 @@ public class PersonManager(
         Logger.MovieDb($"Show {season.Name}; Season {season.SeasonNumber}: Jobs stored", LogEventLevel.Debug);
 
         List<int> ids = personRepository.GetIds();
-        
+
         await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Season);
         Logger.MovieDb($"Show {season.Name}; Season {season.SeasonNumber}: Cast stored", LogEventLevel.Debug);
-        
+
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Season);
         Logger.MovieDb($"Show {season.Name}; Season {season.SeasonNumber}: Crew stored", LogEventLevel.Debug);
     }
 
     public async Task Store(TmdbEpisodeAppends episode)
     {
-        (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) = CollectPeople(episode);
+        (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) =
+            CollectPeople(episode);
 
         List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(peopleIds);
 
@@ -142,26 +145,36 @@ public class PersonManager(
             });
 
         await personRepository.Store(people);
-        Logger.MovieDb($"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: People stored");
+        Logger.MovieDb(
+            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: People stored");
 
         await personRepository.StoreRoles(roles);
-        Logger.MovieDb($"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Roles stored", LogEventLevel.Debug);
+        Logger.MovieDb(
+            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Roles stored",
+            LogEventLevel.Debug);
 
         await personRepository.StoreJobs(jobs);
-        Logger.MovieDb($"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Jobs stored", LogEventLevel.Debug);
+        Logger.MovieDb(
+            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Jobs stored",
+            LogEventLevel.Debug);
 
         List<int> ids = personRepository.GetIds();
-        
+
         await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Episode);
-        Logger.MovieDb($"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Cast stored", LogEventLevel.Debug);
-        
+        Logger.MovieDb(
+            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Cast stored",
+            LogEventLevel.Debug);
+
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Episode);
-        Logger.MovieDb($"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Crew stored", LogEventLevel.Debug);
+        Logger.MovieDb(
+            $"Show {episode.Name}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Crew stored",
+            LogEventLevel.Debug);
     }
 
     public async Task Store(TmdbMovieAppends movie)
     {
-        (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) = CollectPeople(movie);
+        (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) =
+            CollectPeople(movie);
 
         List<TmdbPersonAppends> peopleAppends = await FetchPeopleByIds(peopleIds);
 
@@ -199,13 +212,13 @@ public class PersonManager(
 
         await personRepository.StoreCast(casts.Where(c => ids.Contains(c.PersonId)), Type.Movie);
         Logger.MovieDb($"Movie: {movie.Title}: Cast stored", LogEventLevel.Debug);
-        
+
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Movie);
         Logger.MovieDb($"Movie: {movie.Title}: Crew stored", LogEventLevel.Debug);
 
         jobDispatcher.DispatchJob<AddPersonExtraDataJob, TmdbPersonAppends>(peopleAppends, movie.Title);
     }
-    
+
     public Task Update(string showName, TmdbTvShowAppends show)
     {
         throw new NotImplementedException();
@@ -260,14 +273,15 @@ public class PersonManager(
             jobDispatcher.DispatchJob<ImagePaletteJob, Image>(person.Id, posterJobItems);
     }
 
-    private (List<int> peopleIds, List<Cast> casts, List<Crew> crews,  List<Role> roles, List<Job> jobs) CollectPeople(TmdbTvShowAppends show)
+    private (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) CollectPeople(
+        TmdbTvShowAppends show)
     {
         List<int> peopleIds = [];
         List<Role> roles = [];
         List<Job> jobs = [];
         List<Cast> casts = [];
         List<Crew> crews = [];
-        
+
         foreach (TmdbTmdbAggregatedCast aggregateCast in show.AggregateCredits.Cast)
         {
             peopleIds.Add(aggregateCast.Id);
@@ -279,7 +293,7 @@ public class PersonManager(
                 Order = creditRole.Order,
                 EpisodeCount = creditRole.EpisodeCount
             }));
-            
+
             casts.AddRange(aggregateCast.Roles.Select(creditRole => new Cast
             {
                 CreditId = creditRole.CreditId,
@@ -299,7 +313,7 @@ public class PersonManager(
                 Order = crewJob.Order,
                 EpisodeCount = crewJob.EpisodeCount
             }));
-            
+
             crews.AddRange(aggregateCrew.Jobs.Select(crewJob => new Crew
             {
                 CreditId = crewJob.CreditId,
@@ -310,8 +324,9 @@ public class PersonManager(
 
         return (peopleIds, casts, crews, roles, jobs);
     }
-    
-    private (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) CollectPeople(TmdbSeasonAppends season)
+
+    private (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) CollectPeople(
+        TmdbSeasonAppends season)
     {
         List<int> peopleIds = [];
         List<Role> roles = [];
@@ -322,7 +337,7 @@ public class PersonManager(
         foreach (TmdbTmdbAggregatedCast aggregateCast in season.AggregateCredits.Cast)
         {
             peopleIds.Add(aggregateCast.Id);
-            
+
             roles.AddRange(aggregateCast.Roles.Select(r => new Role
             {
                 CreditId = r.CreditId,
@@ -330,7 +345,7 @@ public class PersonManager(
                 Order = r.Order,
                 EpisodeCount = r.EpisodeCount
             }));
-            
+
             casts.AddRange(aggregateCast.Roles.Select(creditRole => new Cast
             {
                 CreditId = creditRole.CreditId,
@@ -342,7 +357,7 @@ public class PersonManager(
         foreach (TmdbTmdbAggregatedCrew aggregateCrew in season.AggregateCredits.Crew)
         {
             peopleIds.Add(aggregateCrew.Id);
-            
+
             jobs.AddRange(aggregateCrew.Jobs.Select(j => new Job
             {
                 CreditId = j.CreditId ?? string.Empty,
@@ -350,7 +365,7 @@ public class PersonManager(
                 Order = j.Order,
                 EpisodeCount = j.EpisodeCount
             }));
-            
+
             crews.AddRange(aggregateCrew.Jobs.Select(crewJob => new Crew
             {
                 CreditId = crewJob.CreditId,
@@ -361,8 +376,9 @@ public class PersonManager(
 
         return (peopleIds, casts, crews, roles, jobs);
     }
-    
-    private (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) CollectPeople(TmdbEpisodeAppends episode)
+
+    private (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) CollectPeople(
+        TmdbEpisodeAppends episode)
     {
         List<int> peopleIds = [];
         List<Role> roles = [];
@@ -373,45 +389,46 @@ public class PersonManager(
         foreach (TmdbCast tmdbCast in episode.Cast)
         {
             peopleIds.Add(tmdbCast.Id);
-            
+
             roles.Add(new()
             {
                 CreditId = tmdbCast.CreditId,
                 Character = tmdbCast.Character,
                 Order = tmdbCast.Order
             });
-            
+
             casts.Add(new()
             {
                 CreditId = tmdbCast.CreditId,
                 PersonId = tmdbCast.Id,
-                EpisodeId = episode.Id,
+                EpisodeId = episode.Id
             });
         }
 
         foreach (TmdbCrew tmdbCrew in episode.Crew)
         {
             peopleIds.Add(tmdbCrew.Id);
-            
+
             jobs.Add(new()
             {
                 CreditId = tmdbCrew.CreditId ?? string.Empty,
                 Task = tmdbCrew.Job,
                 Order = tmdbCrew.Order
             });
-            
+
             crews.Add(new()
             {
                 CreditId = tmdbCrew.CreditId,
                 PersonId = tmdbCrew.Id,
-                EpisodeId = episode.Id,
+                EpisodeId = episode.Id
             });
         }
 
         return (peopleIds, casts, crews, roles, jobs);
     }
-    
-    private (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) CollectPeople(TmdbMovieAppends movie)
+
+    private (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) CollectPeople(
+        TmdbMovieAppends movie)
     {
         List<int> peopleIds = [];
         List<Role> roles = [];
@@ -429,7 +446,7 @@ public class PersonManager(
                 Character = aggregateCast.Character,
                 Order = aggregateCast.Order
             });
-            
+
             casts.Add(new()
             {
                 CreditId = aggregateCast.CreditId,
@@ -448,7 +465,7 @@ public class PersonManager(
                 Task = tmdbCrew.Job,
                 Order = tmdbCrew.Order
             });
-            
+
             crews.Add(new()
             {
                 CreditId = tmdbCrew.CreditId,

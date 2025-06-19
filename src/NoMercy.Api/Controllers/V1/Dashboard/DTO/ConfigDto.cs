@@ -5,13 +5,13 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
 public class ConfigDto
 {
     [JsonProperty("data")] public ConfigDtoData Data { get; set; } = new();
-} 
+}
 
 public class ConfigDtoData
 {
     [JsonProperty("internal_port")] public int InternalServerPort { get; set; }
     [JsonProperty("external_port")] public int ExternalServerPort { get; set; }
-    
+
     [JsonProperty("name")] public string? ServerName { get; set; }
     [JsonProperty("queue_workers")] public int? QueueWorkers { get; set; }
     [JsonProperty("encoder_workers")] public int? EncoderWorkers { get; set; }

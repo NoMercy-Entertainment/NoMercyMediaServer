@@ -4,12 +4,12 @@ namespace NoMercy.Providers.TVDB.Models;
 
 public class TvdbPeople
 {
-    
 }
 
-public class TvdbPeopleTypeResponse: TvdbResponse<TvdbPersonType[]>
+public class TvdbPeopleTypeResponse : TvdbResponse<TvdbPersonType[]>
 {
 }
+
 public class TvdbPersonType
 {
     [JsonProperty("id")] public int Id { get; set; }

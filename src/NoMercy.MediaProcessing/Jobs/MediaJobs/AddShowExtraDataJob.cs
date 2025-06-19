@@ -35,7 +35,7 @@ public class AddShowExtraDataJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
         await showManager.StoreContentRatings(Storage);
 
         await personManager.Store(Storage);
-        
+
         await showManager.StoreImages(Storage);
         await showManager.StoreSimilar(Storage);
         await showManager.StoreRecommendations(Storage);

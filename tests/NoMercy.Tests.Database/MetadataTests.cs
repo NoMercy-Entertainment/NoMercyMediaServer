@@ -39,21 +39,21 @@ public class MetadataTests
             Chapters = new() { FileSize = 200 }
         };
 
-        long expectedTotalSize = 
+        long expectedTotalSize =
             500 + 700 // Video sizes
                 + 300 + 400 // Audio sizes
-                + 50 + 70   // Subtitle sizes
-                + (30 + 20) + (40 + 25) // Preview sizes
-                + 15 + 25   // Font sizes
-                + 100       // FontsFile size
-                + 200;      // Chapters size
+                + 50 + 70 + // Subtitle sizes
+                30 + 20 + 40 + 25 + // Preview sizes
+                15 + 25 + // Font sizes
+                100 + // FontsFile size
+                200; // Chapters size
 
         // Act
         long totalSize = metadata.CalculateTotalSize();
 
         // Assert
         Assert.Equal(expectedTotalSize, totalSize);
-        
+
         await Task.CompletedTask;
     }
 }

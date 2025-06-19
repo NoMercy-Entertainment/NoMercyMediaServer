@@ -11,11 +11,11 @@ using Serilog.Events;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 [Serializable]
-public class MusicDescriptionJob: AbstractMusicDescriptionJob
+public class MusicDescriptionJob : AbstractMusicDescriptionJob
 {
     public override string QueueName => "queue";
     public override int Priority => 6;
-    
+
     public MusicBrainzArtist? MusicBrainzArtist { get; set; }
     public MusicBrainzReleaseGroup? MusicBrainzReleaseGroup { get; set; }
 

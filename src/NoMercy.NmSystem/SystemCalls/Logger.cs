@@ -37,7 +37,7 @@ public static class Logger
                 rollingInterval: RollingInterval.Day
             );
     }
-    
+
     private static SystemConsoleTheme Literate { get; } = new(
         new Dictionary<ConsoleThemeStyle, SystemConsoleThemeStyle>
         {
@@ -56,7 +56,7 @@ public static class Logger
             [ConsoleThemeStyle.LevelInformation] = new() { Foreground = ConsoleColor.White },
             [ConsoleThemeStyle.LevelWarning] = new() { Foreground = ConsoleColor.Yellow },
             [ConsoleThemeStyle.LevelError] = new() { Foreground = ConsoleColor.White, Background = ConsoleColor.Red },
-            [ConsoleThemeStyle.LevelFatal] = new() { Foreground = ConsoleColor.White, Background = ConsoleColor.Red },
+            [ConsoleThemeStyle.LevelFatal] = new() { Foreground = ConsoleColor.White, Background = ConsoleColor.Red }
         });
 
     private static void SinkConsole(this LoggerConfiguration lc)
@@ -71,29 +71,26 @@ public static class Logger
                 outputTemplate: ConsoleTemplate
             );
     }
-    
+
     static Logger()
-    { 
+    {
         ConsoleLog = CreateConsoleConfiguration()
             .CreateLogger();
         FileLog = CreateFileConfiguration()
             .CreateLogger();
     }
-    
+
     private static LoggerConfiguration CreateConsoleConfiguration()
     {
         return new LoggerConfiguration()
             .MinimumLevel.Verbose()
             .DefaultEnrich()
             .WriteTo.Logger(lc =>
-            { 
-                if (!Console.IsOutputRedirected)
-                {
-                    lc.SinkConsole();
-                }
+            {
+                if (!Console.IsOutputRedirected) lc.SinkConsole();
             });
     }
-    
+
     private static LoggerConfiguration CreateFileConfiguration()
     {
         return new LoggerConfiguration()
@@ -343,16 +340,16 @@ public static class Logger
         if (level < _maxLogLevel) return;
         if (!ShouldLog(level))
             return;
-        
+
         Color color = GetColor(type);
-    
+
         ConsoleLog.ForContext("Type", type)
             .ForContext("Color", ToHexString(color))
             .ForContext("Message", message)
             .ForContext("Level", level)
             .ForContext("ConsoleType", type)
             .Write(level, "{@Message}", message);
-        
+
         FileLog.ForContext("Type", type)
             .ForContext("Color", ToHexString(color))
             .ForContext("Message", message.ToJson())
@@ -375,7 +372,7 @@ public static class Logger
     {
         _maxLogLevel = level;
     }
-    
+
     // // ReSharper disable once MethodOverloadWithOptionalParameter
     // public static T Log<T>(this T self, string type = "server") where T : class
     // {
@@ -958,10 +955,7 @@ public static class Logger
         string logDirectoryPath = AppFiles.LogPath;
         List<LogEntry> logs = await LogReader.GetLogsAsync(logDirectoryPath, limit);
 
-        if (filter != null)
-        {
-            logs = logs.Where(filter).ToList();
-        }
+        if (filter != null) logs = logs.Where(filter).ToList();
 
         return logs;
     }

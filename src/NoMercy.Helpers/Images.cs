@@ -40,7 +40,7 @@ public static class Images
 
         // try
         // {
-            return Image.Load<Rgba32>(image);
+        return Image.Load<Rgba32>(image);
         // }
         // catch
         // {
@@ -59,18 +59,13 @@ public static class Images
         IImageFormat imageFormat;
         Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension("png", out imageFormat!);
 
-        if (string.IsNullOrEmpty(format))
-        {
-            return imageFormat;
-        }
+        if (string.IsNullOrEmpty(format)) return imageFormat;
 
         format = format.ToLowerInvariant();
 
         if (Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension(format,
                 out IImageFormat? imageFormat2))
-        {
             return imageFormat2;
-        }
 
         return imageFormat;
     }

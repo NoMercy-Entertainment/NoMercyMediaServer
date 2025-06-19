@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.Other;
+
 public class KitsuAnime
 {
     [JsonProperty("data")] public Data[] Data { get; set; } = [];

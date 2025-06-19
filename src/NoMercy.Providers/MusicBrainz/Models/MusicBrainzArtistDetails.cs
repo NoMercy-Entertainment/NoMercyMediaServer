@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class MusicBrainzArtistDetails : MusicBrainzArtist
 {
     [JsonProperty("isnis")] public string[] Isnis { get; set; } = [];

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class CoverArtArchive
 {
     [JsonProperty("artwork")] public bool Artwork { get; set; }

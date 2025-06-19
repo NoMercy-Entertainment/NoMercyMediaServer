@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Setup.Dto;
+
 public class Keys
 {
     [JsonProperty("makemkv_key")] public string MakeMkvKey { get; set; } = string.Empty;

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.AcoustId.Models;
+
 public class AcoustIdFingerprintDate
 {
     [JsonProperty("day")] public int Day { get; set; }

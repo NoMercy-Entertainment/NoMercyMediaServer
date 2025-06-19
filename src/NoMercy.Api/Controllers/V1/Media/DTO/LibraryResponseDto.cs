@@ -91,62 +91,62 @@ public record LibraryResponseDto
     }
 
     public static readonly Func<MediaContext, Guid, Ulid, string, int, int, Task<Library>> GetLibrary =
-        EF.CompileAsyncQuery(
-            (MediaContext mediaContext, Guid userId, Ulid id, string language, int take, int page = 0) =>
-                mediaContext.Libraries.AsNoTracking()
-                    .Where(library => library.Id == id)
-                    .Where(library => library.LibraryUsers
-                        .FirstOrDefault(u => u.UserId.Equals(userId)) != null
+        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid id, string language, int take,
+                int page = 0) =>
+            mediaContext.Libraries.AsNoTracking()
+                .Where(library => library.Id == id)
+                .Where(library => library.LibraryUsers
+                    .FirstOrDefault(u => u.UserId.Equals(userId)) != null
+                )
+                .Take(take)
+                .Skip(page * take)
+                .Include(library => library.LibraryMovies
+                    .Where(libraryMovie => libraryMovie.Movie.VideoFiles
+                        .Any(videoFile => videoFile.Folder != null) == true
                     )
-                    .Take(take)
-                    .Skip(page * take)
-                    .Include(library => library.LibraryMovies
-                        .Where(libraryMovie => libraryMovie.Movie.VideoFiles
+                )
+                .ThenInclude(libraryMovie => libraryMovie.Movie)
+                .ThenInclude(movie => movie.VideoFiles)
+                .Include(library => library.LibraryMovies)
+                .ThenInclude(libraryMovie => libraryMovie.Movie.Media
+                    .Where(media => media.Iso6391 == language || media.Iso6391 == "en"))
+                .Include(library => library.LibraryMovies)
+                .ThenInclude(libraryMovie => libraryMovie.Movie.Images
+                    .Where(image => image.Iso6391 == language || image.Iso6391 == "en"))
+                .Include(library => library.LibraryMovies)
+                .ThenInclude(libraryMovie => libraryMovie.Movie.GenreMovies)
+                .ThenInclude(genreMovie => genreMovie.Genre)
+                .Include(library => library.LibraryMovies)
+                .ThenInclude(libraryMovie => libraryMovie.Movie.Translations
+                    .Where(translation => translation.Iso6391 == language || translation.Iso6391 == "en"))
+                .Include(library => library.LibraryMovies)
+                .ThenInclude(libraryMovie => libraryMovie.Movie.CertificationMovies)
+                .ThenInclude(certificationMovie => certificationMovie.Certification)
+                .Include(library => library.LibraryTvs
+                    .Where(libraryTv => libraryTv.Tv.Episodes
+                        .Any(episode => episode.VideoFiles
                             .Any(videoFile => videoFile.Folder != null) == true
-                        )
+                        ) == true
                     )
-                    .ThenInclude(libraryMovie => libraryMovie.Movie)
-                    .ThenInclude(movie => movie.VideoFiles)
-                    .Include(library => library.LibraryMovies)
-                    .ThenInclude(libraryMovie => libraryMovie.Movie.Media
-                        .Where(media => media.Iso6391 == language || media.Iso6391 == "en"))
-                    .Include(library => library.LibraryMovies)
-                    .ThenInclude(libraryMovie => libraryMovie.Movie.Images
-                        .Where(image => image.Iso6391 == language || image.Iso6391 == "en"))
-                    .Include(library => library.LibraryMovies)
-                    .ThenInclude(libraryMovie => libraryMovie.Movie.GenreMovies)
-                    .ThenInclude(genreMovie => genreMovie.Genre)
-                    .Include(library => library.LibraryMovies)
-                    .ThenInclude(libraryMovie => libraryMovie.Movie.Translations
-                        .Where(translation => translation.Iso6391 == language || translation.Iso6391 == "en"))
-                    .Include(library => library.LibraryMovies)
-                    .ThenInclude(libraryMovie => libraryMovie.Movie.CertificationMovies)
-                    .ThenInclude(certificationMovie => certificationMovie.Certification)
-                    .Include(library => library.LibraryTvs
-                        .Where(libraryTv => libraryTv.Tv.Episodes
-                            .Any(episode => episode.VideoFiles
-                                .Any(videoFile => videoFile.Folder != null) == true
-                            ) == true
-                        )
-                    )
-                    .ThenInclude(libraryTv => libraryTv.Tv)
-                    .ThenInclude(tv => tv.Episodes
-                        .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
-                    .ThenInclude(episode => episode.VideoFiles)
-                    .Include(library => library.LibraryTvs)
-                    .ThenInclude(libraryTv => libraryTv.Tv.Media
-                        .Where(media => media.Iso6391 == language || media.Iso6391 == "en"))
-                    .Include(library => library.LibraryTvs)
-                    .ThenInclude(libraryTv => libraryTv.Tv.Images
-                        .Where(image => image.Iso6391 == language || image.Iso6391 == "en"))
-                    .Include(library => library.LibraryTvs)
-                    .ThenInclude(libraryTv => libraryTv.Tv.GenreTvs)
-                    .ThenInclude(genreTv => genreTv.Genre)
-                    .Include(library => library.LibraryTvs)
-                    .ThenInclude(libraryTv => libraryTv.Tv.Translations
-                        .Where(translation => translation.Iso6391 == language || translation.Iso6391 == "en"))
-                    .Include(library => library.LibraryTvs)
-                    .ThenInclude(libraryTv => libraryTv.Tv.CertificationTvs)
-                    .ThenInclude(certificationTv => certificationTv.Certification)
-                    .First());
+                )
+                .ThenInclude(libraryTv => libraryTv.Tv)
+                .ThenInclude(tv => tv.Episodes
+                    .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
+                .ThenInclude(episode => episode.VideoFiles)
+                .Include(library => library.LibraryTvs)
+                .ThenInclude(libraryTv => libraryTv.Tv.Media
+                    .Where(media => media.Iso6391 == language || media.Iso6391 == "en"))
+                .Include(library => library.LibraryTvs)
+                .ThenInclude(libraryTv => libraryTv.Tv.Images
+                    .Where(image => image.Iso6391 == language || image.Iso6391 == "en"))
+                .Include(library => library.LibraryTvs)
+                .ThenInclude(libraryTv => libraryTv.Tv.GenreTvs)
+                .ThenInclude(genreTv => genreTv.Genre)
+                .Include(library => library.LibraryTvs)
+                .ThenInclude(libraryTv => libraryTv.Tv.Translations
+                    .Where(translation => translation.Iso6391 == language || translation.Iso6391 == "en"))
+                .Include(library => library.LibraryTvs)
+                .ThenInclude(libraryTv => libraryTv.Tv.CertificationTvs)
+                .ThenInclude(certificationTv => certificationTv.Certification)
+                .First());
 }

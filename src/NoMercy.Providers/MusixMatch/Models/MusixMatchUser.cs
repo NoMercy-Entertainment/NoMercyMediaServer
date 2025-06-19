@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusixMatch.Models;
+
 public class MusixMatchUser
 {
     [JsonProperty("uaid")] public string Uaid { get; set; } = string.Empty;

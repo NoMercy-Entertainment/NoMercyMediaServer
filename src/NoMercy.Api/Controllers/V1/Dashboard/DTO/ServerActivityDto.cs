@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record ServerActivityDto
 {
     [JsonProperty("id")] public int Id { get; set; }

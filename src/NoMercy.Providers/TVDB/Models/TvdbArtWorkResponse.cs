@@ -5,6 +5,7 @@ namespace NoMercy.Providers.TVDB.Models;
 public class TvdbArtWorkResponse : TvdbResponse<TvdbArtWork>
 {
 }
+
 public class TvdbArtWork
 {
     [JsonProperty("height")] public int Height { get; set; }
@@ -21,7 +22,8 @@ public class TvdbArtWork
 public class TvdbArtWorkExtendedResponse : TvdbResponse<TvdbTvdbArtWorkExtended>
 {
 }
-public class TvdbTvdbArtWorkExtended: TvdbArtWork
+
+public class TvdbTvdbArtWorkExtended : TvdbArtWork
 {
     [JsonProperty("episodeId")] public int? EpisodeId { get; set; }
     [JsonProperty("movieId")] public int? MovieId { get; set; }
@@ -40,6 +42,7 @@ public class TvdbTvdbArtWorkExtended: TvdbArtWork
 public class TvdbArtWorkTypesResponse : TvdbResponse<TvdbTypes[]>
 {
 }
+
 public class TvdbTypes
 {
     [JsonProperty("height")] public int Height { get; set; }
@@ -52,5 +55,3 @@ public class TvdbTypes
     [JsonProperty("thumbWidth")] public int ThumbWidth { get; set; }
     [JsonProperty("width")] public int Width { get; set; }
 }
-
-

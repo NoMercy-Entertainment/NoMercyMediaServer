@@ -10,7 +10,7 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
     public MusicBrainzReleaseClient() : base()
     {
     }
-    
+
     public MusicBrainzReleaseClient(Guid? id, string[]? appendices = null) : base((Guid)id!)
     {
     }
@@ -97,7 +97,7 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
             "tags"
         ], priority);
     }
-    
+
     public Task<MusicBrainzReleaseSearchResponse?> SearchReleases(string query, bool? priority = false)
     {
         Dictionary<string, string>? queryParams = new()

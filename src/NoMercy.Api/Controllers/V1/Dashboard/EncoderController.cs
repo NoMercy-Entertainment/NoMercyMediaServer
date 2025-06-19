@@ -73,7 +73,7 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
         }
         catch (Exception e)
         {
-            return Ok(new StatusResponseDto<EncoderProfile>()
+            return Ok(new StatusResponseDto<EncoderProfile>
             {
                 Status = "error",
                 Message = "Something went wrong creating a new library: {0}",

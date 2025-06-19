@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record AniDbCredentialsResponseDto
 {
     [JsonProperty("key")] public string Key { get; set; } = string.Empty;

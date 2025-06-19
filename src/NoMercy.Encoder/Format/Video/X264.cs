@@ -109,37 +109,29 @@ public class X264 : BaseVideo
         get
         {
             if (VideoCodecs.H264Nvenc.Value == VideoCodec.Value)
-            {
                 return
                 [
                     VideoTunes.Hq, VideoTunes.Li,
                     VideoTunes.Ull, VideoTunes.Lossless
                 ];
-            }
             else if (VideoCodecs.H264Amf.Value == VideoCodec.Value)
-            {
                 return
                 [
                     VideoTunes.Hq, VideoTunes.Li,
                     VideoTunes.Ull, VideoTunes.Lossless
                 ];
-            }
             else if (VideoCodecs.H264Qsv.Value == VideoCodec.Value)
-            {
                 return
                 [
                     VideoTunes.Hq, VideoTunes.Li,
                     VideoTunes.Ull, VideoTunes.Lossless
                 ];
-            }
             else if (VideoCodecs.H264Videotoolbox.Value == VideoCodec.Value)
-            {
                 return
                 [
                     VideoTunes.Hq, VideoTunes.Li,
                     VideoTunes.Ull, VideoTunes.Lossless
                 ];
-            }
 
             return
             [
@@ -154,7 +146,7 @@ public class X264 : BaseVideo
     public override string[] AvailableColorSpaces =>
     [
         ColorSpaces.Yuv420P, ColorSpaces.Yuv420P10Le,
-        ColorSpaces.Yuv422P, ColorSpaces.Yuv444P,
+        ColorSpaces.Yuv422P, ColorSpaces.Yuv444P
     ];
 
     public override string[] AvailableLevels =>

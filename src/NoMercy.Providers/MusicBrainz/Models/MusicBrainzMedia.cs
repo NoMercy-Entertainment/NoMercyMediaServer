@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class MusicBrainzMedia
 {
     [JsonProperty("track-count")] public int TrackCount { get; set; }

@@ -52,7 +52,7 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
             })
             .RunAsync();
     }
-    
+
     public Task LinkToLibrary(LibraryTrack libraryTrack)
     {
         return context.LibraryTrack.Upsert(new(libraryTrack.LibraryId, libraryTrack.TrackId))
@@ -64,7 +64,7 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
             })
             .RunAsync();
     }
-    
+
     public Task LinkToLibrary(ArtistLibrary artistLibrary)
     {
         return context.ArtistLibrary.Upsert(new(artistLibrary.ArtistId, artistLibrary.LibraryId))

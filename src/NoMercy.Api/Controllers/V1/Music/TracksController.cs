@@ -2,11 +2,12 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.Services;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
@@ -24,8 +25,16 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/tracks")]
 public class TracksController : BaseController
 {
-    public static event EventHandler<LikeEventDto> OnLikeEvent;
-    
+    public static event EventHandler<LikeEventDto>? OnLikeEvent;
+    private readonly MusicRepository _musicRepository;
+    private readonly MediaContext _mediaContext;
+
+    public TracksController(MusicRepository musicService, MediaContext mediaContext)
+    {
+        _musicRepository = musicService;
+        _mediaContext = mediaContext;
+    }
+
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -37,8 +46,7 @@ public class TracksController : BaseController
 
         string language = Language();
 
-        await using MediaContext mediaContext = new();
-        await foreach (TrackUser track in TracksResponseDto.GetTracks(mediaContext, userId))
+        foreach (TrackUser track in await _musicRepository.GetTracks(_mediaContext, userId))
             tracks.Add(new(track.Track, language));
 
         if (tracks.Count == 0)
@@ -65,54 +73,23 @@ public class TracksController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like tracks");
 
-        await using MediaContext mediaContext = new();
-        Track? track = await mediaContext.Tracks
-            .AsNoTracking()
-            .Where(track => track.Id == id)
-            .Include(track => track.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(track => track.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Album)
-            .Include(track => track.TrackUser
-                .Where(trackUser => trackUser.UserId.Equals(userId)))
-            .FirstOrDefaultAsync();
+        Track? track = await _musicRepository.GetTrackWithIncludes(_mediaContext, id);
 
         if (track is null)
             return NotFoundResponse("Track not found");
 
-        if (request.Value)
-        {
-            await mediaContext.TrackUser
-                .Upsert(new(track.Id, userId))
-                .On(m => new { m.TrackId, m.UserId })
-                .WhenMatched(m => new()
-                {
-                    TrackId = m.TrackId,
-                    UserId = m.UserId
-                })
-                .RunAsync();
-        }
-        else
-        {
-            TrackUser? tvUser = await mediaContext.TrackUser
-                .Where(tvUser => tvUser.TrackId == track.Id && tvUser.UserId.Equals(userId))
-                .FirstOrDefaultAsync();
+        await _musicRepository.LikeTrackAsync(userId, track, request.Value);
 
-            if (tvUser is not null) mediaContext.TrackUser.Remove(tvUser);
-
-            await mediaContext.SaveChangesAsync();
-        }
-
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
+        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
         {
             QueryKey = ["music", "album", track.AlbumTrack.FirstOrDefault()?.Album.Id]
         });
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
+        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
         {
             QueryKey = ["music", "artist", track.ArtistTrack.FirstOrDefault()?.Artist.Id]
         });
-        
-        
+
+
         LikeEventDto likeEventDto = new()
         {
             Id = track.Id,
@@ -120,8 +97,8 @@ public class TracksController : BaseController
             Liked = request.Value,
             User = User.User()
         };
-        
-        OnLikeEvent.Invoke(this, likeEventDto);
+
+        OnLikeEvent?.Invoke(this, likeEventDto);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -143,14 +120,7 @@ public class TracksController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view lyrics");
 
-        MediaContext mediaContext = new();
-        Track? track = await mediaContext.Tracks
-            .Where(track => track.Id == id)
-            .Include(track => track.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(track => track.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Album)
-            .FirstOrDefaultAsync();
+        Track? track = await _musicRepository.GetTrackWithIncludes(_mediaContext, id);
 
         if (track is null)
             return NotFoundResponse("Track not found");
@@ -167,7 +137,7 @@ public class TracksController : BaseController
             MusixMatchTrackSearchParameters parameters = new()
             {
                 Album = track.AlbumTrack.FirstOrDefault()?.Album.Name ?? "",
-                Artist = track.ArtistTrack.FirstOrDefault()?.Artist.Name ?? "",
+                // Artist = track.ArtistTrack.FirstOrDefault()?.Artist.Name ?? "",
                 Artists = track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
                 Title = track.Name,
                 Duration = track.Duration?.ToSeconds().ToString(),
@@ -198,7 +168,7 @@ public class TracksController : BaseController
                     Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc
                 };
 
-                 lyrics = await client.SongSearch(parameters);
+                lyrics = await client.SongSearch(parameters);
 
                 subtitles = lyrics?.Message?.Body?.MacroCalls?
                     .TrackSubtitlesGet?.Message?.Body?.SubtitleList.FirstOrDefault()?.Subtitle?.SubtitleBody;
@@ -214,9 +184,7 @@ public class TracksController : BaseController
             if (subtitles is null)
                 return NotFoundResponse("Subtitle not found");
 
-            track._lyrics = JsonConvert.SerializeObject(subtitles);
-            track.UpdatedAt = DateTime.UtcNow;
-            await mediaContext.SaveChangesAsync();
+            await _musicRepository.UpdateTrackLyricsAsync(track, JsonConvert.SerializeObject(subtitles));
 
             return Ok(new DataResponseDto<Lyric[]>
             {
@@ -237,19 +205,12 @@ public class TracksController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to record playback");
 
-        await using MediaContext mediaContext = new();
-        Track? track = await mediaContext.Tracks
-            .AsNoTracking()
-            .Where(track => track.Id == id)
-            .FirstOrDefaultAsync();
+        Track? track = await _musicRepository.GetTrack(_mediaContext, id);
 
         if (track is null)
             return NotFoundResponse("Track not found");
 
-        await mediaContext.MusicPlays
-            .AddAsync(new(userId, track.Id));
-
-        await mediaContext.SaveChangesAsync();
+        await _musicRepository.RecordPlaybackAsync(id, userId);
 
         return Ok(new StatusResponseDto<string>
         {

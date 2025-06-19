@@ -1,7 +1,7 @@
-﻿
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.People;
+
 public class TmdbPerson
 {
     [JsonProperty("birthday")] public DateTime? BirthDay { get; set; }

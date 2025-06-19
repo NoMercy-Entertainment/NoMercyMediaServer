@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Search;
+
 public class TmdbKeywordSearchResult
 {
     [JsonProperty("id")] public int Id { get; set; }

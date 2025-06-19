@@ -5,6 +5,7 @@ using Serilog.Core;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem.LogEnrichers;
+
 internal class ConsoleTypeEnricher : ILogEventEnricher
 {
     private static string SpacerEnd(string text, int padding)

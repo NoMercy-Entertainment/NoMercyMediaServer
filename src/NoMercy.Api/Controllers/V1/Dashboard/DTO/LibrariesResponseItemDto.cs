@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record LibrariesResponseItemDto
 {
     [JsonProperty("id")] public Ulid Id { get; set; }
@@ -39,8 +40,8 @@ public record LibrariesResponseItemDto
         CreatedAt = library.CreatedAt;
         UpdatedAt = library.UpdatedAt;
         Pagination = library.LibraryMovies.Count + library.LibraryTvs.Count > 300 ? "letter" : "auto";
-        Link = library.LibraryMovies.Count + library.LibraryTvs.Count > 300 
-            ? new($"/{Id}/letter/A", UriKind.Relative) 
+        Link = library.LibraryMovies.Count + library.LibraryTvs.Count > 300
+            ? new($"/{Id}/letter/A", UriKind.Relative)
             : new($"/{Id}", UriKind.Relative);
 
         Subtitles = library.LanguageLibraries

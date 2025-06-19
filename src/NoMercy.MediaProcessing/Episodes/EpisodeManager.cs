@@ -19,10 +19,10 @@ public class EpisodeManager(
     JobDispatcher jobDispatcher
 ) : BaseManager, IEpisodeManager
 {
-    public async Task Add(TmdbTvShow show, TmdbSeasonAppends season, bool? priority = false)
+    public async Task<IEnumerable<Episode>> Add(TmdbTvShow show, TmdbSeasonAppends season, bool? priority = false)
     {
         IEnumerable<TmdbEpisodeAppends> episodeAppends = await Collect(show, season, priority);
-        
+
         IEnumerable<Episode> episodes = episodeAppends
             .Select(episode => new Episode
             {
@@ -43,11 +43,12 @@ public class EpisodeManager(
                 VoteCount = episode.VoteCount,
                 _colorPalette = MovieDbImageManager.ColorPalette("still", episode.StillPath).Result
             });
-
-        await episodeRepository.StoreEpisodes(episodes);
+        
         Logger.MovieDb($"Show {show.Name}: Season {season.SeasonNumber} Episodes stored", LogEventLevel.Debug);
-
+        
         jobDispatcher.DispatchJob<AddEpisodeExtraDataJob, TmdbEpisodeAppends>(episodeAppends, show.Name);
+
+        return episodes;
     }
 
     private static async Task<List<TmdbEpisodeAppends>> Collect(
@@ -115,6 +116,7 @@ public class EpisodeManager(
             .ToList();
 
         await episodeRepository.StoreEpisodeImages(stills);
+            
         Logger.MovieDb(
             $"Show {showName}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Images stored",
             LogEventLevel.Debug);
@@ -124,7 +126,7 @@ public class EpisodeManager(
             .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
                         e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
             .ToArray();
-        
+
         if (posterJobItems.Any())
             jobDispatcher.DispatchJob<ImagePaletteJob, Image>(episode.Id, posterJobItems);
     }

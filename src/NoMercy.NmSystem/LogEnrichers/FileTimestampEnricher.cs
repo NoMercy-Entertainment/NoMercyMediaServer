@@ -2,6 +2,7 @@ using Serilog.Core;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem.LogEnrichers;
+
 internal class FileTimestampEnricher : ILogEventEnricher
 {
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)

@@ -1,6 +1,7 @@
 using FFMpegCore;
 
 namespace NoMercy.Encoder;
+
 [Serializable]
 public class MediaAnalysis(IMediaAnalysis mediaAnalysis, string path)
 {

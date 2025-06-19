@@ -1,4 +1,5 @@
 namespace NoMercy.MediaProcessing.People;
+
 public enum Type
 {
     TvShow,

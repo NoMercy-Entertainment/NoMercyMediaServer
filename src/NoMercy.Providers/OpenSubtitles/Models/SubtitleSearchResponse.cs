@@ -12,29 +12,24 @@ public class SubtitleSearchResponse
 
 public class SubtitleSearchResponseParam
 {
-    [XmlElement("value")]
-    public SubtitleSearchResponseMemberValue Value { get; set; } = new();
+    [XmlElement("value")] public SubtitleSearchResponseMemberValue Value { get; set; } = new();
 }
 
 public class SubtitleSearchResponseResponseValue
 {
-    [XmlElement("struct")]
-    public SubtitleSearchResponseStruct Struct { get; set; } = new();
+    [XmlElement("struct")] public SubtitleSearchResponseStruct Struct { get; set; } = new();
 }
 
 public class SubtitleSearchResponseStruct
 {
-    [XmlElement("member")]
-    public List<SubtitleSearchResponseMember> Members { get; set; } = new();
+    [XmlElement("member")] public List<SubtitleSearchResponseMember> Members { get; set; } = new();
 }
 
 public class SubtitleSearchResponseMember
 {
-    [XmlElement("name")]
-    public string Name { get; set; } = string.Empty;
+    [XmlElement("name")] public string Name { get; set; } = string.Empty;
 
-    [XmlElement("value")]
-    public SubtitleSearchResponseMemberValue MemberValue { get; set; } = new();
+    [XmlElement("value")] public SubtitleSearchResponseMemberValue MemberValue { get; set; } = new();
 }
 
 public class SubtitleSearchResponseMemberValue
@@ -51,8 +46,7 @@ public class SubtitleSearchResponseMemberValue
     [XmlElement("double", IsNullable = true)]
     public double? DoubleValue { get; set; }
 
-    [XmlElement("int", IsNullable = true)]
-    public int? IntValue { get; set; }
+    [XmlElement("int", IsNullable = true)] public int? IntValue { get; set; }
 }
 
 public class SubtitleSearchResponseArrayData

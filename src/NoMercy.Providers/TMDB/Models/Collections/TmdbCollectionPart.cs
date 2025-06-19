@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Collections;
+
 public class TmdbCollectionPart
 {
     [JsonProperty("adult")] public bool Adult { get; set; }

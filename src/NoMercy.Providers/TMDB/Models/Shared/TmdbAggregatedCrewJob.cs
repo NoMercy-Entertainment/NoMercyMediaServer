@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Shared;
+
 public class TmdbAggregatedCrewJob
 {
     [JsonProperty("credit_id")] public string? CreditId { get; set; }

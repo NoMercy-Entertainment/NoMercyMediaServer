@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Data.Logic;
+
 public class SpecialItemDto
 {
     [JsonProperty("id")] public int Id { get; set; }

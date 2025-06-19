@@ -10,13 +10,14 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Encoder;
+
 [Serializable]
 public class FfMpeg : Classes
 {
     internal string FfProbePath { get; set; } = AppFiles.FfProbePath;
     internal string FfmpegPath { get; set; } = AppFiles.FfmpegPath;
 
-    private static readonly Dictionary<int,Process> FfmpegProcess = new();
+    private static readonly Dictionary<int, Process> FfmpegProcess = new();
 
     internal MediaAnalysis? MediaAnalysis;
 
@@ -81,7 +82,7 @@ public class FfMpeg : Classes
         public string HostFolder { get; set; } = string.Empty;
         public string Filename { get; set; } = string.Empty;
     }
-    
+
     public class ProgressData
     {
         public double ProgressPercentage { get; set; }
@@ -91,7 +92,6 @@ public class FfMpeg : Classes
         public int Frame { get; set; }
         public string Bitrate { get; set; } = string.Empty;
         public double Remaining { get; set; }
-
     }
 
     public VideoAudioFile Open(FolderAndFile? videoFile)
@@ -116,7 +116,7 @@ public class FfMpeg : Classes
             CreateNoWindow = true,
             RedirectStandardInput = true
         };
-        
+
         ffmpeg.Start();
         FfmpegProcess.Add(ffmpeg.Id, ffmpeg);
 
@@ -272,7 +272,7 @@ public class FfMpeg : Classes
         return output.ToString();
     }
 
-    static ProgressData? ParseOutputData(string output, TimeSpan totalDuration)
+    private static ProgressData? ParseOutputData(string output, TimeSpan totalDuration)
     {
         try
         {
@@ -307,7 +307,7 @@ public class FfMpeg : Classes
                 int milliseconds = int.Parse(progressMatch.Groups[4].Value, CultureInfo.InvariantCulture) / 100;
 
                 currentTime = new(0, hours, minutes, seconds, milliseconds);
-                progressPercentage = (currentTime.TotalMilliseconds / totalDuration.TotalMilliseconds) * 100;
+                progressPercentage = currentTime.TotalMilliseconds / totalDuration.TotalMilliseconds * 100;
             }
 
             double speed = parsedValues.TryGetValue("speed", out string? speedStr)
@@ -321,7 +321,8 @@ public class FfMpeg : Classes
                 : 0;
             string bitrate = parsedValues.GetValueOrDefault("bitrate", string.Empty);
 
-            double remaining = speed > 0 ? Math.Floor((totalDuration.TotalSeconds - currentTime.TotalSeconds) / speed) : 0.0;
+            double remaining =
+                speed > 0 ? Math.Floor((totalDuration.TotalSeconds - currentTime.TotalSeconds) / speed) : 0.0;
 
             return new()
             {
@@ -338,7 +339,7 @@ public class FfMpeg : Classes
         {
             Logger.Encoder($"Error parsing output data: {ex.Message}");
         }
-        
+
         return null;
     }
 
@@ -349,7 +350,7 @@ public class FfMpeg : Classes
 
         if (!Directory.Exists(thumbFolder)) return "";
 
-        string file  = Directory.GetFiles(thumbFolder)
+        string file = Directory.GetFiles(thumbFolder)
             .OrderByDescending(file => new FileInfo(file).LastWriteTimeUtc)
             .FirstOrDefault() ?? "";
 
@@ -380,18 +381,18 @@ public class FfMpeg : Classes
 
         using StreamReader outputReader = process1.StandardOutput;
         using StreamReader errorReader = process1.StandardError;
-    
+
         // Read both streams simultaneously
         Task<string> outputTask = outputReader.ReadToEndAsync();
         Task<string> errorTask = errorReader.ReadToEndAsync();
-    
+
         await Task.WhenAll(outputTask, errorTask);
         string fingerprint = await outputTask;
         await process1.WaitForExitAsync();
 
         return fingerprint;
     }
-    
+
     public static async Task<string> GetDuration(string file)
     {
         Process process2 = new()
@@ -399,7 +400,8 @@ public class FfMpeg : Classes
             StartInfo =
             {
                 FileName = AppFiles.FfProbePath,
-                Arguments = "-i \"" + file + "\" -hide_banner -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
+                Arguments = "-i \"" + file +
+                            "\" -hide_banner -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
                 WindowStyle = ProcessWindowStyle.Hidden,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -412,48 +414,40 @@ public class FfMpeg : Classes
 
         using StreamReader outputReader2 = process2.StandardOutput;
         using StreamReader errorReader2 = process2.StandardError;
-    
+
         // Read both streams simultaneously
         Task<string> outputTask2 = outputReader2.ReadToEndAsync();
         Task<string> errorTask2 = errorReader2.ReadToEndAsync();
-    
+
         await Task.WhenAll(outputTask2, errorTask2);
         string time = await outputTask2;
         await process2.WaitForExitAsync();
-        
-        if (string.IsNullOrEmpty(time))
-        {
-            throw new("Failed to get duration");
-        }
-        
-        if (time.Contains("N/A"))
-        {
-            throw new("Failed to get duration");
-        }
-        
-        if (time.Contains("Duration"))
-        {
-            time = time.Split("Duration: ")[1].Split(",")[0];
-        }
+
+        if (string.IsNullOrEmpty(time)) throw new("Failed to get duration");
+
+        if (time.Contains("N/A")) throw new("Failed to get duration");
+
+        if (time.Contains("Duration")) time = time.Split("Duration: ")[1].Split(",")[0];
 
         return time.Trim();
     }
-    
-    
+
+
     public static async Task<bool> Pause(int id)
     {
         if (!FfmpegProcess.TryGetValue(id, out Process? process)) return false;
-        
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             await SuspendProcessOnWindows(process);
         }
-        else{
+        else
+        {
             Process.Start("kill", $"-STOP {process.Id}");
             await Task.Delay(0);
         }
-        return true;
 
+        return true;
     }
 
     public static async Task<bool> Resume(int id)
@@ -501,6 +495,7 @@ public class FfMpeg : Classes
                 CloseHandle(threadHandle);
             }
         }
+
         await Task.CompletedTask;
     }
 
@@ -515,7 +510,7 @@ public class FfMpeg : Classes
                 CloseHandle(threadHandle);
             }
         }
+
         await Task.CompletedTask;
     }
-
 }

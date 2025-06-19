@@ -26,7 +26,7 @@ public class Device : Timestamps
     [JsonProperty("version")] public string Version { get; set; } = string.Empty;
     [JsonProperty("ip")] public string Ip { get; set; } = string.Empty;
     [JsonProperty("activity_logs")] public virtual ICollection<ActivityLog> ActivityLogs { get; set; } = [];
-    
+
     [JsonProperty("is_active")] public bool IsActive { get; set; }
     [JsonProperty("volume_percent")] public int VolumePercent { get; set; }
 }

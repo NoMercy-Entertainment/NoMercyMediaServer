@@ -1,5 +1,4 @@
-﻿
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using NoMercy.Providers.TMDB.Models.Combined;
 using NoMercy.Providers.TMDB.Models.Shared;
 

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.MediaProcessing.Files;
+
 public class Subtitle
 {
     [JsonProperty("index")] public int Index { get; set; }

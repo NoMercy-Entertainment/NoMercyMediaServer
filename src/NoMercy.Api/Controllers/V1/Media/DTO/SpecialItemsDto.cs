@@ -5,6 +5,7 @@ using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record SpecialItemsDto
 {
     [JsonProperty("id")] public int Id { get; set; }
@@ -36,7 +37,7 @@ public record SpecialItemsDto
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int HaveItems { get; set; }
     [JsonProperty("duration")] public int Duration { get; set; }
-    
+
     [JsonProperty("total_duration")] public int TotalDuration { get; set; }
 
     public SpecialItemsDto(Movie movie)
@@ -44,7 +45,7 @@ public record SpecialItemsDto
         Id = movie.Id;
         EpisodeIds = [];
         Title = movie.Title;
-        Overview =  movie.Overview;
+        Overview = movie.Overview;
 
         Backdrop = movie.Backdrop;
         // Watched = movie.Watched;
@@ -69,9 +70,9 @@ public record SpecialItemsDto
         Link = new($"/movie/{Id}", UriKind.Relative);
         Year = movie.ReleaseDate.ParseYear();
         Duration = movie.Runtime * 60 ?? 0;
-        
+
         TotalDuration = movie.Runtime * 60 ?? 0;
-        
+
         Genres = movie.GenreMovies
             .Select(genreMovie => new GenreDto(genreMovie.Genre));
 
@@ -140,7 +141,7 @@ public record SpecialItemsDto
         HaveItems = have;
 
         Duration = tv.Duration * have * 60 ?? 0;
-        
+
         TotalDuration = tv.Episodes.Sum(item => item.Tv.Duration * 60 ?? 0);
 
         // Watched = tv.Episodes
@@ -158,5 +159,4 @@ public record SpecialItemsDto
             .Take(15)
             .Select(crew => new PeopleDto(crew));
     }
-
 }

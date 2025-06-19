@@ -27,14 +27,14 @@ public class AddSeasonExtraDataJob : AbstractShowExtraDataJob<TmdbSeasonAppends,
 
         SeasonRepository seasonRepository = new(context);
         SeasonManager seasonManager = new(seasonRepository, jobDispatcher);
-        
+
         PersonRepository personRepository = new(context);
         PersonManager personManager = new(personRepository, jobDispatcher);
-        
+
         foreach (TmdbSeasonAppends season in Storage)
         {
             await personManager.Store(season);
-            
+
             await seasonManager.StoreImages(Name, season);
             await seasonManager.StoreTranslations(Name, season);
         }

@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
+
 public record PlaylistTrackDto
 {
     [JsonProperty("id")] public Guid Id { get; set; }
@@ -19,7 +20,7 @@ public record PlaylistTrackDto
     [JsonProperty("favorite")] public bool Favorite { get; set; }
     [JsonProperty("quality")] public int? Quality { get; set; }
     [JsonProperty("type")] public string Type { get; set; }
-    
+
     [JsonProperty("album_name")] public string? AlbumName { get; set; }
     [JsonProperty("lyrics")] public Lyric[]? Lyrics { get; set; }
 
@@ -31,19 +32,19 @@ public record PlaylistTrackDto
         Image? img = artistTrack.Artist.Images.FirstOrDefault(image => image.Type == "background");
         Id = artistTrack.Track.Id;
         Name = artistTrack.Track.Name;
-        Backdrop = img?.FilePath is not null ? new Uri($"/images/music{img?.FilePath}", UriKind.Relative).ToString() : null;
-        Cover = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? artistTrack.Track.Cover;
-        Cover = Cover is not null 
-            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() 
+        Backdrop = img?.FilePath is not null
+            ? new Uri($"/images/music{img?.FilePath}", UriKind.Relative).ToString()
             : null;
-        Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}", UriKind.Relative).ToString();
+        Cover = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? artistTrack.Track.Cover;
+        Cover = Cover is not null
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            : null;
+        Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}",
+            UriKind.Relative).ToString();
         Link = new($"/music/tracks/{artistTrack.Track.Id}", UriKind.Relative);
-        
+
         ColorPalette = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
-        if(ColorPalette is not null)
-        {
-            ColorPalette.Backdrop = img?.ColorPalette?.Image;
-        }
+        if (ColorPalette is not null) ColorPalette.Backdrop = img?.ColorPalette?.Image;
         Date = artistTrack.Track.Date;
         Disc = artistTrack.Track.DiscNumber;
         Track = artistTrack.Track.TrackNumber;
@@ -67,19 +68,20 @@ public record PlaylistTrackDto
 
     public PlaylistTrackDto(PlaylistTrack trackTrack, string country)
     {
-        Image? img = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.AlbumArtist.FirstOrDefault()?.Artist.Images.FirstOrDefault(image => image.Type == "background");
+        Image? img = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.AlbumArtist.FirstOrDefault()?.Artist.Images
+            .FirstOrDefault(image => image.Type == "background");
         Id = trackTrack.Track.Id;
         Name = trackTrack.Track.Name;
-        Backdrop = img?.FilePath is not null ? new Uri($"/images/music{img?.FilePath}", UriKind.Relative).ToString() : null;
+        Backdrop = img?.FilePath is not null
+            ? new Uri($"/images/music{img?.FilePath}", UriKind.Relative).ToString()
+            : null;
         Cover = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? trackTrack.Track.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
-        Path = new Uri($"/{trackTrack.Track.FolderId}{trackTrack.Track.Folder}{trackTrack.Track.Filename}", UriKind.Relative).ToString();
+        Path = new Uri($"/{trackTrack.Track.FolderId}{trackTrack.Track.Folder}{trackTrack.Track.Filename}",
+            UriKind.Relative).ToString();
         Link = new($"/music/tracks/{trackTrack.Track.Id}", UriKind.Relative);
         ColorPalette = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
-        if(ColorPalette is not null)
-        {
-            ColorPalette.Backdrop = img?.ColorPalette?.Image;
-        }
+        if (ColorPalette is not null) ColorPalette.Backdrop = img?.ColorPalette?.Image;
         Date = trackTrack.Track.Date;
         Disc = trackTrack.Track.DiscNumber;
         Track = trackTrack.Track.TrackNumber;
@@ -95,27 +97,28 @@ public record PlaylistTrackDto
             .Select(albumTrack => new AlbumDto(albumTrack, country))
             .ToList();
 
-        Artist =  trackTrack.Track.ArtistTrack
+        Artist = trackTrack.Track.ArtistTrack
             .Select(albumTrack => new ArtistDto(albumTrack, country))
             .ToList();
     }
 
     public PlaylistTrackDto(AlbumTrack artistTrack, string country)
     {
-        Image? img = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Images.FirstOrDefault(image => image.Type == "background");
+        Image? img = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Images
+            .FirstOrDefault(image => image.Type == "background");
         Id = artistTrack.Track.Id;
         Name = artistTrack.Track.Name;
-        Backdrop = img?.FilePath is not null ? new Uri($"/images/music{img?.FilePath}", UriKind.Relative).ToString() : null;
+        Backdrop = img?.FilePath is not null
+            ? new Uri($"/images/music{img?.FilePath}", UriKind.Relative).ToString()
+            : null;
         Cover = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? artistTrack.Track.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
-        Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}", UriKind.Relative).ToString();
+        Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}",
+            UriKind.Relative).ToString();
         Link = new($"/music/tracks/{artistTrack.Track.Id}", UriKind.Relative);
-        
+
         ColorPalette = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
-        if(ColorPalette is not null)
-        {
-            ColorPalette.Backdrop = img?.ColorPalette?.Image;
-        }
+        if (ColorPalette is not null) ColorPalette.Backdrop = img?.ColorPalette?.Image;
         Date = artistTrack.Track.Date;
         Disc = artistTrack.Track.DiscNumber;
         Track = artistTrack.Track.TrackNumber;
@@ -131,7 +134,7 @@ public record PlaylistTrackDto
             .Select(albumTrack => new AlbumDto(albumTrack, country))
             .ToList();
 
-        Artist =  artistTrack.Track.ArtistTrack
+        Artist = artistTrack.Track.ArtistTrack
             .Select(albumTrack => new ArtistDto(albumTrack, country))
             .ToList();
     }

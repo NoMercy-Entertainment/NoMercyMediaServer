@@ -1,4 +1,3 @@
-
 using AniDB;
 using AniDB.ResponseItems;
 

@@ -3,7 +3,7 @@ using NoMercy.NmSystem.Dto;
 
 namespace NoMercy.MediaProcessing.Libraries;
 
-public interface ILibraryRepository: IDisposable, IAsyncDisposable
+public interface ILibraryRepository : IDisposable, IAsyncDisposable
 {
     public Task<IEnumerable<MediaFolderExtend>> GetRootFoldersAsync(string path);
 

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.AcoustId.Models;
+
 public class AcoustIdFingerprintMedium
 {
     [JsonProperty("format")] public string? Format { get; set; }

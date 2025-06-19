@@ -27,45 +27,49 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
             return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
+        string country = Country();
 
         List<Collection> collections =
             await collectionRepository.GetCollectionsAsync(userId, language, request.Take, request.Page);
 
         if (request.Version != "lolomo")
         {
-            IEnumerable<CollectionsResponseItemDto> concat = collections
-                .Select(collection => new CollectionsResponseItemDto(collection));
-            
+            IEnumerable<NmCardDto> concat = collections
+                .Select(collection => new NmCardDto(collection, country));
+
             return Ok(new Render
             {
-                Data = [
-                    new ComponentBuilder<CollectionsResponseItemDto>()
+                Data =
+                [
+                    new ComponentBuilder<NmCardDto>()
                         .WithComponent("NMGrid")
                         .WithProps(props => props
                             .WithItems(
                                 concat.Select(item =>
-                                    new ComponentBuilder<CollectionsResponseItemDto>()
+                                    new ComponentBuilder<NmCardDto>()
                                         .WithComponent("NMCard")
                                         .WithProps(cardProps => cardProps
                                             .WithData(item)
                                             .WithWatch())
                                         .Build())))
-                        .Build(),
+                        .Build()
                 ]
             });
         }
 
         return Ok(new Render
         {
-            Data = Letters.Select(genre => new ComponentBuilder<LibraryResponseItemDto>()
+            Data = Letters.Select(genre => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
                 .WithComponent("NMCarousel")
                 .WithProps(props => props
                     .WithId(genre)
                     .WithTitle(genre)
                     .WithItems(
-                        collections.Select(movie => new LibraryResponseItemDto(movie))
-                            .Where(item => genre == "#" ? Numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre))
-                            .Select(item => new ComponentBuilder<LibraryResponseItemDto>()
+                        collections.Select(movie => new NmCardDto(movie, country))
+                            .Where(item => genre == "#"
+                                ? Numbers.Any(p => item.Title.StartsWith(p))
+                                : item.Title.StartsWith(genre))
+                            .Select(item => new ComponentBuilder<NmCardDto>()
                                 .WithComponent("NMCard")
                                 .WithProps(cardProps => cardProps
                                     .WithData(item)
@@ -89,12 +93,10 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
         Collection? collection = await collectionRepository.GetCollectionAsync(userId, id, language, country);
 
         if (collection is not null && collection.CollectionMovies.Count > 0 && collection.Images.Count > 0)
-        {
             return Ok(new CollectionResponseDto
             {
                 Data = new(collection)
             });
-        }
 
         TmdbCollectionClient tmdbCollectionsClient = new(id);
         TmdbCollectionAppends? collectionAppends = await tmdbCollectionsClient.WithAllAppends(true);
@@ -113,7 +115,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
         // TmdbCollectionJob tmdbJob = new(collectionAppends.Id, library);
         // jobDispatcher.Dispatch(tmdbJob, "queue", 10);
-        
+
         return Ok(new CollectionResponseDto
         {
             Data = new(collectionAppends)

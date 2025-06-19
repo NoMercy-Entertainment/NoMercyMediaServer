@@ -11,7 +11,7 @@ namespace NoMercy.NmSystem.Extensions;
 public static partial class Str
 {
     public static string DirectorySeparator => Path.DirectorySeparatorChar.ToString();
-    
+
     public static double MatchPercentage(string strA, string strB)
     {
         if (string.IsNullOrEmpty(strA) || string.IsNullOrEmpty(strB))
@@ -33,26 +33,26 @@ public static partial class Str
             dp[0, j] = j;
 
         for (int i = 1; i <= s1.Length; i++)
+        for (int j = 1; j <= s2.Length; j++)
         {
-            for (int j = 1; j <= s2.Length; j++)
-            {
-                int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
-                dp[i, j] = Math.Min(Math.Min(
-                        dp[i - 1, j] + 1,    // Deletion
-                        dp[i, j - 1] + 1),   // Insertion
-                    dp[i - 1, j - 1] + cost); // Substitution
-            }
+            int cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
+            dp[i, j] = Math.Min(Math.Min(
+                    dp[i - 1, j] + 1, // Deletion
+                    dp[i, j - 1] + 1), // Insertion
+                dp[i - 1, j - 1] + cost); // Substitution
         }
 
         return dp[s1.Length, s2.Length];
     }
-    
-    public static List<T> SortByMatchPercentage<T>(IEnumerable<T> array, Func<T, string> keySelector, string match) where T : class
+
+    public static List<T> SortByMatchPercentage<T>(IEnumerable<T> array, Func<T, string> keySelector, string match)
+        where T : class
     {
         return array.OrderBy(item => MatchPercentage(match, keySelector(item))).ToList();
     }
-    
-    public static List<T> ToSortByMatchPercentage<T>(this IEnumerable<T> array, Func<T, string> keySelector, string match) where T : class
+
+    public static List<T> ToSortByMatchPercentage<T>(this IEnumerable<T> array, Func<T, string> keySelector,
+        string match) where T : class
     {
         return array.OrderBy(item => MatchPercentage(match, keySelector(item))).ToList();
     }
@@ -88,22 +88,22 @@ public static partial class Str
 
     [GeneratedRegex(@"(1(8|9)|20)\d{2}(?!p|i|(1(8|9)|20)\d{2}|\W(1(8|9)|20)\d{2})")]
     public static partial Regex MatchYearRegex();
-    
+
     public static string? TryGetYear(this string str)
     {
         if (!MatchYearRegex().Match(str).Success) return null;
         return MatchYearRegex().Match(str).Value;
     }
-    
+
     [GeneratedRegex(@"\[.*?\]")]
     public static partial Regex RemoveBracketedString();
-    
+
     [GeneratedRegex(@"\d+")]
     public static partial Regex MatchNumbers();
-    
+
     [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();
-    
+
     public static bool IsAlphaNumeric(this string str)
     {
         return IsAlphaNumeric().IsMatch(str);
@@ -111,7 +111,7 @@ public static partial class Str
 
     [GeneratedRegex("/[0-9]/")]
     public static partial Regex IsNumeric();
-    
+
     public static bool IsNumeric(this string str)
     {
         return IsNumeric().IsMatch(str);
@@ -132,7 +132,7 @@ public static partial class Str
     {
         return Convert.ToInt32(value);
     }
-    
+
     public static int ToInt(this uint value)
     {
         return Convert.ToInt32(value);
@@ -148,7 +148,7 @@ public static partial class Str
     {
         return Convert.ToDouble(value);
     }
-    
+
     public static bool ToBoolean(this string value)
     {
         if (string.IsNullOrEmpty(value)) return false;
@@ -203,20 +203,20 @@ public static partial class Str
         str = Regex.Replace(str, @"(\P{Ll})(\P{Ll}\p{Ll})", "$1 $2");
         return Regex.Replace(str, @"(\p{Ll})(\P{Ll})", "$1 $2");
     }
-    
+
     /** This method sanitizes a string by removing diacritics, non-alphanumeric characters and accents. */
     public static string Sanitize(this string str)
     {
         return str.RemoveDiacritics().RemoveNonAlphaNumericCharacters().RemoveAccents().Trim();
     }
-    
+
     public static bool ContainsSanitized(this string str, string value)
     {
         str = str.Sanitize().ToLower();
         value = value.Sanitize().ToLower();
         return str.Contains(value) || value.Contains(str);
     }
-    
+
     public static bool EqualsSanitized(this string str, string value)
     {
         str = str.Sanitize().ToLower();
@@ -228,7 +228,7 @@ public static partial class Str
     {
         return WebUtility.UrlDecode(str);
     }
-    
+
     public static string UrlEncode(this string str)
     {
         return WebUtility.UrlEncode(str);
@@ -236,14 +236,16 @@ public static partial class Str
 
     public static string ToQueryUri(this string str, Dictionary<string, string>? parameters)
     {
-        return str + ((parameters is not null && parameters.Count > 0) ? "?" + string.Join("&", parameters.Select(pair => $"{pair.Key}={pair.Value}")) : string.Empty);
+        return str + (parameters is not null && parameters.Count > 0
+            ? "?" + string.Join("&", parameters.Select(pair => $"{pair.Key}={pair.Value}"))
+            : string.Empty);
     }
-    
+
     public static string EscapeQuotes(this string str)
     {
         return Regex.Replace(str, "\"", $"'");
     }
-    
+
     private static string _parseTitleSort(string? value = null, DateTime? date = null)
     {
         if (string.IsNullOrWhiteSpace(value)) return "";
@@ -270,21 +272,21 @@ public static partial class Str
     private static string _cleanFileName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "";
-        
+
         // Replace invalid file system characters with dots
         string invalidChars = $"{string.Join("", Path.GetInvalidFileNameChars())}:?*<>|\"";
         string pattern = $"[{Regex.Escape(invalidChars)}]";
         name = Regex.Replace(name, pattern, ".");
-        
+
         // Replace whitespace with dots
         name = Regex.Replace(name, @"\s+", ".");
-        
+
         // Replace special characters and symbols
         name = name
-            .Replace("‐", "-")  // Hyphen
-            .Replace("–", "-")  // En dash
-            .Replace("—", "-")  // Em dash
-            .Replace("−", "-")  // Minus sign
+            .Replace("‐", "-") // Hyphen
+            .Replace("–", "-") // En dash
+            .Replace("—", "-") // Em dash
+            .Replace("−", "-") // Minus sign
             .Replace("°", ".Degrees")
             .Replace("&", "and")
             .Replace("!", ".")
@@ -298,26 +300,26 @@ public static partial class Str
 
         // Collapse multiple dots
         name = Regex.Replace(name, @"\.+", ".");
-    
+
         // Remove leading/trailing dots
         name = name.Trim('.');
 
         return name;
     }
-    
+
     public static string SanitizeFileName(this string filePath)
     {
         string directory = Path.GetDirectoryName(filePath) ?? string.Empty;
         string fileName = Path.GetFileName(filePath);
 
         // Replace problematic Unicode characters with ASCII equivalents
-        fileName = fileName.Replace('\u2019', '\'')  // Right single quote
-            .Replace('\u2018', '\'')  // Left single quote
-            .Replace('\u201C', '"')   // Left double quote
-            .Replace('\u201D', '"')   // Right double quote
-            .Replace('\u2013', '-')   // En dash
-            .Replace('\u2014', '-');  // Em dash
-        
+        fileName = fileName.Replace('\u2019', '\'') // Right single quote
+            .Replace('\u2018', '\'') // Left single quote
+            .Replace('\u201C', '"') // Left double quote
+            .Replace('\u201D', '"') // Right double quote
+            .Replace('\u2013', '-') // En dash
+            .Replace('\u2014', '-'); // Em dash
+
         // Normalize to decomposed form (separates combined characters)
         fileName = fileName.Normalize(NormalizationForm.FormKD);
 
@@ -330,7 +332,7 @@ public static partial class Str
         string name = Regex.Replace(self, @"[/\\|:*?\""<>{}]", " ");
         return name.Trim().SanitizeFileName();
     }
-    
+
     public static string MusicBrainzSafeName(this string? self)
     {
         if (string.IsNullOrEmpty(self)) return string.Empty;
@@ -382,7 +384,7 @@ public static partial class Str
         return char.ToUpper(str[0]) + str[1..].ToLower();
     }
 
-    public static int ToSeconds(this string hms)
+    public static int ToSeconds(this string? hms)
     {
         if (string.IsNullOrEmpty(hms)) return 0;
 
@@ -401,12 +403,13 @@ public static partial class Str
     {
         return _parseTitleSort(self?.ToString(), date);
     }
-    
+
     public static string ToName(this string str)
-    {;
+    {
+        ;
         return NumberConverter.ConvertNumbersInString(str);
     }
-    
+
     public static string NormalizeSearch(this string input)
     {
         if (string.IsNullOrEmpty(input))
@@ -418,10 +421,8 @@ public static partial class Str
         // Remove diacritics
         StringBuilder stringBuilder = new();
         foreach (char c in normalized)
-        {
             if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
                 stringBuilder.Append(c);
-        }
 
         // Replace variations of dashes with a standard dash
         string result = stringBuilder.ToString()

@@ -57,7 +57,8 @@ public class TmdbBaseClient : IDisposable
 
     public int Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = null, bool? priority = false, bool skipCache = false)
+    protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = null, bool? priority = false,
+        bool skipCache = false)
         where T : class
     {
         query ??= new();
@@ -70,10 +71,7 @@ public class TmdbBaseClient : IDisposable
 
         string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
-        if (!skipCache)
-        {
-            await CacheController.Write(newUrl, response);
-        }
+        if (!skipCache) await CacheController.Write(newUrl, response);
 
         T? data = response.FromJson<T>();
 

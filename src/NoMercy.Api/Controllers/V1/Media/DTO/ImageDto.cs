@@ -4,6 +4,7 @@ using NoMercy.Database.Models;
 using NoMercy.Providers.TMDB.Models.Shared;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record ImageDto
 {
     [JsonProperty("height")] public long Height { get; set; }
@@ -19,8 +20,8 @@ public record ImageDto
     public ImageDto(Image media)
     {
         Id = media.Id;
-        Src = media.Site == "https://image.tmdb.org/t/p/" 
-            ? new Uri(media.FilePath, UriKind.Relative).ToString() 
+        Src = media.Site == "https://image.tmdb.org/t/p/"
+            ? new Uri(media.FilePath, UriKind.Relative).ToString()
             : new Uri($"/images/music{media.FilePath}", UriKind.Relative).ToString();
         Width = media.Width ?? 0;
         Type = media.Type;

@@ -9,17 +9,10 @@ public static class DesktopIconCreator
         try
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
                 CreateWindowsShortcut(appName, appPath, iconPath);
-            }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
                 CreateMacShortcut(appName, appPath, iconPath);
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                CreateLinuxShortcut(appName, appPath, iconPath);
-            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) CreateLinuxShortcut(appName, appPath, iconPath);
         }
         catch (Exception ex)
         {
@@ -37,10 +30,10 @@ public static class DesktopIconCreator
 
             Type? id = Type.GetTypeFromProgID("WScript.Shell");
             if (id == null) return;
-            
+
             dynamic shell = Activator.CreateInstance(id) ?? throw new InvalidOperationException();
             if (shell == null) return;
-            
+
             dynamic shortcut = shell.CreateShortcut(shortcutPath);
             shortcut.TargetPath = appPath;
             shortcut.IconLocation = iconPath;
@@ -75,7 +68,9 @@ public static class DesktopIconCreator
                 string iconDest = Path.Combine(aliasPath, "Icon.icns");
                 File.Copy(iconPath, iconDest, true);
 
-                System.Diagnostics.Process.Start("sh", $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\"").WaitForExit();
+                System.Diagnostics.Process.Start("sh",
+                        $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\"")
+                    .WaitForExit();
 
                 System.Diagnostics.Process.Start("killall", "Finder").WaitForExit();
             }
@@ -110,4 +105,3 @@ public static class DesktopIconCreator
         }
     }
 }
-    

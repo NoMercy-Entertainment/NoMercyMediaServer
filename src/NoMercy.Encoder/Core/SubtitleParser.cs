@@ -45,7 +45,9 @@ public partial class SubtitleParser
             timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
     }
 
-    [GeneratedRegex(@"pts_time:(?<start>\d+(\.\d+)?)\nlavfi\.ocr\.text=(?<text>.+(\n.+)?)\n\n.*?pts_time:(?<end>\d+(\.\d+)?)", RegexOptions.Multiline)]
+    [GeneratedRegex(
+        @"pts_time:(?<start>\d+(\.\d+)?)\nlavfi\.ocr\.text=(?<text>.+(\n.+)?)\n\n.*?pts_time:(?<end>\d+(\.\d+)?)",
+        RegexOptions.Multiline)]
     private static partial Regex OcrRegex();
 }
 

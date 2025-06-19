@@ -2,12 +2,14 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TVDB.Models;
 
-public class TvdbGenresResponse: TvdbResponse<TvdbGenre[]>
+public class TvdbGenresResponse : TvdbResponse<TvdbGenre[]>
 {
 }
-public class TvdbGenreResponse: TvdbResponse<TvdbGenre>
+
+public class TvdbGenreResponse : TvdbResponse<TvdbGenre>
 {
 }
+
 public class TvdbGenre
 {
     [JsonProperty("id")] public string Id { get; set; } = string.Empty;

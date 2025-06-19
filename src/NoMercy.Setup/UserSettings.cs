@@ -4,67 +4,63 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
-namespace NoMercy.Setup
+namespace NoMercy.Setup;
+
+public static class UserSettings
 {
-    public static class UserSettings
+    public static bool TryGetUserSettings(out Dictionary<string, string> settings)
     {
-        public static bool TryGetUserSettings(out Dictionary<string, string> settings)
+        settings = new();
+
+        try
         {
-            settings = new();
+            using MediaContext mediaContext = new();
+            List<Configuration> configuration = mediaContext.Configuration.ToList();
 
-            try
-            {
-                using MediaContext mediaContext = new();
-                List<Configuration> configuration = mediaContext.Configuration.ToList();
+            foreach (Configuration? config in configuration) settings[config.Key] = config.Value;
 
-                foreach (Configuration? config in configuration)
-                {
-                    settings[config.Key] = config.Value;
-                }
-
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            return true;
         }
-
-        public static void ApplySettings(Dictionary<string, string> settings)
+        catch (Exception)
         {
-            foreach (KeyValuePair<string, string> setting in settings)
+            return false;
+        }
+    }
+
+    public static void ApplySettings(Dictionary<string, string> settings)
+    {
+        foreach (KeyValuePair<string, string> setting in settings)
+        {
+            Logger.App($"Configuration: {setting.Key} = {setting.Value}");
+            switch (setting.Key)
             {
-                Logger.App($"Configuration: {setting.Key} = {setting.Value}");
-                switch (setting.Key)
-                {
-                    case "internalPort":
-                        Config.InternalServerPort = int.Parse(setting.Value);
-                        break;
-                    case "externalPort":
-                        Config.ExternalServerPort = int.Parse(setting.Value);
-                        break;
-                    case "queueRunners":
-                        Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.ToInt());
-                        break;
-                    case "encoderRunners":
-                        Config.EncoderWorkers = new(Config.EncoderWorkers.Key, setting.Value.ToInt());
-                        break;
-                    case "cronRunners":
-                        Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());
-                        break;
-                    case "dataRunners":
-                        Config.DataWorkers = new(Config.DataWorkers.Key, setting.Value.ToInt());
-                        break;
-                    case "imageRunners":
-                        Config.ImageWorkers = new(Config.ImageWorkers.Key, setting.Value.ToInt());
-                        break;
-                    case "requestRunners":
-                        Config.RequestWorkers = new(Config.RequestWorkers.Key, setting.Value.ToInt());
-                        break;
-                    case "swagger":
-                        Config.Swagger = setting.Value.ToBoolean();
-                        break;
-                }
+                case "internalPort":
+                    Config.InternalServerPort = int.Parse(setting.Value);
+                    break;
+                case "externalPort":
+                    Config.ExternalServerPort = int.Parse(setting.Value);
+                    break;
+                case "queueRunners":
+                    Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "encoderRunners":
+                    Config.EncoderWorkers = new(Config.EncoderWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "cronRunners":
+                    Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "dataRunners":
+                    Config.DataWorkers = new(Config.DataWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "imageRunners":
+                    Config.ImageWorkers = new(Config.ImageWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "requestRunners":
+                    Config.RequestWorkers = new(Config.RequestWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "swagger":
+                    Config.Swagger = setting.Value.ToBoolean();
+                    break;
             }
         }
     }

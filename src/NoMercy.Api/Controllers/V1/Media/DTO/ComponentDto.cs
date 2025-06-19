@@ -19,8 +19,10 @@ public record ComponentDto<T>
     public ComponentDto()
     {
         Id = Ulid.NewUlid();
-        Update = new(Id);
-        Update.When = null;
+        Update = new(Id)
+        {
+            When = null
+        };
     }
 
     [JsonProperty("id")] public Ulid Id { get; set; }
@@ -32,16 +34,16 @@ public record ComponentDto<T>
 
 public record Update
 {
-    [JsonProperty("when")]public string? When { get; set; }
+    [JsonProperty("when")] public string? When { get; set; }
     [JsonProperty("link")] public Uri Link { get; set; } = default!;
     [JsonProperty("body")] public object Body { get; set; } = new();
 
     public Update(Ulid ulid)
     {
-       Body = new
-       {
-           replace_id = ulid
-       };
+        Body = new
+        {
+            replace_id = ulid
+        };
     }
 }
 
@@ -114,7 +116,7 @@ public record RenderPropsItemDto
 
             ContentRatings = item.Movie.CertificationMovies
                 .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                    || certificationMovie.Certification.Iso31661 == country)
+                                             || certificationMovie.Certification.Iso31661 == country)
                 .Select(certificationMovie => new ContentRating
                 {
                     Rating = certificationMovie.Certification.Rating,
@@ -147,7 +149,7 @@ public record RenderPropsItemDto
 
             ContentRatings = item.Tv.CertificationTvs
                 .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                    || certificationMovie.Certification.Iso31661 == country)
+                                             || certificationMovie.Certification.Iso31661 == country)
                 .Select(certificationTv => new ContentRating
                 {
                     Rating = certificationTv.Certification.Rating,
@@ -169,29 +171,29 @@ public record RenderPropsItemDto
 
             NumberOfItems = item.Special.Items.Count;
             HaveItems = item.Special.Items
-                    .Select(specialItem => specialItem.Episode?.VideoFiles
-                        .Any(videoFile => videoFile.Folder != null)).Count()
-                + item.Special.Items.Count(i => i.MovieId != null);
+                            .Select(specialItem => specialItem.Episode?.VideoFiles
+                                .Any(videoFile => videoFile.Folder != null)).Count()
+                        + item.Special.Items.Count(i => i.MovieId != null);
             Videos = [];
             ContentRatings = item.Special.Items
                 .SelectMany(specialItem => specialItem.Episode?.Tv.CertificationTvs
                     .Where(certificationTv => certificationTv.Certification.Iso31661 == "US"
-                        || certificationTv.Certification.Iso31661 == country)
+                                              || certificationTv.Certification.Iso31661 == country)
                     .Select(certificationTv => new ContentRating
                     {
                         Rating = certificationTv.Certification.Rating,
                         Iso31661 = certificationTv.Certification.Iso31661
-                    }) ?? Array.Empty<ContentRating>())
+                    }) ?? [])
                 .Concat(item.Special.Items
                     .Where(specialItem => specialItem.MovieId != null)
                     .SelectMany(specialItem => specialItem.Movie?.CertificationMovies
                         .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                            || certificationMovie.Certification.Iso31661 == country)
+                                                     || certificationMovie.Certification.Iso31661 == country)
                         .Select(certificationMovie => new ContentRating
                         {
                             Rating = certificationMovie.Certification.Rating,
                             Iso31661 = certificationMovie.Certification.Iso31661
-                        }) ?? Array.Empty<ContentRating>()));
+                        }) ?? []));
             // Videos = item.SpecialItemsDto.SpecialItems
             //     .SelectMany(specialDto => specialDto.Tv.Media)
             //     .Select(media => new Video(media))
@@ -226,7 +228,7 @@ public record RenderPropsItemDto
             ContentRatings = item.Collection.CollectionMovies
                 .SelectMany(collectionMovie => collectionMovie.Movie.CertificationMovies)
                 .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                    || certificationMovie.Certification.Iso31661 == country)
+                                             || certificationMovie.Certification.Iso31661 == country)
                 .Select(certificationMovie => new ContentRating
                 {
                     Rating = certificationMovie.Certification.Rating,
@@ -235,4 +237,3 @@ public record RenderPropsItemDto
         }
     }
 }
-

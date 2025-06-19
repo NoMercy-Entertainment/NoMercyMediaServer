@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record TaskDto
 {
     [JsonProperty("id")] public string Id { get; set; } = string.Empty;

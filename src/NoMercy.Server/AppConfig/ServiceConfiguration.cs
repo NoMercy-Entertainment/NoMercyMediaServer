@@ -84,6 +84,8 @@ public static class ServiceConfiguration
         services.AddTransient<MediaContext>();
 
         // Add Repositories
+        services.AddScoped<HomeRepository>();
+        services.AddScoped<MusicRepository>();
         services.AddScoped<EncoderRepository>();
         services.AddScoped<LibraryRepository>();
         services.AddScoped<DeviceRepository>();
@@ -105,10 +107,9 @@ public static class ServiceConfiguration
         services.AddScoped<SeasonManager>();
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();
-
         services.AddScoped<HomeService>();
         services.AddScoped<HomeController>();
-        
+
         services.AddSingleton<JobQueue>();
         services.AddSingleton<JobDispatcher>();
         services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
@@ -195,7 +196,8 @@ public static class ServiceConfiguration
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+                options.JsonSerializerOptions.Encoder =
+                    System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
             });
 
         services.Configure<RouteOptions>(options =>
@@ -224,7 +226,7 @@ public static class ServiceConfiguration
 
         // services.AddTransient<DynamicStaticFilesMiddleware>();
         // services.AddSingleton(LibraryFileWatcher.Instance);
-        
+
         ConfigureApiVersioning(services);
         ConfigureSwagger(services);
     }
@@ -235,7 +237,7 @@ public static class ServiceConfiguration
         services.AddSwaggerGenNewtonsoftSupport();
         services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
     }
-    
+
     private static void ConfigureApiVersioning(IServiceCollection services)
     {
         // Add API versioning
@@ -254,7 +256,7 @@ public static class ServiceConfiguration
             });
     }
 
-    
+
     private static void ConfigureCors(IServiceCollection services)
     {
         // Configure CORS

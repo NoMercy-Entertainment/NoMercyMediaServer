@@ -15,14 +15,20 @@ public class DeviceManager
         _mediaContext = mediaContext;
     }
 
-    public Device? GetUserDevice(Guid userId) =>
-        _currentDevices.TryGetValue(userId, out Device? device) ? device : null;
+    public Device? GetUserDevice(Guid userId)
+    {
+        return _currentDevices.TryGetValue(userId, out Device? device) ? device : null;
+    }
 
-    public void SetUserDevice(Guid userId, Device device) =>
+    public void SetUserDevice(Guid userId, Device device)
+    {
         _currentDevices.AddOrUpdate(userId, device, (_, _) => device);
+    }
 
-    public bool RemoveUserDevice(Guid userId) =>
-        _currentDevices.TryRemove(userId, out _);
+    public bool RemoveUserDevice(Guid userId)
+    {
+        return _currentDevices.TryRemove(userId, out _);
+    }
 
     public async Task UpdateDeviceVolume(string deviceId, int volume)
     {

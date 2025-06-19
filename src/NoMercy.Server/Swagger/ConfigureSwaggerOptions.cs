@@ -53,7 +53,7 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
 
             options.AddSecurityRequirement(new()
             {
-                { keycloakSecurityScheme, Array.Empty<string>() },
+                { keycloakSecurityScheme, [] },
                 {
                     new() { Reference = new() { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
                     []

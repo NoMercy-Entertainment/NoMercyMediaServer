@@ -12,12 +12,12 @@ public sealed class CloudflareTunnelService : IHostedService
     private readonly string _tunnelToken;
     private readonly string _tunnelName;
     private bool _disposed;
-    
+
     public CloudflareTunnelService(string tunnelToken, string tunnelName)
     {
         _tunnelToken = tunnelToken;
         _tunnelName = tunnelName;
-        
+
         // Register application exit handler
         AppDomain.CurrentDomain.ProcessExit += (_, _) => StopTunnel();
         Console.CancelKeyPress += (_, e) =>
@@ -26,8 +26,8 @@ public sealed class CloudflareTunnelService : IHostedService
             StopTunnel();
         };
     }
-    
-   public Task StartAsync(CancellationToken cancellationToken)
+
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -41,7 +41,7 @@ public sealed class CloudflareTunnelService : IHostedService
                     WorkingDirectory = AppFiles.BinariesPath,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true,
+                    CreateNoWindow = true
                 },
                 EnableRaisingEvents = true
             };
@@ -81,19 +81,13 @@ public sealed class CloudflareTunnelService : IHostedService
             {
                 // Try graceful shutdown first
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
                     Shell.ProcessHelper.SendCtrlC(_tunnelProcess);
-                }
                 else
-                {
                     _tunnelProcess.CloseMainWindow();
-                }
 
                 // Wait for graceful shutdown
                 if (!_tunnelProcess.WaitForExit(3000))
-                {
                     _tunnelProcess.Kill(true); // Force kill if graceful shutdown fails
-                }
             }
         }
         catch (Exception ex)
@@ -111,7 +105,7 @@ public sealed class CloudflareTunnelService : IHostedService
     private void Dispose(bool disposing)
     {
         if (_disposed) return;
-        
+
         if (disposing)
         {
             StopTunnel();

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Trending;
+
 public class TmdbResult
 {
     [JsonProperty("adult")] public bool? Adult { get; set; }

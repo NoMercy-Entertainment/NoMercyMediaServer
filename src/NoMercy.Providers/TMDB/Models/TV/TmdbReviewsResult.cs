@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.TV;
+
 public class TmdbReviewsResult
 {
     [JsonProperty("author")] public string Author { get; set; } = string.Empty;

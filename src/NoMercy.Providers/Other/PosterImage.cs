@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.Other;
+
 public class PosterImage
 {
     [JsonProperty("tiny")] public Uri? Tiny { get; set; }

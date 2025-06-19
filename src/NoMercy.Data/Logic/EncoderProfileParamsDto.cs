@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Data.Logic;
+
 public class EncoderProfileParamsDto
 {
     [JsonProperty("width")] public int Width { get; set; }

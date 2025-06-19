@@ -6,6 +6,7 @@ using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
+
 public record ArtistResponseItemDto
 {
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
@@ -35,16 +36,15 @@ public record ArtistResponseItemDto
     {
         string? description = artist.Translations
             .FirstOrDefault(translation => translation.Iso31661 == country)?.Description ?? artist.Description;
-        
+
         Image? img = artist.Images.FirstOrDefault(image => image.Type == "background");
-        Backdrop = img?.FilePath is not null ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString() : null;
+        Backdrop = img?.FilePath is not null
+            ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
+            : null;
         Cover = artist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         ColorPalette = artist.ColorPalette;
-        if(ColorPalette is not null)
-        {
-            ColorPalette.Backdrop = img?.ColorPalette?.Image;
-        }
+        if (ColorPalette is not null) ColorPalette.Backdrop = img?.ColorPalette?.Image;
         Disambiguation = artist.Disambiguation;
         Description = description;
         Favorite = artist.ArtistUser.Any();
@@ -90,7 +90,7 @@ public record ArtistResponseItemDto
             .OrderBy(artistTrack => artistTrack.AlbumName)
             .ThenBy(artistTrack => artistTrack.Disc)
             .ThenBy(artistTrack => artistTrack.Track);
-        
+
         FavoriteTracks = artist.ArtistTrack
             .Where(artistTrack => artistTrack.Track.MusicPlays.Count > 0)
             .Select(artistTrack => new FavoriteTrackDto(artistTrack, country!))

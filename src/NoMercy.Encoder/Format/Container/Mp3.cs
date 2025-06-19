@@ -13,7 +13,7 @@ public class Mp3 : BaseContainer
 
     public override CodecDto[] AvailableCodecs =>
     [
-        AudioCodecs.Mp3,
+        AudioCodecs.Mp3
     ];
 
     public override Mp3 ApplyFlags()

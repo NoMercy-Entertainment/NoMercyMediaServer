@@ -15,6 +15,7 @@ public class BaseAudio : Classes
     internal List<AudioStream> AudioStreams { get; set; } = [];
 
     private string? _language;
+
     public string Language
     {
         get => _language ?? AudioStream?.Language ?? "und";
@@ -43,12 +44,14 @@ public class BaseAudio : Classes
 
     internal readonly List<string> _id3Tags = [];
 
-    protected virtual string[] AvailableContainers { get; set; } = [
+    protected virtual string[] AvailableContainers { get; set; } =
+    [
         AudioContainers.Mp3, AudioContainers.Flac, AudioContainers.M4A,
         AudioContainers.Aac, AudioContainers.Ogg, AudioContainers.Wav
     ];
 
-    public virtual CodecDto[] AvailableCodecs { get; set; } = [
+    public virtual CodecDto[] AvailableCodecs { get; set; } =
+    [
         AudioCodecs.Aac, AudioCodecs.Opus, AudioCodecs.Vorbis,
         AudioCodecs.Mp3, AudioCodecs.Flac, AudioCodecs.Ac3,
         AudioCodecs.Eac3, AudioCodecs.TrueHd
@@ -147,7 +150,7 @@ public class BaseAudio : Classes
             AddCustomArgument(key, val);
         return this;
     }
-    
+
     public BaseAudio AddId3Tag(string value)
     {
         _id3Tags.Add(value);
@@ -171,6 +174,7 @@ public class BaseAudio : Classes
         AddCustomArgument(value, null);
         return this;
     }
+
     public BaseAudio AddOpts(string[] value)
     {
         foreach (string opt in value)
@@ -208,26 +212,24 @@ public class BaseAudio : Classes
         List<BaseAudio> streams = [];
 
         foreach (string allowedLanguage in AllowedLanguages.Append("und"))
+        foreach (AudioStream stream in AudioStreams.Where(audioStream =>
+                     audioStream.Language is null || audioStream.Language == allowedLanguage))
         {
-            foreach (AudioStream stream in AudioStreams.Where(audioStream => 
-                         audioStream.Language is null || audioStream.Language == allowedLanguage))
-            {
-                BaseAudio newStream = (BaseAudio)MemberwiseClone();
+            BaseAudio newStream = (BaseAudio)MemberwiseClone();
 
-                newStream.Language = stream.Language == "und" 
-                    ? "eng" 
-                    : stream.Language ?? "eng";
+            newStream.Language = stream.Language == "und"
+                ? "eng"
+                : stream.Language ?? "eng";
 
-                newStream.IsAudio = true;
+            newStream.IsAudio = true;
 
-                newStream.AudioStream = stream;
+            newStream.AudioStream = stream;
 
-                newStream.Index = AudioStreams.IndexOf(newStream.AudioStream);
+            newStream.Index = AudioStreams.IndexOf(newStream.AudioStream);
 
-                if(streams.Any(s => s.HlsPlaylistFilename == newStream.HlsPlaylistFilename)) continue;
+            if (streams.Any(s => s.HlsPlaylistFilename == newStream.HlsPlaylistFilename)) continue;
 
-                streams.Add(newStream);
-            }
+            streams.Add(newStream);
         }
 
         return streams.Distinct().ToList();
@@ -276,7 +278,7 @@ public class BaseAudio : Classes
     public BaseAudio SetLanguage(string language)
     {
         Language = language;
-        
+
         return this;
     }
 

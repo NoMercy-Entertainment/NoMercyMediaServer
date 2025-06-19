@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class MusicBrainzMediaDetails : MusicBrainzMedia
 {
     [JsonProperty("discs")] public Disc[] Discs { get; set; } = [];

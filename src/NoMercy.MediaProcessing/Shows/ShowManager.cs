@@ -22,7 +22,7 @@ public class ShowManager(
         Logger.MovieDb($"Show {id}: Adding to Library {library.Title}");
 
         using TmdbTvClient showClient = new(id);
-        TmdbTvShowAppends? showAppends = await showClient.WithAllAppends(priority: priority);
+        TmdbTvShowAppends? showAppends = await showClient.WithAllAppends(priority);
 
         if (showAppends == null) return null;
 
@@ -105,8 +105,8 @@ public class ShowManager(
 
     internal async Task StoreAlternativeTitles(TmdbTvShowAppends show)
     {
-        IEnumerable<AlternativeTitle> alternativeTitles = show.AlternativeTitles.Results.Select(
-            tmdbShowAlternativeTitles => new AlternativeTitle
+        IEnumerable<AlternativeTitle> alternativeTitles =
+            show.AlternativeTitles.Results.Select(tmdbShowAlternativeTitles => new AlternativeTitle
             {
                 Iso31661 = tmdbShowAlternativeTitles.Iso31661,
                 Title = tmdbShowAlternativeTitles.Title,
@@ -275,20 +275,19 @@ public class ShowManager(
         if (backdropJobItems.Any())
             jobDispatcher.DispatchJob<ImagePaletteJob, Image>(show.Id, backdropJobItems);
 
-        IEnumerable<Image> logos = show.Images.Logos.Select(
-                image => new Image
-                {
-                    AspectRatio = image.AspectRatio,
-                    Height = image.Height,
-                    Iso6391 = image.Iso6391,
-                    FilePath = image.FilePath,
-                    Width = image.Width,
-                    VoteAverage = image.VoteAverage,
-                    VoteCount = image.VoteCount,
-                    TvId = show.Id,
-                    Type = "logo",
-                    Site = "https://image.tmdb.org/t/p/"
-                })
+        IEnumerable<Image> logos = show.Images.Logos.Select(image => new Image
+            {
+                AspectRatio = image.AspectRatio,
+                Height = image.Height,
+                Iso6391 = image.Iso6391,
+                FilePath = image.FilePath,
+                Width = image.Width,
+                VoteAverage = image.VoteAverage,
+                VoteCount = image.VoteCount,
+                TvId = show.Id,
+                Type = "logo",
+                Site = "https://image.tmdb.org/t/p/"
+            })
             .ToArray();
 
         await showRepository.StoreImages(logos);
@@ -304,22 +303,20 @@ public class ShowManager(
 
     internal async Task StoreKeywords(TmdbTvShowAppends show)
     {
-        IEnumerable<Keyword> keywords = show.Keywords.Results.Select(
-            keyword => new Keyword
-            {
-                Id = keyword.Id,
-                Name = keyword.Name
-            });
+        IEnumerable<Keyword> keywords = show.Keywords.Results.Select(keyword => new Keyword
+        {
+            Id = keyword.Id,
+            Name = keyword.Name
+        });
 
         await showRepository.StoreKeywords(keywords);
         Logger.MovieDb($"Show {show.Name}: Keywords stored", LogEventLevel.Debug);
 
-        IEnumerable<KeywordTv> keywordTvs = show.Keywords.Results.Select(
-            keyword => new KeywordTv
-            {
-                KeywordId = keyword.Id,
-                TvId = show.Id
-            });
+        IEnumerable<KeywordTv> keywordTvs = show.Keywords.Results.Select(keyword => new KeywordTv
+        {
+            KeywordId = keyword.Id,
+            TvId = show.Id
+        });
 
         await showRepository.LinkKeywordsToTv(keywordTvs);
         Logger.MovieDb($"Show {show.Name}: Keywords linked to Show", LogEventLevel.Debug);
@@ -327,12 +324,11 @@ public class ShowManager(
 
     internal async Task StoreGenres(TmdbTvShowAppends show)
     {
-        IEnumerable<GenreTv> genreShows = show.Genres.Select(
-            genre => new GenreTv
-            {
-                GenreId = genre.Id,
-                TvId = show.Id
-            });
+        IEnumerable<GenreTv> genreShows = show.Genres.Select(genre => new GenreTv
+        {
+            GenreId = genre.Id,
+            TvId = show.Id
+        });
 
         await showRepository.StoreGenres(genreShows);
         Logger.MovieDb($"Show {show.Name}: Genres stored", LogEventLevel.Debug);
@@ -370,7 +366,7 @@ public class ShowManager(
     {
         await Task.CompletedTask;
     }
-    
+
     internal async Task StoreCrew(TmdbTvShowAppends show)
     {
         await Task.CompletedTask;

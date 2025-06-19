@@ -6,7 +6,7 @@ using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Images;
 
-public class CoverArtImageManagerManager: ICoverArtImageManagerManager
+public class CoverArtImageManagerManager : ICoverArtImageManagerManager
 {
     public static async Task<string> ColorPalette(string type, Uri url, bool? download = true)
     {
@@ -17,7 +17,7 @@ public class CoverArtImageManagerManager: ICoverArtImageManagerManager
     {
         return await BaseImageManager.MultiColorPalette(CoverArtCoverArtClient.Download, items, download);
     }
-    
+
     public class CoverPalette
     {
         public string? Palette { get; set; }
@@ -34,7 +34,7 @@ public class CoverArtImageManagerManager: ICoverArtImageManagerManager
 
             CoverArtImage? coverItem = covers.Images
                 .FirstOrDefault(image => image.Types.Contains("Front"));
-            
+
             return coverItem?.CoverArtThumbnails.Large;
         }
         catch (Exception e)

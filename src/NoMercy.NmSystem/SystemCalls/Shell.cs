@@ -14,7 +14,7 @@ public static class Shell
         public bool UseShellExecute { get; set; } = false;
         public bool CreateNoWindow { get; set; } = true;
         public bool MergeStdErrToOut { get; set; } = false; // For "2>&1" behavior
-        
+
         public Dictionary<string, string> EnvironmentVariables { get; set; } = new();
     }
 
@@ -46,11 +46,9 @@ public static class Shell
             process.StartInfo.RedirectStandardError = false;
         else
             process.StartInfo.RedirectStandardError = options.CaptureStdErr;
-        
+
         foreach (KeyValuePair<string, string> envVar in options.EnvironmentVariables)
-        {
             process.StartInfo.EnvironmentVariables[envVar.Key] = envVar.Value;
-        }
 
         StringBuilder outputBuilder = new();
         StringBuilder errorBuilder = new();
@@ -61,12 +59,10 @@ public static class Shell
         };
 
         if (options.CaptureStdErr && !options.MergeStdErrToOut)
-        {
             process.ErrorDataReceived += (_, e) =>
             {
                 if (e.Data != null) errorBuilder.AppendLine(e.Data);
             };
-        }
 
         try
         {
@@ -115,7 +111,7 @@ public static class Shell
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            
+
             using Process? process = Process.Start(psi);
             if (process != null)
             {
@@ -128,17 +124,24 @@ public static class Shell
         {
             Console.WriteLine($"Error running command: {ex.Message}");
         }
+
         return "Unknown";
     }
-    
+
     public static ExecResult ExecSync(string executable, string arguments, ExecOptions? options = null)
-        => ExecAsync(executable, arguments, options).GetAwaiter().GetResult();
+    {
+        return ExecAsync(executable, arguments, options).GetAwaiter().GetResult();
+    }
 
     public static async Task<string> ExecStdOutAsync(string executable, string arguments, ExecOptions? options = null)
-        => (await ExecAsync(executable, arguments, options)).StandardOutput;
+    {
+        return (await ExecAsync(executable, arguments, options)).StandardOutput;
+    }
 
     public static string ExecStdOutSync(string executable, string arguments, ExecOptions? options = null)
-        => ExecSync(executable, arguments, options).StandardOutput;
+    {
+        return ExecSync(executable, arguments, options).StandardOutput;
+    }
 
     public static async Task<string> ExecStdErrAsync(string executable, string arguments, ExecOptions? options = null)
     {
@@ -151,9 +154,10 @@ public static class Shell
         options ??= new() { CaptureStdErr = true, CaptureStdOut = false };
         return ExecSync(executable, arguments, options).StandardError;
     }
-        public static class ProcessHelper
-        {
-    #if WINDOWS
+
+    public static class ProcessHelper
+    {
+#if WINDOWS
             [DllImport("kernel32.dll", SetLastError = true)]
             private static extern bool AttachConsole(uint dwProcessId);
     
@@ -176,12 +180,11 @@ public static class Shell
                     FreeConsole();
                 }
             }
-    #else
-            public static void SendCtrlC(Process process)
-            {
-                throw new PlatformNotSupportedException("SendCtrlC is only supported on Windows platforms.");
-            }
-    #endif
+#else
+        public static void SendCtrlC(Process process)
+        {
+            throw new PlatformNotSupportedException("SendCtrlC is only supported on Windows platforms.");
         }
+#endif
+    }
 }
-

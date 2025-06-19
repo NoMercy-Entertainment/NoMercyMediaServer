@@ -1,4 +1,5 @@
 namespace NoMercy.Encoder.Format.Rules;
+
 public static class VideoContainers
 {
     public static readonly string Mkv = "mkv";
@@ -6,5 +7,4 @@ public static class VideoContainers
     public static readonly string Hls = "m3u8";
     public static readonly string Webm = "webm";
     public static readonly string Flv = "flv";
-
 }

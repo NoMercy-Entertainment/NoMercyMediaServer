@@ -6,7 +6,7 @@ using PlatformNotSupportedException = System.PlatformNotSupportedException;
 
 namespace NoMercy.App;
 
-class Program
+internal class Program
 {
     private static PhotinoWindow Window { get; set; } = null!;
     private static int WindowWidth { get; set; } = 1280;
@@ -17,16 +17,16 @@ class Program
     private static int Left { get; set; }
 
     [STAThread]
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
         PhotinoServer
             .CreateStaticFileServer(args, 7625, 100, "", out string baseUrl)
             .RunAsync();
 
         string appUrl = Debugger.IsAttached ? "https://app-dev.nomercy.tv" : baseUrl;
-        
+
         string windowTitle = "NoMercy TV";
-        
+
         string iconPath;
         if (PhotinoWindow.IsWindowsPlatform)
             iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.ico");
@@ -36,9 +36,9 @@ class Program
             iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.icns");
         else
             throw new PlatformNotSupportedException("Unsupported OS platform");
-        
+
         if (!File.Exists(iconPath)) throw new FileNotFoundException("Tray icon file not found", iconPath);
-        
+
         Window = new PhotinoWindow
             {
                 Centered = true,
@@ -50,23 +50,24 @@ class Program
                 UseOsDefaultSize = false,
                 SmoothScrollingEnabled = true,
                 MediaAutoplayEnabled = true,
-                MediaStreamEnabled = true,
+                MediaStreamEnabled = true
             }
-            .RegisterCustomSchemeHandler("nomercy", (object sender, string scheme, string url, out string contentType) =>
-            {
-                contentType = "text/javascript";
-                return new MemoryStream(@"
+            .RegisterCustomSchemeHandler("nomercy",
+                (object sender, string scheme, string url, out string contentType) =>
+                {
+                    contentType = "text/javascript";
+                    return new MemoryStream(@"
                         (() =>{
                             window.setTimeout(() => {
                                 alert(`🎉 Dynamically inserted JavaScript.`);
                             }, 1000);
                         })();
                     "u8.ToArray());
-            })
+                })
             .RegisterWebMessageReceivedHandler((object sender, string message) =>
             {
                 PhotinoWindow window = (PhotinoWindow)sender;
-                
+
                 switch (message)
                 {
                     case "enterFullscreen":
@@ -78,11 +79,11 @@ class Program
                 }
             })
             .Load(appUrl);
-        
+
         Window.WindowCreated += (_, _) =>
         {
             Monitor? primaryMonitor = Window.Monitors.FirstOrDefault();
-        
+
             if (primaryMonitor != null)
             {
                 WindowWidth = primaryMonitor.Value.WorkArea.Width / 2;
@@ -92,17 +93,17 @@ class Program
                 Window.SetSize(WindowWidth, WindowHeight);
                 Window.Center();
             }
-            
+
             Window.WindowMaximizedHandler += (_, _) =>
             {
                 WindowRestoreWidth = WindowWidth;
                 WindowRestoreHeight = WindowHeight;
-                
+
                 if (primaryMonitor == null) return;
                 WindowWidth = primaryMonitor.Value.WorkArea.Width;
                 WindowHeight = primaryMonitor.Value.WorkArea.Width;
             };
-        
+
             Window.WindowRestoredHandler += (_, _) =>
             {
                 if (primaryMonitor == null) return;
@@ -120,11 +121,11 @@ class Program
 
         Window.WaitForClose();
     }
-    
+
     private static void EnterFullScreen(PhotinoWindow window)
     {
         Monitor? primaryMonitor = window.MainMonitor;
-        
+
         window.SetFullScreen(true);
         window.SetSize(primaryMonitor.Value.MonitorArea.Width - 1, primaryMonitor.Value.MonitorArea.Height - 1);
         window.SetTop(0);
@@ -132,7 +133,7 @@ class Program
         window.SetSize(primaryMonitor.Value.MonitorArea.Width, primaryMonitor.Value.MonitorArea.Height);
         window.SetTopMost(true);
     }
-    
+
     private static void ExitFullScreen(PhotinoWindow window)
     {
         window.SetFullScreen(false);

@@ -9,7 +9,8 @@ public abstract class NoMercyImageManager() : INoMercyImageManager
         return await BaseImageManager.ColorPalette(NoMercyImageClient.Download, type, path, download);
     }
 
-    public static async Task<string> MultiColorPalette(IEnumerable<BaseImageManager.MultiStringType> items, bool? download = true)
+    public static async Task<string> MultiColorPalette(IEnumerable<BaseImageManager.MultiStringType> items,
+        bool? download = true)
     {
         return await BaseImageManager.MultiColorPalette(NoMercyImageClient.Download, items, download);
     }

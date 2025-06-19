@@ -14,14 +14,14 @@ public class JobDispatcher
         TJob job = new() { LibraryId = libraryId, FolderId = folderId, Id = id, InputFile = inputFile };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
-    
+
     public void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, Guid releaseId, string filePath)
         where TJob : AbstractMusicFolderJob, new()
     {
         TJob job = new() { FolderId = folderId, LibraryId = libraryId, Id = releaseId, InputFolder = filePath };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
-    
+
     public void DispatchJob<TJob>(int id, Ulid libraryId)
         where TJob : AbstractMediaJob, new()
     {
@@ -74,34 +74,35 @@ public class JobDispatcher
     public void DispatchJob<TJob>(Ulid libraryId, Guid id, Folder baseFolder, MediaFolderExtend mediaFolder)
         where TJob : AbstractReleaseJob, new()
     {
-        TJob job = new() { LibraryId = libraryId, Id = id, BaseFolder = baseFolder, MediaFolder = mediaFolder};
+        TJob job = new() { LibraryId = libraryId, Id = id, BaseFolder = baseFolder, MediaFolder = mediaFolder };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
-    
+
     public void DispatchJob<TJob>(Guid id1, Guid? id2 = null, Guid? id3 = null)
         where TJob : AbstractFanArtDataJob, new()
     {
         TJob job = new() { Id1 = id1, Id2 = id2, Id3 = id3 };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
-    
+
     public void DispatchJob<TJob>(MusicBrainzReleaseGroup musicBrainzReleaseGroup)
         where TJob : MusicDescriptionJob, new()
     {
-        TJob job = new() { MusicBrainzReleaseGroup = musicBrainzReleaseGroup};
+        TJob job = new() { MusicBrainzReleaseGroup = musicBrainzReleaseGroup };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
+
     public void DispatchJob<TJob>(MusicBrainzArtist musicBrainzArtist)
         where TJob : MusicDescriptionJob, new()
     {
-        TJob job = new() { MusicBrainzArtist = musicBrainzArtist};
+        TJob job = new() { MusicBrainzArtist = musicBrainzArtist };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
-    
+
     public void DispatchJob<TJob>(
         Guid id,
-        Ulid folderId, 
-        ProcessMusicFolderJob.FolderMetadata folderMetaData, 
+        Ulid folderId,
+        ProcessMusicFolderJob.FolderMetadata folderMetaData,
         MediaFile mediaFile,
         MusicBrainzTrack foundTrack,
         Ulid libraryId,
@@ -110,11 +111,12 @@ public class JobDispatcher
     )
         where TJob : EncodeMusicJob, new()
     {
-        TJob job = new() { 
+        TJob job = new()
+        {
             Id = id,
             FolderId = folderId,
-            foundTrack = foundTrack, folderMetaData = folderMetaData, 
-            mediaFile = mediaFile, LibraryId = libraryId, 
+            foundTrack = foundTrack, folderMetaData = folderMetaData,
+            mediaFile = mediaFile, LibraryId = libraryId,
             InputFolder = inputFolder, InputFile = inputFile
         };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);

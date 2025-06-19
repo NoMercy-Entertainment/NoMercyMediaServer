@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.Providers.TMDB.Models.Shared;
 
 namespace NoMercy.Providers.TMDB.Models.TV;
+
 public class TmdbOriginalValueClass
 {
     [JsonProperty("id")] public int? Id { get; set; }

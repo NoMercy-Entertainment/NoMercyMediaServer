@@ -1,4 +1,5 @@
 namespace NoMercy.Helpers.Monitoring;
+
 public class ResourceMonitorDto
 {
     public string Name { get; set; } = string.Empty;

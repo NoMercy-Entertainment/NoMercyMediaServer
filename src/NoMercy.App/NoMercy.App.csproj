@@ -20,7 +20,7 @@
         <NeutralLanguage>en</NeutralLanguage>
         <OutputType>WinExe</OutputType>
     </PropertyGroup>
-    
+
     <PropertyGroup>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
@@ -36,7 +36,7 @@
         <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
-        
+
         <Version>0.0.1</Version>
         <AssemblyVersion>$(Version).0</AssemblyVersion>
         <FileVersion>$(Version).0</FileVersion>
@@ -44,15 +44,15 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="8.0.10"/>
-        <PackageReference Include="Photino.NET" Version="4.0.16" />
-        <PackageReference Include="Photino.NET.Server" Version="4.0.12" />
+        <PackageReference Include="Photino.NET" Version="4.0.16"/>
+        <PackageReference Include="Photino.NET.Server" Version="4.0.12"/>
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0"/>
     </ItemGroup>
 
     <ItemGroup>
         <EmbeddedResource Include="Resources\**"/>
     </ItemGroup>
-    
+
     <ItemGroup>
         <None Update="Resources\AppIcon\**">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>

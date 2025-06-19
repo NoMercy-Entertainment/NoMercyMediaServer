@@ -1,4 +1,5 @@
 namespace NoMercy.Encoder.Format.Rules;
+
 public static class ImageContainers
 {
     public static readonly string Jpeg = "jpeg";

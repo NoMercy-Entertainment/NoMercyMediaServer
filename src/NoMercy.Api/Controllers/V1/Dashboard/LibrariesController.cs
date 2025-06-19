@@ -30,16 +30,16 @@ public class LibrariesController(
 ) : BaseController
 {
     [HttpGet]
-    public Task<IActionResult> Index()
+    public async Task<IActionResult> Index()
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
-            return Task.FromResult(UnauthorizedResponse("You do not have permission to view libraries"));
-        IQueryable<Library> libraries = libraryRepository.GetLibraries(userId);
-        return Task.FromResult<IActionResult>(Ok(new LibrariesDto
+            return UnauthorizedResponse("You do not have permission to view libraries");
+        IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
+        return Ok(new LibrariesDto
         {
             Data = libraries.Select(library => new LibrariesResponseItemDto(library))
-        }));
+        });
     }
 
     [HttpPost]
@@ -159,7 +159,7 @@ public class LibrariesController(
 
         try
         {
-            List<Data.Repositories.FolderDto> folders = libraryRepository.GetFoldersAsync();
+            List<Data.Repositories.FolderDto> folders = await libraryRepository.GetFoldersAsync();
             List<EncoderProfileFolder> encoderProfileFolders = [];
 
             foreach (Data.Repositories.FolderDto folder in folders)
@@ -211,7 +211,8 @@ public class LibrariesController(
         {
             return Ok(new StatusResponseDto<string>
             {
-                Status = "error", Message = "Something went wrong deleting the library: {0}", Args = [e.InnerException?.Message ?? e.Message]
+                Status = "error", Message = "Something went wrong deleting the library: {0}",
+                Args = [e.InnerException?.Message ?? e.Message]
             });
         }
     }
@@ -289,7 +290,6 @@ public class LibrariesController(
         {
             Status = "ok", Message = "Rescanning all libraries."
         });
-
     }
 
     [HttpPost]
@@ -525,11 +525,11 @@ public class LibrariesController(
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete the encoder profile");
-    
+
         EncoderProfile? encoderProfile = await encoderRepository.GetEncoderProfileByIdAsync(encoderProfileId);
         if (encoderProfile is null)
             return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Encoder profile not found" });
-    
+
         try
         {
             await encoderRepository.DeleteEncoderProfileAsync(encoderProfile);
@@ -555,7 +555,7 @@ public class LibrariesController(
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to move the library");
-        
+
         Folder? folder = await folderRepository.GetFolderByIdAsync(request.FolderId);
         if (folder is null)
             return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Folder not found" });
@@ -563,12 +563,12 @@ public class LibrariesController(
         try
         {
             await using MediaContext mediaContext = new();
-            
+
             FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);
-            
+
             await fileManager.MoveToLibraryFolder(request.Id, folder);
-            
+
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok", Message = "Successfully moved item {0}.", Args = [request.Id.ToString()]

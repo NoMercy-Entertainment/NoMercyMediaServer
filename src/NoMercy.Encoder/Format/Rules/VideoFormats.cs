@@ -1,4 +1,5 @@
 namespace NoMercy.Encoder.Format.Rules;
+
 public static class VideoFormats
 {
     public static readonly string Mkv = "matroska";

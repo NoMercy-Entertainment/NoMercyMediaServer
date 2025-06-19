@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
+
 public record TracksResponseItemDto
 {
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
@@ -33,7 +34,7 @@ public record TracksResponseItemDto
         Name = track.Name;
         Cover = track.Cover is not null ? new Uri($"/images/music{track.Cover}", UriKind.Relative).ToString() : null;
         Link = new($"/music/tracks/{track.Id}", UriKind.Relative);
-        
+
         ColorPalette = track.ColorPalette;
         Favorite = track.TrackUser.Any();
         Type = "favorites";

@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -12,6 +11,12 @@ namespace NoMercy.Database.Models;
 [Index(nameof(CreditId), nameof(SeasonId), nameof(RoleId), IsUnique = true)]
 [Index(nameof(CreditId), nameof(EpisodeId), nameof(RoleId), IsUnique = true)]
 [Index(nameof(RoleId), IsUnique = false)]
+[Index(nameof(PersonId))]
+[Index(nameof(MovieId))]
+[Index(nameof(TvId))]
+[Index(nameof(SeasonId))]
+[Index(nameof(EpisodeId))]
+[Index(nameof(CreditId))]
 public class Cast
 {
     [Key]

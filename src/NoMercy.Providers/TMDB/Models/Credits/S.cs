@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Credits;
+
 public class S : Season.TmdbSeason
 {
     [JsonProperty("air_date")] public new DateTime AirDate { get; set; }

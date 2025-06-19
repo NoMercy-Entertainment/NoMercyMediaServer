@@ -2,9 +2,10 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TVDB.Models;
 
-public class TvdbLanguagesResponse: TvdbResponse<TvdbLanguage[]>
+public class TvdbLanguagesResponse : TvdbResponse<TvdbLanguage[]>
 {
 }
+
 public class TvdbLanguage
 {
     [JsonProperty("id")] public string Id { get; set; } = string.Empty;

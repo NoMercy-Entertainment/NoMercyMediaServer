@@ -37,7 +37,8 @@ public static class Binaries
             {
                 if (program.Url == null) continue;
 
-                string destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name + Info.ExecSuffix);
+                string destinationDirectoryName =
+                    Path.Combine(AppFiles.BinariesPath, program.Path, program.Name + Info.ExecSuffix);
                 bool fileExists = File.Exists(destinationDirectoryName);
                 if (!fileExists)
                 {
@@ -56,10 +57,7 @@ public static class Binaries
                 if (fileExists)
                 {
                     DateTime fileDate = File.GetCreationTimeUtc(destinationDirectoryName);
-                    if (fileDate >= lastUpdatedOffset.UtcDateTime)
-                    {
-                        continue; // Skip if file is newer or same age
-                    }
+                    if (fileDate >= lastUpdatedOffset.UtcDateTime) continue; // Skip if file is newer or same age
                 }
 
                 try
@@ -70,9 +68,7 @@ public static class Binaries
 
                     // Set the creation time to match the last_updated time
                     if (File.Exists(destinationDirectoryName))
-                    {
                         File.SetCreationTimeUtc(destinationDirectoryName, lastUpdatedOffset.UtcDateTime);
-                    }
                 }
                 catch (Exception e)
                 {
@@ -89,7 +85,7 @@ public static class Binaries
 
         string baseName = Path.GetFileName(program.Url?.ToString() ?? "");
         string filePath = Path.Combine(AppFiles.BinariesPath, baseName);
-        
+
         HttpResponseMessage result = await HttpClient.GetAsync(program.Url);
         byte[] content = await result.Content.ReadAsByteArrayAsync();
 
@@ -99,42 +95,34 @@ public static class Binaries
     private static async Task Extract(Download program)
     {
         if (program.Url == null) return;
-        
+
         string sourceArchiveFileName =
             Path.Combine(AppFiles.BinariesPath, Path.GetFileName(program.Url?.ToString() ?? ""));
         string destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name);
-        
+
         Logger.Setup($"Extracting {program.Name} to {destinationDirectoryName}", LogEventLevel.Verbose);
-        
+
         string extension = Path.GetExtension(program.Url!.ToString());
         if (!program.NoDelete && (string.IsNullOrEmpty(extension) || extension == ".exe"))
         {
             string file = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name + Info.ExecSuffix);
-            
-            if (IsFileLocked(sourceArchiveFileName))
-            {
-                CloseApplicationLockingFile(sourceArchiveFileName);
-            }
-            
-            if (IsFileLocked(file))
-            {
-                CloseApplicationLockingFile(file);
-            }
-            
+
+            if (IsFileLocked(sourceArchiveFileName)) CloseApplicationLockingFile(sourceArchiveFileName);
+
+            if (IsFileLocked(file)) CloseApplicationLockingFile(file);
+
             File.Delete(file);
             File.Move(sourceArchiveFileName, file);
             await SetExecutionPermissions(file);
             return;
         }
-        
+
         try
         {
-            if (!program.NoDelete && Directory.Exists(destinationDirectoryName) && 
+            if (!program.NoDelete && Directory.Exists(destinationDirectoryName) &&
                 (sourceArchiveFileName.EndsWith(".zip") || sourceArchiveFileName.EndsWith(".tar.xz") ||
                  sourceArchiveFileName.EndsWith(".tar.gz") || sourceArchiveFileName.EndsWith("tgz")))
-            {
                 Directory.Delete(destinationDirectoryName, true);
-            }
 
             if (sourceArchiveFileName.EndsWith(".zip"))
             {
@@ -143,7 +131,7 @@ public static class Binaries
                 File.Delete(sourceArchiveFileName);
                 await SetExecutionPermissions(destinationDirectoryName);
             }
-            else if (sourceArchiveFileName.EndsWith(".tar.xz") || sourceArchiveFileName.EndsWith(".tar.gz") 
+            else if (sourceArchiveFileName.EndsWith(".tar.xz") || sourceArchiveFileName.EndsWith(".tar.gz")
                                                                || sourceArchiveFileName.EndsWith("tgz"))
             {
                 Directory.CreateDirectory(destinationDirectoryName);
@@ -166,18 +154,13 @@ public static class Binaries
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             if (File.Exists(path))
-            {
                 await Shell.ExecAsync("chmod", $"+x \"{path}\"");
-            }
-            else if (Directory.Exists(path))
-            {
-                await Shell.ExecAsync("chmod", $"-R +x \"{path}\"");
-            }
-        
+            else if (Directory.Exists(path)) await Shell.ExecAsync("chmod", $"-R +x \"{path}\"");
+
             Logger.Setup($"Set execution permissions for {path}", LogEventLevel.Verbose);
         }
     }
-    
+
     private static async Task Cleanup(Download program)
     {
         if (program.Filter == "")
@@ -197,7 +180,7 @@ public static class Binaries
 
         Directory.Delete(workingDir);
     }
-    
+
     private static bool IsFileLocked(string filePath)
     {
         try
@@ -209,15 +192,15 @@ public static class Binaries
         {
             return true;
         }
+
         return false;
     }
-    
+
     private static void CloseApplicationLockingFile(string filePath)
     {
         Logger.Setup($"Closing application locking {filePath}", LogEventLevel.Verbose);
 
         foreach (Process process in Process.GetProcesses())
-        {
             try
             {
                 if (process.MainModule?.FileName == null) continue;
@@ -237,6 +220,5 @@ public static class Binaries
             {
                 Logger.Setup($"Process {process.ProcessName} has already exited: {ex.Message}", LogEventLevel.Warning);
             }
-        }
     }
 }

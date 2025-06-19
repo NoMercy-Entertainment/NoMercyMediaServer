@@ -43,7 +43,8 @@ public class AcoustIdBaseClient : IDisposable
 
     protected Guid Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = default, bool? priority = false, int retry = 0) where T : AcoustIdFingerprint 
+    protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = default, bool? priority = false,
+        int retry = 0) where T : AcoustIdFingerprint
     {
         query ??= new();
 
@@ -56,11 +57,11 @@ public class AcoustIdBaseClient : IDisposable
                 return result as T;
 
         Logger.AcoustId(newUrl, LogEventLevel.Verbose);
-        
+
         T? data;
-        
+
         string? response;
-        
+
         try
         {
             response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
@@ -105,7 +106,6 @@ public class AcoustIdBaseClient : IDisposable
         }
 
         return data ?? throw new($"Failed to parse {response}");
-
     }
 
     public void Dispose()

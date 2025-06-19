@@ -8,6 +8,7 @@ using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem;
+
 public class MediaScan : IDisposable, IAsyncDisposable
 {
     private readonly MovieDetector _movieDetector = new();
@@ -26,7 +27,8 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     public MediaScan()
     {
-        FFMpegCore.GlobalFFOptions.Configure(options => options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
+        FFMpegCore.GlobalFFOptions.Configure(options =>
+            options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
     }
 
     public MediaScan EnableFileListing()
@@ -89,7 +91,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
             {
                 Title = movieFile1.Title,
                 Year = movieFile1.Year,
-                FilePath = movieFile1.Path,
+                FilePath = movieFile1.Path
             },
 
             Files = files
@@ -244,12 +246,11 @@ public class MediaScan : IDisposable, IAsyncDisposable
             Parallel.ForEach(Directory.GetFiles(folderPath), (file, _) =>
             {
                 file = Path.GetFullPath(file.ToUtf8());
-                
+
                 if (Filter is not null)
-                {
-                    if(!file.Contains(Filter)) return;
-                }
-                
+                    if (!file.Contains(Filter))
+                        return;
+
                 string extension = Path.GetExtension(file).ToLower();
 
                 if (_extensionFilter.Length > 0 && !_extensionFilter.Contains(extension)) return;
@@ -288,7 +289,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     Logger.App(e.Message, LogEventLevel.Fatal);
                     // return;
                 }
-                
+
                 MovieFileExtend movieFileExtend = new()
                 {
                     FilePath = movieFile?.Path ?? file,
@@ -333,7 +334,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
         catch (Exception e)
         {
             Logger.App(e.Message, LogEventLevel.Fatal);
-        
+
             return files;
         }
     }
@@ -357,7 +358,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
     public MediaScan FilterByFileName(string? filter)
     {
         Filter = filter;
-        
+
         return this;
     }
 }

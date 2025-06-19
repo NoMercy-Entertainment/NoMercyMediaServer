@@ -14,7 +14,7 @@ public class Flac : BaseContainer
 
     public override CodecDto[] AvailableCodecs =>
     [
-        AudioCodecs.Flac,
+        AudioCodecs.Flac
     ];
 
     public override Flac ApplyFlags()

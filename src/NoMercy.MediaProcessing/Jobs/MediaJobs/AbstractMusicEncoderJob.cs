@@ -16,16 +16,16 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue
 {
     public Ulid LibraryId { get; set; }
     public Guid Id { get; set; }
-    
+
     public Ulid FolderId { get; set; }
 
     public MusicBrainzTrack foundTrack { get; set; } = null!;
     public ProcessMusicFolderJob.FolderMetadata folderMetaData { get; set; } = null!;
     public MediaFile mediaFile { get; set; } = null!;
-    
-    public string  InputFolder { get; set; } = string.Empty;
-    
-    public string  InputFile { get; set; } = string.Empty;
+
+    public string InputFolder { get; set; } = string.Empty;
+
+    public string InputFile { get; set; } = string.Empty;
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }

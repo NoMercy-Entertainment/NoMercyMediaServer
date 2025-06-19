@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Data.Logic;
+
 public class EncoderProfileDto
 {
     [JsonProperty("id")] public Ulid Id { get; set; }

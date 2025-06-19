@@ -7,7 +7,7 @@ public class IVideoProfile
     public int Width { get; set; }
     public int Height { get; set; }
     public int Framerate { get; set; }
-    public string Preset { get; set; }  = string.Empty;
+    public string Preset { get; set; } = string.Empty;
     public string Profile { get; set; } = string.Empty;
     public string Tune { get; set; } = string.Empty;
     public string SegmentName { get; set; } = string.Empty;

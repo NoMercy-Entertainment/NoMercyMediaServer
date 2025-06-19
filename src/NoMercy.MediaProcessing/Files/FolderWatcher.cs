@@ -2,6 +2,7 @@ using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Files;
+
 public class FolderWatcher : IDisposable
 {
     private static readonly List<FileSystemWatcher> Watchers = [];
@@ -40,14 +41,14 @@ public class FolderWatcher : IDisposable
         watcher.IncludeSubdirectories = IncludeSubdirectories;
         watcher.NotifyFilter =
             // NotifyFilters.Attributes |
-           // NotifyFilters.CreationTime |
-           // NotifyFilters.DirectoryName |
-           // NotifyFilters.FileName |
-           // NotifyFilters.LastAccess |
-           NotifyFilters.LastWrite
-           // NotifyFilters.Security |
-           // NotifyFilters.Size
-           ;
+            // NotifyFilters.CreationTime |
+            // NotifyFilters.DirectoryName |
+            // NotifyFilters.FileName |
+            // NotifyFilters.LastAccess |
+            NotifyFilters.LastWrite
+            // NotifyFilters.Security |
+            // NotifyFilters.Size
+            ;
         watcher.InternalBufferSize = 64 * 1024;
 
         watcher.Filter = "*.*";
@@ -69,10 +70,7 @@ public class FolderWatcher : IDisposable
 
         Logger.System($"Watching folder: {folder}");
 
-        return () =>
-        {
-            watcher.Dispose();
-        };
+        return () => { watcher.Dispose(); };
     }
 
     private static string _prevChanged = "";

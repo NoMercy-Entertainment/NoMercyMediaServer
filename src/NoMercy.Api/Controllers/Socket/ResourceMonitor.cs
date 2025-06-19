@@ -3,6 +3,7 @@ using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
 namespace NoMercy.Api.Controllers.Socket;
+
 public static class ResourceMonitor
 {
     private static bool _broadcasting;

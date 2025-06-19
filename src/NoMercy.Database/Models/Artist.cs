@@ -1,11 +1,15 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
+[Index(nameof(Name))]
+[Index(nameof(LibraryId))]
+[Index(nameof(FolderId))]
+[Index(nameof(Country))]
+[Index(nameof(Year))]
 public class Artist : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]

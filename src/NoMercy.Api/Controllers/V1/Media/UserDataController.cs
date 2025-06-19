@@ -30,7 +30,7 @@ public class UserDataController : BaseController
                 Message = "You do not have permission to view user data"
             });
 
-        return Ok(new PlaceholderResponse()
+        return Ok(new PlaceholderResponse
         {
             Data = []
         });
@@ -56,7 +56,6 @@ public class UserDataController : BaseController
             .AsNoTracking()
             .Where(user => user.UserId.Equals(userId))
             .Include(movie => movie.VideoFile)
-            
             .Include(userData => userData.Movie!)
             .ThenInclude(movie => movie.Media
                 .Where(media => media.Site == "Youtube")
@@ -68,7 +67,6 @@ public class UserDataController : BaseController
             .ThenInclude(certificationMovie => certificationMovie.Certification)
             .Include(userData => userData.Movie!)
             .ThenInclude(movie => movie.VideoFiles)
-            
             .Include(userData => userData.Tv!)
             .ThenInclude(tv => tv.Media
                 .Where(media => media.Site == "Youtube")
@@ -83,7 +81,6 @@ public class UserDataController : BaseController
                 .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0)
             )
             .ThenInclude(episode => episode.VideoFiles)
-            
             .Include(userData => userData.Collection!)
             .ThenInclude(collection => collection.CollectionMovies)
             .ThenInclude(collectionMovie => collectionMovie.Movie)
@@ -99,7 +96,6 @@ public class UserDataController : BaseController
             .ThenInclude(collection => collection.CollectionMovies)
             .ThenInclude(collectionMovie => collectionMovie.Movie)
             .ThenInclude(movie => movie.VideoFiles)
-            
             .Include(userData => userData.Special)
             .OrderByDescending(userData => userData.UpdatedAt)
             .ToListAsync();
@@ -113,11 +109,11 @@ public class UserDataController : BaseController
                 userData.SpecialId
             }).ToList();
 
-        return Ok(new ContinueWatchingDto
+        return Ok(new CarouselResponseDto<NmCardDto>
         {
             Data = filteredContinueWatching
-                .Select(item => new ContinueWatchingItemDto(item, country))
-                .DistinctBy(item => item.Link),
+                .Select(item => new NmCardDto(item, country))
+                .DistinctBy(item => item.Link)
         });
     }
 
@@ -168,11 +164,11 @@ public class UserDataController : BaseController
             });
 
         Logger.Socket(userData);
-        
+
         mediaContext.UserData.RemoveRange(userData);
         await mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
+
+        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
         {
             QueryKey = ["home"]
         });

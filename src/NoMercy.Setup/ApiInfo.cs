@@ -25,11 +25,14 @@ public partial class ApiInfo
     public static string MusixmatchKey { get; set; } = string.Empty;
     public static string JwplayerKey { get; set; } = string.Empty;
     public static Downloads BinaryList { get; private set; } = new();
-    public static string[] Colors { get; private set; } = [
+
+    public static string[] Colors { get; private set; } =
+    [
         "#8f00fc",
         "#705BAD",
         "#CBAFFF"
     ];
+
     public static string Quote { get; private set; } = string.Empty;
 
     public static async Task RequestInfo()
@@ -40,7 +43,7 @@ public partial class ApiInfo
             GenericHttpClient apiClient = new(Config.ApiBaseUrl);
             apiClient.SetDefaultHeaders(Config.UserAgent);
             string content = await apiClient.SendAndReadAsync(HttpMethod.Get, "v1/info");
-            
+
             if (content == null) throw new("Failed to get server info");
 
             ApiInfo? data = content.FromJson<ApiInfo>();
@@ -79,4 +82,5 @@ public partial class ApiInfo
     [JsonProperty("status")] public string Status { get; set; } = string.Empty;
     [JsonProperty("data")] public Data Data { get; set; } = new();
 }
+
 #endregion

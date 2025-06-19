@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models;
+
 public class Lyric
 {
     [JsonProperty("text")] public string Text { get; set; } = string.Empty;

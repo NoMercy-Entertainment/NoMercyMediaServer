@@ -29,10 +29,7 @@ public class ImageController : Controller
             string filePath = Path.Join(folder, path.Replace("/", ""));
             try
             {
-                if (!System.IO.File.Exists(filePath) && type == "original")
-                {
-                    await TmdbImageClient.Download("/" + path)!;
-                }
+                if (!System.IO.File.Exists(filePath) && type == "original") await TmdbImageClient.Download("/" + path)!;
             }
             catch (Exception)
             {
@@ -55,12 +52,13 @@ public class ImageController : Controller
                                request.Format.FileExtensions.First();
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
-            if (System.IO.File.Exists(cachedImagePath)) return PhysicalFile(cachedImagePath, request.Format.DefaultMimeType);
+            if (System.IO.File.Exists(cachedImagePath))
+                return PhysicalFile(cachedImagePath, request.Format.DefaultMimeType);
 
             (byte[] magickImage, string mimeType) = Images.ResizeMagickNet(filePath, request);
             await System.IO.File.WriteAllBytesAsync(cachedImagePath, magickImage);
 
-            return File(magickImage,  mimeType);
+            return File(magickImage, mimeType);
         }
         catch (Exception e)
         {

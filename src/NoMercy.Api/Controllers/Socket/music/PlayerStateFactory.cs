@@ -31,7 +31,7 @@ public class PlayerStateFactory
                 Disallows = new()
                 {
                     Previous = false,
-                    Resuming = false,
+                    Resuming = false
                 }
             }
         };

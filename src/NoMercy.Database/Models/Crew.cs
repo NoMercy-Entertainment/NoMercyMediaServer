@@ -23,8 +23,9 @@ public class Crew
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [JsonProperty("id")]
     public int Id { get; set; }
+
     [JsonProperty("credit_id")] public string? CreditId { get; set; }
-    
+
     [JsonProperty("movie_id")] public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 

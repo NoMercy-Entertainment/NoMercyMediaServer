@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class Alias : MusicBrainzLifeSpan
 {
     [JsonProperty("locale")] public string? Locale { get; set; }

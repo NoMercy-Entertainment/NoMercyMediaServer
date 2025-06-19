@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
@@ -18,8 +18,16 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/album")]
 public class AlbumsController : BaseController
 {
-    public static event EventHandler<LikeEventDto> OnLikeEvent;
-    
+    public static event EventHandler<LikeEventDto>? OnLikeEvent;
+    private readonly MusicRepository _musicRepository;
+    private readonly MediaContext _mediaContext;
+
+    public AlbumsController(MusicRepository musicService, MediaContext mediaContext)
+    {
+        _musicRepository = musicService;
+        _mediaContext = mediaContext;
+    }
+
     [HttpGet]
     [Route("/api/v{version:apiVersion}/music/albums/{letter}")]
     public async Task<IActionResult> Index(string letter)
@@ -31,14 +39,11 @@ public class AlbumsController : BaseController
 
         string language = Language();
 
-        await using MediaContext mediaContext = new();
-        await foreach (Album album in AlbumsResponseDto.GetAlbums(mediaContext, userId, letter))
+        await foreach (Album album in _musicRepository.GetAlbums(_mediaContext, userId, letter))
             albums.Add(new(album, language));
 
-        List<AlbumTrack> tracks = mediaContext.AlbumTrack
-            .Where(albumTrack => albums.Select(a => a.Id).Contains(albumTrack.AlbumId))
-            .Where(albumTrack => albumTrack.Track.Duration != null)
-            .ToList();
+        List<AlbumTrack> tracks = await _musicRepository.GetAlbumTracksForIds(_mediaContext, albums.Select(a => a.Id)
+            .ToList());
 
         if (tracks.Count == 0)
             return NotFoundResponse("Albums not found");
@@ -62,8 +67,7 @@ public class AlbumsController : BaseController
 
         string language = Language();
 
-        await using MediaContext mediaContext = new();
-        Album? album = await AlbumResponseDto.GetAlbum(mediaContext, userId, id);
+        Album? album = await _musicRepository.GetAlbum(_mediaContext, userId, id);
 
         if (album is null)
             return NotFoundResponse("Albums not found");
@@ -82,43 +86,18 @@ public class AlbumsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like albums");
 
-        await using MediaContext mediaContext = new();
-        Album? album = await mediaContext.Albums
-            .AsNoTracking()
-            .Where(album => album.Id == id)
-            .FirstOrDefaultAsync();
+        Album? album = await _musicRepository.GetAlbum(_mediaContext, userId, id);
 
         if (album is null)
             return UnprocessableEntityResponse("Albums not found");
 
-        if (request.Value)
-        {
-            await mediaContext.AlbumUser
-                .Upsert(new(album.Id, userId))
-                .On(m => new { m.AlbumId, m.UserId })
-                .WhenMatched(m => new()
-                {
-                    AlbumId = m.AlbumId,
-                    UserId = m.UserId
-                })
-                .RunAsync();
-        }
-        else
-        {
-            AlbumUser? tvUser = await mediaContext.AlbumUser
-                .Where(tvUser => tvUser.AlbumId == album.Id && tvUser.UserId.Equals(userId))
-                .FirstOrDefaultAsync();
+        await _musicRepository.LikeAlbum(userId, album, request.Value);
 
-            if (tvUser is not null) mediaContext.AlbumUser.Remove(tvUser);
-
-            await mediaContext.SaveChangesAsync();
-        }
-
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
+        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
         {
             QueryKey = ["music", "album", album.Id]
         });
-        
+
         LikeEventDto likeEventDto = new()
         {
             Id = album.Id,
@@ -126,8 +105,8 @@ public class AlbumsController : BaseController
             Liked = request.Value,
             User = User.User()
         };
-        
-        OnLikeEvent.Invoke(this, likeEventDto);
+
+        OnLikeEvent?.Invoke(this, likeEventDto);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -143,12 +122,10 @@ public class AlbumsController : BaseController
 
     [HttpPost]
     [Route("{id:guid}/rescan")]
-    public async Task<IActionResult> Like(Guid id)
+    public IActionResult Rescan(Guid id)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan albums");
-
-        await using MediaContext mediaContext = new();
 
         return Ok(new StatusResponseDto<string>
         {
@@ -158,5 +135,3 @@ public class AlbumsController : BaseController
         });
     }
 }
-
-

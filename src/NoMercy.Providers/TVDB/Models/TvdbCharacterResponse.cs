@@ -2,9 +2,10 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TVDB.Models;
 
-public class TvdbCharacterResponse: TvdbResponse<TvdbCharacterData>
+public class TvdbCharacterResponse : TvdbResponse<TvdbCharacterData>
 {
 }
+
 public class TvdbCharacterData
 {
     [JsonProperty("aliases")] public List<TvdbAlias> Aliases { get; set; } = [];

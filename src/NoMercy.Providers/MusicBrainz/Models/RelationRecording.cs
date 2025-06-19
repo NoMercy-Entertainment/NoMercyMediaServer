@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class RelationRecording
 {
     [JsonProperty("artist-credit")] public RecordingArtistCredit[] ArtistCredit { get; set; } = [];

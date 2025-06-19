@@ -97,8 +97,8 @@ public class MovieManager(
 
     public async Task StoreAlternativeTitles(TmdbMovieAppends movie)
     {
-        IEnumerable<AlternativeTitle> alternativeTitles = movie.AlternativeTitles.Results.Select(
-            tmdbMovieAlternativeTitles => new AlternativeTitle
+        IEnumerable<AlternativeTitle> alternativeTitles =
+            movie.AlternativeTitles.Results.Select(tmdbMovieAlternativeTitles => new AlternativeTitle
             {
                 Iso31661 = tmdbMovieAlternativeTitles.Iso31661,
                 Title = tmdbMovieAlternativeTitles.Title,
@@ -269,20 +269,19 @@ public class MovieManager(
         if (backdropJobItems.Any())
             jobDispatcher.DispatchJob<ImagePaletteJob, Image>(movie.Id, backdropJobItems);
 
-        IEnumerable<Image> logos = movie.Images.Logos.Select(
-                image => new Image
-                {
-                    AspectRatio = image.AspectRatio,
-                    FilePath = image.FilePath,
-                    Height = image.Height,
-                    Iso6391 = image.Iso6391,
-                    VoteAverage = image.VoteAverage,
-                    VoteCount = image.VoteCount,
-                    Width = image.Width,
-                    MovieId = movie.Id,
-                    Type = "logo",
-                    Site = "https://image.tmdb.org/t/p/"
-                })
+        IEnumerable<Image> logos = movie.Images.Logos.Select(image => new Image
+            {
+                AspectRatio = image.AspectRatio,
+                FilePath = image.FilePath,
+                Height = image.Height,
+                Iso6391 = image.Iso6391,
+                VoteAverage = image.VoteAverage,
+                VoteCount = image.VoteCount,
+                Width = image.Width,
+                MovieId = movie.Id,
+                Type = "logo",
+                Site = "https://image.tmdb.org/t/p/"
+            })
             .ToArray();
 
         await movieRepository.StoreImages(logos);
@@ -300,22 +299,20 @@ public class MovieManager(
 
     public async Task StoreKeywords(TmdbMovieAppends movie)
     {
-        IEnumerable<Keyword> keywords = movie.Keywords.Results.Select(
-            keyword => new Keyword
-            {
-                Id = keyword.Id,
-                Name = keyword.Name
-            });
+        IEnumerable<Keyword> keywords = movie.Keywords.Results.Select(keyword => new Keyword
+        {
+            Id = keyword.Id,
+            Name = keyword.Name
+        });
 
         await movieRepository.StoreKeywords(keywords);
         Logger.MovieDb($"Movie: {movie.Title}: Keywords stored", LogEventLevel.Debug);
 
-        IEnumerable<KeywordMovie> keywordMovies = movie.Keywords.Results.Select(
-            keyword => new KeywordMovie
-            {
-                KeywordId = keyword.Id,
-                MovieId = movie.Id
-            });
+        IEnumerable<KeywordMovie> keywordMovies = movie.Keywords.Results.Select(keyword => new KeywordMovie
+        {
+            KeywordId = keyword.Id,
+            MovieId = movie.Id
+        });
 
         await movieRepository.LinkKeywordsToMovie(keywordMovies);
         Logger.MovieDb($"Movie: {movie.Title}: Keywords linked to Movie", LogEventLevel.Debug);
@@ -323,12 +320,11 @@ public class MovieManager(
 
     public async Task StoreGenres(TmdbMovieAppends movie)
     {
-        IEnumerable<GenreMovie> genreMovies = movie.Genres.Select(
-            genre => new GenreMovie
-            {
-                GenreId = genre.Id,
-                MovieId = movie.Id
-            });
+        IEnumerable<GenreMovie> genreMovies = movie.Genres.Select(genre => new GenreMovie
+        {
+            GenreId = genre.Id,
+            MovieId = movie.Id
+        });
 
         await movieRepository.StoreGenres(genreMovies);
         Logger.MovieDb($"Movie: {movie.Title}: Genres stored", LogEventLevel.Debug);

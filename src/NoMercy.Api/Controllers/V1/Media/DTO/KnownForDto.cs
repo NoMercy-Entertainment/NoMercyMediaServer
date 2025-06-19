@@ -4,6 +4,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.People;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record KnownForDto
 {
     [JsonProperty("adult")] public bool Adult { get; set; }
@@ -122,7 +123,7 @@ public record KnownForDto
         HaveItems = person?.Casts
             .Where(c => c.MovieId == crew.Id || c.TvId == crew.Id || c.SeasonId == crew.Id || c.EpisodeId == crew.Id)
             .Sum(c => (c.Movie is { VideoFiles.Count: > 0 } ? 1 : 0)
-                + (c.Tv != null ? c.Tv.Episodes.Count(e => e.VideoFiles.Count != 0) : 0)) ?? 0;
+                      + (c.Tv != null ? c.Tv.Episodes.Count(e => e.VideoFiles.Count != 0) : 0)) ?? 0;
     }
 
     public KnownForDto(TmdbPersonCredit crew, string type, Person? person)
@@ -163,6 +164,6 @@ public record KnownForDto
         HaveItems = person?.Crews
             .Where(c => c.MovieId == crew.Id || c.TvId == crew.Id || c.SeasonId == crew.Id || c.EpisodeId == crew.Id)
             .Sum(c => (c.Movie is { VideoFiles.Count: > 0 } ? 1 : 0)
-                + (c.Tv != null ? c.Tv.Episodes.Count(e => e.VideoFiles.Count != 0) : 0)) ?? 0;
+                      + (c.Tv != null ? c.Tv.Episodes.Count(e => e.VideoFiles.Count != 0) : 0)) ?? 0;
     }
 }

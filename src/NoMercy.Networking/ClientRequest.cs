@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Networking;
+
 public class ClientRequest
 {
     [JsonProperty("id")] public string Id { get; set; } = string.Empty;

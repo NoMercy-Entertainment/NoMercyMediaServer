@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
@@ -27,7 +26,7 @@ public record SpecialResponseDto
                     .OrderBy(specialItem => specialItem.Order)
                 )
                 .ThenInclude(specialItem => specialItem.Episode)
-                    .ThenInclude(ep => ep!.Tv)
+                .ThenInclude(ep => ep!.Tv)
                 .Include(special => special.SpecialUser
                     .Where(specialUser => specialUser.UserId.Equals(userId))
                 )

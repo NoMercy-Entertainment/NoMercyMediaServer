@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class Collection
 {
     [JsonProperty("editor")] public string Editor { get; set; } = string.Empty;

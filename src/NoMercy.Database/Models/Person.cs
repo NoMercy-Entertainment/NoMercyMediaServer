@@ -1,11 +1,15 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
+[Index(nameof(Name))]
+[Index(nameof(TitleSort))]
+[Index(nameof(ImdbId))]
+[Index(nameof(BirthDay))]
+[Index(nameof(Popularity))]
 public class Person : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]

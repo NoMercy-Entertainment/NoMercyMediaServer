@@ -72,10 +72,7 @@ public class LibraryManager(
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();
 
-        foreach (MediaFolderExtend rootFolder in rootFolders.OrderBy(f => f.Path))
-        {
-            ProcessMusicFolder(rootFolder);
-        }
+        foreach (MediaFolderExtend rootFolder in rootFolders.OrderBy(f => f.Path)) ProcessMusicFolder(rootFolder);
 
         Logger.App("Found " + rootFolders.Count + " subfolders");
     }

@@ -4,6 +4,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record SpecialItemDto
 {
     [JsonProperty("id")] public int Id { get; set; }

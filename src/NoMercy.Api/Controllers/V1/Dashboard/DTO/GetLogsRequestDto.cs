@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record GetLogsRequestDto
 {
     [FromQuery(Name = "limit")] public int Limit { get; init; } = 50;

@@ -21,13 +21,11 @@ public static class LogReader
         IOrderedEnumerable<FileInfo> logFiles = GetLogFilesSortedByDate(logDirectoryPath);
         List<LogEntry> logEntries = [];
 
-        IEnumerable<Task<IEnumerable<LogEntry>>> tasks = logFiles.Select(fileInfo => ProcessFileAsync(fileInfo.FullName, typeFilter, levelFilter, messageFilter));
+        IEnumerable<Task<IEnumerable<LogEntry>>> tasks = logFiles.Select(fileInfo =>
+            ProcessFileAsync(fileInfo.FullName, typeFilter, levelFilter, messageFilter));
         IEnumerable<LogEntry>[] results = await Task.WhenAll(tasks);
 
-        foreach (IEnumerable<LogEntry> entries in results)
-        {
-            logEntries.AddRange(entries);
-        }
+        foreach (IEnumerable<LogEntry> entries in results) logEntries.AddRange(entries);
 
         logEntries = logEntries
             .OrderByDescending(entry => entry.Time)
@@ -66,7 +64,6 @@ public static class LogReader
             using StreamReader reader = new(fileStream);
 
             while (await reader.ReadLineAsync() is { } line)
-            {
                 try
                 {
                     LogEntry? logEntry = JsonSerializer.Deserialize<LogEntry>(line);
@@ -74,15 +71,12 @@ public static class LogReader
                         (typeFilter == null || logEntry.Type == typeFilter) &&
                         (levelFilter == null || logEntry.Level == levelFilter) &&
                         (messageFilter == null || logEntry.Message.Contains(messageFilter)))
-                    {
                         logEntries.Add(logEntry);
-                    }
                 }
                 catch (JsonException jsonEx)
                 {
                     Logger.App($"Error deserializing line in file {filePath}: {jsonEx.Message}", LogEventLevel.Error);
                 }
-            }
         }
         catch (Exception ex)
         {

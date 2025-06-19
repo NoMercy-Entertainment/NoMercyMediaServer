@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class Disc
 {
     [JsonProperty("id")] public string Id { get; set; } = string.Empty;

@@ -6,6 +6,7 @@ using Microsoft.Win32;
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
 
 namespace NoMercy.Helpers;
+
 [SupportedOSPlatform("windows10.0.18362")]
 public static class Wallpaper
 {

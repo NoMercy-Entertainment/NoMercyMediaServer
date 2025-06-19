@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Helpers.Monitoring;
+
 public class Cpu
 {
     [JsonProperty("total")] public double Total { get; set; }

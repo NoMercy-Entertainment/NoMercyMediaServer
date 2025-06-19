@@ -2,6 +2,7 @@ using LibreHardwareMonitor.Hardware;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Helpers.Monitoring;
+
 public class ResourceMonitor
 {
     private static readonly Computer? Computer;
@@ -26,7 +27,7 @@ public class ResourceMonitor
             IsNetworkEnabled = false,
             IsStorageEnabled = false
         };
-        
+
         computer.Open();
         return computer;
     }
@@ -65,7 +66,7 @@ public class ResourceMonitor
             _gpu = new(),
             Memory = new()
         };
-        
+
         try
         {
             Computer.Accept(new UpdateVisitor());
@@ -225,7 +226,7 @@ public class ResourceMonitor
         {
             //
         }
-        
+
         return resource;
     }
 

@@ -135,13 +135,13 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = AllLanguages(),
+                        AllowedLanguages = AllLanguages()
                     },
                     new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = AllLanguages(),
+                        AllowedLanguages = AllLanguages()
                     }
                 ]
             },
@@ -150,17 +150,19 @@ public static class EncoderProfileSeedData
                 Id = Ulid.Parse("01HQ629JAYQDEQAH0GW3ZHGW8Z"),
                 Name = "1080p high",
                 Container = VideoContainers.Hls,
-                EncoderProfileFolder = [
+                EncoderProfileFolder =
+                [
                     new()
                     {
-                        FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8"),
+                        FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8")
                     },
                     new()
                     {
-                        FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8"),
+                        FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8")
                     }
                 ],
-                VideoProfiles = [
+                VideoProfiles =
+                [
                     new()
                     {
                         Codec = VideoCodecs.H264Nvenc.Value,
@@ -172,8 +174,9 @@ public static class EncoderProfileSeedData
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
                         Keyint = 48,
-                        CustomArguments = [
-                            new ValueTuple<string, string>()
+                        CustomArguments =
+                        [
+                            new ValueTuple<string, string>
                             {
                                 Item1 = "-x264opts",
                                 Item2 = "no-scenecut"
@@ -181,22 +184,24 @@ public static class EncoderProfileSeedData
                         ]
                     }
                 ],
-                AudioProfiles = [
+                AudioProfiles =
+                [
                     new()
                     {
                         Codec = AudioCodecs.Aac.Value,
                         Channels = 2,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                        AllowedLanguages = AllLanguages(),
-                    },
+                        AllowedLanguages = AllLanguages()
+                    }
                 ],
-                SubtitleProfiles = [
+                SubtitleProfiles =
+                [
                     new()
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = AllLanguages(),
+                        AllowedLanguages = AllLanguages()
                     }
                 ]
             },
@@ -258,13 +263,13 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = AllLanguages(),
+                        AllowedLanguages = AllLanguages()
                     },
                     new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = AllLanguages(),
+                        AllowedLanguages = AllLanguages()
                     }
                 ]
             },
@@ -369,7 +374,8 @@ public static class EncoderProfileSeedData
             Languages.Ful, Languages.Geo, Languages.Ger, Languages.Gla, Languages.Gle, Languages.Glg, Languages.Glv,
             Languages.Gre, Languages.Grn, Languages.Gsw, Languages.Guj, Languages.Hat, Languages.Hau, Languages.Haw,
             Languages.Heb, Languages.Her, Languages.Hin, Languages.Hmo, Languages.Hrv, Languages.Hun, Languages.Ibo,
-            Languages.Ice, Languages.Ido, Languages.Iii, Languages.Iku, Languages.Ile, Languages.Ina, Languages.Ind, Languages.Ipk,
+            Languages.Ice, Languages.Ido, Languages.Iii, Languages.Iku, Languages.Ile, Languages.Ina, Languages.Ind,
+            Languages.Ipk,
             Languages.Ita, Languages.Jav, Languages.Jpn, Languages.Kan, Languages.Kas, Languages.Kau, Languages.Kaz,
             Languages.Khm, Languages.Kik, Languages.Kin, Languages.Kir, Languages.Kom, Languages.Kon, Languages.Kor,
             Languages.Kua, Languages.Kur, Languages.Lao, Languages.Lat, Languages.Lav, Languages.Lim, Languages.Lin,

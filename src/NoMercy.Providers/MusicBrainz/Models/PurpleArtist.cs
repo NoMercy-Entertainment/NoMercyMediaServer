@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class PurpleArtist
 {
     [JsonProperty("disambiguation")] public string Disambiguation { get; set; } = string.Empty;

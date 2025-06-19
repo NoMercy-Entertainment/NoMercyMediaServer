@@ -16,7 +16,7 @@ public static class Helper
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            
+
             using Process? process = Process.Start(psi);
             if (process != null)
             {
@@ -29,7 +29,7 @@ public static class Helper
         {
             Console.WriteLine($"Error running command: {ex.Message}");
         }
+
         return "Unknown";
     }
-    
 }

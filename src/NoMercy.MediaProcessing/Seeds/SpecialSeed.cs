@@ -152,13 +152,11 @@ public static class SpecialSeed
         }
 
         if (item.Episodes.Length == 0)
-        {
             item.Episodes = context.Episodes
                 .Where(x => x.TvId == tv.Id)
                 .Where(x => x.SeasonNumber == item.Seasons.First())
                 .Select(x => x.EpisodeNumber)
                 .ToArray();
-        }
 
         foreach (int episodeNumber in item.Episodes)
         {
@@ -187,7 +185,6 @@ public static class SpecialSeed
             .Where(s => s.MovieId is not null);
 
         foreach (SpecialItem movie in movies)
-        {
             try
             {
                 await context.SpecialItems.Upsert(movie)
@@ -204,13 +201,11 @@ public static class SpecialSeed
             {
                 Console.WriteLine(e);
             }
-        }
 
         IEnumerable<SpecialItem> episodes = specialItems
             .Where(s => s.EpisodeId is not null);
 
         foreach (SpecialItem episode in episodes)
-        {
             try
             {
                 await context.SpecialItems.Upsert(episode)
@@ -227,6 +222,5 @@ public static class SpecialSeed
             {
                 Console.WriteLine(e);
             }
-        }
     }
 }

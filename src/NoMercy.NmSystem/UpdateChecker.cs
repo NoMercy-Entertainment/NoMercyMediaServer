@@ -11,13 +11,13 @@ public static class UpdateChecker
                 await Task.Delay(TimeSpan.FromHours(6));
                 Config.UpdateAvailable = IsUpdateAvailable();
             }
-            
+
             // ReSharper disable once FunctionNeverReturns
         });
-        
+
         return Task.CompletedTask;
     }
-    
+
     public static bool IsUpdateAvailable()
     {
         try

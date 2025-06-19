@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class TrackRecording
 {
     [JsonProperty("aliases")] public Alias[] Aliases { get; set; } = [];
@@ -13,7 +14,10 @@ public class TrackRecording
 
     public DateTime? FirstReleaseDate
     {
-        get => !string.IsNullOrWhiteSpace(_firstReleaseDate) && !string.IsNullOrEmpty(_firstReleaseDate) && _firstReleaseDate.TryParseToDateTime(out DateTime dt) ? dt : null;
+        get => !string.IsNullOrWhiteSpace(_firstReleaseDate) && !string.IsNullOrEmpty(_firstReleaseDate) &&
+               _firstReleaseDate.TryParseToDateTime(out DateTime dt)
+            ? dt
+            : null;
         set => _firstReleaseDate = value.ToString() ?? string.Empty;
     }
 

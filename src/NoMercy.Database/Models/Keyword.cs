@@ -1,10 +1,10 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models;
 
+[Index(nameof(Name))]
 [PrimaryKey(nameof(Id))]
 public class Keyword
 {

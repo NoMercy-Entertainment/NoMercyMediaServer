@@ -13,9 +13,8 @@ public class DirectoryTree
 
     public DirectoryTree()
     {
-        
     }
-    
+
     public DirectoryTree(string parent, string path)
     {
         string fullPath = System.IO.Path.Combine(parent, path);
@@ -32,7 +31,7 @@ public class DirectoryTree
         string parentPath = string.IsNullOrEmpty(parent)
             ? "/"
             : System.IO.Path.Combine(fullPath, @"..\..");
-        
+
         // double dirSize = Task.Run(() => pathInfo.GetDirectorySize())?.Result ?? 0.0;
 
         Path = newPath;

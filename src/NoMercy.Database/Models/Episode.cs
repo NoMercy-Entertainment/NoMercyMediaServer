@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
@@ -9,6 +8,12 @@ namespace NoMercy.Database.Models;
 [PrimaryKey(nameof(Id))]
 [Index(nameof(TvId))]
 [Index(nameof(SeasonId))]
+[Index(nameof(Title))]
+[Index(nameof(EpisodeNumber))]
+[Index(nameof(SeasonNumber))]
+[Index(nameof(AirDate))]
+[Index(nameof(ImdbId))]
+[Index(nameof(TvdbId))]
 public class Episode : ColorPalettes
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -53,12 +58,12 @@ public class Episode : ColorPalettes
                 Tv.Title.CleanFileName(),
                 ".S", SeasonNumber.ToString("00"),
                 "E", EpisodeNumber.ToString("00")
-           ).CleanFileName();
+            ).CleanFileName();
     }
 
     public string CreateTitle()
     {
-        return string. Concat(
+        return string.Concat(
             Tv.Title,
             " S", SeasonNumber.ToString("00"),
             "E", EpisodeNumber.ToString("00"),

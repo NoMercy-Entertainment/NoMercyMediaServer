@@ -41,11 +41,11 @@ public class ConfigurationController : BaseController
                 ImageWorkers = Config.ImageWorkers.Value,
                 RequestWorkers = Config.RequestWorkers.Value,
                 ServerName = DeviceName(),
-                Swagger = Config.Swagger,
+                Swagger = Config.Swagger
             }
         });
     }
-    
+
     [NonAction]
     private static string DeviceName()
     {
@@ -74,7 +74,7 @@ public class ConfigurationController : BaseController
 
         Guid userId = User.UserId();
         await using MediaContext mediaContext = new();
-        
+
         if (request.InternalServerPort != 0)
         {
             Config.InternalServerPort = request.InternalServerPort;
@@ -85,7 +85,7 @@ public class ConfigurationController : BaseController
                     ModifiedBy = userId
                 })
                 .On(e => e.Key)
-                .WhenMatched((o, n) =>new()
+                .WhenMatched((o, n) => new()
                 {
                     Id = o.Id,
                     Value = n.Value,
@@ -94,7 +94,7 @@ public class ConfigurationController : BaseController
                 })
                 .RunAsync();
         }
-        
+
         if (request.ExternalServerPort != 0)
         {
             Config.ExternalServerPort = request.ExternalServerPort;
@@ -105,7 +105,7 @@ public class ConfigurationController : BaseController
                     ModifiedBy = userId
                 })
                 .On(e => e.Key)
-                .WhenMatched((o, n) =>new()
+                .WhenMatched((o, n) => new()
                 {
                     Id = o.Id,
                     Value = n.Value,
@@ -114,32 +114,37 @@ public class ConfigurationController : BaseController
                 })
                 .RunAsync();
         }
-        
+
         if (request.QueueWorkers is not null)
         {
             Config.QueueWorkers = new(Config.QueueWorkers.Key, (int)request.QueueWorkers);
             await QueueRunner.SetWorkerCount(Config.QueueWorkers.Key, (int)request.QueueWorkers, userId);
         }
+
         if (request.EncoderWorkers is not null)
         {
             Config.EncoderWorkers = new(Config.EncoderWorkers.Key, (int)request.EncoderWorkers);
             await QueueRunner.SetWorkerCount(Config.EncoderWorkers.Key, (int)request.EncoderWorkers, userId);
         }
+
         if (request.CronWorkers is not null)
         {
             Config.CronWorkers = new(Config.CronWorkers.Key, (int)request.CronWorkers);
             await QueueRunner.SetWorkerCount(Config.CronWorkers.Key, (int)request.CronWorkers, userId);
         }
+
         if (request.DataWorkers is not null)
         {
             Config.DataWorkers = new(Config.DataWorkers.Key, (int)request.DataWorkers);
             await QueueRunner.SetWorkerCount(Config.DataWorkers.Key, (int)request.DataWorkers, userId);
         }
+
         if (request.ImageWorkers is not null)
         {
             Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
             await QueueRunner.SetWorkerCount(Config.ImageWorkers.Key, (int)request.ImageWorkers, userId);
         }
+
         if (request.RequestWorkers is not null)
         {
             Config.RequestWorkers = new(Config.RequestWorkers.Key, (int)request.RequestWorkers);
@@ -156,7 +161,7 @@ public class ConfigurationController : BaseController
                     ModifiedBy = User.UserId()
                 })
                 .On(e => e.Key)
-                .WhenMatched((o, n) =>new()
+                .WhenMatched((o, n) => new()
                 {
                     Id = o.Id,
                     Value = Config.Swagger.ToString(),
@@ -165,31 +170,29 @@ public class ConfigurationController : BaseController
                 })
                 .RunAsync();
         }
-        
+
         if (request.ServerName is not null)
-        {
             await mediaContext.Configuration.Upsert(new()
                 {
-                Key = "serverName",
-                Value = request.ServerName,
-                ModifiedBy = User.UserId()
-            })
-            .On(e => e.Key)
-            .WhenMatched((o, n) =>new()
+                    Key = "serverName",
+                    Value = request.ServerName,
+                    ModifiedBy = User.UserId()
+                })
+                .On(e => e.Key)
+                .WhenMatched((o, n) => new()
                 {
-                Id = o.Id,
-                Value = request.ServerName,
-                ModifiedBy = n.ModifiedBy,
-                UpdatedAt = n.UpdatedAt
-            })
-            .RunAsync();
-        }
-        
+                    Id = o.Id,
+                    Value = request.ServerName,
+                    ModifiedBy = n.ModifiedBy,
+                    UpdatedAt = n.UpdatedAt
+                })
+                .RunAsync();
+
         return Ok(new StatusResponseDto<string>
         {
             Message = "Configuration updated successfully",
             Status = "success",
-            Args = [],
+            Args = []
         });
     }
 
@@ -230,5 +233,4 @@ public class ConfigurationController : BaseController
             Code = country.Iso31661
         }).ToList());
     }
-    
 }

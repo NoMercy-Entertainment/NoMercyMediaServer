@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Data.Repositories;
+
 public class FolderDto
 {
     [JsonProperty("id")] public Ulid Id { get; set; }

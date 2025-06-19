@@ -7,8 +7,11 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
+[Index(nameof(Name))]
 [Index(nameof(Folder))]
 [Index(nameof(Filename))]
+[Index(nameof(TrackNumber))]
+[Index(nameof(DiscNumber))]
 // [Index(nameof(Filename), nameof(HostFolder), IsUnique = true)]
 public class Track : ColorPaletteTimeStamps
 {
@@ -58,7 +61,7 @@ public class Track : ColorPaletteTimeStamps
 
     [JsonProperty("folder_id")] public Ulid FolderId { get; set; }
     public Folder LibraryFolder { get; set; } = null!;
-    
+
     [JsonProperty("metadata_id")] public int? MetadataId { get; set; }
     public Metadata Metadata { get; init; } = null!;
 
@@ -70,7 +73,7 @@ public class Track : ColorPaletteTimeStamps
     [JsonProperty("track_user")] public ICollection<TrackUser> TrackUser { get; set; } = [];
     [JsonProperty("genre_track")] public ICollection<MusicGenreTrack> MusicGenreTrack { get; set; } = [];
     [JsonProperty("music_plays")] public ICollection<MusicPlay> MusicPlays { get; set; } = [];
-    
+
     public string CreateFolderName()
     {
         return Name.CleanFileName();
@@ -79,19 +82,16 @@ public class Track : ColorPaletteTimeStamps
     public string CreateName()
     {
         int padding = 2;
-        if (AlbumTrack.Count.ToString().Length > 2)
-        {
-            padding = AlbumTrack.Count.ToString().Length;
-        }
-        
+        if (AlbumTrack.Count.ToString().Length > 2) padding = AlbumTrack.Count.ToString().Length;
+
         return string.Concat(
             AlbumTrack.First().Album.Name,
             ": ",
             DiscNumber.ToString(),
             "-",
-            TrackNumber.ToString().PadLeft(padding, '0'), 
+            TrackNumber.ToString().PadLeft(padding, '0'),
             " - ",
-            Name, 
+            Name,
             " NoMercy"
         );
     }
@@ -99,15 +99,12 @@ public class Track : ColorPaletteTimeStamps
     public string CreateTitle()
     {
         int padding = 2;
-        if (AlbumTrack.Count.ToString().Length > 2)
-        {
-            padding = AlbumTrack.Count.ToString().Length;
-        }
+        if (AlbumTrack.Count.ToString().Length > 2) padding = AlbumTrack.Count.ToString().Length;
         return string.Concat(
-            TrackNumber.ToString().PadLeft(padding, '0'), 
-            " - ", 
-            Name.MusicBrainzSafeName(), 
+            TrackNumber.ToString().PadLeft(padding, '0'),
+            " - ",
+            Name.MusicBrainzSafeName(),
             ".NoMercy"
-            );
+        );
     }
 }

@@ -37,7 +37,7 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
 
         string language = Language();
         string country = Country();
-        
+
         Tv? tv = await tvShowRepository.GetTvAsync(mediaContext, userId, id, language, country);
 
         if (tv is not null)
@@ -162,19 +162,19 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
             .AsNoTracking()
             .Where(tv => tv.Id == id)
             .Include(tv => tv.Library)
-                .ThenInclude(library => library.FolderLibraries)
-                    .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .ThenInclude(library => library.FolderLibraries)
+            .ThenInclude(folderLibrary => folderLibrary.Folder)
             .FirstOrDefaultAsync();
 
         if (tv is null)
             return UnprocessableEntityResponse("Tv show not found");
-        
+
         TmdbTvClient tvClient = new(id);
         TmdbTvShowDetails? show = await tvClient.Details(true);
         if (show == null) return NotFoundResponse("Tv show not found");
-        
+
         bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
-        
+
         Library? tvLibrary = await mediaContext.Libraries
             .Where(f => f.Type == (isAnime ? "anime" : "tv"))
             .FirstOrDefaultAsync() ?? await mediaContext.Libraries
@@ -185,7 +185,7 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
         {
             FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);
-            
+
             await fileManager.FindFiles(id, tvLibrary ?? tv.Library);
         }
         catch (Exception e)
@@ -220,13 +220,13 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
 
         if (tv is null)
             return UnprocessableEntityResponse("Tv show not found");
-        
+
         TmdbTvClient tvClient = new(id);
         TmdbTvShowDetails? show = await tvClient.Details(true);
         if (show == null) return NotFoundResponse("Tv show not found");
-        
+
         bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
-        
+
         Library? tvLibrary = await mediaContext.Libraries
             .Where(f => f.Type == (isAnime ? "anime" : "tv"))
             .FirstOrDefaultAsync() ?? await mediaContext.Libraries
@@ -259,7 +259,7 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
-            Message = "Added to library",
+            Message = "Added to library"
         });
     }
 }

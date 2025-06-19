@@ -27,14 +27,15 @@ public class SpecialController(SpecialRepository specialRepository) : BaseContro
             return UnauthorizedResponse("You do not have permission to view specials");
 
         string language = Language();
+        string country = Country();
 
         List<Special> specials = await specialRepository.GetSpecialsAsync(userId, language, request.Take, request.Page);
 
         if (request.Version != "lolomo")
-        {
             return Ok(new Render
             {
-                Data = [
+                Data =
+                [
                     new ComponentBuilder<SpecialsResponseItemDto>()
                         .WithComponent("NMGrid")
                         .WithProps(props => props
@@ -48,22 +49,23 @@ public class SpecialController(SpecialRepository specialRepository) : BaseContro
                                                 .WithData(item)
                                                 .WithWatch())
                                             .Build())))
-                        .Build(),
+                        .Build()
                 ]
             });
-        }
 
         return Ok(new Render
         {
-            Data = Letters.Select(genre => new ComponentBuilder<LibraryResponseItemDto>()
+            Data = Letters.Select(genre => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
                 .WithComponent("NMCarousel")
                 .WithProps(props => props
                     .WithId(genre)
                     .WithTitle(genre)
                     .WithItems(
-                        specials.Select(movie => new LibraryResponseItemDto(movie))
-                            .Where(item => genre == "#" ? Numbers.Any(p => item.Title.StartsWith(p)) : item.Title.StartsWith(genre))
-                            .Select(item => new ComponentBuilder<LibraryResponseItemDto>()
+                        specials.Select(movie => new NmCardDto(movie, country))
+                            .Where(item => genre == "#"
+                                ? Numbers.Any(p => item.Title.StartsWith(p))
+                                : item.Title.StartsWith(genre))
+                            .Select(item => new ComponentBuilder<NmCardDto>()
                                 .WithComponent("NMCard")
                                 .WithProps(cardProps => cardProps
                                     .WithData(item)
@@ -101,15 +103,17 @@ public class SpecialController(SpecialRepository specialRepository) : BaseContro
             .Select(tv => tv.Id);
 
         List<SpecialItemsDto> items = [];
-        
-        IAsyncEnumerable<Movie> specialMovies = SpecialResponseDto.GetSpecialMovies(mediaContext, userId, movieIds, language, country);
+
+        IAsyncEnumerable<Movie> specialMovies =
+            SpecialResponseDto.GetSpecialMovies(mediaContext, userId, movieIds, language, country);
         await foreach (Movie movie in specialMovies)
             items.Add(new(movie));
-        
-        IAsyncEnumerable<Tv> specialTvs = SpecialResponseDto.GetSpecialTvs(mediaContext, userId, tvIds, language, country);
+
+        IAsyncEnumerable<Tv> specialTvs =
+            SpecialResponseDto.GetSpecialTvs(mediaContext, userId, tvIds, language, country);
         await foreach (Tv tv in specialTvs)
             items.Add(new(tv));
-        
+
         return Ok(new DataResponseDto<SpecialResponseItemDto>
         {
             Data = new(special, items)
@@ -212,7 +216,8 @@ public class SpecialController(SpecialRepository specialRepository) : BaseContro
         else
         {
             SpecialUser? collectionUser = await mediaContext.SpecialUser
-                .Where(collectionUser => collectionUser.SpecialId == collection.Id && collectionUser.UserId.Equals(userId))
+                .Where(collectionUser =>
+                    collectionUser.SpecialId == collection.Id && collectionUser.UserId.Equals(userId))
                 .FirstOrDefaultAsync();
 
             if (collectionUser is not null) mediaContext.SpecialUser.Remove(collectionUser);

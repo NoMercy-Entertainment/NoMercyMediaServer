@@ -43,12 +43,13 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
             ]
         };
 
-        LoginResponse? x = await  Post<Login, LoginResponse>("", login);
-        AccessToken = x?.Params?.Param?.Value?.Struct?.Member.FirstOrDefault(member => member.Name == "token")?.Value?.String;
-        
+        LoginResponse? x = await Post<Login, LoginResponse>("", login);
+        AccessToken = x?.Params?.Param?.Value?.Struct?.Member.FirstOrDefault(member => member.Name == "token")?.Value
+            ?.String;
+
         return this;
     }
-    
+
     public async Task<SubtitleSearchResponse?> SearchSubtitles(string query, string language)
     {
         SubtitleSearch searchResponse = new()
@@ -81,14 +82,14 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                                             {
                                                 Member =
                                                 [
-                                                    new(name: "sublanguageid", value: new()
+                                                    new("sublanguageid", new()
                                                     {
                                                         String = language
                                                     }),
-                                                    new(name: "query", value: new()
+                                                    new("query", new()
                                                     {
                                                         String = query
-                                                    }),
+                                                    })
                                                 ]
                                             }
                                         }

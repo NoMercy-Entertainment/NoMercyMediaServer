@@ -3,6 +3,7 @@ using NoMercy.Database.Models;
 using NoMercy.Providers.TMDB.Models.Combined;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record TranslationDto
 {
     public TranslationDto(Translation translation)

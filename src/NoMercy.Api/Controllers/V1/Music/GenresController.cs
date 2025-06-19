@@ -2,6 +2,8 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Data.Repositories;
 using NoMercy.Helpers;
 
 namespace NoMercy.Api.Controllers.V1.Music;
@@ -13,15 +15,45 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/genres", Order = 4)]
 public class GenresController : BaseController
 {
+    private readonly GenreRepository _genreRepository;
+
+    public GenresController(GenreRepository genreRepository)
+    {
+        _genreRepository = genreRepository;
+    }
+    
     [HttpGet]
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view genres");
 
-        return Ok(new PlaceholderResponse
+        Guid userId = User.UserId();
+
+        List<NmGenreCardDto> genres = (await _genreRepository
+                .GetMusicGenresAsync(userId))
+            .Select(genre => new NmGenreCardDto(genre))
+            .DistinctBy(genre => genre.Title)
+            .ToList();
+
+        return Ok(new Render
         {
-            Data = []
+            Data =
+            [
+                new ComponentBuilder<NmGenreCardDto>()
+                    .WithComponent("NMGrid")
+                    .WithProps(props => props
+                        .WithItems(
+                            genres
+                                .Select(item =>
+                                    new ComponentBuilder<NmGenreCardDto>()
+                                        .WithComponent("NMGenreCard")
+                                        .WithProps(cardProps => cardProps
+                                            .WithData(item)
+                                            .WithWatch())
+                                        .Build())))
+                    .Build()
+            ]
         });
     }
 

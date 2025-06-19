@@ -8,12 +8,12 @@ public class TvdbCompanyClient(int id) : TvdbBaseClient(id)
     {
         return Get<TvdbCompaniesResponse>("companies");
     }
-    
+
     public Task<TvdbCompanyResponse?> Details()
     {
         return Get<TvdbCompanyResponse>("companies/" + Id);
     }
-    
+
     public Task<TvdbCompanyTypesResponse?> Types()
     {
         return Get<TvdbCompanyTypesResponse>("companies/types");

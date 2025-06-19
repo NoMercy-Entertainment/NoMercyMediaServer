@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class MusicBrainzRecordingAppends : MusicBrainzRecording
 {
     // ReSharper disable once InconsistentNaming
@@ -9,7 +10,10 @@ public class MusicBrainzRecordingAppends : MusicBrainzRecording
 
     public DateTime? FirstReleaseDate
     {
-        get => !string.IsNullOrWhiteSpace(_firstReleaseDate) && !string.IsNullOrEmpty(_firstReleaseDate) && _firstReleaseDate.TryParseToDateTime(out DateTime dt) ? dt : null;
+        get => !string.IsNullOrWhiteSpace(_firstReleaseDate) && !string.IsNullOrEmpty(_firstReleaseDate) &&
+               _firstReleaseDate.TryParseToDateTime(out DateTime dt)
+            ? dt
+            : null;
         set => _firstReleaseDate = value.ToString();
     }
 
@@ -21,20 +25,16 @@ public class MusicBrainzRecordingAppends : MusicBrainzRecording
 
 public class MusicBrainzSearchResponse
 {
-    [JsonProperty("created")]
-    public DateTime Created { get; set; }
+    [JsonProperty("created")] public DateTime Created { get; set; }
 
-    [JsonProperty("count")]
-    public int Count { get; set; }
+    [JsonProperty("count")] public int Count { get; set; }
 
-    [JsonProperty("offset")]
-    public int Offset { get; set; }
+    [JsonProperty("offset")] public int Offset { get; set; }
 
     [JsonProperty("recordings")] public List<MusicBrainzSearchRecording> Recordings { get; set; } = [];
 }
 
 public class MusicBrainzSearchRecording : MusicBrainzRecordingAppends
 {
-    [JsonProperty("score")]
-    public int Score { get; set; }
+    [JsonProperty("score")] public int Score { get; set; }
 }

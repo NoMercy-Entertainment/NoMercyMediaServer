@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.Other;
+
 public class CoverImage
 {
     [JsonProperty("tiny")] public Uri? Tiny { get; set; }

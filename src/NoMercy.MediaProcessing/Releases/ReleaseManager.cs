@@ -20,32 +20,33 @@ public class ReleaseManager(
     JobDispatcher jobDispatcher
 ) : BaseManager, IReleaseManager
 {
-    public async Task<(MusicBrainzReleaseAppends? releaseAppends, CoverArtImageManagerManager.CoverPalette? coverPalette)> Add(Guid id, Library albumLibrary, Folder libraryFolder,
-        MediaFolder mediaFolder)
+    public async
+        Task<(MusicBrainzReleaseAppends? releaseAppends, CoverArtImageManagerManager.CoverPalette? coverPalette)> Add(
+            Guid id, Library albumLibrary, Folder libraryFolder,
+            MediaFolder mediaFolder)
     {
         Logger.MusicBrainz($"Adding Release: {id} to Library: {albumLibrary.Title}", LogEventLevel.Verbose);
 
         MusicBrainzReleaseClient musicBrainzReleaseClient = new();
         MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(id);
         if (releaseAppends == null) return (null, null);
-        
-        CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(releaseAppends.Id);
-        if (coverPalette is not null)
-        {
-            await CoverArtCoverArtClient.Download(coverPalette.Url);
-        }
-        
-        await Store(releaseAppends, albumLibrary, libraryFolder,  mediaFolder, coverPalette);
+
+        CoverArtImageManagerManager.CoverPalette? coverPalette =
+            await CoverArtImageManagerManager.Add(releaseAppends.Id);
+        if (coverPalette is not null) await CoverArtCoverArtClient.Download(coverPalette.Url);
+
+        await Store(releaseAppends, albumLibrary, libraryFolder, mediaFolder, coverPalette);
 
         return (releaseAppends, coverPalette);
     }
 
-    private async Task Store(MusicBrainzReleaseAppends releaseAppends, Library library, Folder libraryFolder, MediaFolder mediaFolder, CoverArtImageManagerManager.CoverPalette? coverPalette)
+    private async Task Store(MusicBrainzReleaseAppends releaseAppends, Library library, Folder libraryFolder,
+        MediaFolder mediaFolder, CoverArtImageManagerManager.CoverPalette? coverPalette)
     {
         try
         {
             Logger.MusicBrainz($"Storing Release: {releaseAppends.Title}", LogEventLevel.Verbose);
-            
+
             string folder = mediaFolder.Path.Replace(libraryFolder.Path, "");
 
             Album release = new()
@@ -60,31 +61,32 @@ public class ReleaseManager(
                 Tracks = releaseAppends.Media.Sum(m => m.TrackCount),
 
                 LibraryId = library.Id,
-                FolderId =libraryFolder.Id,
+                FolderId = libraryFolder.Id,
                 HostFolder = folder.PathName(),
-            
+
                 Folder = folder.Replace(libraryFolder.Path, "")
                     .Replace("\\", "/"),
-                
+
                 Cover = coverPalette?.Url is not null
-                    ? $"/{coverPalette.Url.FileName()}" : null,
-                _colorPalette = coverPalette?.Palette ?? string.Empty,
+                    ? $"/{coverPalette.Url.FileName()}"
+                    : null,
+                _colorPalette = coverPalette?.Palette ?? string.Empty
             };
 
             await releaseRepository.Store(release);
-            
+
             await LinkToLibrary(releaseAppends, library);
-            
-            List<AlbumMusicGenre> genres = releaseAppends.Genres.Select(genre => new AlbumMusicGenre()
+
+            List<AlbumMusicGenre> genres = releaseAppends.Genres.Select(genre => new AlbumMusicGenre
             {
                 AlbumId = releaseAppends.Id,
-                MusicGenreId = genre.Id,
+                MusicGenreId = genre.Id
             }).ToList();
 
             await musicGenreRepository.LinkToRelease(genres);
-            
+
             Logger.MusicBrainz($"Release {releaseAppends.Title} stored", LogEventLevel.Verbose);
-            
+
             jobDispatcher.DispatchJob<ProcessFanartReleaseImagesJob>(releaseAppends.Id);
         }
         catch (Exception e)
@@ -92,17 +94,17 @@ public class ReleaseManager(
             Logger.MusicBrainz(e.Message, LogEventLevel.Error);
         }
     }
-    
+
     private async Task LinkToLibrary(MusicBrainzReleaseAppends releaseAppends, Library library)
     {
         Logger.MusicBrainz($"Linking Release to Library: {releaseAppends.Title}", LogEventLevel.Verbose);
-        
+
         AlbumLibrary insert = new()
         {
             AlbumId = releaseAppends.Id,
             LibraryId = library.Id
         };
-        
+
         await releaseRepository.LinkToLibrary(insert);
     }
 }

@@ -95,12 +95,12 @@ public record PlaylistResponseDto
         ];
 
         Tracks = videoFile.Tracks.Select(t => new IVideoTrack
-        {
-            Label = t.Label,
-            File = $"{baseFolder}{t.File}",
-            Language = t.Language,
-            Kind = t.Kind
-        })
+            {
+                Label = t.Label,
+                File = $"{baseFolder}{t.File}",
+                Language = t.Language,
+                Kind = t.Kind
+            })
             .Concat(subs.TextTracks)
             .OrderBy(track => track.Language)
             .ToList();
@@ -162,12 +162,12 @@ public record PlaylistResponseDto
         ];
 
         Tracks = videoFile.Tracks.Select(t => new IVideoTrack
-        {
-            Label = t.Label,
-            File = $"{baseFolder}{t.File}",
-            Language = t.Language,
-            Kind = t.Kind
-        })
+            {
+                Label = t.Label,
+                File = $"{baseFolder}{t.File}",
+                Language = t.Language,
+                Kind = t.Kind
+            })
             .Concat(subs.TextTracks)
             .OrderBy(track => track.Language)
             .ToList();

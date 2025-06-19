@@ -1,4 +1,5 @@
 namespace NoMercy.Helpers;
+
 public enum WallpaperStyle
 {
     Fill,

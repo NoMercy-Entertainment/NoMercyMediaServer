@@ -9,6 +9,7 @@ using NoMercy.Networking;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.Socket;
+
 public class VideoHub(IHttpContextAccessor httpContextAccessor) : ConnectionHub(httpContextAccessor)
 {
     public async Task SetTime(VideoProgressRequest request)
@@ -72,7 +73,7 @@ public class VideoHub(IHttpContextAccessor httpContextAccessor) : ConnectionHub(
                         || x.SpecialId == request.SpecialId
                         || x.CollectionId == request.TmdbId)
             .ToArrayAsync();
-        
+
         Logger.Socket(request);
         Logger.Socket(userdata);
 

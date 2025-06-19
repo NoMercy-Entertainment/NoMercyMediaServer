@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Data.Repositories;
+
 public class LibraryUpdateRequest
 {
     [JsonProperty("id")] public Ulid Id { get; set; }

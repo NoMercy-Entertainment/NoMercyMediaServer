@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Encoder.Core;
+
 public class Progress : ProgressMeta
 {
     [JsonProperty("frame")] public int Frame { get; set; }

@@ -40,7 +40,7 @@ public abstract class TmdbImageClient : TmdbBaseClient
                 string filePath = Path.Join(folder, path.Replace("/", ""));
                 if (File.Exists(filePath))
                     return isSvg ? null : await Image.LoadAsync<Rgba32>(filePath);
-                
+
                 using HttpClientHandler handler = new();
                 handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
 

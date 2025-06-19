@@ -1,4 +1,5 @@
 namespace NoMercy.Providers.Helpers;
+
 public class QueueOptions
 {
     public int Concurrent { get; init; } = 5;

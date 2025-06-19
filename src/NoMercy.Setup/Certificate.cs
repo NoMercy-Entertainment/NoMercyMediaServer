@@ -55,7 +55,7 @@ public static class Certificate
         return new()
         {
             SslProtocols = SslProtocols.Tls12,
-            ServerCertificate = CombinePublicAndPrivateCerts(),
+            ServerCertificate = CombinePublicAndPrivateCerts()
         };
     }
 
@@ -86,7 +86,7 @@ public static class Certificate
         Logger.Certificate(!hasExistingCert
             ? "Generating SSL Certificate..."
             : "Renewing SSL Certificate...");
-        
+
         using System.Net.Http.HttpClient client = HttpClient.WithDns();
         client.Timeout = TimeSpan.FromMinutes(10);
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
@@ -97,7 +97,6 @@ public static class Certificate
             serverUrl = $"{Config.ApiServerBaseUrl}renew-certificate?id={Info.DeviceId}";
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
-        {
             try
             {
                 HttpResponseMessage response = await client.GetAsync(serverUrl);
@@ -114,7 +113,7 @@ public static class Certificate
                 response.EnsureSuccessStatusCode();
                 string content = await response.Content.ReadAsStringAsync();
                 ApiResponse<CertificateResponse> data = content.FromJson<ApiResponse<CertificateResponse>>()
-                                                      ?? throw new("Failed to deserialize JSON");
+                                                        ?? throw new("Failed to deserialize JSON");
 
                 if (File.Exists(AppFiles.KeyFile))
                     File.Delete(AppFiles.KeyFile);
@@ -125,7 +124,8 @@ public static class Certificate
 
                 await File.WriteAllTextAsync(AppFiles.KeyFile, data.Data.PrivateKey);
                 await File.WriteAllTextAsync(AppFiles.CaFile, data.Data.CertificateAuthority);
-                await File.WriteAllTextAsync(AppFiles.CertFile, $"{data.Data.Certificate}\n{data.Data.IssuerCertificate}");
+                await File.WriteAllTextAsync(AppFiles.CertFile,
+                    $"{data.Data.Certificate}\n{data.Data.IssuerCertificate}");
 
                 Logger.Certificate(!hasExistingCert
                     ? "SSL Certificate created"
@@ -134,12 +134,12 @@ public static class Certificate
             }
             catch (HttpRequestException ex) when (attempt < maxRetries)
             {
-                Logger.Certificate($"Request failed: {ex.Message}, retrying in {delaySeconds} seconds (attempt {attempt}/{maxRetries})");
+                Logger.Certificate(
+                    $"Request failed: {ex.Message}, retrying in {delaySeconds} seconds (attempt {attempt}/{maxRetries})");
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
             }
-        }
     }
-    
+
     public class ApiResponse<T>
     {
         [JsonProperty("status")] public string? Status { get; set; }

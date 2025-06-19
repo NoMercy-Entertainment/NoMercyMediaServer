@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.AcoustId.Models;
+
 public class AcoustIdFingerprintReleaseGroups
 {
     [JsonProperty("artists")] public AcoustIdFingerprintArtist[] Artists { get; set; } = [];

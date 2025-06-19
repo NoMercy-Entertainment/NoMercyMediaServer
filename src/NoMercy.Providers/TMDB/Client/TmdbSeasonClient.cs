@@ -24,7 +24,7 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
         return Get<TmdbSeasonDetails>("tv/" + Id + "/season/" + _seasonNumber, priority: priority);
     }
 
-    public Task<TmdbSeasonAppends?> WithAppends(string[] appendices,bool? priority = false)
+    public Task<TmdbSeasonAppends?> WithAppends(string[] appendices, bool? priority = false)
     {
         Dictionary<string, string?> queryParams = new()
         {
@@ -54,7 +54,8 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
 
     public Task<TmdbSeasonAggregatedCredits?> AggregatedCredits(bool? priority = false)
     {
-        return Get<TmdbSeasonAggregatedCredits>("tv/" + Id + "/season/" + _seasonNumber + "/aggregate_credits", priority: priority);
+        return Get<TmdbSeasonAggregatedCredits>("tv/" + Id + "/season/" + _seasonNumber + "/aggregate_credits",
+            priority: priority);
     }
 
     public Task<TmdbSeasonChanges?> Changes(string startDate, string endDate, bool? priority = false)
@@ -65,7 +66,8 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
             ["end_date"] = endDate
         };
 
-        return Get<TmdbSeasonChanges>("tv/" + Id + "/season/" + _seasonNumber + "/changes", queryParams, priority: priority);
+        return Get<TmdbSeasonChanges>("tv/" + Id + "/season/" + _seasonNumber + "/changes", queryParams,
+            priority: priority);
     }
 
     public Task<TmdbSeasonCredits?> Credits(bool? priority = false)
@@ -75,7 +77,8 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
 
     public Task<TmdbSeasonExternalIds?> ExternalIds(bool? priority = false)
     {
-        return Get<TmdbSeasonExternalIds>("tv/" + Id + "/season/" + _seasonNumber + "/external_ids", priority: priority);
+        return Get<TmdbSeasonExternalIds>("tv/" + Id + "/season/" + _seasonNumber + "/external_ids",
+            priority: priority);
     }
 
     public Task<TmdbSeasonImages?> Images(bool? priority = false)
@@ -85,7 +88,8 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
 
     public Task<TmdbSharedTranslations?> Translations(bool? priority = false)
     {
-        return Get<TmdbSharedTranslations>("tv/" + Id + "/season/" + _seasonNumber + "/translations", priority: priority);
+        return Get<TmdbSharedTranslations>("tv/" + Id + "/season/" + _seasonNumber + "/translations",
+            priority: priority);
     }
 
     public Task<TmdbSeasonVideos?> Videos(bool? priority = false)

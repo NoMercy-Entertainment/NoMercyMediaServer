@@ -14,16 +14,25 @@ using Srt = NoMercy.Encoder.Format.Container.Srt;
 using Vtt = NoMercy.Encoder.Format.Container.Vtt;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record ContainerDto
 {
     [JsonProperty("label")] public string Label { get; set; } = string.Empty;
     [JsonProperty("value")] public string Value { get; set; } = string.Empty;
     [JsonProperty("type")] public string Type { get; set; } = string.Empty;
     [JsonProperty("default")] public bool IsDefault { get; set; }
-    [JsonProperty("available_video_codecs")] public VideoCodecDto[]  AvailableVideoCodecs { get; set; }
-    [JsonProperty("available_audio_codecs")] public AudioCodecDto[] AvailableAudioCodecs { get; set; }
-    [JsonProperty("available_subtitle_codecs")] public SubtitleCodecDto[] AvailableSubtitleCodecs { get; set; }
-    [JsonProperty("available_resolutions")] public Classes.VideoQualityDto[] AvailableVideoSizes { get; set; }
+
+    [JsonProperty("available_video_codecs")]
+    public VideoCodecDto[] AvailableVideoCodecs { get; set; }
+
+    [JsonProperty("available_audio_codecs")]
+    public AudioCodecDto[] AvailableAudioCodecs { get; set; }
+
+    [JsonProperty("available_subtitle_codecs")]
+    public SubtitleCodecDto[] AvailableSubtitleCodecs { get; set; }
+
+    [JsonProperty("available_resolutions")]
+    public Classes.VideoQualityDto[] AvailableVideoSizes { get; set; }
 
     public ContainerDto(Classes.ContainerDto container)
     {
@@ -41,11 +50,11 @@ public record ContainerDto
             _ => throw new ArgumentOutOfRangeException(nameof(container.Name))
         };
 
-        VideoCodecDto[] videoCodecs  = containerData.AvailableVideoCodecs
+        VideoCodecDto[] videoCodecs = containerData.AvailableVideoCodecs
             .Select(c => new VideoCodecDto(c))
             .ToArray();
 
-        AudioCodecDto[] audioCodecs  = containerData.AvailableAudioCodecs
+        AudioCodecDto[] audioCodecs = containerData.AvailableAudioCodecs
             .Select(c => new AudioCodecDto(c))
             .ToArray();
 
@@ -67,9 +76,10 @@ public record ContainerDto
     }
 }
 
-public class VideoCodecDto: Classes.CodecDto {
-    [JsonProperty("color_spaces")] public LabelValueDto[]  AvailableVideoColorSpaces { get; set; }
-    [JsonProperty("tunes")] public LabelValueDto[]  AvailableVideoTunes { get; set; }
+public class VideoCodecDto : Classes.CodecDto
+{
+    [JsonProperty("color_spaces")] public LabelValueDto[] AvailableVideoColorSpaces { get; set; }
+    [JsonProperty("tunes")] public LabelValueDto[] AvailableVideoTunes { get; set; }
     [JsonProperty("profiles")] public LabelValueDto[] AvailableVideoProfiles { get; set; }
     [JsonProperty("presets")] public LabelValueDto[] AvailablePresets { get; set; }
 
@@ -78,11 +88,11 @@ public class VideoCodecDto: Classes.CodecDto {
         BaseVideo codecData = codecDto switch
         {
             { SimpleValue: "h264" } => new X264(),
-            { SimpleValue: "h264_nvenc"} => new X264("h264_nvenc"),
+            { SimpleValue: "h264_nvenc" } => new X264("h264_nvenc"),
             { SimpleValue: "h265" } => new X265(),
-            { SimpleValue: "hevc_nvenc"} => new X265("hevc_nvenc"),
+            { SimpleValue: "hevc_nvenc" } => new X265("hevc_nvenc"),
             { SimpleValue: "vp9" } => new Vp9(),
-            { SimpleValue: "vp9_nvenc"} => new Vp9("vp9_nvenc"),
+            { SimpleValue: "vp9_nvenc" } => new Vp9("vp9_nvenc"),
             _ => throw new ArgumentOutOfRangeException(nameof(codecDto.SimpleValue))
         };
 
@@ -96,7 +106,6 @@ public class VideoCodecDto: Classes.CodecDto {
         AvailableVideoTunes = codecData.AvailableTune.Select(t => new LabelValueDto(t)).ToArray();
         AvailablePresets = codecData.AvailablePresets.Select(p => new LabelValueDto(p)).ToArray();
     }
-
 }
 
 public class AudioCodecDto : Classes.CodecDto
@@ -105,7 +114,10 @@ public class AudioCodecDto : Classes.CodecDto
     [JsonProperty("audio_quality_level")] public int AudioQualityLevel { get; set; }
     [JsonProperty("audio_channels")] public int AudioChannels { get; set; }
     [JsonProperty("hls_segment_filename")] public string HlsSegmentFilename { get; set; }
-    [JsonProperty("hls_playlist_filename")] public string HlsPlaylistFilename { get; set; }
+
+    [JsonProperty("hls_playlist_filename")]
+    public string HlsPlaylistFilename { get; set; }
+
     [JsonProperty("bit_rate")] public long BitRate { get; set; }
 
     public AudioCodecDto(Classes.CodecDto codecDto)
@@ -139,14 +151,15 @@ public class AudioCodecDto : Classes.CodecDto
                 Value = l
             }).ToArray();
     }
-
 }
 
 public class SubtitleCodecDto : Classes.CodecDto
 {
     [JsonProperty("available_languages")] public LabelValueDto[] AvailableLanguages { get; set; }
     [JsonProperty("hls_segment_filename")] public string HlsSegmentFilename { get; set; }
-    [JsonProperty("hls_playlist_filename")] public string HlsPlaylistFilename { get; set; }
+
+    [JsonProperty("hls_playlist_filename")]
+    public string HlsPlaylistFilename { get; set; }
 
     public SubtitleCodecDto(Classes.CodecDto codecDto)
     {

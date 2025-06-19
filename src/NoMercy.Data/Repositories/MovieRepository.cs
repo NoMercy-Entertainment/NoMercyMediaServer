@@ -50,36 +50,33 @@ public class MovieRepository(MediaContext context)
                 .Include(movie => movie.RecommendationFrom)
                 .Include(movie => movie.SimilarFrom)
                 .Include(movie => movie.VideoFiles)
-                .ThenInclude(file => file.UserData.Where(
-                    userData => userData.UserId.Equals(userId)))
+                .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
                 .FirstOrDefault());
 
-    public Task<bool> GetMovieAvailableAsync(Guid userId, int id)
-    {
-        return context.Movies.AsNoTracking()
-            .Where(movie => movie.Library.LibraryUsers
-                .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
-            .Where(movie => movie.Id == id)
-            .Include(movie => movie.VideoFiles)
-            .AnyAsync();
-    }
+    public readonly Func<MediaContext, Guid, int, string, string, Task<bool>> GetMovieAvailableAsync =
+        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, int id, string language, string country) =>
+            mediaContext.Movies.AsNoTracking()
+                .Where(movie => movie.Library.LibraryUsers
+                    .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+                .Where(movie => movie.Id == id)
+                .Include(movie => movie.VideoFiles)
+                .Any());
 
-    public IEnumerable<Movie> GetMoviePlaylistAsync(Guid userId, int id, string language)
-    {
-        return context.Movies.AsNoTracking()
-            .Where(movie => movie.Id == id)
-            .Where(movie => movie.Library.LibraryUsers
-                .FirstOrDefault(libraryUser => libraryUser.UserId.Equals(userId)) != null)
-            .Include(movie => movie.Media
-                .Where(media => media.Type == "video"))
-            .Include(movie => movie.Images
-                .Where(image => image.Type == "logo"))
-            .Include(movie => movie.Translations
-                .Where(translation => translation.Iso6391 == language))
-            .Include(movie => movie.VideoFiles)
-            .ThenInclude(file => file.UserData.Where(
-                userData => userData.UserId.Equals(userId)));
-    }
+    public readonly Func<MediaContext, Guid, int, string, Task<List<Movie>>> GetMoviePlaylistAsync =
+        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, int id, string language) =>
+            mediaContext.Movies.AsNoTracking()
+                .Where(movie => movie.Id == id)
+                .Where(movie => movie.Library.LibraryUsers
+                    .FirstOrDefault(libraryUser => libraryUser.UserId.Equals(userId)) != null)
+                .Include(movie => movie.Media
+                    .Where(media => media.Type == "video"))
+                .Include(movie => movie.Images
+                    .Where(image => image.Type == "logo"))
+                .Include(movie => movie.Translations
+                    .Where(translation => translation.Iso6391 == language))
+                .Include(movie => movie.VideoFiles)
+                .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
+                .ToList());
 
     public async Task<bool> LikeMovieAsync(int id, Guid userId, bool like)
     {

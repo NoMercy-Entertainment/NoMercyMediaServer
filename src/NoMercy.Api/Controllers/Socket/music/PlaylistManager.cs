@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.Services;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 
@@ -7,12 +8,15 @@ namespace NoMercy.Api.Controllers.Socket.music;
 
 public class PlaylistManager
 {
+    private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
 
-    public PlaylistManager(MediaContext mediaContext)
+    public PlaylistManager(MusicRepository musicService, MediaContext mediaContext)
     {
+        _musicRepository = musicService;
         _mediaContext = mediaContext;
     }
+
     public async Task<(PlaylistTrackDto item, List<PlaylistTrackDto> playlist)> GetPlaylist(
         string type, Guid listId, Guid trackId, string country)
     {
@@ -25,38 +29,29 @@ public class PlaylistManager
         };
     }
 
-    public (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) SplitPlaylist(List<PlaylistTrackDto> playlist, Guid currentTrackId)
+    public (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) SplitPlaylist(List<PlaylistTrackDto> playlist,
+        Guid currentTrackId)
     {
         int index = playlist.FindIndex(p => p.Id == currentTrackId);
-        if (index == -1)
-        {
-            return ([], playlist);
-        }
+        if (index == -1) return ([], playlist);
 
         List<PlaylistTrackDto> before = playlist.GetRange(0, index);
         List<PlaylistTrackDto> after = playlist.GetRange(index + 1, playlist.Count - index - 1);
 
         return (before, after);
     }
-    
+
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetPlaylistTracks(
         Guid listId, Guid trackId, string country)
     {
-        PlaylistTrack? playlistTrack = await _mediaContext.PlaylistTrack
-            .Include(x => x.Track)
-            .ThenInclude(x => x.PlaylistTrack)
-            .ThenInclude(x => x.Track)
-            .ThenInclude(x => x.PlaylistTrack)
-            .ThenInclude(x => x.Track)
-            .ThenInclude(x => x.Images)
-            .FirstOrDefaultAsync(x => x.PlaylistId == listId && x.TrackId == trackId);
+        PlaylistTrack? playlistTrack = await _musicRepository.GetPlaylistTrack(_mediaContext, listId, trackId);
 
         if (playlistTrack is null)
-            throw new ("Playlist track not found");
+            throw new("Playlist track not found");
 
         List<PlaylistTrackDto> playlist = playlistTrack.Track.PlaylistTrack
             .SelectMany(x => x.Track.PlaylistTrack)
-            .Select(x =>  new PlaylistTrackDto(x, country))
+            .Select(x => new PlaylistTrackDto(x, country))
             .ToList();
 
         PlaylistTrackDto item = playlist.First(p => p.Id == playlistTrack.TrackId);
@@ -64,71 +59,45 @@ public class PlaylistManager
         List<PlaylistTrackDto> sortedPlaylist = [];
         sortedPlaylist.AddRange(after);
         sortedPlaylist.AddRange(before);
-    
+
         return (item, sortedPlaylist);
     }
-    
+
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetAlbumTracks(
         Guid listId, Guid trackId, string country)
     {
-        AlbumTrack? albumTrack = await _mediaContext.AlbumTrack
-            .Include(x => x.Track)
-            .ThenInclude(x => x.AlbumTrack
-                .Where(x => x.AlbumId == listId))
-            .ThenInclude(x => x.Album)
-            .ThenInclude(x => x.AlbumTrack
-                .Where(x => x.AlbumId == listId))
-            .ThenInclude(x => x.Track)
-            .ThenInclude(x => x.ArtistTrack)
-            .ThenInclude(x => x.Artist)
-            .ThenInclude(x => x.Images)
-            .FirstOrDefaultAsync(x => x.AlbumId == listId && x.TrackId == trackId);
+        AlbumTrack? albumTrack = await _musicRepository.GetAlbumTrack(_mediaContext, listId, trackId);
 
         if (albumTrack is null)
-            throw new ("Album track not found");
+            throw new("Album track not found");
 
         List<PlaylistTrackDto> playlist = albumTrack.Track.AlbumTrack
-                .SelectMany(x => x.Album.AlbumTrack)
-                .Select(x =>  new PlaylistTrackDto(x, country))
-                .OrderBy(x => x.Disc)
-                .ThenBy(x => x.Track)
-                .ToList();
-        
+            .SelectMany(x => x.Album.AlbumTrack)
+            .Select(x => new PlaylistTrackDto(x, country))
+            .OrderBy(x => x.Disc)
+            .ThenBy(x => x.Track)
+            .ToList();
+
         PlaylistTrackDto item = playlist.First(p => p.Id == albumTrack.TrackId);
         (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) = SplitPlaylist(playlist, albumTrack.TrackId);
         List<PlaylistTrackDto> sortedPlaylist = [];
         sortedPlaylist.AddRange(after);
         sortedPlaylist.AddRange(before);
-    
+
         return (item, sortedPlaylist);
     }
-    
+
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetArtistTracks(
         Guid listId, Guid trackId, string country)
     {
-        ArtistTrack? artistTrack = await _mediaContext.ArtistTrack
-            .Include(x => x.Track)
-            .ThenInclude(x => x.ArtistTrack
-                .Where(x => x.ArtistId == listId))
-            .ThenInclude(x => x.Artist)
-            .ThenInclude(x => x.ArtistTrack
-                .Where(x => x.ArtistId == listId))
-            .ThenInclude(x => x.Track)
-            .ThenInclude(track => track.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Album)
-            .ThenInclude(artist => artist.Translations)
-            .Include(x => x.Track)
-            .ThenInclude(x => x.ArtistTrack)
-            .ThenInclude(x => x.Artist)
-            .ThenInclude(x => x.Images)
-            .FirstOrDefaultAsync(x => x.ArtistId == listId && x.TrackId == trackId);
+        ArtistTrack? artistTrack = await _musicRepository.GetArtistTrack(_mediaContext, listId, trackId);
 
         if (artistTrack is null)
-            throw new ("Artist track not found");
+            throw new("Artist track not found");
 
         List<PlaylistTrackDto> playlist = artistTrack.Track.ArtistTrack
             .SelectMany(x => x.Artist.ArtistTrack)
-            .Select(x =>  new PlaylistTrackDto(x, country))
+            .Select(x => new PlaylistTrackDto(x, country))
             .DistinctBy(x => x.Id)
             .OrderBy(x => x.AlbumName)
             .ThenBy(x => x.Disc)
@@ -140,7 +109,7 @@ public class PlaylistManager
         List<PlaylistTrackDto> sortedPlaylist = [];
         sortedPlaylist.AddRange(after);
         sortedPlaylist.AddRange(before);
-    
+
         return (item, sortedPlaylist);
     }
 }

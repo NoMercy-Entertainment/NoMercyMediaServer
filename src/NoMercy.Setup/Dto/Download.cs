@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Setup.Dto;
+
 public class Download
 {
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;

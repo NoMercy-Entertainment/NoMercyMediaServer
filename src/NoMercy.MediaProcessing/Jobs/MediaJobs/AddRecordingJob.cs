@@ -30,39 +30,41 @@ public class AddRecordingJob : AbstractMusicRecordingJob
     {
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
-        
+
         MusicGenreRepository musicGenreRepository = new(context);
-        
+
         ArtistRepository artistRepository = new(context);
         ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
-        
+
         RecordingRepository recordingRepository = new(context);
         RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
-        
+
         await using MediaScan mediaScan = new();
-        
+
         mediaScan.FilterByFileName(Container.FileName);
-        
-        MediaFolderExtend mediaFolder = (await mediaScan.DisableRegexFilter().EnableFileListing().Process(FolderMetaData.BasePath)).First();
+
+        MediaFolderExtend mediaFolder =
+            (await mediaScan.DisableRegexFilter().EnableFileListing().Process(FolderMetaData.BasePath)).First();
 
         mediaFolder.Files?.FilterConcurrentBag([Container.FileName]);
-        
-        CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(FolderMetaData.MusicBrainzRelease.Id);
-        
+
+        CoverArtImageManagerManager.CoverPalette? coverPalette =
+            await CoverArtImageManagerManager.Add(FolderMetaData.MusicBrainzRelease.Id);
+
         await Parallel.ForEachAsync(FolderMetaData.MusicBrainzRelease.Media, async (media, t) =>
         {
             if (!await recordingManager.Store(FolderMetaData.MusicBrainzRelease, FoundTrack, media,
-                Folder, mediaFolder, coverPalette)) return;
-                
+                    Folder, mediaFolder, coverPalette)) return;
+
             Library? albumLibrary = Folder.FolderLibraries
                 ?.FirstOrDefault(f => f.LibraryId == LibraryId)?.Library;
-            
+
             if (albumLibrary is null)
             {
                 Logger.MusicBrainz($"Album Library not found: {LibraryId}", LogEventLevel.Error);
                 return;
             }
-            
+
             await Parallel.ForEachAsync(FoundTrack.ArtistCredit, t, async (artist, _) =>
             {
                 Logger.MusicBrainz($"Storing Artist: {artist.MusicBrainzArtist.Name}", LogEventLevel.Verbose);
@@ -71,10 +73,10 @@ public class AddRecordingJob : AbstractMusicRecordingJob
                 jobDispatcher.DispatchJob<MusicDescriptionJob>(artist.MusicBrainzArtist);
             });
         });
-        
+
         Logger.App($"Recording {FoundTrack.Title} added to the library: {LibraryId}");
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
+        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
         {
             QueryKey = ["libraries", LibraryId.ToString()]
         });

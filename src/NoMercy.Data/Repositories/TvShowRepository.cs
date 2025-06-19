@@ -63,13 +63,11 @@ public class TvShowRepository(MediaContext context)
                 .Include(tv => tv.Seasons)
                 .ThenInclude(season => season.Episodes)
                 .ThenInclude(episode => episode.VideoFiles)
-                .ThenInclude(file => file.UserData.Where(
-                    userData => userData.UserId.Equals(userId))
+                .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId))
                 )
                 .Include(tv => tv.Episodes)
                 .ThenInclude(episode => episode.VideoFiles)
-                .ThenInclude(file => file.UserData.Where(
-                    userData => userData.UserId.Equals(userId)))
+                .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
                 .Include(tv => tv.RecommendationFrom)
                 .Include(tv => tv.SimilarFrom)
                 .Include(tv => tv.Episodes)
@@ -85,7 +83,7 @@ public class TvShowRepository(MediaContext context)
                 .ThenInclude(episode => episode.Crew)
                 .ThenInclude(crewTv => crewTv.Job)
                 .FirstOrDefault());
-    
+
     public Task<bool> GetTvAvailableAsync(Guid userId, int id)
     {
         return context.Tvs.AsNoTracking()
@@ -126,8 +124,7 @@ public class TvShowRepository(MediaContext context)
             .Include(tv => tv.Seasons)
             .ThenInclude(season => season.Episodes)
             .ThenInclude(tv => tv.VideoFiles)
-            .ThenInclude(file => file.UserData.Where(
-                userData => userData.UserId.Equals(userId)))
+            .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
             .Include(tv => tv.Seasons)
             .ThenInclude(season => season.Translations
                 .Where(translation => translation.Iso6391 == language))
@@ -170,9 +167,9 @@ public class TvShowRepository(MediaContext context)
         TmdbTvClient tvClient = new(id);
         TmdbTvShowDetails? show = await tvClient.Details(true);
         if (show == null) return;
-        
+
         bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
-        
+
         Library? tvLibrary = await context.Libraries
             .Where(f => f.Type == (isAnime ? "anime" : "tv"))
             .FirstOrDefaultAsync() ?? await context.Libraries

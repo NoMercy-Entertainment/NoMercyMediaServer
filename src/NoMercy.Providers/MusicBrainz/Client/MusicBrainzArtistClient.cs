@@ -9,7 +9,7 @@ public class MusicBrainzArtistClient : MusicBrainzBaseClient
     public MusicBrainzArtistClient() : base()
     {
     }
-    
+
     public MusicBrainzArtistClient(Guid? id, string[]? appendices = null) : base((Guid)id!)
     {
     }
@@ -35,7 +35,7 @@ public class MusicBrainzArtistClient : MusicBrainzBaseClient
             "works"
         ], priority);
     }
-    
+
     public Task<MusicBrainzArtistAppends?> SearchArtists(string query, bool? priority = false)
     {
         Dictionary<string, string>? queryParams = new()

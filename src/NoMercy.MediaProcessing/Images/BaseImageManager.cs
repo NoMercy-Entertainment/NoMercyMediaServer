@@ -223,7 +223,7 @@ public class BaseImageManager : IBaseImageManager, IDisposable
             }
         });
 
-        image.Mutate(x => x.Resize(new ResizeOptions()
+        image.Mutate(x => x.Resize(new ResizeOptions
         {
             Size = new(1, 1),
             Mode = ResizeMode.Max

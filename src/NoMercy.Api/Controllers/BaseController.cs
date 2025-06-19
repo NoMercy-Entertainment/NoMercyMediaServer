@@ -254,9 +254,10 @@ public class BaseController : Controller
     {
         return HttpContext.Request.Headers.AcceptLanguage.LastOrDefault() ?? "US";
     }
-    
-    protected static readonly string[] Numbers = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-    
+
+    protected static readonly string[] Numbers =
+        ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+
     protected static readonly string[] Letters =
     [
         "#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",

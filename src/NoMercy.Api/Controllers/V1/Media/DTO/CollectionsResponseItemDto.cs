@@ -5,6 +5,7 @@ using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record CollectionsResponseItemDto
 {
     [JsonProperty("id")] public long Id { get; set; }

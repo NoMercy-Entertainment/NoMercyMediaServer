@@ -3,9 +3,10 @@ using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Providers.TMDB.Models.Shared;
-using TmdbGender=NoMercy.Providers.TMDB.Models.People.TmdbGender;
+using TmdbGender = NoMercy.Providers.TMDB.Models.People.TmdbGender;
 
 namespace NoMercy.Api.Controllers.V1.DTO;
+
 public record PeopleDto
 {
     [JsonProperty("character")] public string? Character { get; set; }

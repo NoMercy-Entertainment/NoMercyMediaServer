@@ -26,7 +26,9 @@ public class FeaturedDto
 
         Id = albumArtist.Album.Id;
         Name = albumArtist.Album.Name;
-        Cover = albumArtist.Album.Cover is not null ? new Uri($"/images/music{albumArtist.Album.Cover}", UriKind.Relative).ToString() : null;
+        Cover = albumArtist.Album.Cover is not null
+            ? new Uri($"/images/music{albumArtist.Album.Cover}", UriKind.Relative).ToString()
+            : null;
         Disambiguation = albumArtist.Album.Disambiguation;
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Description = !string.IsNullOrEmpty(description)
@@ -39,7 +41,7 @@ public class FeaturedDto
 
         AlbumArtist = albumArtist.ArtistId;
     }
-    
+
     public FeaturedDto(Album album, string country)
     {
         string? description = album.Translations

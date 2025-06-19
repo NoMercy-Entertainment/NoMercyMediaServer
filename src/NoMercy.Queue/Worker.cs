@@ -4,6 +4,7 @@ using Serilog.Events;
 using Exception = System.Exception;
 
 namespace NoMercy.Queue;
+
 public class Worker(JobQueue queue, string name = "default")
 {
     private long? _currentJobId;

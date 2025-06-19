@@ -51,13 +51,11 @@ public static class FFmpegHardwareConfig
         string arg = "-extra_hw_frames 3 -init_hw_device opencl=ocl";
         bool supported = CheckAccel(arg);
         if (supported)
-        {
             Accelerators.Add(new(
-                vendor: GpuVendor.Unknown,
-                ffmpegArgs: arg,
-                accelerator: "none"
+                GpuVendor.Unknown,
+                arg,
+                "none"
             ));
-        }
     }
 
     private static void SetHardwareAccelerationFlags(List<string> gpuVendors)
@@ -67,7 +65,7 @@ public static class FFmpegHardwareConfig
             Logger.Encoder("No dedicated GPU detected, skipping hardware acceleration.", LogEventLevel.Warning);
             return;
         }
-        
+
         Dictionary<GpuVendor, int> gpuCounts = new()
         {
             { GpuVendor.Nvidia, 0 },
@@ -78,7 +76,6 @@ public static class FFmpegHardwareConfig
         };
 
         foreach (string vendor in gpuVendors.Select(v => v.ToLower()))
-        {
             if (vendor.Contains("nvidia"))
             {
                 int index = gpuCounts[GpuVendor.Nvidia];
@@ -86,95 +83,78 @@ public static class FFmpegHardwareConfig
                     $" -init_hw_device cuda=cu:{index} -filter_hw_device cu -extra_hw_frames 8 -hwaccel_output_format cuda";
                 bool supported = CheckAccel(arg);
                 if (supported)
-                {
                     Accelerators.Add(new(
-                        vendor: GpuVendor.Nvidia,
-                        ffmpegArgs: arg,
-                        accelerator: "cuda"
+                        GpuVendor.Nvidia,
+                        arg,
+                        "cuda"
                     ));
-                }
                 else
-                {
                     OpenClCheck();
-                }
                 gpuCounts[GpuVendor.Nvidia]++;
             }
             else if (vendor.Contains("amd") || vendor.Contains("advanced micro devices"))
             {
                 int index = gpuCounts[GpuVendor.Amd];
-                string arg = (OperatingSystem.IsLinux())
-                    ? $" -init_hw_device vaapi=hw{index}:/dev/dri/renderD128 -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format vaapi"
-                    : $" -init_hw_device dxva2=hw{index} -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format dxva2";
-                
-                bool supported = CheckAccel(arg);
-                if (supported)
-                {
-                    Accelerators.Add(new(
-                        vendor: GpuVendor.Amd,
-                        ffmpegArgs: arg,
-                        filter: (OperatingSystem.IsLinux() ? "hwupload" : ""),
-                        accelerator: OperatingSystem.IsLinux() ? "vaapi" : "dxva2"
-                    ));
-                }
-                else
-                {
-                    OpenClCheck();
-                }
-                gpuCounts[GpuVendor.Amd]++;
-            }
-            else if (vendor.Contains("intel"))
-            {
-                int index = gpuCounts[GpuVendor.Intel];
-                string arg = (OperatingSystem.IsLinux())
+                string arg = OperatingSystem.IsLinux()
                     ? $" -init_hw_device vaapi=hw{index}:/dev/dri/renderD128 -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format vaapi"
                     : $" -init_hw_device dxva2=hw{index} -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format dxva2";
 
                 bool supported = CheckAccel(arg);
                 if (supported)
-                {
                     Accelerators.Add(new(
-                        vendor: GpuVendor.Intel,
-                        ffmpegArgs: arg,
-                        filter: (OperatingSystem.IsLinux() ? "hwupload" : ""),
+                        GpuVendor.Amd,
+                        arg,
+                        filter: OperatingSystem.IsLinux() ? "hwupload" : "",
                         accelerator: OperatingSystem.IsLinux() ? "vaapi" : "dxva2"
                     ));
-                }
                 else
-                {
                     OpenClCheck();
-                }
+                gpuCounts[GpuVendor.Amd]++;
+            }
+            else if (vendor.Contains("intel"))
+            {
+                int index = gpuCounts[GpuVendor.Intel];
+                string arg = OperatingSystem.IsLinux()
+                    ? $" -init_hw_device vaapi=hw{index}:/dev/dri/renderD128 -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format vaapi"
+                    : $" -init_hw_device dxva2=hw{index} -filter_hw_device hw{index} -extra_hw_frames 8 -hwaccel_output_format dxva2";
+
+                bool supported = CheckAccel(arg);
+                if (supported)
+                    Accelerators.Add(new(
+                        GpuVendor.Intel,
+                        arg,
+                        filter: OperatingSystem.IsLinux() ? "hwupload" : "",
+                        accelerator: OperatingSystem.IsLinux() ? "vaapi" : "dxva2"
+                    ));
+                else
+                    OpenClCheck();
                 gpuCounts[GpuVendor.Intel]++;
             }
             else if (vendor.Contains("apple"))
             {
                 int index = gpuCounts[GpuVendor.Apple];
-                string arg = $" -init_hw_device videotoolbox=hw{index} -filter_hw_device hw -extra_hw_frames 8 -hwaccel_output_format videotoolbox";
+                string arg =
+                    $" -init_hw_device videotoolbox=hw{index} -filter_hw_device hw -extra_hw_frames 8 -hwaccel_output_format videotoolbox";
                 bool supported = CheckAccel(arg);
                 if (supported)
-                {
                     Accelerators.Add(new(
-                        vendor: GpuVendor.Apple,
-                        ffmpegArgs: arg,
-                        accelerator: "videotoolbox"
+                        GpuVendor.Apple,
+                        arg,
+                        "videotoolbox"
                     ));
-                }
                 else
-                {
                     OpenClCheck();
-                }
                 gpuCounts[GpuVendor.Apple]++;
             }
             else
             {
                 OpenClCheck();
             }
-        }
     }
-    
+
     private static bool IsDedicatedGpuAvailable()
     {
         if (OperatingSystem.IsWindows())
-        {
             try
             {
                 ManagementObjectSearcher searcher = new("SELECT * FROM Win32_VideoController");
@@ -185,25 +165,21 @@ public static class FFmpegHardwareConfig
                     ManagementObject? obj = (ManagementObject)managementBaseObject;
                     object? adapterRam = obj["AdapterRAM"];
                     if (adapterRam == null || (uint)adapterRam <= 0) continue;
-                    
+
                     string caption = obj["Caption"]?.ToString() ?? string.Empty;
                     if (caption.Contains("NVIDIA", StringComparison.InvariantCultureIgnoreCase) ||
                         caption.Contains("AMD", StringComparison.InvariantCultureIgnoreCase) ||
                         caption.Contains("Intel",
                             StringComparison
                                 .InvariantCultureIgnoreCase))
-                    {
                         return true;
-                    }
                 }
             }
             catch (Exception e)
             {
                 Logger.Encoder($"Error checking for dedicated GPU on Windows: {e.Message}", LogEventLevel.Error);
             }
-        }
         else if (OperatingSystem.IsLinux())
-        {
             try
             {
                 string result = Shell.ExecStdOutSync("lspci", "| grep -i 'vga'");
@@ -213,13 +189,11 @@ public static class FFmpegHardwareConfig
             {
                 Logger.Encoder($"Error checking for dedicated GPU: {e.Message}", LogEventLevel.Error);
             }
-        }
         else if (OperatingSystem.IsMacOS())
-        {
             try
             {
                 string result = Shell.ExecStdOutSync("system_profiler", "SPDisplaysDataType");
-                
+
                 return result.Contains("NVIDIA", StringComparison.InvariantCultureIgnoreCase) ||
                        result.Contains("AMD", StringComparison.InvariantCultureIgnoreCase) ||
                        result.Contains("Intel", StringComparison.InvariantCultureIgnoreCase);
@@ -228,7 +202,6 @@ public static class FFmpegHardwareConfig
             {
                 Logger.Encoder($"Error checking for dedicated GPU on macOS: {e.Message}", LogEventLevel.Error);
             }
-        }
 
         return false;
     }

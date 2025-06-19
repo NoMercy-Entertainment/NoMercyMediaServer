@@ -2,14 +2,17 @@ using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class MusicBrainzTrack
 {
     private int _number;
     [JsonProperty("artist-credit")] public ReleaseArtistCredit[] ArtistCredit { get; set; } = [];
     [JsonProperty("id")] public Guid Id { get; set; }
-    
+
     /** Track length in milliseconds */
-    [JsonProperty("length")] public int? Length { get; set; }
+    [JsonProperty("length")]
+    public int? Length { get; set; }
+
     public double Duration => (Length ?? 0) / 1000.0;
 
     [JsonProperty("number")]

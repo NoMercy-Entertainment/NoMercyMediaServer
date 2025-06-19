@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.Helpers;
+
 public class ParseJwtStringConverter : JsonConverter
 {
     public static readonly ParseJwtStringConverter Singleton = new();

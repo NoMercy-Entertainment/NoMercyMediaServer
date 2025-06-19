@@ -21,7 +21,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
                 Parts = ti.Parts,
                 LibraryId = ti.LibraryId,
                 TitleSort = ti.TitleSort,
-                _colorPalette = ti._colorPalette,
+                _colorPalette = ti._colorPalette
             })
             .RunAsync();
     }
@@ -48,9 +48,9 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
     {
         return context.CollectionLibrary.Upsert(new()
             {
-            LibraryId = library.Id,
-            CollectionId = collection.Id
-        })
+                LibraryId = library.Id,
+                CollectionId = collection.Id
+            })
             .On(v => new { v.LibraryId, v.CollectionId })
             .WhenMatched((ts, ti) => new()
             {
@@ -71,7 +71,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
         //         CollectionId = ti.CollectionId
         //     })
         //     .RunAsync();
-        
+
         return Task.CompletedTask;
     }
 

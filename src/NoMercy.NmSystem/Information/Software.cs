@@ -9,11 +9,11 @@ namespace NoMercy.NmSystem.Information;
 public static class Software
 {
     public static Version? Version { get; set; } = new(0, 1, 0, 0);
-    
+
     public static bool IsWindows => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
     public static bool IsMac => RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
     public static bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-    
+
     internal static string GetPlatform()
     {
         if (IsWindows)
@@ -25,7 +25,7 @@ public static class Software
 
         throw new("Unknown platform");
     }
-    
+
     internal static Guid GetDeviceId()
     {
         string? generatedId = new DeviceIdBuilder()
@@ -66,7 +66,7 @@ public static class Software
 
         return "Unknown";
     }
-    
+
     public static string GetReleaseVersion()
     {
         return $"{Version!.Major}.{Version.Minor}.{Version.Build}";
@@ -98,5 +98,4 @@ public static class Software
 
         return DateTime.MinValue;
     }
-
 }

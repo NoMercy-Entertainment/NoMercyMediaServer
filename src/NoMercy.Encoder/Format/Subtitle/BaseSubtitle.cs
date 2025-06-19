@@ -23,11 +23,15 @@ public class BaseSubtitle : Classes
     private readonly Dictionary<string, dynamic> _extraParameters = [];
     private readonly Dictionary<string, dynamic> _filters = [];
     private readonly Dictionary<string, dynamic> _ops = [];
-    public virtual CodecDto[] AvailableCodecs => [
+
+    public virtual CodecDto[] AvailableCodecs =>
+    [
         SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass,
         SubtitleCodecs.Copy
     ];
-    protected virtual string[] AvailableContainers => [
+
+    protected virtual string[] AvailableContainers =>
+    [
         SubtitleContainers.WebVtt, SubtitleContainers.Srt, SubtitleContainers.Ass
     ];
 
@@ -95,11 +99,13 @@ public class BaseSubtitle : Classes
         _ops.Add(key, value);
         return this;
     }
+
     public BaseSubtitle AddOpt(string value)
     {
         AddCustomArgument(value, null);
         return this;
     }
+
     public BaseSubtitle AddOpts(string[] value)
     {
         foreach (string opt in value)
@@ -151,20 +157,18 @@ public class BaseSubtitle : Classes
 
                 newStream.Variant = GetVariant(newStream);
 
-                if(newStream.SubtitleStream!.CodecName == newStream.SubtitleCodec.SimpleValue) continue;
-                
+                if (newStream.SubtitleStream!.CodecName == newStream.SubtitleCodec.SimpleValue) continue;
+
                 List<SubtitleStream> subTitleStreams = SubtitleStreams
                     .Where(s => s.Language == stream.Language)
                     .ToList();
-                
-                int currentStreamIndex = subTitleStreams.IndexOf(stream);
-                
-                if (newStream.SubtitleStream!.Tags?.TryGetValue("title", out _) == false && currentStreamIndex > 0)
-                {
-                    newStream.Variant = "sdh";
-                }
 
-                if(streams.Any(s => s.HlsPlaylistFilename == newStream.HlsPlaylistFilename)) continue;
+                int currentStreamIndex = subTitleStreams.IndexOf(stream);
+
+                if (newStream.SubtitleStream!.Tags?.TryGetValue("title", out _) == false && currentStreamIndex > 0)
+                    newStream.Variant = "sdh";
+
+                if (streams.Any(s => s.HlsPlaylistFilename == newStream.HlsPlaylistFilename)) continue;
 
                 streams.Add(newStream);
             }
@@ -180,20 +184,15 @@ public class BaseSubtitle : Classes
         string variant = "full";
 
         string? description = "";
-        if(stream.SubtitleStream!.Tags?.TryGetValue("title", out description) is false) return variant;
+        if (stream.SubtitleStream!.Tags?.TryGetValue("title", out description) is false) return variant;
 
         if (
             description.Contains("sign", StringComparison.CurrentCultureIgnoreCase)
             || description.Contains("song", StringComparison.CurrentCultureIgnoreCase)
             || description.Contains("s&s", StringComparison.CurrentCultureIgnoreCase)
-            )
-        {
+        )
             variant = "sign";
-        }
-        else  if (description.Contains("sdh", StringComparison.CurrentCultureIgnoreCase))
-        {
-            variant = "sdh";
-        }
+        else if (description.Contains("sdh", StringComparison.CurrentCultureIgnoreCase)) variant = "sdh";
 
         return variant;
     }
@@ -202,7 +201,7 @@ public class BaseSubtitle : Classes
     {
         stream.SubtitleCodec = SubtitleCodecs.Webvtt;
         string extension = "vtt";
-            
+
         if (stream.SubtitleStream!.CodecName == "hdmv_pgs_subtitle")
         {
             stream.SubtitleCodec = SubtitleCodecs.Copy;
@@ -234,18 +233,14 @@ public class BaseSubtitle : Classes
         // commandDictionary["-map"] = $"[s{index}_hls_0]";
         commandDictionary["-map"] = $"s:{index}";
         commandDictionary["-c:s"] = SubtitleCodec.Value;
-        
+
         if (!IsoLanguageMapper.IsoToLanguage.TryGetValue(Language, out string? language))
-        {
             throw new($"Language {Language} is not supported");
-        }
         commandDictionary[$"-metadata:s:s:{index}"] = $"title=\"{language}\"";
         commandDictionary[$"-metadata:s:s:{index}"] = $"language=\"{Language}\"";
 
         foreach (KeyValuePair<string, dynamic> extraParameter in _extraParameters)
-        {
             commandDictionary[extraParameter.Key] = extraParameter.Value;
-        }
     }
 
     public void CreateFolder()

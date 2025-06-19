@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record AddFilesRequest
 {
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }

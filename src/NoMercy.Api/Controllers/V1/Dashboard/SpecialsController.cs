@@ -78,7 +78,7 @@ public class SpecialsController : BaseController
                 .WhenMatched((lus, lui) => new()
                 {
                     SpecialId = lui.SpecialId,
-                    UserId = lui.UserId,
+                    UserId = lui.UserId
                 })
                 .RunAsync();
 
@@ -114,7 +114,7 @@ public class SpecialsController : BaseController
             .FirstOrDefaultAsync();
 
         if (special is null)
-            return Ok(new StatusResponseDto<string>()
+            return Ok(new StatusResponseDto<string>
             {
                 Status = "error",
                 Message = "Library {0} does not exist.",
@@ -123,12 +123,12 @@ public class SpecialsController : BaseController
 
         try
         {
-            if ((request.Poster is not null && special.Poster != request.Poster) 
-                || (request.Backdrop is not null && special.Backdrop != request.Backdrop) 
+            if ((request.Poster is not null && special.Poster != request.Poster)
+                || (request.Backdrop is not null && special.Backdrop != request.Backdrop)
                 || (request.Logo is not null && special.Logo != request.Logo))
             {
                 special.Poster = request.Poster;
-                
+
                 special._colorPalette = await MovieDbImageManager
                     .MultiColorPalette([
                         new("poster", request.Poster),
@@ -136,28 +136,27 @@ public class SpecialsController : BaseController
                         new("logo", request.Logo)
                     ]);
             }
-            
+
             if (request.Title is not null)
                 special.Title = request.Title;
-            
+
             if (request.Overview is not null)
                 special.Overview = request.Overview;
-            
+
             if (request.Poster is not null)
                 special.Poster = request.Poster;
-            
+
             if (request.Backdrop is not null)
                 special.Backdrop = request.Backdrop;
-            
+
             if (request.Logo is not null)
                 special.Logo = request.Logo;
-            
-            await mediaContext.SaveChangesAsync();
 
+            await mediaContext.SaveChangesAsync();
         }
         catch (Exception e)
         {
-            return Ok(new StatusResponseDto<string>()
+            return Ok(new StatusResponseDto<string>
             {
                 Status = "error",
                 Message = "Something went wrong updating the special: {0}",
@@ -165,7 +164,7 @@ public class SpecialsController : BaseController
             });
         }
 
-        return Ok(new StatusResponseDto<string>()
+        return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
             Message = "Successfully updated {0} special.",
@@ -186,7 +185,7 @@ public class SpecialsController : BaseController
             Special? special = await mediaContext.Specials.FindAsync(keyValues: id);
 
             if (special is null)
-                return Ok(new StatusResponseDto<string>()
+                return Ok(new StatusResponseDto<string>
                 {
                     Status = "error",
                     Message = "Library {0} does not exist.",
@@ -196,7 +195,7 @@ public class SpecialsController : BaseController
             mediaContext.Specials.Remove(special);
             await mediaContext.SaveChangesAsync();
 
-            return Ok(new StatusResponseDto<string>()
+            return Ok(new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Successfully deleted {0} special.",
@@ -205,7 +204,7 @@ public class SpecialsController : BaseController
         }
         catch (Exception e)
         {
-            return Ok(new StatusResponseDto<string>()
+            return Ok(new StatusResponseDto<string>
             {
                 Status = "error",
                 Message = "Something went wrong deleting the special: {0}",
@@ -227,14 +226,14 @@ public class SpecialsController : BaseController
             .ToListAsync();
 
         if (specials.Count == 0)
-            return Ok(new StatusResponseDto<string>()
+            return Ok(new StatusResponseDto<string>
             {
                 Status = "error",
                 Message = "No specials exist.",
                 Args = []
             });
 
-        return Ok(new StatusResponseDto<string>()
+        return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
             Message = "Successfully sorted specials.",
@@ -254,7 +253,7 @@ public class SpecialsController : BaseController
             .ToListAsync();
 
         if (specialsList.Count == 0)
-            return NotFound(new StatusResponseDto<List<string?>>()
+            return NotFound(new StatusResponseDto<List<string?>>
             {
                 Status = "error",
                 Message = "No specials exist."
@@ -338,7 +337,7 @@ public class SpecialsController : BaseController
         //     }
         // }
 
-        return Ok(new StatusResponseDto<List<string?>>()
+        return Ok(new StatusResponseDto<List<string?>>
         {
             Status = "ok",
             Data = titles,
@@ -356,7 +355,7 @@ public class SpecialsController : BaseController
         LibraryLogic specialLogic = new(id);
 
         if (await specialLogic.Process())
-            return Ok(new StatusResponseDto<List<dynamic>>()
+            return Ok(new StatusResponseDto<List<dynamic>>
             {
                 Status = "ok",
                 Data = specialLogic.Titles,
@@ -364,7 +363,7 @@ public class SpecialsController : BaseController
                 Args = [specialLogic.Id]
             });
 
-        return NotFound(new StatusResponseDto<List<dynamic>>()
+        return NotFound(new StatusResponseDto<List<dynamic>>
         {
             Status = "error",
             Message = "Library {0} does not exist.",
@@ -386,7 +385,7 @@ public class SpecialsController : BaseController
         });
         thread.Start();
 
-        return Ok(new StatusResponseDto<string>()
+        return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
             Message = "Rescanning all specials."
@@ -402,6 +401,5 @@ public class SpecialsController : BaseController
         [JsonProperty("poster")] public string? Poster { get; set; }
         [JsonProperty("backdrop")] public string? Backdrop { get; set; }
         [JsonProperty("logo")] public string? Logo { get; set; }
-        
     }
 }

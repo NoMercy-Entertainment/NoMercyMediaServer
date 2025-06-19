@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class MusicBrainzReleaseGroup
 {
     [JsonProperty("disambiguation")] public string Disambiguation { get; set; } = string.Empty;
@@ -11,7 +12,10 @@ public class MusicBrainzReleaseGroup
 
     public DateTime? FirstReleaseDate
     {
-        get => !string.IsNullOrWhiteSpace(_firstReleaseDate) && !string.IsNullOrEmpty(_firstReleaseDate) && _firstReleaseDate.TryParseToDateTime(out DateTime dt) ? dt : null;
+        get => !string.IsNullOrWhiteSpace(_firstReleaseDate) && !string.IsNullOrEmpty(_firstReleaseDate) &&
+               _firstReleaseDate.TryParseToDateTime(out DateTime dt)
+            ? dt
+            : null;
         set => _firstReleaseDate = value.ToString() ?? string.Empty;
     }
 

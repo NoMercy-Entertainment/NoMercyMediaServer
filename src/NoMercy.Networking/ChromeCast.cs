@@ -19,12 +19,9 @@ public class ChromeCast
     {
         _chromecastReceivers = (await Locator.FindReceiversAsync(Source.Token)).ToList();
 
-        foreach (ChromecastReceiver chromecast in _chromecastReceivers)
-        {
-            Logger.Ping(chromecast.Name);
-        }
+        foreach (ChromecastReceiver chromecast in _chromecastReceivers) Logger.Ping(chromecast.Name);
     }
-    
+
     public static string[] GetChromeCasts()
     {
         return _chromecastReceivers.Select(x => x.Name).ToArray();
@@ -38,8 +35,8 @@ public class ChromeCast
         {
             Logger.Ping("Chromecast not found");
             return;
-        }     
-        
+        }
+
         await SelectChromecast(receiver);
     }
 
@@ -50,44 +47,48 @@ public class ChromeCast
             Logger.Ping("Chromecast not found");
             return;
         }
-        
+
         Logger.Ping("Connecting to chromecast");
-        
+
         _client = new();
-        
+
         _client.MediaChannel.StatusChanged += (sender, args) =>
         {
-            Networking.SendToAll("StatusChanged", "castHub", new Dictionary<string, object?>{
-                {"sender", sender},
-                {"args", args},
+            Networking.SendToAll("StatusChanged", "castHub", new Dictionary<string, object?>
+            {
+                { "sender", sender },
+                { "args", args }
             });
         };
-        
+
         _client.ReceiverChannel.ReceiverStatusChanged += (sender, args) =>
         {
-            Networking.SendToAll("ReceiverStatusChanged", "castHub", new Dictionary<string, object?>{
-                {"sender", sender},
-                {"args", args},
+            Networking.SendToAll("ReceiverStatusChanged", "castHub", new Dictionary<string, object?>
+            {
+                { "sender", sender },
+                { "args", args }
             });
         };
-        
+
         _client.ReceiverChannel.LaunchStatusChanged += (sender, args) =>
         {
-            Networking.SendToAll("LaunchStatusChanged", "castHub", new Dictionary<string, object?>{
-                {"sender", sender},
-                {"args", args},
+            Networking.SendToAll("LaunchStatusChanged", "castHub", new Dictionary<string, object?>
+            {
+                { "sender", sender },
+                { "args", args }
             });
         };
-        
+
         await _client.ConnectChromecast(receiver);
     }
-    
+
     public static async Task Disconnect()
     {
         if (_client is null) return;
-        
+
         await _client.DisconnectAsync();
     }
+
     public static async Task Stop()
     {
         if (_client is null) return;
@@ -102,7 +103,7 @@ public class ChromeCast
         //
         // if (!_client.GetChromecastStatus().IsStandBy)
         // {
-            _ = await _client.LaunchApplicationAsync("925B4C3C");
+        _ = await _client.LaunchApplicationAsync("925B4C3C");
         // }
     }
 
@@ -110,28 +111,27 @@ public class ChromeCast
     {
         if (_client is null) return;
         Logger.Ping("Casting playlist: " + value);
-        
+
         Media media = new()
         {
             CustomData = new Dictionary<string, string>
             {
-                {"accessToken", Globals.Globals.AccessToken!},
-                {"basePath", Networking.ExternalAddress},
-                {"playlist", $"{Networking.ExternalAddress}/api/v1/{value}/watch"}
+                { "accessToken", Globals.Globals.AccessToken! },
+                { "basePath", Networking.ExternalAddress },
+                { "playlist", $"{Networking.ExternalAddress}/api/v1/{value}/watch" }
             }
         };
-        
+
         _ = await _client.MediaChannel.LoadAsync(media);
     }
-    
+
     public static ChromecastStatus? GetChromecastStatus()
     {
         return _client?.GetChromecastStatus();
     }
-    
+
     public static MediaStatus? GetMediaStatus()
     {
         return _client?.MediaChannel.MediaStatus;
     }
-    
 }

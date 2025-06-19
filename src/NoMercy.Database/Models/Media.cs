@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -12,6 +11,9 @@ namespace NoMercy.Database.Models;
 [Index(nameof(MovieId), nameof(Src), IsUnique = true)]
 [Index(nameof(PersonId), nameof(Src), IsUnique = true)]
 [Index(nameof(VideoFileId), nameof(Src), IsUnique = true)]
+[Index(nameof(Type))]
+[Index(nameof(Site))]
+[Index(nameof(Name))]
 public class Media : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]

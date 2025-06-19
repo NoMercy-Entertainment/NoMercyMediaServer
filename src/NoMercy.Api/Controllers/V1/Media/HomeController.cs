@@ -24,57 +24,6 @@ public class HomeController : BaseController
     {
         _homeService = homeService;
     }
-    
-    [HttpGet]
-    public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
-    {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view home");
-        
-        Guid userId = User.UserId();
-        string language = Language();
-        string country = Country();
-    
-        List<GenreRowDto<GenreRowItemDto>> result = await _homeService.GetHomePageContent(userId, language, country, request);
-        // IActionResult response =  GetPaginatedResponse(result, request);
-        
-        List<GenreRowDto<GenreRowItemDto>> newData = result.ToList();
-        bool hasMore = newData.Count() >= request.Take;
-
-        newData = newData.Take(request.Take).ToList();
-
-        PaginatedResponse<GenreRowDto<GenreRowItemDto>> response = new()
-        {
-            Data = newData,
-            NextPage = hasMore ? request.Page + 1 : null,
-            HasMore = hasMore
-        };
-        
-        // IActionResult response =  GetPaginatedResponse(result, request);
-        if (request.Page == 0)
-        {
-            LibraryRepository libraryRepository = new(new());
-            IQueryable<Library> libraries = libraryRepository.GetLibraries(userId);
-
-            foreach (Library library in libraries.OrderByDescending(library => library.Order))
-            {
-                IEnumerable<Movie> movies =
-                    libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
-                IEnumerable<Tv> shows =
-                    libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
-
-                response.Data = response.Data.Prepend(new()
-                {
-                    Title = "Latest in " + library.Title,
-                    MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
-                    Items = movies.Select(movie => new GenreRowItemDto(movie, country))
-                        .Concat(shows.Select(tv => new GenreRowItemDto(tv, country)))
-                });
-            }
-        }
-
-        return Ok(response);
-    }
 
     [HttpGet("home")]
     public async Task<IActionResult> ContinueWatching()
@@ -83,7 +32,7 @@ public class HomeController : BaseController
             return UnauthorizedResponse("You do not have permission to view continue watching");
 
         Render result = await _homeService.GetHomeData(User.UserId(), Language(), Country());
-        
+
         return Ok(result);
     }
 
@@ -97,7 +46,7 @@ public class HomeController : BaseController
 
         return Ok(result);
     }
-    
+
     [HttpGet("home/tv")]
     public async Task<IActionResult> HomeTv()
     {
@@ -115,11 +64,12 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view continue watching");
 
-        Render result = await _homeService.GetHomeContinueContent(User.UserId(), Language(), Country(), request.ReplaceId);
+        Render result =
+            await _homeService.GetHomeContinueContent(User.UserId(), Language(), Country(), request.ReplaceId);
 
         return Ok(result);
     }
-    
+
     [HttpGet]
     [Route("screensaver")]
     public async Task<IActionResult> Screensaver()
@@ -128,10 +78,10 @@ public class HomeController : BaseController
             return UnauthorizedResponse("You do not have permission to view screensaver");
 
         ScreensaverDto result = await _homeService.GetScreensaverContent(User.UserId());
-        
+
         return Ok(result);
     }
-    
+
     [HttpGet]
     [AllowAnonymous]
     [Route("/status")]
@@ -145,20 +95,19 @@ public class HomeController : BaseController
             Timestamp = DateTime.UtcNow
         });
     }
-    
+
     [HttpGet]
     [Route("permissions")]
     public IActionResult Permissions()
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have access to this server");
-        
+
         return Ok(new
         {
             owner = User.IsOwner(),
             manager = User.IsModerator(),
-            allowed = User.IsAllowed(),
+            allowed = User.IsAllowed()
         });
     }
-
 }

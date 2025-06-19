@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
@@ -7,6 +6,11 @@ using NoMercy.NmSystem.Extensions;
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
+[Index(nameof(Title))]
+[Index(nameof(TitleSort))]
+[Index(nameof(LibraryId))]
+[Index(nameof(ImdbId))]
+[Index(nameof(ReleaseDate))]
 public class Movie : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -45,8 +49,7 @@ public class Movie : ColorPaletteTimeStamps
 
     [JsonProperty("cast")] public ICollection<Cast> Cast { get; set; } = [];
 
-    [JsonProperty("certifications")]
-    public ICollection<CertificationMovie> CertificationMovies { get; set; } = [];
+    [JsonProperty("certifications")] public ICollection<CertificationMovie> CertificationMovies { get; set; } = [];
 
     [JsonProperty("crew")] public ICollection<Crew> Crew { get; set; } = [];
     [JsonProperty("genre")] public ICollection<GenreMovie> GenreMovies { get; set; } = [];

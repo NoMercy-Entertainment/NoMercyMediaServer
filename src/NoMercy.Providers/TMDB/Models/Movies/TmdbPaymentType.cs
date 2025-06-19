@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Movies;
+
 public class TmdbPaymentType
 {
     [JsonProperty("link")] public Uri? Link { get; set; }

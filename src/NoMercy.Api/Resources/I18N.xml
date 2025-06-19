@@ -1,275 +1,284 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <I18N>
-  <Entry>
-    <Key>The Effortless Encoder</Key>
-    <Value lang="nl">De Moeiteloze Encoder</Value>
-  </Entry>
-  <Entry>
-    <Key>NoMercy is running!</Key>
-    <Value lang="nl">NoMercy draait!</Value>
-  </Entry>
-  <Entry>
-    <Key>Continue watching</Key>
-    <Value lang="nl">Doorgaan met kijken</Value>
-  </Entry>
-  <Entry>
-    <Key>Remove from watchlist</Key>
-    <Value lang="nl">Verwijderen uit kijklijst</Value>
-  </Entry>
-  <Entry>
-    <Key>Are you sure you want to remove this from continue watching?</Key>
-    <Value lang="nl">Weet je zeker dat je dit wilt verwijderen?</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view continue watching</Key>
-    <Value lang="nl">Je hebt geen toestemming om door te gaan met kijken te bekijken</Value>
-  </Entry>
-  <Entry>
-    <Key>Rescanning all libraries.</Key>
-    <Value lang="nl">Rescanning all libraries.</Value>
-  </Entry>
-  <Entry>
-    <Key>Continue Watching</Key>
-    <Value lang="nl">Continue Watching</Value>
-  </Entry>
-  <Entry>
-    <Key>See all</Key>
-    <Value lang="nl">Alles bekijken</Value>
-  </Entry>
-  <Entry>
-    <Key>Tv show not found</Key>
-    <Value lang="nl">Tv show not found</Value>
-  </Entry>
-  <Entry>
-    <Key>Configuration updated successfully</Key>
-    <Value lang="nl">Configuration updated successfully</Value>
-  </Entry>
-  <Entry>
-    <Key>Albums not found</Key>
-    <Value lang="nl">Albums not found</Value>
-  </Entry>
-  <Entry>
-    <Key>Subtitle not found</Key>
-    <Value lang="nl">Subtitle not found</Value>
-  </Entry>
-  <Entry>
-    <Key>{0} {1}</Key>
-    <Value lang="nl">{0} {1}</Value>
-  </Entry>
-  <Entry>
-    <Key>Specials not found</Key>
-    <Value lang="nl">Specials not found</Value>
-  </Entry>
-  <Entry>
-    <Key>People not found</Key>
-    <Value lang="nl">People not found</Value>
-  </Entry>
-  <Entry>
-    <Key>Playback recorded</Key>
-    <Value lang="nl">Playback recorded</Value>
-  </Entry>
-  <Entry>
-    <Key>Genre not found</Key>
-    <Value lang="nl">Genre not found</Value>
-  </Entry>
-  <Entry>
-    <Key>An error occurred while saving the entity changes. See the inner exception for details.</Key>
-    <Value lang="nl">An error occurred while saving the entity changes. See the inner exception for details.</Value>
-  </Entry>
-  <Entry>
-    <Key>Albums not found</Key>
-    <Value lang="nl">Albums not found</Value>
-  </Entry>
-  <Entry>
-    <Key>Artist not found</Key>
-    <Value lang="nl">Artist not found</Value>
-  </Entry>
-  <Entry>
-    <Key>Tracks not found</Key>
-    <Value lang="nl">Tracks not found</Value>
-  </Entry>
-  <Entry>
-    <Key>Playlist not found</Key>
-    <Value lang="nl">Playlist not found</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to access the dashboard</Key>
-    <Value lang="nl">You do not have permission to access the dashboard</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view configuration</Key>
-    <Value lang="nl">You do not have permission to view configuration</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view task workers</Key>
-    <Value lang="nl">You do not have permission to view task workers</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view server information</Key>
-    <Value lang="nl">You do not have permission to view server information</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view server paths</Key>
-    <Value lang="nl">You do not have permission to view server paths</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view activity</Key>
-    <Value lang="nl">You do not have permission to view activity</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view devices</Key>
-    <Value lang="nl">You do not have permission to view devices</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view encoder profiles</Key>
-    <Value lang="nl">You do not have permission to view encoder profiles</Value>
-  </Entry>
-  <Entry>
-    <Key>Successfully created a new library.</Key>
-    <Value lang="nl">Successfully created a new library.</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view encoder queue</Key>
-    <Value lang="nl">You do not have permission to view encoder queue</Value>
-  </Entry>
-  <Entry>
-    <Key>Something went wrong deleting the library: {0}</Key>
-    <Value lang="nl">Something went wrong deleting the library: {0}</Value>
-  </Entry>
-  <Entry>
-    <Key>Successfully deleted {0} library.</Key>
-    <Value lang="nl">Successfully deleted {0} library.</Value>
-  </Entry>
-  <Entry>
-    <Key>No results found</Key>
-    <Value lang="nl">No results found</Value>
-  </Entry>
-  <Entry>
-    <Key>User already exists</Key>
-    <Value lang="nl">User already exists</Value>
-  </Entry>
-  <Entry>
-    <Key>User updated</Key>
-    <Value lang="nl">User updated</Value>
-  </Entry>
-  <Entry>
-    <Key>Rescanning all specials.</Key>
-    <Value lang="nl">Rescanning all specials.</Value>
-  </Entry>
-  <Entry>
-    <Key>Rescanning {0} for files</Key>
-    <Value lang="nl">Rescanning {0} for files</Value>
-  </Entry>
-  <Entry>
-    <Key>Item removed</Key>
-    <Value lang="nl">Item removed</Value>
-  </Entry>
-  <Entry>
-    <Key>Successfully updated {0} special.</Key>
-    <Value lang="nl">Successfully updated {0} special.</Value>
-  </Entry>
-  <Entry>
-    <Key>Unknown property Audio</Key>
-    <Value lang="nl">Unknown property Audio</Value>
-  </Entry>
-  <Entry>
-    <Key>Unknown property AudioTrack</Key>
-    <Value lang="nl">Unknown property AudioTrack</Value>
-  </Entry>
-  <Entry>
-    <Key>SQLite Error 1: 'ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint'.</Key>
-    <Value lang="nl">SQLite Error 1: 'ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint'.</Value>
-  </Entry>
-  <Entry>
-    <Key>SQLite Error 19: 'NOT NULL constraint failed: Metadata.AudioTrackId'.</Key>
-    <Value lang="nl">SQLite Error 19: 'NOT NULL constraint failed: Metadata.AudioTrackId'.</Value>
-  </Entry>
-  <Entry>
-    <Key>Unknown property Chapters</Key>
-    <Value lang="nl">Unknown property Chapters</Value>
-  </Entry>
-  <Entry>
-    <Key>Unknown property Fonts</Key>
-    <Value lang="nl">Unknown property Fonts</Value>
-  </Entry>
-  <Entry>
-    <Key>Unknown property FontsFile</Key>
-    <Value lang="nl">Unknown property FontsFile</Value>
-  </Entry>
-  <Entry>
-    <Key>Unknown property Previews</Key>
-    <Value lang="nl">Unknown property Previews</Value>
-  </Entry>
-  <Entry>
-    <Key>Unknown property Subtitles</Key>
-    <Value lang="nl">Unknown property Subtitles</Value>
-  </Entry>
-  <Entry>
-    <Key>Unknown property Video</Key>
-    <Value lang="nl">Unknown property Video</Value>
-  </Entry>
-  <Entry>
-    <Key>updater must be an Initialiser of the TEntity type (Parameter 'updater')</Key>
-    <Value lang="nl">updater must be an Initialiser of the TEntity type (Parameter 'updater')</Value>
-  </Entry>
-  <Entry>
-    <Key>Could not find file '\\192.168.2.120\mnt\vault\Media\Anime\Anime\No.Game.No.Life.(2014)\No.Game.No.Life.S00E01\No.Game.No.Life.S00E01.Special.1.Wild.Fancy.NoMercy.eng.full.ass'.</Key>
-    <Value lang="nl">Could not find file '\\192.168.2.120\mnt\vault\Media\Anime\Anime\No.Game.No.Life.(2014)\No.Game.No.Life.S00E01\No.Game.No.Life.S00E01.Special.1.Wild.Fancy.NoMercy.eng.full.ass'.</Value>
-  </Entry>
-  <Entry>
-    <Key>Rescanning {0} library.</Key>
-    <Value lang="nl">Rescanning {0} library.</Value>
-  </Entry>
-  <Entry>
-    <Key>Successfully moved item {0}.</Key>
-    <Value lang="nl">Successfully moved item {0}.</Value>
-  </Entry>
-  <Entry>
-    <Key>Something went wrong moving the item: {0}</Key>
-    <Value lang="nl">Something went wrong moving the item: {0}</Value>
-  </Entry>
-  <Entry>
-    <Key>Added to library</Key>
-    <Value lang="nl">Added to library</Value>
-  </Entry>
-  <Entry>
-    <Key>Wallpaper set successfully</Key>
-    <Value lang="nl">Wallpaper set successfully</Value>
-  </Entry>
-  <Entry>
-    <Key>{1}</Key>
-    <Value lang="nl">{1}</Value>
-  </Entry>
-  <Entry>
-    <Key>Wallpaper not found</Key>
-    <Value lang="nl">Wallpaper not found</Value>
-  </Entry>
-  <Entry>
-    <Key>Could not find a part of the path '\\192.168.2.120\mnt\vault\Media\Anime\Anime\By.the.Grace.of.the.Gods.(2020)\By.the.Grace.of.the.Gods.S02E02'.</Key>
-    <Value lang="nl">Could not find a part of the path '\\192.168.2.120\mnt\vault\Media\Anime\Anime\By.the.Grace.of.the.Gods.(2020)\By.the.Grace.of.the.Gods.S02E02'.</Value>
-  </Entry>
-  <Entry>
-    <Key>Job not found</Key>
-    <Value lang="nl">Job not found</Value>
-  </Entry>
-  <Entry>
-    <Key>Priority updated</Key>
-    <Value lang="nl">Priority updated</Value>
-  </Entry>
-  <Entry>
-    <Key>User {0} created successfully</Key>
-    <Value lang="nl">User {0} created successfully</Value>
-  </Entry>
-  <Entry>
-    <Key>Movie not found</Key>
-    <Value lang="nl">Movie not found</Value>
-  </Entry>
-  <Entry>
-    <Key>{0}: {1}</Key>
-    <Value lang="nl">{0}: {1}</Value>
-  </Entry>
-  <Entry>
-    <Key>You do not have permission to view optical drives</Key>
-    <Value lang="nl">You do not have permission to view optical drives</Value>
-  </Entry>
+    <Entry>
+        <Key>The Effortless Encoder</Key>
+        <Value lang="nl">De Moeiteloze Encoder</Value>
+    </Entry>
+    <Entry>
+        <Key>NoMercy is running!</Key>
+        <Value lang="nl">NoMercy draait!</Value>
+    </Entry>
+    <Entry>
+        <Key>Continue watching</Key>
+        <Value lang="nl">Doorgaan met kijken</Value>
+    </Entry>
+    <Entry>
+        <Key>Remove from watchlist</Key>
+        <Value lang="nl">Verwijderen uit kijklijst</Value>
+    </Entry>
+    <Entry>
+        <Key>Are you sure you want to remove this from continue watching?</Key>
+        <Value lang="nl">Weet je zeker dat je dit wilt verwijderen?</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view continue watching</Key>
+        <Value lang="nl">Je hebt geen toestemming om door te gaan met kijken te bekijken</Value>
+    </Entry>
+    <Entry>
+        <Key>Rescanning all libraries.</Key>
+        <Value lang="nl">Rescanning all libraries.</Value>
+    </Entry>
+    <Entry>
+        <Key>Continue Watching</Key>
+        <Value lang="nl">Continue Watching</Value>
+    </Entry>
+    <Entry>
+        <Key>See all</Key>
+        <Value lang="nl">Alles bekijken</Value>
+    </Entry>
+    <Entry>
+        <Key>Tv show not found</Key>
+        <Value lang="nl">Tv show not found</Value>
+    </Entry>
+    <Entry>
+        <Key>Configuration updated successfully</Key>
+        <Value lang="nl">Configuration updated successfully</Value>
+    </Entry>
+    <Entry>
+        <Key>Albums not found</Key>
+        <Value lang="nl">Albums not found</Value>
+    </Entry>
+    <Entry>
+        <Key>Subtitle not found</Key>
+        <Value lang="nl">Subtitle not found</Value>
+    </Entry>
+    <Entry>
+        <Key>{0} {1}</Key>
+        <Value lang="nl">{0} {1}</Value>
+    </Entry>
+    <Entry>
+        <Key>Specials not found</Key>
+        <Value lang="nl">Specials not found</Value>
+    </Entry>
+    <Entry>
+        <Key>People not found</Key>
+        <Value lang="nl">People not found</Value>
+    </Entry>
+    <Entry>
+        <Key>Playback recorded</Key>
+        <Value lang="nl">Playback recorded</Value>
+    </Entry>
+    <Entry>
+        <Key>Genre not found</Key>
+        <Value lang="nl">Genre not found</Value>
+    </Entry>
+    <Entry>
+        <Key>An error occurred while saving the entity changes. See the inner exception for details.</Key>
+        <Value lang="nl">An error occurred while saving the entity changes. See the inner exception for details.</Value>
+    </Entry>
+    <Entry>
+        <Key>Albums not found</Key>
+        <Value lang="nl">Albums not found</Value>
+    </Entry>
+    <Entry>
+        <Key>Artist not found</Key>
+        <Value lang="nl">Artist not found</Value>
+    </Entry>
+    <Entry>
+        <Key>Tracks not found</Key>
+        <Value lang="nl">Tracks not found</Value>
+    </Entry>
+    <Entry>
+        <Key>Playlist not found</Key>
+        <Value lang="nl">Playlist not found</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to access the dashboard</Key>
+        <Value lang="nl">You do not have permission to access the dashboard</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view configuration</Key>
+        <Value lang="nl">You do not have permission to view configuration</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view task workers</Key>
+        <Value lang="nl">You do not have permission to view task workers</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view server information</Key>
+        <Value lang="nl">You do not have permission to view server information</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view server paths</Key>
+        <Value lang="nl">You do not have permission to view server paths</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view activity</Key>
+        <Value lang="nl">You do not have permission to view activity</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view devices</Key>
+        <Value lang="nl">You do not have permission to view devices</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view encoder profiles</Key>
+        <Value lang="nl">You do not have permission to view encoder profiles</Value>
+    </Entry>
+    <Entry>
+        <Key>Successfully created a new library.</Key>
+        <Value lang="nl">Successfully created a new library.</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view encoder queue</Key>
+        <Value lang="nl">You do not have permission to view encoder queue</Value>
+    </Entry>
+    <Entry>
+        <Key>Something went wrong deleting the library: {0}</Key>
+        <Value lang="nl">Something went wrong deleting the library: {0}</Value>
+    </Entry>
+    <Entry>
+        <Key>Successfully deleted {0} library.</Key>
+        <Value lang="nl">Successfully deleted {0} library.</Value>
+    </Entry>
+    <Entry>
+        <Key>No results found</Key>
+        <Value lang="nl">No results found</Value>
+    </Entry>
+    <Entry>
+        <Key>User already exists</Key>
+        <Value lang="nl">User already exists</Value>
+    </Entry>
+    <Entry>
+        <Key>User updated</Key>
+        <Value lang="nl">User updated</Value>
+    </Entry>
+    <Entry>
+        <Key>Rescanning all specials.</Key>
+        <Value lang="nl">Rescanning all specials.</Value>
+    </Entry>
+    <Entry>
+        <Key>Rescanning {0} for files</Key>
+        <Value lang="nl">Rescanning {0} for files</Value>
+    </Entry>
+    <Entry>
+        <Key>Item removed</Key>
+        <Value lang="nl">Item removed</Value>
+    </Entry>
+    <Entry>
+        <Key>Successfully updated {0} special.</Key>
+        <Value lang="nl">Successfully updated {0} special.</Value>
+    </Entry>
+    <Entry>
+        <Key>Unknown property Audio</Key>
+        <Value lang="nl">Unknown property Audio</Value>
+    </Entry>
+    <Entry>
+        <Key>Unknown property AudioTrack</Key>
+        <Value lang="nl">Unknown property AudioTrack</Value>
+    </Entry>
+    <Entry>
+        <Key>SQLite Error 1: 'ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint'.</Key>
+        <Value lang="nl">SQLite Error 1: 'ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint'.
+        </Value>
+    </Entry>
+    <Entry>
+        <Key>SQLite Error 19: 'NOT NULL constraint failed: Metadata.AudioTrackId'.</Key>
+        <Value lang="nl">SQLite Error 19: 'NOT NULL constraint failed: Metadata.AudioTrackId'.</Value>
+    </Entry>
+    <Entry>
+        <Key>Unknown property Chapters</Key>
+        <Value lang="nl">Unknown property Chapters</Value>
+    </Entry>
+    <Entry>
+        <Key>Unknown property Fonts</Key>
+        <Value lang="nl">Unknown property Fonts</Value>
+    </Entry>
+    <Entry>
+        <Key>Unknown property FontsFile</Key>
+        <Value lang="nl">Unknown property FontsFile</Value>
+    </Entry>
+    <Entry>
+        <Key>Unknown property Previews</Key>
+        <Value lang="nl">Unknown property Previews</Value>
+    </Entry>
+    <Entry>
+        <Key>Unknown property Subtitles</Key>
+        <Value lang="nl">Unknown property Subtitles</Value>
+    </Entry>
+    <Entry>
+        <Key>Unknown property Video</Key>
+        <Value lang="nl">Unknown property Video</Value>
+    </Entry>
+    <Entry>
+        <Key>updater must be an Initialiser of the TEntity type (Parameter 'updater')</Key>
+        <Value lang="nl">updater must be an Initialiser of the TEntity type (Parameter 'updater')</Value>
+    </Entry>
+    <Entry>
+        <Key>Could not find file
+            '\\192.168.2.120\mnt\vault\Media\Anime\Anime\No.Game.No.Life.(2014)\No.Game.No.Life.S00E01\No.Game.No.Life.S00E01.Special.1.Wild.Fancy.NoMercy.eng.full.ass'.
+        </Key>
+        <Value lang="nl">Could not find file
+            '\\192.168.2.120\mnt\vault\Media\Anime\Anime\No.Game.No.Life.(2014)\No.Game.No.Life.S00E01\No.Game.No.Life.S00E01.Special.1.Wild.Fancy.NoMercy.eng.full.ass'.
+        </Value>
+    </Entry>
+    <Entry>
+        <Key>Rescanning {0} library.</Key>
+        <Value lang="nl">Rescanning {0} library.</Value>
+    </Entry>
+    <Entry>
+        <Key>Successfully moved item {0}.</Key>
+        <Value lang="nl">Successfully moved item {0}.</Value>
+    </Entry>
+    <Entry>
+        <Key>Something went wrong moving the item: {0}</Key>
+        <Value lang="nl">Something went wrong moving the item: {0}</Value>
+    </Entry>
+    <Entry>
+        <Key>Added to library</Key>
+        <Value lang="nl">Added to library</Value>
+    </Entry>
+    <Entry>
+        <Key>Wallpaper set successfully</Key>
+        <Value lang="nl">Wallpaper set successfully</Value>
+    </Entry>
+    <Entry>
+        <Key>{1}</Key>
+        <Value lang="nl">{1}</Value>
+    </Entry>
+    <Entry>
+        <Key>Wallpaper not found</Key>
+        <Value lang="nl">Wallpaper not found</Value>
+    </Entry>
+    <Entry>
+        <Key>Could not find a part of the path
+            '\\192.168.2.120\mnt\vault\Media\Anime\Anime\By.the.Grace.of.the.Gods.(2020)\By.the.Grace.of.the.Gods.S02E02'.
+        </Key>
+        <Value lang="nl">Could not find a part of the path
+            '\\192.168.2.120\mnt\vault\Media\Anime\Anime\By.the.Grace.of.the.Gods.(2020)\By.the.Grace.of.the.Gods.S02E02'.
+        </Value>
+    </Entry>
+    <Entry>
+        <Key>Job not found</Key>
+        <Value lang="nl">Job not found</Value>
+    </Entry>
+    <Entry>
+        <Key>Priority updated</Key>
+        <Value lang="nl">Priority updated</Value>
+    </Entry>
+    <Entry>
+        <Key>User {0} created successfully</Key>
+        <Value lang="nl">User {0} created successfully</Value>
+    </Entry>
+    <Entry>
+        <Key>Movie not found</Key>
+        <Value lang="nl">Movie not found</Value>
+    </Entry>
+    <Entry>
+        <Key>{0}: {1}</Key>
+        <Value lang="nl">{0}: {1}</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view optical drives</Key>
+        <Value lang="nl">You do not have permission to view optical drives</Value>
+    </Entry>
 </I18N>

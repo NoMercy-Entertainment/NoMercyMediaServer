@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace NoMercy.Database.Migrations
 {
     /// <inheritdoc />
-    public partial class Test : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -73,6 +73,8 @@ namespace NoMercy.Database.Migrations
                     CustomName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Version = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     Ip = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
+                    VolumePercent = table.Column<int>(type: "INTEGER", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
@@ -133,7 +135,7 @@ namespace NoMercy.Database.Migrations
                     Task = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     EpisodeCount = table.Column<int>(type: "INTEGER", nullable: true),
                     Order = table.Column<int>(type: "INTEGER", nullable: true),
-                    CreditId = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true)
+                    CreditId = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -225,17 +227,6 @@ namespace NoMercy.Database.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Metadata",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Metadata", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "MusicGenres",
                 columns: table => new
                 {
@@ -315,7 +306,6 @@ namespace NoMercy.Database.Migrations
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     Backdrop = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Poster = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Logo = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Title = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
@@ -387,12 +377,13 @@ namespace NoMercy.Database.Migrations
                     Cover = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Date = table.Column<DateTime>(type: "TEXT", nullable: true),
                     Filename = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Duration = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Duration = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     Quality = table.Column<int>(type: "INTEGER", nullable: true),
                     Lyrics = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Folder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     HostFolder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    FolderId = table.Column<string>(type: "TEXT", nullable: true),
+                    FolderId = table.Column<string>(type: "TEXT", nullable: false),
+                    MetadataId = table.Column<int>(type: "INTEGER", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     ColorPalette = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
@@ -404,43 +395,6 @@ namespace NoMercy.Database.Migrations
                         name: "FK_Tracks_Folders_FolderId",
                         column: x => x.FolderId,
                         principalTable: "Folders",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Albums",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    Disambiguation = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Cover = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Country = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Year = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tracks = table.Column<int>(type: "INTEGER", nullable: false),
-                    Folder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    HostFolder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    LibraryId = table.Column<string>(type: "TEXT", nullable: true),
-                    FolderId = table.Column<string>(type: "TEXT", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    ColorPalette = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Albums", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Albums_Folders_FolderId",
-                        column: x => x.FolderId,
-                        principalTable: "Folders",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Albums_Libraries_LibraryId",
-                        column: x => x.LibraryId,
-                        principalTable: "Libraries",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -458,7 +412,7 @@ namespace NoMercy.Database.Migrations
                     Country = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Year = table.Column<int>(type: "INTEGER", nullable: true),
                     Folder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    HostFolder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    HostFolder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     LibraryId = table.Column<string>(type: "TEXT", nullable: true),
                     FolderId = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
@@ -634,7 +588,7 @@ namespace NoMercy.Database.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false),
                     Title = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    TitleSort = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    TitleSort = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     HaveEpisodes = table.Column<int>(type: "INTEGER", nullable: true),
                     Folder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Backdrop = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -778,7 +732,7 @@ namespace NoMercy.Database.Migrations
                 name: "Playlists",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     Description = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Cover = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -843,6 +797,39 @@ namespace NoMercy.Database.Migrations
                     table.ForeignKey(
                         name: "FK_LibraryTrack_Tracks_TrackId",
                         column: x => x.TrackId,
+                        principalTable: "Tracks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Metadata",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Type = table.Column<int>(type: "INTEGER", nullable: false),
+                    Duration = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    Filename = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    Folder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    HostFolder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    FolderSize = table.Column<long>(type: "INTEGER", nullable: false),
+                    AudioTrackId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    Video = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Audio = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Subtitles = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Previews = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Fonts = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    FontsFile = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    ChaptersFile = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Metadata", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Metadata_Tracks_AudioTrackId",
+                        column: x => x.AudioTrackId,
                         principalTable: "Tracks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -920,126 +907,6 @@ namespace NoMercy.Database.Migrations
                         name: "FK_TrackUser_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AlbumLibrary",
-                columns: table => new
-                {
-                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    LibraryId = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AlbumLibrary", x => new { x.AlbumId, x.LibraryId });
-                    table.ForeignKey(
-                        name: "FK_AlbumLibrary_Albums_AlbumId",
-                        column: x => x.AlbumId,
-                        principalTable: "Albums",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AlbumLibrary_Libraries_LibraryId",
-                        column: x => x.LibraryId,
-                        principalTable: "Libraries",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AlbumMusicGenre",
-                columns: table => new
-                {
-                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MusicGenreId = table.Column<Guid>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AlbumMusicGenre", x => new { x.AlbumId, x.MusicGenreId });
-                    table.ForeignKey(
-                        name: "FK_AlbumMusicGenre_Albums_AlbumId",
-                        column: x => x.AlbumId,
-                        principalTable: "Albums",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AlbumMusicGenre_MusicGenres_MusicGenreId",
-                        column: x => x.MusicGenreId,
-                        principalTable: "MusicGenres",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AlbumTrack",
-                columns: table => new
-                {
-                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TrackId = table.Column<Guid>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AlbumTrack", x => new { x.AlbumId, x.TrackId });
-                    table.ForeignKey(
-                        name: "FK_AlbumTrack_Albums_AlbumId",
-                        column: x => x.AlbumId,
-                        principalTable: "Albums",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AlbumTrack_Tracks_TrackId",
-                        column: x => x.TrackId,
-                        principalTable: "Tracks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AlbumUser",
-                columns: table => new
-                {
-                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AlbumUser", x => new { x.AlbumId, x.UserId });
-                    table.ForeignKey(
-                        name: "FK_AlbumUser_Albums_AlbumId",
-                        column: x => x.AlbumId,
-                        principalTable: "Albums",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AlbumUser_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AlbumArtist",
-                columns: table => new
-                {
-                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ArtistId = table.Column<Guid>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AlbumArtist", x => new { x.AlbumId, x.ArtistId });
-                    table.ForeignKey(
-                        name: "FK_AlbumArtist_Albums_AlbumId",
-                        column: x => x.AlbumId,
-                        principalTable: "Albums",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AlbumArtist_Artists_ArtistId",
-                        column: x => x.ArtistId,
-                        principalTable: "Artists",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1328,30 +1195,6 @@ namespace NoMercy.Database.Migrations
                         name: "FK_MovieUser_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AlbumReleaseGroup",
-                columns: table => new
-                {
-                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ReleaseGroupId = table.Column<Guid>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AlbumReleaseGroup", x => new { x.AlbumId, x.ReleaseGroupId });
-                    table.ForeignKey(
-                        name: "FK_AlbumReleaseGroup_Albums_AlbumId",
-                        column: x => x.AlbumId,
-                        principalTable: "Albums",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AlbumReleaseGroup_ReleaseGroups_ReleaseGroupId",
-                        column: x => x.ReleaseGroupId,
-                        principalTable: "ReleaseGroups",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1706,7 +1549,7 @@ namespace NoMercy.Database.Migrations
                 name: "PlaylistTrack",
                 columns: table => new
                 {
-                    PlaylistId = table.Column<string>(type: "TEXT", nullable: false),
+                    PlaylistId = table.Column<Guid>(type: "TEXT", nullable: false),
                     TrackId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -1722,6 +1565,50 @@ namespace NoMercy.Database.Migrations
                         name: "FK_PlaylistTrack_Tracks_TrackId",
                         column: x => x.TrackId,
                         principalTable: "Tracks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Albums",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    Disambiguation = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Cover = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Country = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Year = table.Column<int>(type: "INTEGER", nullable: false),
+                    Tracks = table.Column<int>(type: "INTEGER", nullable: false),
+                    Folder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    HostFolder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
+                    LibraryId = table.Column<string>(type: "TEXT", nullable: false),
+                    FolderId = table.Column<string>(type: "TEXT", nullable: false),
+                    MetadataId = table.Column<string>(type: "TEXT", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    ColorPalette = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Albums", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Albums_Folders_FolderId",
+                        column: x => x.FolderId,
+                        principalTable: "Folders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Albums_Libraries_LibraryId",
+                        column: x => x.LibraryId,
+                        principalTable: "Libraries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Albums_Metadata_MetadataId",
+                        column: x => x.MetadataId,
+                        principalTable: "Metadata",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1759,6 +1646,150 @@ namespace NoMercy.Database.Migrations
                         name: "FK_Episodes_Tvs_TvId",
                         column: x => x.TvId,
                         principalTable: "Tvs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AlbumArtist",
+                columns: table => new
+                {
+                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ArtistId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AlbumArtist", x => new { x.AlbumId, x.ArtistId });
+                    table.ForeignKey(
+                        name: "FK_AlbumArtist_Albums_AlbumId",
+                        column: x => x.AlbumId,
+                        principalTable: "Albums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AlbumArtist_Artists_ArtistId",
+                        column: x => x.ArtistId,
+                        principalTable: "Artists",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AlbumLibrary",
+                columns: table => new
+                {
+                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    LibraryId = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AlbumLibrary", x => new { x.AlbumId, x.LibraryId });
+                    table.ForeignKey(
+                        name: "FK_AlbumLibrary_Albums_AlbumId",
+                        column: x => x.AlbumId,
+                        principalTable: "Albums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AlbumLibrary_Libraries_LibraryId",
+                        column: x => x.LibraryId,
+                        principalTable: "Libraries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AlbumMusicGenre",
+                columns: table => new
+                {
+                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MusicGenreId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AlbumMusicGenre", x => new { x.AlbumId, x.MusicGenreId });
+                    table.ForeignKey(
+                        name: "FK_AlbumMusicGenre_Albums_AlbumId",
+                        column: x => x.AlbumId,
+                        principalTable: "Albums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AlbumMusicGenre_MusicGenres_MusicGenreId",
+                        column: x => x.MusicGenreId,
+                        principalTable: "MusicGenres",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AlbumReleaseGroup",
+                columns: table => new
+                {
+                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ReleaseGroupId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AlbumReleaseGroup", x => new { x.AlbumId, x.ReleaseGroupId });
+                    table.ForeignKey(
+                        name: "FK_AlbumReleaseGroup_Albums_AlbumId",
+                        column: x => x.AlbumId,
+                        principalTable: "Albums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AlbumReleaseGroup_ReleaseGroups_ReleaseGroupId",
+                        column: x => x.ReleaseGroupId,
+                        principalTable: "ReleaseGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AlbumTrack",
+                columns: table => new
+                {
+                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    TrackId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AlbumTrack", x => new { x.AlbumId, x.TrackId });
+                    table.ForeignKey(
+                        name: "FK_AlbumTrack_Albums_AlbumId",
+                        column: x => x.AlbumId,
+                        principalTable: "Albums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AlbumTrack_Tracks_TrackId",
+                        column: x => x.TrackId,
+                        principalTable: "Tracks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AlbumUser",
+                columns: table => new
+                {
+                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AlbumUser", x => new { x.AlbumId, x.UserId });
+                    table.ForeignKey(
+                        name: "FK_AlbumUser_Albums_AlbumId",
+                        column: x => x.AlbumId,
+                        principalTable: "Albums",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AlbumUser_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1814,24 +1845,6 @@ namespace NoMercy.Database.Migrations
                         name: "FK_Crews_Tvs_TvId",
                         column: x => x.TvId,
                         principalTable: "Tvs",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Files",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    EpisodeId = table.Column<int>(type: "INTEGER", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Files", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Files_Episodes_EpisodeId",
-                        column: x => x.EpisodeId,
-                        principalTable: "Episodes",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -2006,6 +2019,7 @@ namespace NoMercy.Database.Migrations
                     Chapters = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     EpisodeId = table.Column<int>(type: "INTEGER", nullable: true),
                     MovieId = table.Column<int>(type: "INTEGER", nullable: true),
+                    MetadataId = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     Track = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
@@ -2020,55 +2034,13 @@ namespace NoMercy.Database.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
+                        name: "FK_VideoFiles_Metadata_MetadataId",
+                        column: x => x.MetadataId,
+                        principalTable: "Metadata",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
                         name: "FK_VideoFiles_Movies_MovieId",
-                        column: x => x.MovieId,
-                        principalTable: "Movies",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "FileLibrary",
-                columns: table => new
-                {
-                    FileId = table.Column<string>(type: "TEXT", nullable: false),
-                    LibraryId = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_FileLibrary", x => new { x.FileId, x.LibraryId });
-                    table.ForeignKey(
-                        name: "FK_FileLibrary_Files_FileId",
-                        column: x => x.FileId,
-                        principalTable: "Files",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_FileLibrary_Libraries_LibraryId",
-                        column: x => x.LibraryId,
-                        principalTable: "Libraries",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "FileMovie",
-                columns: table => new
-                {
-                    FileId = table.Column<string>(type: "TEXT", nullable: false),
-                    MovieId = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_FileMovie", x => new { x.FileId, x.MovieId });
-                    table.ForeignKey(
-                        name: "FK_FileMovie_Files_FileId",
-                        column: x => x.FileId,
-                        principalTable: "Files",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_FileMovie_Movies_MovieId",
                         column: x => x.MovieId,
                         principalTable: "Movies",
                         principalColumn: "Id",
@@ -2177,7 +2149,7 @@ namespace NoMercy.Database.Migrations
                     TvId = table.Column<int>(type: "INTEGER", nullable: true),
                     CollectionId = table.Column<int>(type: "INTEGER", nullable: true),
                     SpecialId = table.Column<string>(type: "TEXT", nullable: true),
-                    VideoFileId = table.Column<string>(type: "TEXT", nullable: true),
+                    VideoFileId = table.Column<string>(type: "TEXT", nullable: false),
                     SpecialItemId = table.Column<int>(type: "INTEGER", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
@@ -2291,7 +2263,7 @@ namespace NoMercy.Database.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     AspectRatio = table.Column<double>(type: "REAL", nullable: false),
-                    FilePath = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    FilePath = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Height = table.Column<int>(type: "INTEGER", nullable: true),
                     Iso6391 = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -2450,6 +2422,21 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Albums_MetadataId",
+                table: "Albums",
+                column: "MetadataId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Albums_Name",
+                table: "Albums",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Albums_Year",
+                table: "Albums",
+                column: "Year");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_AlbumTrack_AlbumId",
                 table: "AlbumTrack",
                 column: "AlbumId");
@@ -2522,6 +2509,11 @@ namespace NoMercy.Database.Migrations
                 column: "ReleaseGroupId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Artists_Country",
+                table: "Artists",
+                column: "Country");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Artists_FolderId",
                 table: "Artists",
                 column: "FolderId");
@@ -2530,6 +2522,16 @@ namespace NoMercy.Database.Migrations
                 name: "IX_Artists_LibraryId",
                 table: "Artists",
                 column: "LibraryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Artists_Name",
+                table: "Artists",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Artists_Year",
+                table: "Artists",
+                column: "Year");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ArtistTrack_ArtistId",
@@ -2550,6 +2552,11 @@ namespace NoMercy.Database.Migrations
                 name: "IX_ArtistUser_UserId",
                 table: "ArtistUser",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Casts_CreditId",
+                table: "Casts",
+                column: "CreditId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Casts_CreditId_EpisodeId_RoleId",
@@ -2622,6 +2629,16 @@ namespace NoMercy.Database.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Certifications_Order",
+                table: "Certifications",
+                column: "Order");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Certifications_Rating",
+                table: "Certifications",
+                column: "Rating");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CertificationTv_CertificationId",
                 table: "CertificationTv",
                 column: "CertificationId");
@@ -2657,6 +2674,16 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Collections_Title",
+                table: "Collections",
+                column: "Title");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Collections_TitleSort",
+                table: "Collections",
+                column: "TitleSort");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CollectionUser_CollectionId",
                 table: "CollectionUser",
                 column: "CollectionId");
@@ -2673,10 +2700,20 @@ namespace NoMercy.Database.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Countries_EnglishName",
+                table: "Countries",
+                column: "EnglishName");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Countries_Iso31661",
                 table: "Countries",
                 column: "Iso31661",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Countries_NativeName",
+                table: "Countries",
+                column: "NativeName");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Creators_TvId",
@@ -2759,39 +2796,44 @@ namespace NoMercy.Database.Migrations
                 column: "FolderId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Episodes_AirDate",
+                table: "Episodes",
+                column: "AirDate");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Episodes_EpisodeNumber",
+                table: "Episodes",
+                column: "EpisodeNumber");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Episodes_ImdbId",
+                table: "Episodes",
+                column: "ImdbId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Episodes_SeasonId",
                 table: "Episodes",
                 column: "SeasonId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Episodes_SeasonNumber",
+                table: "Episodes",
+                column: "SeasonNumber");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Episodes_Title",
+                table: "Episodes",
+                column: "Title");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Episodes_TvdbId",
+                table: "Episodes",
+                column: "TvdbId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Episodes_TvId",
                 table: "Episodes",
                 column: "TvId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_FileLibrary_FileId",
-                table: "FileLibrary",
-                column: "FileId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_FileLibrary_LibraryId",
-                table: "FileLibrary",
-                column: "LibraryId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_FileMovie_FileId",
-                table: "FileMovie",
-                column: "FileId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_FileMovie_MovieId",
-                table: "FileMovie",
-                column: "MovieId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Files_EpisodeId",
-                table: "Files",
-                column: "EpisodeId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_FolderLibrary_FolderId",
@@ -2818,6 +2860,11 @@ namespace NoMercy.Database.Migrations
                 name: "IX_GenreMovie_MovieId",
                 table: "GenreMovie",
                 column: "MovieId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Genres_Name",
+                table: "Genres",
+                column: "Name");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GenreTv_GenreId",
@@ -3003,6 +3050,11 @@ namespace NoMercy.Database.Migrations
                 column: "MovieId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Keywords_Name",
+                table: "Keywords",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_KeywordTv_KeywordId",
                 table: "KeywordTv",
                 column: "KeywordId");
@@ -3023,16 +3075,41 @@ namespace NoMercy.Database.Migrations
                 column: "LibraryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Languages_EnglishName",
+                table: "Languages",
+                column: "EnglishName");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Languages_Iso6391",
                 table: "Languages",
                 column: "Iso6391",
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Languages_Name",
+                table: "Languages",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Libraries_Id",
                 table: "Libraries",
                 column: "Id",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Libraries_Order",
+                table: "Libraries",
+                column: "Order");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Libraries_Title",
+                table: "Libraries",
+                column: "Title");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Libraries_Type",
+                table: "Libraries",
+                column: "Type");
 
             migrationBuilder.CreateIndex(
                 name: "IX_LibraryMovie_LibraryId",
@@ -3087,6 +3164,11 @@ namespace NoMercy.Database.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Medias_Name",
+                table: "Medias",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Medias_PersonId_Src",
                 table: "Medias",
                 columns: new[] { "PersonId", "Src" },
@@ -3099,10 +3181,20 @@ namespace NoMercy.Database.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Medias_Site",
+                table: "Medias",
+                column: "Site");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Medias_TvId_Src",
                 table: "Medias",
                 columns: new[] { "TvId", "Src" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Medias_Type",
+                table: "Medias",
+                column: "Type");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Medias_VideoFileId_Src",
@@ -3111,9 +3203,46 @@ namespace NoMercy.Database.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Metadata_AudioTrackId",
+                table: "Metadata",
+                column: "AudioTrackId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Metadata_Filename_HostFolder",
+                table: "Metadata",
+                columns: new[] { "Filename", "HostFolder" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Metadata_Type",
+                table: "Metadata",
+                column: "Type");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Movies_ImdbId",
+                table: "Movies",
+                column: "ImdbId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Movies_LibraryId",
                 table: "Movies",
                 column: "LibraryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Movies_ReleaseDate",
+                table: "Movies",
+                column: "ReleaseDate");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Movies_Title",
+                table: "Movies",
+                column: "Title");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Movies_TitleSort",
+                table: "Movies",
+                column: "TitleSort");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MovieUser_MovieId",
@@ -3134,6 +3263,11 @@ namespace NoMercy.Database.Migrations
                 name: "IX_MusicGenreReleaseGroup_ReleaseGroupId",
                 table: "MusicGenreReleaseGroup",
                 column: "ReleaseGroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MusicGenres_Name",
+                table: "MusicGenres",
+                column: "Name");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MusicGenreTrack_GenreId",
@@ -3164,6 +3298,31 @@ namespace NoMercy.Database.Migrations
                 name: "IX_NotificationUser_UserId",
                 table: "NotificationUser",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_People_BirthDay",
+                table: "People",
+                column: "BirthDay");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_People_ImdbId",
+                table: "People",
+                column: "ImdbId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_People_Name",
+                table: "People",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_People_Popularity",
+                table: "People",
+                column: "Popularity");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_People_TitleSort",
+                table: "People",
+                column: "TitleSort");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Playlists_UserId",
@@ -3245,9 +3404,24 @@ namespace NoMercy.Database.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Seasons_AirDate",
+                table: "Seasons",
+                column: "AirDate");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Seasons_MovieId",
                 table: "Seasons",
                 column: "MovieId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Seasons_SeasonNumber",
+                table: "Seasons",
+                column: "SeasonNumber");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Seasons_Title",
+                table: "Seasons",
+                column: "Title");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Seasons_TvId",
@@ -3275,6 +3449,16 @@ namespace NoMercy.Database.Migrations
                 name: "IX_Similar_MovieToId",
                 table: "Similar",
                 column: "MovieToId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Similar_Title",
+                table: "Similar",
+                column: "Title");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Similar_TitleSort",
+                table: "Similar",
+                column: "TitleSort");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Similar_TvFromId",
@@ -3314,6 +3498,11 @@ namespace NoMercy.Database.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Tracks_DiscNumber",
+                table: "Tracks",
+                column: "DiscNumber");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Tracks_Filename",
                 table: "Tracks",
                 column: "Filename");
@@ -3327,6 +3516,16 @@ namespace NoMercy.Database.Migrations
                 name: "IX_Tracks_FolderId",
                 table: "Tracks",
                 column: "FolderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tracks_Name",
+                table: "Tracks",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tracks_TrackNumber",
+                table: "Tracks",
+                column: "TrackNumber");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TrackUser_TrackId",
@@ -3449,9 +3648,34 @@ namespace NoMercy.Database.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Tvs_FirstAirDate",
+                table: "Tvs",
+                column: "FirstAirDate");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tvs_ImdbId",
+                table: "Tvs",
+                column: "ImdbId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Tvs_LibraryId",
                 table: "Tvs",
                 column: "LibraryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tvs_Title",
+                table: "Tvs",
+                column: "Title");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tvs_TitleSort",
+                table: "Tvs",
+                column: "TitleSort");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tvs_TvdbId",
+                table: "Tvs",
+                column: "TvdbId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TvUser_TvId",
@@ -3505,6 +3729,37 @@ namespace NoMercy.Database.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Users_Allowed",
+                table: "Users",
+                column: "Allowed");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Email",
+                table: "Users",
+                column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Manage",
+                table: "Users",
+                column: "Manage");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Name",
+                table: "Users",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Owner",
+                table: "Users",
+                column: "Owner");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VideoFiles_Duration",
+                table: "VideoFiles",
+                column: "Duration");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_VideoFiles_EpisodeId",
                 table: "VideoFiles",
                 column: "EpisodeId");
@@ -3516,9 +3771,24 @@ namespace NoMercy.Database.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_VideoFiles_Folder",
+                table: "VideoFiles",
+                column: "Folder");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VideoFiles_MetadataId",
+                table: "VideoFiles",
+                column: "MetadataId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_VideoFiles_MovieId",
                 table: "VideoFiles",
                 column: "MovieId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VideoFiles_Quality",
+                table: "VideoFiles",
+                column: "Quality");
         }
 
         /// <inheritdoc />
@@ -3591,12 +3861,6 @@ namespace NoMercy.Database.Migrations
                 name: "EncoderProfileFolder");
 
             migrationBuilder.DropTable(
-                name: "FileLibrary");
-
-            migrationBuilder.DropTable(
-                name: "FileMovie");
-
-            migrationBuilder.DropTable(
                 name: "FolderLibrary");
 
             migrationBuilder.DropTable(
@@ -3640,9 +3904,6 @@ namespace NoMercy.Database.Migrations
 
             migrationBuilder.DropTable(
                 name: "Messages");
-
-            migrationBuilder.DropTable(
-                name: "Metadata");
 
             migrationBuilder.DropTable(
                 name: "MovieUser");
@@ -3699,9 +3960,6 @@ namespace NoMercy.Database.Migrations
                 name: "EncoderProfiles");
 
             migrationBuilder.DropTable(
-                name: "Files");
-
-            migrationBuilder.DropTable(
                 name: "Casts");
 
             migrationBuilder.DropTable(
@@ -3724,9 +3982,6 @@ namespace NoMercy.Database.Migrations
 
             migrationBuilder.DropTable(
                 name: "Providers");
-
-            migrationBuilder.DropTable(
-                name: "Tracks");
 
             migrationBuilder.DropTable(
                 name: "Albums");
@@ -3759,19 +4014,25 @@ namespace NoMercy.Database.Migrations
                 name: "Users");
 
             migrationBuilder.DropTable(
-                name: "Folders");
-
-            migrationBuilder.DropTable(
                 name: "Specials");
 
             migrationBuilder.DropTable(
+                name: "Metadata");
+
+            migrationBuilder.DropTable(
                 name: "GuestStars");
+
+            migrationBuilder.DropTable(
+                name: "Tracks");
 
             migrationBuilder.DropTable(
                 name: "Episodes");
 
             migrationBuilder.DropTable(
                 name: "People");
+
+            migrationBuilder.DropTable(
+                name: "Folders");
 
             migrationBuilder.DropTable(
                 name: "Seasons");

@@ -1,13 +1,17 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
 
-
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
+[Index(nameof(Title))]
+[Index(nameof(TitleSort))]
+[Index(nameof(LibraryId))]
+[Index(nameof(ImdbId))]
+[Index(nameof(TvdbId))]
+[Index(nameof(FirstAirDate))]
 public class Tv : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -15,7 +19,7 @@ public class Tv : ColorPaletteTimeStamps
     public int Id { get; set; }
 
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("titleSort")] public string? TitleSort { get; set; } = string.Empty;
+    [JsonProperty("titleSort")] public string TitleSort { get; set; } = string.Empty;
     [JsonProperty("airDate")] public int? HaveEpisodes { get; set; }
     [JsonProperty("folder")] public string? Folder { get; set; }
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }

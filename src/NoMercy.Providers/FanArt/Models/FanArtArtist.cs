@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.FanArt.Models;
+
 public class FanArtArtist
 {
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;

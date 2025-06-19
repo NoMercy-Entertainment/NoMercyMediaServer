@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -17,7 +16,7 @@ public class ActivityLog : Timestamps
 
     [JsonProperty("device_id")] public Ulid DeviceId { get; set; }
     public Device Device { get; set; } = null!;
- 
+
     [JsonProperty("user_id")] public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 }

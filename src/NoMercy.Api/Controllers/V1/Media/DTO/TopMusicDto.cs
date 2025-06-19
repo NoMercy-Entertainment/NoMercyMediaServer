@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record TopMusicDto
 {
     [JsonProperty("id")] public string Id { get; set; } = string.Empty;

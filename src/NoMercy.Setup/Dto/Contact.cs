@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Setup.Dto;
+
 public class Contact
 {
     [JsonProperty("homepage")] public string Homepage { get; set; } = string.Empty;

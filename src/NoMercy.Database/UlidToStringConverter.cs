@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace NoMercy.Database;
+
 public class UlidToStringConverter : ValueConverter<Ulid, string>
 {
     private static readonly ConverterMappingHints DefaultHints = new(26);

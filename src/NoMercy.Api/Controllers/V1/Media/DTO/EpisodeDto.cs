@@ -6,6 +6,7 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Episode;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record EpisodeDto
 {
     [JsonProperty("id")] public long Id { get; set; }
@@ -38,7 +39,8 @@ public record EpisodeDto
             : episode.Overview;
         EpisodeNumber = episode.EpisodeNumber;
         SeasonNumber = episode.SeasonNumber;
-        Link = new($"/tv/{episode.TvId}/watch?season={episode.SeasonNumber}&episode={episode.EpisodeNumber}", UriKind.Relative);
+        Link = new($"/tv/{episode.TvId}/watch?season={episode.SeasonNumber}&episode={episode.EpisodeNumber}",
+            UriKind.Relative);
         AirDate = episode.AirDate;
         Still = episode.Still;
         ColorPalette = episode.ColorPalette;

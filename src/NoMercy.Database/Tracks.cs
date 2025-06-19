@@ -3,7 +3,8 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace NoMercy.Database;
-public class VideoTracks: Timestamps
+
+public class VideoTracks : Timestamps
 {
     [Column("Track")]
     [StringLength(1024)]

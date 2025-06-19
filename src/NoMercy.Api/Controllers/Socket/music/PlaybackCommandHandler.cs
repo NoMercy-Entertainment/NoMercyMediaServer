@@ -5,7 +5,7 @@ namespace NoMercy.Api.Controllers.Socket.music;
 public class PlaybackCommandHandler(PlaybackService playbackService)
 {
     private readonly string[] _repeatStates = ["off", "one", "all"];
-    
+
     public void HandleCommand(User user, string command, object? data, PlayerState state)
     {
         switch (command.ToLower())
@@ -45,17 +45,19 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
         state.PlayState = true;
         playbackService.StartPlaybackTimer(user);
     }
+
     private void HandlePause(User user, PlayerState state)
     {
         state.PlayState = false;
         playbackService.RemoveTimer(user.Id);
     }
+
     private void HandleSeek(PlayerState state, object? data)
     {
         int seekTime = int.Parse(data?.ToString() ?? "0") * 1000;
         state.Time = seekTime;
     }
-    
+
     private void HandleNext(User user, PlayerState state)
     {
         if (state.CurrentItem == null) return;
@@ -79,7 +81,7 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
 
         playbackService.StartPlaybackTimer(user);
     }
-    
+
     private void HandlePlaylistCompletion(User user, PlayerState state)
     {
         switch (state.Repeat)
@@ -108,6 +110,7 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
                     state.Time = 0;
                     state.CurrentItem = null;
                 }
+
                 break;
             default:
                 // If repeat is off, stop playback
@@ -117,7 +120,7 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
                 break;
         }
     }
-    
+
     private void HandlePrevious(User user, PlayerState state)
     {
         if (state.CurrentItem == null) return;
@@ -151,12 +154,13 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
 
         playbackService.StartPlaybackTimer(user);
     }
-    
+
     private void HandleRepeat(PlayerState state)
     {
         int currentIndex = Array.IndexOf(_repeatStates, state.Repeat);
         state.Repeat = _repeatStates[(currentIndex + 1) % _repeatStates.Length];
     }
+
     private void HandleStop(PlayerState state)
     {
         state.DeviceId = null;
@@ -171,7 +175,7 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
             {
                 Previous = true,
                 Resuming = true,
-                Pausing = true,
+                Pausing = true
             }
         };
     }

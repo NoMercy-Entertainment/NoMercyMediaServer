@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Setup.Dto;
+
 public class Data
 {
     [JsonProperty("state")] public string State { get; set; } = string.Empty;

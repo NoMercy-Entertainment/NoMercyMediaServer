@@ -2,15 +2,18 @@ using Newtonsoft.Json;
 using NoMercy.Providers.Helpers;
 
 namespace NoMercy.Providers.CoverArt.Models;
+
 public class CoverArtThumbnails
 {
-    private Uri __250 { get; set;} = null!;
-    private Uri __500 { get; set;} = null!;
-    private Uri __1200 { get; set;} = null!;
+    private Uri __250 { get; set; } = null!;
+    private Uri __500 { get; set; } = null!;
+    private Uri __1200 { get; set; } = null!;
+
     // ReSharper disable once InconsistentNaming
-    private Uri __large { get; set;} = null!;
+    private Uri __large { get; set; } = null!;
+
     // ReSharper disable once InconsistentNaming
-    private Uri __small { get; set;} = null!;
+    private Uri __small { get; set; } = null!;
 
     [JsonProperty("250")]
     public Uri _250

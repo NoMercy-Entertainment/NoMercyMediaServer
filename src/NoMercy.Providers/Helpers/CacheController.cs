@@ -24,12 +24,12 @@ public static class CacheController
 
     public static bool Read<T>(string url, out T? value, bool xml = false) where T : class?
     {
-        if (Config.IsDev == false) 
+        if (Config.IsDev == false)
         {
             value = default;
             return false;
         }
-        
+
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
         lock (fullname)
         {
@@ -79,7 +79,7 @@ public static class CacheController
     public static async Task Write(string url, string data, int retry = 0)
     {
         if (Config.IsDev == false) return;
-        
+
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
 
         try
@@ -97,5 +97,4 @@ public static class CacheController
             await Write(url, data, retry + 1);
         }
     }
-    
 }

@@ -1,6 +1,4 @@
-﻿
-
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -14,6 +12,7 @@ public class AlternativeTitle
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [JsonProperty("id")]
     public int Id { get; set; }
+
     [JsonProperty("iso_3166_1")] public string? Iso31661 { get; set; }
     [JsonProperty("title")] public string? Title { get; set; }
 

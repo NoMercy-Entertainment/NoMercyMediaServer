@@ -22,13 +22,15 @@ public class ConnectionHub : Hub
         // Logger.Socket($"Connected to {Endpoint}");
     }
 
-    public string GetCountryFromContext() =>
-        _httpContextAccessor.HttpContext?.Request.Headers["country"].FirstOrDefault() ?? "US";
-    
+    public string GetCountryFromContext()
+    {
+        return _httpContextAccessor.HttpContext?.Request.Headers["country"].FirstOrDefault() ?? "US";
+    }
+
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
-        
+
         User? user = Context.User.User();
         if (user is null) return;
 
@@ -103,7 +105,7 @@ public class ConnectionHub : Hub
                 Type = di.Type,
                 Version = di.Version,
                 UpdatedAt = di.UpdatedAt,
-                VolumePercent = di.VolumePercent,
+                VolumePercent = di.VolumePercent
             })
             .RunAsync();
 
@@ -112,7 +114,7 @@ public class ConnectionHub : Hub
         client.CustomName = device?.CustomName;
         client.VolumePercent = device?.VolumePercent ?? 0;
         client.IsActive = true;
-        
+
         if (device is not null)
         {
             await mediaContext.Devices
@@ -137,7 +139,7 @@ public class ConnectionHub : Hub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);
-        
+
         if (Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
         {
             await using MediaContext mediaContext = new();
@@ -148,7 +150,7 @@ public class ConnectionHub : Hub
                     .Where(x => x.DeviceId == device.DeviceId)
                     .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, false));
                 await mediaContext.SaveChangesAsync();
-                
+
                 await SaveActivityLog(mediaContext, new()
                 {
                     DeviceId = device.Id,
@@ -174,7 +176,7 @@ public class ConnectionHub : Hub
         catch (Exception)
         {
             if (count > 2) return; // 3 times
-            
+
             count += 1;
             await Task.Delay(1000);
             await SaveActivityLog(mediaContext, log, count);
@@ -201,7 +203,7 @@ public class ConnectionHub : Hub
                 Version = c.Version,
                 Id = c.Id,
                 CustomName = c.CustomName,
-                VolumePercent = c.VolumePercent,
+                VolumePercent = c.VolumePercent
             })
             .ToList();
     }

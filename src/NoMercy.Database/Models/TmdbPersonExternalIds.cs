@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models;
+
 public class TmdbPersonExternalIds
 {
     [JsonProperty("imdb_id")] public string? ImdbId { get; set; }

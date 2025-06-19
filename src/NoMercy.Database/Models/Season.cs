@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -7,6 +6,9 @@ namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(TvId))]
+[Index(nameof(Title))]
+[Index(nameof(SeasonNumber))]
+[Index(nameof(AirDate))]
 public class Season : ColorPalettes
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -25,7 +27,7 @@ public class Season : ColorPalettes
 
     [JsonProperty("episodes")] public ICollection<Episode> Episodes { get; set; } = [];
     [JsonProperty("casts")] public ICollection<Cast> Cast { get; set; } = [];
-    [JsonProperty("crews")] public ICollection<Crew> Crew { get; set; } = []; 
+    [JsonProperty("crews")] public ICollection<Crew> Crew { get; set; } = [];
     [JsonProperty("medias")] public ICollection<Media> Medias { get; set; } = [];
     [JsonProperty("images")] public ICollection<Image> Images { get; set; } = [];
     [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; } = [];

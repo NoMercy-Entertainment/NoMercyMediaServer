@@ -17,15 +17,12 @@ public class TrayIcon
         string resourceName = "NoMercy.Setup.Assets.icon.ico";
 
         using Stream? stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream == null)
-        {
-            throw new FileNotFoundException("Icon resource not found.");
-        }
+        if (stream == null) throw new FileNotFoundException("Icon resource not found.");
         return new(stream);
     }
-    
+
     private static readonly Icon Icon = LoadIcon();
-    
+
     private static Process Process { get; set; } = new()
     {
         StartInfo =
@@ -58,13 +55,13 @@ public class TrayIcon
                 new PopupMenuItem("Shutdown", (_, _) => Shutdown())
             }
         };
-        
+
         if (_trayIcon.ContextMenu?.Items.ElementAt(1) is not null)
         {
             _trayIcon.ContextMenu.Items.ElementAt(0).Visible = true;
             _trayIcon.ContextMenu.Items.ElementAt(1).Visible = false;
         }
-        
+
         if (_trayIcon.ContextMenu?.Items.ElementAt(3) is not null)
         {
             _trayIcon.ContextMenu.Items.ElementAt(2).Visible = true;
@@ -73,11 +70,11 @@ public class TrayIcon
 
         _trayIcon.Create();
     }
-    
+
     private static void Pause()
     {
     }
-    
+
     private void ToggleConsole()
     {
         Start.VsConsoleWindow(Start.ConsoleVisible == 1 ? 0 : 1);
@@ -93,7 +90,7 @@ public class TrayIcon
             _trayIcon.ContextMenu.Items.ElementAt(1).Visible = false;
         }
     }
-    
+
     private void ToggleApp()
     {
         if (Start.AppProcessStarted == 1)
@@ -102,7 +99,7 @@ public class TrayIcon
             if (_trayIcon.ContextMenu?.Items.ElementAt(3) is null) return;
             _trayIcon.ContextMenu.Items.ElementAt(2).Visible = true;
             _trayIcon.ContextMenu.Items.ElementAt(3).Visible = false;
-            StopApp(); 
+            StopApp();
         }
         else
         {
@@ -134,19 +131,19 @@ public class TrayIcon
 
         return Task.CompletedTask;
     }
-    
-    
+
+
     private void StartApp()
     {
         Process = new()
         {
             StartInfo =
             {
-                FileName = AppFiles.AppExePath,
+                FileName = AppFiles.AppExePath
             },
             EnableRaisingEvents = true
         };
-        
+
         Process.Exited += (_, _) =>
         {
             Start.AppProcessStarted = 0;
@@ -157,9 +154,9 @@ public class TrayIcon
 
         Process.Start();
     }
-    
+
     private void StopApp()
     {
-       Process.Kill(); 
+        Process.Kill();
     }
 }

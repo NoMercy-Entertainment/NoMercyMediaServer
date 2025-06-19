@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.Providers.TMDB.Models.Networks;
 
 namespace NoMercy.Providers.TMDB.Models.TV;
+
 public class TmdbEpisodeGroupsResult
 {
     [JsonProperty("description")] public string Description { get; set; } = string.Empty;

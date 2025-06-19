@@ -1,4 +1,3 @@
-
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -63,7 +62,8 @@ public class PluginController : BaseController
             return UnauthorizedResponse("You do not have permission to set credentials");
 
         UserPass? aniDb = CredentialManager.Credential(requestDto.Key);
-        CredentialManager.SetCredentials(requestDto.Key, requestDto.Username, requestDto.Password ?? aniDb?.Password ?? "",
+        CredentialManager.SetCredentials(requestDto.Key, requestDto.Username,
+            requestDto.Password ?? aniDb?.Password ?? "",
             requestDto.ApiKey);
 
         return Ok(new StatusResponseDto<string>

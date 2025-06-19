@@ -31,5 +31,7 @@ public class DeviceAuthResponse
     [JsonProperty("interval")] public int Interval { get; set; }
     [JsonProperty("user_code")] public string UserCode { get; set; } = string.Empty;
     [JsonProperty("verification_uri")] public string VerificationUri { get; set; } = string.Empty;
-    [JsonProperty("verification_uri_complete")] public string VerificationUriComplete { get; set; } = string.Empty;
+
+    [JsonProperty("verification_uri_complete")]
+    public string VerificationUriComplete { get; set; } = string.Empty;
 }

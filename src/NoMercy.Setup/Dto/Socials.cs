@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Setup.Dto;
+
 public class Socials
 {
     [JsonProperty("twitch")] public Uri? Twitch { get; set; }

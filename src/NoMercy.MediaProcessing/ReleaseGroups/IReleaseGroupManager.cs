@@ -5,5 +5,6 @@ namespace NoMercy.MediaProcessing.ReleaseGroups;
 
 public interface IReleaseGroupManager
 {
-    public Task Store(MusicBrainzReleaseGroup releaseGroup, Ulid id, CoverArtImageManagerManager.CoverPalette colorPalette);
+    public Task Store(MusicBrainzReleaseGroup releaseGroup, Ulid id,
+        CoverArtImageManagerManager.CoverPalette colorPalette);
 }

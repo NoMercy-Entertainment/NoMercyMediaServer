@@ -31,14 +31,14 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
     {
         return context.Folders
             .Include(folder => folder.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Library)
-                    .ThenInclude(f => f.FolderLibraries)
-                        .ThenInclude(f => f.Folder)
+            .ThenInclude(folderLibrary => folderLibrary.Library)
+            .ThenInclude(f => f.FolderLibraries)
+            .ThenInclude(f => f.Folder)
             .Include(folder => folder.EncoderProfileFolder)
-                .ThenInclude(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
+            .ThenInclude(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
             .FirstOrDefaultAsync(folder => folder.Id == folderId);
     }
-    
+
     public Task<Library?> GetLibraryByIdWithFolders(Ulid libraryId)
     {
         return context.Libraries

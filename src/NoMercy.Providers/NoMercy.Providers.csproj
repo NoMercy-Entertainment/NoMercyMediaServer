@@ -29,8 +29,8 @@
 
     <ItemGroup>
         <PackageReference Include="AcoustID.NET" Version="1.3.3"/>
-        <PackageReference Include="Castle.Core" Version="5.2.1" />
-        <PackageReference Include="ExtendedNumerics.BigRational" Version="3000.0.1.326" />
+        <PackageReference Include="Castle.Core" Version="5.2.1"/>
+        <PackageReference Include="ExtendedNumerics.BigRational" Version="3000.0.1.326"/>
         <PackageReference Include="MusixmatchClientLib" Version="1.1.9"/>
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
     </ItemGroup>
@@ -42,12 +42,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
+        <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
         <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
         <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj"/>
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
-        <ProjectReference Include="..\NoMercy.Queue\NoMercy.Queue.csproj" />
-        <ProjectReference Include="..\NoMercy.Setup\NoMercy.Setup.csproj" />
+        <ProjectReference Include="..\NoMercy.Queue\NoMercy.Queue.csproj"/>
+        <ProjectReference Include="..\NoMercy.Setup\NoMercy.Setup.csproj"/>
     </ItemGroup>
 
 </Project>

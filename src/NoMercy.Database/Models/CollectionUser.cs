@@ -1,5 +1,4 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models;
@@ -11,7 +10,7 @@ public class CollectionUser
 {
     [JsonProperty("collection_id")] public int CollectionId { get; set; }
     public Collection Collection { get; set; } = null!;
- 
+
     [JsonProperty("user_id")] public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 

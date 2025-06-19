@@ -11,7 +11,8 @@ public class MusixMatchRichSync
     [JsonProperty("richsync_length")] public int RichsyncLength;
     [JsonProperty("richsync_language")] public string RichsyncLanguage = string.Empty;
 
-    [JsonProperty("richsync_language_description")] public string RichsyncLanguageDescription = string.Empty;
+    [JsonProperty("richsync_language_description")]
+    public string RichsyncLanguageDescription = string.Empty;
 
     [JsonProperty("script_tracking_url")] public string ScriptTrackingUrl = string.Empty;
     [JsonProperty("updated_time")] public DateTime UpdatedTime;

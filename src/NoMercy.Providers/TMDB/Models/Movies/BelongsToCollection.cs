@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Movies;
+
 public class BelongsToCollection
 {
     [JsonProperty("id")] public int Id { get; set; }

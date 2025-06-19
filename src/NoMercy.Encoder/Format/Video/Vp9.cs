@@ -25,7 +25,7 @@ public class Vp9 : BaseVideo
     protected override CodecDto[] AvailableCodecs =>
     [
         VideoCodecs.Vp9,
-        VideoCodecs.Vp9Nvenc,
+        VideoCodecs.Vp9Nvenc
         // VideoCodecs.Vp9Qsv,
         // VideoCodecs.Vp9Amf,
         // VideoCodecs.Vp9Videotoolbox
@@ -53,7 +53,7 @@ public class Vp9 : BaseVideo
     public override string[] AvailableColorSpaces =>
     [
         ColorSpaces.Yuv420P, ColorSpaces.Yuv420P10Le,
-        ColorSpaces.Yuv422P, ColorSpaces.Yuv444P,
+        ColorSpaces.Yuv422P, ColorSpaces.Yuv444P
     ];
 
     public override string[] AvailableTune =>

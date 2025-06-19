@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.MediaProcessing.Files;
+
 public record Streams
 {
     [JsonProperty("video")] public IEnumerable<Video> Video { get; set; } = new List<Video>();

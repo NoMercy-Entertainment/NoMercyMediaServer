@@ -6,6 +6,7 @@ using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record RelatedDto
 {
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }

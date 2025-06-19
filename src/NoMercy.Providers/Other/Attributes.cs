@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.Other;
+
 public class Attributes
 {
     [JsonProperty("createdAt")] public DateTime CreatedAt { get; set; }

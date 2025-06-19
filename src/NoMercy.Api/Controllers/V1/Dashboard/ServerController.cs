@@ -26,7 +26,6 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Dithering;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
-
 using AppFiles = NoMercy.NmSystem.Information.AppFiles;
 using Config = NoMercy.NmSystem.Information.Config;
 using Configuration = NoMercy.Database.Models.Configuration;
@@ -41,7 +40,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/server", Order = 10)]
-public class ServerController(IHostApplicationLifetime appLifetime, MediaContext context, FileRepository fileRepository, MediaProcessing.Jobs.JobDispatcher jobDispatcher) : BaseController
+public class ServerController(
+    IHostApplicationLifetime appLifetime,
+    MediaContext context,
+    FileRepository fileRepository,
+    MediaProcessing.Jobs.JobDispatcher jobDispatcher) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -133,7 +136,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
         // ApplicationLifetime.StopApplication();
         return Content("Done");
     }
-    
+
     [HttpGet("update/check")]
     public IActionResult CheckForUpdate()
     {
@@ -174,9 +177,9 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add files");
-        
+
         Library? library = await context.Libraries.FirstOrDefaultAsync(x => x.Id == request.LibraryId);
-        
+
         if (library == null)
             return NotFoundResponse("Library not found");
 
@@ -193,16 +196,14 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
 
                 return Ok(request);
             }
-        
+
             foreach (AddFile file in request.Files)
-            {
                 jobDispatcher.DispatchJob<EncodeVideoJob>(
                     library.Id,
                     request.FolderId,
                     file.Id,
                     file.Path
                 );
-            }
 
             return Ok(request);
         }
@@ -219,7 +220,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view folders");
-        
+
         try
         {
             List<DirectoryTree> array = fileRepository.GetDirectoryTree(request.Folder);
@@ -229,7 +230,6 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
                 Status = "ok",
                 Data = array
             });
-
         }
         catch (Exception ex)
         {
@@ -249,7 +249,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
             return Problem(
                 title: "Unauthorized.",
                 detail: "You do not have permission to view files");
-        
+
         if (request.Type == "music")
         {
             List<FileItem> fileList = await FileRepository.GetMusicBrainzReleasesInDirectory(request.Folder);
@@ -267,7 +267,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
         else
         {
             List<FileItem> fileList = await fileRepository.GetFilesInDirectory(request.Folder, request.Type);
-            
+
             return Ok(new DataResponseDto<FileListResponseDto>
             {
                 Data = new()
@@ -389,7 +389,7 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
             StatusResponseDto<string>? data = JsonConvert.DeserializeObject<StatusResponseDto<string>>(response);
 
             if (data == null)
-                return UnprocessableEntity(new StatusResponseDto<string>()
+                return UnprocessableEntity(new StatusResponseDto<string>
                 {
                     Status = "error",
                     Message = "Server name could not be updated",
@@ -473,45 +473,43 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
 
         return BadRequestResponse($"{worker} worker count could not be set to {count}");
     }
-    
+
     [HttpGet]
     [Route("storage")]
     public IActionResult Storage()
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view server paths");
-        
+
         // StorageJob storageJob = new(StorageMonitor.Storage);
         // JobDispatcher.Dispatch(storageJob, "data", 1000);
-        
+
         return Ok(StorageMonitor.Storage);
     }
-    
+
     [HttpPost]
     [Route("wallpaper")]
     public async Task<IActionResult> SetWallpaper([FromBody] WallpaperRequest request)
     {
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to set wallpaper");
-        
+
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
             return BadRequestResponse("Wallpaper setting is only supported on Windows");
-        }
 
         await using MediaContext mediaContext = new();
         Image? wallpaper = await mediaContext.Images
             .FirstOrDefaultAsync(config => config.FilePath == request.Path);
-        
+
         if (wallpaper?.FilePath is null)
             return NotFoundResponse("Wallpaper not found");
 
         string path = Path.Combine(AppFiles.ImagesPath, "original", wallpaper.FilePath.Replace("/", ""));
-        
+
         string color = GetDominantColor(path);
-        #pragma warning disable CA1416
-            Wallpaper.SilentSet(path, request.Style, request.Color ?? color);
-        #pragma warning restore CA1416
+#pragma warning disable CA1416
+        Wallpaper.SilentSet(path, request.Style, request.Color ?? color);
+#pragma warning restore CA1416
 
         return Ok(new StatusResponseDto<string>
         {
@@ -523,29 +521,27 @@ public class ServerController(IHostApplicationLifetime appLifetime, MediaContext
     private static string GetDominantColor(string path)
     {
         using Image<Rgb24> image = SixLabors.ImageSharp.Image.Load<Rgb24>(path);
-        image.Mutate(
-            x => x
-                // Scale the image down preserving the aspect ratio. This will speed up quantization.
-                // We use nearest neighbor as it will be the fastest approach.
-                .Resize(new ResizeOptions()
+        image.Mutate(x => x
+            // Scale the image down preserving the aspect ratio. This will speed up quantization.
+            // We use nearest neighbor as it will be the fastest approach.
+            .Resize(new ResizeOptions
+            {
+                Sampler = KnownResamplers.NearestNeighbor,
+                Size = new(100, 0)
+            })
+            // Reduce the color palette to 1 color without dithering.
+            .Quantize(new OctreeQuantizer
+            {
+                Options =
                 {
-                    Sampler = KnownResamplers.NearestNeighbor,
-                    Size = new(100, 0)
-                })
-                // Reduce the color palette to 1 color without dithering.
-                .Quantize(new OctreeQuantizer()
-                {
-                    Options =
-                    {
-                        MaxColors = 1,
-                        Dither = new OrderedDither(1),
-                        DitherScale = 1
-                    }
-                }));
+                    MaxColors = 1,
+                    Dither = new OrderedDither(1),
+                    DitherScale = 1
+                }
+            }));
 
         Rgb24 dominant = image[0, 0];
 
         return dominant.ToHexString();
-
     }
 }

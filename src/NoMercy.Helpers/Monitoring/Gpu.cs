@@ -2,6 +2,7 @@ using LibreHardwareMonitor.Hardware;
 using Newtonsoft.Json;
 
 namespace NoMercy.Helpers.Monitoring;
+
 public class Gpu
 {
     [JsonProperty("d3d")] public double D3D { get; set; }

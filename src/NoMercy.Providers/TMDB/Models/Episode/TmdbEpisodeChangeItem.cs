@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Episode;
+
 public class TmdbEpisodeChangeItem
 {
     [JsonProperty("id")] public string Id { get; set; } = string.Empty;

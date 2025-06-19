@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class MusicBrainzLabel
 {
     [JsonProperty("aliases")] public Alias[] Aliases { get; set; } = [];

@@ -146,30 +146,29 @@ public class TasksController : BaseController
         List<EncodeVideoJob> encoderJobs = jobs
             .Select(job => job.Payload.FromJson<EncodeVideoJob>()!)
             .ToList();
-        
+
         List<Ulid> folderIds = encoderJobs.Select(j => j.FolderId).ToList();
-        
+
         // Load folders into memory first
         List<Folder> folders = await mediaContext.Folders
             .Where(f => folderIds.Contains(f.Id))
-            
             .Include(f => f.EncoderProfileFolder)
-                .ThenInclude(e => e.EncoderProfile)
+            .ThenInclude(e => e.EncoderProfile)
             .Include(f => f.FolderLibraries)
-                .ThenInclude(f => f.Library)
-                    .ThenInclude(f => f.LibraryTvs)
-                        .ThenInclude(libraryTv => libraryTv.Tv)
-                            .ThenInclude(tv => tv.Episodes)
+            .ThenInclude(f => f.Library)
+            .ThenInclude(f => f.LibraryTvs)
+            .ThenInclude(libraryTv => libraryTv.Tv)
+            .ThenInclude(tv => tv.Episodes)
             .Include(f => f.FolderLibraries)
-                .ThenInclude(f => f.Library)
-                    .ThenInclude(f => f.LibraryMovies)
-                        .ThenInclude(libraryMovie => libraryMovie.Movie)
+            .ThenInclude(f => f.Library)
+            .ThenInclude(f => f.LibraryMovies)
+            .ThenInclude(libraryMovie => libraryMovie.Movie)
             .Include(f => f.FolderLibraries)
-                .ThenInclude(f => f.Library)
-                    .ThenInclude(f => f.LibraryTracks)
-                        .ThenInclude(libraryTrack => libraryTrack.Track)
-                            .ThenInclude(track => track.AlbumTrack)
-                                .ThenInclude(albumTrack => albumTrack.Album)
+            .ThenInclude(f => f.Library)
+            .ThenInclude(f => f.LibraryTracks)
+            .ThenInclude(libraryTrack => libraryTrack.Track)
+            .ThenInclude(track => track.AlbumTrack)
+            .ThenInclude(albumTrack => albumTrack.Album)
             .ToListAsync();
 
         QueueJobDto[] queueJobs = encoderJobs
@@ -191,15 +190,13 @@ public class TasksController : BaseController
             .Where(j => j.Status == "running");
 
         foreach (EncodeVideoJob job in runningJobs)
-        {
             Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
             {
                 Id = job.Id,
                 Status = "running",
                 Title = GetTitle(folders, job),
-                Message = "Encoding video",
+                Message = "Encoding video"
             });
-        }
 
         return Ok(new DataResponseDto<QueueJobDto[]>
         {
@@ -218,13 +215,13 @@ public class TasksController : BaseController
             ?.Library.LibraryTvs.FirstOrDefault(m => m.Tv.Episodes.Any(e => e.Id == j.Id.ToInt()))?.Tv;
 
         Episode? episode = tv?.Episodes.FirstOrDefault(e => e.Id == j.Id.ToInt());
-        
+
         Track? track = folders.FirstOrDefault(f => f.Id == j.FolderId)
             ?.FolderLibraries.FirstOrDefault()
             ?.Library.LibraryTracks.FirstOrDefault(m => m.TrackId == j.Id.ToGuid())?.Track;
 
-        return movie?.CreateTitle() 
-               ?? episode?.CreateTitle() 
+        return movie?.CreateTitle()
+               ?? episode?.CreateTitle()
                ?? track?.CreateName()
                ?? string.Empty;
     }
@@ -237,17 +234,14 @@ public class TasksController : BaseController
             return UnauthorizedResponse("You do not have permission to clear encoder queue");
 
         await using QueueContext queueContext = new();
-        List<QueueJob> jobs = queueContext.QueueJobs
-            .ToList();
+        QueueJob? job = queueContext.QueueJobs
+            .FirstOrDefault(job => job.Id == id);
 
-        QueueJob? job = jobs
-            .FirstOrDefault(j => JsonConvert.DeserializeObject<EncodeVideoJob>(j.Payload)?.Id.ToInt() == id);
-        
         if (job is null)
             return NotFoundResponse("Job not found");
 
         queueContext.QueueJobs.Remove(job);
-        
+
         await queueContext.SaveChangesAsync();
 
         return Ok(new StatusResponseDto<string>
@@ -256,7 +250,7 @@ public class TasksController : BaseController
             Status = "success"
         });
     }
-    
+
     [HttpPatch]
     [Route("queue/{id:int}")]
     public async Task<IActionResult> UpdateTask(int id, [FromBody] PatchQueueItemDto request)
@@ -265,13 +259,13 @@ public class TasksController : BaseController
             return UnauthorizedResponse("You do not have permission to clear encoder queue");
 
         await using QueueContext queueContext = new();
-        
+
         QueueJob? job = queueContext.QueueJobs
             .FirstOrDefault(job => job.Id == id);
 
         if (job is null)
             return NotFoundResponse("Job not found");
-        
+
         job.Priority = request.Priority;
 
         await queueContext.SaveChangesAsync();
@@ -282,7 +276,7 @@ public class TasksController : BaseController
             Status = "success"
         });
     }
-    
+
     [HttpPost]
     [Route("failed/retry")]
     [Route("failed/retry/{id:long?}")]
@@ -303,8 +297,8 @@ public class TasksController : BaseController
 
         jobQueue.RetryFailedJobs(id);
 
-        string message = id.HasValue 
-            ? "Failed job has been queued for retry" 
+        string message = id.HasValue
+            ? "Failed job has been queued for retry"
             : "All failed jobs have been queued for retry";
 
         return Ok(new StatusResponseDto<string>
@@ -322,7 +316,7 @@ public class TasksController : BaseController
             return UnauthorizedResponse("You do not have permission to view failed jobs");
 
         await using QueueContext queueContext = new();
-    
+
         List<FailedJob> failedJobs = await queueContext.FailedJobs
             .OrderByDescending(j => j.FailedAt)
             .ToListAsync();

@@ -9,7 +9,7 @@ public class DashboardHub : ConnectionHub
     public DashboardHub(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
     {
     }
-    
+
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
@@ -32,8 +32,6 @@ public class DashboardHub : ConnectionHub
     public void StopResources()
     {
         if (Networking.Networking.SocketClients.Values.All(x => x.Endpoint != "/dashboardHub"))
-        {
             ResourceMonitor.StopBroadcasting();
-        }
     }
 }

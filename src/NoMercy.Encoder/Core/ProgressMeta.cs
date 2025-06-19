@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Encoder.Core;
+
 public class ProgressMeta
 {
     [JsonProperty("has_gpu")] public bool HasGpu { get; set; }

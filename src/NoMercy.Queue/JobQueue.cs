@@ -20,10 +20,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
 
             Context.QueueJobs.Add(queueJob);
 
-            if(Context.ChangeTracker.HasChanges())
-            {
-                Context.SaveChanges();
-            }
+            if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
         }
     }
 
@@ -36,10 +33,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
 
             Context.QueueJobs.Remove(job);
 
-            if(Context.ChangeTracker.HasChanges())
-            {
-                Context.SaveChanges();
-            }
+            if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
 
             return job;
         }
@@ -68,28 +62,22 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
                 job.ReservedAt = DateTime.UtcNow;
                 job.Attempts++;
 
-                if(Context.ChangeTracker.HasChanges())
-                {
-                    Context.SaveChanges();
-                }
-                
+                if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
+
                 return job;
             }
         }
         catch (Exception e)
         {
             Logger.Queue(e.Message, LogEventLevel.Error);
-            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
-            {
-                return null;
-            }
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return null;
             if (attempt < 10)
             {
                 Thread.Sleep(2000);
                 return ReserveJob(name, currentJobId, attempt + 1);
             }
         }
-        
+
         return null;
     }
 
@@ -117,19 +105,13 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
                     Context.QueueJobs.Remove(queueJob);
                 }
 
-                if(Context.ChangeTracker.HasChanges())
-                {
-                    Context.SaveChanges();
-                }
+                if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
             }
         }
         catch (Exception e)
         {
             Logger.Queue(e.Message, LogEventLevel.Error);
-            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
-            {
-                return;
-            }
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return;
             if (attempt < 10)
             {
                 Thread.Sleep(2000);
@@ -146,10 +128,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
             {
                 Context.QueueJobs.Remove(queueJob);
 
-                if(Context.ChangeTracker.HasChanges())
-                {
-                    Context.SaveChanges();
-                }
+                if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
             }
         }
         catch (Exception)
@@ -188,10 +167,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
                     Attempts = 0
                 });
 
-                if(Context.ChangeTracker.HasChanges())
-                {
-                    Context.SaveChanges();
-                }
+                if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
             }
         }
         catch (Exception e)
@@ -207,17 +183,14 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
             }
         }
     }
-    
+
     public void RetryFailedJobs(long? failedJobId = null)
     {
         lock (Context)
         {
             IQueryable<FailedJob> failedJobsQuery = Context.FailedJobs;
-        
-            if (failedJobId.HasValue)
-            {
-                failedJobsQuery = failedJobsQuery.Where(j => j.Id == failedJobId.Value);
-            }
+
+            if (failedJobId.HasValue) failedJobsQuery = failedJobsQuery.Where(j => j.Id == failedJobId.Value);
 
             List<FailedJob> failedJobs = failedJobsQuery.ToList();
 
@@ -234,10 +207,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
                 Context.FailedJobs.Remove(failedJob);
             }
 
-            if (Context.ChangeTracker.HasChanges())
-            {
-                Context.SaveChanges();
-            }
+            if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
         }
     }
 

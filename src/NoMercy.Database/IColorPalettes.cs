@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Database;
+
 public class IColorPalettes
 {
     [JsonProperty("poster", NullValueHandling = NullValueHandling.Ignore)]

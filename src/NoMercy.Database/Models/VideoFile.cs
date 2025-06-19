@@ -8,6 +8,9 @@ namespace NoMercy.Database.Models;
 [Index(nameof(Filename), IsUnique = true)]
 [Index(nameof(EpisodeId))]
 [Index(nameof(MovieId))]
+[Index(nameof(Folder))]
+[Index(nameof(Quality))]
+[Index(nameof(Duration))]
 public class VideoFile : VideoTracks
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -29,7 +32,7 @@ public class VideoFile : VideoTracks
 
     [JsonProperty("movie_id")] public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
-    
+
     [JsonProperty("metadata_id")] public Ulid? MetadataId { get; set; }
     public Metadata? Metadata { get; set; }
 

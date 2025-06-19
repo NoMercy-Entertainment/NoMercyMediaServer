@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Combined;
+
 public class TmdbCombinedTranslationData
 {
     [JsonProperty("name")] public string? Name { get; set; }

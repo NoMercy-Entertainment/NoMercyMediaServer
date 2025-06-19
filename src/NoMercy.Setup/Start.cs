@@ -12,6 +12,7 @@ public class Start
 {
     [DllImport("Kernel32.dll")]
     private static extern IntPtr GetConsoleWindow();
+
     [DllImport("User32.dll")]
     private static extern bool ShowWindow(IntPtr hWnd, int cmdShow);
 
@@ -27,38 +28,37 @@ public class Start
             ShowWindow(hWnd, i);
         }
     }
-    
+
     public static async Task Init(List<TaskDelegate> tasks)
     {
         if (UserSettings.TryGetUserSettings(out Dictionary<string, string>? settings))
-        {
             UserSettings.ApplySettings(settings);
-        }
-        
+
         await ApiInfo.RequestInfo();
-        
+
         List<TaskDelegate> startupTasks =
         [
             // new (ApiInfo.RequestInfo),
-            new (AppFiles.CreateAppFolders),
-            new (Networking.Networking.Discover),
-            new (Auth.Init),
+            new(AppFiles.CreateAppFolders),
+            new(Networking.Networking.Discover),
+            new(Auth.Init),
             ..tasks,
-            new (Register.Init),
-            new (Binaries.DownloadAll),
-            new (ChromeCast.Init),
-            new (UpdateChecker.StartPeriodicUpdateCheck),
+            new(Register.Init),
+            new(Binaries.DownloadAll),
+            new(ChromeCast.Init),
+            new(UpdateChecker.StartPeriodicUpdateCheck),
 
-            new (delegate
+            new(delegate
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
                     return TrayIcon.Make();
                 return Task.CompletedTask;
             }),
-            new (delegate
+            new(delegate
             {
-                DesktopIconCreator.CreateDesktopIcon(AppFiles.ApplicationName, AppFiles.ServerExePath, AppFiles.AppIcon);
+                DesktopIconCreator.CreateDesktopIcon(AppFiles.ApplicationName, AppFiles.ServerExePath,
+                    AppFiles.AppIcon);
                 return Task.CompletedTask;
             })
         ];
@@ -80,11 +80,10 @@ public class Start
         //     IsBackground = true
         // };
         // fileWatcher.Start();
-        
+
         foreach (GpuAccelerator accelerator in FFmpegHardwareConfig.Accelerators)
-        {
-            Logger.Encoder($"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}");
-        }
+            Logger.Encoder(
+                $"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}");
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
             OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
@@ -95,13 +94,9 @@ public class Start
                 .ContinueWith(_ => VsConsoleWindow(0));
         }
     }
-    
+
     private static async Task RunStartup(List<TaskDelegate> startupTasks)
     {
-        foreach (TaskDelegate task in startupTasks)
-        {
-            await task.Invoke();
-        }
+        foreach (TaskDelegate task in startupTasks) await task.Invoke();
     }
-
 }

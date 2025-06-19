@@ -25,14 +25,14 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
 
         return Get<AcoustIdFingerprint>("lookup?meta=" + string.Join("+", appendices), queryParams, priority);
     }
-    
+
     public async ValueTask<AcoustIdFingerprint?> Lookup(string? file, bool? priority = false)
     {
         if (file == null) return null;
 
         string fingerprint = await FfMpeg.GetFingerprint(file);
         string duration = await FfMpeg.GetDuration(file);
-        
+
         FingerPrintData? fingerprintData = new()
         {
             Fingerprint = fingerprint,

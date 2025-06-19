@@ -13,7 +13,7 @@ public abstract class ConsoleMessages
     public static Task ServerRunning()
     {
         if (Console.IsOutputRedirected) return Task.CompletedTask;
-        
+
         ConsoleExtensions.Enable();
 
         Console.WriteLine(("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"));
@@ -21,17 +21,13 @@ public abstract class ConsoleMessages
                           "Secure Server running: on port:".Pastel("#5ffa71") +
                           $" {Config.InternalServerPort}     ".Pastel("#ffffff") +
                           $"{_("#00a10d")}".Pastel("#00a10d"));
-        
+
         if (Config.IsDev)
-        {
             Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"      " + "  visit:".Pastel("#cccccc") +
                               $"  {Config.AppBaseUrl}   ".Pastel("#ffffff") + $"{_("#00a10d")}".Pastel("#00a10d"));
-        }
         else
-        {
             Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"      " + "  visit:".Pastel("#cccccc") +
                               $"  {Config.AppBaseUrl}       ".Pastel("#ffffff") + $"{_("#00a10d")}".Pastel("#00a10d"));
-        }
 
         Console.WriteLine(("╚" + Repeat("═", 46) + "╝").Pastel("#00a10d"));
 
@@ -67,7 +63,7 @@ public abstract class ConsoleMessages
 
         return string.Join(" ", spacing);
     }
-    
+
     private static bool IsXmasTime()
     {
         DateTime today = DateTime.Today;
@@ -75,26 +71,26 @@ public abstract class ConsoleMessages
 
         long xmasBeginDate = new DateTime(currentYear, 12, 7).Ticks;
         long xmasEndDate = new DateTime(currentYear + 1, 1, 5).Ticks;
-        
+
         return today.Ticks > xmasBeginDate && xmasEndDate < today.Ticks;
     }
 
     public static void Logo()
     {
         if (Console.IsOutputRedirected) return;
-        
+
         Console.Clear();
 
         StringBuilder builder = new();
         string outputString = "║  NoMercy MediaServer  ║";
         int totalWidth = 0;
-        
+
         bool isXmas = IsXmasTime();
-        
-        Dictionary<string, List<string>> letters = isXmas 
-            ? ConsoleLetters.ColossalXmas 
+
+        Dictionary<string, List<string>> letters = isXmas
+            ? ConsoleLetters.ColossalXmas
             : ConsoleLetters.Colossal;
-        
+
         for (int i = 0; i < letters.FirstOrDefault().Value.Count - 1; i++)
         {
             foreach (char letter in outputString)
@@ -128,13 +124,12 @@ public abstract class ConsoleMessages
                           CreateQuote(Quote, 4) + $"{letters["║"][0].Pastel(Colors[0])}");
         // Console.WriteLine($"{_()}" + CreateQuote(Quote, totalWidth, 4) + $"{(isXmas() ? ConsoleLetters.ColossalXmas : ConsoleLetters.Colossal)["║"][0].Pastel(Colors[0])}");        
         Console.WriteLine($"{("╚" + Repeat("═", magicSpacer) + "╝").Pastel(Colors[0])}");
-
     }
 
     public static Task Welcome()
     {
         if (!Console.IsOutputRedirected) return Task.CompletedTask;
-        
+
         Console.WriteLine(("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"));
         Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"     " +
                           "Welcome to NoMercy MediaServer".Pastel("#5ffa71") +
@@ -146,27 +141,22 @@ public abstract class ConsoleMessages
 
         return Task.CompletedTask;
     }
-    
+
     private static void SetConsoleSize(int width, int height)
     {
         try
         {
             if (OperatingSystem.IsWindows())
-            {
-                Console.SetWindowSize(Math.Min(width, Console.LargestWindowWidth), 
+                Console.SetWindowSize(Math.Min(width, Console.LargestWindowWidth),
                     Math.Min(height, Console.LargestWindowHeight));
-            }
-            else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-            {
-                Console.Write($"\x1b[8;{height};{width}t");
-            }
+            else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) Console.Write($"\x1b[8;{height};{width}t");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to resize console: {ex.Message}");
         }
     }
-    
+
     private static void ClearConsole()
     {
         Console.Clear();

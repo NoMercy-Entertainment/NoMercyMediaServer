@@ -18,6 +18,4 @@ public static class Info
     public static readonly DateTime StartTime = DateTime.UtcNow;
     public static readonly string ExecSuffix = Platform == "windows" ? ".exe" : "";
     public static readonly string IconSuffix = Platform == "windows" ? ".ico" : Platform == "macos" ? ".icns" : ".png";
-
-
 }

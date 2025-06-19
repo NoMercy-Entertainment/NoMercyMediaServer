@@ -1,4 +1,5 @@
 namespace NoMercy.Encoder.Format.Rules;
+
 public static class AudioFormats
 {
     public static readonly string Mp3 = "libmp3lame";

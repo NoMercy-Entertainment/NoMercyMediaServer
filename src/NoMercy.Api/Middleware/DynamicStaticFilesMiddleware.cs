@@ -46,13 +46,9 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             IFileInfo? file = relativePath != null ? provider.GetFileInfo(relativePath) : null;
 
             if (file?.PhysicalPath != null)
-            {
                 await ServeFile(context, file);
-            }
             else
-            {
                 await next(context);
-            }
         }
         catch
         {
@@ -83,10 +79,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         long end = fileLength - 1;
         long start = Convert.ToInt64(ranges[0]);
 
-        if (ranges.Length > 1 && !string.IsNullOrEmpty(ranges[1]))
-        {
-            end = Convert.ToInt64(ranges[1]);
-        }
+        if (ranges.Length > 1 && !string.IsNullOrEmpty(ranges[1])) end = Convert.ToInt64(ranges[1]);
 
         long length = end - start + 1;
 

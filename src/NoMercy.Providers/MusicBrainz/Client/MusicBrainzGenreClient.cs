@@ -40,7 +40,7 @@ public class MusicBrainzGenreClient : MusicBrainzBaseClient
 
         return genres;
     }
-    
+
     public async Task<MusicBrainzGenre?> SearchGenre(string query)
     {
         MusicBrainzAllGenres? data = await Get<MusicBrainzAllGenres>("genre", new Dictionary<string, string>

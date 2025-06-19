@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Api.Controllers.V1.DTO;
+
 public record ContentRating
 {
     [JsonProperty("rating")] public string? Rating { get; set; }

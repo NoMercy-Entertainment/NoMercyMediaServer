@@ -1,10 +1,14 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class RecordingRelation : MusicBrainzLifeSpan
 {
     [JsonProperty("attribute-ids")] public Dictionary<string, Guid> AttributeIds { get; set; } = new();
-    [JsonProperty("attribute-values")] public MusicBrainzAttributeValues MusicBrainzAttributeValues { get; set; } = new();
+
+    [JsonProperty("attribute-values")]
+    public MusicBrainzAttributeValues MusicBrainzAttributeValues { get; set; } = new();
+
     [JsonProperty("attributes")] public string[] Attributes { get; set; } = [];
     [JsonProperty("source-credit")] public string SourceCredit { get; set; } = string.Empty;
     [JsonProperty("target-credit")] public string TargetCredit { get; set; } = string.Empty;

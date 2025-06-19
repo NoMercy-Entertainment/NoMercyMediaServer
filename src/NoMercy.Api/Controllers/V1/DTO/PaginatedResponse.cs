@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Api.Controllers.V1.DTO;
+
 public record PaginatedResponse<T>
 {
     [JsonProperty("data")] public IEnumerable<T> Data { get; set; } = [];

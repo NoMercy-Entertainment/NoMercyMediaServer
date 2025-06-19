@@ -26,9 +26,11 @@ public class SubtitleSearchParam
 
 public class SubtitleSearchParamValue
 {
-    [XmlElement("string", IsNullable = true)] public string String { get; set; } = string.Empty;
+    [XmlElement("string", IsNullable = true)]
+    public string String { get; set; } = string.Empty;
 
-    [XmlElement("array", IsNullable = true)] public SubtitleSearchArray Array { get; set; } = new();
+    [XmlElement("array", IsNullable = true)]
+    public SubtitleSearchArray Array { get; set; } = new();
 }
 
 public class SubtitleSearchArray

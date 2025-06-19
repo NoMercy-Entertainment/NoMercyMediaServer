@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
+
 public record AlbumTrackDto
 {
     [JsonProperty("id")] public Guid Id { get; set; }
@@ -26,8 +27,11 @@ public record AlbumTrackDto
     {
         Id = albumTrack.Track.Id;
         Name = albumTrack.Track.Name;
-        Cover = albumTrack.Album.Cover is not null ? new Uri($"/images/music{albumTrack.Album.Cover}", UriKind.Relative).ToString() : null;
-        Path = new Uri($"/{albumTrack.Track.FolderId}{albumTrack.Track.Folder}{albumTrack.Track.Filename}", UriKind.Relative).ToString();
+        Cover = albumTrack.Album.Cover is not null
+            ? new Uri($"/images/music{albumTrack.Album.Cover}", UriKind.Relative).ToString()
+            : null;
+        Path = new Uri($"/{albumTrack.Track.FolderId}{albumTrack.Track.Folder}{albumTrack.Track.Filename}",
+            UriKind.Relative).ToString();
         Type = "tracks";
         ColorPalette = albumTrack.Album.ColorPalette;
         Date = albumTrack.Track.Date;
@@ -41,7 +45,7 @@ public record AlbumTrackDto
 
         Artists = albumTrack.Track.ArtistTrack
             .Select(artistTrack => new ArtistDto(artistTrack, country));
-        
+
         Albums = albumTrack.Track.AlbumTrack
             .Select(trackAlbum => new AlbumDto(trackAlbum, country));
     }

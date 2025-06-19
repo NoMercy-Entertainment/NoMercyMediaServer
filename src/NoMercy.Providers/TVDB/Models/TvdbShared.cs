@@ -11,6 +11,7 @@ public class TvdbResponse<T>
 public class TvdbArtWorkStatusesResponse : TvdbResponse<TvdbStatus[]>
 {
 }
+
 public class TvdbStatus
 {
     [JsonProperty("id")] public int Id { get; set; }

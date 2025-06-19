@@ -12,6 +12,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup;
 
 namespace NoMercy.Server;
+
 public static class Program
 {
     public static async Task Main(string[] args)
@@ -48,31 +49,29 @@ public static class Program
             Console.Clear();
             Console.Title = AppFiles.ApplicationName;
         }
-        
+
         ConsoleMessages.Logo();
-        
+
         options.ApplySettings(out bool shouldSeedMarvel);
-        
+
         if (Config.Sentry)
-        {
             SentrySdk.Init(config =>
             {
                 config.Dsn = Config.SentryDsn;
                 config.TracesSampleRate = 1.0;
             });
-        }
 
         Version version = Assembly.GetExecutingAssembly().GetName().Version!;
         Software.Version = version;
         Logger.App($"NoMercy MediaServer version: v{version.Major}.{version.Minor}.{version.Build}");
-        
+
         Stopwatch stopWatch = new();
         stopWatch.Start();
-        
+
         List<TaskDelegate> startupTasks =
         [
-            new (() => Seed.Init(shouldSeedMarvel)),
-            new (Dev.Run),
+            new(() => Seed.Init(shouldSeedMarvel)),
+            new(Dev.Run)
         ];
 
         await Setup.Start.Init(startupTasks);
@@ -83,7 +82,7 @@ public static class Program
         {
             Config.Started = true;
             stopWatch.Stop();
-            
+
             Task.Run(() =>
             {
                 Task.Delay(300).Wait();
@@ -91,19 +90,16 @@ public static class Program
                 Logger.App($"Internal Address: {Networking.Networking.InternalAddress}");
                 Logger.App($"External Address: {Networking.Networking.ExternalAddress}");
 
-                if (!Console.IsOutputRedirected)
-                {
-                    ConsoleMessages.ServerRunning();
-                }
+                if (!Console.IsOutputRedirected) ConsoleMessages.ServerRunning();
 
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
             });
         });
-        
+
         new Thread(() => app.RunAsync()).Start();
 
         await DriveMonitor.Start();
-        
+
         await Task.Delay(-1);
     }
 
@@ -135,7 +131,7 @@ public static class Program
                 logging.AddFilter("Microsoft", LogLevel.None);
             })
             .ConfigureServices(services =>
-            {                
+            {
                 services.AddSingleton<StartupOptions>(options);
                 services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
                 services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
@@ -154,5 +150,4 @@ public static class Program
             .UseSockets()
             .UseStartup<Startup>();
     }
-
 }

@@ -33,27 +33,28 @@ public class GenresController : BaseController
 
         string language = Language();
 
-        List<GenresResponseItemDto> genres = await _genreRepository
+        List<NmGenreCardDto> genres = await _genreRepository
             .GetGenresAsync(userId, language, request.Take, request.Page)
-            .Select(genre => new GenresResponseItemDto(genre))
+            .Select(genre => new NmGenreCardDto(genre))
             .ToListAsync();
-        
+
         return Ok(new Render
         {
-            Data = [
-                new ComponentBuilder<GenresResponseItemDto>()
+            Data =
+            [
+                new ComponentBuilder<NmGenreCardDto>()
                     .WithComponent("NMGrid")
                     .WithProps(props => props
                         .WithItems(
                             genres
                                 .Select(item =>
-                                    new ComponentBuilder<GenresResponseItemDto>()
+                                    new ComponentBuilder<NmGenreCardDto>()
                                         .WithComponent("NMGenreCard")
                                         .WithProps(cardProps => cardProps
                                             .WithData(item)
                                             .WithWatch())
                                         .Build())))
-                    .Build(),
+                    .Build()
             ]
         });
     }
@@ -67,6 +68,7 @@ public class GenresController : BaseController
             return UnauthorizedResponse("You do not have permission to view genres");
 
         string language = Language();
+        string country = Country();
 
         Genre genre = await _genreRepository.GetGenreAsync(userId, genreId, language, request.Take, request.Page);
 
@@ -75,34 +77,35 @@ public class GenresController : BaseController
 
         if (request.Version != "lolomo")
         {
-            IOrderedEnumerable<GenreResponseItemDto> concat = genre.GenreMovies
-                .Select(movie => new GenreResponseItemDto(movie))
+            IOrderedEnumerable<NmCardDto> concat = genre.GenreMovies
+                .Select(genreMovie => new NmCardDto(genreMovie.Movie, country))
                 .Concat(genre.GenreTvShows
-                    .Select(tv => new GenreResponseItemDto(tv)))
+                    .Select(genteTv => new NmCardDto(genteTv.Tv, country)))
                 .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort);
-            
+
             return Ok(new Render
             {
-                Data = [
-                    new ComponentBuilder<GenreResponseItemDto>()
+                Data =
+                [
+                    new ComponentBuilder<NmCardDto>()
                         .WithComponent("NMGrid")
                         .WithProps(props => props
                             .WithItems(
                                 concat.Select(item =>
-                                    new ComponentBuilder<GenreResponseItemDto>()
+                                    new ComponentBuilder<NmCardDto>()
                                         .WithComponent("NMCard")
                                         .WithProps(cardProps => cardProps
                                             .WithData(item)
                                             .WithWatch())
                                         .Build())))
-                        .Build(),
+                        .Build()
                 ]
             });
         }
 
-        return Ok(new LoloMoResponseDto<GenreResponseItemDto>
+        return Ok(new LoloMoResponseDto<NmCardDto>
         {
-            Data = Letters.Select(g => new LoloMoRowDto<GenreResponseItemDto>
+            Data = Letters.Select(g => new LoloMoRowDto<NmCardDto>
             {
                 Title = g,
                 Id = g,
@@ -110,12 +113,12 @@ public class GenresController : BaseController
                     .Where(libraryMovie => g == "#"
                         ? Numbers.Any(p => libraryMovie.Movie.Title.StartsWith(p))
                         : libraryMovie.Movie.Title.StartsWith(g))
-                    .Select(movie => new GenreResponseItemDto(movie))
+                    .Select(genreMovie => new NmCardDto(genreMovie.Movie, country))
                     .Concat(genre.GenreTvShows.Take(request.Take)
                         .Where(libraryTv => g == "#"
                             ? Numbers.Any(p => libraryTv.Tv.Title.StartsWith(p))
                             : libraryTv.Tv.Title.StartsWith(g))
-                        .Select(tv => new GenreResponseItemDto(tv)))
+                        .Select(genreTv => new NmCardDto(genreTv.Tv, country)))
                     .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort)
             })
         });

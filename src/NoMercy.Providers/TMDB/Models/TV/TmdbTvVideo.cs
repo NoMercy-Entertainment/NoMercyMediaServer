@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.TV;
+
 public class TmdbTvVideo
 {
     [JsonProperty("id")] public string Id { get; set; } = string.Empty;

@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
+
 public record ArtistsResponseItemDto
 {
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }

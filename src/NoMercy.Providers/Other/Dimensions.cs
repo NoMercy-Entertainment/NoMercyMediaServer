@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.Other;
+
 public class Dimensions
 {
     [JsonProperty("tiny")] public Large? Tiny { get; set; }

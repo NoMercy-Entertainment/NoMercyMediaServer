@@ -2,10 +2,10 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TVDB.Models;
 
-public class TvdbContentRatingsResponse: TvdbResponse<TvdbContentRating[]>
+public class TvdbContentRatingsResponse : TvdbResponse<TvdbContentRating[]>
 {
 }
-    
+
 public class TvdbContentRating
 {
     [JsonProperty("id")] public int Id { get; set; }

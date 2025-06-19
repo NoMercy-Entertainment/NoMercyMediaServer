@@ -3,6 +3,7 @@ using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
 namespace NoMercy.Providers.Helpers;
+
 public class Queue(QueueOptions options)
 {
     private readonly Dictionary<string, Func<Task>> _tasks = [];
@@ -115,11 +116,8 @@ public class Queue(QueueOptions options)
 
         lock (_tasks)
         {
-            while (_tasks.ContainsKey(uniqueId))
-            {
-                uniqueId = Ulid.NewUlid().ToString();
-            }
-            
+            while (_tasks.ContainsKey(uniqueId)) uniqueId = Ulid.NewUlid().ToString();
+
             _tasks.Add(uniqueId, async () =>
             {
                 try

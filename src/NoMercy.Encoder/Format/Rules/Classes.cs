@@ -28,7 +28,7 @@ public class Classes
     protected int HlsTime { get; set; } = 4;
 
     public List<GpuAccelerator> Accelerators { get; set; } = FFmpegHardwareConfig.Accelerators;
-    
+
     protected string Type
     {
         get
@@ -72,10 +72,7 @@ public class Classes
                 int width = int.Parse(scale[0]);
                 int height = int.Parse(scale[1]);
 
-                if (height == -2)
-                {
-                    height = (int)(width * AspectRatioValue);
-                }
+                if (height == -2) height = (int)(width * AspectRatioValue);
 
                 return new()
                 {

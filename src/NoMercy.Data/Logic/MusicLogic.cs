@@ -71,7 +71,8 @@ public partial class MusicLogic : IAsyncDisposable
             try
             {
                 Logger.App($"Analyzing File: {file.Name}", LogEventLevel.Debug);
-                IMediaAnalysis mediaAnalysis = await FFProbe.AnalyseAsync(file.Path, cancellationToken: cancellationToken);
+                IMediaAnalysis mediaAnalysis =
+                    await FFProbe.AnalyseAsync(file.Path, cancellationToken: cancellationToken);
 
                 AcoustIdFingerprintRecording? fingerPrintRecording = await MatchTrack(file, mediaAnalysis);
                 if (fingerPrintRecording is not null)
@@ -419,8 +420,8 @@ public partial class MusicLogic : IAsyncDisposable
         {
             Id = musicBrainzArtist.Id,
             Name = musicBrainzArtist.Name,
-            Disambiguation = string.IsNullOrEmpty(musicBrainzArtist.Disambiguation) 
-                ? null 
+            Disambiguation = string.IsNullOrEmpty(musicBrainzArtist.Disambiguation)
+                ? null
                 : musicBrainzArtist.Disambiguation,
             Country = musicBrainzArtist.Country,
             TitleSort = musicBrainzArtist.SortName,

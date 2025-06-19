@@ -12,10 +12,10 @@ public class NoMercyUpdater
     private const string RepoOwner = "NoMercy-Entertainment";
     private const string RepoName = "NoMercyMediaServer";
     private const string Url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
-    
+
     private static readonly HttpClient HttpClient = new();
 
-    static async Task Main(string[] args)
+    private static async Task Main(string[] args)
     {
         try
         {
@@ -37,15 +37,12 @@ public class NoMercyUpdater
             if (await CheckForUpdate())
             {
                 Logger.Setup("An update is available. Do you want to install it? (y/n)");
-                if (Console.ReadKey().Key == ConsoleKey.Y)
-                {
-                    await InstallUpdate();
-                }
+                if (Console.ReadKey().Key == ConsoleKey.Y) await InstallUpdate();
             }
             else
             {
                 Logger.Setup("No updates available.");
-                
+
                 Console.WriteLine("Press Enter to start the server or Esc to exit...");
                 ConsoleKey key = Console.ReadKey().Key;
                 switch (key)
@@ -76,7 +73,7 @@ public class NoMercyUpdater
 
         Logger.Setup($"Installed version: {installedVersion}");
         Logger.Setup($"Latest version: {latestVersion}");
-        
+
         if (installedVersion == "0.0.0")
         {
             Logger.Setup("No installation detected. Installing latest version...");
@@ -90,7 +87,7 @@ public class NoMercyUpdater
     private static async Task InstallUpdate()
     {
         Logger.Setup("Downloading and installing update...");
-        
+
         string? osIdentifier = GetOsIdentifier();
         if (string.IsNullOrEmpty(osIdentifier)) return;
 
@@ -101,35 +98,31 @@ public class NoMercyUpdater
             Logger.Setup("No valid update found.");
             return;
         }
-        
+
         Logger.Setup("Downloading update...");
         byte[] data = await HttpClient.GetByteArrayAsync(downloadUrl);
         await File.WriteAllBytesAsync(AppFiles.ServerTempExePath, data);
-        
+
         StopMediaServer();
-        
+
         Logger.Setup("Installing update...");
-        
+
         if (File.Exists(AppFiles.ServerExePath))
-        {
             File.Replace(AppFiles.ServerTempExePath, AppFiles.ServerExePath, null);
-        }
         else
-        {
             File.Move(AppFiles.ServerTempExePath, AppFiles.ServerExePath);
-        }
-        
+
         MakeBinaryExecutable(AppFiles.ServerExePath);
-        
+
         Logger.Setup("Update installed successfully.");
-        
+
         StartMediaServer();
     }
-    
+
     private static async Task InstallServer()
     {
         Logger.Setup("Downloading and installing NoMercyMediaServer...");
-        
+
         string? osIdentifier = GetOsIdentifier();
         if (string.IsNullOrEmpty(osIdentifier)) return;
 
@@ -145,7 +138,7 @@ public class NoMercyUpdater
 
         Logger.Setup("Installation completed.");
     }
-    
+
     private static bool SemverIsGreater(string oldVersion, string newVersion)
     {
         if (!SemVersion.TryParse(oldVersion, out SemVersion? oldSemVer)) return false;
@@ -171,13 +164,13 @@ public class NoMercyUpdater
 
         return version.Split('+')[0];
     }
-    
+
     private static async Task<(string semver, string? downloadUrl)> GetLatestReleaseInfo(string? osIdentifier)
     {
         try
         {
             string response = await HttpClient.GetStringAsync(Url);
-            
+
             Release? doc = JsonConvert.DeserializeObject<Release>(response);
 
             if (doc == null) return ("0.0.0", null);
@@ -205,7 +198,6 @@ public class NoMercyUpdater
     private static void MakeBinaryExecutable(string filePath)
     {
         if (!OperatingSystem.IsWindows())
-        {
             try
             {
                 Logger.Setup("Making the binary executable...");
@@ -219,9 +211,8 @@ public class NoMercyUpdater
                 Logger.Setup($"sudo chmod +x {filePath}");
                 throw;
             }
-        }
     }
-    
+
     private static void StopMediaServer()
     {
         foreach (Process process in Process.GetProcesses())
@@ -230,7 +221,7 @@ public class NoMercyUpdater
             try
             {
                 Logger.Setup("Stopping NoMercyMediaServer...");
-                
+
                 process.Kill();
                 process.WaitForExit();
             }
@@ -258,13 +249,13 @@ public class NoMercyUpdater
             throw;
         }
     }
-    
+
     private class Release
     {
         [JsonProperty("tag_name")] public string TagName { get; set; } = "v0.0.0";
         [JsonProperty("assets")] public List<Asset> Assets { get; set; } = [];
     }
-    
+
     private class Asset
     {
         [JsonProperty("name")] public string Name { get; set; } = "";

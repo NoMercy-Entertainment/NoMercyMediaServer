@@ -4,6 +4,7 @@ using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
+
 public record ReleaseGroupDto
 {
     [JsonProperty("id")] public Guid Id { get; set; }

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.People;
+
 public class TmdbPersonChangeItem
 {
     [JsonProperty("id")] public string Id { get; set; } = string.Empty;

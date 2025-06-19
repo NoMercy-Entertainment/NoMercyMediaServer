@@ -1,4 +1,5 @@
 namespace NoMercy.Providers.Helpers;
+
 public enum State
 {
     Idle,

@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -8,6 +7,12 @@ namespace NoMercy.Database.Models;
 [PrimaryKey(nameof(Id))]
 [Index(nameof(MediaId), nameof(TvFromId), IsUnique = true)]
 [Index(nameof(MediaId), nameof(MovieFromId), IsUnique = true)]
+[Index(nameof(Title))]
+[Index(nameof(TitleSort))]
+[Index(nameof(TvFromId))]
+[Index(nameof(TvToId))]
+[Index(nameof(MovieFromId))]
+[Index(nameof(MovieToId))]
 public class Similar : ColorPalettes
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

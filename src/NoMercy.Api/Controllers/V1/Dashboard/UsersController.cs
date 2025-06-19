@@ -247,7 +247,7 @@ public class UsersController : BaseController
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to update notification settings");
-        
+
         await using MediaContext mediaContext = new();
         User? user = await mediaContext.Users
             .Where(user => user.Id.Equals(userId))
@@ -255,12 +255,12 @@ public class UsersController : BaseController
             .Include(user => user.NotificationUser)
             .ThenInclude(notificationUser => notificationUser.Notification)
             .FirstOrDefaultAsync(user => user.Id.Equals(userId));
-        
+
         if (user == null)
             return NotFoundResponse("User not found");
-        
+
         // TODO Implement notification settings.
-        
+
         return Ok(new StatusResponseDto<string>
         {
             Status = "success",

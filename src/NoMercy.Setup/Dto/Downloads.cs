@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Setup.Dto;
+
 public class Downloads
 {
     [JsonProperty("windows")] public List<Download> Windows { get; set; } = [];

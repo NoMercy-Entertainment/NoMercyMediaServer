@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class RecordingArtistCredit
 {
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;

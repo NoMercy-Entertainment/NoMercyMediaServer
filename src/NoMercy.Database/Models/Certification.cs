@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -7,6 +6,8 @@ namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Iso31661), nameof(Rating), IsUnique = true)]
+[Index(nameof(Rating))]
+[Index(nameof(Order))]
 public class Certification
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

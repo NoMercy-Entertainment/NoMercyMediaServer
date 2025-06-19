@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.MediaProcessing.Files;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record FileListResponseDto
 {
     [JsonProperty("status")] public string Status { get; set; } = string.Empty;

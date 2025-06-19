@@ -30,7 +30,8 @@ public class MusixMatchSubtitle
     [JsonProperty("subtitle_length")] public long SubtitleLength { get; set; }
     [JsonProperty("subtitle_language")] public string SubtitleLanguage { get; set; } = string.Empty;
 
-    [JsonProperty("subtitle_language_description")] public string SubtitleLanguageDescription { get; set; } = string.Empty;
+    [JsonProperty("subtitle_language_description")]
+    public string SubtitleLanguageDescription { get; set; } = string.Empty;
 
     [JsonProperty("script_tracking_url")] public Uri ScriptTrackingUrl { get; set; } = null!;
     [JsonProperty("pixel_tracking_url")] public Uri PixelTrackingUrl { get; set; } = null!;

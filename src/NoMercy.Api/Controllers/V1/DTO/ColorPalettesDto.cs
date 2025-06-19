@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 
 namespace NoMercy.Api.Controllers.V1.DTO;
+
 public record ColorPalettesDto
 {
     [JsonProperty("logo")] public IColorPalettes Logo { get; set; } = new();

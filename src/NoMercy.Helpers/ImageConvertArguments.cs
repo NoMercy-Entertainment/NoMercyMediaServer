@@ -5,12 +5,13 @@ using Serilog.Events;
 using SixLabors.ImageSharp.Formats;
 
 namespace NoMercy.Helpers;
+
 public class ImageConvertArguments
 {
     [JsonProperty("width")] public int? Width { get; set; }
     [JsonProperty("type")] public string? Type { get; set; }
     [JsonProperty("quality")] public int Quality { get; set; } = 100;
-    
+
     public IImageFormat Format
     {
         get
@@ -29,7 +30,7 @@ public class ImageConvertArguments
             return result;
         }
     }
-    
+
     [FromQuery(Name = "aspect_ratio")]
     [JsonProperty("aspect_ratio")]
     public double? AspectRatio { get; set; }

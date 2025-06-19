@@ -4,6 +4,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record CarouselResponseItemDto
 {
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
@@ -20,105 +21,6 @@ public record CarouselResponseItemDto
     [JsonProperty("link")] public Uri Link { get; set; }
 
     [JsonProperty("tracks")] public int Tracks { get; set; }
-
-    public static readonly Func<MediaContext, Guid, Task<List<CarouselResponseItemDto>>> GetPlaylists =
-        (mediaContext, userId) => mediaContext.Playlists
-            .Where(playlist => playlist.UserId.Equals(userId))
-            .Select(playlist => new CarouselResponseItemDto(playlist))
-            .Take(36)
-            .ToListAsync();
-
-    public static readonly Func<MediaContext, Task<List<CarouselResponseItemDto>>> GetLatestAlbums =
-        (mediaContext) => mediaContext.Albums
-            .Where(album => album.Cover != null && album.AlbumTrack.Count > 0)
-            .Include(album => album.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Track)
-            .OrderByDescending(album => album.CreatedAt)
-            .Select(album => new CarouselResponseItemDto(album))
-            .Take(36)
-            .ToListAsync();
-
-    public static readonly Func<MediaContext, Task<List<CarouselResponseItemDto>>> GetLatestArtists =
-        (mediaContext) => mediaContext.Artists
-            .Where(artist => artist.Cover != null && artist.ArtistTrack.Count > 0)
-            .Include(artist => artist.Images
-                .Where(image => image.Type == "thumb")
-                .OrderByDescending(image => image.VoteCount)
-            )
-            .Include(artist => artist.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Track)
-            .OrderByDescending(artist => artist.CreatedAt)
-            .Select(artist => new CarouselResponseItemDto(artist))
-            .Take(36)
-            .ToListAsync();
-
-    public static readonly Func<MediaContext, Guid, Task<List<CarouselResponseItemDto>>> GetFavoriteArtists =
-        (mediaContext, userId) => mediaContext.ArtistUser
-            .Where(artistUser => artistUser.UserId.Equals(userId))
-            .Include(albumUser => albumUser.Artist)
-            .ThenInclude(artist => artist.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Track)
-            .Include(albumUser => albumUser.Artist)
-                .ThenInclude(artist => artist.Images
-                    .Where(image => image.Type == "thumb")
-                    .OrderByDescending(image => image.VoteCount)
-                )
-            .Select(artistUser => new CarouselResponseItemDto(artistUser))
-            .Take(36)
-            .ToListAsync();
-
-    public static readonly Func<MediaContext, Guid, Task<List<CarouselResponseItemDto>>> GetFavoriteAlbums =
-        (mediaContext, userId) => mediaContext.AlbumUser
-            .Where(albumUser => albumUser.UserId.Equals(userId))
-            .Include(albumUser => albumUser.Album)
-            .ThenInclude(album => album.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Track)
-            .Select(albumUser => new CarouselResponseItemDto(albumUser))
-            .Take(36)
-            .ToListAsync();
-
-    public static readonly Func<MediaContext, Guid, TopMusicDto?> GetFavoriteArtist =
-        (mediaContext, userId) => mediaContext.MusicPlays
-            .Where(musicPlay => musicPlay.UserId.Equals(userId))
-            .Include(musicPlay => musicPlay.Track)
-            .ThenInclude(track => track.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Artist)
-            .ThenInclude(musicPlay => musicPlay.Images
-                .Where(image => image.Type == "thumb")
-                .OrderByDescending(image => image.VoteCount)
-            )
-            .SelectMany(p => p.Track.ArtistTrack)
-            .Select(artistTrack => new TopMusicDto(artistTrack))
-            .AsEnumerable()
-            .GroupBy(a => a.Name)
-            .MaxBy(g => g.Count())?
-            .FirstOrDefault();
-
-    public static readonly Func<MediaContext, Guid, TopMusicDto?> GetFavoriteAlbum =
-        (mediaContext, userId) => mediaContext.MusicPlays
-            .Where(musicPlay => musicPlay.UserId.Equals(userId))
-            .Include(musicPlay => musicPlay.Track)
-            .ThenInclude(track => track.AlbumTrack)
-            .ThenInclude(artistTrack => artistTrack.Album)
-            .SelectMany(p => p.Track.AlbumTrack)
-            .Select(albumTrack => new TopMusicDto(albumTrack))
-            .AsEnumerable()
-            .GroupBy(a => a.Name)
-            .MaxBy(g => g.Count())?
-            .FirstOrDefault();
-
-    public static readonly Func<MediaContext, Guid, TopMusicDto?> GetFavoritePlaylist =
-        (mediaContext, userId) => mediaContext.MusicPlays
-            .Where(musicPlay => musicPlay.UserId.Equals(userId))
-            .Include(musicPlay => musicPlay.Track)
-            .ThenInclude(track => track.PlaylistTrack)
-            .ThenInclude(artistTrack => artistTrack.Playlist)
-            .SelectMany(p => p.Track.PlaylistTrack)
-            .Select(musicPlay => new TopMusicDto(musicPlay))
-            .AsEnumerable()
-            .GroupBy(a => a.Name)
-            .MaxBy(g => g.Count())?
-            .FirstOrDefault();
 
     public CarouselResponseItemDto(Artist artist)
     {
@@ -160,22 +62,22 @@ public record CarouselResponseItemDto
             .Count();
     }
 
-    public CarouselResponseItemDto(ArtistUser playlist)
+    public CarouselResponseItemDto(ArtistUser artistUser)
     {
-        ColorPalette = playlist.Artist.ColorPalette;
-        Cover = playlist.Artist.Cover ?? playlist.Artist.Images
+        ColorPalette = artistUser.Artist.ColorPalette;
+        Cover = artistUser.Artist.Cover ?? artistUser.Artist.Images
             .FirstOrDefault()?.FilePath;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
-        Disambiguation = playlist.Artist.Disambiguation;
-        Description = playlist.Artist.Description;
-        Folder = playlist.Artist.Folder ?? "";
-        Id = playlist.Artist.Id.ToString();
-        LibraryId = playlist.Artist.LibraryId;
-        Name = playlist.Artist.Name;
+        Disambiguation = artistUser.Artist.Disambiguation;
+        Description = artistUser.Artist.Description;
+        Folder = artistUser.Artist.Folder ?? "";
+        Id = artistUser.Artist.Id.ToString();
+        LibraryId = artistUser.Artist.LibraryId;
+        Name = artistUser.Artist.Name;
         Type = "artists";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
-        Tracks = playlist.Artist.ArtistTrack
+        Tracks = artistUser.Artist.ArtistTrack
             .Where(artistTrack => artistTrack.Track.Duration != null)
             .DistinctBy(artistTrack => artistTrack.Track.Name.ToLower())
             .Count();

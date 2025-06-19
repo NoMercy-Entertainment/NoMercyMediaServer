@@ -1,4 +1,5 @@
 namespace NoMercy.Helpers;
+
 public class UserPass
 {
     public string Username { get; set; }

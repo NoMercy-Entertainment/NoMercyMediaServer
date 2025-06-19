@@ -26,7 +26,7 @@ public class BaseContainer : Classes
         new() { Name = VideoContainers.Mp4, Type = "video", IsDefault = true },
         new() { Name = VideoContainers.Webm, Type = "video", IsDefault = false },
         new() { Name = AudioContainers.Flac, Type = "audio", IsDefault = false },
-        new() { Name = AudioContainers.Mp3, Type = "audio", IsDefault = true },
+        new() { Name = AudioContainers.Mp3, Type = "audio", IsDefault = true }
     ];
 
     public static string GetName(string container)
@@ -44,19 +44,22 @@ public class BaseContainer : Classes
         };
     }
 
-    public virtual CodecDto[] AvailableVideoCodecs => [
+    public virtual CodecDto[] AvailableVideoCodecs =>
+    [
         VideoCodecs.H264, VideoCodecs.H264Nvenc,
         VideoCodecs.H265, VideoCodecs.H265Nvenc,
         VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc
     ];
 
-    public virtual CodecDto[] AvailableAudioCodecs => [
+    public virtual CodecDto[] AvailableAudioCodecs =>
+    [
         AudioCodecs.Aac, AudioCodecs.Opus, AudioCodecs.Vorbis,
         AudioCodecs.Mp3, AudioCodecs.Flac, AudioCodecs.Ac3,
-        AudioCodecs.Eac3, AudioCodecs.LibOpus, AudioCodecs.TrueHd,
+        AudioCodecs.Eac3, AudioCodecs.LibOpus, AudioCodecs.TrueHd
     ];
 
-    public virtual CodecDto[] AvailableSubtitleCodecs => [
+    public virtual CodecDto[] AvailableSubtitleCodecs =>
+    [
         SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass,
         SubtitleCodecs.Copy
     ];

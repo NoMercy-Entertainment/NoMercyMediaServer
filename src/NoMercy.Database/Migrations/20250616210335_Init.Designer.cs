@@ -11,14 +11,14 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    [Migration("20241206212308_Test3")]
-    partial class Test3
+    [Migration("20250616210335_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.2");
 
             modelBuilder.Entity("NoMercy.Database.Models.ActivityLog", b =>
                 {
@@ -94,6 +94,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FolderId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("HostFolder")
@@ -102,6 +103,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LibraryId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MetadataId")
@@ -137,6 +139,10 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("LibraryId");
 
                     b.HasIndex("MetadataId");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("Year");
 
                     b.ToTable("Albums");
                 });
@@ -346,9 +352,15 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Country");
+
                     b.HasIndex("FolderId");
 
                     b.HasIndex("LibraryId");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("Year");
 
                     b.ToTable("Artists");
                 });
@@ -468,6 +480,8 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreditId");
+
                     b.HasIndex("EpisodeId");
 
                     b.HasIndex("MovieId");
@@ -518,6 +532,10 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Order");
+
+                    b.HasIndex("Rating");
 
                     b.HasIndex("Iso31661", "Rating")
                         .IsUnique();
@@ -613,6 +631,10 @@ namespace NoMercy.Database.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("LibraryId");
+
+                    b.HasIndex("Title");
+
+                    b.HasIndex("TitleSort");
 
                     b.ToTable("Collections");
                 });
@@ -728,8 +750,12 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EnglishName");
+
                     b.HasIndex("Iso31661")
                         .IsUnique();
+
+                    b.HasIndex("NativeName");
 
                     b.ToTable("Countries");
                 });
@@ -838,6 +864,9 @@ namespace NoMercy.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Model")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -869,6 +898,9 @@ namespace NoMercy.Database.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("VolumePercent")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1005,9 +1037,21 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AirDate");
+
+                    b.HasIndex("EpisodeNumber");
+
+                    b.HasIndex("ImdbId");
+
                     b.HasIndex("SeasonId");
 
+                    b.HasIndex("SeasonNumber");
+
+                    b.HasIndex("Title");
+
                     b.HasIndex("TvId");
+
+                    b.HasIndex("TvdbId");
 
                     b.ToTable("Episodes");
                 });
@@ -1058,6 +1102,8 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name");
 
                     b.ToTable("Genres");
                 });
@@ -1168,6 +1214,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("FilePath")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
@@ -1303,6 +1350,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("CreditId")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
@@ -1335,6 +1383,8 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name");
 
                     b.ToTable("Keywords");
                 });
@@ -1395,8 +1445,12 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EnglishName");
+
                     b.HasIndex("Iso6391")
                         .IsUnique();
+
+                    b.HasIndex("Name");
 
                     b.ToTable("Languages");
                 });
@@ -1478,6 +1532,12 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Id")
                         .IsUnique();
+
+                    b.HasIndex("Order");
+
+                    b.HasIndex("Title");
+
+                    b.HasIndex("Type");
 
                     b.ToTable("Libraries");
                 });
@@ -1617,6 +1677,12 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Name");
+
+                    b.HasIndex("Site");
+
+                    b.HasIndex("Type");
+
                     b.HasIndex("EpisodeId", "Src")
                         .IsUnique();
 
@@ -1716,43 +1782,36 @@ namespace NoMercy.Database.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("_audio")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT")
                         .HasColumnName("Audio");
 
                     b.Property<string>("_chapters_file")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT")
                         .HasColumnName("ChaptersFile");
 
                     b.Property<string>("_fonts")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT")
                         .HasColumnName("Fonts");
 
                     b.Property<string>("_fonts_file")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT")
                         .HasColumnName("FontsFile");
 
                     b.Property<string>("_previews")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT")
                         .HasColumnName("Previews");
 
                     b.Property<string>("_subtitles")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT")
                         .HasColumnName("Subtitles");
 
                     b.Property<string>("_video")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT")
                         .HasColumnName("Video");
@@ -1887,7 +1946,15 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ImdbId");
+
                     b.HasIndex("LibraryId");
+
+                    b.HasIndex("ReleaseDate");
+
+                    b.HasIndex("Title");
+
+                    b.HasIndex("TitleSort");
 
                     b.ToTable("Movies");
                 });
@@ -1920,6 +1987,8 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name");
 
                     b.ToTable("MusicGenres");
                 });
@@ -2101,6 +2170,16 @@ namespace NoMercy.Database.Migrations
                         .HasColumnName("ExternalIds");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BirthDay");
+
+                    b.HasIndex("ImdbId");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("Popularity");
+
+                    b.HasIndex("TitleSort");
 
                     b.ToTable("People");
                 });
@@ -2415,7 +2494,13 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AirDate");
+
                     b.HasIndex("MovieId");
+
+                    b.HasIndex("SeasonNumber");
+
+                    b.HasIndex("Title");
 
                     b.HasIndex("TvId");
 
@@ -2474,6 +2559,10 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("MovieFromId");
 
                     b.HasIndex("MovieToId");
+
+                    b.HasIndex("Title");
+
+                    b.HasIndex("TitleSort");
 
                     b.HasIndex("TvFromId");
 
@@ -2616,6 +2705,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Duration")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
@@ -2668,11 +2758,17 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DiscNumber");
+
                     b.HasIndex("Filename");
 
                     b.HasIndex("Folder");
 
                     b.HasIndex("FolderId");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("TrackNumber");
 
                     b.ToTable("Tracks");
                 });
@@ -2929,6 +3025,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("TitleSort")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
@@ -2963,7 +3060,17 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("FirstAirDate");
+
+                    b.HasIndex("ImdbId");
+
                     b.HasIndex("LibraryId");
+
+                    b.HasIndex("Title");
+
+                    b.HasIndex("TitleSort");
+
+                    b.HasIndex("TvdbId");
 
                     b.ToTable("Tvs");
                 });
@@ -3032,6 +3139,17 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Allowed");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("Manage");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("Owner");
+
                     b.ToTable("Users");
                 });
 
@@ -3098,6 +3216,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("VideoFileId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -3197,14 +3316,20 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Duration");
+
                     b.HasIndex("EpisodeId");
 
                     b.HasIndex("Filename")
                         .IsUnique();
 
+                    b.HasIndex("Folder");
+
                     b.HasIndex("MetadataId");
 
                     b.HasIndex("MovieId");
+
+                    b.HasIndex("Quality");
 
                     b.ToTable("VideoFiles");
                 });
@@ -3233,12 +3358,14 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Folder", "LibraryFolder")
                         .WithMany()
                         .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Metadata", "Metadata")
                         .WithMany()
@@ -4552,7 +4679,8 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.VideoFile", "VideoFile")
                         .WithMany("UserData")
                         .HasForeignKey("VideoFileId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Collection");
 

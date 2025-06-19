@@ -1,4 +1,5 @@
 namespace NoMercy.Encoder.Format.Rules;
+
 public static class SubtitleCodecs
 {
     public static readonly Classes.CodecDto Ass = new()

@@ -1,6 +1,7 @@
 using NoMercy.Database.Models;
 
 namespace NoMercy.MediaProcessing.People;
+
 public interface IPersonRepository
 {
     public Task Store(IEnumerable<Person> people);

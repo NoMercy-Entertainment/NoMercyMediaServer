@@ -10,12 +10,12 @@ namespace NoMercy.Data.Jobs;
 public class StorageJob : IShouldQueue
 {
     public List<StorageDto> Storage { get; set; } = [];
-    
+
     public StorageJob()
     {
         //
     }
-    
+
     public StorageJob(List<StorageDto> storage)
     {
         Storage = storage;
@@ -24,26 +24,22 @@ public class StorageJob : IShouldQueue
     public async Task Handle()
     {
         await using MediaContext context = new();
-        
+
         List<Library> libraries = await context.Libraries
             .Include(library => library.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Folder)
-            
+            .ThenInclude(folderLibrary => folderLibrary.Folder)
             .Include(library => library.LibraryTvs)
-                .ThenInclude(folder => folder.Tv)
-                .ThenInclude(tv => tv.Episodes)
-                .ThenInclude(episode => episode.VideoFiles)
-                .ThenInclude(file => file.Metadata)
-            
+            .ThenInclude(folder => folder.Tv)
+            .ThenInclude(tv => tv.Episodes)
+            .ThenInclude(episode => episode.VideoFiles)
+            .ThenInclude(file => file.Metadata)
             .Include(folder => folder.LibraryMovies)
-                .ThenInclude(folder => folder.Movie)
-                .ThenInclude(movie => movie.VideoFiles)
-                .ThenInclude(file => file.Metadata)
-            
+            .ThenInclude(folder => folder.Movie)
+            .ThenInclude(movie => movie.VideoFiles)
+            .ThenInclude(file => file.Metadata)
             .Include(folder => folder.AlbumLibraries)
-                .ThenInclude(folder => folder.Album)
-                .ThenInclude(file => file.Metadata)
-            
+            .ThenInclude(folder => folder.Album)
+            .ThenInclude(file => file.Metadata)
             .ToListAsync();
 
         await Parallel.ForEachAsync(libraries, (library, _) =>
@@ -54,7 +50,7 @@ public class StorageJob : IShouldQueue
                 .Where(m => m.Metadata is not null)
                 .Select(vf => vf.Metadata)
                 .ToList();
-            
+
             List<Metadata?> tvMetaData = library.LibraryTvs
                 .Select(l => l.Tv)
                 .SelectMany(t => t.Episodes)
@@ -62,7 +58,7 @@ public class StorageJob : IShouldQueue
                 .Where(m => m.Metadata is not null)
                 .Select(vf => vf.Metadata)
                 .ToList();
-            
+
             List<Metadata?> albumMetaData = library.AlbumLibraries
                 .Select(l => l.Album)
                 .Where(m => m.Metadata is not null)
@@ -72,63 +68,60 @@ public class StorageJob : IShouldQueue
             foreach (FolderLibrary folderLibraries in library.FolderLibraries)
             {
                 StorageDto? storage = Storage.Find(s => s.Path == folderLibraries.Folder.Path);
-                
+
                 if (storage?.Data is null) return default;
-                
+
                 if (movieMetaData.Count > 0)
-                {
-                    foreach (Metadata? metadata in movieMetaData.Where(metadata => metadata?.HostFolder.StartsWith(folderLibraries.Folder.Path.Replace("\\", "/")) ?? false))
+                    foreach (Metadata? metadata in movieMetaData.Where(metadata =>
+                                 metadata?.HostFolder.StartsWith(folderLibraries.Folder.Path.Replace("\\", "/")) ??
+                                 false))
                     {
                         storage.Data.Movies += metadata?.MovieSize ?? 0;
                         storage.Data.Other += metadata?.OtherSize ?? 0;
                         storage.Data.Used += metadata?.FolderSize ?? 0;
                     }
-                }
-            
+
                 if (tvMetaData.Count > 0)
-                {
-                    foreach (Metadata? metadata in tvMetaData.Where(metadata => metadata?.HostFolder.StartsWith(folderLibraries.Folder.Path.Replace("\\", "/")) ?? false))
+                    foreach (Metadata? metadata in tvMetaData.Where(metadata =>
+                                 metadata?.HostFolder.StartsWith(folderLibraries.Folder.Path.Replace("\\", "/")) ??
+                                 false))
                     {
                         storage.Data.Shows += metadata?.TvSize ?? 0;
                         storage.Data.Other += metadata?.OtherSize ?? 0;
                         storage.Data.Used += metadata?.FolderSize ?? 0;
                     }
-                }
-            
+
                 if (albumMetaData.Count > 0)
-                {
-                    foreach (Metadata? metadata in albumMetaData.Where(metadata => metadata?.HostFolder.StartsWith(folderLibraries.Folder.Path.Replace("\\", "/")) ?? false))
+                    foreach (Metadata? metadata in albumMetaData.Where(metadata =>
+                                 metadata?.HostFolder.StartsWith(folderLibraries.Folder.Path.Replace("\\", "/")) ??
+                                 false))
                     {
                         storage.Data.Music += metadata?.MusicSize ?? 0;
                         storage.Data.Other += metadata?.OtherSize ?? 0;
                         storage.Data.Used += metadata?.FolderSize ?? 0;
                     }
-                }
             }
-            
-            
+
+
             return default;
         });
     }
 
     private static long GetDirectorySize(DirectoryInfo directoryInfo)
     {
-        if (!directoryInfo.Exists)
-        {
-            return 0;
-        }
+        if (!directoryInfo.Exists) return 0;
 
         FileInfo[] dirs = directoryInfo.GetFiles("*", SearchOption.AllDirectories);
-            
+
         long totalSize = dirs.Sum(file => file.Length);
 
         return totalSize;
     }
-    
-    private static async Task CountFolder(List<string> folders, string library, StorageDto storage, CancellationToken cancellationToken = default)
+
+    private static async Task CountFolder(List<string> folders, string library, StorageDto storage,
+        CancellationToken cancellationToken = default)
     {
-        
-        await Parallel.ForEachAsync(folders, cancellationToken,(folder, _) =>
+        await Parallel.ForEachAsync(folders, cancellationToken, (folder, _) =>
         {
             long size = GetDirectorySize(new(folder));
 
@@ -148,5 +141,4 @@ public class StorageJob : IShouldQueue
             return default;
         });
     }
-
 }

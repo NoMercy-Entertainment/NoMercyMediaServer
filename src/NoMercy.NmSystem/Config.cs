@@ -13,14 +13,14 @@ public static class Config
     public static readonly string ApiBaseUrl = "https://api.nomercy.tv/";
     public static string ApiServerBaseUrl = $"{ApiBaseUrl}v1/server/";
     public static readonly string CloudflareProxyUrl = "https://server-proxy.nomercy.tv";
-    
+
     public static string UserAgent => $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
 
     public static string? CloudflareTunnelToken { get; set; }
     public static bool UseCloudflareProxy { get; set; } = false;
     public static int InternalServerPort { get; set; } = 7626;
     public static int ExternalServerPort { get; set; } = 7626;
-    
+
     public static bool Swagger { get; set; } = true;
     public static bool IsDev { get; set; }
     public static bool UpdateAvailable { get; set; }

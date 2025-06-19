@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.Services;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
@@ -20,8 +22,17 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/artist")]
 public class ArtistsController : BaseController
 {
-    public static event EventHandler<LikeEventDto> OnLikeEvent;
-    
+    private readonly MusicRepository _musicRepository;
+    private readonly MediaContext _mediaContext;
+
+    public ArtistsController(MusicRepository musicService, MediaContext mediaContext)
+    {
+        _musicRepository = musicService;
+        _mediaContext = mediaContext;
+    }
+
+    public static event EventHandler<LikeEventDto>? OnLikeEvent;
+
     [HttpGet]
     [Route("/api/v{version:apiVersion}/music/artists/{letter}")]
     public async Task<IActionResult> Index(string letter)
@@ -32,15 +43,12 @@ public class ArtistsController : BaseController
 
         List<ArtistsResponseItemDto> artists = [];
 
-        await using MediaContext mediaContext = new();
-        await foreach (Artist artist in ArtistsResponseDto.GetArtists(mediaContext, userId, letter))
+        await foreach (Artist artist in _musicRepository.GetArtists(_mediaContext, userId, letter))
             artists.Add(new(artist));
 
-        List<ArtistTrack> tracks = mediaContext.ArtistTrack
-            .Where(artistTrack => artists
-                .Select(a => a.Id)
-                .Contains(artistTrack.ArtistId))
-            .ToList();
+        List<ArtistTrack> tracks = await _musicRepository.GetArtistTracksForCollection(_mediaContext,
+            artists.Select(a => a.Id)
+                .ToList());
 
         foreach (ArtistsResponseItemDto artist in artists)
             artist.Tracks = tracks.Count(track => track.ArtistId == artist.Id);
@@ -61,8 +69,7 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
 
-        await using MediaContext mediaContext = new();
-        Artist? artist = await ArtistResponseDto.GetArtist(mediaContext, userId, id);
+        Artist? artist = await _musicRepository.GetArtist(_mediaContext, userId, id);
 
         string country = Country();
 
@@ -92,34 +99,13 @@ public class ArtistsController : BaseController
         if (artist is null)
             return UnprocessableEntityResponse("Artist not found");
 
-        if (request.Value)
-        {
-            await mediaContext.ArtistUser
-                .Upsert(new(artist.Id, userId))
-                .On(m => new { m.ArtistId, m.UserId })
-                .WhenMatched(m => new()
-                {
-                    ArtistId = m.ArtistId,
-                    UserId = m.UserId
-                })
-                .RunAsync();
-        }
-        else
-        {
-            ArtistUser? tvUser = await mediaContext.ArtistUser
-                .Where(tvUser => tvUser.ArtistId == artist.Id && tvUser.UserId.Equals(userId))
-                .FirstOrDefaultAsync();
+        await _musicRepository.LikeArtistAsync(userId, artist, request.Value);
 
-            if (tvUser is not null) mediaContext.ArtistUser.Remove(tvUser);
-
-            await mediaContext.SaveChangesAsync();
-        }
-
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
+        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
         {
             QueryKey = ["music", "artist", artist.Id]
         });
-        
+
         LikeEventDto likeEventDto = new()
         {
             Id = artist.Id,
@@ -127,8 +113,8 @@ public class ArtistsController : BaseController
             Liked = request.Value,
             User = User.User()
         };
-        
-        OnLikeEvent.Invoke(this, likeEventDto);
+
+        OnLikeEvent?.Invoke(this, likeEventDto);
 
         return Ok(new StatusResponseDto<string>
         {

@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record UserPermissionRequest
 {
     [JsonProperty("id")] public Guid Id { get; set; }

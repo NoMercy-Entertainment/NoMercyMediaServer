@@ -11,7 +11,7 @@ public class Aac : BaseAudio
 
     public override CodecDto[] AvailableCodecs =>
     [
-        AudioCodecs.Aac,
+        AudioCodecs.Aac
     ];
 
     protected override string[] AvailableContainers =>

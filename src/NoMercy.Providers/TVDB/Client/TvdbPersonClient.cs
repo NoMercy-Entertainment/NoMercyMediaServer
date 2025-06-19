@@ -8,12 +8,12 @@ public class TvdbPersonClient(int id) : TvdbBaseClient(id)
     {
         return Get<TvdbCharacterResponse>("characters/" + Id);
     }
-    
+
     // public Task<TvdbPeopleResponse?> People()
     // {
     //     return Get<TvdbPeopleResponse>("people");
     // }
-    
+
     // public Task<TvdbPersonResponse?> Details()
     // {
     //     return Get<TvdbPersonResponse>("people/" + Id);
@@ -23,7 +23,7 @@ public class TvdbPersonClient(int id) : TvdbBaseClient(id)
     // {
     //     return Get<TvdbPersonExtendedResponse>("people/" + Id + "/extended");
     // }
-    
+
     public Task<TvdbPeopleTypeResponse?> Types()
     {
         return Get<TvdbPeopleTypeResponse>("people/types");

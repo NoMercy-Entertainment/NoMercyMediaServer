@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.TV;
+
 public class TmdbTvWatchProviderType
 {
     [JsonProperty("link")] public Uri? Link { get; set; }

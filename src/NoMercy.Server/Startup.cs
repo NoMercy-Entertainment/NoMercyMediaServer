@@ -1,4 +1,6 @@
 ﻿using Asp.Versioning.ApiExplorer;
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
 using NoMercy.Server.AppConfig;
 
 namespace NoMercy.Server;
@@ -10,7 +12,8 @@ public class Startup
     private readonly IApiVersionDescriptionProvider _provider;
     private readonly StartupOptions _options;
 
-    public Startup(IConfiguration configuration, IWebHostEnvironment environment, IApiVersionDescriptionProvider provider, StartupOptions options)
+    public Startup(IConfiguration configuration, IWebHostEnvironment environment,
+        IApiVersionDescriptionProvider provider, StartupOptions options)
     {
         _configuration = configuration;
         _environment = environment;
@@ -28,6 +31,32 @@ public class Startup
 
     public void Configure(IApplicationBuilder app)
     {
+        using IServiceScope? serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>()?.CreateScope();
+        MediaContext? mediaContext = serviceScope?.ServiceProvider.GetRequiredService<MediaContext>();
+        QueueContext? queueContext = serviceScope?.ServiceProvider.GetRequiredService<QueueContext>();
+
+        try
+        {
+            // Check if migration is needed
+            if (mediaContext?.Database.GetPendingMigrations().Any() == true)
+            {
+                mediaContext.Database.ExecuteSqlRaw("PRAGMA journal_mode = WAL;");
+                mediaContext.Database.Migrate();
+                Console.WriteLine("Media database migrations applied.");
+            }
+
+            if (queueContext?.Database.GetPendingMigrations().Any() == true)
+            {
+                queueContext.Database.ExecuteSqlRaw("PRAGMA journal_mode = WAL;");
+                queueContext.Database.Migrate();
+                Console.WriteLine("Queue database migrations applied.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error applying migrations: {ex.Message}");
+        }
+
         ApplicationConfiguration.ConfigureApp(app, _provider);
     }
 }

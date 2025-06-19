@@ -42,7 +42,8 @@ public class MusicBrainzBaseClient : IDisposable
 
     protected Guid Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false, int retry = 0) where T : class
+    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false,
+        int retry = 0) where T : class
     {
         query ??= new();
 

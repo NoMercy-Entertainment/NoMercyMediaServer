@@ -12,12 +12,10 @@ public static class Fonts
         string folder = Path.Combine(location, "fonts");
         string attachmentsFile = $"{location}/fonts.json";
 
-        if (!Directory.Exists(folder))
-        {
-            Directory.CreateDirectory(folder);
-        }
+        if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
-        string command = $"-dump_attachment:t \"\" -i \"{inputFilePath}\" -y  -hide_banner -max_muxing_queue_size 9999 -async 1 -loglevel panic 2>&1";
+        string command =
+            $"-dump_attachment:t \"\" -i \"{inputFilePath}\" -y  -hide_banner -max_muxing_queue_size 9999 -async 1 -loglevel panic 2>&1";
         await Shell.ExecAsync(command, folder);
 
         string[] files = Directory.GetFiles(folder);
@@ -25,13 +23,11 @@ public static class Fonts
 
         List<Attachment> attachments = [];
         foreach (string file in files)
-        {
             attachments.Add(new()
             {
                 Filename = Path.GetFileName(file),
                 MimeType = MimeTypes.GetMimeTypeFromFile(file)
             });
-        }
 
         await File.WriteAllTextAsync(attachmentsFile, attachments.ToJson());
     }

@@ -14,8 +14,8 @@ public static class AppFiles
             ".local/share")
         : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-    public static string AppPath => Config.IsDev 
-        ? Path.Combine(AppDataPath, "NoMercy_dev") 
+    public static string AppPath => Config.IsDev
+        ? Path.Combine(AppDataPath, "NoMercy_dev")
         : Path.Combine(AppDataPath, "NoMercy");
 
     public static string ConfigPath => Path.Combine(AppPath, "config");
@@ -43,10 +43,10 @@ public static class AppFiles
     public static string FfmpegFolder => Path.Combine(BinariesPath, "ffmpeg");
     public static string FfmpegPath => Path.Combine(FfmpegFolder, "ffmpeg" + Info.ExecSuffix);
     public static string FfProbePath => Path.Combine(FfmpegFolder, "ffprobe" + Info.ExecSuffix);
-    
+
     public static string TesseractFolder => Path.Combine(BinariesPath, "tesseract");
     public static string TesseractModelsFolder => Path.Combine(TesseractFolder, "tessdata");
-    
+
     public static string CloudflareDPath => Path.Combine(BinariesPath, "cloudflared" + Info.ExecSuffix);
 
     public static string UpdaterExePath => Path.Combine(BinariesPath, "NoMercyUpdater" + Info.ExecSuffix);
@@ -90,7 +90,7 @@ public static class AppFiles
             SecretsPath,
             TempImagesPath,
             TempPath,
-            TranscodePath,
+            TranscodePath
         ];
     }
 
@@ -114,7 +114,7 @@ public static class AppFiles
                 };
             }
         }
-        
+
         return Task.CompletedTask;
     }
 }

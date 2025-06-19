@@ -5,6 +5,7 @@ using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Season;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record SeasonDto
 {
     [JsonProperty("id")] public long Id { get; set; }

@@ -36,5 +36,8 @@ public class ComponentBuilder<T>
         return this;
     }
 
-    public ComponentDto<T> Build() => _component;
+    public ComponentDto<T> Build()
+    {
+        return _component;
+    }
 }

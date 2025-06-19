@@ -55,7 +55,6 @@ public class CollectionRepository(MediaContext context)
             .ThenInclude(library => library.LibraryUsers)
             .Include(collection => collection.CollectionMovies)
             .ThenInclude(movie => movie.Movie)
-            
             .ThenInclude(movie => movie.Translations
                 .Where(translation => translation.Iso6391 == language))
             .Include(collection => collection.CollectionMovies)
@@ -192,17 +191,13 @@ public class CollectionRepository(MediaContext context)
                 ));
 
         if (orderByExpression is not null && direction == "desc")
-        {
             return x.OrderByDescending(orderByExpression)
                 .Skip(page * take)
                 .Take(take);
-        }
         if (orderByExpression is not null)
-        {
             return x.OrderBy(orderByExpression)
                 .Skip(page * take)
                 .Take(take);
-        }
 
         return x.OrderBy(tv => tv.TitleSort)
             .Skip(page * take)

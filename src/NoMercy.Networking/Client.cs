@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Networking;
+
 public class Client : Device
 {
     public Guid Sub { get; set; }

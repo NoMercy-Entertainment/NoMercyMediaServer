@@ -28,16 +28,16 @@ public class ProcessFanartArtistImagesJob : AbstractFanArtDataJob
 
         ImageRepository imageRepository = new(context);
         FanArtImageManager imageManager = new(imageRepository);
-        
+
         try
         {
             using FanArtMusicClient fanArtMusicClient = new();
             FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(Id1);
             if (fanArt is null) return;
-            
+
             Artist dbArtist = await context.Artists
                 .FirstAsync(a => a.Id == Id1);
-            
+
             await imageManager.StoreReleaseImages(fanArt.ArtistAlbum, Id1, dbArtist);
 
             Database.Models.Image? artistCover = await imageManager.StoreArtistImages(fanArt, Id1, dbArtist);

@@ -19,16 +19,19 @@ public class Mp4 : BaseContainer
         VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc
     ];
 
-    public override CodecDto[] AvailableVideoCodecs => [
+    public override CodecDto[] AvailableVideoCodecs =>
+    [
         VideoCodecs.H264, VideoCodecs.H264Nvenc,
-        VideoCodecs.H265, VideoCodecs.H265Nvenc,
+        VideoCodecs.H265, VideoCodecs.H265Nvenc
     ];
 
-    public override CodecDto[] AvailableAudioCodecs => [
+    public override CodecDto[] AvailableAudioCodecs =>
+    [
         AudioCodecs.Mp3
     ];
 
-    public override CodecDto[] AvailableSubtitleCodecs => [
+    public override CodecDto[] AvailableSubtitleCodecs =>
+    [
         SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass,
         SubtitleCodecs.Copy
     ];

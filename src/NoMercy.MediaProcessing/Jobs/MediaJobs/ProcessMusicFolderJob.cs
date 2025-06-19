@@ -29,7 +29,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
         await using LibraryRepository libraryRepository = new(context);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
-        
+
         if (folder is null)
         {
             Logger.Encoder($"Folder not found: {FolderId}", LogEventLevel.Error);
@@ -58,45 +58,48 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
             if (!OperatingSystem.IsWindows())
             {
                 UnixFileMode unixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-                                            UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
-                                            UnixFileMode.OtherRead | UnixFileMode.OtherWrite | UnixFileMode.OtherExecute;
-                
+                                            UnixFileMode.GroupRead | UnixFileMode.GroupWrite |
+                                            UnixFileMode.GroupExecute |
+                                            UnixFileMode.OtherRead | UnixFileMode.OtherWrite |
+                                            UnixFileMode.OtherExecute;
+
                 Directory.CreateDirectory(folderMetaData.BasePath, unixFileMode);
             }
             else
             {
                 Directory.CreateDirectory(folderMetaData.BasePath);
             }
+
             Logger.Encoder($"{folderMetaData.BasePath} is created", LogEventLevel.Verbose);
         }
-        
+
         await using MediaScan mediaScan = new();
-        
+
         MediaFolderExtend? mediaFolder = (
             await mediaScan
                 .EnableFileListing()
                 .FilterByMediaType("music")
                 .Process(folderMetaData.BasePath, 1)
         ).FirstOrDefault();
-        
+
         if (mediaFolder is null)
         {
             Logger.Encoder($"Media folder not found for: {folderMetaData.BasePath}", LogEventLevel.Error);
             return;
         }
-        
+
         mediaFolder.Files?.Clear();
-        
+
         Logger.App("Matched: " + folderMetaData.ReleaseName + " - " + Id);
         AddReleaseOnlyJob addReleaseOnlyJob = new()
         {
             LibraryId = LibraryId,
             Id = Id,
             BaseFolder = folder,
-            MediaFolder = mediaFolder,
+            MediaFolder = mediaFolder
         };
         await addReleaseOnlyJob.Handle();
-        
+
         string[] extensions = [".mp3", ".flac", ".wav", ".m4a"];
         List<MediaFile> files = folderMetaData.Files
             .Where(f => f.Type == "file" && extensions.Contains(f.Extension))
@@ -122,7 +125,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
                         x.Title.ContainsSanitized(recordingName) &&
                         x.Position == trackNumber
                     ));
-            
+
             if (foundTrack is null)
             {
                 foundTrack = folderMetaData.MusicBrainzRelease.Media
@@ -134,7 +137,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
                     foundTrack = folderMetaData.MusicBrainzRelease.Media
                         .SelectMany(x => x.Tracks)
                         .FirstOrDefault(x => x.Position == trackNumber);
-                    
+
                     if (foundTrack is null)
                     {
                         Logger.Encoder($"Track not found in MusicBrainz: {recordingName}", LogEventLevel.Error);
@@ -142,9 +145,9 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
                     }
                 }
             }
-            
+
             folderMetaData.Files.Clear();
-            
+
             jobDispatcher.DispatchJob<EncodeMusicJob>(
                 foundTrack.Id,
                 folder.Id,
@@ -157,7 +160,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
             );
         }
     }
-    
+
     private async Task<FolderMetadata?> GetFolderMetaData(Folder folder)
     {
         using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
@@ -167,9 +170,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
             string.IsNullOrEmpty(musicBrainzRelease.Title) ||
             string.IsNullOrEmpty(musicBrainzRelease.ArtistCredit.FirstOrDefault()?.Name)
         )
-        {
             return null;
-        }
 
         string artistName = musicBrainzRelease.ArtistCredit.FirstOrDefault()?.Name ?? string.Empty;
         string releaseName = musicBrainzRelease.Title;
@@ -178,17 +179,11 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
         string folderStartLetter = artistName[..1];
 
         if (folderStartLetter.IsAlphaNumeric())
-        {
             folderStartLetter = "[Other]";
-        }
         else if (folderStartLetter.IsNumeric())
-        {
             folderStartLetter = "#";
-        }
         else
-        {
             folderStartLetter = folderStartLetter.ToUpper();
-        }
 
         string basePath = Path.Combine(folder.Path, folderStartLetter, artistName,
             folderReleaseName.DirectorySafeName());
@@ -212,8 +207,7 @@ public class ProcessMusicFolderJob : AbstractMusicFolderJob
             ReleaseName = releaseName,
             Year = int.Parse(year, CultureInfo.InvariantCulture),
             FolderReleaseName = folderReleaseName,
-            FolderStartLetter = folderStartLetter,
-            
+            FolderStartLetter = folderStartLetter
         };
     }
 

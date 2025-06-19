@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Certifications;
+
 public class TmdbTvShowCertification
 {
     [JsonProperty("certification")] public string? Rating { get; set; }

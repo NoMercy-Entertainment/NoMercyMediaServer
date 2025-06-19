@@ -47,7 +47,7 @@ public class CollectionManager(
             Parts = collectionAppends.Parts.Length,
             _colorPalette = colorPalette,
 
-            LibraryId = library.Id,
+            LibraryId = library.Id
         };
 
         await collectionRepository.Store(collection);
@@ -147,20 +147,19 @@ public class CollectionManager(
         if (backdropJobItems.Any())
             jobDispatcher.DispatchJob<ImagePaletteJob, Image>(collection.Id, backdropJobItems);
 
-        IEnumerable<Image> logos = collection.Images.Logos.Select(
-                image => new Image
-                {
-                    AspectRatio = image.AspectRatio,
-                    FilePath = image.FilePath,
-                    Height = image.Height,
-                    Iso6391 = image.Iso6391,
-                    VoteAverage = image.VoteAverage,
-                    VoteCount = image.VoteCount,
-                    Width = image.Width,
-                    CollectionId = collection.Id,
-                    Type = "logo",
-                    Site = "https://image.tmdb.org/t/p/"
-                })
+        IEnumerable<Image> logos = collection.Images.Logos.Select(image => new Image
+            {
+                AspectRatio = image.AspectRatio,
+                FilePath = image.FilePath,
+                Height = image.Height,
+                Iso6391 = image.Iso6391,
+                VoteAverage = image.VoteAverage,
+                VoteCount = image.VoteCount,
+                Width = image.Width,
+                CollectionId = collection.Id,
+                Type = "logo",
+                Site = "https://image.tmdb.org/t/p/"
+            })
             .ToArray();
 
         await collectionRepository.StoreImages(logos);
@@ -187,10 +186,7 @@ public class CollectionManager(
             movies.Add(movieAppends);
         });
 
-        foreach (TmdbMovieAppends movie in movies)
-        {
-            await movieManager.Add(movie.Id, library);
-        }
+        foreach (TmdbMovieAppends movie in movies) await movieManager.Add(movie.Id, library);
 
         await collectionRepository.LinkToMovies(collectionAppends);
 

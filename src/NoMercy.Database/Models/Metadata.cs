@@ -1,5 +1,4 @@
-﻿
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -9,27 +8,30 @@ namespace NoMercy.Database.Models;
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Filename), nameof(HostFolder), IsUnique = true)]
 [Index(nameof(Type))]
-public class Metadata: Timestamps
+public class Metadata : Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
     public Ulid Id { get; init; } = Ulid.NewUlid();
-    
+
     [JsonProperty("type")] public MediaType Type { get; set; }
     [JsonProperty("duration")] public string Duration { get; set; } = string.Empty;
     [JsonProperty("filename")] public string Filename { get; set; } = string.Empty;
     [JsonProperty("folder")] public string Folder { get; set; } = string.Empty;
     [JsonProperty("host_folder")] public string HostFolder { get; set; } = string.Empty;
-    
+
     [JsonProperty("folder_size")] public long FolderSize { get; set; }
     [JsonProperty("movie_size")] public long MovieSize => Type == MediaType.Movie ? CalculateVideoSize() : 0;
     [JsonProperty("show_size")] public long TvSize => Type == MediaType.Tv ? CalculateVideoSize() : 0;
-    [JsonProperty("music_size")] public long MusicSize => Type == MediaType.Music ? Audio?.Sum(a => a.FileSize) ?? 0 : 0;
+
+    [JsonProperty("music_size")]
+    public long MusicSize => Type == MediaType.Music ? Audio?.Sum(a => a.FileSize) ?? 0 : 0;
+
     [JsonProperty("other_size")] public long OtherSize => FolderSize - (MovieSize + TvSize + MusicSize);
-    
+
     [JsonProperty("audio_track_id")] public Guid? AudioTrackId { get; set; }
     public Track AudioTrack { get; set; } = null!;
-    
+
     [Column("Video")]
     [StringLength(1024)]
     [JsonProperty("video")]
@@ -45,7 +47,7 @@ public class Metadata: Timestamps
             : null;
         init => _video = JsonConvert.SerializeObject(value);
     }
-    
+
     [Column("Audio")]
     [StringLength(1024)]
     [JsonProperty("audio")]
@@ -61,7 +63,7 @@ public class Metadata: Timestamps
             : null;
         init => _audio = JsonConvert.SerializeObject(value);
     }
-    
+
     [Column("Subtitles")]
     [StringLength(1024)]
     [JsonProperty("subtitles")]
@@ -77,7 +79,7 @@ public class Metadata: Timestamps
             : null;
         init => _subtitles = JsonConvert.SerializeObject(value);
     }
-    
+
     [Column("Previews")]
     [StringLength(1024)]
     [JsonProperty("previews")]
@@ -93,7 +95,7 @@ public class Metadata: Timestamps
             : null;
         init => _previews = JsonConvert.SerializeObject(value);
     }
-    
+
     [Column("Fonts")]
     [StringLength(1024)]
     [JsonProperty("fonts")]
@@ -109,7 +111,7 @@ public class Metadata: Timestamps
             : null;
         init => _fonts = JsonConvert.SerializeObject(value);
     }
-    
+
     [Column("FontsFile")]
     [StringLength(1024)]
     [JsonProperty("fonts_file")]
@@ -125,7 +127,7 @@ public class Metadata: Timestamps
             : null;
         init => _fonts_file = JsonConvert.SerializeObject(value);
     }
-    
+
     [Column("ChaptersFile")]
     [StringLength(1024)]
     [JsonProperty("chapters_file")]
@@ -146,40 +148,19 @@ public class Metadata: Timestamps
     {
         long totalSize = 0;
 
-        if (Video != null)
-        {
-            totalSize += Video.Sum(v => v.FileSize);
-        }
+        if (Video != null) totalSize += Video.Sum(v => v.FileSize);
 
-        if (Audio != null)
-        {
-            totalSize += Audio.Sum(a => a.FileSize);
-        }
+        if (Audio != null) totalSize += Audio.Sum(a => a.FileSize);
 
-        if (Subtitles != null)
-        {
-            totalSize += Subtitles.Sum(s => s.FileSize);
-        }
+        if (Subtitles != null) totalSize += Subtitles.Sum(s => s.FileSize);
 
-        if (Previews != null)
-        {
-            totalSize += Previews.Sum(p => p.ImageFileSize + p.TimeFileSize);
-        }
+        if (Previews != null) totalSize += Previews.Sum(p => p.ImageFileSize + p.TimeFileSize);
 
-        if (Fonts != null)
-        {
-            totalSize += Fonts.Sum(f => f.FileSize);
-        }
+        if (Fonts != null) totalSize += Fonts.Sum(f => f.FileSize);
 
-        if (FontsFile != null)
-        {
-            totalSize += FontsFile.FileSize;
-        }
+        if (FontsFile != null) totalSize += FontsFile.FileSize;
 
-        if (Chapters != null)
-        {
-            totalSize += Chapters.FileSize;
-        }
+        if (Chapters != null) totalSize += Chapters.FileSize;
 
         return totalSize;
     }
@@ -188,15 +169,9 @@ public class Metadata: Timestamps
     {
         long totalSize = 0;
 
-        if (Video != null)
-        {
-            totalSize += Video.Sum(v => v.FileSize);
-        }
+        if (Video != null) totalSize += Video.Sum(v => v.FileSize);
 
-        if (Audio != null)
-        {
-            totalSize += Audio.Sum(a => a.FileSize);
-        }
+        if (Audio != null) totalSize += Audio.Sum(a => a.FileSize);
 
         return totalSize;
     }
@@ -210,7 +185,7 @@ public enum MediaType
     Other
 }
 
-public class IVideo: IHash
+public class IVideo : IHash
 {
     [JsonProperty("width")] public int Width { get; set; }
     [JsonProperty("height")] public int Height { get; set; }
@@ -218,7 +193,7 @@ public class IVideo: IHash
     [JsonProperty("bit_rate")] public long BitRate { get; set; }
 }
 
-public class IAudio: IHash
+public class IAudio : IHash
 {
     [JsonProperty("language")] public string? Language { get; set; }
     [JsonProperty("codec")] public string? Codec { get; set; }
@@ -228,23 +203,22 @@ public class IAudio: IHash
     [JsonProperty("sample_rate")] public int SampleRate { get; set; }
 }
 
-public class ISubtitle: IHash
+public class ISubtitle : IHash
 {
     [JsonProperty("language")] public string? Language { get; set; }
     [JsonProperty("codec")] public string? Codec { get; set; }
-    [MaxLength(10)]
-    [JsonProperty("type")] public string? Type { get; set; }
+    [MaxLength(10)] [JsonProperty("type")] public string? Type { get; set; }
 }
 
 public class IPreview
 {
     [JsonProperty("width")] public int? Width { get; set; }
     [JsonProperty("height")] public int? Height { get; set; }
-    
+
     [JsonProperty("image_file_name")] public string? ImageFileName { get; set; }
     [JsonProperty("image_file_hash")] public string? ImageFileHash { get; set; }
     [JsonProperty("image_file_size")] public long ImageFileSize { get; set; }
-    
+
     [JsonProperty("time_file_name")] public string? TimeFileName { get; set; }
     [JsonProperty("time_file_hash")] public string? TimeFileHash { get; set; }
     [JsonProperty("time_file_size")] public long TimeFileSize { get; set; }
@@ -257,8 +231,14 @@ public class IHash
     [JsonProperty("file_size")] public long FileSize { get; set; }
 }
 
-public class IFont: IHash{}
+public class IFont : IHash
+{
+}
 
-public class IFontsFile: IHash{}
+public class IFontsFile : IHash
+{
+}
 
-public class IChaptersFile: IHash{}
+public class IChaptersFile : IHash
+{
+}

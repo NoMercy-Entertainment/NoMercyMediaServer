@@ -32,7 +32,7 @@ public class SeasonManager(
                     "external_ids",
                     "images",
                     "translations"
-                ], priority: priority);
+                ], priority);
                 if (seasonTask is null) return;
 
                 seasonAppends.Add(seasonTask);

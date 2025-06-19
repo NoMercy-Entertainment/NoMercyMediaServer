@@ -24,7 +24,7 @@ public static class Dev
         // {
         //     SentrySdk.CaptureException(ex);
         // }
-        
+
         // MediaContext context = new();
         // List<Folder> folders = context.Folders
         //     .Include(l => l.FolderLibraries)
@@ -80,7 +80,6 @@ public static class Dev
         // Logger.Tvdb(peopleTypes);
 
 
-
         //
         // TvdbCompanyClient companyClient = new(2151);
         // TvdbCompaniesResponse? tvdbCompaniesResponse = await companyClient.Companies();
@@ -120,15 +119,15 @@ public static class Dev
         // TvdbLanguagesResponse? languages = await languagesClient.Languages();
         // Logger.Tvdb(languages);
     }
-    
+
     private static void ProcessM3U8Files(string rootPath)
     {
         try
         {
             Logger.Encoder($"Processing M3U8 files in {rootPath}");
-            string[] m3U8TmpFiles = Directory.GetFiles(rootPath, "*.m3u8.tmp", SearchOption.AllDirectories) 
+            string[] m3U8TmpFiles = Directory.GetFiles(rootPath, "*.m3u8.tmp", SearchOption.AllDirectories)
                                     ?? throw new ArgumentNullException(nameof(m3U8TmpFiles), "No M3U8 files found");
-            
+
             foreach (string tmpFile in m3U8TmpFiles)
             {
                 string originalFile = tmpFile[..^4]; // Remove .tmp extension
@@ -150,12 +149,12 @@ public static class Dev
             Console.WriteLine($"Error processing M3U8 files: {ex.Message}");
         }
     }
-    
+
     public static string GetDominantColor(string path)
     {
         using Image<Rgb24> image = Image.Load<Rgb24>(path);
         image.Mutate(x => x
-            .Resize(new ResizeOptions()
+            .Resize(new ResizeOptions
             {
                 Sampler = KnownResamplers.NearestNeighbor,
                 Size = new(100, 0)
@@ -173,6 +172,5 @@ public static class Dev
         Rgb24 dominant = image[0, 0];
 
         return dominant.ToHexString();
-
     }
 }

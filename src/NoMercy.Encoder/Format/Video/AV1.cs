@@ -26,7 +26,7 @@ public class Av1 : BaseVideo
     protected override CodecDto[] AvailableCodecs =>
     [
         VideoCodecs.Av1,
-        VideoCodecs.Av1Nvenc,
+        VideoCodecs.Av1Nvenc
         // VideoCodecs.Av1Qsv,
         // VideoCodecs.Av1Amf,
         // VideoCodecs.Av1Videotoolbox
@@ -125,7 +125,7 @@ public class Av1 : BaseVideo
             else if (VideoCodecs.Av1Videotoolbox.Value == VideoCodec.Value)
             {
             }
-            
+
             return
             [
                 VideoTunes.Film, VideoTunes.Animation,
@@ -139,7 +139,7 @@ public class Av1 : BaseVideo
     public override string[] AvailableColorSpaces =>
     [
         ColorSpaces.Yuv420P, ColorSpaces.Yuv420P10Le,
-        ColorSpaces.Yuv422P, ColorSpaces.Yuv444P,
+        ColorSpaces.Yuv422P, ColorSpaces.Yuv444P
     ];
 
     public override string[] AvailableLevels =>

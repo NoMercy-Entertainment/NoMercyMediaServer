@@ -1237,7 +1237,7 @@ public class ConsoleLetters
             "║"
         ]
     };
-    
+
     public static readonly Dictionary<string, List<string>> ColossalXmas = new()
     {
         ["A"] =
@@ -1630,7 +1630,7 @@ public class ConsoleLetters
             " 888  888",
             " \"Y888888",
             "   🎄️   ",
-            "          ",
+            "          "
         ],
         ["b"] =
         [

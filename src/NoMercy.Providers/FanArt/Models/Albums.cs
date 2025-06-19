@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.FanArt.Models;
+
 public class Albums
 {
     private Image[]? _cover = [];

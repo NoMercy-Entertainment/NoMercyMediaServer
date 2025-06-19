@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record HomeSourceDto
 {
     [JsonProperty("id")] public int Id { get; set; }
@@ -13,5 +14,4 @@ public record HomeSourceDto
         MediaType = type;
         Link = new($"/{type}/{id}", UriKind.Relative);
     }
-
 }

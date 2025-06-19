@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record TextTrackDto
 {
     [JsonProperty("label")] public string Label { get; set; } = string.Empty;

@@ -1,14 +1,19 @@
 using Newtonsoft.Json;
+
 namespace NoMercy.Providers.TVDB.Models;
-public class TvdbAwardsResponse: TvdbResponse<TvdbStatus[]>
+
+public class TvdbAwardsResponse : TvdbResponse<TvdbStatus[]>
 {
 }
+
 public class TvdbAwardResponse : TvdbResponse<TvdbStatus>
 {
 }
+
 public class TvdbAwardExtendedResponse : TvdbResponse<TvdbAwardExtendedData>
 {
 }
+
 public class TvdbAwardExtendedData
 {
     [JsonProperty("categories")] public List<TvdbAwardCategoryData> Categories { get; set; } = [];
@@ -16,9 +21,11 @@ public class TvdbAwardExtendedData
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("score")] public int Score { get; set; }
 }
+
 public class TvdbAwardCategoryResponse : TvdbResponse<TvdbAwardCategoryData>
 {
 }
+
 public class TvdbAwardCategoryData
 {
     [JsonProperty("allowCoNominees")] public bool AllowCoNominees { get; set; }
@@ -28,9 +35,11 @@ public class TvdbAwardCategoryData
     [JsonProperty("id")] public int Id { get; set; }
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
 }
+
 public class TvdbAwardCategoryExtendedResponse : TvdbResponse<TvdbAwardCategoryExtendedData>
 {
 }
+
 public class TvdbAwardCategoryExtendedData : TvdbAwardCategoryData
 {
     // [JsonProperty("id")] public int Id { get; set; }
@@ -56,8 +65,14 @@ public class TvdbNominee
     [JsonProperty("character")] public TvdbCharacter? Character { get; set; }
 }
 
-public class TvdbEpisode {}
-public class TvdbCharacter {}
+public class TvdbEpisode
+{
+}
+
+public class TvdbCharacter
+{
+}
+
 public class TvdbMovie
 {
     [JsonProperty("id")] public int Id { get; set; }
@@ -73,11 +88,13 @@ public class TvdbMovie
     [JsonProperty("lastUpdated")] public DateTimeOffset LastUpdated { get; set; }
     [JsonProperty("year")] public int Year { get; set; }
 }
+
 public class TvdbAlias
-{ 
+{
     [JsonProperty("language")] public string Language { get; set; } = string.Empty;
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
 }
+
 public class TvdbAwardStatus
 {
     [JsonProperty("id")] public int Id { get; set; }

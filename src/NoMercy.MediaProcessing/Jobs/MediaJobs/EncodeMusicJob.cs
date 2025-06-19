@@ -48,11 +48,11 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 FolderId = folder.Id,
                 TrackNumber = foundTrack.Position
             };
-            
+
             try
             {
                 BaseContainer container = BaseContainer.Create(profile.Container);
-                
+
                 BuildAudioStreams(profile, ref container, foundTrack, folderMetaData.MusicBrainzRelease);
 
                 VideoAudioFile ffmpeg = new FfMpeg()
@@ -75,7 +75,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                     Id = track.Id,
                     Title = foundTrack.Title,
                     BaseFolder = folderMetaData.BasePath,
-                    Type = "audio",
+                    Type = "audio"
                 };
 
                 Logger.Encoder(fullCommand);
@@ -88,7 +88,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                     Id = track.Id,
                     Status = "completed",
                     Title = foundTrack.Title,
-                    Message = "Done",
+                    Message = "Done"
                 });
             }
             catch (Exception e)
@@ -100,27 +100,27 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                     Id = track.Id,
                     Status = "failed",
                     Title = foundTrack.Title,
-                    Message = e.Message,
+                    Message = e.Message
                 });
             }
         }
     }
-    
+
     private async Task AddRecording(BaseContainer container, Folder folder)
     {
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
-        
+
         MusicGenreRepository musicGenreRepository = new(context);
-        
+
         ArtistRepository artistRepository = new(context);
         ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
-        
+
         RecordingRepository recordingRepository = new(context);
         RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
-        
+
         await using MediaScan mediaScan = new();
-        
+
         MediaFolderExtend mediaFolder = (
             await mediaScan
                 .EnableFileListing()
@@ -130,17 +130,18 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         ).First();
 
         mediaFolder.Files?.FilterConcurrentBag([container.FileName]);
-        
-        CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(folderMetaData.MusicBrainzRelease.Id);
-        
+
+        CoverArtImageManagerManager.CoverPalette? coverPalette =
+            await CoverArtImageManagerManager.Add(folderMetaData.MusicBrainzRelease.Id);
+
         await Parallel.ForEachAsync(folderMetaData.MusicBrainzRelease.Media, async (media, t) =>
         {
             if (!await recordingManager.Store(folderMetaData.MusicBrainzRelease, foundTrack, media,
-                folder, mediaFolder, coverPalette)) return;
-                
+                    folder, mediaFolder, coverPalette)) return;
+
             Library? albumLibrary = folder.FolderLibraries
                 .FirstOrDefault(f => f.LibraryId == LibraryId)?.Library;
-            
+
             if (albumLibrary is null)
             {
                 Logger.MusicBrainz($"Album Library not found: {LibraryId}", LogEventLevel.Error);
@@ -164,7 +165,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         {
             MusicBrainzMedia album = musicBrainzRelease.Media
                 .First(m => m.Tracks.Any(t => t.Title == track.Title));
-            
+
             string albumArtist = string.Join("/", musicBrainzRelease.ArtistCredit.Select(c => c.Name));
             string albumNumber = musicBrainzRelease.Title;
             string artist = string.Join("/", track.ArtistCredit.Select(c => c.Name));
@@ -176,7 +177,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 musicBrainzRelease.MusicBrainzReleaseGroup?.Genres?.Select(c => c.Name) ?? []);
             string title = track.Title;
             string trackNumber = $"{track.Number}/{album.TrackCount}";
-            
+
             Guid musicBrainzReleaseId = musicBrainzRelease.Id;
             Guid musicBrainzRecordingId = track.Id;
             Guid musicBrainzTrackId = track.Id;

@@ -1,4 +1,5 @@
 namespace NoMercy.Encoder.Format.Rules;
+
 public static class SubtitleFormats
 {
     public static readonly string Ass = "ass";

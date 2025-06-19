@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.Helpers.Monitoring;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard.DTO;
+
 public record ResourceInfoDto
 {
     [JsonProperty("cpu")] public Cpu Cpu { get; set; } = new();

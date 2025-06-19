@@ -2,6 +2,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -24,7 +25,7 @@ public class AddShowJob : AbstractMediaJob
 {
     public override string QueueName => "queue";
     public override int Priority => 5;
-    
+
     public bool HighPriority { get; set; }
 
     public override async Task Handle()
@@ -50,17 +51,28 @@ public class AddShowJob : AbstractMediaJob
             .ThenInclude(f => f.Folder)
             .FirstAsync();
 
-        TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary, priority: HighPriority);
+        TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary, HighPriority);
         if (show == null) return;
 
-        IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(show, priority: HighPriority);
-        foreach (TmdbSeasonAppends season in seasons) await episodeManager.Add(show, season, priority: HighPriority);
+        IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(show, HighPriority);
+
+        ConcurrentBag<Episode> episodes = [];
+        await Parallel.ForEachAsync(seasons, async (season, _) =>
+        {
+            IEnumerable<Episode> eps = await episodeManager.Add(show, season, HighPriority);
+            foreach (Episode episode in eps)
+            {
+                episodes.Add(episode);
+            } 
+        });
+        
+        await episodeRepository.StoreEpisodes(episodes); 
 
         await fileManager.FindFiles(Id, tvLibrary);
 
         Logger.App($"Show {show.Name} added to the library, extra data will be added in the background");
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto()
+        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
         {
             QueryKey = ["libraries", LibraryId.ToString()]
         });

@@ -8,9 +8,9 @@ namespace NoMercy.Helpers.Monitoring;
 public class StorageMonitor
 {
     public static List<Library> Libraries { get; set; } = [];
-    
+
     public static List<StorageDto> Storage { get; set; } = [];
-    
+
     public static List<ResourceMonitorDto> Main()
     {
         DriveInfo[] allDrives = DriveInfo.GetDrives();
@@ -34,11 +34,11 @@ public class StorageMonitor
 
         return resourceMonitorDtos;
     }
-    
+
     public static Task UpdateStorage()
     {
         using MediaContext context = new();
-        
+
         Libraries = context.Libraries
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
@@ -52,62 +52,60 @@ public class StorageMonitor
             .Include(folder => folder.LibraryTracks)
             .ThenInclude(folder => folder.Track)
             .ToList();
-        
+
         foreach (Library library in Libraries)
+        foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
-            foreach (FolderLibrary folderLibrary in library.FolderLibraries)
+            StorageDto movieStorageDto = new()
             {
-                StorageDto movieStorageDto = new()
+                Path = folderLibrary.Folder.Path,
+                Data = new()
                 {
-                    Path = folderLibrary.Folder.Path,
-                    Data = new()
-                    {
-                        Movies = 0,
-                        Shows = 0,
-                        Music = 0,
-                        // Free = StorageHelper.GetFreeSpace(folderLibrary.Folder.Path),
-                        Used = 0,
-                        Other = 0
-                    }
-                };
-                Storage.Add(movieStorageDto);
-                
-                StorageDto tvStorageDto = new()
+                    Movies = 0,
+                    Shows = 0,
+                    Music = 0,
+                    // Free = StorageHelper.GetFreeSpace(folderLibrary.Folder.Path),
+                    Used = 0,
+                    Other = 0
+                }
+            };
+            Storage.Add(movieStorageDto);
+
+            StorageDto tvStorageDto = new()
+            {
+                Path = folderLibrary.Folder.Path,
+                Data = new()
                 {
-                    Path = folderLibrary.Folder.Path,
-                    Data = new()
-                    {
-                        Movies = 0,
-                        Shows = 0,
-                        Music = 0,
-                        // Free = StorageHelper.GetFreeSpace(folderLibrary.Folder.Path),
-                        Used = 0,
-                        Other = 0
-                    }
-                };
-                Storage.Add(tvStorageDto);
-                
-                StorageDto musicStorageDto = new()
+                    Movies = 0,
+                    Shows = 0,
+                    Music = 0,
+                    // Free = StorageHelper.GetFreeSpace(folderLibrary.Folder.Path),
+                    Used = 0,
+                    Other = 0
+                }
+            };
+            Storage.Add(tvStorageDto);
+
+            StorageDto musicStorageDto = new()
+            {
+                Path = folderLibrary.Folder.Path,
+                Data = new()
                 {
-                    Path = folderLibrary.Folder.Path,
-                    Data = new()
-                    {
-                        Movies = 0,
-                        Shows = 0,
-                        Music = 0,
-                        // Free = StorageHelper.GetFreeSpace(folderLibrary.Folder.Path),
-                        Used = 0,
-                        Other = 0
-                    }
-                };
-                Storage.Add(musicStorageDto);
-            }
+                    Movies = 0,
+                    Shows = 0,
+                    Music = 0,
+                    // Free = StorageHelper.GetFreeSpace(folderLibrary.Folder.Path),
+                    Used = 0,
+                    Other = 0
+                }
+            };
+            Storage.Add(musicStorageDto);
         }
-        
+
         Storage = Storage.GroupBy(f => f.Path)
             .Select(f => f.First())
             .ToList();
-        
+
         return Task.CompletedTask;
     }
 }
@@ -175,9 +173,8 @@ public class Usage
     //     }
     //     set => _free = (long)value;
     // }
-
     [JsonIgnore]
-    private long Total => (Used + _free);
+    private long Total => Used + _free;
 
     private long CalculatePercentage(long value)
     {

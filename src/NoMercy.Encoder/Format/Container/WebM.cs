@@ -17,15 +17,18 @@ public class WebM : BaseContainer
         VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc
     ];
 
-    public override CodecDto[] AvailableVideoCodecs => [
-        VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc,
+    public override CodecDto[] AvailableVideoCodecs =>
+    [
+        VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc
     ];
 
-    public override CodecDto[] AvailableAudioCodecs => [
-        AudioCodecs.Opus, AudioCodecs.Vorbis,
+    public override CodecDto[] AvailableAudioCodecs =>
+    [
+        AudioCodecs.Opus, AudioCodecs.Vorbis
     ];
 
-    public override CodecDto[] AvailableSubtitleCodecs => [
+    public override CodecDto[] AvailableSubtitleCodecs =>
+    [
         SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass,
         SubtitleCodecs.Copy
     ];

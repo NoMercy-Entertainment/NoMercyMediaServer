@@ -4,7 +4,7 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.MediaProcessing.Images;
 
-public class ImageRepository(MediaContext context): IImageRepository
+public class ImageRepository(MediaContext context) : IImageRepository
 {
     public Task StoreArtistImages(IEnumerable<Image> images, Artist dbArtist)
     {
@@ -48,7 +48,7 @@ public class ImageRepository(MediaContext context): IImageRepository
             })
             .RunAsync();
     }
-    
+
     public Task<ReleaseGroup> GetReleaseImages(Guid id)
     {
         return context.ReleaseGroups

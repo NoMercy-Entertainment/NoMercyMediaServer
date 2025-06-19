@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Shared;
+
 public class TmdbCertificationList
 {
     [JsonProperty("AU")] public TmdbCertificationItem[] Au { get; set; } = [];

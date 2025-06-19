@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record PeopleResponseItemDto
 {
     [JsonProperty("id")] public long Id { get; set; }

@@ -193,7 +193,7 @@ public class IsoLanguageMapper
         { Zha, "zhuang, chuang" },
         { Zul, "zulu" }
     };
-    
+
     public static readonly Dictionary<string, string> Iso3ToIso2 = new(StringComparer.OrdinalIgnoreCase)
     {
         { Aar, "aa" },
@@ -380,10 +380,11 @@ public class IsoLanguageMapper
         { Xho, "za" },
         { Yid, "zu" }
     };
-    
+
     public static string? GetIsoCode(string language)
     {
-        Dictionary<string, string> languageToIso = IsoToLanguage.ToDictionary(kvp => kvp.Value, kvp => kvp.Key, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> languageToIso =
+            IsoToLanguage.ToDictionary(kvp => kvp.Value, kvp => kvp.Key, StringComparer.OrdinalIgnoreCase);
         return languageToIso.TryGetValue(language, out string? isoCode) ? isoCode : null;
     }
 }

@@ -4,6 +4,7 @@ using NoMercy.Database.Models;
 using NoMercy.Providers.TMDB.Models.Shared;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record DirectorDto
 {
     [JsonProperty("id")] public long Id { get; set; }

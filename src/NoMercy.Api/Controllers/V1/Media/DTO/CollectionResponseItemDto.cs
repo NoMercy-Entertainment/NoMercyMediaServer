@@ -6,6 +6,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.Collections;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record CollectionResponseItemDto
 {
     [JsonProperty("id")] public long Id { get; set; }
@@ -36,7 +37,7 @@ public record CollectionResponseItemDto
     public CollectionResponseItemDto(Collection? collection)
     {
         if (collection is null) return;
-        
+
         string? title = collection.Translations.FirstOrDefault()?.Title;
         string? overview = collection.Translations.FirstOrDefault()?.Overview;
 
@@ -63,7 +64,7 @@ public record CollectionResponseItemDto
 
         Favorite = collection.CollectionUser.Count != 0;
         Watched = collection.CollectionMovies.Count(collectionMovie => collectionMovie.Movie.MovieUser.Count != 0) ==
-            collection.CollectionMovies.Count;
+                  collection.CollectionMovies.Count;
 
         Duration = collection.CollectionMovies
             .Select(movie => movie.Movie.Runtime)

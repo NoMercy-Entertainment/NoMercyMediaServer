@@ -19,19 +19,22 @@ public class Hls : BaseContainer
         VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc
     ];
 
-    public override CodecDto[] AvailableVideoCodecs => [
+    public override CodecDto[] AvailableVideoCodecs =>
+    [
         VideoCodecs.H264, VideoCodecs.H264Nvenc,
         VideoCodecs.H265, VideoCodecs.H265Nvenc,
         VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc
     ];
 
-    public override CodecDto[] AvailableAudioCodecs => [
+    public override CodecDto[] AvailableAudioCodecs =>
+    [
         AudioCodecs.Aac, AudioCodecs.Opus, AudioCodecs.Vorbis,
         AudioCodecs.Mp3, AudioCodecs.Flac, AudioCodecs.Ac3,
-        AudioCodecs.Eac3, AudioCodecs.LibOpus, AudioCodecs.TrueHd,
+        AudioCodecs.Eac3, AudioCodecs.LibOpus, AudioCodecs.TrueHd
     ];
 
-    public override CodecDto[] AvailableSubtitleCodecs => [
+    public override CodecDto[] AvailableSubtitleCodecs =>
+    [
         SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass,
         SubtitleCodecs.Copy
     ];

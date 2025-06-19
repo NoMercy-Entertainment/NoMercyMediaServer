@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.NmSystem;
 
 namespace NoMercy.Api.Controllers.V1.DTO;
+
 public record StatusResponseDto<T>
 {
     private string? _message = "NoMercy is running!";

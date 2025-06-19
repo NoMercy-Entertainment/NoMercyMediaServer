@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Credits;
+
 public class TmdbMedia
 {
     [JsonProperty("id")] public int Id { get; set; }

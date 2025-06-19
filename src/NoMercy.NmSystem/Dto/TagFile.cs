@@ -16,8 +16,7 @@ public class TagFile
             Properties = fileTag.Properties
         };
     }
-    
-    [JsonIgnore]
-    public Tag? Tag { get; set; }
+
+    [JsonIgnore] public Tag? Tag { get; set; }
     public Properties? Properties { get; set; }
 }

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.Tadb.Models;
+
 public class TadbAlbum
 {
     [JsonProperty("idAlbum")] public string IdAlbum { get; set; } = string.Empty;
@@ -50,7 +51,8 @@ public class TadbAlbum
     [JsonProperty("strLocation")] public string StrLocation { get; set; } = string.Empty;
     [JsonProperty("strMusicBrainzID")] public string StrMusicBrainzId { get; set; } = string.Empty;
 
-    [JsonProperty("strMusicBrainzArtistID")] public string StrMusicBrainzArtistId { get; set; } = string.Empty;
+    [JsonProperty("strMusicBrainzArtistID")]
+    public string StrMusicBrainzArtistId { get; set; } = string.Empty;
 
     [JsonProperty("strAllMusicID")] public string StrAllMusicId { get; set; } = string.Empty;
     [JsonProperty("strBBCReviewID")] public string StrBbcReviewId { get; set; } = string.Empty;

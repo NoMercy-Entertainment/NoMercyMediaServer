@@ -19,7 +19,7 @@ public abstract class BaseVideo : Classes
     protected internal virtual bool BFramesSupport => false;
 
     protected internal virtual int Modulus { get; set; }
-    
+
     protected internal virtual int[] CrfRange { get; set; } = [0, 51];
     protected internal int Bitrate { get; set; }
     internal int BufferSize { get; set; }
@@ -37,7 +37,8 @@ public abstract class BaseVideo : Classes
     public bool HdrAllowed { get; set; }
     public bool ConvertToSdr { get; set; }
 
-    protected internal virtual string[] AvailableContainers => [
+    protected internal virtual string[] AvailableContainers =>
+    [
         VideoContainers.Hls, VideoContainers.Mkv,
         VideoContainers.Mp4, VideoContainers.Webm
     ];
@@ -47,10 +48,12 @@ public abstract class BaseVideo : Classes
     public virtual string[] AvailableTune => [];
     public virtual string[] AvailableColorSpaces => [];
     public virtual string[] AvailableLevels => [];
-    protected virtual CodecDto[] AvailableCodecs => [
+
+    protected virtual CodecDto[] AvailableCodecs =>
+    [
         VideoCodecs.H264, VideoCodecs.H264Nvenc, VideoCodecs.H265,
         VideoCodecs.H265Nvenc, VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc,
-        VideoCodecs.Av1,
+        VideoCodecs.Av1
     ];
 
     internal readonly Dictionary<string, dynamic> _extraParameters = [];
@@ -96,7 +99,7 @@ public abstract class BaseVideo : Classes
 
     #region Setters
 
-    public BaseVideo SetKiloBitrate(int?  kiloBitrate = 0)
+    public BaseVideo SetKiloBitrate(int? kiloBitrate = 0)
     {
         if (kiloBitrate is null) return this;
 
@@ -112,9 +115,9 @@ public abstract class BaseVideo : Classes
     {
         if (VideoStream is null)
             throw new("Video stream is null");
-        if(VideoStream.PixelFormat.Contains("hdr")) return true;
+        if (VideoStream.PixelFormat.Contains("hdr")) return true;
         if (string.IsNullOrEmpty(VideoStream.ColorSpace)) return false;
-        if(VideoStream.ColorSpace.Contains(ColorSpaces.Bt2020)) return true;
+        if (VideoStream.ColorSpace.Contains(ColorSpaces.Bt2020)) return true;
         return false;
     }
 
@@ -192,8 +195,10 @@ public abstract class BaseVideo : Classes
     {
         OutputWidth = width;
 
-        if(height is 0)
+        if (height is 0)
+        {
             ScaleValue = $"{width}:-2";
+        }
         else
         {
             OutputHeight = height;
@@ -225,7 +230,7 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo SetPreset(string value)
     {
-        if(string.IsNullOrEmpty(value))
+        if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailablePresets.Contains(value))
             throw new($"Wrong preset value for {value}, available formats are {string.Join(", ", AvailablePresets)}");
@@ -235,7 +240,7 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo SetProfile(string value)
     {
-        if(string.IsNullOrEmpty(value))
+        if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableProfiles.Contains(value))
             throw new($"Wrong profile value for {value}, available formats are {string.Join(", ", AvailableProfiles)}");
@@ -245,7 +250,7 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo SetTune(string value)
     {
-        if(string.IsNullOrEmpty(value))
+        if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableTune.Contains(value))
             throw new($"Wrong tune value for {value}, available formats are {string.Join(", ", AvailableTune)}");

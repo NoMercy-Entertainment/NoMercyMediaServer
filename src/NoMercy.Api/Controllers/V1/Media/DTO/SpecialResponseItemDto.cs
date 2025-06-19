@@ -5,6 +5,7 @@ using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record SpecialResponseItemDto
 {
     [JsonProperty("id")] public Ulid Id { get; set; }
@@ -103,7 +104,7 @@ public record SpecialResponseItemDto
         Favorite = special.SpecialUser.Count != 0;
 
         NumberOfItems = special.Items.Count;
-        
+
         HaveItems = specialItems.Count;
 
         TotalDuration = items.Sum(item => item.TotalDuration);

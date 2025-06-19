@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusicBrainz.Models;
+
 public class MusicBrainzArea
 {
     [JsonProperty("type-id")] public Guid? TypeId { get; set; }

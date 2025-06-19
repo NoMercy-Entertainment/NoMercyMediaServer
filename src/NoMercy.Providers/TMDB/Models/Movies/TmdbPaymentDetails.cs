@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Movies;
+
 public class TmdbPaymentDetails
 {
     [JsonProperty("display_priority")] public int DisplayPriority { get; set; }

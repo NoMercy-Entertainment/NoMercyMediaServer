@@ -10,7 +10,7 @@ public class MusicBrainzRecordingClient : MusicBrainzBaseClient
     {
     }
 
-    public MusicBrainzRecordingClient(): base()
+    public MusicBrainzRecordingClient() : base()
     {
     }
 
@@ -35,7 +35,7 @@ public class MusicBrainzRecordingClient : MusicBrainzBaseClient
             "genres"
         ], priority);
     }
-    
+
     public Task<MusicBrainzRecordingAppends?> SearchRecordings(string query, bool? priority = false)
     {
         Dictionary<string, string>? queryParams = new()
@@ -46,7 +46,7 @@ public class MusicBrainzRecordingClient : MusicBrainzBaseClient
         };
         return Get<MusicBrainzRecordingAppends>($"recording", queryParams, priority);
     }
-    
+
     public Task<MusicBrainzSearchResponse?> SearchRecordingsDynamic(string query, bool? priority = false)
     {
         Dictionary<string, string>? queryParams = new()

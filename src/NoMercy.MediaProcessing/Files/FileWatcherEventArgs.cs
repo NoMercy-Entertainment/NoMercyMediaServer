@@ -1,4 +1,5 @@
 namespace NoMercy.MediaProcessing.Files;
+
 public class FileWatcherEventArgs
 {
     // ReSharper disable once MemberCanBePrivate.Global

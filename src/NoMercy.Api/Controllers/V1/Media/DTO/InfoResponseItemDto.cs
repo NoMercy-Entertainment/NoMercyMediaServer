@@ -8,6 +8,7 @@ using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
+
 public record InfoResponseItemDto
 {
     [JsonProperty("id")] public long Id { get; set; }
@@ -32,7 +33,7 @@ public record InfoResponseItemDto
     [JsonProperty("type")] public string Type { get; set; }
     [JsonProperty("media_type")] public string MediaType { get; set; }
     [JsonProperty("total_duration")] public int TotalDuration { get; set; }
-    
+
     [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; } = [];
     [JsonProperty("keywords")] public IEnumerable<string> Keywords { get; set; } = [];
     [JsonProperty("videos")] public IEnumerable<VideoDto> Videos { get; set; } = [];
@@ -67,7 +68,7 @@ public record InfoResponseItemDto
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
 
         Duration = movie.VideoFiles.Count != 0
-            ? movie.VideoFiles.Select(videoFile => videoFile.Duration?.ToSeconds() ?? 0).Average() 
+            ? movie.VideoFiles.Select(videoFile => videoFile.Duration?.ToSeconds() ?? 0).Average()
             : movie.Duration ?? 0;
 
         Year = movie.ReleaseDate.ParseYear();
@@ -75,7 +76,7 @@ public record InfoResponseItemDto
 
         ColorPalette = movie.ColorPalette;
         Backdrop = movie.Images.FirstOrDefault(image => image is { Type: "backdrop", Iso6391: null })?.FilePath ??
-            movie.Backdrop;
+                   movie.Backdrop;
         // Poster = movie.Images.FirstOrDefault(image => image is { Type: "poster", Iso6391: null })?.FilePath ??
         //          movie.Poster;
         Poster = movie.Poster;
@@ -90,7 +91,7 @@ public record InfoResponseItemDto
 
         ContentRatings = movie.CertificationMovies
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                || certificationMovie.Certification.Iso31661 == country)
+                                         || certificationMovie.Certification.Iso31661 == country)
             .Select(certificationMovie => new ContentRating
             {
                 Rating = certificationMovie.Certification.Rating,
@@ -291,7 +292,7 @@ public record InfoResponseItemDto
 
         ColorPalette = tv.ColorPalette;
         Backdrop = tv.Images.FirstOrDefault(image => image is { Type: "backdrop", Iso6391: null })?.FilePath ??
-            tv.Backdrop;
+                   tv.Backdrop;
         // Poster = tv.Images.FirstOrDefault(image => image is { Type: "poster", Iso6391: null })?.FilePath ?? tv.Poster;
         Poster = tv.Poster;
 
@@ -303,7 +304,7 @@ public record InfoResponseItemDto
 
         ContentRatings = tv.CertificationTvs
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
-                || certificationMovie.Certification.Iso31661 == country)
+                                         || certificationMovie.Certification.Iso31661 == country)
             .Select(certificationTv => new ContentRating
             {
                 Rating = certificationTv.Certification.Rating,
@@ -436,10 +437,10 @@ public record InfoResponseItemDto
 
         // ColorPalette = tv.ColorPalette;
         Backdrop = tmdbTv.Images.Backdrops.FirstOrDefault(media => media.Iso6391 is "")?.FilePath ??
-            tmdbTv.Images.Backdrops.FirstOrDefault()?.FilePath;
+                   tmdbTv.Images.Backdrops.FirstOrDefault()?.FilePath;
 
         Poster = tmdbTv.Images.Posters.FirstOrDefault(poster => poster.Iso6391 is "")?.FilePath ??
-            tmdbTv.Images.Posters.FirstOrDefault()?.FilePath;
+                 tmdbTv.Images.Posters.FirstOrDefault()?.FilePath;
 
 
         ExternalIds = new()
@@ -539,7 +540,7 @@ public record InfoResponseItemDto
                 .MinBy(collectionMovie => collectionMovie.Movie.ReleaseDate)
                 ?.Movie.ReleaseDate
                 .ParseYear());
-        
+
         Duration = collection.CollectionMovies
             .SelectMany(collectionMovie => collectionMovie.Movie.VideoFiles)
             .Select(videoFile => videoFile.Duration?.ToSeconds() ?? 0)
@@ -558,9 +559,9 @@ public record InfoResponseItemDto
 
         ColorPalette = collection.ColorPalette;
         Backdrop = collection.Images.FirstOrDefault(image => image is { Type: "backdrop", Iso6391: null })?.FilePath ??
-            collection.Backdrop;
+                   collection.Backdrop;
         Poster = collection.Images.FirstOrDefault(image => image is { Type: "poster", Iso6391: null })?.FilePath ??
-            collection.Poster;
+                 collection.Poster;
 
         ContentRatings = collection.CollectionMovies
             .Select(certificationMovie => new ContentRating

@@ -35,7 +35,7 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
 
         string language = Language();
         string country = Country();
-        
+
         Movie? movie = await movieRepository.GetMovieAsync(mediaContext, userId, id, language, country);
 
         if (movie is not null)
@@ -49,8 +49,6 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
 
         if (movieAppends is null)
             return NotFoundResponse("Movie not found");
-
-        // await _movieRepository.AddMovieAsync(id);
 
         return Ok(new InfoResponseDto
         {
@@ -81,7 +79,10 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view movies");
 
-        bool available = await movieRepository.GetMovieAvailableAsync(userId, id);
+        string language = Language();
+        string country = Country();
+
+        bool available = await movieRepository.GetMovieAvailableAsync(mediaContext, userId, id, language, country);
 
         if (!available)
             return NotFound(new AvailableResponseDto
@@ -97,7 +98,7 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
 
     [HttpGet]
     [Route("watch")]
-    public IActionResult Watch(int id)
+    public async Task<IActionResult> Watch(int id)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -105,7 +106,8 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
 
         string language = Language();
 
-        IEnumerable<PlaylistResponseDto> playlist = movieRepository.GetMoviePlaylistAsync(userId, id, language)
+        IEnumerable<PlaylistResponseDto> playlist =
+            (await movieRepository.GetMoviePlaylistAsync(mediaContext, userId, id, language))
             .Select(movie => new PlaylistResponseDto(movie));
 
         if (!playlist.Any())
@@ -148,8 +150,8 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
         Movie? movie = await mediaContext.Movies
             .AsNoTracking()
             .Include(movie => movie.Library)
-                .ThenInclude(f => f.FolderLibraries)
-                    .ThenInclude(f => f.Folder)
+            .ThenInclude(f => f.FolderLibraries)
+            .ThenInclude(f => f.Folder)
             .FirstOrDefaultAsync(movie => movie.Id == id);
 
         if (movie is null)
@@ -158,10 +160,10 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
         try
         {
             Logger.MovieDb("Rescanning {movie.Title} for files", LogEventLevel.Debug);
-            
+
             FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);
-            
+
             await fileManager.FindFiles(id, movie.Library);
         }
         catch (Exception e)
@@ -216,7 +218,7 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
             }
         });
     }
-    
+
     [HttpPost]
     [Route("add")]
     public async Task<IActionResult> Add(int id)
@@ -229,7 +231,7 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
-            Message = "Added to library",
+            Message = "Added to library"
         });
     }
 }

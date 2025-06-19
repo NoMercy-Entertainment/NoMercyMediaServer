@@ -1,4 +1,3 @@
-
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
 
@@ -28,7 +27,7 @@ public class MusicBrainzRelease
     [JsonProperty("text-representation")]
     public MusicBrainzTextRepresentation MusicBrainzTextRepresentation { get; set; } = new();
 
-    [JsonProperty("title")] public string Title { get; set; } = string.Empty; 
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
 
     [JsonProperty("area")] public MusicBrainzArea MusicBrainzArea { get; set; } = new();
 
@@ -38,7 +37,10 @@ public class MusicBrainzRelease
     [JsonProperty("dateTime")]
     public DateTime? DateTime
     {
-        get => !string.IsNullOrWhiteSpace(_date) && !string.IsNullOrEmpty(_date) && _date.TryParseToDateTime(out DateTime dt) ? dt : null;
+        get => !string.IsNullOrWhiteSpace(_date) && !string.IsNullOrEmpty(_date) &&
+               _date.TryParseToDateTime(out DateTime dt)
+            ? dt
+            : null;
         set => _date = value.ToString() ?? string.Empty;
     }
 }

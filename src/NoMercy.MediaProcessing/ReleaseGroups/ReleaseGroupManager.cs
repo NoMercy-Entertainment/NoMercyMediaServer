@@ -10,10 +10,11 @@ namespace NoMercy.MediaProcessing.ReleaseGroups;
 
 public class ReleaseGroupManager(IReleaseGroupRepository releaseGroupRepository) : BaseManager, IReleaseGroupManager
 {
-    public async Task Store(MusicBrainzReleaseGroup releaseGroup, Ulid id, CoverArtImageManagerManager.CoverPalette? coverPalette)
+    public async Task Store(MusicBrainzReleaseGroup releaseGroup, Ulid id,
+        CoverArtImageManagerManager.CoverPalette? coverPalette)
     {
         Logger.MusicBrainz($"Storing Release Group: {releaseGroup.Title}", LogEventLevel.Verbose);
-        
+
         ReleaseGroup insert = new()
         {
             Id = releaseGroup.Id,
@@ -26,15 +27,15 @@ public class ReleaseGroupManager(IReleaseGroupRepository releaseGroupRepository)
             Disambiguation = string.IsNullOrEmpty(releaseGroup.Disambiguation)
                 ? null
                 : releaseGroup.Disambiguation,
-            
+
             Cover = coverPalette?.Url is not null
-                ? $"/{coverPalette.Url.FileName()}" : null,
-            _colorPalette = coverPalette?.Palette ?? string.Empty,
+                ? $"/{coverPalette.Url.FileName()}"
+                : null,
+            _colorPalette = coverPalette?.Palette ?? string.Empty
         };
-        
+
         await releaseGroupRepository.Store(insert);
-        
+
         Logger.MusicBrainz($"Release Group {releaseGroup.Title} stored", LogEventLevel.Verbose);
     }
-    
 }

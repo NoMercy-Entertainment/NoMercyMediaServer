@@ -5,6 +5,7 @@ using Serilog.Core;
 using Serilog.Events;
 
 namespace NoMercy.NmSystem.LogEnrichers;
+
 internal class ConsoleTimestampEnricher : ILogEventEnricher
 {
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)

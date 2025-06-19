@@ -13,7 +13,7 @@ public class FolderRepository(MediaContext context)
             .ThenInclude(folderLibrary => folderLibrary.Library)
             .FirstOrDefaultAsync();
     }
-    
+
     public Task<Folder?> GetFolderByPathAsync(string requestPath)
     {
         return context.Folders.FirstOrDefaultAsync(folder => folder.Path == requestPath);

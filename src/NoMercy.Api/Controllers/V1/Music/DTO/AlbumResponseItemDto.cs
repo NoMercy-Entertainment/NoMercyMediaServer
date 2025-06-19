@@ -5,6 +5,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
+
 public record AlbumResponseItemDto
 {
     [JsonProperty("id")] public Guid Id { get; set; }

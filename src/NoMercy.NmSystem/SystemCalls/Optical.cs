@@ -22,15 +22,9 @@ public static class Optical
     {
         Dictionary<string, string?> drives = new();
         foreach (DriveInfo drive in DriveInfo.GetDrives())
-        {
             if (drive.DriveType == DriveType.CDRom && drive.IsReady)
-            {
                 drives[drive.Name] = drive.VolumeLabel.Length > 0 ? drive.VolumeLabel : null;
-            } else if (drive.DriveType == DriveType.CDRom)
-            {
-                drives[drive.Name] = null;
-            }
-        }
+            else if (drive.DriveType == DriveType.CDRom) drives[drive.Name] = null;
 
         return drives;
     }
@@ -63,7 +57,8 @@ public static class Optical
             if (parts.Length <= 0) continue;
 
             string path = parts[^1]; // Last item is typically the disk identifier (e.g., /dev/disk2)
-            drives[path] = RunShellCommand($"diskutil info {path} | grep 'Volume Name'").FirstOrDefault()?.Split(": ")[1];
+            drives[path] =
+                RunShellCommand($"diskutil info {path} | grep 'Volume Name'").FirstOrDefault()?.Split(": ")[1];
         }
 
         return drives;
@@ -97,7 +92,7 @@ public static class Optical
 
         throw new PlatformNotSupportedException("Unsupported OS.");
     }
-    
+
     public static bool CloseDrive(string drivePath)
     {
         if (Software.IsWindows)
@@ -113,7 +108,8 @@ public static class Optical
     #region Windows Optical Drive Control
 
     [DllImport("winmm.dll", EntryPoint = "mciSendString")]
-    public static extern int mciSendString(string lpstrCommand, string lpstrReturnString, int uReturnLength, int hwndCallback);
+    public static extern int mciSendString(string lpstrCommand, string lpstrReturnString, int uReturnLength,
+        int hwndCallback);
 
     private static bool OpenWindowsOpticalDrives(string drivePath)
     {
@@ -121,7 +117,8 @@ public static class Optical
 
         try
         {
-            int locked = mciSendString($"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}", string.Empty, 0, 0);
+            int locked = mciSendString($"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}", string.Empty, 0,
+                0);
             if (locked != 0) return false; // Check if open was successful
 
             int result = mciSendString($"set drive{drivePath[0]} door open", string.Empty, 0, 0);
@@ -142,7 +139,8 @@ public static class Optical
 
         try
         {
-            int locked = mciSendString($"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}", string.Empty, 0, 0);
+            int locked = mciSendString($"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}", string.Empty, 0,
+                0);
             if (locked != 0) return false; // check if open was successful
 
             int result = mciSendString($"set drive{drivePath[0]} door closed", string.Empty, 0, 0);
@@ -162,7 +160,7 @@ public static class Optical
         DriveInfo driveInfo = new(drivePath);
         return driveInfo.DriveType == DriveType.CDRom;
     }
-    
+
     #endregion
 
     #region Linux Optical Drive Control
@@ -228,7 +226,7 @@ public static class Optical
     }
 
     #endregion
-    
+
     public static OpticalDiscType GetDiscType(string drivePath)
     {
         if (!Directory.Exists(drivePath))
@@ -247,10 +245,8 @@ public static class Optical
         {
             DriveInfo drive = new(drivePath);
             if (drive.DriveType == DriveType.CDRom && drive.IsReady)
-            {
                 // If we get here and it's not BD or DVD, it's some form of CD
                 return OpticalDiscType.CD;
-            }
         }
         catch
         {

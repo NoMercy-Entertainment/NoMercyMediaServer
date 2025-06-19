@@ -17,10 +17,11 @@ public static class HttpClient
                 if (!string.IsNullOrEmpty(server))
                 {
                     LookupClient dnsClient = new(IPAddress.Parse(server));
-                    IDnsQueryResponse? result = await dnsClient.QueryAsync(context.DnsEndPoint.Host, QueryType.A, cancellationToken: token);
+                    IDnsQueryResponse? result = await dnsClient.QueryAsync(context.DnsEndPoint.Host, QueryType.A,
+                        cancellationToken: token);
                     IPAddress? address = result.Answers.ARecords().FirstOrDefault()?.Address;
                     if (address == null) throw new SocketException((int)SocketError.HostNotFound);
-                
+
                     hostEntry = new()
                     {
                         AddressList = [address]

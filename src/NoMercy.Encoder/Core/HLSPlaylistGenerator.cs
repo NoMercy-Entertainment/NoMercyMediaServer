@@ -74,12 +74,12 @@ public static class HlsPlaylistGenerator
                 string resolution = $"{parts[1]}x{parts[2]}";
                 bool isSdr = parts.Length == 4 && parts[3] == "SDR";
 
-                string vCodec = Shell.ExecStdOutAsync(AppFiles.FfProbePath, 
-                    $"-v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 {videoFile}")
+                string vCodec = Shell.ExecStdOutAsync(AppFiles.FfProbePath,
+                        $"-v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 {videoFile}")
                     .Result.Trim();
 
-                string profile = Shell.ExecStdOutAsync(AppFiles.FfProbePath, 
-                    $"-v error -select_streams v:0 -show_entries stream=profile -of default=noprint_wrappers=1:nokey=1 {videoFile}")
+                string profile = Shell.ExecStdOutAsync(AppFiles.FfProbePath,
+                        $"-v error -select_streams v:0 -show_entries stream=profile -of default=noprint_wrappers=1:nokey=1 {videoFile}")
                     .Result.Trim();
 
                 string vCodecProfile = MapProfileToCodec(profile);
@@ -128,14 +128,12 @@ public static class HlsPlaylistGenerator
 
     private static double GetVideoDuration(string videoPath)
     {
-        string output = Shell.ExecStdOutSync(AppFiles.FfProbePath, 
-            $"-v error -select_streams 0 -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{videoPath}\"").Trim();
-        
+        string output = Shell.ExecStdOutSync(AppFiles.FfProbePath,
+                $"-v error -select_streams 0 -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{videoPath}\"")
+            .Trim();
+
         string x = output.Trim().Replace("N/A", "0");
-        if (x == "")
-        {
-            return 0;
-        }
+        if (x == "") return 0;
         return double.Parse(x, CultureInfo.InvariantCulture);
     }
 

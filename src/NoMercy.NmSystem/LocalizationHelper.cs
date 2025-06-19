@@ -16,6 +16,7 @@ public static class LocalizationHelper
             AppendMissingLocalization(key);
             return key;
         }
+
         return localized;
     }
 

@@ -137,7 +137,7 @@ public class X265 : BaseVideo
     public override string[] AvailableColorSpaces =>
     [
         ColorSpaces.Yuv420P, ColorSpaces.Yuv420P10Le,
-        ColorSpaces.Yuv422P, ColorSpaces.Yuv444P,
+        ColorSpaces.Yuv422P, ColorSpaces.Yuv444P
     ];
 
     public override string[] AvailableLevels

@@ -1,4 +1,5 @@
 namespace NoMercy.Database.Models;
+
 public enum TmdbGender
 {
     Unknown,

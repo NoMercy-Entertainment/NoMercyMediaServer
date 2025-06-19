@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.Other;
+
 public class KitsuIoLinks
 {
     [JsonProperty("first")] public Uri First { get; set; } = default!;

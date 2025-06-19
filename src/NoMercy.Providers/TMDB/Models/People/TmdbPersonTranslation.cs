@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.People;
+
 public class TmdbPersonTranslation
 {
     [JsonProperty("iso_639_1")] public string Iso6391 { get; set; } = string.Empty;

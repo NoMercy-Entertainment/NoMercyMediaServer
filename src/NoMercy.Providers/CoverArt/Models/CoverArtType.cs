@@ -1,4 +1,5 @@
 namespace NoMercy.Providers.CoverArt.Models;
+
 public enum CoverArtType
 {
     Back,

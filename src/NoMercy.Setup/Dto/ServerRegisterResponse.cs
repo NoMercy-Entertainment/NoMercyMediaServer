@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Setup.Dto;
+
 public class ServerRegisterResponse
 {
     [JsonProperty("data")] public ServerRegisterResponseData Data { get; set; } = new();

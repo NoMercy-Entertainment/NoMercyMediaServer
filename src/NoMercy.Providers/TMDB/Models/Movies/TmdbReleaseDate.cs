@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.TMDB.Models.Movies;
+
 public class TmdbReleaseDate
 {
     [JsonProperty("certification")] public string Certification { get; set; } = string.Empty;

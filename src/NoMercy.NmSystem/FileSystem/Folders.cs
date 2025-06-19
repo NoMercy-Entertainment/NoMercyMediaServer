@@ -7,23 +7,17 @@ public static class Folders
         DirectoryInfo directory = new(folderPath);
         if (!directory.Exists) return;
 
-        foreach (FileInfo file in directory.GetFiles())
-        {
-            file.Delete();
-        }
+        foreach (FileInfo file in directory.GetFiles()) file.Delete();
 
-        foreach (DirectoryInfo subDirectory in directory.GetDirectories())
-        {
-            subDirectory.Delete(true);
-        }
+        foreach (DirectoryInfo subDirectory in directory.GetDirectories()) subDirectory.Delete(true);
     }
-    
+
     public static long GetDirectorySize(this DirectoryInfo directoryInfo, bool recursive = true)
     {
         long startDirectorySize = 0;
         if (!directoryInfo.Exists)
             return startDirectorySize;
-        
+
         try
         {
             foreach (FileInfo fileInfo in directoryInfo.GetFiles())
@@ -39,6 +33,5 @@ public static class Folders
         {
             return 0;
         }
-        
     }
 }

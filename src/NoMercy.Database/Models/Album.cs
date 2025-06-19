@@ -1,11 +1,15 @@
-﻿
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
+[Index(nameof(Name))]
+[Index(nameof(LibraryId))]
+[Index(nameof(FolderId))]
+[Index(nameof(Year))]
+[Index(nameof(MetadataId))]
 public class Album : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -28,7 +32,7 @@ public class Album : ColorPaletteTimeStamps
 
     [JsonProperty("folder_id")] public Ulid FolderId { get; set; }
     public Folder LibraryFolder { get; set; } = new();
-    
+
     [JsonProperty("metadata_id")] public Ulid? MetadataId { get; set; }
     public Metadata? Metadata { get; init; }
 
@@ -37,6 +41,6 @@ public class Album : ColorPaletteTimeStamps
     [JsonProperty("album_user")] public ICollection<AlbumUser> AlbumUser { get; set; } = [];
     [JsonProperty("album_genre")] public ICollection<AlbumMusicGenre> AlbumMusicGenre { get; set; } = [];
     [JsonProperty("album_release")] public ICollection<AlbumReleaseGroup> AlbumReleaseGroup { get; set; } = [];
-    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; } = []; 
+    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; } = [];
     [JsonProperty("images")] public ICollection<Image> Images { get; set; } = [];
 }

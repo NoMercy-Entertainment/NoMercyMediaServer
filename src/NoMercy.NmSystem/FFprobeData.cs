@@ -1,6 +1,7 @@
 using FFMpegCore;
 
 namespace NoMercy.NmSystem;
+
 public class FfProbeData
 {
     public TimeSpan Duration { get; set; }

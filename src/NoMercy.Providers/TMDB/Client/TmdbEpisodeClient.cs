@@ -18,7 +18,8 @@ public class TmdbEpisodeClient : TmdbBaseClient
 
     public Task<TmdbEpisodeDetails?> Details(bool? priority = false)
     {
-        return Get<TmdbEpisodeDetails>("tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber, priority: priority);
+        return Get<TmdbEpisodeDetails>("tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber,
+            priority: priority);
     }
 
     public Task<TmdbEpisodeAppends?> WithAppends(string[] appendices, bool? priority = false)
@@ -66,7 +67,8 @@ public class TmdbEpisodeClient : TmdbBaseClient
     public Task<TmdbEpisodeExternalIds?> ExternalIds(bool? priority = false)
     {
         return Get<TmdbEpisodeExternalIds>(
-            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/external_ids", priority: priority);
+            "tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/external_ids",
+            priority: priority);
     }
 
     public Task<TmdbEpisodeImages?> Images(bool? priority = false)
@@ -83,6 +85,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
 
     public Task<Videos?> Videos(bool? priority = false)
     {
-        return Get<Videos>("tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/videos", priority: priority);
+        return Get<Videos>("tv/" + Id + "/season/" + _seasonNumber + "/episode/" + _episodeNumber + "/videos",
+            priority: priority);
     }
 }

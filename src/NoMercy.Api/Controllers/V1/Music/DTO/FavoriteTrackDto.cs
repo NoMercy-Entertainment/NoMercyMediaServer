@@ -18,20 +18,22 @@ public class FavoriteTrackDto
     [JsonProperty("year")] public int? Year { get; set; }
     [JsonProperty("album_artist")] public Guid? AlbumArtist { get; set; }
     [JsonProperty("type")] public string Type { get; set; }
-    
+
     [JsonProperty("album_track")] public IEnumerable<AlbumDto> Albums { get; set; }
     [JsonProperty("artist_track")] public IEnumerable<ArtistDto> Artists { get; set; }
-    
+
     public FavoriteTrackDto(ArtistTrack artistTrack, string country)
     {
         Id = artistTrack.Track.Id;
         Name = artistTrack.Track.Name;
-        Cover = artistTrack.Track.Cover is not null ? new Uri($"/images/music{artistTrack.Track.Cover}", UriKind.Relative).ToString() : null;
+        Cover = artistTrack.Track.Cover is not null
+            ? new Uri($"/images/music{artistTrack.Track.Cover}", UriKind.Relative).ToString()
+            : null;
         Link = new($"/music/tracks/{Id}", UriKind.Relative);
         Type = "tracks";
         ColorPalette = artistTrack.Track.ColorPalette;
         Year = artistTrack.Track.Date.ParseYear();
-        
+
         Albums = artistTrack.Track.AlbumTrack
             .Select(albumTrack => new AlbumDto(albumTrack, country));
         Artists = artistTrack.Track.ArtistTrack

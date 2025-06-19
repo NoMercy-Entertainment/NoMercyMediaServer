@@ -12,7 +12,7 @@ namespace NoMercy.Providers.TVDB.Client;
 
 public class TvdbBaseClient : IDisposable
 {
-     private readonly Uri _baseUrl = new("https://api4.thetvdb.com/v4/");
+    private readonly Uri _baseUrl = new("https://api4.thetvdb.com/v4/");
 
     private readonly HttpClient _client = new();
 
@@ -21,7 +21,7 @@ public class TvdbBaseClient : IDisposable
     protected TvdbBaseClient()
     {
         Login().Wait();
-        
+
         _client.BaseAddress = _baseUrl;
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
@@ -33,7 +33,7 @@ public class TvdbBaseClient : IDisposable
     protected TvdbBaseClient(int id)
     {
         Login().Wait();
-        
+
         _client = new()
         {
             BaseAddress = _baseUrl
@@ -47,20 +47,16 @@ public class TvdbBaseClient : IDisposable
     }
 
     private static Helpers.Queue? _queue;
-    
+
     private async Task Login()
     {
-        if (IsTokenValid(Token))
-        {
-            return;
-        }
+        if (IsTokenValid(Token)) return;
 
         TvdbLoginResponse? token = await GetToken();
 
         if (token is null) return;
-        
+
         Token = token;
-        
     }
 
     private static bool IsTokenValid(TvdbLoginResponse? token)
@@ -68,7 +64,7 @@ public class TvdbBaseClient : IDisposable
         if (token is null) return false;
 
         if (token.Data.ExpiresAt >= DateTime.Now.AddMinutes(5)) return true;
-        
+
         Token = null;
         return false;
     }
@@ -96,7 +92,7 @@ public class TvdbBaseClient : IDisposable
         client.BaseAddress = _baseUrl;
         client.DefaultRequestHeaders.Add("Accept", "application/json");
         client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        
+
         JsonContent content = JsonContent.Create(new { apikey = ApiInfo.TvdbKey });
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "login")
@@ -111,7 +107,8 @@ public class TvdbBaseClient : IDisposable
         return response.FromJson<TvdbLoginResponse>();
     }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false, bool skipCache = false)
+    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false,
+        bool skipCache = false)
         where T : class
     {
         query ??= new();
@@ -124,10 +121,7 @@ public class TvdbBaseClient : IDisposable
 
         string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
-        if (!skipCache)
-        {
-            await CacheController.Write(newUrl, response);
-        }
+        if (!skipCache) await CacheController.Write(newUrl, response);
 
         T? data = response.FromJson<T>();
 

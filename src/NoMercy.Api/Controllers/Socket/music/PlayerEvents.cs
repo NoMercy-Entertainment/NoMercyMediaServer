@@ -3,16 +3,18 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.Socket.music;
 
-public enum EventType {
+public enum EventType
+{
     Null,
     PlayerStateChanged,
     BroadcastUnavailable,
-    DeviceStateChanged,
+    DeviceStateChanged
 }
 
 public class EventPayload<T>
 {
-    [JsonProperty("events", NullValueHandling = NullValueHandling.Ignore)] public List<T> Events { get; set; } = [];
+    [JsonProperty("events", NullValueHandling = NullValueHandling.Ignore)]
+    public List<T> Events { get; set; } = [];
 }
 
 public class PlayerStateEventElement
@@ -29,8 +31,10 @@ public class PlayerStateEvent
     [JsonProperty("state")] public PlayerState? State { get; set; }
 }
 
-public class BroadcastEventPayload {
-    [JsonProperty("deviceBroadcastStatus")] public DeviceBroadcastStatus DeviceBroadcastStatus { get; set; } = new();
+public class BroadcastEventPayload
+{
+    [JsonProperty("deviceBroadcastStatus")]
+    public DeviceBroadcastStatus DeviceBroadcastStatus { get; set; } = new();
 }
 
 public class DeviceBroadcastStatus

@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
+
 public record PlaylistResponseItemDto
 {
     [JsonProperty("id")] public Guid Id { get; set; }
@@ -21,7 +22,9 @@ public record PlaylistResponseItemDto
         Id = playlist.Id;
         Name = playlist.Name;
         Description = playlist.Description;
-        Cover = playlist.Cover is not null ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString() : null;
+        Cover = playlist.Cover is not null
+            ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString()
+            : null;
         ColorPalette = playlist.ColorPalette;
         CreatedAt = playlist.CreatedAt;
         UpdatedAt = playlist.UpdatedAt;

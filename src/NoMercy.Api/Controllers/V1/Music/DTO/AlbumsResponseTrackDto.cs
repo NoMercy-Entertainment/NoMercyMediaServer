@@ -4,6 +4,7 @@ using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
+
 public record AlbumsResponseTrackDto
 {
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
@@ -30,7 +31,9 @@ public record AlbumsResponseTrackDto
     public AlbumsResponseTrackDto(AlbumTrack artistTrack, Ulid libraryId, string country)
     {
         ColorPalette = artistTrack.Track.ColorPalette;
-        Cover = artistTrack.Track.Cover is not null ? new Uri($"/images/music{artistTrack.Track.Cover}", UriKind.Relative).ToString() : null;
+        Cover = artistTrack.Track.Cover is not null
+            ? new Uri($"/images/music{artistTrack.Track.Cover}", UriKind.Relative).ToString()
+            : null;
         Date = artistTrack.Track.Date;
         Disc = artistTrack.Track.DiscNumber;
         Duration = artistTrack.Track.Duration;

@@ -40,7 +40,6 @@ public class TvdbRelation
     [JsonProperty("typeName")] public string TypeName { get; set; } = string.Empty;
 }
 
-
 public class TvdbCompanyTypesResponse : TvdbResponse<TvdbCompanyType[]>
 {
 }

@@ -39,5 +39,4 @@ public record PeopleResponseDto
             .Select(person => new PeopleResponseItemDto(person))
             .ToList();
     }
-    
 }

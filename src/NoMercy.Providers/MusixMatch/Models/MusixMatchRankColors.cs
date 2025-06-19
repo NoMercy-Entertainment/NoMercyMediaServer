@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 namespace NoMercy.Providers.MusixMatch.Models;
+
 public class MusixMatchRankColors
 {
     [JsonProperty("rank_color_10")] public string RankColor10 { get; set; } = string.Empty;

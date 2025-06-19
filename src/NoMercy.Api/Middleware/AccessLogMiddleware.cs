@@ -10,6 +10,7 @@ namespace NoMercy.Api.Middleware;
 public class AccessLogMiddleware
 {
     private readonly RequestDelegate _next;
+
     public AccessLogMiddleware(RequestDelegate next)
     {
         _next = next;
@@ -24,7 +25,7 @@ public class AccessLogMiddleware
         "/styles",
         "/scripts",
         "/favicon",
-        "/transcode",
+        "/transcode"
     ];
 
     private readonly string[] _ignoreExact =
@@ -40,13 +41,13 @@ public class AccessLogMiddleware
 
     private readonly string[] _ignoreIfGuest =
     [
-        "/status",
+        "/status"
     ];
 
     public async Task InvokeAsync(HttpContext context)
     {
         string path = HttpUtility.UrlDecode(context.Request.Path);
-        
+
         bool ignoreStart = _ignoredStartsWithRoutes
             .Any(route => context.Request.Path.ToString().StartsWith(route));
 

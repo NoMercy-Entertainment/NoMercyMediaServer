@@ -24,10 +24,7 @@ public static class ApplicationConfiguration
         ConfigureStaticFiles(app);
         ConfigureDynamicStaticFiles(app);
 
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapControllers();
-        });
+        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
     }
 
     private static void ConfigureLocalization(IApplicationBuilder app)
@@ -48,7 +45,7 @@ public static class ApplicationConfiguration
     {
         app.UseRouting();
         app.UseCors("AllowNoMercyOrigins");
-        
+
         app.UseHsts();
         app.UseHttpsRedirection();
         app.UseResponseCompression();
@@ -87,7 +84,7 @@ public static class ApplicationConfiguration
             options.OAuthScopes("openid");
             options.EnablePersistAuthorization();
             options.EnableTryItOutByDefault();
-            
+
             IReadOnlyList<ApiVersionDescription> descriptions = provider.ApiVersionDescriptions;
             foreach (ApiVersionDescription description in descriptions)
             {
@@ -166,8 +163,6 @@ public static class ApplicationConfiguration
         using MediaContext mediaContext = new();
         List<Folder> folderLibraries = mediaContext.Folders.ToList();
         foreach (Folder folder in folderLibraries.Where(folder => Directory.Exists(folder.Path)))
-        {
             DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
-        }
     }
 }
