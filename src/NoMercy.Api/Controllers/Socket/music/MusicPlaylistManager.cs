@@ -6,12 +6,12 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.Socket.music;
 
-public class PlaylistManager
+public class MusicPlaylistManager
 {
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
 
-    public PlaylistManager(MusicRepository musicService, MediaContext mediaContext)
+    public MusicPlaylistManager(MusicRepository musicService, MediaContext mediaContext)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;

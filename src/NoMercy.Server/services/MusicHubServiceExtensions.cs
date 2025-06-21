@@ -8,13 +8,13 @@ public static class MusicHubServiceExtensions
     public static IServiceCollection AddMusicHubServices(this IServiceCollection services)
     {
         // Singletons - shared state across requests
-        services.AddSingleton<PlayerStateManager>();
-        services.AddSingleton<PlaybackService>();
-        services.AddSingleton<PlaybackCommandHandler>();
+        services.AddSingleton<MusicPlayerStateManager>();
+        services.AddSingleton<MusicPlaybackService>();
+        services.AddSingleton<MusicPlaybackCommandHandler>();
 
         // Scoped - one instance per request
-        services.AddScoped<PlaylistManager>();
-        services.AddScoped<DeviceManager>();
+        services.AddScoped<MusicPlaylistManager>();
+        services.AddScoped<MusicDeviceManager>();
         services.AddScoped<MusicHub>();
 
         return services;

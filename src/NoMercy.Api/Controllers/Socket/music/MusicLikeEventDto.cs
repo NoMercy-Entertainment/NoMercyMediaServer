@@ -2,7 +2,7 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.Socket.music;
 
-public class LikeEventDto
+public class MusicLikeEventDto
 {
     public Guid Id { get; set; }
     public string Type { get; set; } = null!;

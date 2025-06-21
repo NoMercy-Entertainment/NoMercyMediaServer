@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Api.Controllers.Socket.video;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
@@ -80,21 +81,6 @@ public class VideoHub(IHttpContextAccessor httpContextAccessor) : ConnectionHub(
         mediaContext.UserData.RemoveRange(userdata);
 
         await mediaContext.SaveChangesAsync();
-    }
-
-    public class VideoProgressRequest
-    {
-        [JsonProperty("app")] public int AppId { get; set; }
-        [JsonProperty("video_id")] public Ulid VideoId { get; set; }
-        [JsonProperty("tmdb_id")] public int TmdbId { get; set; }
-        [JsonProperty("playlist_type")] public string PlaylistType { get; set; } = string.Empty;
-        [JsonProperty("video_type")] public string VideoType { get; set; } = string.Empty;
-        [JsonProperty("time")] public int Time { get; set; }
-        [JsonProperty("audio")] public string Audio { get; set; } = string.Empty;
-        [JsonProperty("subtitle")] public string Subtitle { get; set; } = string.Empty;
-        [JsonProperty("subtitle_type")] public string SubtitleType { get; set; } = string.Empty;
-        [JsonProperty("special_id")] public Ulid? SpecialId { get; set; }
-        [JsonProperty("collection_id")] public int? CollectionId { get; set; }
     }
 
     public override async Task OnConnectedAsync()

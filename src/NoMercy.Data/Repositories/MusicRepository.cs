@@ -495,7 +495,7 @@ public class MusicRepository
 
     public readonly Func<MediaContext, Guid, Guid, Task<PlaylistTrack?>> GetPlaylistTrack =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid listId, Guid trackId) =>
-            mediaContext.PlaylistTrack.AsNoTracking()
+            mediaContext.PlaylistTrack
                 .Include(playlistTrack => playlistTrack.Track)
                 .ThenInclude(track => track.PlaylistTrack)
                 .ThenInclude(playlistTrack => playlistTrack.Track)
@@ -507,7 +507,7 @@ public class MusicRepository
 
     public readonly Func<MediaContext, Guid, Guid, Task<AlbumTrack?>> GetAlbumTrack =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid listId, Guid trackId) =>
-            mediaContext.AlbumTrack.AsNoTracking()
+            mediaContext.AlbumTrack
                 .Include(x => x.Track)
                 .ThenInclude(track => track.AlbumTrack
                     .Where(albumTrack => albumTrack.AlbumId == listId))
@@ -523,7 +523,7 @@ public class MusicRepository
 
     public readonly Func<MediaContext, Guid, Guid, Task<ArtistTrack?>> GetArtistTrack =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid listId, Guid trackId) =>
-            mediaContext.ArtistTrack.AsNoTracking()
+            mediaContext.ArtistTrack
                 .Include(x => x.Track)
                 .ThenInclude(track => track.ArtistTrack
                     .Where(artistTrack => artistTrack.ArtistId == listId))

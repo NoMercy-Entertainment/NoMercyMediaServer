@@ -200,7 +200,7 @@ public class CastHub : ConnectionHub
 
     public void PlayerState(CastPlayerState state)
     {
-        Networking.Networking.SendToAll("PlayerState", "castHub", state);
+        Networking.Networking.SendToAll("MusicPlayerState", "castHub", state);
     }
 
     public void SetAudioTrack(int audioTrack)

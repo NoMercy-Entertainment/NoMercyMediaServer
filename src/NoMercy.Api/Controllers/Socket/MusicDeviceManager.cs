@@ -5,12 +5,12 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.Socket;
 
-public class DeviceManager
+public class MusicDeviceManager
 {
     private readonly ConcurrentDictionary<Guid, Device> _currentDevices = new();
     private readonly MediaContext _mediaContext;
 
-    public DeviceManager(MediaContext mediaContext)
+    public MusicDeviceManager(MediaContext mediaContext)
     {
         _mediaContext = mediaContext;
     }

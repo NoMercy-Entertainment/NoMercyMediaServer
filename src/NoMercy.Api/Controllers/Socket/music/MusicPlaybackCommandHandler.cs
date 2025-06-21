@@ -2,11 +2,11 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.Socket.music;
 
-public class PlaybackCommandHandler(PlaybackService playbackService)
+public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackService)
 {
     private readonly string[] _repeatStates = ["off", "one", "all"];
 
-    public void HandleCommand(User user, string command, object? data, PlayerState state)
+    public void HandleCommand(User user, string command, object? data, MusicPlayerState state)
     {
         switch (command.ToLower())
         {
@@ -40,28 +40,28 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
         }
     }
 
-    private void HandlePlay(User user, PlayerState state)
+    private void HandlePlay(User user, MusicPlayerState state)
     {
         state.PlayState = true;
-        playbackService.StartPlaybackTimer(user);
+        musicPlaybackService.StartPlaybackTimer(user);
     }
 
-    private void HandlePause(User user, PlayerState state)
+    private void HandlePause(User user, MusicPlayerState state)
     {
         state.PlayState = false;
-        playbackService.RemoveTimer(user.Id);
+        musicPlaybackService.RemoveTimer(user.Id);
     }
 
-    private void HandleSeek(PlayerState state, object? data)
+    private void HandleSeek(MusicPlayerState state, object? data)
     {
         int seekTime = int.Parse(data?.ToString() ?? "0") * 1000;
         state.Time = seekTime;
     }
 
-    private void HandleNext(User user, PlayerState state)
+    private void HandleNext(User user, MusicPlayerState state)
     {
         if (state.CurrentItem == null) return;
-        playbackService.RemoveTimer(user.Id);
+        musicPlaybackService.RemoveTimer(user.Id);
 
         // Add current item to backlog
         state.Backlog.Add(state.CurrentItem);
@@ -79,17 +79,17 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
             return;
         }
 
-        playbackService.StartPlaybackTimer(user);
+        musicPlaybackService.StartPlaybackTimer(user);
     }
 
-    private void HandlePlaylistCompletion(User user, PlayerState state)
+    private void HandlePlaylistCompletion(User user, MusicPlayerState state)
     {
         switch (state.Repeat)
         {
             case "one":
                 // If repeat one, play the same item again
                 state.Time = 0;
-                playbackService.StartPlaybackTimer(user);
+                musicPlaybackService.StartPlaybackTimer(user);
                 break;
             case "all":
                 // If repeat all, move the backlog to the playlist and start from the beginning
@@ -101,7 +101,7 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
                     state.Playlist.RemoveAt(0);
                     state.Time = 0;
                     state.PlayState = true;
-                    playbackService.StartPlaybackTimer(user);
+                    musicPlaybackService.StartPlaybackTimer(user);
                 }
                 else
                 {
@@ -121,7 +121,7 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
         }
     }
 
-    private void HandlePrevious(User user, PlayerState state)
+    private void HandlePrevious(User user, MusicPlayerState state)
     {
         if (state.CurrentItem == null) return;
 
@@ -131,7 +131,7 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
             return;
         }
 
-        playbackService.RemoveTimer(user.Id);
+        musicPlaybackService.RemoveTimer(user.Id);
 
         // Move current item to playlist
         state.Playlist.Insert(0, state.CurrentItem);
@@ -152,16 +152,16 @@ public class PlaybackCommandHandler(PlaybackService playbackService)
             state.CurrentItem = null;
         }
 
-        playbackService.StartPlaybackTimer(user);
+        musicPlaybackService.StartPlaybackTimer(user);
     }
 
-    private void HandleRepeat(PlayerState state)
+    private void HandleRepeat(MusicPlayerState state)
     {
         int currentIndex = Array.IndexOf(_repeatStates, state.Repeat);
         state.Repeat = _repeatStates[(currentIndex + 1) % _repeatStates.Length];
     }
 
-    private void HandleStop(PlayerState state)
+    private void HandleStop(MusicPlayerState state)
     {
         state.DeviceId = null;
         state.CurrentItem = null;

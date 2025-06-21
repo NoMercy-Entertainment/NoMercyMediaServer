@@ -31,7 +31,7 @@ public class ArtistsController : BaseController
         _mediaContext = mediaContext;
     }
 
-    public static event EventHandler<LikeEventDto>? OnLikeEvent;
+    public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
 
     [HttpGet]
     [Route("/api/v{version:apiVersion}/music/artists/{letter}")]
@@ -106,7 +106,7 @@ public class ArtistsController : BaseController
             QueryKey = ["music", "artist", artist.Id]
         });
 
-        LikeEventDto likeEventDto = new()
+        MusicLikeEventDto musicLikeEventDto = new()
         {
             Id = artist.Id,
             Type = "artist",
@@ -114,7 +114,7 @@ public class ArtistsController : BaseController
             User = User.User()
         };
 
-        OnLikeEvent?.Invoke(this, likeEventDto);
+        OnLikeEvent?.Invoke(this, musicLikeEventDto);
 
         return Ok(new StatusResponseDto<string>
         {

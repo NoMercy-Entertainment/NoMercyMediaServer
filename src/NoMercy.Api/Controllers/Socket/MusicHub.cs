@@ -16,26 +16,26 @@ namespace NoMercy.Api.Controllers.Socket;
 public class MusicHub : ConnectionHub
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly PlaybackService _playbackService;
-    private readonly PlayerStateManager _playerStateManager;
-    private readonly DeviceManager _deviceManager;
-    private readonly PlaylistManager _playlistManager;
-    private readonly PlaybackCommandHandler _commandHandler;
+    private readonly MusicPlaybackService _musicPlaybackService;
+    private readonly MusicPlayerStateManager _musicPlayerStateManager;
+    private readonly MusicDeviceManager _musicDeviceManager;
+    private readonly MusicPlaylistManager _musicPlaylistManager;
+    private readonly MusicPlaybackCommandHandler _commandHandler;
 
     public MusicHub(
         IHttpContextAccessor httpContextAccessor,
-        PlaybackService playbackService,
-        PlayerStateManager playerStateManager,
-        DeviceManager deviceManager,
-        PlaylistManager playlistManager,
-        PlaybackCommandHandler commandHandler)
+        MusicPlaybackService musicPlaybackService,
+        MusicPlayerStateManager musicPlayerStateManager,
+        MusicDeviceManager musicDeviceManager,
+        MusicPlaylistManager musicPlaylistManager,
+        MusicPlaybackCommandHandler commandHandler)
         : base(httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
-        _playbackService = playbackService;
-        _playerStateManager = playerStateManager;
-        _deviceManager = deviceManager;
-        _playlistManager = playlistManager;
+        _musicPlaybackService = musicPlaybackService;
+        _musicPlayerStateManager = musicPlayerStateManager;
+        _musicDeviceManager = musicDeviceManager;
+        _musicPlaylistManager = musicPlaylistManager;
         _commandHandler = commandHandler;
     }
 
@@ -51,7 +51,7 @@ public class MusicHub : ConnectionHub
         try
         {
             (PlaylistTrackDto item, List<PlaylistTrackDto> playlist) =
-                await _playlistManager.GetPlaylist(type, listId, trackId, country);
+                await _musicPlaylistManager.GetPlaylist(type, listId, trackId, country);
             await HandlePlaybackState(user, type, listId, item, playlist);
         }
         catch (ArgumentException ex)
@@ -67,7 +67,7 @@ public class MusicHub : ConnectionHub
     private async Task HandlePlaybackState(User user, string type, Guid listId, PlaylistTrackDto item,
         List<PlaylistTrackDto> playlist)
     {
-        PlayerState? playerState = _playerStateManager.GetState(user.Id);
+        MusicPlayerState? playerState = _musicPlayerStateManager.GetState(user.Id);
 
         if (playerState is null || playerState.CurrentItem is null || playerState.Playlist.Count == 0)
             await HandleNewPlayerState(user, type, listId, item, playlist);
@@ -81,11 +81,11 @@ public class MusicHub : ConnectionHub
         List<PlaylistTrackDto> playlist)
     {
         Device device = GetCurrentDevice(user);
-        PlayerState playerState = PlayerStateFactory.Create(device, item, playlist, type, listId);
+        MusicPlayerState musicPlayerState = MusicPlayerStateFactory.Create(device, item, playlist, type, listId);
 
-        _playerStateManager.UpdateState(user.Id, playerState);
-        _playbackService.StartPlaybackTimer(user);
-        await _playbackService.UpdatePlaybackState(user, playerState);
+        _musicPlayerStateManager.UpdateState(user.Id, musicPlayerState);
+        _musicPlaybackService.StartPlaybackTimer(user);
+        await _musicPlaybackService.UpdatePlaybackState(user, musicPlayerState);
     }
 
     private Device GetCurrentDevice(User user)
@@ -100,41 +100,41 @@ public class MusicHub : ConnectionHub
         return device;
     }
 
-    private static bool IsCurrentPlaylist(PlayerState state, string type, Guid listId, Guid itemId)
+    private static bool IsCurrentPlaylist(MusicPlayerState state, string type, Guid listId, Guid itemId)
     {
         return state.CurrentItem is not null && state.CurrentList.Contains($"{type}/{listId}") &&
                state.CurrentItem?.Id == itemId;
     }
 
-    private async Task HandleExistingPlaylistState(User user, PlayerState state)
+    private async Task HandleExistingPlaylistState(User user, MusicPlayerState state)
     {
         state.PlayState = !state.PlayState;
-        _playbackService.StartPlaybackTimer(user);
-        await _playbackService.UpdatePlaybackState(user, state);
+        _musicPlaybackService.StartPlaybackTimer(user);
+        await _musicPlaybackService.UpdatePlaybackState(user, state);
     }
 
-    private async Task HandlePlaylistChange(User user, PlayerState state, string type, Guid listId,
+    private async Task HandlePlaylistChange(User user, MusicPlayerState state, string type, Guid listId,
         PlaylistTrackDto item, List<PlaylistTrackDto> playlist)
     {
         UpdateDeviceInfo(state);
         UpdatePlaylistInfo(state, type, listId, item, playlist);
 
-        _playbackService.StartPlaybackTimer(user);
-        await _playbackService.UpdatePlaybackState(user, state);
+        _musicPlaybackService.StartPlaybackTimer(user);
+        await _musicPlaybackService.UpdatePlaybackState(user, state);
     }
 
-    private void UpdateDeviceInfo(PlayerState state)
+    private void UpdateDeviceInfo(MusicPlayerState state)
     {
         if (!Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? device)) return;
         state.DeviceId = device.DeviceId;
         state.VolumePercentage = device.VolumePercent;
     }
 
-    private void UpdatePlaylistInfo(PlayerState state, string type, Guid listId, PlaylistTrackDto item,
+    private void UpdatePlaylistInfo(MusicPlayerState state, string type, Guid listId, PlaylistTrackDto item,
         List<PlaylistTrackDto> playlist)
     {
         (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) =
-            _playlistManager.SplitPlaylist(playlist, item.Id);
+            _musicPlaylistManager.SplitPlaylist(playlist, item.Id);
         List<PlaylistTrackDto> sortedPlaylist = [];
         sortedPlaylist.AddRange(after);
         sortedPlaylist.AddRange(before);
@@ -156,12 +156,12 @@ public class MusicHub : ConnectionHub
         };
     }
 
-    public PlayerState? GetStateCommand()
+    public MusicPlayerState? GetStateCommand()
     {
         User? user = Context.User.User();
         if (user is null) return null;
 
-        _playerStateManager.TryGetValue(user.Id, out PlayerState? playerState);
+        _musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState);
         if (playerState is null) return null;
 
         return playerState;
@@ -172,9 +172,9 @@ public class MusicHub : ConnectionHub
         User? user = Context.User.User();
         if (user is null) return;
 
-        if (!_playerStateManager.TryGetValue(user.Id, out PlayerState? state))
+        if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
         {
-            await _playbackService.UpdatePlaybackState(user, null);
+            await _musicPlaybackService.UpdatePlaybackState(user, null);
             return;
         }
 
@@ -187,7 +187,7 @@ public class MusicHub : ConnectionHub
                 state.VolumePercentage = device.VolumePercent;
             }
 
-        await _playbackService.UpdatePlaybackState(user, state);
+        await _musicPlaybackService.UpdatePlaybackState(user, state);
     }
 
     public async Task CurrentTimeCommand(int time)
@@ -195,15 +195,15 @@ public class MusicHub : ConnectionHub
         User? user = Context.User.User();
         if (user is null) return;
 
-        if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
             playerState.Time = time * 1000;
 
-            await _playbackService.UpdatePlaybackState(user, playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
         else
         {
-            await _playbackService.UpdatePlaybackState(user, playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
     }
 
@@ -216,13 +216,13 @@ public class MusicHub : ConnectionHub
 
         await Networking.Networking.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
 
-        if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
             playerState.DeviceId = deviceId;
         }
         else
         {
-            await _playbackService.UpdatePlaybackState(user, playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
             return;
         }
 
@@ -235,7 +235,7 @@ public class MusicHub : ConnectionHub
                     DeviceBroadcastStatus = new()
                     {
                         Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                        BroadcastStatus = EventType.BroadcastUnavailable,
+                        BroadcastStatus = MusicEventType.BroadcastUnavailable,
                         DeviceId = deviceId
                     }
                 }
@@ -250,14 +250,14 @@ public class MusicHub : ConnectionHub
         User? user = Context.User.User();
         if (user is null) return;
 
-        if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
             playerState.VolumePercentage = volume;
-            await _playbackService.UpdatePlaybackState(user, playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
         else
         {
-            await _playbackService.UpdatePlaybackState(user, playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
             return;
         }
 
@@ -273,25 +273,25 @@ public class MusicHub : ConnectionHub
             }
     }
 
-    private async Task LikeEvent(LikeEventDto likeEvent)
+    private async Task LikeEvent(MusicLikeEventDto musicLikeEvent)
     {
-        User? user = likeEvent.User;
+        User? user = musicLikeEvent.User;
         if (user is null) return;
 
-        if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            if (playerState.CurrentItem != null && playerState.CurrentItem.Id == likeEvent.Id)
-                playerState.CurrentItem.Favorite = likeEvent.Liked;
+            if (playerState.CurrentItem != null && playerState.CurrentItem.Id == musicLikeEvent.Id)
+                playerState.CurrentItem.Favorite = musicLikeEvent.Liked;
 
             foreach (PlaylistTrackDto track in playerState.Playlist)
-                if (track.Id == likeEvent.Id)
-                    track.Favorite = likeEvent.Liked;
+                if (track.Id == musicLikeEvent.Id)
+                    track.Favorite = musicLikeEvent.Liked;
 
-            await _playbackService.UpdatePlaybackState(user, playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
     }
 
-    private void OnLikeEvent(object? sender, LikeEventDto e)
+    private void OnLikeEvent(object? sender, MusicLikeEventDto e)
     {
         LikeEvent(e).Wait();
     }
@@ -305,13 +305,13 @@ public class MusicHub : ConnectionHub
 
         await Task.Delay(3000);
 
-        if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            await _playbackService.UpdatePlaybackState(user, playerState);
+            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
         else
         {
-            await _playbackService.UpdatePlaybackState(user, new());
+            await _musicPlaybackService.UpdatePlaybackState(user, new());
 
             // Subscribe to the OnLikeEvent
             AlbumsController.OnLikeEvent += OnLikeEvent;
@@ -330,19 +330,19 @@ public class MusicHub : ConnectionHub
         bool stopPlayback = false;
 
         if (Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
-            if (_playerStateManager.TryGetValue(user.Id, out PlayerState? state))
+            if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
                 if (state.DeviceId == client.DeviceId)
                 {
-                    _playbackService.RemoveTimer(user.Id);
+                    _musicPlaybackService.RemoveTimer(user.Id);
 
-                    _deviceManager.RemoveUserDevice(user.Id);
+                    _musicDeviceManager.RemoveUserDevice(user.Id);
 
                     stopPlayback = true;
                 }
 
         await base.OnDisconnectedAsync(exception);
 
-        if (_playerStateManager.TryGetValue(user.Id, out PlayerState? playerState))
+        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
             List<Device> connectedDevices = Devices();
 
@@ -380,7 +380,7 @@ public class MusicHub : ConnectionHub
             }
         }
 
-        await _playbackService.UpdatePlaybackState(user, playerState);
+        await _musicPlaybackService.UpdatePlaybackState(user, playerState);
 
         Logger.Socket("Music client disconnected");
     }

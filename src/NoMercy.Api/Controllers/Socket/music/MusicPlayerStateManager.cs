@@ -3,21 +3,21 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace NoMercy.Api.Controllers.Socket.music;
 
-public class PlayerStateManager
+public class MusicPlayerStateManager
 {
-    private readonly ConcurrentDictionary<Guid, PlayerState> _playerStates = new();
+    private readonly ConcurrentDictionary<Guid, MusicPlayerState> _playerStates = new();
 
-    public IEnumerable<PlayerState> GetAllStates()
+    public IEnumerable<MusicPlayerState> GetAllStates()
     {
         return _playerStates.Values;
     }
 
-    public PlayerState? GetState(Guid userId)
+    public MusicPlayerState? GetState(Guid userId)
     {
-        return _playerStates.TryGetValue(userId, out PlayerState? state) ? state : null;
+        return _playerStates.TryGetValue(userId, out MusicPlayerState? state) ? state : null;
     }
 
-    public void UpdateState(Guid userId, PlayerState state)
+    public void UpdateState(Guid userId, MusicPlayerState state)
     {
         _playerStates.AddOrUpdate(userId, state, (_, _) => state);
     }
@@ -37,16 +37,16 @@ public class PlayerStateManager
         _playerStates.Clear();
     }
 
-    public void UpdateStateProperty(Guid userId, Action<PlayerState> updateAction)
+    public void UpdateStateProperty(Guid userId, Action<MusicPlayerState> updateAction)
     {
-        if (_playerStates.TryGetValue(userId, out PlayerState? state))
+        if (_playerStates.TryGetValue(userId, out MusicPlayerState? state))
         {
             updateAction(state);
             _playerStates[userId] = state;
         }
     }
 
-    public bool TryGetValue(Guid userId, [NotNullWhen(true)] out PlayerState? state)
+    public bool TryGetValue(Guid userId, [NotNullWhen(true)] out MusicPlayerState? state)
     {
         return _playerStates.TryGetValue(userId, out state);
     }

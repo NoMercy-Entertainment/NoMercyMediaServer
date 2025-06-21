@@ -3,7 +3,7 @@ using NoMercy.Api.Controllers.V1.Music.DTO;
 
 namespace NoMercy.Api.Controllers.Socket.music;
 
-public class PlayerState
+public class MusicPlayerState
 {
     [JsonProperty("actions")] public Actions? Actions { get; set; }
     [JsonProperty("device_id")] public string? DeviceId { get; set; }

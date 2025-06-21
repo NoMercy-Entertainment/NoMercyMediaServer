@@ -4,14 +4,14 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.Socket.music;
 
-public class PlaybackService
+public class MusicPlaybackService
 {
-    private readonly PlayerStateManager _stateManager;
+    private readonly MusicPlayerStateManager _stateManager;
     private readonly string[] _repeatStates = ["off", "one", "all"];
     private static int _playerStateEventId;
     private static int PlayerStateEventId => ++_playerStateEventId;
 
-    public PlaybackService(PlayerStateManager stateManager)
+    public MusicPlaybackService(MusicPlayerStateManager stateManager)
     {
         _stateManager = stateManager;
     }
@@ -23,11 +23,11 @@ public class PlaybackService
     {
         if (_timers.TryGetValue(user.Id, out Timer? existingTimer)) existingTimer.Dispose();
 
-        if (!_stateManager.TryGetValue(user.Id, out PlayerState? _)) return;
+        if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? _)) return;
 
         Timer timer = new(_ =>
         {
-            if (!_stateManager.TryGetValue(user.Id, out PlayerState? playerState)) return;
+            if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? playerState)) return;
             if (!playerState.PlayState || playerState.CurrentItem is null) return;
 
             playerState.Time += TimerInterval;
@@ -46,7 +46,7 @@ public class PlaybackService
         if (_timers.TryRemove(userId, out Timer? timer)) timer.Dispose();
     }
 
-    private async Task HandleTrackCompletion(User user, PlayerState state)
+    private async Task HandleTrackCompletion(User user, MusicPlayerState state)
     {
         if (state.CurrentItem == null) return;
         RemoveTimer(user.Id);
@@ -58,7 +58,7 @@ public class PlaybackService
         StartPlaybackTimer(user);
     }
 
-    public async Task UpdatePlaybackState(User user, PlayerState? state)
+    public async Task UpdatePlaybackState(User user, MusicPlayerState? state)
     {
         if (state is not null) state.Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -74,16 +74,16 @@ public class PlaybackService
                         State = state
                     },
                     Source = "musicHub",
-                    Type = EventType.PlayerStateChanged,
+                    Type = MusicEventType.PlayerStateChanged,
                     User = user
                 }
             ]
         };
 
-        await Networking.Networking.SendTo("PlayerState", "musicHub", user.Id, payload);
+        await Networking.Networking.SendTo("MusicPlayerState", "musicHub", user.Id, payload);
     }
 
-    private void UpdateStateBasedOnRepeatMode(PlayerState state, int currentIndex)
+    private void UpdateStateBasedOnRepeatMode(MusicPlayerState state, int currentIndex)
     {
         switch (state.Repeat)
         {

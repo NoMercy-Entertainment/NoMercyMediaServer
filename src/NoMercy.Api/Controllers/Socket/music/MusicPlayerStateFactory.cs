@@ -4,9 +4,9 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.Socket.music;
 
-public class PlayerStateFactory
+public class MusicPlayerStateFactory
 {
-    public static PlayerState Create(
+    public static MusicPlayerState Create(
         Device device,
         PlaylistTrackDto item,
         List<PlaylistTrackDto> playlist,

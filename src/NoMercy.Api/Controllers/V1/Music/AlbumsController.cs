@@ -18,7 +18,7 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/album")]
 public class AlbumsController : BaseController
 {
-    public static event EventHandler<LikeEventDto>? OnLikeEvent;
+    public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
 
@@ -98,7 +98,7 @@ public class AlbumsController : BaseController
             QueryKey = ["music", "album", album.Id]
         });
 
-        LikeEventDto likeEventDto = new()
+        MusicLikeEventDto musicLikeEventDto = new()
         {
             Id = album.Id,
             Type = "album",
@@ -106,7 +106,7 @@ public class AlbumsController : BaseController
             User = User.User()
         };
 
-        OnLikeEvent?.Invoke(this, likeEventDto);
+        OnLikeEvent?.Invoke(this, musicLikeEventDto);
 
         return Ok(new StatusResponseDto<string>
         {
