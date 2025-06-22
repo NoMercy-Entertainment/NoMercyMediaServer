@@ -63,7 +63,7 @@ public class MovieRepository(MediaContext context)
                 .Any());
 
     public readonly Func<MediaContext, Guid, int, string, Task<List<Movie>>> GetMoviePlaylistAsync =
-        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, int id, string language) =>
+        (mediaContext, userId, id, language) =>
             mediaContext.Movies.AsNoTracking()
                 .Where(movie => movie.Id == id)
                 .Where(movie => movie.Library.LibraryUsers
@@ -76,7 +76,7 @@ public class MovieRepository(MediaContext context)
                     .Where(translation => translation.Iso6391 == language))
                 .Include(movie => movie.VideoFiles)
                 .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
-                .ToList());
+                .ToListAsync();
 
     public async Task<bool> LikeMovieAsync(int id, Guid userId, bool like)
     {
