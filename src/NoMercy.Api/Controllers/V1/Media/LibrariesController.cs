@@ -121,7 +121,7 @@ public class LibrariesController(
                         .WithData(homeCardItem))
                     .Build(),
 
-                ..list.Select(genre => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
+                ..list.Select(genre => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithProps(props => props
                         .WithId(genre.Id)
@@ -224,7 +224,7 @@ public class LibrariesController(
                         .WithData(homeCardItem))
                     .Build(),
 
-                ..list.Select(genre => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
+                ..list.Select(genre => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithProps(props => props
                         .WithId(genre.Id)
