@@ -59,7 +59,7 @@ public class SeasonManager(
 
         await seasonRepository.StoreAsync(seasons);
         Logger.MovieDb($"Show {show.Name}: Seasons stored", LogEventLevel.Debug);
-        
+
         jobDispatcher.DispatchJob<AddSeasonExtraDataJob, TmdbSeasonAppends>(seasonAppends, show.Name);
 
         return seasonAppends;
@@ -78,8 +78,7 @@ public class SeasonManager(
 
     internal async Task StoreTranslations(string showName, TmdbSeasonAppends season)
     {
-        
-        List<Translation> translations = season.Translations.Translations
+        IEnumerable<Translation> translations = season.Translations.Translations
             .Where(translation => translation.Data.Title != null || translation.Data.Overview != "")
             .Select(translation => new Translation
             {
@@ -91,8 +90,8 @@ public class SeasonManager(
                 EnglishName = translation.EnglishName,
                 Homepage = translation.Data.Homepage?.ToString(),
                 SeasonId = season.Id
-            }).ToList();
-        
+            });
+
         await seasonRepository.StoreTranslationsAsync(translations);
         Logger.MovieDb($"Show {showName}: Season {season.SeasonNumber}: Translations stored", LogEventLevel.Debug);
     }

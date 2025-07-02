@@ -57,14 +57,14 @@ public class AddShowJob : AbstractMediaJob
         IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(show, HighPriority);
 
         ConcurrentBag<Episode> episodes = [];
-        foreach (TmdbSeasonAppends season in seasons)
+        await Parallel.ForEachAsync(seasons, async (season, _) =>
         {
             IEnumerable<Episode> eps = await episodeManager.Add(show, season, HighPriority);
             foreach (Episode episode in eps)
             {
                 episodes.Add(episode);
             } 
-        };
+        });
         
         await episodeRepository.StoreEpisodes(episodes); 
 
