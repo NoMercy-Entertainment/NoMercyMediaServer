@@ -38,6 +38,9 @@ public class User : Timestamps
     [JsonProperty("album_user")] public virtual ICollection<AlbumUser> AlbumUser { get; set; } = [];
     [JsonProperty("artist_user")] public virtual ICollection<ArtistUser> ArtistUser { get; set; } = [];
     [JsonProperty("track_user")] public virtual ICollection<TrackUser> TrackUser { get; set; } = [];
+    
+    [JsonProperty("playback_preferences")] 
+    public virtual ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
 
     public User()
     {

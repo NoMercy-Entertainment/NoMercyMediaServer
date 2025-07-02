@@ -244,11 +244,10 @@ public class MusicController : BaseController
         string normalizedQuery = request.Query.NormalizeSearch();
 
         // Step 1: Get IDs using MusicRepository search methods
-        List<Guid> artistIds = await _musicRepository.SearchArtistIds(_mediaContext, normalizedQuery);
-        List<Guid> albumIds = await _musicRepository.SearchAlbumIds(_mediaContext, normalizedQuery);
-        List<Guid> playlistIds = await _musicRepository.SearchPlaylistIds(_mediaContext, normalizedQuery);
-        List<Guid> trackIds = await _musicRepository.SearchTrackIds(_mediaContext, normalizedQuery);
-
+        List<Guid> artistIds = _musicRepository.SearchArtistIds(_mediaContext, normalizedQuery);
+        List<Guid> albumIds = _musicRepository.SearchAlbumIds(_mediaContext, normalizedQuery);
+        List<Guid> playlistIds = _musicRepository.SearchPlaylistIds(_mediaContext, normalizedQuery);
+        List<Guid> trackIds = _musicRepository.SearchTrackIds(_mediaContext, normalizedQuery);
         // Step 2: Query full data using the IDs
         MediaContext mediaContext = new();
         List<Artist> artists = mediaContext.Artists

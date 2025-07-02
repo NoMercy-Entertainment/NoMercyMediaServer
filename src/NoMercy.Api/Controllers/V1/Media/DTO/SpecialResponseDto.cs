@@ -147,104 +147,6 @@ public record SpecialResponseDto
 
     #endregion
 
-    #region GetSpecialPlaylist
-
-    public static readonly Func<MediaContext, Guid, Ulid, string, Task<Special?>> GetSpecialPlaylist =
-        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid id, string language) =>
-            mediaContext.Specials.AsNoTracking()
-                .Where(special => special.Id == id)
-                .Include(special => special.Items
-                    .OrderBy(specialItem => specialItem.Order)
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Movie)
-                .ThenInclude(movie => movie!.VideoFiles)
-                .ThenInclude(file => file.UserData
-                    .Where(userData => userData.UserId.Equals(userId))
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Movie)
-                .ThenInclude(movie => movie!.CertificationMovies)
-                .ThenInclude(certificationMovie => certificationMovie.Certification)
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Movie)
-                .ThenInclude(movie => movie!.Images
-                    .Where(image =>
-                        (image.Type == "logo" && image.Iso6391 == "en")
-                        || ((image.Type == "backdrop" || image.Type == "poster") &&
-                            (image.Iso6391 == "en" || image.Iso6391 == null))
-                    )
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Movie)
-                .ThenInclude(movie => movie!.MovieUser
-                    .Where(movieUser => movieUser.UserId.Equals(userId))
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Movie)
-                .ThenInclude(movie => movie!.Translations
-                    .Where(translation => translation.Iso6391 == language)
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Episode)
-                .ThenInclude(episode => episode!.VideoFiles)
-                .ThenInclude(file => file.UserData
-                    .Where(userData => userData.UserId.Equals(userId))
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Episode)
-                .ThenInclude(episode => episode!.Season)
-                .ThenInclude(episode => episode.Images
-                    .Where(image =>
-                        (image.Type == "logo" && image.Iso6391 == "en")
-                        || ((image.Type == "backdrop" || image.Type == "poster") &&
-                            (image.Iso6391 == "en" || image.Iso6391 == null))
-                    )
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Episode)
-                .ThenInclude(episode => episode!.Images
-                    .Where(image =>
-                        (image.Type == "logo" && image.Iso6391 == "en")
-                        || ((image.Type == "backdrop" || image.Type == "poster") &&
-                            (image.Iso6391 == "en" || image.Iso6391 == null))
-                    )
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Episode)
-                .ThenInclude(episode => episode!.Translations
-                    .Where(translation => translation.Iso6391 == language)
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Episode)
-                .ThenInclude(episode => episode!.Tv)
-                .ThenInclude(episode => episode.Translations
-                    .Where(translation => translation.Iso6391 == language)
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Episode)
-                .ThenInclude(episode => episode!.Tv)
-                .ThenInclude(episode => episode.CertificationTvs)
-                .ThenInclude(certificationTv => certificationTv.Certification)
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Episode)
-                .ThenInclude(episode => episode!.Tv)
-                .ThenInclude(episode => episode.Images
-                    .Where(image =>
-                        (image.Type == "logo" && image.Iso6391 == "en")
-                        || ((image.Type == "backdrop" || image.Type == "poster") &&
-                            (image.Iso6391 == "en" || image.Iso6391 == null))
-                    )
-                    .OrderByDescending(image => image.VoteAverage)
-                )
-                .Include(special => special.Items)
-                .ThenInclude(specialItem => specialItem.Episode)
-                .ThenInclude(episode => episode!.Tv)
-                .ThenInclude(episode => episode.TvUser
-                    .Where(tvUser => tvUser.UserId.Equals(userId))
-                )
-                .FirstOrDefault());
-
     public SpecialResponseDto(Special special)
     {
         //
@@ -255,5 +157,4 @@ public record SpecialResponseDto
         //
     }
 
-    #endregion
 }

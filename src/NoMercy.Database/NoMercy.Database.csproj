@@ -43,4 +43,8 @@
         <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Migrations\Queue\" />
+    </ItemGroup>
+
 </Project>

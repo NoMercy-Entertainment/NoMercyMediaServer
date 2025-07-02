@@ -62,21 +62,27 @@ public class MovieRepository(MediaContext context)
                 .Include(movie => movie.VideoFiles)
                 .Any());
 
-    public readonly Func<MediaContext, Guid, int, string, Task<List<Movie>>> GetMoviePlaylistAsync =
-        (mediaContext, userId, id, language) =>
-            mediaContext.Movies.AsNoTracking()
-                .Where(movie => movie.Id == id)
-                .Where(movie => movie.Library.LibraryUsers
-                    .FirstOrDefault(libraryUser => libraryUser.UserId.Equals(userId)) != null)
-                .Include(movie => movie.Media
-                    .Where(media => media.Type == "video"))
-                .Include(movie => movie.Images
-                    .Where(image => image.Type == "logo"))
-                .Include(movie => movie.Translations
-                    .Where(translation => translation.Iso6391 == language))
-                .Include(movie => movie.VideoFiles)
-                .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
-                .ToListAsync();
+    public async Task<List<Movie>> GetMoviePlaylistAsync(Guid userId, int id, string language)
+    {
+        return await context.Movies.AsNoTracking()
+            .Where(movie => movie.Id == id)
+            .Where(movie => movie.Library.LibraryUsers
+                .FirstOrDefault(libraryUser => libraryUser.UserId.Equals(userId)) != null)
+            .Include(movie => movie.Media
+                .Where(media => media.Type == "video"))
+            .Include(movie => movie.Images
+                .Where(image => image.Type == "logo"))
+            .Include(movie => movie.Translations
+                .Where(translation => translation.Iso6391 == language))
+            
+            .Include(movie => movie.VideoFiles)
+            .ThenInclude(videoFile => videoFile.Metadata)
+            
+            .Include(movie => movie.VideoFiles)
+            .ThenInclude(file => file.UserData
+                .Where(userData => userData.UserId.Equals(userId) && userData.Type == "movie"))
+            .ToListAsync();
+    }
 
     public async Task<bool> LikeMovieAsync(int id, Guid userId, bool like)
     {

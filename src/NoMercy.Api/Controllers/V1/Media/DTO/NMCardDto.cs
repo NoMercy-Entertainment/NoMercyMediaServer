@@ -47,7 +47,7 @@ public class NmCardDto
             : movie.Overview;
         Poster = movie.Poster;
         Backdrop = movie.Backdrop;
-        Logo = movie.Images.FirstOrDefault(image => image.Type == "logo")?.FilePath;
+        Logo = movie.Images.FirstOrDefault()?.FilePath;
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
 
@@ -81,7 +81,7 @@ public class NmCardDto
             : tv.Overview;
         Poster = tv.Poster;
         Backdrop = tv.Backdrop;
-        Logo = tv.Images.FirstOrDefault(image => image.Type == "logo")?.FilePath;
+        Logo = tv.Images.FirstOrDefault()?.FilePath;
         TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
         Year = tv.FirstAirDate.ParseYear();
 
@@ -116,7 +116,7 @@ public class NmCardDto
             : collection.Overview;
         Poster = collection.Poster;
         Backdrop = collection.Backdrop;
-        Logo = collection.Images.FirstOrDefault(image => image.Type == "logo")?.FilePath;
+        Logo = collection.Images.FirstOrDefault()?.FilePath;
         TitleSort = collection.Title.TitleSort(collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)
             ?.Movie.ReleaseDate);
         Year = collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();
@@ -199,10 +199,12 @@ public class NmCardDto
             Link = new($"/specials/{Id}/watch", UriKind.Relative);
 
             NumberOfItems = item.Special.Items.Count;
-            HaveItems = item.Special.Items
-                            .Select(specialItem => specialItem.Episode?.VideoFiles
-                                .Any(videoFile => videoFile.Folder != null)).Count()
-                        + item.Special.Items.Count(i => i.MovieId != null);
+            
+            int availableMovies = item.Special.Items
+                .Count(specialItem => specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Any() == true);
+            int availableEpisodes = item.Special.Items
+                .Count(specialItem => specialItem.Episode != null && specialItem.Episode?.VideoFiles.Any() == true);
+            HaveItems = availableMovies + availableEpisodes;
 
             ContentRatings = item.Special.Items
                 .SelectMany(specialItem => specialItem.Episode?.Tv.CertificationTvs

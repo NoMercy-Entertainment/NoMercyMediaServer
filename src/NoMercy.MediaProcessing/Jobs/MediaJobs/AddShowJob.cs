@@ -57,14 +57,14 @@ public class AddShowJob : AbstractMediaJob
         IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(show, HighPriority);
 
         ConcurrentBag<Episode> episodes = [];
-        await Parallel.ForEachAsync(seasons, async (season, _) =>
+        foreach (TmdbSeasonAppends season in seasons)
         {
             IEnumerable<Episode> eps = await episodeManager.Add(show, season, HighPriority);
             foreach (Episode episode in eps)
             {
                 episodes.Add(episode);
             } 
-        });
+        };
         
         await episodeRepository.StoreEpisodes(episodes); 
 
@@ -72,12 +72,12 @@ public class AddShowJob : AbstractMediaJob
 
         Logger.App($"Show {show.Name} added to the library, extra data will be added in the background");
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["libraries", LibraryId.ToString()]
         });
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["tv", Id.ToString()]
         });

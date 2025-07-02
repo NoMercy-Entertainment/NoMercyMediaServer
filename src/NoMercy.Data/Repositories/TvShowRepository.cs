@@ -124,7 +124,12 @@ public class TvShowRepository(MediaContext context)
             .Include(tv => tv.Seasons)
             .ThenInclude(season => season.Episodes)
             .ThenInclude(tv => tv.VideoFiles)
-            .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
+            .ThenInclude(videoFile => videoFile.Metadata)
+            .Include(tv => tv.Seasons)
+            .ThenInclude(season => season.Episodes)
+            .ThenInclude(tv => tv.VideoFiles)
+            .ThenInclude(file => file.UserData
+                .Where(userData => userData.UserId.Equals(userId) && userData.Type == "tv"))
             .Include(tv => tv.Seasons)
             .ThenInclude(season => season.Translations
                 .Where(translation => translation.Iso6391 == language))

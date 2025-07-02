@@ -11,14 +11,14 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations.Queue
 {
     [DbContext(typeof(QueueContext))]
-    [Migration("20240310020923_Test")]
-    partial class Test
+    [Migration("20250627004829_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.1");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.2");
 
             modelBuilder.Entity("NoMercy.Database.Models.FailedJob", b =>
                 {
@@ -59,7 +59,7 @@ namespace NoMercy.Database.Migrations.Queue
 
             modelBuilder.Entity("NoMercy.Database.Models.QueueJob", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -79,7 +79,7 @@ namespace NoMercy.Database.Migrations.Queue
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("Priority")
+                    b.Property<int>("Priority")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Queue")

@@ -2,6 +2,7 @@ using Asp.Versioning.ApiExplorer;
 using AspNetCore.Swagger.Themes;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.FileProviders;
 using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Middleware;
@@ -37,8 +38,18 @@ public static class ApplicationConfiguration
 
         localizationOptions.FallBackToParentCultures = true;
         localizationOptions.FallBackToParentUICultures = true;
+        
+        localizationOptions.CultureInfoUseUserOverride = true;
+        localizationOptions.DefaultRequestCulture = new(supportedCultures[0]);
 
         app.UseRequestLocalization(localizationOptions);
+        
+        // // Make sure your API is setting content type headers correctly
+        // app.Use(async (context, next) =>
+        // {
+        //     context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+        //     await next();
+        // });
     }
 
     private static void ConfigureMiddleware(IApplicationBuilder app)
@@ -49,7 +60,6 @@ public static class ApplicationConfiguration
         app.UseHsts();
         app.UseHttpsRedirection();
         app.UseResponseCompression();
-        app.UseRequestLocalization();
 
         app.UseMiddleware<LocalizationMiddleware>();
         app.UseMiddleware<TokenParamAuthMiddleware>();
@@ -102,14 +112,14 @@ public static class ApplicationConfiguration
         app.UseWebSockets()
             .UseEndpoints(endpoints =>
             {
-                endpoints.MapHub<VideoHub>("/socket", options =>
+                endpoints.MapHub<VideoHub>("/videoHub", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
                     options.TransportSendTimeout = TimeSpan.FromSeconds(40);
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
-                endpoints.MapHub<DashboardHub>("/dashboardHub", options =>
+                endpoints.MapHub<MusicHub>("/musicHub", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
                     options.TransportSendTimeout = TimeSpan.FromSeconds(40);
@@ -123,7 +133,7 @@ public static class ApplicationConfiguration
                     options.CloseOnAuthenticationExpiration = true;
                 });
 
-                endpoints.MapHub<MusicHub>("/musicHub", options =>
+                endpoints.MapHub<DashboardHub>("/dashboardHub", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;
                     options.TransportSendTimeout = TimeSpan.FromSeconds(40);

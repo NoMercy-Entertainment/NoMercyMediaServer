@@ -26,6 +26,11 @@ public class ConnectionHub : Hub
     {
         return _httpContextAccessor.HttpContext?.Request.Headers["country"].FirstOrDefault() ?? "US";
     }
+    
+    public string GetLanguageFromContext() 
+    {
+        return _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en";
+    }
 
     public override async Task OnConnectedAsync()
     {

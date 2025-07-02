@@ -1783,6 +1783,11 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("Audio");
 
+                    b.Property<string>("_chapters")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("Chapters");
+
                     b.Property<string>("_chapters_file")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT")
@@ -2179,6 +2184,70 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("TitleSort");
 
                     b.ToTable("People");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.PlaybackPreference", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("LibraryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("TvId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("_audio")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("Audio");
+
+                    b.Property<string>("_subtitle")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("Subtitles");
+
+                    b.Property<string>("_video")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("Video");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId");
+
+                    b.HasIndex("MovieId");
+
+                    b.HasIndex("TvId");
+
+                    b.HasIndex("UserId", "LibraryId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "MovieId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "TvId")
+                        .IsUnique();
+
+                    b.ToTable("PlaybackPreferences");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Playlist", b =>
@@ -3232,7 +3301,16 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("VideoFileId");
 
-                    b.HasIndex("VideoFileId", "UserId")
+                    b.HasIndex("VideoFileId", "UserId", "CollectionId")
+                        .IsUnique();
+
+                    b.HasIndex("VideoFileId", "UserId", "MovieId")
+                        .IsUnique();
+
+                    b.HasIndex("VideoFileId", "UserId", "SpecialId")
+                        .IsUnique();
+
+                    b.HasIndex("VideoFileId", "UserId", "TvId")
                         .IsUnique();
 
                     b.ToTable("UserData");
@@ -3423,7 +3501,7 @@ namespace NoMercy.Database.Migrations
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.MusicGenre", "MusicGenre")
-                        .WithMany()
+                        .WithMany("AlbumMusicGenres")
                         .HasForeignKey("MusicGenreId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3552,7 +3630,7 @@ namespace NoMercy.Database.Migrations
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.MusicGenre", "MusicGenre")
-                        .WithMany()
+                        .WithMany("ArtistMusicGenres")
                         .HasForeignKey("MusicGenreId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -4251,7 +4329,7 @@ namespace NoMercy.Database.Migrations
             modelBuilder.Entity("NoMercy.Database.Models.MusicGenreReleaseGroup", b =>
                 {
                     b.HasOne("NoMercy.Database.Models.MusicGenre", "Genre")
-                        .WithMany()
+                        .WithMany("MusicGenreReleaseGroups")
                         .HasForeignKey("GenreId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -4270,7 +4348,7 @@ namespace NoMercy.Database.Migrations
             modelBuilder.Entity("NoMercy.Database.Models.MusicGenreTrack", b =>
                 {
                     b.HasOne("NoMercy.Database.Models.MusicGenre", "Genre")
-                        .WithMany()
+                        .WithMany("MusicGenreTracks")
                         .HasForeignKey("GenreId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -4320,6 +4398,38 @@ namespace NoMercy.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("Notification");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.PlaybackPreference", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Library", "Library")
+                        .WithMany("PlaybackPreferences")
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("NoMercy.Database.Models.Movie", "Movie")
+                        .WithMany("PlaybackPreferences")
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("NoMercy.Database.Models.Tv", "Tv")
+                        .WithMany("PlaybackPreferences")
+                        .HasForeignKey("TvId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("NoMercy.Database.Models.User", "User")
+                        .WithMany("PlaybackPreferences")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
+
+                    b.Navigation("Movie");
+
+                    b.Navigation("Tv");
 
                     b.Navigation("User");
                 });
@@ -4837,6 +4947,8 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("LibraryTvs");
 
                     b.Navigation("LibraryUsers");
+
+                    b.Navigation("PlaybackPreferences");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Movie", b =>
@@ -4859,6 +4971,8 @@ namespace NoMercy.Database.Migrations
 
                     b.Navigation("MovieUser");
 
+                    b.Navigation("PlaybackPreferences");
+
                     b.Navigation("RecommendationFrom");
 
                     b.Navigation("RecommendationTo");
@@ -4874,6 +4988,17 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("UserData");
 
                     b.Navigation("VideoFiles");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.MusicGenre", b =>
+                {
+                    b.Navigation("AlbumMusicGenres");
+
+                    b.Navigation("ArtistMusicGenres");
+
+                    b.Navigation("MusicGenreReleaseGroups");
+
+                    b.Navigation("MusicGenreTracks");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Person", b =>
@@ -4977,6 +5102,8 @@ namespace NoMercy.Database.Migrations
 
                     b.Navigation("Media");
 
+                    b.Navigation("PlaybackPreferences");
+
                     b.Navigation("RecommendationFrom");
 
                     b.Navigation("RecommendationTo");
@@ -5007,6 +5134,8 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("MovieUser");
 
                     b.Navigation("NotificationUser");
+
+                    b.Navigation("PlaybackPreferences");
 
                     b.Navigation("SpecialUser");
 

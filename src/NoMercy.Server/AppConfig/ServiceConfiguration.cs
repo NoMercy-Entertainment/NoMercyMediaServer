@@ -78,7 +78,7 @@ public static class ServiceConfiguration
 
         services.AddDbContext<MediaContext>(optionsAction =>
         {
-            optionsAction.UseSqlite($"Data Source={AppFiles.MediaDatabase} Pooling=True",
+            optionsAction.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
         });
         services.AddTransient<MediaContext>();
@@ -114,6 +114,7 @@ public static class ServiceConfiguration
         services.AddSingleton<JobDispatcher>();
         services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
 
+        services.AddVideoHubServices();
         services.AddMusicHubServices();
 
         services.AddHostedService<ServerRegistrationService>(_ =>
@@ -131,7 +132,7 @@ public static class ServiceConfiguration
         // Configure Logging
         services.AddLogging(options =>
         {
-            options.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+            options.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Debug);
         });
     }
 
@@ -181,23 +182,24 @@ public static class ServiceConfiguration
 
     private static void ConfigureApi(IServiceCollection services)
     {
+       
         // Add Controllers and JSON Options
         services.AddControllers(options =>
             {
-                options.EnableEndpointRouting = true; // This is the default, but explicit for clarity
+                options.EnableEndpointRouting = true;
             })
             .AddNewtonsoftJson(options =>
             {
                 options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                options.SerializerSettings.Culture = System.Globalization.CultureInfo.InvariantCulture;
+                // options.SerializerSettings.Culture = System.Globalization.CultureInfo.InvariantCulture;
                 options.SerializerSettings.DateFormatHandling = DateFormatHandling.IsoDateFormat;
                 options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
             })
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                options.JsonSerializerOptions.Encoder =
-                    System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+                // options.JsonSerializerOptions.Encoder =
+                //     System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
             });
 
         services.Configure<RouteOptions>(options =>

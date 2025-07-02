@@ -77,7 +77,8 @@ public class EpisodeManager(
 
     internal async Task StoreTranslations(string showName, TmdbEpisodeAppends episode)
     {
-        IEnumerable<Translation> translations = episode.Translations.Translations
+        
+        List<Translation> translations = episode.Translations.Translations
             .Where(translation => translation.Data.Title != null || translation.Data.Overview != "")
             .Select(translation => new Translation
             {
@@ -89,7 +90,7 @@ public class EpisodeManager(
                 EnglishName = translation.EnglishName,
                 Homepage = translation.Data.Homepage?.ToString(),
                 EpisodeId = episode.Id
-            });
+            }).ToList();
 
         await episodeRepository.StoreEpisodeTranslations(translations);
 

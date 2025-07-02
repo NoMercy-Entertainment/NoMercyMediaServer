@@ -41,6 +41,7 @@ public class Startup
             if (mediaContext?.Database.GetPendingMigrations().Any() == true)
             {
                 mediaContext.Database.ExecuteSqlRaw("PRAGMA journal_mode = WAL;");
+                mediaContext.Database.ExecuteSqlRaw("PRAGMA encoding = 'UTF-8'");
                 mediaContext.Database.Migrate();
                 Console.WriteLine("Media database migrations applied.");
             }
@@ -48,6 +49,7 @@ public class Startup
             if (queueContext?.Database.GetPendingMigrations().Any() == true)
             {
                 queueContext.Database.ExecuteSqlRaw("PRAGMA journal_mode = WAL;");
+                queueContext.Database.ExecuteSqlRaw("PRAGMA encoding = 'UTF-8'");
                 queueContext.Database.Migrate();
                 Console.WriteLine("Queue database migrations applied.");
             }

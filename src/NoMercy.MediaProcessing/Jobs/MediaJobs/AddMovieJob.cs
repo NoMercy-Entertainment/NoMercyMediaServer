@@ -49,12 +49,12 @@ public class AddMovieJob : AbstractMediaJob
 
         Logger.App($"Movie {Id} added to library, extra data will be added in the background");
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["libraries", LibraryId.ToString()]
         });
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["movie", Id.ToString()]
         });

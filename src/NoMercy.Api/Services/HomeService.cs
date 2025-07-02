@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -15,8 +14,7 @@ public class HomeService
     private readonly LibraryRepository _libraryRepository;
     private readonly HomeRepository _homeRepository;
 
-    public HomeService(
-        HomeRepository homeRepository, LibraryRepository libraryRepository, MediaContext mediaContext)
+    public HomeService(HomeRepository homeRepository, LibraryRepository libraryRepository, MediaContext mediaContext)
     {
         _homeRepository = homeRepository;
         _libraryRepository = libraryRepository;
@@ -224,33 +222,9 @@ public class HomeService
 
     public async Task<Render> GetHomeCard(Guid userId, string language, Ulid replaceId)
     {
-        Tv? tv = await _mediaContext.Tvs
-            .AsNoTracking()
-            .Where(tv =>
-                tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId))
-                && tv.Episodes.Any(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
-            .Include(tv => tv.Translations.Where(translation => translation.Iso6391 == language))
-            .Include(tv => tv.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en"))
-            .Include(tv => tv.Media.Where(media => media.Site == "YouTube"))
-            .Include(tv => tv.KeywordTvs).ThenInclude(keywordTv => keywordTv.Keyword)
-            .Include(tv => tv.Episodes.Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
-            .ThenInclude(episode => episode.VideoFiles)
-            .Include(tv => tv.CertificationTvs).ThenInclude(certificationTv => certificationTv.Certification)
-            .OrderBy(tv => EF.Functions.Random())
-            .FirstOrDefaultAsync();
+        Tv? tv = await _libraryRepository.GetRandomTvShow(userId, language);
 
-        Movie? movie = await _mediaContext.Movies
-            .AsNoTracking()
-            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId))
-                            && movie.VideoFiles.Count != 0)
-            .Include(movie => movie.Translations.Where(translation => translation.Iso6391 == language))
-            .Include(movie => movie.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en"))
-            .Include(movie => movie.Media.Where(media => media.Site == "YouTube"))
-            .Include(movie => movie.KeywordMovies).ThenInclude(keywordMovie => keywordMovie.Keyword)
-            .Include(movie => movie.CertificationMovies)
-            .ThenInclude(certificationMovie => certificationMovie.Certification)
-            .OrderBy(movie => EF.Functions.Random())
-            .FirstOrDefaultAsync();
+        Movie? movie = await _libraryRepository.GetRandomMovie(userId, language);
 
         List<NmCardDto> genres = [];
         if (tv != null)
@@ -259,8 +233,10 @@ public class HomeService
         if (movie != null)
             genres.Add(new(movie, language));
 
-        NmCardDto? homeCardItem = genres.Where(g => !string.IsNullOrWhiteSpace(g.Title))
-            .Randomize().FirstOrDefault();
+        NmCardDto? homeCardItem = genres
+            .Where(g => !string.IsNullOrWhiteSpace(g.Title))
+            .Randomize()
+            .FirstOrDefault();
 
         return new()
         {
@@ -464,7 +440,7 @@ public class HomeService
         {
             Data =
             [
-                new ComponentBuilder<NmCarouselDto<NmCardDto>>()
+                new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/home/continue")
                     .WithProps(props => props

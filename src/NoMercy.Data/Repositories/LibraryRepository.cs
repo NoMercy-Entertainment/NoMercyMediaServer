@@ -11,7 +11,7 @@ public class LibraryRepository(MediaContext context)
 
     private static readonly Func<MediaContext, Guid, IAsyncEnumerable<Library>> GetLibrariesQuery =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId) =>
-            mediaContext.Libraries
+            mediaContext.Libraries.AsNoTracking()
                 .Where(library => library.LibraryUsers
                     .FirstOrDefault(u => u.UserId.Equals(userId)) != null
                 )
@@ -26,8 +26,7 @@ public class LibraryRepository(MediaContext context)
 
     private static readonly Func<MediaContext, Ulid, Guid, string, Task<Library?>> GetLibraryByIdAsyncQuery =
         EF.CompileAsyncQuery((MediaContext mediaContext, Ulid libraryId, Guid userId, string language) =>
-            mediaContext.Libraries
-                .AsNoTracking()
+            mediaContext.Libraries.AsNoTracking()
                 .Where(library => library.Id == libraryId)
                 .Where(library => library.LibraryUsers
                     .FirstOrDefault(u => u.UserId.Equals(userId)) != null
@@ -82,12 +81,9 @@ public class LibraryRepository(MediaContext context)
                 .ThenInclude(certificationTv => certificationTv.Certification)
                 .FirstOrDefault());
 
-    private static readonly Func<MediaContext, Guid, Ulid, string, int, int, IAsyncEnumerable<Movie>>
-        GetLibraryMoviesQuery =
-            EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int skip,
-                    int take) =>
-                mediaContext.Movies
-                    .AsNoTracking()
+    private static readonly Func<MediaContext, Guid, Ulid, string, int, int, IAsyncEnumerable<Movie>> GetLibraryMoviesQuery =
+            EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int skip, int take) =>
+                mediaContext.Movies.AsNoTracking()
                     .Where(movie => movie.Library.Id == libraryId)
                     .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
                     .Where(libraryMovie => libraryMovie.VideoFiles
@@ -113,12 +109,9 @@ public class LibraryRepository(MediaContext context)
                     .Skip(skip)
                     .Take(take));
 
-    private static readonly Func<MediaContext, Guid, Ulid, string, int, int, IAsyncEnumerable<Tv>>
-        GetLibraryShowsQuery =
-            EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int skip,
-                    int take) =>
-                mediaContext.Tvs
-                    .AsNoTracking()
+    private static readonly Func<MediaContext, Guid, Ulid, string, int, int, IAsyncEnumerable<Tv>> GetLibraryShowsQuery =
+            EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int skip, int take) 
+                => mediaContext.Tvs.AsNoTracking()
                     .Where(tv => tv.Library.Id == libraryId)
                     .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
                     .Where(libraryTv => libraryTv.Episodes
@@ -150,12 +143,9 @@ public class LibraryRepository(MediaContext context)
 
     private static readonly string[] Letters = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
-    private static readonly Func<MediaContext, Guid, Ulid, string, string, int, int, IAsyncEnumerable<Movie>>
-        GetPaginatedLibraryMoviesQuery =
-            EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string letter,
-                    string language, int skip, int take) =>
-                mediaContext.Movies
-                    .AsNoTracking()
+    private static readonly Func<MediaContext, Guid, Ulid, string, string, int, int, IAsyncEnumerable<Movie>> GetPaginatedLibraryMoviesQuery =
+            EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string letter, string language, int skip, int take) =>
+                mediaContext.Movies.AsNoTracking()
                     .Where(movie => movie.Library.Id == libraryId)
                     .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
                     .Where(libraryMovie => libraryMovie.VideoFiles
@@ -185,12 +175,9 @@ public class LibraryRepository(MediaContext context)
                     .Skip(skip)
                     .Take(take));
 
-    private static readonly Func<MediaContext, Guid, Ulid, string, string, int, int, IAsyncEnumerable<Tv>>
-        GetPaginatedLibraryShowsQuery =
-            EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string letter,
-                    string language, int skip, int take) =>
-                mediaContext.Tvs
-                    .AsNoTracking()
+    private static readonly Func<MediaContext, Guid, Ulid, string, string, int, int, IAsyncEnumerable<Tv>> GetPaginatedLibraryShowsQuery =
+            EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string letter, string language, int skip, int take) =>
+                mediaContext.Tvs.AsNoTracking()
                     .Where(tv => tv.Library.Id == libraryId)
                     .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
                     .Where(libraryTv => libraryTv.Episodes
@@ -224,9 +211,8 @@ public class LibraryRepository(MediaContext context)
                     .Skip(skip)
                     .Take(take));
 
-    private static readonly Func<MediaContext, Ulid, Task<Library?>> GetLibraryByIdAsyncSimpleQuery =
-        (MediaContext mediaContext, Ulid id) =>
-            mediaContext.Libraries
+    private static readonly Func<MediaContext, Ulid, Task<Library?>> GetLibraryByIdAsyncSimpleQuery = 
+        (mediaContext, id) => mediaContext.Libraries.AsNoTracking()
                 .Include(library => library.LanguageLibraries)
                 .Include(library => library.FolderLibraries)
                 .ThenInclude(folderLibrary => folderLibrary.Folder)
@@ -234,9 +220,8 @@ public class LibraryRepository(MediaContext context)
                 .Include(library => library.LibraryTvs)
                 .FirstOrDefaultAsync(library => library.Id == id);
 
-    private static readonly Func<MediaContext, Task<List<Library>>> GetAllLibrariesAsyncQuery =
-        (MediaContext mediaContext) =>
-            mediaContext.Libraries
+    private static readonly Func<MediaContext, Task<List<Library>>> GetAllLibrariesAsyncQuery = 
+        (mediaContext) => mediaContext.Libraries.AsNoTracking()
                 .Include(library => library.FolderLibraries)
                 .ThenInclude(folderLibrary => folderLibrary.Folder)
                 .Include(library => library.LibraryMovies)
@@ -244,36 +229,37 @@ public class LibraryRepository(MediaContext context)
                 .ToListAsync();
 
     private static readonly Func<MediaContext, IAsyncEnumerable<FolderDto>> GetFoldersAsyncQuery =
-        EF.CompileAsyncQuery((MediaContext mediaContext) =>
-            mediaContext.Folders
-                .Select(folder => new FolderDto
-                {
-                    Id = folder.Id,
-                    Path = folder.Path,
-                    EncoderProfiles = folder.EncoderProfileFolder
-                        .Select(e => e.EncoderProfile)
-                        .ToArray()
-                }));
+        EF.CompileAsyncQuery((MediaContext mediaContext) => mediaContext.Folders.AsNoTracking()
+            .Select(folder => new FolderDto
+            {
+                Id = folder.Id,
+                Path = folder.Path,
+                EncoderProfiles = folder.EncoderProfileFolder
+                    .Select(e => e.EncoderProfile)
+                    .ToArray()
+            }));
 
-    public static readonly Func<MediaContext, Guid, string, Task<Tv?>> GetRandomTvShowQuery =
+    private static readonly Func<MediaContext, Guid, string, Task<Tv?>> GetRandomTvShowQuery =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, string language) =>
             mediaContext.Tvs.AsNoTracking()
-                .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
-                .Include(tv => tv.Translations
-                    .Where(translation => translation.Iso6391 == language))
-                .Include(tv => tv.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en"))
-                .Include(tv => tv.Media.Where(media => media.Site == "YouTube"))
-                .Include(tv => tv.KeywordTvs)
-                .ThenInclude(keywordTv => keywordTv.Keyword)
-                .Include(tv => tv.Episodes
-                    .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
-                .ThenInclude(episode => episode.VideoFiles)
-                .Include(tv => tv.CertificationTvs)
-                .ThenInclude(certificationTv => certificationTv.Certification)
-                .OrderBy(tv => EF.Functions.Random())
-                .FirstOrDefault());
+            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Include(tv => tv.Translations
+                .Where(translation => translation.Iso6391 == language))
+            .Include(tv => tv.Images
+                .Where(image => image.Type == "logo" && image.Iso6391 == "en"))
+            .Include(tv => tv.Media
+                .Where(media => media.Site == "YouTube"))
+            .Include(tv => tv.KeywordTvs)
+            .ThenInclude(keywordTv => keywordTv.Keyword)
+            .Include(tv => tv.Episodes
+                .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
+            .ThenInclude(episode => episode.VideoFiles)
+            .Include(tv => tv.CertificationTvs)
+            .ThenInclude(certificationTv => certificationTv.Certification)
+            .OrderBy(tv => EF.Functions.Random())
+            .FirstOrDefault());
 
-    public static readonly Func<MediaContext, Guid, string, Task<Movie?>> GetRandomMovieQuery =
+    private static readonly Func<MediaContext, Guid, string, Task<Movie?>> GetRandomMovieQuery =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, string language) =>
             mediaContext.Movies.AsNoTracking()
                 .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
@@ -308,30 +294,24 @@ public class LibraryRepository(MediaContext context)
     }
 
     public async Task<IEnumerable<Movie>> GetLibraryMovies(Guid userId, Ulid libraryId, string language, int take,
-        int page,
-        Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)
+        int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)
     {
-        // Note: Compiled queries don't support dynamic ordering, so we use the compiled query with default ordering
-        // For complex ordering scenarios, consider creating separate compiled queries for each order type
         List<Movie> movies = [];
         await foreach (Movie movie in GetLibraryMoviesQuery(context, userId, libraryId, language, page * take, take))
             movies.Add(movie);
         return movies;
     }
 
-    public async Task<IEnumerable<Tv>> GetLibraryShows(Guid userId, Ulid libraryId, string language, int take, int page,
-        Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null)
+    public async Task<IEnumerable<Tv>> GetLibraryShows(Guid userId, Ulid libraryId, string language, int take, 
+        int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null)
     {
-        // Note: Compiled queries don't support dynamic ordering, so we use the compiled query with default ordering
-        // For complex ordering scenarios, consider creating separate compiled queries for each order type
         List<Tv> shows = [];
         await foreach (Tv show in GetLibraryShowsQuery(context, userId, libraryId, language, page * take, take))
             shows.Add(show);
         return shows;
     }
 
-    public async Task<IEnumerable<Movie>> GetPaginatedLibraryMovies(Guid userId, Ulid libraryId, string letter,
-        string language,
+    public async Task<IEnumerable<Movie>> GetPaginatedLibraryMovies(Guid userId, Ulid libraryId, string letter, string language, 
         int take, int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)
     {
         List<Movie> movies = [];
@@ -340,8 +320,7 @@ public class LibraryRepository(MediaContext context)
         return movies;
     }
 
-    public async Task<IEnumerable<Tv>> GetPaginatedLibraryShows(Guid userId, Ulid libraryId, string letter,
-        string language,
+    public async Task<IEnumerable<Tv>> GetPaginatedLibraryShows(Guid userId, Ulid libraryId, string letter, string language,
         int take, int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null)
     {
         List<Tv> shows = [];

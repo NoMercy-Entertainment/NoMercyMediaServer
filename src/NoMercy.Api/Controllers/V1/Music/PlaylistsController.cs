@@ -10,7 +10,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using CarouselResponseItemDto = NoMercy.Data.Repositories.CarouselResponseItemDto;
-using PlaylistResponseItemDto = NoMercy.Api.Controllers.V1.Music.DTO.PlaylistResponseItemDto;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 

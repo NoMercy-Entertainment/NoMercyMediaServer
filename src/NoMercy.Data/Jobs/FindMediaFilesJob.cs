@@ -75,13 +75,13 @@ public class FindMediaFilesJob : IShouldQueue
                 await context.SaveChangesAsync();
             }
 
-            Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+            Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
             {
                 QueryKey = ["libraries", library.Id.ToString()]
             });
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = [library.Type == "movie" ? "movie" : "tv", Id]
         });

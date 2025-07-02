@@ -17,7 +17,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/specials")]
-public class SpecialController(SpecialRepository specialRepository) : BaseController
+public class SpecialController(SpecialRepository specialRepository, MediaContext context) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
@@ -163,20 +163,17 @@ public class SpecialController(SpecialRepository specialRepository) : BaseContro
 
         string language = Language();
 
-        await using MediaContext mediaContext = new();
-
-        Special? special = await SpecialResponseDto
-            .GetSpecialPlaylist(mediaContext, userId, id, language);
+        Special? special = await specialRepository
+            .GetSpecialPlaylist(context, userId, id, language);
 
         if (special is null)
             return NotFoundResponse("Special not found");
 
-        PlaylistResponseDto[] items = special.Items
+        VideoPlaylistResponseDto[] items = special.Items
             .OrderBy(item => item.Order)
             .Select((item, index) => item.EpisodeId is not null
-                ? new(item.Episode ?? new Episode(), index)
-                : new PlaylistResponseDto(item.Movie ?? new Movie(), index)
-            )
+                ? new(item.Episode ?? new Episode(), "specials", id, index)
+                : new VideoPlaylistResponseDto(item.Movie ?? new Movie(), "specials", id, index))
             .ToArray();
 
         if (items.Length == 0)

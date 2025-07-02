@@ -12,15 +12,15 @@ public class MusixMatchTrackSearchParameters
         [MusixMatchSortStrategy.ReleaseDateDesc] = new("s_track_release_date", "desc")
     };
 
-    public string? Query { get; set; } = "";
-    public string? LyricsQuery { get; set; } = "";
-    public string Title { get; set; } = "";
-    public string Artist { get; set; } = "";
+    public string? Query { get; set; }
+    public string? LyricsQuery { get; set; }
+    public string Title { get; set; }
+    public string Artist { get; set; }
     public string[]? Artists { get; set; }
-    public string Album { get; set; } = "";
-    public string? Duration { get; set; } = "";
-    public string? Language { get; set; } = "";
-    public bool? HasLyrics { get; set; } = true;
+    public string Album { get; set; }
+    public string? Duration { get; set; }
+    public string? Language { get; set; }
+    public bool? HasLyrics { get; set; }
     public bool? HasSubtitles { get; set; }
     public bool? HasRichSync { get; set; }
     public MusixMatchSortStrategy? Sort { get; set; } = MusixMatchSortStrategy.TrackRatingDesc;

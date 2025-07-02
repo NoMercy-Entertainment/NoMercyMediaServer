@@ -39,7 +39,7 @@ public class AlbumsController : BaseController
 
         string language = Language();
 
-        await foreach (Album album in _musicRepository.GetAlbums(_mediaContext, userId, letter))
+        foreach (Album album in _musicRepository.GetAlbums(_mediaContext, userId, letter))
             albums.Add(new(album, language));
 
         List<AlbumTrack> tracks = await _musicRepository.GetAlbumTracksForIds(_mediaContext, albums.Select(a => a.Id)
@@ -93,7 +93,7 @@ public class AlbumsController : BaseController
 
         await _musicRepository.LikeAlbum(userId, album, request.Value);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["music", "album", album.Id]
         });

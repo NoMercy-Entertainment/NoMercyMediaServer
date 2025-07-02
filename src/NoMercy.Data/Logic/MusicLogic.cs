@@ -389,7 +389,7 @@ public partial class MusicLogic : IAsyncDisposable
             FanArtImagesJob fanartImagesJob = new(musicBrainzRelease);
             JobDispatcher.Dispatch(fanartImagesJob, "image", 2);
 
-            Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+            Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
             {
                 QueryKey = ["music", "album", musicBrainzRelease.Id.ToString()]
             });
@@ -473,7 +473,7 @@ public partial class MusicLogic : IAsyncDisposable
         FanArtImagesJob fanartImagesJob = new(musicBrainzArtist);
         JobDispatcher.Dispatch(fanartImagesJob, "image", 2);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["music", "artist", musicBrainzArtist.Id.ToString()]
         });

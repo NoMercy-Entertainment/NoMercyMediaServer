@@ -4,7 +4,7 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
 
-public record PlaylistResponseItemDto
+public record MusicPlaylistResponseItemDto
 {
     [JsonProperty("id")] public Guid Id { get; set; }
     [JsonProperty("name")] public string Name { get; set; }
@@ -17,7 +17,7 @@ public record PlaylistResponseItemDto
     [JsonProperty("tracks")] public ICollection<PlaylistTrack> Tracks { get; set; }
     [JsonProperty("link")] public Uri Link { get; set; }
 
-    public PlaylistResponseItemDto(Playlist playlist)
+    public MusicPlaylistResponseItemDto(Playlist playlist)
     {
         Id = playlist.Id;
         Name = playlist.Name;

@@ -46,7 +46,7 @@ public class TracksController : BaseController
 
         string language = Language();
 
-        foreach (TrackUser track in await _musicRepository.GetTracks(_mediaContext, userId))
+        foreach (TrackUser track in _musicRepository.GetTracks(_mediaContext, userId))
             tracks.Add(new(track.Track, language));
 
         if (tracks.Count == 0)
@@ -80,11 +80,11 @@ public class TracksController : BaseController
 
         await _musicRepository.LikeTrackAsync(userId, track, request.Value);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["music", "album", track.AlbumTrack.FirstOrDefault()?.Album.Id]
         });
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["music", "artist", track.ArtistTrack.FirstOrDefault()?.Artist.Id]
         });
@@ -164,7 +164,7 @@ public class TracksController : BaseController
                     Artist = track.ArtistTrack.FirstOrDefault()?.Artist.Name ?? "",
                     // Artists = track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
                     Title = track.Name,
-                    Duration = track.Duration?.ToSeconds().ToString(),
+                    // Duration = track.Duration?.ToSeconds().ToString(),
                     Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc
                 };
 
@@ -184,11 +184,11 @@ public class TracksController : BaseController
             if (subtitles is null)
                 return NotFoundResponse("Subtitle not found");
 
-            await _musicRepository.UpdateTrackLyricsAsync(track, JsonConvert.SerializeObject(subtitles));
+            subtitles = await _musicRepository.UpdateTrackLyricsAsync(track, JsonConvert.SerializeObject(subtitles));
 
-            return Ok(new DataResponseDto<Lyric[]>
+            return Ok(new DataResponseDto<dynamic>
             {
-                Data = track.Lyrics
+                Data = subtitles
             });
         }
         catch (Exception e)

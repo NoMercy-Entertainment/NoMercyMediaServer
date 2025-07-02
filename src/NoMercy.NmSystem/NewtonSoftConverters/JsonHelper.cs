@@ -42,7 +42,7 @@ public static class JsonHelper
         }
     };
 
-    public static T? FromJson<T>(this string json)
+    public static T? FromJson<T>(this string? json)
     {
         return JsonConvert.DeserializeObject<T>(json, Settings);
     }

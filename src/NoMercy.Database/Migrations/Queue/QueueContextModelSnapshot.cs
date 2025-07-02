@@ -15,7 +15,7 @@ namespace NoMercy.Database.Migrations.Queue
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.1");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.2");
 
             modelBuilder.Entity("NoMercy.Database.Models.FailedJob", b =>
                 {
@@ -56,7 +56,7 @@ namespace NoMercy.Database.Migrations.Queue
 
             modelBuilder.Entity("NoMercy.Database.Models.QueueJob", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -76,7 +76,7 @@ namespace NoMercy.Database.Migrations.Queue
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("Priority")
+                    b.Property<int>("Priority")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Queue")

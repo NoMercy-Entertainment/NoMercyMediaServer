@@ -5,7 +5,10 @@ using Newtonsoft.Json;
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
-[Index(nameof(VideoFileId), nameof(UserId), IsUnique = true)]
+[Index(nameof(VideoFileId), nameof(UserId),nameof(MovieId), IsUnique = true)]
+[Index(nameof(VideoFileId), nameof(UserId),nameof(TvId), IsUnique = true)]
+[Index(nameof(VideoFileId), nameof(UserId),nameof(CollectionId), IsUnique = true)]
+[Index(nameof(VideoFileId), nameof(UserId),nameof(SpecialId), IsUnique = true)]
 [Index(nameof(UserId))]
 [Index(nameof(MovieId))]
 [Index(nameof(TvId))]

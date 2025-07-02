@@ -252,7 +252,7 @@ public class BaseController : Controller
 
     protected string Country()
     {
-        return HttpContext.Request.Headers.AcceptLanguage.LastOrDefault() ?? "US";
+        return HttpContext.Request.Headers["country"].FirstOrDefault() ?? "US";
     }
 
     protected static readonly string[] Numbers =

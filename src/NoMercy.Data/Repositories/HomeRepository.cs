@@ -14,7 +14,7 @@ public class HomeRepository
                 .Include(tv => tv.Translations
                     .Where(translation => translation.Iso6391 == language))
                 .Include(tv => tv.Images
-                    .Where(image => image.Type == "logo" && image.Iso6391 == "en"))
+                    .Where(image => image.Type == "logo" && (image.Iso6391 == "en" || image.Iso6391 == language)))
                 .Include(tv => tv.Media
                     .Where(media => media.Site == "YouTube"))
                 .Include(tv => tv.KeywordTvs)
@@ -35,7 +35,7 @@ public class HomeRepository
                 .Include(movie => movie.Media
                     .Where(media => media.Site == "YouTube"))
                 .Include(movie => movie.Images
-                    .Where(image => image.Type == "logo" && image.Iso6391 == "en"))
+                    .Where(image => image.Type == "logo" && (image.Iso6391 == "en" || image.Iso6391 == language)))
                 .Include(movie => movie.VideoFiles)
                 .Include(movie => movie.KeywordMovies)
                 .ThenInclude(keywordMovie => keywordMovie.Keyword)
@@ -49,38 +49,72 @@ public class HomeRepository
                 .Where(user => user.UserId.Equals(userId))
                 .Where(user => user.MovieId != null || user.TvId != null || user.CollectionId != null ||
                                user.SpecialId != null)
+                
                 .Include(userData => userData.Movie)
                 .ThenInclude(movie => movie!.VideoFiles)
+                
+                .Include(collectionMovie => collectionMovie.Movie)
+                .ThenInclude(movie => movie.CertificationMovies)
+                .ThenInclude(certificationMovie => certificationMovie.Certification)
+                
                 .Include(userData => userData.Movie)
                 .ThenInclude(movie => movie!.Media.Where(media => media.Site == "Youtube"))
-                .Include(userData => userData.Movie)
-                .ThenInclude(movie =>
-                    movie!.CertificationMovies.Where(certificationMovie =>
-                        certificationMovie.Certification.Iso31661 == country))
-                .ThenInclude(certificationMovie => certificationMovie.Certification)
+                
+                .Include(episode => episode.Tv)
+                .ThenInclude(tv => tv.CertificationTvs
+                    .Where(certificationTv => certificationTv.Certification.Iso31661 == country))
+                .ThenInclude(certificationTv => certificationTv.Certification)
+                
                 .Include(userData => userData.Tv)
-                .ThenInclude(tv =>
-                    tv!.Episodes.Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
+                .ThenInclude(tv => tv!.Episodes
+                    .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
                 .ThenInclude(episode => episode.VideoFiles)
+                
                 .Include(userData => userData.Tv)
                 .ThenInclude(tv => tv!.Media.Where(media => media.Site == "Youtube"))
-                .Include(userData => userData.Tv)
-                .ThenInclude(tv =>
-                    tv!.CertificationTvs.Where(certificationTv => certificationTv.Certification.Iso31661 == country))
-                .ThenInclude(certificationTv => certificationTv.Certification)
+                
                 .Include(userData => userData.Collection)
                 .ThenInclude(collection => collection!.CollectionMovies)
                 .ThenInclude(collectionMovie => collectionMovie.Movie)
                 .ThenInclude(movie => movie.CertificationMovies)
                 .ThenInclude(certificationMovie => certificationMovie.Certification)
+                
                 .Include(userData => userData.Collection)
                 .ThenInclude(collection => collection!.CollectionMovies)
                 .ThenInclude(collectionMovie => collectionMovie.Movie)
                 .ThenInclude(movie => movie.Media.Where(media => media.Site == "Youtube"))
+                
                 .Include(userData => userData.Collection)
                 .ThenInclude(collection => collection!.CollectionMovies)
                 .ThenInclude(collectionMovie => collectionMovie.Movie)
+                .ThenInclude(movie => movie.VideoFiles)
+                
                 .Include(userData => userData.Special)
+                .ThenInclude(special => special!.Items)
+                .ThenInclude(specialItem => specialItem.Movie)
+                .ThenInclude(movie => movie!.VideoFiles)
+                
+                .Include(userData => userData.Special)
+                .ThenInclude(special => special!.Items)
+                .ThenInclude(specialItem => specialItem.Movie)
+                .ThenInclude(movie =>
+                    movie!.CertificationMovies.Where(certificationMovie =>
+                        certificationMovie.Certification.Iso31661 == country))
+                .ThenInclude(certificationMovie => certificationMovie.Certification)
+                
+                .Include(userData => userData.Special)
+                .ThenInclude(special => special!.Items)
+                .ThenInclude(specialItem => specialItem.Episode)
+                .ThenInclude(movie => movie!.VideoFiles)
+                
+                .Include(userData => userData.Special)
+                .ThenInclude(special => special!.Items)
+                .ThenInclude(specialItem => specialItem.Episode)
+                .ThenInclude(episode => episode.Tv)
+                .ThenInclude(tv => tv.CertificationTvs
+                    .Where(certificationTv => certificationTv.Certification.Iso31661 == country))
+                .ThenInclude(certificationTv => certificationTv.Certification)
+                
                 .Include(userData => userData.VideoFile)
                 .OrderByDescending(userData => userData.UpdatedAt)
                 .AsEnumerable()

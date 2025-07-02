@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
+using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using SixLabors.ImageSharp;
@@ -13,6 +16,44 @@ public static class Dev
 {
     public static async Task Run()
     {
+        // await Task.Delay(TimeSpan.FromSeconds(10));
+        // MediaContext context = new();
+        // Library lib = context.Libraries.First(l => l.Type == "movie");
+        // User user = context.Users.First(u => u.Email == "stoney@nomercy.tv");
+        //
+        // PlaybackPreference prefs = new()
+        // {
+        //     UserId = user.Id,
+        //     LibraryId = lib.Id,
+        //     Video = new()
+        //     {
+        //         Width = 3840,
+        //     },
+        //     Audio = new()
+        //     {
+        //         Language = "eng",
+        //     },
+        //     Subtitle = new()
+        //     {
+        //         Language = "eng",
+        //         Type = "full",
+        //         Codec = "vtt"
+        //     },
+        // };
+        //
+        // await context.PlaybackPreferences.Upsert(prefs)
+        // .On(v => new { v.UserId, v.LibraryId })
+        // .WhenMatched((pp, pi) => new()
+        // {
+        //     UserId = pi.UserId,
+        //     LibraryId = pi.LibraryId,
+        //     _video = pi._video,
+        //     _audio = pi._audio,
+        //     _subtitle = pi._subtitle,
+        //     UpdatedAt = DateTime.Now
+        // })
+        // .RunAsync();
+        
         // Logger.Setup("Throwing test exception");
         // try
         // {

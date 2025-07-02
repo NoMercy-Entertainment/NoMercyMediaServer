@@ -66,7 +66,7 @@ public class Seed : IDisposable, IAsyncDisposable
             await AddEncoderProfiles();
             await AddLibraries();
             await Users();
-
+            
             if (ShouldSeedMarvel)
             {
                 Thread thread = new(() => _ = SpecialSeed.AddSpecial(MediaContext));
@@ -139,22 +139,25 @@ public class Seed : IDisposable, IAsyncDisposable
         List<LibraryUser> libraryUsers = [];
 
         foreach (User user in _users.ToList())
-        foreach (Library library in libraries.ToList())
-            libraryUsers.Add(new()
-            {
-                LibraryId = library.Id,
-                UserId = user.Id
-            });
+        {
+            foreach (Library library in libraries.ToList())
+                libraryUsers.Add(new()
+                {
+                    LibraryId = library.Id,
+                    UserId = user.Id
+                });
 
-        await MediaContext.LibraryUser
-            .UpsertRange(libraryUsers)
-            .On(v => new { v.LibraryId, v.UserId })
-            .WhenMatched((lus, lui) => new()
-            {
-                LibraryId = lui.LibraryId,
-                UserId = lui.UserId
-            })
-            .RunAsync();
+            await MediaContext.LibraryUser
+                .UpsertRange(libraryUsers)
+                .On(v => new { v.LibraryId, v.UserId })
+                .WhenMatched((lus, lui) => new()
+                {
+                    LibraryId = lui.LibraryId,
+                    UserId = lui.UserId
+                })
+                .RunAsync();
+        }
+        
     }
 
     private static async Task AddGenres()

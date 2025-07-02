@@ -168,7 +168,7 @@ public class UserDataController : BaseController
         mediaContext.UserData.RemoveRange(userData);
         await mediaContext.SaveChangesAsync();
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["home"]
         });

@@ -85,10 +85,13 @@ public class ShowManager(
 
         await showRepository.LinkToLibrary(library, show);
         Logger.MovieDb($"Show {show.Title}: Linked to Library {library.Title}", LogEventLevel.Debug);
+        
+        ShowManager showManager = new(showRepository, jobDispatcher);
+        await showManager.StoreTranslations(showAppends);
 
         Logger.MovieDb($"Show {showAppends.Name}: Added to Library {library.Title}");
 
-        jobDispatcher.DispatchJob<AddShowExtraDataJob, TmdbTvShowAppends>(showAppends);
+        // jobDispatcher.DispatchJob<AddShowExtraDataJob, TmdbTvShowAppends>(showAppends);
 
         return showAppends;
     }
@@ -120,7 +123,7 @@ public class ShowManager(
 
     internal async Task StoreTranslations(TmdbTvShowAppends show)
     {
-        IEnumerable<Translation> translations = show.Translations.Translations
+        List<Translation> translations = show.Translations.Translations
             .Select(translation => new Translation
             {
                 Iso31661 = translation.Iso31661,
@@ -132,8 +135,8 @@ public class ShowManager(
                 Homepage = translation.Data.Homepage?.ToString(),
                 Biography = translation.Data.Biography,
                 TvId = show.Id
-            });
-
+            }).ToList();
+        
         await showRepository.StoreTranslations(translations);
 
         Logger.MovieDb($"Show {show.Name}: Translations stored", LogEventLevel.Debug);

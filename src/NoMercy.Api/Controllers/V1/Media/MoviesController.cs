@@ -106,9 +106,9 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
 
         string language = Language();
 
-        IEnumerable<PlaylistResponseDto> playlist =
-            (await movieRepository.GetMoviePlaylistAsync(mediaContext, userId, id, language))
-            .Select(movie => new PlaylistResponseDto(movie));
+        IEnumerable<VideoPlaylistResponseDto> playlist =
+            (await movieRepository.GetMoviePlaylistAsync(userId, id, language))
+            .Select(movie => new VideoPlaylistResponseDto(movie, "movie", id));
 
         if (!playlist.Any())
             return NotFoundResponse("Movie not found");
@@ -159,7 +159,7 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
 
         try
         {
-            Logger.MovieDb("Rescanning {movie.Title} for files", LogEventLevel.Debug);
+            Logger.MovieDb($"Rescanning {movie.Title} for files", LogEventLevel.Debug);
 
             FileRepository fileRepository = new();
             FileManager fileManager = new(fileRepository);

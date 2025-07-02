@@ -217,12 +217,16 @@ public class CollectionRepository(MediaContext context)
             .Include(movie => movie.CollectionMovies)
             .ThenInclude(collectionMovie => collectionMovie.Movie)
             .ThenInclude(movie => movie.VideoFiles)
+            .ThenInclude(videoFile => videoFile.Metadata)
+            .Include(movie => movie.CollectionMovies)
+            .ThenInclude(collectionMovie => collectionMovie.Movie)
+            .ThenInclude(movie => movie.VideoFiles)
             .ThenInclude(file => file.UserData
                 .Where(movieUser => movieUser.UserId.Equals(userId)))
             .FirstOrDefaultAsync();
     }
 
-    public Task<Collection?> GetWatchCollectionAsync(Guid userId, int id, string language, string country)
+    public Task<Collection?> GetCollectionPlaylistAsync(Guid userId, int id, string language)
     {
         return context.Collections
             .AsNoTracking()
@@ -250,11 +254,17 @@ public class CollectionRepository(MediaContext context)
             .ThenInclude(movie => movie.Translations
                 .Where(translation => translation.Iso6391 == language)
             )
+            
+            .Include(collection => collection.CollectionMovies)
+            .ThenInclude(collectionMovie => collectionMovie.Movie)
+            .ThenInclude(movie => movie.VideoFiles)
+            .ThenInclude(file => file.Metadata)
+            
             .Include(collection => collection.CollectionMovies)
             .ThenInclude(collectionMovie => collectionMovie.Movie)
             .ThenInclude(movie => movie.VideoFiles)
             .ThenInclude(file => file.UserData
-                .Where(movieUser => movieUser.UserId.Equals(userId)))
+                .Where(userData => userData.UserId.Equals(userId) && userData.Type == "collection"))
             .FirstOrDefaultAsync();
     }
 

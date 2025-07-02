@@ -89,7 +89,7 @@ public class AddReleaseJob : AbstractReleaseJob
 
         jobDispatcher.DispatchJob<MusicDescriptionJob>(releaseAppends.MusicBrainzReleaseGroup);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["music", "albums"]
         });

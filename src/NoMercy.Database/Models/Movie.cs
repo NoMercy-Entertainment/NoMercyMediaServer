@@ -66,6 +66,9 @@ public class Movie : ColorPaletteTimeStamps
     [JsonProperty("movie_user")] public ICollection<MovieUser> MovieUser { get; set; } = [];
 
     [JsonProperty("video_files")] public ICollection<VideoFile> VideoFiles { get; set; } = [];
+    
+    [JsonProperty("playback_preferences")] 
+    public ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
 
     public Movie()
     {

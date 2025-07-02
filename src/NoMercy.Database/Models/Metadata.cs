@@ -8,7 +8,7 @@ namespace NoMercy.Database.Models;
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Filename), nameof(HostFolder), IsUnique = true)]
 [Index(nameof(Type))]
-public class Metadata : Timestamps
+public class Metadata : MetadataTracks
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
@@ -32,62 +32,14 @@ public class Metadata : Timestamps
     [JsonProperty("audio_track_id")] public Guid? AudioTrackId { get; set; }
     public Track AudioTrack { get; set; } = null!;
 
-    [Column("Video")]
-    [StringLength(1024)]
-    [JsonProperty("video")]
-    [JsonIgnore]
-    // ReSharper disable once InconsistentNaming
-    public string? _video { get; set; }
-
-    [NotMapped]
-    public List<IVideo>? Video
-    {
-        get => _video != null
-            ? JsonConvert.DeserializeObject<List<IVideo>>(_video)
-            : null;
-        init => _video = JsonConvert.SerializeObject(value);
-    }
-
-    [Column("Audio")]
-    [StringLength(1024)]
-    [JsonProperty("audio")]
-    [JsonIgnore]
-    // ReSharper disable once InconsistentNaming
-    public string? _audio { get; set; }
-
-    [NotMapped]
-    public List<IAudio>? Audio
-    {
-        get => _audio != null
-            ? JsonConvert.DeserializeObject<List<IAudio>>(_audio)
-            : null;
-        init => _audio = JsonConvert.SerializeObject(value);
-    }
-
-    [Column("Subtitles")]
-    [StringLength(1024)]
-    [JsonProperty("subtitles")]
-    [JsonIgnore]
-    // ReSharper disable once InconsistentNaming
-    public string? _subtitles { get; set; }
-
-    [NotMapped]
-    public List<ISubtitle>? Subtitles
-    {
-        get => _subtitles != null
-            ? JsonConvert.DeserializeObject<List<ISubtitle>>(_subtitles)
-            : null;
-        init => _subtitles = JsonConvert.SerializeObject(value);
-    }
-
     [Column("Previews")]
     [StringLength(1024)]
-    [JsonProperty("previews")]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _previews { get; set; }
 
     [NotMapped]
+    [JsonProperty("previews")]
     public List<IPreview>? Previews
     {
         get => _previews != null
@@ -98,12 +50,12 @@ public class Metadata : Timestamps
 
     [Column("Fonts")]
     [StringLength(1024)]
-    [JsonProperty("fonts")]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _fonts { get; set; }
 
     [NotMapped]
+    [JsonProperty("fonts")]
     public List<IFont>? Fonts
     {
         get => _fonts != null
@@ -114,12 +66,12 @@ public class Metadata : Timestamps
 
     [Column("FontsFile")]
     [StringLength(1024)]
-    [JsonProperty("fonts_file")]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _fonts_file { get; set; }
 
     [NotMapped]
+    [JsonProperty("fonts_file")]
     public IFontsFile? FontsFile
     {
         get => _fonts_file != null
@@ -127,40 +79,56 @@ public class Metadata : Timestamps
             : null;
         init => _fonts_file = JsonConvert.SerializeObject(value);
     }
-
+    
     [Column("ChaptersFile")]
     [StringLength(1024)]
-    [JsonProperty("chapters_file")]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
     public string? _chapters_file { get; set; }
-
+    
     [NotMapped]
-    public IChaptersFile? Chapters
+    [JsonProperty("chapters_file")]
+    public IChapterFile? ChapterFile
     {
         get => _chapters_file != null
-            ? JsonConvert.DeserializeObject<IChaptersFile>(_chapters_file)
+            ? JsonConvert.DeserializeObject<IChapterFile>(_chapters_file)
             : null;
         init => _chapters_file = JsonConvert.SerializeObject(value);
+    }
+    
+    [Column("Chapters")]
+    [StringLength(1024)]
+    [JsonIgnore]
+    // ReSharper disable once InconsistentNaming
+    public string? _chapters { get; set; }
+
+    [NotMapped]
+    [JsonProperty("chapters")]
+    public List<IChapter>? Chapters
+    {
+        get => _chapters != null
+            ? JsonConvert.DeserializeObject<List<IChapter>>(_chapters)
+            : null;
+        init => _chapters = JsonConvert.SerializeObject(value);
     }
 
     public long CalculateTotalSize()
     {
         long totalSize = 0;
 
-        if (Video != null) totalSize += Video.Sum(v => v.FileSize);
+        if (Video != null) totalSize += Video.Sum(v => v.FileSize ?? 0);
 
-        if (Audio != null) totalSize += Audio.Sum(a => a.FileSize);
+        if (Audio != null) totalSize += Audio.Sum(a => a.FileSize ?? 0);
 
-        if (Subtitles != null) totalSize += Subtitles.Sum(s => s.FileSize);
+        if (Subtitles != null) totalSize += Subtitles.Sum(s => s.FileSize ?? 0);
 
         if (Previews != null) totalSize += Previews.Sum(p => p.ImageFileSize + p.TimeFileSize);
 
-        if (Fonts != null) totalSize += Fonts.Sum(f => f.FileSize);
+        if (Fonts != null) totalSize += Fonts.Sum(f => f.FileSize ?? 0);
 
-        if (FontsFile != null) totalSize += FontsFile.FileSize;
+        if (FontsFile != null) totalSize += FontsFile.FileSize ?? 0;
 
-        if (Chapters != null) totalSize += Chapters.FileSize;
+        if (Chapters != null) totalSize += ChapterFile?.FileSize ?? 0;
 
         return totalSize;
     }
@@ -169,9 +137,9 @@ public class Metadata : Timestamps
     {
         long totalSize = 0;
 
-        if (Video != null) totalSize += Video.Sum(v => v.FileSize);
+        if (Video != null) totalSize += Video.Sum(v => v.FileSize ?? 0);
 
-        if (Audio != null) totalSize += Audio.Sum(a => a.FileSize);
+        if (Audio != null) totalSize += Audio.Sum(a => a.FileSize ?? 0);
 
         return totalSize;
     }
@@ -188,26 +156,27 @@ public enum MediaType
 public class IVideo : IHash
 {
     [JsonProperty("width")] public int Width { get; set; }
-    [JsonProperty("height")] public int Height { get; set; }
+    [JsonProperty("height")] public int? Height { get; set; }
     [JsonProperty("codec")] public string? Codec { get; set; }
-    [JsonProperty("bit_rate")] public long BitRate { get; set; }
+    [JsonProperty("bit_rate")] public long? BitRate { get; set; }
 }
 
 public class IAudio : IHash
 {
-    [JsonProperty("language")] public string? Language { get; set; }
+    [JsonProperty("language")] public string Language { get; set; } = null!;
     [JsonProperty("codec")] public string? Codec { get; set; }
-    [JsonProperty("bit_rate")] public long BitRate { get; set; }
-    [JsonProperty("channels")] public int Channels { get; set; }
+    [JsonProperty("bit_rate")] public long? BitRate { get; set; }
+    [JsonProperty("channels")] public int? Channels { get; set; }
     [JsonProperty("channel_layout")] public string? ChannelLayout { get; set; }
-    [JsonProperty("sample_rate")] public int SampleRate { get; set; }
+    [JsonProperty("sample_rate")] public int? SampleRate { get; set; }
 }
 
 public class ISubtitle : IHash
 {
     [JsonProperty("language")] public string? Language { get; set; }
     [JsonProperty("codec")] public string? Codec { get; set; }
-    [MaxLength(10)] [JsonProperty("type")] public string? Type { get; set; }
+    [MaxLength(10)] 
+    [JsonProperty("type")] public string? Type { get; set; }
 }
 
 public class IPreview
@@ -228,7 +197,7 @@ public class IHash
 {
     [JsonProperty("file_name")] public string? FileName { get; set; }
     [JsonProperty("file_hash")] public string? FileHash { get; set; }
-    [JsonProperty("file_size")] public long FileSize { get; set; }
+    [JsonProperty("file_size")] public long? FileSize { get; set; }
 }
 
 public class IFont : IHash
@@ -239,6 +208,14 @@ public class IFontsFile : IHash
 {
 }
 
-public class IChaptersFile : IHash
+public class IChapter
+{
+    [JsonProperty("id")] public int Id { get; set; }
+    [JsonProperty("start_time")] public int StartTime { get; set; }
+    [JsonProperty("end_time")] public int EndTime { get; set; }
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
+}
+
+public class IChapterFile : IHash
 {
 }

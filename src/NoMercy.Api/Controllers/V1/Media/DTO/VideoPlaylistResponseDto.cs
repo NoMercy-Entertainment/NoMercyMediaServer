@@ -6,7 +6,7 @@ using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 
-public record PlaylistResponseDto
+public class VideoPlaylistResponseDto
 {
     [JsonProperty("id")] public int Id { get; set; }
     [JsonProperty("title")] public string? Title { get; set; }
@@ -18,23 +18,29 @@ public record PlaylistResponseDto
     [JsonProperty("duration")] public string Duration { get; set; } = string.Empty;
     [JsonProperty("tmdb_id")] public int TmdbId { get; set; }
     [JsonProperty("video_type")] public string VideoType { get; set; } = string.Empty;
+    [JsonProperty("library_type")] public string LibraryType { get; set; } = string.Empty;
     [JsonProperty("playlist_type")] public string PlaylistType { get; set; } = string.Empty;
+    [JsonProperty("playlist_id")] public dynamic PlaylistId { get; set; } = null!;
     [JsonProperty("year")] public long Year { get; set; }
     [JsonProperty("file")] public string File { get; set; } = string.Empty;
     [JsonProperty("progress")] public ProgressDto? Progress { get; set; }
     [JsonProperty("image")] public string? Image { get; set; }
     [JsonProperty("logo")] public string? Logo { get; set; }
     [JsonProperty("sources")] public SourceDto[] Sources { get; set; } = [];
-    [JsonProperty("fonts")] public List<FontDto?>? Fonts { get; set; } = [];
-    [JsonProperty("fontsFile")] public string FontsFile { get; set; } = string.Empty;
+    [JsonProperty("fonts")] public List<FontDto> Fonts { get; set; } = [];
+    [JsonProperty("chapters")] public List<IChapter> Chapters { get; set; } = [];
     [JsonProperty("tracks")] public List<IVideoTrack> Tracks { get; set; } = [];
+    
+    [JsonProperty("audio")] public List<IAudio> Audio { get; set; } = [];
+    [JsonProperty("captions")] public List<ISubtitle> Captions { get; set; } = [];
+    [JsonProperty("qualities")] public List<IVideo> Qualities { get; set; } = [];
 
     [JsonProperty("season")] public int? Season { get; set; }
     [JsonProperty("episode")] public int? Episode { get; set; }
     [JsonProperty("seasonName")] public string? SeasonName { get; set; }
     [JsonProperty("episode_id")] public int? EpisodeId { get; set; }
 
-    public PlaylistResponseDto(Episode episode, int? index = null)
+    public VideoPlaylistResponseDto(Episode episode, string playlistType, dynamic playlistId, int? index = null)
     {
         VideoFile? videoFile = episode.VideoFiles.FirstOrDefault();
         if (videoFile is null) return;
@@ -65,17 +71,19 @@ public record PlaylistResponseDto
             : tvTitle;
         Origin = Info.DeviceId;
         Uuid = episode.Tv.Id + episode.Id;
-        VideoId = videoFile.Id;
         Duration = videoFile.Duration ?? "0";
         TmdbId = episode.Tv.Id;
         VideoType = "tv";
-        PlaylistType = "tv";
+        VideoId = videoFile.Id;
+        LibraryType = episode.Tv.MediaType ?? "tv";
+        PlaylistType = playlistType;
+        PlaylistId = playlistId;
         Year = episode.Tv.FirstAirDate.ParseYear();
         Progress = userData?.UpdatedAt is not null && userData.Time < userData.VideoFile.Duration?.ToSeconds() * 0.9
             ? new ProgressDto
             {
                 Time = userData.Time ?? 0,
-                Date = userData.UpdatedAt
+                Date = userData.UpdatedAt,
             }
             : null;
         Image = episode.Still is not null ? "https://image.tmdb.org/t/p/original" + episode.Still : null;
@@ -109,9 +117,15 @@ public record PlaylistResponseDto
         Episode = index ?? episode.EpisodeNumber;
         SeasonName = episode.Season.Title;
         EpisodeId = episode.Id;
+        Chapters = videoFile.Metadata?.Chapters ?? [];
+        Fonts = subs.Fonts ?? [];
+
+        Audio = videoFile.Metadata?.Audio ?? [];
+        Captions = videoFile.Metadata?.Subtitles ?? [];
+        Qualities = videoFile.Metadata?.Video ?? [];
     }
 
-    public PlaylistResponseDto(Movie movie, int? index = null, Collection? collection = null)
+    public VideoPlaylistResponseDto(Movie movie, string playlistType, dynamic playlistId, int? index = null, Collection? collection = null)
     {
         VideoFile? videoFile = movie.VideoFiles.FirstOrDefault();
         if (videoFile is null) return;
@@ -132,11 +146,13 @@ public record PlaylistResponseDto
         Description = overview;
         Origin = Info.DeviceId;
         Uuid = movie.Id;
-        VideoId = videoFile.Id;
         Duration = videoFile.Duration ?? "0";
         TmdbId = collection?.Id ?? movie.Id;
         VideoType = "movie";
-        PlaylistType = "movie";
+        VideoId = videoFile.Id;
+        LibraryType = "movie";
+        PlaylistType = playlistType;
+        PlaylistId = playlistId;
         Year = movie.ReleaseDate.ParseYear();
         Progress = userData?.UpdatedAt is not null && userData.Time < userData.VideoFile.Duration?.ToSeconds() * 0.8
             ? new ProgressDto
@@ -171,6 +187,13 @@ public record PlaylistResponseDto
             .Concat(subs.TextTracks)
             .OrderBy(track => track.Language)
             .ToList();
+        
+        Chapters = videoFile.Metadata?.Chapters ?? [];
+        Fonts = subs.Fonts ?? [];
+        
+        Audio = videoFile.Metadata?.Audio ?? [];
+        Captions = videoFile.Metadata?.Subtitles ?? [];
+        Qualities = videoFile.Metadata?.Video ?? [];
 
         if (index is null) return;
         SeasonName = "Collection";
@@ -182,7 +205,7 @@ public record PlaylistResponseDto
     private record Subs
     {
         public List<IVideoTrack> TextTracks { get; set; } = [];
-        public List<FontDto?>? Fonts { get; set; } = [];
+        public List<FontDto>? Fonts { get; set; } = [];
         public string FontsFile { get; set; } = string.Empty;
     }
 

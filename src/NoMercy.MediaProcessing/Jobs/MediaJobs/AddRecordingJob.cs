@@ -76,12 +76,12 @@ public class AddRecordingJob : AbstractMusicRecordingJob
 
         Logger.App($"Recording {FoundTrack.Title} added to the library: {LibraryId}");
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["libraries", LibraryId.ToString()]
         });
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["music", FoundTrack.Id.ToString()]
         });

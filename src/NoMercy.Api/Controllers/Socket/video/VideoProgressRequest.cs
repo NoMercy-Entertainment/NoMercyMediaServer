@@ -15,4 +15,6 @@ public class VideoProgressRequest
     [JsonProperty("subtitle_type")] public string SubtitleType { get; set; } = string.Empty;
     [JsonProperty("special_id")] public Ulid? SpecialId { get; set; }
     [JsonProperty("collection_id")] public int? CollectionId { get; set; }
+    
+    [JsonProperty("playlist_id")] public dynamic PlaylistId { get; set; } = null!;
 }

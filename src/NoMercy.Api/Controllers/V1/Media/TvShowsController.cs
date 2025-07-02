@@ -112,16 +112,16 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
         if (tv is null)
             return NotFoundResponse("Tv show not found");
 
-        PlaylistResponseDto[] episodes = tv.Seasons
+        VideoPlaylistResponseDto[] episodes = tv.Seasons
             .Where(season => season.SeasonNumber > 0)
             .SelectMany(season => season.Episodes)
-            .Select(episode => new PlaylistResponseDto(episode))
+            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id))
             .ToArray();
 
-        PlaylistResponseDto[] extras = tv.Seasons
+        VideoPlaylistResponseDto[] extras = tv.Seasons
             .Where(season => season.SeasonNumber == 0)
             .SelectMany(season => season.Episodes)
-            .Select(episode => new PlaylistResponseDto(episode))
+            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id))
             .ToArray();
 
         return Ok(episodes.Concat(extras).ToArray());

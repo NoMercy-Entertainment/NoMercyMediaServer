@@ -17,8 +17,10 @@ public class MediaContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
-        options.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True",
+        options.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
             o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+        
+        options.EnableSensitiveDataLogging();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -150,4 +152,6 @@ public class MediaContext : DbContext
     public virtual DbSet<AlbumReleaseGroup> AlbumReleaseGroup { get; init; }
     public virtual DbSet<ArtistReleaseGroup> ArtistReleaseGroup { get; init; }
     public virtual DbSet<MusicGenreReleaseGroup> MusicGenreReleaseGroup { get; init; }
+    
+    public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
 }

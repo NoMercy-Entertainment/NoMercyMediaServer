@@ -43,12 +43,12 @@ public class AddCollectionJob : AbstractMediaJob
 
         await collectionManager.AddCollectionMovies(collectionAppends, collectionLibrary);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["libraries", LibraryId.ToString()]
         });
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["collection", Id.ToString()]
         });

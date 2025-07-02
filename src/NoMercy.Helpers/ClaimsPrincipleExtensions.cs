@@ -1,5 +1,6 @@
 using System.Security.Authentication;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 
@@ -10,6 +11,7 @@ public static class ClaimsPrincipleExtensions
     private static readonly MediaContext MediaContext = new();
 
     public static readonly List<User> Users = MediaContext.Users.ToList();
+    
     public static readonly List<Ulid> FolderIds = MediaContext.Folders.Select(x => x.Id).ToList();
 
     private static readonly User Owner = Users.FirstOrDefault(u => u.Owner) ?? throw new InvalidOperationException();

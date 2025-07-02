@@ -68,6 +68,9 @@ public class Tv : ColorPaletteTimeStamps
     [InverseProperty("TvFrom")] public ICollection<Similar> SimilarFrom { get; set; } = [];
     [InverseProperty("TvTo")] public ICollection<Similar> SimilarTo { get; set; } = [];
     [JsonProperty("tv_user")] public ICollection<TvUser> TvUser { get; set; } = [];
+    
+    [JsonProperty("playback_preferences")] 
+    public ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
 
     public Tv()
     {

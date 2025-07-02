@@ -3,14 +3,14 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 
-namespace NoMercy.Api.Controllers.Socket;
+namespace NoMercy.Api.Controllers.Socket.video;
 
-public class MusicDeviceManager
+public class VideoDeviceManager
 {
     private readonly ConcurrentDictionary<Guid, Device> _currentDevices = new();
     private readonly MediaContext _mediaContext;
 
-    public MusicDeviceManager(MediaContext mediaContext)
+    public VideoDeviceManager(MediaContext mediaContext)
     {
         _mediaContext = mediaContext;
     }

@@ -43,7 +43,7 @@ public class ArtistsController : BaseController
 
         List<ArtistsResponseItemDto> artists = [];
 
-        await foreach (Artist artist in _musicRepository.GetArtists(_mediaContext, userId, letter))
+        foreach (Artist artist in _musicRepository.GetArtists(_mediaContext, userId, letter))
             artists.Add(new(artist));
 
         List<ArtistTrack> tracks = await _musicRepository.GetArtistTracksForCollection(_mediaContext,
@@ -101,7 +101,7 @@ public class ArtistsController : BaseController
 
         await _musicRepository.LikeArtistAsync(userId, artist, request.Value);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["music", "artist", artist.Id]
         });

@@ -67,6 +67,7 @@ public class FileRepository : IFileRepository
                 HostFolder = mi.HostFolder,
                 Type = mi.Type,
                 _audio = mi._audio,
+                _chapters = mi._chapters,
                 _chapters_file = mi._chapters_file,
                 _fonts = mi._fonts,
                 _fonts_file = mi._fonts_file,
@@ -287,7 +288,7 @@ public class FileRepository : IFileRepository
 
                 if (!hasShow)
                 {
-                    Networking.Networking.SendToAll("Notify", "socket", new NotifyDto
+                    Networking.Networking.SendToAll("Notify", "videoHub", new NotifyDto
                     {
                         Title = "Show not found",
                         Message = $"Show {show.Name} not found in library, adding now",
@@ -391,7 +392,7 @@ public class FileRepository : IFileRepository
 
                     if (!hasMovie)
                     {
-                        Networking.Networking.SendToAll("Notify", "socket", new NotifyDto
+                        Networking.Networking.SendToAll("Notify", "videoHub", new NotifyDto
                         {
                             Title = "Movie not found",
                             Message = $"Movie {movie.Title} not found in library, adding now",

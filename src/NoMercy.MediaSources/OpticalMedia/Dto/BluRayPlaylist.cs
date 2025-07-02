@@ -200,7 +200,7 @@ public partial class BluRayPlaylist
         return int.Parse(ValueRegex().Match(input).Value.Replace(" ", ""));
     }
 
-    private static Chapter? ParseChapter(string line)
+    public static Chapter? ParseChapter(string line)
     {
         Match match = Regex.Match(line, @"(\d+:\d+:\d+.\d+)\s*:\s(.*)");
         if (match.Success)

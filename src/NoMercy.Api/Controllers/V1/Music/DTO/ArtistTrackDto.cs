@@ -62,8 +62,8 @@ public record ArtistTrackDto
     {
         Id = track.Id;
         Name = track.Name;
-        ColorPalette = track.AlbumTrack.First().Album.ColorPalette ?? track.ArtistTrack.First().Artist.ColorPalette;
-        Cover = track.AlbumTrack.First().Album.Cover ?? track.ArtistTrack.First().Artist.Cover;
+        ColorPalette = track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette ?? track.ArtistTrack.FirstOrDefault()?.Artist.ColorPalette;
+        Cover = track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? track.ArtistTrack.FirstOrDefault()?.Artist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Path = new Uri($"/{track.FolderId}{track.Folder}{track.Filename}", UriKind.Relative).ToString();
         Type = "tracks";

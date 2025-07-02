@@ -32,7 +32,7 @@ public class AddCollectionExtraDataJob : AbstractMediaExraDataJob<TmdbCollection
 
         await collectionManager.StoreImages(Storage);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "socket", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["collection", Storage.Id.ToString()]
         });

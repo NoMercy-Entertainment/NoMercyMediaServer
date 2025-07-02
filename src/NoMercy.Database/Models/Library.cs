@@ -33,28 +33,31 @@ public class Library : Timestamps
     [JsonProperty("type")] public string Type { get; set; } = string.Empty;
 
     [JsonProperty("folder_libraries")]
-    public ICollection<FolderLibrary> FolderLibraries { get; set; } = new List<FolderLibrary>();
+    public ICollection<FolderLibrary> FolderLibraries { get; set; } = [];
 
     [JsonProperty("language_libraries")]
-    public ICollection<LanguageLibrary> LanguageLibraries { get; set; } = new List<LanguageLibrary>();
+    public ICollection<LanguageLibrary> LanguageLibraries { get; set; } = [];
 
     [JsonProperty("library_users")]
-    public ICollection<LibraryUser> LibraryUsers { get; set; } = new List<LibraryUser>();
+    public ICollection<LibraryUser> LibraryUsers { get; set; } = [];
 
-    [JsonProperty("library_tvs")] public ICollection<LibraryTv> LibraryTvs { get; set; } = new List<LibraryTv>();
+    [JsonProperty("library_tvs")] public ICollection<LibraryTv> LibraryTvs { get; set; } = [];
 
     [JsonProperty("library_movies")]
-    public ICollection<LibraryMovie> LibraryMovies { get; set; } = new List<LibraryMovie>();
+    public ICollection<LibraryMovie> LibraryMovies { get; set; } = [];
 
     [JsonProperty("library_tracks")]
-    public ICollection<LibraryTrack> LibraryTracks { get; set; } = new List<LibraryTrack>();
+    public ICollection<LibraryTrack> LibraryTracks { get; set; } = [];
 
     [JsonProperty("collection_libraries")]
-    public ICollection<CollectionLibrary> CollectionLibraries { get; set; } = new List<CollectionLibrary>();
+    public ICollection<CollectionLibrary> CollectionLibraries { get; set; } = [];
 
     [JsonProperty("album_libraries")]
-    public ICollection<AlbumLibrary> AlbumLibraries { get; set; } = new List<AlbumLibrary>();
+    public ICollection<AlbumLibrary> AlbumLibraries { get; set; } = [];
 
     [JsonProperty("artist_libraries")]
-    public ICollection<ArtistLibrary> ArtistLibraries { get; set; } = new List<ArtistLibrary>();
+    public ICollection<ArtistLibrary> ArtistLibraries { get; set; } = [];
+    
+    [JsonProperty("playback_preferences")] 
+    public ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
 }

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Reflection;
 using Asp.Versioning;
@@ -17,6 +18,7 @@ public static class Program
 {
     public static async Task Main(string[] args)
     {
+        CultureInfo.DefaultThreadCurrentCulture = new("en-US");
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
         {
             Exception exception = (Exception)eventArgs.ExceptionObject;

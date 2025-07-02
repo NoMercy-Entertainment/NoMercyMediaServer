@@ -4,8 +4,8 @@ namespace NoMercy.Database;
 
 public class IVideoTrack
 {
-    [JsonProperty("file")] public string? File { get; set; } = string.Empty;
-    [JsonProperty("kind")] public string? Kind { get; set; } = string.Empty;
+    [JsonProperty("file")] public string File { get; set; } = null!;
+    [JsonProperty("kind")] public string Kind { get; set; } = null!;
 
     [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
     public string? Label { get; set; }

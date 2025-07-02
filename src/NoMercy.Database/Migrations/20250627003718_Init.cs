@@ -821,6 +821,7 @@ namespace NoMercy.Database.Migrations
                     Fonts = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     FontsFile = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     ChaptersFile = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Chapters = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
                 },
@@ -1391,6 +1392,50 @@ namespace NoMercy.Database.Migrations
                         name: "FK_LibraryTv_Tvs_TvId",
                         column: x => x.TvId,
                         principalTable: "Tvs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PlaybackPreferences",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    LibraryId = table.Column<string>(type: "TEXT", nullable: true),
+                    TvId = table.Column<int>(type: "INTEGER", nullable: true),
+                    MovieId = table.Column<int>(type: "INTEGER", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    Video = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Audio = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Subtitles = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PlaybackPreferences", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PlaybackPreferences_Libraries_LibraryId",
+                        column: x => x.LibraryId,
+                        principalTable: "Libraries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PlaybackPreferences_Movies_MovieId",
+                        column: x => x.MovieId,
+                        principalTable: "Movies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PlaybackPreferences_Tvs_TvId",
+                        column: x => x.TvId,
+                        principalTable: "Tvs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PlaybackPreferences_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -3325,6 +3370,39 @@ namespace NoMercy.Database.Migrations
                 column: "TitleSort");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PlaybackPreferences_LibraryId",
+                table: "PlaybackPreferences",
+                column: "LibraryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlaybackPreferences_MovieId",
+                table: "PlaybackPreferences",
+                column: "MovieId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlaybackPreferences_TvId",
+                table: "PlaybackPreferences",
+                column: "TvId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlaybackPreferences_UserId_LibraryId",
+                table: "PlaybackPreferences",
+                columns: new[] { "UserId", "LibraryId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlaybackPreferences_UserId_MovieId",
+                table: "PlaybackPreferences",
+                columns: new[] { "UserId", "MovieId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlaybackPreferences_UserId_TvId",
+                table: "PlaybackPreferences",
+                columns: new[] { "UserId", "TvId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Playlists_UserId",
                 table: "Playlists",
                 column: "UserId");
@@ -3723,9 +3801,27 @@ namespace NoMercy.Database.Migrations
                 column: "VideoFileId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserData_VideoFileId_UserId",
+                name: "IX_UserData_VideoFileId_UserId_CollectionId",
                 table: "UserData",
-                columns: new[] { "VideoFileId", "UserId" },
+                columns: new[] { "VideoFileId", "UserId", "CollectionId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserData_VideoFileId_UserId_MovieId",
+                table: "UserData",
+                columns: new[] { "VideoFileId", "UserId", "MovieId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserData_VideoFileId_UserId_SpecialId",
+                table: "UserData",
+                columns: new[] { "VideoFileId", "UserId", "SpecialId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserData_VideoFileId_UserId_TvId",
+                table: "UserData",
+                columns: new[] { "VideoFileId", "UserId", "TvId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -3919,6 +4015,9 @@ namespace NoMercy.Database.Migrations
 
             migrationBuilder.DropTable(
                 name: "NotificationUser");
+
+            migrationBuilder.DropTable(
+                name: "PlaybackPreferences");
 
             migrationBuilder.DropTable(
                 name: "PlaylistTrack");
