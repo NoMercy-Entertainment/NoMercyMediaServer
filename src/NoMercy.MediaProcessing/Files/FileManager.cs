@@ -274,7 +274,7 @@ public partial class FileManager(
     private Metadata MakeMetadata(MediaFile item, string fileName, string baseFolder, string hostFolder,
         List<IVideoTrack> extraFiles)
     {
-        string path = Path.Combine(hostFolder, fileName.Replace("\\", ""));
+        string path = Path.Combine(hostFolder, fileName.Replace("\\", "").Replace("/", ""));
         IMediaAnalysis ffprobe = FFProbe.Analyse(path);
         
         List<IVideo> video = GetVideoHashList(hostFolder, ffprobe);
