@@ -14,19 +14,7 @@ public static class EncoderProfileSeedData
                 Id = Ulid.Parse("01HQ6298ZSZYKJT83WDWTPG4G8"),
                 Name = "Marvel 4k",
                 Container = VideoContainers.Hls,
-                EncoderProfileFolder =
-                [
-                    new()
-                    {
-                        FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8"),
-                        EncoderProfileId = Ulid.Parse("01HQ6298ZSZYKJT83WDWTPG4G8")
-                    },
-                    new()
-                    {
-                        FolderId = Ulid.Parse("01J8T6PDZYCR8JQ8EVQDGCFK8W"),
-                        EncoderProfileId = Ulid.Parse("01HQ6298ZSZYKJT83WDWTPG4G8")
-                    }
-                ],
+                EncoderProfileFolder = [],
                 VideoProfiles =
                 [
                     new()
@@ -150,17 +138,7 @@ public static class EncoderProfileSeedData
                 Id = Ulid.Parse("01HQ629JAYQDEQAH0GW3ZHGW8Z"),
                 Name = "1080p high",
                 Container = VideoContainers.Hls,
-                EncoderProfileFolder =
-                [
-                    new()
-                    {
-                        FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8")
-                    },
-                    new()
-                    {
-                        FolderId = Ulid.Parse("01J8T6PB9JDE801599F7YGPGE8")
-                    }
-                ],
+                EncoderProfileFolder = [],
                 VideoProfiles =
                 [
                     new()
@@ -210,19 +188,7 @@ public static class EncoderProfileSeedData
                 Id = Ulid.Parse("01HQ629SJ32FTV2Q46NX3H1CK9"),
                 Name = "1080p regular",
                 Container = VideoContainers.Hls,
-                EncoderProfileFolder =
-                [
-                    new()
-                    {
-                        FolderId = Ulid.Parse("01HQ5W78J5ADPV6K0SBZRBGWE3"),
-                        EncoderProfileId = Ulid.Parse("01HQ629SJ32FTV2Q46NX3H1CK9")
-                    },
-                    new()
-                    {
-                        FolderId = Ulid.Parse("01HQ5W67GRBPHJKNAZMDYKMVXA"),
-                        EncoderProfileId = Ulid.Parse("01HQ629SJ32FTV2Q46NX3H1CK9")
-                    }
-                ],
+                EncoderProfileFolder = [],
                 VideoProfiles =
                 [
                     new()
@@ -278,14 +244,7 @@ public static class EncoderProfileSeedData
                 Id = Ulid.Parse("01HR360AKTW47XC6ZQ2V9DF024"),
                 Name = "1080p low",
                 Container = VideoContainers.Hls,
-                EncoderProfileFolder =
-                [
-                    new()
-                    {
-                        FolderId = Ulid.Parse("01HQ5W4Y1ZHYZKS87P0AG24ERE"),
-                        EncoderProfileId = Ulid.Parse("01HR360AKTW47XC6ZQ2V9DF024")
-                    }
-                ],
+                EncoderProfileFolder = [],
                 VideoProfiles =
                 [
                     new()
@@ -341,14 +300,7 @@ public static class EncoderProfileSeedData
                 Id = Ulid.Parse("01JRH6Q85QT0D08F9J9577J04K"),
                 Name = "Music",
                 Container = AudioContainers.Mp3,
-                EncoderProfileFolder =
-                [
-                    new()
-                    {
-                        FolderId = Ulid.Parse("01HQ5W84R600G31Q038AGNSKGT"),
-                        EncoderProfileId = Ulid.Parse("01JRH6Q85QT0D08F9J9577J04K")
-                    }
-                ],
+                EncoderProfileFolder = [],
                 AudioProfiles =
                 [
                     new()

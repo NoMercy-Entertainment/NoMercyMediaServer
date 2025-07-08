@@ -88,7 +88,7 @@ public class VideoPlayerStateFactory
             PlayState = true,
             Time = item.Progress?.Time * 1000 ?? 0,
             Duration = item.Duration.ToMilliSeconds(),
-            CurrentList = $"{type}/{listId}",
+            CurrentList = new($"/{type}/{listId}/watch", UriKind.Relative),
             Actions = new()
             {
                 Disallows = new()

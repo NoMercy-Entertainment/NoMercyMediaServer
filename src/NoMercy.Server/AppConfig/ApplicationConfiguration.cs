@@ -9,7 +9,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
-using Config = NoMercy.NmSystem.Config;
 
 namespace NoMercy.Server.AppConfig;
 

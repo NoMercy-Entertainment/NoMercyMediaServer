@@ -192,7 +192,7 @@ public class VideoHub : ConnectionHub
 
     private static bool IsCurrentPlaylist(VideoPlayerState state, string type, dynamic listId, int itemId)
     {
-        return state.CurrentItem is not null && state.CurrentList.Contains($"{type}/{listId}") &&
+        return state.CurrentItem is not null && state.CurrentList.ToString().Contains($"{type}/{listId}") &&
                state.CurrentItem?.Id == itemId;
     }
 
@@ -238,7 +238,7 @@ public class VideoHub : ConnectionHub
         state.CurrentItem = item;
         state.PlayState = true;
         state.Playlist = playlist;
-        state.CurrentList = $"{type}/{listId}";
+        state.CurrentList = new($"/{type}/{listId}/watch", UriKind.Relative);
         state.Time = item.Progress?.Time * 1000 ?? 0;
         state.Duration = item.Duration.ToMilliSeconds();
         state.Actions = new()

@@ -15,7 +15,7 @@ public class VideoPlayerState
     [JsonProperty("playlist")] public List<VideoPlaylistResponseDto> Playlist { get; set; } = [];
     [JsonProperty("progress_ms")] public int Time { get; set; }
     [JsonProperty("duration_ms")] public int Duration { get; set; }
-    [JsonProperty("current_list")] public string CurrentList { get; set; } = null!;
+    [JsonProperty("current_list")] public Uri CurrentList { get; set; } = null!;
     [JsonProperty("muted_state")] public bool Muted { get; set; }
     [JsonProperty("timestamp")] public long Timestamp { get; set; }
     [JsonProperty("volume_percentage")] public int VolumePercentage { get; set; }

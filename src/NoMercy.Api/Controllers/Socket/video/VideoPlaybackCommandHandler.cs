@@ -226,7 +226,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
         state.PlayState = false;
         state.Time = 0;
         state.Playlist = [];
-        state.CurrentList = "";
+        state.CurrentList = new("", UriKind.Relative);
         state.Actions = new()
         {
             Disallows = new()

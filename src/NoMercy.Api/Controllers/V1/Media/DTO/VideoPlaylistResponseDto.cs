@@ -27,7 +27,7 @@ public class VideoPlaylistResponseDto
     [JsonProperty("image")] public string? Image { get; set; }
     [JsonProperty("logo")] public string? Logo { get; set; }
     [JsonProperty("sources")] public SourceDto[] Sources { get; set; } = [];
-    [JsonProperty("fonts")] public List<FontDto> Fonts { get; set; } = [];
+    [JsonProperty("fonts")] public List<IFont> Fonts { get; set; } = [];
     [JsonProperty("chapters")] public List<IChapter> Chapters { get; set; } = [];
     [JsonProperty("tracks")] public List<IVideoTrack> Tracks { get; set; } = [];
     
@@ -118,7 +118,7 @@ public class VideoPlaylistResponseDto
         SeasonName = episode.Season.Title;
         EpisodeId = episode.Id;
         Chapters = videoFile.Metadata?.Chapters ?? [];
-        Fonts = subs.Fonts ?? [];
+        Fonts = videoFile.Metadata?.Fonts ?? [];
 
         Audio = videoFile.Metadata?.Audio ?? [];
         Captions = videoFile.Metadata?.Subtitles ?? [];
@@ -189,7 +189,7 @@ public class VideoPlaylistResponseDto
             .ToList();
         
         Chapters = videoFile.Metadata?.Chapters ?? [];
-        Fonts = subs.Fonts ?? [];
+        Fonts = videoFile.Metadata?.Fonts ?? [];
         
         Audio = videoFile.Metadata?.Audio ?? [];
         Captions = videoFile.Metadata?.Subtitles ?? [];

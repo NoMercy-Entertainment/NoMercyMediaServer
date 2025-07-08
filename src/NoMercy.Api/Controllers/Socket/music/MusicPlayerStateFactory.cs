@@ -25,7 +25,7 @@ public class MusicPlayerStateFactory
             Duration = item.Duration.ToMilliSeconds(),
             Shuffle = false,
             Repeat = "off",
-            CurrentList = $"{type}/{listId}",
+            CurrentList = new($"/music/{type}/{listId}", UriKind.Relative),
             Actions = new()
             {
                 Disallows = new()

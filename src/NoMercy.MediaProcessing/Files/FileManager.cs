@@ -380,7 +380,8 @@ public partial class FileManager(
         List<IAudio> audios = [];
         
         string[] audioFolders = Directory.GetDirectories(hostFolder)
-            .Where(folder => Path.GetFileName(folder).StartsWith("audio")).ToArray();
+            .Where(folder => Path.GetFileName(folder).StartsWith("audio"))
+            .ToArray();
         
         foreach (AudioStream audioFile in ffprobe.AudioStreams)
         {
@@ -395,7 +396,8 @@ public partial class FileManager(
                 continue;
             }
             
-            string audioFilePath = Directory.GetFiles(audioFolderPath).First(file => file.EndsWith("m3u8"));
+            string audioFilePath = Directory.GetFiles(audioFolderPath)
+                .First(file => file.EndsWith("m3u8"));
             
             audios.Add(new()
             {

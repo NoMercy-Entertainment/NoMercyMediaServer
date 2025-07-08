@@ -199,7 +199,7 @@ public class Seed : IDisposable, IAsyncDisposable
 
         await Parallel.ForEachAsync(_languages.Where(g => g.Iso6391 != "en"), async (language, _) =>
         {
-            Logger.Setup($"Adding Genres for {language.Name}", LogEventLevel.Verbose);
+            Logger.Setup($"Adding Genres for {language.EnglishName}", LogEventLevel.Verbose);
 
             List<Translation>? mg = (await TmdbMovieClient.Genres(language.Iso6391))?.Genres
                 .Where(g => g.Name != null)
@@ -375,23 +375,31 @@ public class Seed : IDisposable, IAsyncDisposable
 
         await File.WriteAllTextAsync(AppFiles.EncoderProfilesSeedFile, encoderProfiles.ToJson());
 
-        await MediaContext.EncoderProfiles.UpsertRange(encoderProfiles)
-            .On(v => new { v.Id })
-            .WhenMatched((vs, vi) => new()
-            {
-                Id = vi.Id,
-                Name = vi.Name,
-                Container = vi.Container,
-                Param = vi.Param,
-                _videoProfiles = vi._videoProfiles,
-                _audioProfiles = vi._audioProfiles,
-                _subtitleProfiles = vi._subtitleProfiles,
-                UpdatedAt = vi.UpdatedAt
-            })
-            .RunAsync();
+        try
+        {
+            await MediaContext.EncoderProfiles.UpsertRange(encoderProfiles)
+                .On(v => new { v.Id })
+                .WhenMatched((vs, vi) => new()
+                {
+                    Id = vi.Id,
+                    Name = vi.Name,
+                    Container = vi.Container,
+                    Param = vi.Param,
+                    _videoProfiles = vi._videoProfiles,
+                    _audioProfiles = vi._audioProfiles,
+                    _subtitleProfiles = vi._subtitleProfiles,
+                    UpdatedAt = vi.UpdatedAt
+                })
+                .RunAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.Setup($"Error while adding encoder profiles: {e.Message}", LogEventLevel.Error);
+            throw;
+        }
 
         List<EncoderProfileFolder> encoderProfileFolders = [];
-        foreach (EncoderProfile? encoderProfile in encoderProfiles)
+        foreach (EncoderProfile encoderProfile in encoderProfiles)
             encoderProfileFolders.AddRange(encoderProfile.EncoderProfileFolder.ToList()
                 .Select(encoderProfileFolder => new EncoderProfileFolder
                 {
@@ -399,15 +407,23 @@ public class Seed : IDisposable, IAsyncDisposable
                     FolderId = encoderProfileFolder.FolderId
                 }));
 
-        await MediaContext.EncoderProfileFolder
-            .UpsertRange(encoderProfileFolders)
-            .On(v => new { v.FolderId, v.EncoderProfileId })
-            .WhenMatched((vs, vi) => new()
-            {
-                FolderId = vi.FolderId,
-                EncoderProfileId = vi.EncoderProfileId
-            })
-            .RunAsync();
+        try
+        {
+            await MediaContext.EncoderProfileFolder
+                .UpsertRange(encoderProfileFolders)
+                .On(v => new { v.FolderId, v.EncoderProfileId })
+                .WhenMatched((vs, vi) => new()
+                {
+                    FolderId = vi.FolderId,
+                    EncoderProfileId = vi.EncoderProfileId
+                })
+                .RunAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.Setup($"Error while adding encoder profile folders: {e.Message}", LogEventLevel.Error);
+            throw;
+        }
     }
 
     private static async Task AddFolderRoots()

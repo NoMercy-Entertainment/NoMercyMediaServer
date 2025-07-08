@@ -18,7 +18,7 @@ public static class Program
 {
     public static async Task Main(string[] args)
     {
-        CultureInfo.DefaultThreadCurrentCulture = new("en-US");
+        // CultureInfo.DefaultThreadCurrentCulture = new("en-US");
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
         {
             Exception exception = (Exception)eventArgs.ExceptionObject;

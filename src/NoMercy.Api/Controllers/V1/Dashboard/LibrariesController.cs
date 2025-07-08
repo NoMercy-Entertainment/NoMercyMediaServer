@@ -63,13 +63,16 @@ public class LibrariesController(
                 PerfectSubtitleMatch = true,
                 Realtime = true,
                 SpecialSeasonName = "Specials",
-                Type = "",
+                Type = "movie",
                 Order = 99
             };
             await libraryRepository.AddLibraryAsync(library, userId);
             return Ok(new StatusResponseDto<Library>
             {
-                Status = "ok", Data = library, Message = "Successfully created a new library.", Args = []
+                Status = "ok", 
+                Data = library, 
+                Message = "Successfully created a new library.", 
+                Args = []
             });
         }
         catch (Exception e)
@@ -179,9 +182,12 @@ public class LibrariesController(
             });
         }
 
-        return Ok(new StatusResponseDto<string>
+        return Ok(new StatusResponseDto<Library>
         {
-            Status = "ok", Message = "Successfully updated {0} library.", Args = [library.Title]
+            Status = "ok", 
+            Message = "Successfully updated {0} library.", 
+            Args = [library.Title],
+            Data = library
         });
     }
 
@@ -394,31 +400,22 @@ public class LibrariesController(
             });
         }
 
-        try
-        {
-            Folder? folder = await folderRepository.GetFolderByPathAsync(request.Path);
-            if (folder is null)
-                return NotFound(new StatusResponseDto<string>
-                {
-                    Status = "error", Message = "Folder {0} does not exist.", Args = [id.ToString()]
-                });
-
-            FolderLibrary folderLibrary = new() { LibraryId = library.Id, FolderId = folder.Id };
-            await folderRepository.AddFolderLibraryAsync(folderLibrary);
-        }
-        catch (Exception e)
-        {
-            return UnprocessableEntity(new StatusResponseDto<string>
+        Folder? pathAsync = await folderRepository.GetFolderByPathAsync(request.Path);
+        if (pathAsync is null)
+            return NotFound(new StatusResponseDto<string>
             {
-                Status = "error",
-                Message = "Something went wrong adding a new folder to {0} library: {1}",
-                Args = [id.ToString(), e.Message]
+                Status = "error", Message = "Folder {0} does not exist.", Args = [id.ToString()]
             });
-        }
 
-        return Ok(new StatusResponseDto<string>
+        FolderLibrary folderLibrary = new() { LibraryId = library.Id, FolderId = pathAsync.Id };
+        await folderRepository.AddFolderLibraryAsync(folderLibrary);
+
+        return Ok(new StatusResponseDto<FolderLibrary>
         {
-            Status = "ok", Message = "Successfully added folder to {0} library.", Args = [id.ToString()]
+            Status = "ok", 
+            Message = "Successfully added folder to {0} library.", 
+            Args = [id.ToString()],
+            Data = folderLibrary
         });
     }
 

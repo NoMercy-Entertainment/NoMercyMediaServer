@@ -12,6 +12,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using CarouselResponseItemDto = NoMercy.Data.Repositories.CarouselResponseItemDto;
 
@@ -91,51 +92,52 @@ public class MusicController : BaseController
         {
             Data =
             [
-                new ComponentDto<dynamic>
-                {
-                    Component = "NMContainer",
-                    Props =
-                    {
-                        Items =
-                        [
-                            new()
-                            {
-                                Component = "NMMusicHomeCard",
-                                Props =
-                                {
-                                    Title = "Most listened artist",
-                                    Data = favoriteArtist
-                                }
-                            },
-                            new()
-                            {
-                                Component = "NMMusicHomeCard",
-                                Props =
-                                {
-                                    Title = "Most listened album",
-                                    Data = favoriteAlbum
-                                }
-                            },
-                            new()
-                            {
-                                Component = "NMMusicHomeCard",
-                                Props =
-                                {
-                                    Title = "Most listened playlist",
-                                    Data = favoritePlaylist
-                                }
-                            }
-                        ]
-                    }
-                },
-
-                new ComponentDto<CarouselResponseItemDto>
-                {
-                    Component = "NMCarousel",
-                    Props =
-                    {
-                        Title = "Favorite Artists",
-                        Items = favoriteArtists
+                new ComponentBuilder<dynamic>()
+                    .WithComponent("NMContainer")
+                    .WithUpdate("pageLoad", "/music/start/favorites")
+                    .WithProps(props => props
+                        .WithId("favorites")
+                        .WithNextId("favorite-artists")
+                        .WithItems([
+                            favoriteArtist is not null
+                                ? new ComponentBuilder<dynamic>()
+                                    .WithComponent("NMMusicHomeCard")
+                                    .WithProps(p => p
+                                        .WithId("favorite-artist")
+                                        .WithTitle("Most listened artist".Localize())
+                                        .WithData(favoriteArtist))
+                                    .Build()
+                                : new(),
+                            favoriteAlbum is not null
+                                ? new ComponentBuilder<dynamic>()
+                                    .WithComponent("NMMusicHomeCard")
+                                    .WithProps(p => p
+                                        .WithId("favorite-album")
+                                        .WithTitle("Most listened album".Localize())
+                                        .WithData(favoriteAlbum))
+                                    .Build()
+                                : new(),
+                            favoritePlaylist is not null
+                                ? new ComponentBuilder<dynamic>()
+                                    .WithComponent("NMMusicHomeCard")
+                                    .WithProps(p => p
+                                        .WithId("favorite-playlist")
+                                        .WithTitle("Most listened artist".Localize())
+                                        .WithData(favoritePlaylist))
+                                    .Build()
+                                : new(),
+                        ]))
+                    .Build(),
+                
+                new ComponentBuilder<CarouselResponseItemDto>()
+                    .WithComponent("NMCarousel")
+                    .WithUpdate("pageLoad", "/music/start/favorite-artists")
+                    .WithProps(props => props
+                        .WithId("favorite-artists")
+                        .WithPreviousId("favorite-albums")
+                        .WithNextId("favorite-albums")
+                        .WithTitle("Favorite Artists".Localize())
+                        .WithItems(favoriteArtists
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
                                 Component = "NMMusicCard",
@@ -143,17 +145,18 @@ public class MusicController : BaseController
                                 {
                                     Data = item
                                 }
-                            })
-                    }
-                },
+                            })))
+                    .Build(),
 
-                new ComponentDto<CarouselResponseItemDto>
-                {
-                    Component = "NMCarousel",
-                    Props =
-                    {
-                        Title = "Favorite Albums",
-                        Items = favoriteAlbums
+                new ComponentBuilder<CarouselResponseItemDto>()
+                    .WithComponent("NMCarousel")
+                    .WithUpdate("pageLoad", "/music/start/favorite-albums")
+                    .WithProps(props => props
+                        .WithId("favorite-albums")
+                        .WithPreviousId("favorite-artists")
+                        .WithNextId("playlists")
+                        .WithTitle("Favorite Albums".Localize())
+                        .WithItems(favoriteAlbums
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
                                 Component = "NMMusicCard",
@@ -161,18 +164,19 @@ public class MusicController : BaseController
                                 {
                                     Data = item
                                 }
-                            })
-                    }
-                },
+                            })))
+                    .Build(),
 
-                new ComponentDto<CarouselResponseItemDto>
-                {
-                    Component = "NMCarousel",
-                    Props =
-                    {
-                        Title = "Playlists",
-                        MoreLink = new("/music/playlists", UriKind.Relative),
-                        Items = playlists
+                new ComponentBuilder<CarouselResponseItemDto>()
+                    .WithComponent("NMCarousel")
+                    .WithUpdate("pageLoad", "/music/start/playlists")
+                    .WithProps(props => props
+                        .WithId("playlists")
+                        .WithPreviousId("favorite-albums")
+                        .WithNextId("artists")
+                        .WithTitle("Playlists".Localize())
+                        .WithMoreLink(new("/music/start/playlists", UriKind.Relative))
+                        .WithItems(playlists
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
                                 Component = "NMMusicCard",
@@ -180,18 +184,19 @@ public class MusicController : BaseController
                                 {
                                     Data = item
                                 }
-                            })
-                    }
-                },
+                            })))
+                    .Build(),
 
-                new ComponentDto<CarouselResponseItemDto>
-                {
-                    Component = "NMCarousel",
-                    Props =
-                    {
-                        Title = "Artists",
-                        MoreLink = new("/music/artists", UriKind.Relative),
-                        Items = latestArtists
+                new ComponentBuilder<CarouselResponseItemDto>()
+                    .WithComponent("NMCarousel")
+                    // .WithUpdate("pageLoad", "/music/start/artists")
+                    .WithProps(props => props
+                        .WithId("artists")
+                        .WithPreviousId("playlists")
+                        .WithNextId("albums")
+                        .WithTitle("Artists".Localize())
+                        .WithMoreLink(new("/music/start/artists", UriKind.Relative))
+                        .WithItems(latestArtists
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
                                 Component = "NMMusicCard",
@@ -199,18 +204,18 @@ public class MusicController : BaseController
                                 {
                                     Data = item
                                 }
-                            })
-                    }
-                },
+                            })))
+                    .Build(),
 
-                new ComponentDto<CarouselResponseItemDto>
-                {
-                    Component = "NMCarousel",
-                    Props =
-                    {
-                        Title = "Albums",
-                        MoreLink = new("/music/albums", UriKind.Relative),
-                        Items = latestAlbums
+                new ComponentBuilder<CarouselResponseItemDto>()
+                    .WithComponent("NMCarousel")
+                    // .WithUpdate("pageLoad", "/music/start/albums")
+                    .WithProps(props => props
+                        .WithId("albums")
+                        // .WithNextId($"library_{list.ElementAtOrDefault(0)?.Id}")
+                        .WithTitle("Albums".Localize())
+                        .WithMoreLink(new("/music/start/albums", UriKind.Relative))
+                        .WithItems(latestAlbums
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
                                 Component = "NMMusicCard",
@@ -218,10 +223,204 @@ public class MusicController : BaseController
                                 {
                                     Data = item
                                 }
-                            })
-                    }
-                }
+                            })))
+                    .Build(),
             ]
+        });
+    }
+    
+    [HttpPost]
+    [Route("start/favorites")]
+    public async Task<IActionResult> Favorites()
+    {
+        Guid userId = User.UserId();
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view music");
+
+        TopMusicDto? favoriteArtist = _musicRepository.GetFavoriteArtist(_mediaContext, userId)
+            .AsEnumerable()
+            .Select(artistTrack => new TopMusicDto(artistTrack))
+            .GroupBy(a => a.Name)
+            .MaxBy(g => g.Count())?
+            .FirstOrDefault();
+
+        TopMusicDto? favoriteAlbum = _musicRepository.GetFavoriteAlbum(_mediaContext, userId)
+            .AsEnumerable()
+            .Select(albumTrack => new TopMusicDto(albumTrack))
+            .GroupBy(a => a.Name)
+            .MaxBy(g => g.Count())?
+            .FirstOrDefault();
+
+        TopMusicDto? favoritePlaylist = _musicRepository.GetFavoritePlaylist(_mediaContext, userId)
+            .AsEnumerable()
+            .Select(musicPlay => new TopMusicDto(musicPlay))
+            .GroupBy(a => a.Name)
+            .MaxBy(g => g.Count())?
+            .FirstOrDefault();
+
+        return Ok(new Render
+        {
+            Data =
+            [
+                new ComponentBuilder<dynamic>()
+                    .WithComponent("NMContainer")
+                    .WithUpdate("pageLoad", "/music/start/favorites")
+                    .WithProps(props => props
+                        .WithId("favorites")
+                        .WithNextId("favorite-artists")
+                        .WithItems([
+                            favoriteArtist is not null
+                                ? new ComponentBuilder<dynamic>()
+                                    .WithComponent("NMMusicHomeCard")
+                                    .WithProps(p => p
+                                        .WithId("favorite-artist")
+                                        .WithTitle("Most listened artist".Localize())
+                                        .WithData(favoriteArtist))
+                                    .Build()
+                                : new(),
+                            favoriteAlbum is not null
+                                ? new ComponentBuilder<dynamic>()
+                                    .WithComponent("NMMusicHomeCard")
+                                    .WithProps(p => p
+                                        .WithId("favorite-album")
+                                        .WithTitle("Most listened album".Localize())
+                                        .WithData(favoriteAlbum))
+                                    .Build()
+                                : new(),
+                            favoritePlaylist is not null
+                                ? new ComponentBuilder<dynamic>()
+                                    .WithComponent("NMMusicHomeCard")
+                                    .WithProps(p => p
+                                        .WithId("favorite-playlist")
+                                        .WithTitle("Most listened artist".Localize())
+                                        .WithData(favoritePlaylist))
+                                    .Build()
+                                : new(),
+                        ]))
+                    .Build(),
+            ]
+        });
+    }
+
+    [HttpPost]
+    [Route("start/favorite-artists")]
+    public async Task<IActionResult> FavoriteArtists([FromBody] CardRequestDto request)
+    {
+        Guid userId = User.UserId();
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view music");
+
+        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtists(_mediaContext, userId)
+            .Select(artistUser => new CarouselResponseItemDto(artistUser))
+            .Take(36)
+            .ToListAsync();
+
+        return Ok(new Render
+        {
+            Data =
+            [
+                new ComponentBuilder<CarouselResponseItemDto>()
+                    .WithComponent("NMCarousel")
+                    .WithUpdate("pageLoad", "/music/start/favorite-artists")
+                    .WithReplacing(request.ReplaceId)
+                    .WithProps(props => props
+                        .WithId("favorite-artists")
+                        .WithPreviousId("favorite-albums")
+                        .WithNextId("favorite-albums")
+                        .WithTitle("Favorite Artists".Localize())
+                        // .WithMoreLink(null)
+                        .WithItems(favoriteArtists
+                            .Select(item => new ComponentDto<CarouselResponseItemDto>
+                            {
+                                Component = "NMMusicCard",
+                                Props =
+                                {
+                                    Data = item
+                                }
+                            })))
+                    .Build(),
+            ],
+        });
+    }
+
+    [HttpPost]
+    [Route("start/favorite-albums")]
+    public async Task<IActionResult> FavoriteAlbums([FromBody] CardRequestDto request)
+    {
+        Guid userId = User.UserId();
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view music");
+
+        List<CarouselResponseItemDto> favoriteAlbums = _musicRepository.GetFavoriteAlbums(_mediaContext, userId)
+            .AsEnumerable()
+            .Select(artistUser => new CarouselResponseItemDto(artistUser))
+            .Take(36)
+            .ToList();
+
+        return Ok(new Render()
+        {
+            Data =
+            [
+                new ComponentBuilder<CarouselResponseItemDto>()
+                    .WithComponent("NMCarousel")
+                    .WithUpdate("pageLoad", "/music/start/favorite-albums")
+                    .WithReplacing(request.ReplaceId)
+                    .WithProps(props => props
+                        .WithId("favorite-albums")
+                        .WithPreviousId("favorite-artists")
+                        .WithNextId("playlists")
+                        .WithTitle("Favorite Albums".Localize())
+                        // .WithMoreLink(null)
+                        .WithItems(favoriteAlbums
+                            .Select(item => new ComponentDto<CarouselResponseItemDto>
+                            {
+                                Component = "NMMusicCard",
+                                Props =
+                                {
+                                    Data = item
+                                }
+                            })))
+                    .Build(),
+            ],
+        });
+    }
+
+    [HttpPost]
+    [Route("start/playlists")]
+    public async Task<IActionResult> Playlists([FromBody] CardRequestDto request)
+    {
+        Guid userId = User.UserId();
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view music");
+
+        List<CarouselResponseItemDto> playlists = (await _musicRepository.GetPlaylists(_mediaContext, userId))
+            .ToList();
+
+        return Ok(new Render
+        {
+            Data =
+            [
+                new ComponentBuilder<CarouselResponseItemDto>()
+                    .WithComponent("NMCarousel")
+                    .WithUpdate("pageLoad", "/music/start/playlists")
+                    .WithReplacing(request.ReplaceId)
+                    .WithProps(props => props
+                        .WithId("playlists")
+                        .WithPreviousId("favorite-albums")
+                        .WithNextId("artists")
+                        .WithTitle("Playlists".Localize())
+                        .WithMoreLink(new("/music/start/playlists", UriKind.Relative))
+                        .WithItems(playlists
+                            .Select(item => new ComponentDto<CarouselResponseItemDto>
+                            {
+                                Component = "NMMusicCard",
+                                Props =
+                                {
+                                    Data = item
+                                }
+                            })))
+                    .Build(),
+            ],
         });
     }
 

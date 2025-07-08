@@ -102,7 +102,7 @@ public class MusicHub : ConnectionHub
 
     private static bool IsCurrentPlaylist(MusicPlayerState state, string type, Guid listId, Guid itemId)
     {
-        return state.CurrentItem is not null && state.CurrentList.Contains($"{type}/{listId}") &&
+        return state.CurrentItem is not null && state.CurrentList.ToString().Contains($"{type}/{listId}") &&
                state.CurrentItem?.Id == itemId;
     }
 
@@ -142,7 +142,7 @@ public class MusicHub : ConnectionHub
         state.CurrentItem = item;
         state.PlayState = true;
         state.Playlist = sortedPlaylist;
-        state.CurrentList = $"{type}/{listId}";
+        state.CurrentList = new($"/music/{type}/{listId}", UriKind.Relative);
         state.Backlog.Add(item);
         state.Time = 0;
         state.Duration = item.Duration.ToMilliSeconds();

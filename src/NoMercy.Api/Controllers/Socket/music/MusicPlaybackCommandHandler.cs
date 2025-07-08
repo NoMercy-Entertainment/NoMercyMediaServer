@@ -176,8 +176,9 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         state.CurrentItem = null;
         state.PlayState = false;
         state.Time = 0;
+        state.Backlog = [];
         state.Playlist = [];
-        state.CurrentList = "";
+        state.CurrentList = new("", UriKind.Relative);
         state.Actions = new()
         {
             Disallows = new()

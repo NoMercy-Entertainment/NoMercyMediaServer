@@ -23,10 +23,10 @@ public class HomeService
 
     public async Task<Render> GetHomeData(Guid userId, string language, string country)
     {
-        IEnumerable<UserData> continueWatching = _homeRepository
+        List<UserData> continueWatching = _homeRepository
             .GetContinueWatching(_mediaContext, userId, language, country)
             .Where(item => item.Tv?.Episodes.Last().VideoFiles.First().Id != item.VideoFileId || 
-                           item.Time < item.VideoFile.Duration.ToSeconds() * 0.8);
+                           item.Time < item.VideoFile.Duration.ToSeconds() * 0.8).ToList();
 
         List<NmCarouselDto<NmCardDto>> genres = [];
 
@@ -153,15 +153,15 @@ public class HomeService
         {
             Data =
             [
-                new ComponentBuilder<NmCardDto>()
+                ..homeCardItem != null ? new[] {
+                    new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMHomeCard")
                     .WithUpdate("pageLoad", "/home/card")
-                    .WithProps(props => props
-                        .WithNextId("continue")
-                        .WithPreviousId("")
-                        .WithData(homeCardItem ?? new NmCardDto()))
-                    .Build(),
-
+                    .WithProps(props => props.WithData(homeCardItem))
+                    .Build()
+                } : [],
+                
+                ..continueWatching.Count > 0 ? new[] {
                 new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/home/continue")
@@ -172,6 +172,7 @@ public class HomeService
                         .WithMoreLink(null)
                         .WithItems(GetContinueWatchingItems(continueWatching, country)))
                     .Build(),
+                } : [],
 
                 ..list.Select((genre, index) => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")

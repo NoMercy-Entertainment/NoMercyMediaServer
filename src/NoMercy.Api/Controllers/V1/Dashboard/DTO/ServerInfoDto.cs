@@ -12,4 +12,5 @@ public record ServerInfoDto
     [JsonProperty("version")] public string? Version { get; set; }
     [JsonProperty("bootTime")] public DateTime BootTime { get; set; }
     [JsonProperty("os_version")] public string? OsVersion { get; set; }
+    [JsonProperty("setup_complete")] public bool SetupComplete { get; set; }
 }

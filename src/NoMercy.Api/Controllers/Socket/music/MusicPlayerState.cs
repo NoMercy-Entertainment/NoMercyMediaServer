@@ -12,10 +12,10 @@ public class MusicPlayerState
     [JsonProperty("item")] public PlaylistTrackDto? CurrentItem { get; set; }
     [JsonProperty("playlist")] public List<PlaylistTrackDto> Playlist { get; set; } = [];
     [JsonProperty("backlog")] public List<PlaylistTrackDto> Backlog { get; set; } = [];
+    [JsonProperty("current_list")] public Uri CurrentList { get; set; } = null!;
     [JsonProperty("progress_ms")] public int Time { get; set; }
     [JsonProperty("duration_ms")] public int Duration { get; set; }
     [JsonProperty("repeat_state")] public string Repeat { get; set; } = "off";
-    [JsonProperty("current_list")] public string CurrentList { get; set; } = null!;
     [JsonProperty("shuffle_state")] public bool Shuffle { get; set; }
     [JsonProperty("muted_state")] public bool Muted { get; set; }
     [JsonProperty("timestamp")] public long Timestamp { get; set; }

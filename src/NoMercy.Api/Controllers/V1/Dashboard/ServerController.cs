@@ -294,6 +294,10 @@ public class ServerController(
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view server information");
+        
+        bool setupComplete = context.Libraries.Any()
+                             && context.Folders.Any()
+                             && context.EncoderProfiles.Any();
 
         return Ok(new ServerInfoDto
         {
@@ -303,7 +307,8 @@ public class ServerController(
             Os = $"{Info.Platform.ToTitleCase()} {Info.OsVersion}",
             Arch = Info.Architecture,
             Version = Software.GetReleaseVersion(),
-            BootTime = Info.StartTime
+            BootTime = Info.StartTime,
+            SetupComplete = setupComplete,
         });
     }
 
