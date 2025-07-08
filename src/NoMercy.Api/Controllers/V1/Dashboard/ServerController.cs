@@ -292,7 +292,7 @@ public class ServerController(
     [Route("info")]
     public IActionResult ServerInfo()
     {
-        if (!User.IsModerator())
+        if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view server information");
         
         bool setupComplete = context.Libraries.Any()
