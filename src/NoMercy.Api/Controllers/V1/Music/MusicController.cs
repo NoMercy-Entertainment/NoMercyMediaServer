@@ -327,7 +327,6 @@ public class MusicController : BaseController
                         .WithPreviousId("favorite-albums")
                         .WithNextId("favorite-albums")
                         .WithTitle("Favorite Artists".Localize())
-                        // .WithMoreLink(null)
                         .WithItems(favoriteArtists
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
