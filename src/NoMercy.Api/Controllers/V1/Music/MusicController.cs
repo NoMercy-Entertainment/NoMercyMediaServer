@@ -175,7 +175,7 @@ public class MusicController : BaseController
                         .WithPreviousId("favorite-albums")
                         .WithNextId("artists")
                         .WithTitle("Playlists".Localize())
-                        .WithMoreLink(new("/music/start/playlists", UriKind.Relative))
+                        .WithMoreLink(new("/music/playlists", UriKind.Relative))
                         .WithItems(playlists
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
@@ -189,13 +189,13 @@ public class MusicController : BaseController
 
                 new ComponentBuilder<CarouselResponseItemDto>()
                     .WithComponent("NMCarousel")
-                    // .WithUpdate("pageLoad", "/music/start/artists")
+                    .WithUpdate("pageLoad", "/music/start/artists")
                     .WithProps(props => props
                         .WithId("artists")
                         .WithPreviousId("playlists")
                         .WithNextId("albums")
                         .WithTitle("Artists".Localize())
-                        .WithMoreLink(new("/music/start/artists", UriKind.Relative))
+                        .WithMoreLink(new("/music/artists", UriKind.Relative))
                         .WithItems(latestArtists
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
@@ -209,12 +209,11 @@ public class MusicController : BaseController
 
                 new ComponentBuilder<CarouselResponseItemDto>()
                     .WithComponent("NMCarousel")
-                    // .WithUpdate("pageLoad", "/music/start/albums")
+                    .WithUpdate("pageLoad", "/music/start/albums")
                     .WithProps(props => props
                         .WithId("albums")
-                        // .WithNextId($"library_{list.ElementAtOrDefault(0)?.Id}")
                         .WithTitle("Albums".Localize())
-                        .WithMoreLink(new("/music/start/albums", UriKind.Relative))
+                        .WithMoreLink(new("/music/albums", UriKind.Relative))
                         .WithItems(latestAlbums
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
