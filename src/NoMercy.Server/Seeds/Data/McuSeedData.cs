@@ -1,8 +1,9 @@
-using NoMercy.Providers.NoMercy.Models.Specials;
+using NoMercy.Database.Models;
+using SpecialItem = NoMercy.Server.Seeds.Dto.SpecialItem;
 
-namespace NoMercy.Providers.NoMercy.Data;
+namespace NoMercy.Server.Seeds.Data;
 
-public static class Mcu
+public static class McuSeedData
 {
     public static readonly Special Special = new()
     {
@@ -11,8 +12,7 @@ public static class Mcu
         Backdrop = "/clje9xd4v0000d4ef0usufhy9.jpg",
         Poster = "/4Af70wDv1sN8JztUNnvXgae193O.jpg",
         Logo = "/hUzeosd33nzE5MCNsZxCGEKTXaQ.png",
-        Description =
-            "Chronological order of the movies and episodes from the Marvel Cinematic Universe in the timeline of the story.",
+        Overview = "Chronological order of the movies and episodes from the Marvel Cinematic Universe in the timeline of the story.",
         Creator = "Stoney_Eagle"
     };
 

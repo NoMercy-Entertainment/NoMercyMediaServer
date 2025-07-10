@@ -1,15 +1,14 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.Net;
 using System.Reflection;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
-using NoMercy.MediaProcessing.Seeds;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Server.Seeds;
 using NoMercy.Setup;
 
 namespace NoMercy.Server;
@@ -34,7 +33,6 @@ public static class Program
         await Parser.Default.ParseArguments<StartupOptions>(args)
             .MapResult(Start, ErrorParsingArguments);
 
-
         static Task ErrorParsingArguments(IEnumerable<Error> errors)
         {
             Environment.ExitCode = 1;
@@ -54,7 +52,7 @@ public static class Program
 
         ConsoleMessages.Logo();
 
-        options.ApplySettings(out bool shouldSeedMarvel);
+        options.ApplySettings();
 
         if (Config.Sentry)
             SentrySdk.Init(config =>
@@ -72,7 +70,7 @@ public static class Program
 
         List<TaskDelegate> startupTasks =
         [
-            new(() => Seed.Init(shouldSeedMarvel)),
+            new(DatabaseSeeder.Run),
             new(Dev.Run)
         ];
 

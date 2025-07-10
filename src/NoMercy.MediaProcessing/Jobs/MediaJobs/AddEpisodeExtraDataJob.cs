@@ -34,8 +34,8 @@ public class AddEpisodeExtraDataJob : AbstractShowExtraDataJob<TmdbEpisodeAppend
         foreach (TmdbEpisodeAppends? episode in Storage)
         {
             await personManager.Store(episode);
-            await episodeManager.StoreImages(Name, episode);
             await episodeManager.StoreTranslations(Name, episode);
+            await episodeManager.StoreImages(Name, episode);
         }
 
         Logger.MovieDb(

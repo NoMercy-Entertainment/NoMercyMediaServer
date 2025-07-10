@@ -79,7 +79,7 @@ public class VideoPlaylistResponseDto
         PlaylistType = playlistType;
         PlaylistId = playlistId;
         Year = episode.Tv.FirstAirDate.ParseYear();
-        Progress = userData?.UpdatedAt is not null && userData.Time < userData.VideoFile.Duration?.ToSeconds() * 0.9
+        Progress = userData?.UpdatedAt is not null
             ? new ProgressDto
             {
                 Time = userData.Time ?? 0,
@@ -118,7 +118,12 @@ public class VideoPlaylistResponseDto
         SeasonName = episode.Season.Title;
         EpisodeId = episode.Id;
         Chapters = videoFile.Metadata?.Chapters ?? [];
-        Fonts = videoFile.Metadata?.Fonts ?? [];
+        Fonts = videoFile.Metadata?.Fonts?.Select(font => new IFont
+        {
+            FileName = $"{baseFolder}{font.FileName}",
+            FileHash = font.FileHash,
+            FileSize = font.FileSize,
+        }).ToList() ?? [];
 
         Audio = videoFile.Metadata?.Audio ?? [];
         Captions = videoFile.Metadata?.Subtitles ?? [];
@@ -154,7 +159,7 @@ public class VideoPlaylistResponseDto
         PlaylistType = playlistType;
         PlaylistId = playlistId;
         Year = movie.ReleaseDate.ParseYear();
-        Progress = userData?.UpdatedAt is not null && userData.Time < userData.VideoFile.Duration?.ToSeconds() * 0.8
+        Progress = userData?.UpdatedAt is not null
             ? new ProgressDto
             {
                 Time = userData.Time ?? 0,
@@ -189,7 +194,12 @@ public class VideoPlaylistResponseDto
             .ToList();
         
         Chapters = videoFile.Metadata?.Chapters ?? [];
-        Fonts = videoFile.Metadata?.Fonts ?? [];
+        Fonts = videoFile.Metadata?.Fonts?.Select(font => new IFont
+        {
+            FileName = $"{baseFolder}{font.FileName}",
+            FileHash = font.FileHash,
+            FileSize = font.FileSize,
+        }).ToList() ?? [];
         
         Audio = videoFile.Metadata?.Audio ?? [];
         Captions = videoFile.Metadata?.Subtitles ?? [];

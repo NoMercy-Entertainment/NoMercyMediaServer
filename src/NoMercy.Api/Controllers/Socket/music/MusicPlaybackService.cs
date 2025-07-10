@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using NoMercy.Data.Repositories;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 
@@ -7,6 +8,7 @@ namespace NoMercy.Api.Controllers.Socket.music;
 public class MusicPlaybackService
 {
     private readonly MusicPlayerStateManager _stateManager;
+    private readonly MusicRepository _musicRepository;
     private readonly string[] _repeatStates = ["off", "one", "all"];
     private static int _playerStateEventId;
     private static int PlayerStateEventId => ++_playerStateEventId;
@@ -14,6 +16,7 @@ public class MusicPlaybackService
     public MusicPlaybackService(MusicPlayerStateManager stateManager)
     {
         _stateManager = stateManager;
+        _musicRepository = new(new());
     }
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
@@ -33,8 +36,12 @@ public class MusicPlaybackService
             playerState.Time += TimerInterval;
 
             int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
+            
+            if (playerState.Time >= (duration / 2) && playerState.Time < (duration / 2) + TimerInterval)
+            {
+                _musicRepository.RecordPlaybackAsync(playerState.CurrentItem.Id, user.Id).Wait();
+            }
 
-            // Logger.App($"{playerState.Time}-{duration}");
             if (playerState.Time >= duration) HandleTrackCompletion(user, playerState).Wait();
         }, null, 100, TimerInterval);
 

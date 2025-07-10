@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace NoMercy.MediaProcessing.Seeds;
+namespace NoMercy.Server.Seeds.Dto;
 
 public class LibrarySeedDto
 {

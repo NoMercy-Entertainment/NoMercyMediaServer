@@ -48,7 +48,11 @@ public class VideoPlaybackService
             int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
 
             // Logger.App($"{playerState.Time}-{duration}");
-            if (playerState.Time >= duration) HandleTrackCompletion(user, playerState).Wait();
+            if (playerState.Time >= duration - TimerInterval)
+            {
+                RemoveTimer(user.Id);
+                HandleTrackCompletion(user, playerState).Wait();
+            }
         }, null, 100, TimerInterval);
 
         _timers[user.Id] = timer;
@@ -61,14 +65,13 @@ public class VideoPlaybackService
 
     private async Task HandleTrackCompletion(User user, VideoPlayerState state)
     {
-        if (state.CurrentItem == null) return;
-        RemoveTimer(user.Id);
+        if (state.CurrentItem is null) return;
 
-        int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
-        UpdateState(state, currentIndex);
+        UpdateState(state, -1);
 
         await UpdatePlaybackState(user, state);
-        StartPlaybackTimer(user);
+        
+        _stateManager.RemoveState(user.Id);
     }
 
     public async Task UpdatePlaybackState(User user, VideoPlayerState? state)
@@ -98,13 +101,34 @@ public class VideoPlaybackService
 
     private void UpdateState(VideoPlayerState state, int currentIndex)
     {
-        if (currentIndex + 1 < state.Playlist.Count)
+        if (currentIndex == -1)
+        {
+            state.PlayState = true;
+            state.Time = 0;
+            state.CurrentItem = null;
+            state.Playlist.Clear();
+            state.CurrentList = new("/home", UriKind.Relative);
+            state.Actions = new()
+            {
+                Disallows = new()
+                {
+                    Next = true,
+                    Previous = true,
+                    Muting = true,
+                    Pausing = true,
+                    Resuming = true,
+                    Seeking = true,
+                    Stopping = true,
+                }
+            };
+        }
+        else if (currentIndex + 1 < state.Playlist.Count)
         {
             state.PlayState = true;
             state.Time = 0;
             state.CurrentItem = state.Playlist[currentIndex + 1];
         }
-        else
+        else 
         {
             state.PlayState = false;
             state.Time = 0;

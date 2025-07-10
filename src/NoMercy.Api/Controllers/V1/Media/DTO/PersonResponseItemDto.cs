@@ -15,7 +15,7 @@ public record PersonResponseItemDto
     [JsonProperty("biography")] public string? Biography { get; set; }
     [JsonProperty("birthday")] public DateTime? Birthday { get; set; }
     [JsonProperty("deathday")] public DateTime? DeathDay { get; set; }
-    [JsonProperty("gender")] public string Gender { get; set; } = TmdbGender.Unknown.ToString();
+    [JsonProperty("gender")] public string Gender { get; set; } = nameof(TmdbGender.Unknown);
     [JsonProperty("homepage")] public string? Homepage { get; set; }
     [JsonProperty("imdb_id")] public string? ImdbId { get; set; }
     [JsonProperty("known_for_department")] public string? KnownForDepartment { get; set; }

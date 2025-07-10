@@ -25,8 +25,7 @@ public class HomeService
     {
         List<UserData> continueWatching = _homeRepository
             .GetContinueWatching(_mediaContext, userId, language, country)
-            .Where(item => item.Tv?.Episodes.Last().VideoFiles.First().Id != item.VideoFileId || 
-                           item.Time < item.VideoFile.Duration.ToSeconds() * 0.8).ToList();
+            .ToList();
 
         List<NmCarouselDto<NmCardDto>> genres = [];
 

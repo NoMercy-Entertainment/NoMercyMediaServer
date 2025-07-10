@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Text;
+using NoMercy.NmSystem.Extensions;
 using Pastel;
 using Serilog.Core;
 using Serilog.Events;
@@ -40,6 +41,6 @@ internal class ConsoleTypeEnricher : ILogEventEnricher
         Color color = SystemCalls.Logger.GetColor(type);
 
         logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty(
-            "ConsoleType", Spacer(SystemCalls.Logger.Capitalize[type], 12, true).Pastel(color)));
+            "ConsoleType", Spacer(type.ToTitleCase(), 14, true).Pastel(color)));
     }
 }

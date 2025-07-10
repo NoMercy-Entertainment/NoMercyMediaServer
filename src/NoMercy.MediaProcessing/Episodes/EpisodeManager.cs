@@ -99,35 +99,44 @@ public class EpisodeManager(
 
     internal async Task StoreImages(string showName, TmdbEpisodeAppends episode)
     {
-        IEnumerable<Image> stills = episode.TmdbEpisodeImages.Stills
-            .Select(image => new Image
-            {
-                AspectRatio = image.AspectRatio,
-                FilePath = image.FilePath,
-                Height = image.Height,
-                Iso6391 = image.Iso6391,
-                VoteAverage = image.VoteAverage,
-                VoteCount = image.VoteCount,
-                Width = image.Width,
-                EpisodeId = episode.Id,
-                Type = "still",
-                Site = "https://image.tmdb.org/t/p/"
-            })
-            .ToList();
+        try
+        {
+            IEnumerable<Image> stills = episode.TmdbEpisodeImages.Stills
+                .Select(image => new Image
+                {
+                    AspectRatio = image.AspectRatio,
+                    FilePath = image.FilePath,
+                    Height = image.Height,
+                    Iso6391 = image.Iso6391,
+                    VoteAverage = image.VoteAverage,
+                    VoteCount = image.VoteCount,
+                    Width = image.Width,
+                    EpisodeId = episode.Id,
+                    Type = "still",
+                    Site = "https://image.tmdb.org/t/p/"
+                })
+                .ToList();
 
-        await episodeRepository.StoreEpisodeImages(stills);
+            await episodeRepository.StoreEpisodeImages(stills);
             
-        Logger.MovieDb(
-            $"Show {showName}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Images stored",
-            LogEventLevel.Debug);
+            Logger.MovieDb(
+                $"Show {showName}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Images stored",
+                LogEventLevel.Debug);
 
-        IEnumerable<Image> posterJobItems = stills
-            .Select(x => new Image { FilePath = x.FilePath })
-            .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
-                        e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
-            .ToArray();
+            IEnumerable<Image> posterJobItems = stills
+                .Select(x => new Image { FilePath = x.FilePath })
+                .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
+                            e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+                .ToArray();
 
-        if (posterJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(episode.Id, posterJobItems);
+            if (posterJobItems.Any())
+                jobDispatcher.DispatchJob<ImagePaletteJob, Image>(episode.Id, posterJobItems);
+        }
+        catch (Exception e)
+        {
+            Logger.MovieDb(
+                $"Show {showName}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Error storing images: {e.Message}",
+                LogEventLevel.Error);
+        }
     }
 }

@@ -51,7 +51,7 @@ namespace NoMercy.Database.Migrations.Queue
 
                     b.HasKey("Id");
 
-                    b.ToTable("FailedJobs");
+                    b.ToTable("FailedJobs", (string)null);
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.QueueJob", b =>
@@ -89,7 +89,7 @@ namespace NoMercy.Database.Migrations.Queue
 
                     b.HasKey("Id");
 
-                    b.ToTable("QueueJobs");
+                    b.ToTable("QueueJobs", (string)null);
                 });
 #pragma warning restore 612, 618
         }

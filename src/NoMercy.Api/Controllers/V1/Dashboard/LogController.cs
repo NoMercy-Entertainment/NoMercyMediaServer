@@ -51,11 +51,11 @@ public class LogController : BaseController
         {
             Data =
             [
-                Enum.Parse<LogEventLevel>(LogEventLevel.Verbose.ToString()).ToString(),
-                Enum.Parse<LogEventLevel>(LogEventLevel.Debug.ToString()).ToString(),
-                Enum.Parse<LogEventLevel>(LogEventLevel.Information.ToString()).ToString(),
-                Enum.Parse<LogEventLevel>(LogEventLevel.Error.ToString()).ToString(),
-                Enum.Parse<LogEventLevel>(LogEventLevel.Fatal.ToString()).ToString()
+                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Verbose)).ToString(),
+                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Debug)).ToString(),
+                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Information)).ToString(),
+                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Error)).ToString(),
+                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Fatal)).ToString()
             ]
         });
     }
@@ -66,7 +66,7 @@ public class LogController : BaseController
     {
         return Ok(new DataResponseDto<IEnumerable<Logger.LogType>>
         {
-            Data = Logger.LogTypes
+            Data = Logger.LogTypes.Values
         });
     }
 }

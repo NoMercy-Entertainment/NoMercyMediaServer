@@ -4,19 +4,19 @@ using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.NoMercy.Data;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
+using NoMercy.Server.Seeds.Data;
 using Serilog.Events;
-using SpecialProviderItem = NoMercy.Providers.NoMercy.Models.Specials.SpecialItem;
+using SpecialItem = NoMercy.Database.Models.SpecialItem;
 
-namespace NoMercy.MediaProcessing.Seeds;
+namespace NoMercy.Server.Seeds;
 
 public static class SpecialSeed
 {
-    public static async Task AddSpecial(MediaContext context)
+    public static async Task Init(MediaContext context)
     {
         Logger.Setup("Adding Special");
 
@@ -36,17 +36,17 @@ public static class SpecialSeed
 
             Special special = new()
             {
-                Id = Mcu.Special.Id,
-                Title = Mcu.Special.Title,
-                Backdrop = Mcu.Special.Backdrop,
-                Poster = Mcu.Special.Poster,
-                Logo = Mcu.Special.Logo,
-                Overview = Mcu.Special.Description,
-                Creator = Mcu.Special.Creator,
+                Id = McuSeedData.Special.Id,
+                Title = McuSeedData.Special.Title,
+                Backdrop = McuSeedData.Special.Backdrop,
+                Poster = McuSeedData.Special.Poster,
+                Logo = McuSeedData.Special.Logo,
+                Overview = McuSeedData.Special.Overview,
+                Creator = McuSeedData.Special.Creator,
                 _colorPalette = await NoMercyImageManager
                     .MultiColorPalette([
-                        new("poster", Mcu.Special.Poster),
-                        new("backdrop", Mcu.Special.Backdrop)
+                        new("poster", McuSeedData.Special.Poster),
+                        new("backdrop", McuSeedData.Special.Backdrop)
                     ])
             };
 
@@ -71,7 +71,7 @@ public static class SpecialSeed
             List<int> movieIds = [];
             List<SpecialItem> specialItems = [];
 
-            foreach (SpecialProviderItem item in Mcu.McuItems)
+            foreach (Dto.SpecialItem item in McuSeedData.McuItems)
             {
                 Logger.Setup($"Searching for {item.Title} ({item.Year})");
                 switch (item.Type)
@@ -95,7 +95,7 @@ public static class SpecialSeed
     }
 
     private static async Task AddMovieItem(MediaContext context, TmdbSearchClient client, Library movieLibrary,
-        SpecialProviderItem item, List<int> movieIds, List<SpecialItem> specialItems)
+        Dto.SpecialItem item, List<int> movieIds, List<SpecialItem> specialItems)
     {
         TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(item.Title, item.Year.ToString());
         TmdbMovie? movie = result?.Results.FirstOrDefault(r => !r.Title.ToLower().Contains("making of"));
@@ -120,14 +120,14 @@ public static class SpecialSeed
 
         specialItems.Add(new()
         {
-            SpecialId = Mcu.Special.Id,
+            SpecialId = McuSeedData.Special.Id,
             MovieId = movie.Id,
             Order = specialItems.Count
         });
     }
 
     private static async Task AddTvItem(MediaContext context, TmdbSearchClient client, Library tvLibrary,
-        SpecialProviderItem item, List<int> tvIds, List<SpecialItem> specialItems)
+        Dto.SpecialItem item, List<int> tvIds, List<SpecialItem> specialItems)
     {
         TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(item.Title, item.Year.ToString());
         TmdbTvShow? tv = result?.Results.FirstOrDefault(r =>
@@ -170,7 +170,7 @@ public static class SpecialSeed
 
             specialItems.Add(new()
             {
-                SpecialId = Mcu.Special.Id,
+                SpecialId = McuSeedData.Special.Id,
                 EpisodeId = episode.Id,
                 Order = specialItems.Count
             });

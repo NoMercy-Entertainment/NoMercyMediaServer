@@ -2,6 +2,8 @@ using CommandLine;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Server.Seeds;
+using NoMercy.Server.services;
 using Serilog.Events;
 
 namespace NoMercy.Server;
@@ -13,7 +15,7 @@ public class StartupOptions
     public bool Development { get; set; }
 
     [Option('l', "loglevel", Required = false, HelpText = "Run the server in development mode.")]
-    public string LogLevel { get; set; } = LogEventLevel.Information.ToString();
+    public string LogLevel { get; set; } = nameof(LogEventLevel.Information);
 
     [Option("seed", Required = false, HelpText = "Run the server in development mode.")]
     public bool ShouldSeed { get; set; }
@@ -36,9 +38,9 @@ public class StartupOptions
     [Option("dsn", Required = false, HelpText = "Sentry DSN.")]
     public string? SentryDsn { get; set; }
 
-    public void ApplySettings(out bool shouldSeedMarvel)
+    public void ApplySettings()
     {
-        shouldSeedMarvel = ShouldSeed;
+        DatabaseSeeder.ShouldSeedMarvel = ShouldSeed;
 
         if (Development)
         {

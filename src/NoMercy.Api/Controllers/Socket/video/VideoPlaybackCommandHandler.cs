@@ -183,7 +183,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
     
     private Task HandleItem(VideoPlayerState state, object? data)
     {
-        if (data is null || state.CurrentItem is not null) return Task.CompletedTask;
+        if (data is null || state.CurrentItem is null) return Task.CompletedTask;
         
         int itemId = int.Parse(data.ToString() ?? string.Empty);
         VideoPlaylistResponseDto? item = state.Playlist.ElementAtOrDefault(itemId);

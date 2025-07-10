@@ -14,7 +14,7 @@ namespace NoMercy.Server.AppConfig;
 
 public static class ApplicationConfiguration
 {
-    public static void ConfigureApp(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
+    public static async Task ConfigureApp(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
     {
         ConfigureLocalization(app);
         ConfigureMiddleware(app);
@@ -25,7 +25,7 @@ public static class ApplicationConfiguration
 
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
     }
-
+    
     private static void ConfigureLocalization(IApplicationBuilder app)
     {
         string[] supportedCultures = ["en-US", "nl-NL"]; // Add other supported locales

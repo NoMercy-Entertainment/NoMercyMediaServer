@@ -1,5 +1,4 @@
 using NoMercy.Api.Controllers.Socket;
-using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.Socket.video;
 
 namespace NoMercy.Server.services;

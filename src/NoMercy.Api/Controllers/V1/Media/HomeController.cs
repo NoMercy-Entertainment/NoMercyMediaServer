@@ -2,12 +2,9 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Services;
-using NoMercy.Database.Models;
 using NoMercy.Helpers;
-using NoMercy.Data.Repositories;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 

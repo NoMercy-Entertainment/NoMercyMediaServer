@@ -13,7 +13,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.MediaProcessing.Seeds;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -368,27 +367,6 @@ public class SpecialsController : BaseController
             Status = "error",
             Message = "Library {0} does not exist.",
             Args = [id]
-        });
-    }
-
-    [HttpPost]
-    [Route("addmarvel")]
-    public IActionResult AddMarvel()
-    {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to rescan all specials");
-
-        Thread thread = new(() =>
-        {
-            using MediaContext mediaContext = new();
-            SpecialSeed.AddSpecial(mediaContext).Wait();
-        });
-        thread.Start();
-
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Rescanning all specials."
         });
     }
 
