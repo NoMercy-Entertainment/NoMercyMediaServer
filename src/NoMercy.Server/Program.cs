@@ -5,6 +5,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
+using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -99,6 +100,8 @@ public static class Program
         new Thread(() => app.RunAsync()).Start();
 
         await DriveMonitor.Start();
+
+        _ = LibraryFileWatcher.Instance;
 
         await Task.Delay(-1);
     }

@@ -40,8 +40,8 @@ public class Start
         [
             // new (ApiInfo.RequestInfo),
             new(AppFiles.CreateAppFolders),
-            new(Networking.Networking.Discover),
             new(Auth.Init),
+            new(Networking.Networking.Discover),
             ..tasks,
             new(Register.Init),
             new(Binaries.DownloadAll),
@@ -72,14 +72,6 @@ public class Start
             IsBackground = true
         };
         queues.Start();
-
-        // Thread fileWatcher = new(new Task(() => _ = new LibraryFileWatcher()).Start)
-        // {
-        //     Name = "Library File Watcher",
-        //     Priority = ThreadPriority.Lowest,
-        //     IsBackground = true
-        // };
-        // fileWatcher.Start();
 
         foreach (GpuAccelerator accelerator in FFmpegHardwareConfig.Accelerators)
             Logger.Encoder(

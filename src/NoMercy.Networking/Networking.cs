@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Mono.Nat;
+using Newtonsoft.Json;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
@@ -35,8 +36,7 @@ public class Networking
     private static bool HasFoundDevice { get; set; } = false;
 
     public static readonly ConcurrentDictionary<string, Client> SocketClients = new();
-
-
+    
     public static async Task Discover()
     {
         Logger.Setup("Discovering Networking");
@@ -44,15 +44,29 @@ public class Networking
         NatUtility.DeviceFound += DeviceFound;
         NatUtility.UnknownDeviceFound += UnknownDeviceFound;
 
+        NetworkChange.NetworkAddressChanged += NetworkAddressChanged;
+
         Logger.Setup("Discovering UPNP devices");
-        NatUtility.StartDiscovery();
+        
+        _ = Task.Run(() => NatUtility.StartDiscovery());
 
         if (!HasFoundDevice) await Task.Delay(TimeSpan.FromSeconds(5));
         if (!HasFoundDevice) await Task.Delay(TimeSpan.FromSeconds(10));
 
-        ExternalIp = await GetExternalIp();
+        if (!HasFoundDevice)
+        {
+            Logger.Setup("No UPNP device found");
+            ExternalIp = await GetExternalIp();
+        }
+    }
 
-        if (!HasFoundDevice) Logger.Setup("No UPNP device found");
+    private static void NetworkAddressChanged(object? sender, EventArgs e)
+    { 
+        Logger.Setup("Network address changed, updating IPs");
+        Logger.Setup(e);
+        
+        InternalIp = GetInternalIp();
+        _ = OnIpChanged(InternalIp);
     }
 
     private static string? _internalIp;
@@ -60,7 +74,15 @@ public class Networking
     public static string InternalIp
     {
         get => _internalIp ?? GetInternalIp();
-        set => _internalIp = value;
+        set
+        {
+            if (_internalIp == value) return;
+            if(!string.IsNullOrEmpty(_internalIp))
+            {
+                _ = OnIpChanged(value);
+            }
+            _internalIp = value;
+        }
     }
 
     private static string? _externalIp;
@@ -68,7 +90,15 @@ public class Networking
     public static string ExternalIp
     {
         get => _externalIp ?? GetExternalIp().Result;
-        set => _externalIp = value;
+        set
+        {
+            if (_externalIp == value) return;
+                if(!string.IsNullOrEmpty(_externalIp))
+                {
+                    _ = OnIpChanged(value);
+                }
+                _externalIp = value;
+        }
     }
 
     public static string InternalDomain { get; private set; } = "";
@@ -113,9 +143,59 @@ public class Networking
 
         return externalIp.Replace("\"", "");
     }
+    
+    private static async Task OnIpChanged(string? newIp)
+    {
+        Logger.Setup($"IP changed to: {newIp}");
+
+        if (string.IsNullOrEmpty(newIp))
+        {
+            Config.NatStatus = NatStatus.None;
+            return;
+        }
+
+        await SendUpdate();
+        
+        ExternalDomain = $"{Regex.Replace(ExternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
+        Logger.Setup($"External Address: {ExternalAddress}");
+        
+        InternalDomain = $"{Regex.Replace(InternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        InternalAddress = $"https://{InternalDomain}:{Config.InternalServerPort}";
+        Logger.Setup($"Internal Address: {InternalAddress}");
+    }
+    
+    private static async Task SendUpdate()
+    {
+        Dictionary<string, string> serverData = new()
+        {
+            { "id", Info.DeviceId.ToString() },
+            { "name", Info.DeviceName },
+            { "internal_ip", InternalIp },
+            { "internal_port", Config.InternalServerPort.ToString() },
+            { "external_port", Config.ExternalServerPort.ToString() },
+            { "version", Software.Version!.ToString() },
+            { "platform", Info.Platform }
+        };
+
+        Logger.Register("Your IP address has changed, updating server information...");
+
+        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+        string response =
+            await authClient.SendAndReadAsync(HttpMethod.Post, "ping", new FormUrlEncodedContent(serverData));
+
+        object? data = JsonConvert.DeserializeObject(response);
+
+        if (data == null) throw new("Failed to update server information");
+
+        Logger.Register("Server information updated successfully");
+    }
 
     private static void DeviceFound(object? sender, DeviceEventArgs args)
     {
+        if (HasFoundDevice) return;
+        
         Logger.Setup("UPNP router Found: " + args.Device.DeviceEndpoint);
 
         _device = args.Device;
@@ -123,8 +203,6 @@ public class Networking
         HasFoundDevice = true;
 
         GetNatStatus();
-
-        NatUtility.StopDiscovery();
 
         ExternalDomain = $"{Regex.Replace(ExternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
         ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
@@ -229,9 +307,9 @@ public class Networking
                 0,
                 "NoMercy MediaServer (UDP)"));
 
-            ExternalIp = _device.GetExternalIP().ToString();
-
             Logger.Setup($"IP address obtained from UPNP: {ExternalIp}");
+
+            ExternalIp = _device.GetExternalIP().ToString();
         }
         catch (Exception e)
         {

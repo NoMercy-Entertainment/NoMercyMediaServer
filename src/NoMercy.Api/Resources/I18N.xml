@@ -177,15 +177,6 @@
     <Value lang="nl">Unknown property AudioTrack</Value>
   </Entry>
   <Entry>
-    <Key>SQLite Error 1: 'ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint'.</Key>
-    <Value lang="nl">SQLite Error 1: 'ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint'.
-        </Value>
-  </Entry>
-  <Entry>
-    <Key>SQLite Error 19: 'NOT NULL constraint failed: Metadata.AudioTrackId'.</Key>
-    <Value lang="nl">SQLite Error 19: 'NOT NULL constraint failed: Metadata.AudioTrackId'.</Value>
-  </Entry>
-  <Entry>
     <Key>Unknown property Chapters</Key>
     <Value lang="nl">Unknown property Chapters</Value>
   </Entry>
@@ -214,14 +205,6 @@
     <Value lang="nl">updater must be an Initialiser of the TEntity type (Parameter 'updater')</Value>
   </Entry>
   <Entry>
-    <Key>Could not find file
-            '\\192.168.2.120\mnt\vault\Media\Anime\Anime\No.Game.No.Life.(2014)\No.Game.No.Life.S00E01\No.Game.No.Life.S00E01.Special.1.Wild.Fancy.NoMercy.eng.full.ass'.
-        </Key>
-    <Value lang="nl">Could not find file
-            '\\192.168.2.120\mnt\vault\Media\Anime\Anime\No.Game.No.Life.(2014)\No.Game.No.Life.S00E01\No.Game.No.Life.S00E01.Special.1.Wild.Fancy.NoMercy.eng.full.ass'.
-        </Value>
-  </Entry>
-  <Entry>
     <Key>Rescanning {0} library.</Key>
     <Value lang="nl">Rescanning {0} library.</Value>
   </Entry>
@@ -248,14 +231,6 @@
   <Entry>
     <Key>Wallpaper not found</Key>
     <Value lang="nl">Wallpaper not found</Value>
-  </Entry>
-  <Entry>
-    <Key>Could not find a part of the path
-            '\\192.168.2.120\mnt\vault\Media\Anime\Anime\By.the.Grace.of.the.Gods.(2020)\By.the.Grace.of.the.Gods.S02E02'.
-        </Key>
-    <Value lang="nl">Could not find a part of the path
-            '\\192.168.2.120\mnt\vault\Media\Anime\Anime\By.the.Grace.of.the.Gods.(2020)\By.the.Grace.of.the.Gods.S02E02'.
-        </Value>
   </Entry>
   <Entry>
     <Key>Job not found</Key>

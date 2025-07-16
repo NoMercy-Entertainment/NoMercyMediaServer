@@ -13,19 +13,19 @@ public static class EncoderProfilesSeed
 {
     public static async Task Init(this MediaContext dbContext)
     {
+        Logger.Setup("Adding Encoder Profiles", LogEventLevel.Verbose);
+
+        List<EncoderProfile> encoderProfiles;
+        if (File.Exists(AppFiles.EncoderProfilesSeedFile))
+            encoderProfiles = File.ReadAllTextAsync(AppFiles.EncoderProfilesSeedFile).Result
+                .FromJson<List<EncoderProfile>>()!;
+        else
+            encoderProfiles = EncoderProfileSeedData.GetEncoderProfiles();
+
+        await File.WriteAllTextAsync(AppFiles.EncoderProfilesSeedFile, encoderProfiles.ToJson());
+
         try
         {
-            Logger.Setup("Adding Encoder Profiles", LogEventLevel.Verbose);
-
-            List<EncoderProfile> encoderProfiles;
-            if (File.Exists(AppFiles.EncoderProfilesSeedFile))
-                encoderProfiles = File.ReadAllTextAsync(AppFiles.EncoderProfilesSeedFile).Result
-                    .FromJson<List<EncoderProfile>>()!;
-            else
-                encoderProfiles = EncoderProfileSeedData.GetEncoderProfiles();
-
-            await File.WriteAllTextAsync(AppFiles.EncoderProfilesSeedFile, encoderProfiles.ToJson());
-
             await dbContext.EncoderProfiles.UpsertRange(encoderProfiles)
                 .On(v => new { v.Id })
                 .WhenMatched((vs, vi) => new()
@@ -40,16 +40,23 @@ public static class EncoderProfilesSeed
                     UpdatedAt = vi.UpdatedAt
                 })
                 .RunAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
+        }
 
-            List<EncoderProfileFolder> encoderProfileFolders = [];
-            foreach (EncoderProfile encoderProfile in encoderProfiles)
-                encoderProfileFolders.AddRange(encoderProfile.EncoderProfileFolder.ToList()
-                    .Select(encoderProfileFolder => new EncoderProfileFolder
-                    {
-                        EncoderProfileId = encoderProfile.Id,
-                        FolderId = encoderProfileFolder.FolderId
-                    }));
+        List<EncoderProfileFolder> encoderProfileFolders = [];
+        foreach (EncoderProfile encoderProfile in encoderProfiles)
+            encoderProfileFolders.AddRange(encoderProfile.EncoderProfileFolder.ToList()
+                .Select(encoderProfileFolder => new EncoderProfileFolder
+                {
+                    EncoderProfileId = encoderProfile.Id,
+                    FolderId = encoderProfileFolder.FolderId
+                }));
 
+        try
+        {
             await dbContext.EncoderProfileFolder
                 .UpsertRange(encoderProfileFolders)
                 .On(v => new { v.FolderId, v.EncoderProfileId })

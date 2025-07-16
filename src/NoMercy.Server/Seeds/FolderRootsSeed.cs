@@ -12,15 +12,15 @@ public static class FolderRootsSeed
 {
     public static async Task Init(this MediaContext dbContext)
     {
+        if (!File.Exists(AppFiles.FolderRootsSeedFile)) return;
+
+        Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
+
+        Folder[] folders = File.ReadAllTextAsync(AppFiles.FolderRootsSeedFile)
+            .Result.FromJson<Folder[]>() ?? [];
+        
         try
         {
-            if (!File.Exists(AppFiles.FolderRootsSeedFile)) return;
-
-            Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
-
-            Folder[] folders = File.ReadAllTextAsync(AppFiles.FolderRootsSeedFile)
-                .Result.FromJson<Folder[]>() ?? [];
-
             await dbContext.Folders.UpsertRange(folders)
                 .On(v => new { v.Id })
                 .WhenMatched((vs, vi) => new()

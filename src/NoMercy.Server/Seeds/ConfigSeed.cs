@@ -11,23 +11,23 @@ public static class ConfigSeed
 {
     public static async Task Init(this MediaContext dbContext)
     {
+        Logger.Setup("Adding Configurations", LogEventLevel.Verbose);
+        Configuration[] configs =
+        [
+            new()
+            {
+                Key = "internalPort",
+                Value = Config.InternalServerPort.ToString()
+            },
+            new()
+            {
+                Key = "externalPort",
+                Value = Config.ExternalServerPort.ToString()
+            }
+        ];
+        
         try
         {
-            Logger.Setup("Adding Configurations", LogEventLevel.Verbose);
-            Configuration[] configs =
-            [
-                new()
-                {
-                    Key = "internalPort",
-                    Value = Config.InternalServerPort.ToString()
-                },
-                new()
-                {
-                    Key = "externalPort",
-                    Value = Config.ExternalServerPort.ToString()
-                }
-            ];
-
             await dbContext.Configuration
                 .UpsertRange(configs)
                 .On(v => new { v.Key })

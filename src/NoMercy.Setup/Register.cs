@@ -19,7 +19,8 @@ public static class Register
     {
         MediaContext mediaContext = new();
         Configuration? device = mediaContext.Configuration.FirstOrDefault(device => device.Key == "serverName");
-        return device?.Value ?? Environment.MachineName;
+        Info.DeviceName = device?.Value ?? Environment.MachineName;
+        return Info.DeviceName;
     }
 
     public static async Task Init()

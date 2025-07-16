@@ -37,13 +37,13 @@ public class FolderWatcher : IDisposable
         folder = Path.GetFullPath(folder);
         FileSystemWatcher watcher = new();
         watcher.Path = folder;
-        watcher.EnableRaisingEvents = false;
+        watcher.EnableRaisingEvents = true;
         watcher.IncludeSubdirectories = IncludeSubdirectories;
         watcher.NotifyFilter =
             // NotifyFilters.Attributes |
             // NotifyFilters.CreationTime |
-            // NotifyFilters.DirectoryName |
-            // NotifyFilters.FileName |
+            NotifyFilters.DirectoryName |
+            NotifyFilters.FileName |
             // NotifyFilters.LastAccess |
             NotifyFilters.LastWrite
             // NotifyFilters.Security |
@@ -138,7 +138,7 @@ public class FolderWatcher : IDisposable
 
         _instance?.OnError?.Invoke(fileWatcherEventArgs);
 
-        // Logger.System($"FolderWatcher error:  {e.GetException().Message}", LogEventLevel.Error);
+        Logger.System($"FolderWatcher error:  {e.GetException().Message}", LogEventLevel.Error);
     }
 
     public void Dispose()

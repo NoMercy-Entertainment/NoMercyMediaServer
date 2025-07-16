@@ -13,16 +13,14 @@ public static class LibrariesSeed
 {
     public static async Task Init(this MediaContext dbContext)
     {
-        try
-        {
-            if (!File.Exists(AppFiles.LibrariesSeedFile)) return;
+        if (!File.Exists(AppFiles.LibrariesSeedFile)) return;
+        Logger.Setup("Adding Libraries", LogEventLevel.Verbose);
 
-            Logger.Setup("Adding Libraries", LogEventLevel.Verbose);
+        List<LibrarySeedDto> librarySeed = File.ReadAllTextAsync(AppFiles.LibrariesSeedFile)
+            .Result.FromJson<List<LibrarySeedDto>>() ?? [];
 
-            LibrarySeedDto[] librarySeed = File.ReadAllTextAsync(AppFiles.LibrariesSeedFile)
-                .Result.FromJson<LibrarySeedDto[]>() ?? [];
-
-            List<Library> libraries = librarySeed.Select(librarySeedDto => new Library
+        List<Library> libraries = librarySeed
+            .Select(librarySeedDto => new Library
             {
                 Id = librarySeedDto.Id,
                 AutoRefreshInterval = librarySeedDto.AutoRefreshInterval,
@@ -36,8 +34,11 @@ public static class LibrariesSeed
                 Title = librarySeedDto.Title,
                 Type = librarySeedDto.Type,
                 Order = librarySeedDto.Order
-            }).ToList();
+            })
+            .ToList();
 
+        try
+        {
             await dbContext.Libraries.UpsertRange(libraries)
                 .On(v => new { v.Id })
                 .WhenMatched((vs, vi) => new()
@@ -56,13 +57,42 @@ public static class LibrariesSeed
                     Order = vi.Order
                 })
                 .RunAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
+        }
+        
+        if (!File.Exists(AppFiles.FolderRootsSeedFile)) return;
+        Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
+        
+        Folder[] folders = File.ReadAllTextAsync(AppFiles.FolderRootsSeedFile)
+            .Result.FromJson<Folder[]>() ?? [];
 
-            List<FolderLibrary> libraryFolders = [];
+        try
+        {
+            await dbContext.Folders.UpsertRange(folders)
+                .On(v => new { v.Id })
+                .WhenMatched((vs, vi) => new()
+                {
+                    Id = vi.Id,
+                    Path = vi.Path
+                })
+                .RunAsync();
+        }
+        catch (Exception e)
+        {
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
+        }
 
-            foreach (LibrarySeedDto library in librarySeed.ToList())
-            foreach (FolderDto folder in library.Folders.ToList())
+        List<FolderLibrary> libraryFolders = [];
+
+        foreach (LibrarySeedDto library in librarySeed)
+            foreach (FolderDto folder in library.Folders)
                 libraryFolders.Add(new(folder.Id, library.Id));
 
+        try
+        {
             await dbContext.FolderLibrary
                 .UpsertRange(libraryFolders)
                 .On(v => new { v.FolderId, v.LibraryId })
@@ -75,7 +105,7 @@ public static class LibrariesSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Error);
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
     }
 }

@@ -89,7 +89,7 @@ public static class SpecialSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Error);
+            Logger.Setup(e.Message, LogEventLevel.Fatal);
             throw;
         }
     }

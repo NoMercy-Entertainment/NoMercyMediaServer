@@ -53,10 +53,16 @@ public class LibraryFileWatcher
     // ReSharper disable once MemberCanBePrivate.Global
     public static Action AddLibraryWatcher(Library library)
     {
-        List<string> paths = library.FolderLibraries.Select(folderLibrary => folderLibrary.Folder.Path).ToList();
+        List<string> paths = library.FolderLibraries
+            .Select(folderLibrary => folderLibrary.Folder.Path)
+            .ToList();
+        
         List<Action> disposers = [];
 
-        Task.Run(() => { disposers = Fs.Watch(paths); }).Wait();
+        Task.Run(() =>
+        {
+            disposers = Fs.Watch(paths);
+        }).Wait();
 
         return () =>
         {
@@ -87,32 +93,32 @@ public class LibraryFileWatcher
 
     private void _onError(FileWatcherEventArgs e)
     {
-        // Logger.System(e, LogEventLevel.Error);
+        Logger.System(e, LogEventLevel.Error);
     }
 
     private Library? GetLibraryByPath(string path)
     {
-        using MediaContext mediaContext = new(); // concurrent lock issue
+        using MediaContext mediaContext = new();
         return mediaContext.Libraries
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .FirstOrDefault(library => library.FolderLibraries
-                .Any(folderLibrary => folderLibrary.Folder.Path == path));
-    }
-
-    private bool IsFolderRootOfLibrary(Library library, string path)
-    {
-        return library.FolderLibraries.Any(folderLibrary => folderLibrary.Folder.Path == path);
+                .Any(folderLibrary => path.Contains(folderLibrary.Folder.Path)));
     }
 
     private void HandleFileChange(FileWatcherEventArgs e)
     {
-        string folderPath = Path.GetDirectoryName(e.FullPath) ?? string.Empty;
-        Library? library = GetLibraryByPath(e.Root);
+        string watcherPath = e.Path;
+        Library? library = GetLibraryByPath(watcherPath);
 
         if (library is null) return;
-        if (IsFolderRootOfLibrary(library, folderPath)) return;
+
         if (!IsAllowedExtensionForLibrary(library, e.FullPath)) return;
+
+        string folderPath = Path.GetDirectoryName(e.FullPath) ?? string.Empty;
+        
+        if (Directory.Exists(folderPath))
+            folderPath = e.FullPath;
 
         lock (LockObject)
         {
@@ -130,15 +136,17 @@ public class LibraryFileWatcher
 
     private static bool IsAllowedExtensionForLibrary(Library library, string path)
     {
+        if (Directory.Exists(path)) return true;
+        
         switch (library.Type)
         {
             case "movie":
             case "tv":
                 string[] videoExtensions = [".mp4", ".mkv", ".avi", ".webm", ".mov", ".m3u8"];
-                return videoExtensions.Contains(Path.GetExtension(path));
+                return videoExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
             case "music":
-                string[] audioExtensions = [".mp3", ".flac", ".opus", "wav", "m4a"];
-                return audioExtensions.Contains(Path.GetExtension(path));
+                string[] audioExtensions = [".mp3", ".flac", ".opus", ".wav", ".m4a"];
+                return audioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
             default:
                 return false;
         }
@@ -146,41 +154,20 @@ public class LibraryFileWatcher
 
     private void ProcessFileChanges(object? state)
     {
-        if (state is not FileChangeGroup) return;
+        if (state is not FileChangeGroup group) return;
 
         lock (LockObject)
         {
-            if (FileChangeGroups.TryGetValue((state as FileChangeGroup)!.FolderPath, out FileChangeGroup? group))
+            switch (group.ChangeType)
             {
-                switch ((state as FileChangeGroup)!.ChangeType)
-                {
-                    case WatcherChangeTypes.Created:
-                        Logger.System($"File Created: {group.FolderPath}", LogEventLevel.Verbose);
-                        break;
-                    case WatcherChangeTypes.Deleted:
-                        Logger.System($"File Deleted: {group.FolderPath}", LogEventLevel.Verbose);
-                        break;
-                    case WatcherChangeTypes.Changed:
-                        Logger.System($"File Changed: {group.FolderPath}", LogEventLevel.Verbose);
-                        HandleFolder(group.Library, group.FolderPath).Wait();
-                        break;
-                    case WatcherChangeTypes.Renamed:
-                        Logger.System($"File Renamed: {group.FolderPath}", LogEventLevel.Verbose);
-                        break;
-                    case WatcherChangeTypes.All:
-                        break;
-                    default:
-                        ArgumentOutOfRangeException exception = new()
-                        {
-                            HelpLink = null,
-                            HResult = 0,
-                            Source = null
-                        };
-                        throw exception;
-                }
-
-                FileChangeGroups.Remove(group.FolderPath);
+                case WatcherChangeTypes.Created:
+                case WatcherChangeTypes.Deleted:
+                case WatcherChangeTypes.Changed:
+                case WatcherChangeTypes.Renamed:
+                    _ = HandleFolder(group.Library, group.FolderPath);
+                    break;
             }
+            FileChangeGroups.Remove(group.FolderPath);
         }
     }
 

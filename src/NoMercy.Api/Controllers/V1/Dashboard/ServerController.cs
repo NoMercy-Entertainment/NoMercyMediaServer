@@ -549,4 +549,30 @@ public class ServerController(
 
         return dominant.ToHexString();
     }
+    
+    [HttpPost]
+    [Route("changeIp")]
+    public async Task<IActionResult> ChangeIp([FromBody] ChangeIpRequest request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to change the IP address");
+
+        if (string.IsNullOrEmpty(request.Ip))
+            return BadRequestResponse("New IP address is required");
+
+        Logger.App($"Changing IP address to {request.Ip}");
+
+        Networking.Networking.InternalIp = request.Ip;
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Status = "ok",
+            Message = $"IP address changed to {request.Ip}"
+        });
+    }
+    
+    public class ChangeIpRequest
+    {
+        public string Ip { get; set; } = string.Empty;
+    }
 }
