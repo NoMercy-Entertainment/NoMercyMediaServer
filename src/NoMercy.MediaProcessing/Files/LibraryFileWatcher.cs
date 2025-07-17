@@ -219,7 +219,7 @@ public class LibraryFileWatcher
 
         await FileManager.FindFiles(res.First().Id, library);
 
-        // JobDispatcher.DispatchJob<AddShowJob>(res.First().Id, library);
+        JobDispatcher.DispatchJob<AddShowJob>(res.First().Id, library);
     }
 
     private async Task HandleMovieFolder(Library library, MediaFolderExtend path)
@@ -239,6 +239,6 @@ public class LibraryFileWatcher
 
         await FileManager.FindFiles(res.First().Id, library);
 
-        // JobDispatcher.DispatchJob<AddMovieJob>(res.First().Id, library);
+        JobDispatcher.DispatchJob<AddMovieJob>(res.First().Id, library);
     }
 }

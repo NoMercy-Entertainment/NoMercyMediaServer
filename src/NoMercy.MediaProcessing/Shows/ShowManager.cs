@@ -2,6 +2,7 @@ using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -86,11 +87,13 @@ public class ShowManager(
         Logger.MovieDb($"Show {show.Title}: Linked to Library {library.Title}", LogEventLevel.Debug);
         
         ShowManager showManager = new(showRepository, jobDispatcher);
+        await showManager.StoreGenres(showAppends);
+        await showManager.StoreContentRatings(showAppends);
         await showManager.StoreTranslations(showAppends);
 
         Logger.MovieDb($"Show {showAppends.Name}: Added to Library {library.Title}");
 
-        // jobDispatcher.DispatchJob<AddShowExtraDataJob, TmdbTvShowAppends>(showAppends);
+        jobDispatcher.DispatchJob<AddShowExtraDataJob, TmdbTvShowAppends>(showAppends);
 
         return showAppends;
     }
