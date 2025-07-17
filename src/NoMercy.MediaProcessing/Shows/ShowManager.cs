@@ -35,6 +35,19 @@ public class ShowManager(
                 new("backdrop", showAppends.BackdropPath)
             ]);
 
+        DateTime folderCreatedAt = DateTime.UtcNow;
+
+        foreach (FolderLibrary folderLibrary in library.FolderLibraries)
+        {
+            string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
+            if(!Directory.Exists(folderName)) continue;
+            
+            DirectoryInfo folderInfo = new(folderName);
+            folderCreatedAt = folderInfo.CreationTimeUtc;
+            
+            if(folderCreatedAt != DateTime.UtcNow) break;
+        }
+
         Tv show = new()
         {
             LibraryId = library.Id,
@@ -65,6 +78,8 @@ public class ShowManager(
             Type = showAppends.Type,
             VoteAverage = showAppends.VoteAverage,
             VoteCount = showAppends.VoteCount,
+            
+            CreatedAt = folderCreatedAt,
 
             Duration = showAppends.EpisodeRunTime?.Length > 0
                 ? (int?)showAppends.EpisodeRunTime?.Average()

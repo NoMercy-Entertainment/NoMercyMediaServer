@@ -45,6 +45,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
                 Folder = ti.Folder,
                 LibraryId = ti.LibraryId,
                 MediaType = ti.MediaType,
+                CreatedAt = ti.CreatedAt,
                 UpdatedAt = ti.UpdatedAt
             })
             .RunAsync();

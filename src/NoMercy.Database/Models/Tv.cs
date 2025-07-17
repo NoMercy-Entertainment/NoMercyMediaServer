@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
@@ -12,7 +14,7 @@ namespace NoMercy.Database.Models;
 [Index(nameof(ImdbId))]
 [Index(nameof(TvdbId))]
 [Index(nameof(FirstAirDate))]
-public class Tv : ColorPaletteTimeStamps
+public class Tv : ColorPalettes
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
@@ -46,6 +48,17 @@ public class Tv : ColorPaletteTimeStamps
     [JsonProperty("type")] public string? Type { get; set; }
     [JsonProperty("vote_average")] public double? VoteAverage { get; set; }
     [JsonProperty("vote_count")] public int? VoteCount { get; set; }
+    
+    [JsonProperty("created_at")]
+    public DateTime CreatedAt { get; set; }
+
+    [DefaultValue("CURRENT_TIMESTAMP")]
+    [JsonProperty("updated_at")]
+    [TypeConverter("TIMESTAMP")]
+    [Timestamp]
+    [Required]
+    [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;

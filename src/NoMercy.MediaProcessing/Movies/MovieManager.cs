@@ -35,6 +35,19 @@ public class MovieManager(
                 new("backdrop", movieAppends.BackdropPath)
             ]);
 
+        DateTime folderCreatedAt = DateTime.UtcNow;
+
+        foreach (FolderLibrary folderLibrary in library.FolderLibraries)
+        {
+            string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
+            if(!Directory.Exists(folderName)) continue;
+            
+            DirectoryInfo folderInfo = new(folderName);
+            folderCreatedAt = folderInfo.CreationTimeUtc;
+            
+            if(folderCreatedAt != DateTime.UtcNow) break;
+        }
+
         Movie movie = new()
         {
             LibraryId = library.Id,
@@ -63,7 +76,9 @@ public class MovieManager(
             Trailer = movieAppends.Video,
             Video = movieAppends.Video,
             VoteAverage = movieAppends.VoteAverage,
-            VoteCount = movieAppends.VoteCount
+            VoteCount = movieAppends.VoteCount,
+            
+            CreatedAt = folderCreatedAt,
         };
 
         await movieRepository.Add(movie);

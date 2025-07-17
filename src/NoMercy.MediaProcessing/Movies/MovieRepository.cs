@@ -33,6 +33,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
                 VoteCount = ti.VoteCount,
                 Folder = ti.Folder,
                 LibraryId = ti.LibraryId,
+                CreatedAt = ti.CreatedAt,
                 UpdatedAt = ti.UpdatedAt,
                 _colorPalette = ti._colorPalette
             })

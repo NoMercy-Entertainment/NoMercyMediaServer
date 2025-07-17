@@ -296,20 +296,88 @@ public class LibraryRepository(MediaContext context)
     public async Task<IEnumerable<Movie>> GetLibraryMovies(Guid userId, Ulid libraryId, string language, int take,
         int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)
     {
-        List<Movie> movies = [];
-        await foreach (Movie movie in GetLibraryMoviesQuery(context, userId, libraryId, language, page * take, take))
-            movies.Add(movie);
-        return movies;
+        IQueryable<Movie> x = context.Movies.AsNoTracking()
+            .Where(movie => movie.Library.Id == libraryId)
+            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(libraryMovie => libraryMovie.VideoFiles
+                .Any(videoFile => videoFile.Folder != null) == true
+            )
+            .Include(movie => movie.VideoFiles)
+            .Include(movie => movie.Media
+                .Where(media => media.Iso6391 == language || media.Iso6391 == "en")
+            )
+            .Include(movie => movie.Images
+                .Where(image => image.Iso6391 == language || image.Iso6391 == "en")
+            )
+            .Include(movie => movie.GenreMovies)
+            .ThenInclude(genreMovie => genreMovie.Genre)
+            .Include(movie => movie.Translations
+                .Where(translation => translation.Iso6391 == language || translation.Iso6391 == "en")
+            )
+            .Include(movie => movie.KeywordMovies)
+            .ThenInclude(keywordMovie => keywordMovie.Keyword)
+            .Include(movie => movie.CertificationMovies)
+            .ThenInclude(certificationMovie => certificationMovie.Certification);
+            
+        if (orderByExpression is not null && direction == "desc")
+            return x.OrderByDescending(orderByExpression)
+                .Skip(page * take)
+                .Take(take);
+        if (orderByExpression is not null)
+            return x.OrderBy(orderByExpression)
+                .Skip(page * take)
+                .Take(take);
+
+        return x.OrderBy(special => special.TitleSort)
+            .Skip(page * take)
+            .Take(take);
     }
 
     public async Task<IEnumerable<Tv>> GetLibraryShows(Guid userId, Ulid libraryId, string language, int take, 
         int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null)
     {
-        List<Tv> shows = [];
-        await foreach (Tv show in GetLibraryShowsQuery(context, userId, libraryId, language, page * take, take))
-            shows.Add(show);
-        return shows;
-    }
+        IQueryable<Tv> x = context.Tvs.AsNoTracking()
+            .Where(tv => tv.Library.Id == libraryId)
+            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
+            .Where(libraryTv => libraryTv.Episodes
+                .Any(episode => episode.VideoFiles
+                    .Any(videoFile => videoFile.Folder != null) == true
+                ) == true)
+            .Include(tv => tv.Episodes
+                .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0)
+            )
+            .ThenInclude(episode => episode.VideoFiles)
+            .Include(tv => tv.Media
+                .Where(media => media.Iso6391 == language || media.Iso6391 == "en")
+            )
+            .Include(tv => tv.Images
+                .Where(image => image.Iso6391 == language || image.Iso6391 == "en")
+            )
+            .Include(tv => tv.GenreTvs)
+            .ThenInclude(genreTv => genreTv.Genre)
+            .Include(tv => tv.Translations
+                .Where(translation => translation.Iso6391 == language || translation.Iso6391 == "en")
+            )
+            .Include(tv => tv.KeywordTvs)
+            .ThenInclude(keywordTv => keywordTv.Keyword)
+            .Include(tv => tv.CertificationTvs)
+            .ThenInclude(certificationTv => certificationTv.Certification)
+            .OrderBy(tv => tv.TitleSort);
+            
+            if (orderByExpression is not null && direction == "desc")
+                return x.OrderByDescending(orderByExpression)
+                    .Skip(page * take)
+                    .Take(take);
+            if (orderByExpression is not null)
+                return x.OrderBy(orderByExpression)
+                    .Skip(page * take)
+                    .Take(take);
+
+            return x.OrderBy(special => special.TitleSort)
+                .Skip(page * take)
+                .Take(take);
+        }
+    
 
     public async Task<IEnumerable<Movie>> GetPaginatedLibraryMovies(Guid userId, Ulid libraryId, string letter, string language, 
         int take, int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)

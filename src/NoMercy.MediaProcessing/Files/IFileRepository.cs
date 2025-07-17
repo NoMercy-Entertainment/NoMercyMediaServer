@@ -9,5 +9,4 @@ public interface IFileRepository
     Task<Ulid> StoreMetadata(Metadata metadata);
     Task<Episode?> GetEpisode(int? showId, MediaFile item);
     Task<(Movie? movie, Tv? show, string type)> MediaType(int id, Library library);
-    Task SetCreatedAt(VideoFile videoFile);
 }

@@ -123,8 +123,7 @@ public class HomeService
         foreach (Library library in libraries)
         {
             IEnumerable<Movie> movies =
-                await _libraryRepository.GetLibraryMovies(userId, library.Id, language, 32, 0, m => m.CreatedAt,
-                    "desc");
+                await _libraryRepository.GetLibraryMovies(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc");
             IEnumerable<Tv> shows =
                 await _libraryRepository.GetLibraryShows(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc");
 
@@ -205,7 +204,7 @@ public class HomeService
                         .WithNextId(index == list.Count - 1
                             ? genres.FirstOrDefault()?.Id
                             : $"library_{list.ElementAtOrDefault(index + 1)?.Id}")
-                        .WithTitle("Latest in " + genre.Title)
+                        .WithTitle(genre.Title)
                         .WithMoreLink(genre.MoreLink)
                         .WithItems(
                             genre.Items.Select(item =>

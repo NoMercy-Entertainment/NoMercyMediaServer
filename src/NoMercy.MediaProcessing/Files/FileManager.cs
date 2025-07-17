@@ -220,24 +220,23 @@ public partial class FileManager(
         Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
         if (folder == null) return;
 
-        string fileName = Path.DirectorySeparatorChar + Path.GetFileName(item.Path);
-        string hostFolder = item.Path.Replace(fileName, "");
-        string baseFolder = (Path.DirectorySeparatorChar + (Movie?.Folder ?? Show?.Folder ?? "").Replace("/", "")
-                                                         + item.Path.Replace(folder.Path, ""))
-            .Replace(fileName, "");
-
-        List<Subtitle> subtitles = GetSubtitles(hostFolder);
-
-        List<IVideoTrack> tracks = GetExtraFiles(hostFolder);
-
-        Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
-
-        Metadata metadata = MakeMetadata(item, fileName, baseFolder, hostFolder, tracks);
-
-        Ulid metadataId = await fileRepository.StoreMetadata(metadata);
-
         try
         {
+            string fileName = Path.DirectorySeparatorChar + Path.GetFileName(item.Path);
+            string hostFolder = item.Path.Replace(fileName, "");
+            string baseFolder = (Path.DirectorySeparatorChar + (Movie?.Folder ?? Show?.Folder ?? "").Replace("/", "")
+                                                             + item.Path.Replace(folder.Path, "")).Replace(fileName, "");
+
+            List<Subtitle> subtitles = GetSubtitles(hostFolder);
+
+            List<IVideoTrack> tracks = GetExtraFiles(hostFolder);
+
+            Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
+
+            Metadata metadata = MakeMetadata(item, fileName, baseFolder, hostFolder, tracks);
+
+            Ulid metadataId = await fileRepository.StoreMetadata(metadata);
+
             Logger.App($"Storing video file: {episode?.Id}, {Movie?.Id}", LogEventLevel.Verbose);
             VideoFile videoFile = new()
             {
@@ -262,8 +261,6 @@ public partial class FileManager(
             };
 
             await fileRepository.StoreVideoFile(videoFile);
-
-            await fileRepository.SetCreatedAt(videoFile);
         }
         catch (Exception e)
         {
@@ -351,18 +348,25 @@ public partial class FileManager(
         foreach (VideoStream videoFile in ffprobe.VideoStreams)
         {
             string tag = VideoIsHdr(videoFile) ? "HDR" : "SDR";
+            string fileName = $"/{videoFile.Width}x{videoFile.Height}_{tag}/{videoFile.Width}x{videoFile.Height}_{tag}.m3u8";
             string? videoFolderPath = videoFolders.FirstOrDefault(vf => vf.Contains($"video_{videoFile.Width}x{videoFile.Height}_{tag}"));
             if(string.IsNullOrEmpty(videoFolderPath))
             {
-                Logger.App($"No video folder found for video_{videoFile.Width}x{videoFile.Height}", LogEventLevel.Warning);
-                continue;
+                fileName = $"/{videoFile.Width}x{videoFile.Height}/{videoFile.Width}x{videoFile.Height}.m3u8";
+                videoFolderPath = videoFolders.FirstOrDefault(vf => vf.Contains($"video_{videoFile.Width}x{videoFile.Height}"));
+                if(string.IsNullOrEmpty(videoFolderPath))
+                {
+                    Logger.App($"No video folder found for video_{videoFile.Width}x{videoFile.Height}", LogEventLevel.Warning);
+                    continue;
+                }
             }
+            
             string videoFilePath = Directory.GetFiles(videoFolderPath).First(file => file.EndsWith("m3u8"));
             
             videos.Add(new()
             {
                 //TODO: Fix FileSize and BitRate
-                FileName = $"/{videoFile.Width}x{videoFile.Height}_{tag}/{videoFile.Width}x{videoFile.Height}_{tag}.m3u8",
+                FileName = fileName,
                 FileHash = ComputeFileHash(videoFilePath),
                 FileSize = GetDirectorySize(videoFilePath),
                 Width = videoFile.Width,
@@ -385,9 +389,12 @@ public partial class FileManager(
         
         foreach (AudioStream audioFile in ffprobe.AudioStreams)
         {
+            string fileName =
+                $"/audio_{audioFile.Language}_{audioFile.CodecName}/audio_{audioFile.Language}_{audioFile.CodecName}.m3u8";
             string? audioFolderPath = audioFolders.FirstOrDefault(vf => vf.Contains($"audio_{audioFile.Language}_{audioFile.CodecName}"));
             if (string.IsNullOrEmpty(audioFolderPath))
             {
+                fileName = $"/audio_{audioFile.Language}/audio_{audioFile.Language}.m3u8";
                 audioFolderPath = audioFolders.FirstOrDefault(vf => vf.Contains($"audio_{audioFile.Language}"));
             }
             if(string.IsNullOrEmpty(audioFolderPath))
@@ -402,7 +409,7 @@ public partial class FileManager(
             audios.Add(new()
             {
                 //:TODO: Fix FileSize and BitRate
-                FileName = $"/audio_{audioFile.Language}_{audioFile.CodecName}/audio_{audioFile.Language}_{audioFile.CodecName}.m3u8",
+                FileName = fileName,
                 FileHash = ComputeFileHash(audioFilePath),
                 FileSize = GetDirectorySize(audioFilePath),
                 
