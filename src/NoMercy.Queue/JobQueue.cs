@@ -69,12 +69,15 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         }
         catch (Exception e)
         {
-            Logger.Queue(e.Message, LogEventLevel.Error);
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return null;
             if (attempt < 10)
             {
                 Thread.Sleep(2000);
-                return ReserveJob(name, currentJobId, attempt + 1);
+                ReserveJob(name, currentJobId, attempt + 1);
+            }
+            else
+            {
+                Logger.Queue(e.Message, LogEventLevel.Error);
             }
         }
 
@@ -110,12 +113,15 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         }
         catch (Exception e)
         {
-            Logger.Queue(e.Message, LogEventLevel.Error);
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return;
             if (attempt < 10)
             {
                 Thread.Sleep(2000);
                 FailJob(queueJob, exception, attempt + 1);
+            }
+            else
+            {
+                Logger.Queue(e.Message, LogEventLevel.Error);
             }
         }
     }
@@ -171,7 +177,8 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
             }
         }
         catch (Exception e)
-        {
+        {            
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return;
             if (attempt < 10)
             {
                 Thread.Sleep(2000);

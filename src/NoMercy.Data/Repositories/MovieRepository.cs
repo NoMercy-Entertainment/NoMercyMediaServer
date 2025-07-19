@@ -27,7 +27,8 @@ public class MovieRepository(MediaContext context)
                 .ThenInclude(crewMovie => crewMovie.Job)
                 .Include(movie => movie.Library)
                 .ThenInclude(library => library.LibraryUsers)
-                .Include(movie => movie.Media)
+                .Include(movie => movie.Media
+                    .Where(media => media.Type == "Trailer"))
                 .Include(movie => movie.AlternativeTitles)
                 .Include(movie => movie.Translations
                     .Where(translation => translation.Iso6391 == language))

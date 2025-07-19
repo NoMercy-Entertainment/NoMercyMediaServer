@@ -288,4 +288,12 @@
     <Key>Most listened album</Key>
     <Value lang="nl">Most listened album</Value>
   </Entry>
+  <Entry>
+    <Key>Trailer found</Key>
+    <Value lang="nl">Trailer found</Value>
+  </Entry>
+  <Entry>
+    <Key>Trailer not found</Key>
+    <Value lang="nl">Trailer not found</Value>
+  </Entry>
 </I18N>

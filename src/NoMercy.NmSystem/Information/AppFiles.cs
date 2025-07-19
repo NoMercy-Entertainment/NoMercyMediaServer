@@ -43,6 +43,7 @@ public static class AppFiles
     public static string FfmpegFolder => Path.Combine(BinariesPath, "ffmpeg");
     public static string FfmpegPath => Path.Combine(FfmpegFolder, "ffmpeg" + Info.ExecSuffix);
     public static string FfProbePath => Path.Combine(FfmpegFolder, "ffprobe" + Info.ExecSuffix);
+    public static string YtdlpPath => Path.Combine(FfmpegFolder, "yt-dlp" + Info.ExecSuffix);
 
     public static string TesseractFolder => Path.Combine(BinariesPath, "tesseract");
     public static string TesseractModelsFolder => Path.Combine(TesseractFolder, "tessdata");

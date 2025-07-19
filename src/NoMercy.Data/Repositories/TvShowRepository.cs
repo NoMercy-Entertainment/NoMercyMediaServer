@@ -21,7 +21,8 @@ public class TvShowRepository(MediaContext context)
                 .Include(tv => tv.TvUser)
                 .Include(tv => tv.Library)
                 .ThenInclude(library => library.LibraryUsers)
-                .Include(tv => tv.Media)
+                .Include(tv => tv.Media
+                    .Where(media => media.Type == "Trailer"))
                 .Include(tv => tv.AlternativeTitles)
                 .Include(tv => tv.Translations
                     .Where(translation => translation.Iso6391 == language))

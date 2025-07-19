@@ -40,6 +40,11 @@ public class VideoPlaylistResponseDto
     [JsonProperty("seasonName")] public string? SeasonName { get; set; }
     [JsonProperty("episode_id")] public int? EpisodeId { get; set; }
 
+    public VideoPlaylistResponseDto()
+    {
+        
+    }
+
     public VideoPlaylistResponseDto(Episode episode, string playlistType, dynamic playlistId, int? index = null)
     {
         VideoFile? videoFile = episode.VideoFiles.FirstOrDefault();

@@ -7,7 +7,6 @@ using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Server.AppConfig;
@@ -140,20 +139,20 @@ public static class ApplicationConfiguration
 
     private static void ConfigureStaticFiles(IApplicationBuilder app)
     {
-        Folders.EmptyFolder(AppFiles.TranscodePath);
+        // Folders.EmptyFolder(AppFiles.TranscodePath);
 
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-            RequestPath = new("/transcode"),
+            RequestPath = new("/transcodes"),
             ServeUnknownFileTypes = true,
             HttpsCompression = HttpsCompressionMode.Compress
         });
-
+        
         app.UseDirectoryBrowser(new DirectoryBrowserOptions
         {
             FileProvider = new PhysicalFileProvider(AppFiles.TranscodePath),
-            RequestPath = new("/transcode")
+            RequestPath = new("/transcodes")
         });
     }
 
