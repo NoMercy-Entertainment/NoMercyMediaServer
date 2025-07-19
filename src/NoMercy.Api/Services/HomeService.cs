@@ -159,7 +159,6 @@ public class HomeService
                     .Build()
                 } : [],
                 
-                ..continueWatching.Count > 0 ? new[] {
                 new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/home/continue")
@@ -170,7 +169,6 @@ public class HomeService
                         .WithMoreLink(null)
                         .WithItems(GetContinueWatchingItems(continueWatching, country)))
                     .Build(),
-                } : [],
 
                 ..list.Select((genre, index) => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
