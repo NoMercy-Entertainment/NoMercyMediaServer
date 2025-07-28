@@ -9,7 +9,7 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
 {
     private readonly int _seasonNumber;
 
-    public TmdbSeasonClient(int tvId, int seasonNumber, string[]? appendices = null) : base(tvId)
+    public TmdbSeasonClient(int tvId, int seasonNumber, string[]? appendices = null, string? language = "en-US") : base(tvId, language!)
     {
         _seasonNumber = seasonNumber;
     }

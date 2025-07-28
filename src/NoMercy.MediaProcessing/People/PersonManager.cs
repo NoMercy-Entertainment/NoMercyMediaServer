@@ -480,35 +480,45 @@ public class PersonManager(
     /** Note: The data returned here is a reduced set to improve performance. */
     private async Task<List<TmdbPersonAppends>> FetchPeopleByIds(List<int> ids)
     {
-        List<TmdbPersonAppends> personAppends = [];
-
-        await Parallel.ForEachAsync(ids, async (id, _) =>
+        try
         {
-            try
-            {
-                using TmdbPersonClient personClient = new(id);
-                TmdbPersonAppends? personTask = await personClient.WithAppends([
-                    "external_ids",
-                    "images",
-                    "translations"
-                ]);
+            List<TmdbPersonAppends> personAppends = [];
 
-                if (personTask?.Name is null)
+            await Parallel.ForEachAsync(ids, async (id, _) =>
+            {
+                try
                 {
-                    Logger.MovieDb($"Person {id} not found", LogEventLevel.Warning);
-                    return;
+                    using TmdbPersonClient personClient = new(id);
+                    TmdbPersonAppends? personTask = await personClient.WithAppends([
+                        "external_ids",
+                        "images",
+                        "translations"
+                    ]);
+
+                    if (personTask?.Name is null)
+                    {
+                        Logger.MovieDb($"Person {id} not found", LogEventLevel.Warning);
+                        return;
+                    }
+
+                    personAppends.Add(personTask);
                 }
-
-                personAppends.Add(personTask);
-            }
-            catch (Exception e)
-            {
-                Logger.MovieDb(e.Message, LogEventLevel.Error);
-            }
-        });
-
-        return personAppends
-            .OrderBy(f => f.Name)
-            .ToList();
+                catch (Exception e)
+                {
+                    Logger.MovieDb(e.Message, LogEventLevel.Error);
+                }
+            });
+            
+            return personAppends
+                .Where(f => f is { Name: not null })
+                .OrderBy(f => f!.Name)
+                .ToList();
+        }
+        catch (Exception e)
+        {
+            Logger.MovieDb(e.Message, LogEventLevel.Error);
+        }
+        
+        return [];
     }
 }

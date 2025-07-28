@@ -9,7 +9,7 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public class TmdbTvClient : TmdbBaseClient
 {
-    public TmdbTvClient(int? id = 0, string[]? appendices = null) : base((int)id!)
+    public TmdbTvClient(int? id = 0, string[]? appendices = null, string? language = "en-US") : base((int)id!, language!)
     {
     }
 

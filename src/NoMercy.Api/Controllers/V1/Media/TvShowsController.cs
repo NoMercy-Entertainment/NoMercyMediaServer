@@ -46,7 +46,7 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
                 Data = new(tv, language)
             });
 
-        TmdbTvClient tmdbTvClient = new(id);
+        TmdbTvClient tmdbTvClient = new(id, language: language);
         TmdbTvShowAppends? tvShowAppends = await tmdbTvClient.WithAllAppends(true);
 
         if (tvShowAppends is null)

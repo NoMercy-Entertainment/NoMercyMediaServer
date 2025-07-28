@@ -44,7 +44,7 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
                 Data = new(movie, country)
             });
 
-        TmdbMovieClient tmdbMovieClient = new(id);
+        TmdbMovieClient tmdbMovieClient = new(id, language: language);
         TmdbMovieAppends? movieAppends = await tmdbMovieClient.WithAllAppends(true);
 
         if (movieAppends is null)

@@ -98,7 +98,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
                 Data = new(collection)
             });
 
-        TmdbCollectionClient tmdbCollectionsClient = new(id);
+        TmdbCollectionClient tmdbCollectionsClient = new(id, language: language);
         TmdbCollectionAppends? collectionAppends = await tmdbCollectionsClient.WithAllAppends(true);
 
         if (collectionAppends is null)

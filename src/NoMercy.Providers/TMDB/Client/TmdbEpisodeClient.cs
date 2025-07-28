@@ -10,7 +10,7 @@ public class TmdbEpisodeClient : TmdbBaseClient
     private readonly int _episodeNumber;
     private readonly int _seasonNumber;
 
-    public TmdbEpisodeClient(int id, int seasonNumber, int episodeNumber, string[]? appendices = null) : base(id)
+    public TmdbEpisodeClient(int id, int seasonNumber, int episodeNumber, string[]? appendices = null, string? language = "en-US") : base(id, language!)
     {
         _seasonNumber = seasonNumber;
         _episodeNumber = episodeNumber;

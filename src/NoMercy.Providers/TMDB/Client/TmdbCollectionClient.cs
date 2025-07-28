@@ -6,7 +6,7 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public class TmdbCollectionClient : TmdbBaseClient
 {
-    public TmdbCollectionClient(int id, string[]? appendices = null) : base(id)
+    public TmdbCollectionClient(int id, string[]? appendices = null, string? language = "en-US") : base(id, language!)
     {
     }
 

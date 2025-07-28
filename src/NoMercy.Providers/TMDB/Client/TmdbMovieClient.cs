@@ -12,8 +12,7 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
 {
     private readonly MovieResponseMocks? _mockDataProvider;
 
-    public TmdbMovieClient(int? id = 0, string[]? appendices = null, MovieResponseMocks? mockDataProvider = null) :
-        base((int)id!)
+    public TmdbMovieClient(int? id = 0, string[]? appendices = null, MovieResponseMocks? mockDataProvider = null, string? language = "en-US") : base((int)id!, language!)
     {
         _mockDataProvider = mockDataProvider;
     }

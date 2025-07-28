@@ -12,6 +12,7 @@ namespace NoMercy.Providers.TMDB.Client;
 public class TmdbBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new("https://api.themoviedb.org/3/");
+    private readonly string Language;
 
     private readonly HttpClient _client = new();
 
@@ -23,20 +24,19 @@ public class TmdbBaseClient : IDisposable
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
+        Language = "en-US";
     }
 
-    protected TmdbBaseClient(int id)
+    protected TmdbBaseClient(int id, string language = "en-US")
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
+        _baseUrl = new("https://api.themoviedb.org/3/");
+        _client.BaseAddress = _baseUrl;
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
-        Id = id;
+        Language = language;
     }
 
     private static Helpers.Queue? _queue;
@@ -62,6 +62,8 @@ public class TmdbBaseClient : IDisposable
         where T : class
     {
         query ??= new();
+        
+        query["language"] = Language;
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
