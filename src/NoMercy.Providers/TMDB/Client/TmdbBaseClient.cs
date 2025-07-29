@@ -14,6 +14,8 @@ public class TmdbBaseClient : IDisposable
     private readonly Uri _baseUrl = new("https://api.themoviedb.org/3/");
     private readonly string Language;
 
+    public int Id { get; private set; }
+
     private readonly HttpClient _client = new();
 
     protected TmdbBaseClient()
@@ -37,6 +39,7 @@ public class TmdbBaseClient : IDisposable
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
         Language = language;
+        Id = id;
     }
 
     private static Helpers.Queue? _queue;
@@ -54,8 +57,6 @@ public class TmdbBaseClient : IDisposable
                 : wanted
             : available;
     }
-
-    public int Id { get; private set; }
 
     protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = null, bool? priority = false,
         bool skipCache = false)
