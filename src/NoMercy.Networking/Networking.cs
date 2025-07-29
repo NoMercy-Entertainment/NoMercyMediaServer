@@ -62,10 +62,11 @@ public class Networking
 
     private static void NetworkAddressChanged(object? sender, EventArgs e)
     { 
-        Logger.Setup("Network address changed, updating IPs");
-        Logger.Setup(e);
+        string ip = GetInternalIp();
+        if (ip == InternalIp) return;
         
-        InternalIp = GetInternalIp();
+        InternalIp = ip;
+        
         _ = OnIpChanged(InternalIp);
     }
 
@@ -146,7 +147,7 @@ public class Networking
     
     private static async Task OnIpChanged(string? newIp)
     {
-        Logger.Setup($"IP changed to: {newIp}");
+        Logger.Setup($"Network address changed, updating IPs, IP changed to: {newIp}");
 
         if (string.IsNullOrEmpty(newIp))
         {

@@ -28,8 +28,7 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
                 {
                     Implicit = new()
                     {
-                        AuthorizationUrl =
-                            new($"{Config.AuthBaseUrl}protocol/openid-connect/auth"),
+                        AuthorizationUrl = new($"{Config.AuthBaseUrl}protocol/openid-connect/auth"),
                         Scopes = new Dictionary<string, string>
                         {
                             { "openid", "openid" },
@@ -47,7 +46,9 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
                     Type = ReferenceType.SecurityScheme
                 },
                 In = ParameterLocation.Header,
-                Name = "Bearer",
+                Name = "Authorization",
+                Type = SecuritySchemeType.OAuth2,
+                Description = "Use the Keycloak authorization server to authenticate.",
                 Scheme = "Bearer"
             };
 
