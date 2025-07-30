@@ -126,10 +126,10 @@ public class HomeRepository
                     userData.TvId,
                     userData.SpecialId
                 })
-                .Where(user => 
-                    // Filter out items that have been finished watching, 90% for episodes, 80% for movies
-                    (user.VideoFile.Episode != null && user.Time < user.VideoFile.Duration.ToSeconds() * 0.9) || 
-                    (user.VideoFile.Movie != null && user.Time < user.VideoFile.Duration.ToSeconds() * 0.8))
+                // .Where(user => 
+                //     // Filter out items that have been finished watching, 90% for episodes, 80% for movies
+                //     (user.VideoFile.Episode != null && user.Time < user.VideoFile.Duration.ToSeconds() * 0.9) || 
+                //     (user.VideoFile.Movie != null && user.Time < user.VideoFile.Duration.ToSeconds() * 0.8))
                 .ToHashSet();
 
     public readonly Func<MediaContext, Guid, Task<HashSet<Image>>> GetScreensaverImagesQuery =
