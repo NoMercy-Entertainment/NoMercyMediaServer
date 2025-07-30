@@ -103,7 +103,15 @@ public class HomeService
 
         genres = genres.Where(genre => genre.Items.Any()).ToList();
 
-        Render homeCardItem = await GetHomeCard(userId, language, new());
+        NmCardDto? homeCardItem = genres.Where(g => g.Title != string.Empty)
+            .Randomize().FirstOrDefault()
+            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != string.Empty)
+            .Randomize().FirstOrDefault()
+            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != string.Empty)
+            .Randomize().FirstOrDefault()
+            ?.Items.Randomize().FirstOrDefault() ?? genres.Where(g => g.Title != string.Empty)
+            .Randomize().FirstOrDefault()
+            ?.Items.Randomize().FirstOrDefault();
 
         List<Library> libraries = await _homeRepository.GetLibrariesQuery(_mediaContext, userId);
         List<NmCarouselDto<NmCardDto>> list = [];
@@ -143,7 +151,13 @@ public class HomeService
         {
             Data =
             [
-                homeCardItem,
+                ..homeCardItem != null ? new[] {
+                    new ComponentBuilder<NmCardDto>()
+                    .WithComponent("NMHomeCard")
+                    .WithUpdate("pageLoad", "/home/card")
+                    .WithProps(props => props.WithData(homeCardItem))
+                    .Build()
+                } : [],
                 
                 new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
