@@ -93,7 +93,7 @@ public static class Logger
         { "twitter", new("twitter", "Twitter", Color.Green, "Notifications") },
         { "webhook", new("webhook", "Webhook", Color.Green, "Notifications") },
         { "whatsapp", new("whatsapp", "Whatsapp", Color.Green, "Notifications") },
-        { "telegram", new("telegram", "Telegram", Color.Green, "Notifications") },
+        { "telegram", new("telegram", "Telegram", Color.Green, "Notifications") }
     };
 
     static Logger()

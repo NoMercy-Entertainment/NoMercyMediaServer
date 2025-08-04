@@ -35,7 +35,7 @@ public class MetadataTests
                 new() { FileSize = 15 },
                 new() { FileSize = 25 }
             ],
-            FontsFile = new() { FileSize = 100 },
+            FontsFile = new() { FileSize = 100 }
         };
 
         long expectedTotalSize =

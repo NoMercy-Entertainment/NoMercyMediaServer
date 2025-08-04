@@ -43,23 +43,23 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         {
             Track track = new()
             {
-                Id = foundTrack.Id,
-                Name = foundTrack.Title,
+                Id = FoundTrack.Id,
+                Name = FoundTrack.Title,
                 FolderId = folder.Id,
-                TrackNumber = foundTrack.Position
+                TrackNumber = FoundTrack.Position
             };
 
             try
             {
                 BaseContainer container = BaseContainer.Create(profile.Container);
 
-                BuildAudioStreams(profile, ref container, foundTrack, folderMetaData.MusicBrainzRelease);
+                BuildAudioStreams(profile, ref container, FoundTrack, FolderMetaData.MusicBrainzRelease);
 
                 VideoAudioFile ffmpeg = new FfMpeg()
-                    .Open(mediaFile.Path);
+                    .Open(MediaFile.Path);
 
-                ffmpeg.SetBasePath(folderMetaData.BasePath);
-                ffmpeg.SetTitle(mediaFile.Name);
+                ffmpeg.SetBasePath(FolderMetaData.BasePath);
+                ffmpeg.SetTitle(MediaFile.Name);
                 ffmpeg.ToFile(track.CreateTitle());
 
                 ffmpeg.AddContainer(container);
@@ -73,13 +73,13 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 ProgressMeta progressMeta = new()
                 {
                     Id = track.Id,
-                    Title = foundTrack.Title,
-                    BaseFolder = folderMetaData.BasePath,
+                    Title = FoundTrack.Title,
+                    BaseFolder = FolderMetaData.BasePath,
                     Type = "audio"
                 };
 
                 Logger.Encoder(fullCommand);
-                await ffmpeg.Run(fullCommand, folderMetaData.BasePath, progressMeta);
+                await ffmpeg.Run(fullCommand, FolderMetaData.BasePath, progressMeta);
 
                 await AddRecording(container, folder);
 
@@ -87,7 +87,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 {
                     Id = track.Id,
                     Status = "completed",
-                    Title = foundTrack.Title,
+                    Title = FoundTrack.Title,
                     Message = "Done"
                 });
             }
@@ -99,7 +99,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 {
                     Id = track.Id,
                     Status = "failed",
-                    Title = foundTrack.Title,
+                    Title = FoundTrack.Title,
                     Message = e.Message
                 });
             }
@@ -126,17 +126,17 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 .EnableFileListing()
                 .FilterByMediaType("music")
                 .FilterByFileName(container.FileName)
-                .Process(folderMetaData.BasePath)
+                .Process(FolderMetaData.BasePath)
         ).First();
 
         mediaFolder.Files?.FilterConcurrentBag([container.FileName]);
 
         CoverArtImageManagerManager.CoverPalette? coverPalette =
-            await CoverArtImageManagerManager.Add(folderMetaData.MusicBrainzRelease.Id);
+            await CoverArtImageManagerManager.Add(FolderMetaData.MusicBrainzRelease.Id);
 
-        await Parallel.ForEachAsync(folderMetaData.MusicBrainzRelease.Media, async (media, t) =>
+        await Parallel.ForEachAsync(FolderMetaData.MusicBrainzRelease.Media, async (media, t) =>
         {
-            if (!await recordingManager.Store(folderMetaData.MusicBrainzRelease, foundTrack, media,
+            if (!await recordingManager.Store(FolderMetaData.MusicBrainzRelease, FoundTrack, media,
                     folder, mediaFolder, coverPalette)) return;
 
             Library? albumLibrary = folder.FolderLibraries
@@ -148,10 +148,10 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 return;
             }
 
-            await Parallel.ForEachAsync(foundTrack.ArtistCredit, t, async (artist, _) =>
+            await Parallel.ForEachAsync(FoundTrack.ArtistCredit, t, async (artist, _) =>
             {
                 Logger.MusicBrainz($"Storing Artist: {artist.MusicBrainzArtist.Name}", LogEventLevel.Verbose);
-                await artistManager.Store(artist.MusicBrainzArtist, albumLibrary, folder, mediaFolder, foundTrack);
+                await artistManager.Store(artist.MusicBrainzArtist, albumLibrary, folder, mediaFolder, FoundTrack);
 
                 jobDispatcher.DispatchJob<MusicDescriptionJob>(artist.MusicBrainzArtist);
             });

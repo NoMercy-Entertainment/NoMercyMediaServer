@@ -189,7 +189,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
                 Muting = true,
                 Next = true,
                 Seeking = true,
-                Stopping = true,
+                Stopping = true
             }
         };
     }

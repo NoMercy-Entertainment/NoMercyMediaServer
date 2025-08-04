@@ -1,4 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using NoMercy.Database;
+using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -13,6 +18,24 @@ public static class Dev
 {
     public static async Task Run()
     {
+        await using MediaContext context = new();
+        Library? lib = await context.Libraries
+            .Include(lib => lib.FolderLibraries)
+            .ThenInclude(fl => fl.Folder)
+            .FirstOrDefaultAsync(l => l.Type == "anime");
+
+        string? path = lib?.FolderLibraries
+            .Select(fl => fl.Folder.Path)
+            .FirstOrDefault();
+        
+        if (string.IsNullOrEmpty(path))
+        {
+            Logger.Encoder("No anime library found");
+            return;
+        }
+        
+        PrefixFontFiles(path);
+
         // await Task.Delay(TimeSpan.FromSeconds(10));
         // MediaContext context = new();
         // Library lib = context.Libraries.First(l => l.Type == "movie");
@@ -50,7 +73,7 @@ public static class Dev
         //     UpdatedAt = DateTime.Now
         // })
         // .RunAsync();
-        
+
         // Logger.Setup("Throwing test exception");
         // try
         // {
@@ -210,5 +233,52 @@ public static class Dev
         Rgb24 dominant = image[0, 0];
 
         return dominant.ToHexString();
+    }
+
+    public class Font
+    {
+        [JsonProperty("mimeType")] public string MimeType { get; set; } = string.Empty;
+        [JsonProperty("file")] public string File { get; set; } = string.Empty;
+    }
+
+    private static void PrefixFontFiles(string rootPath)
+    {
+        string[] subFolders = Directory.GetDirectories(rootPath);
+
+        foreach (string folder in subFolders)
+        {
+            Logger.Encoder($"Cluster: {Path.GetFileName(folder)}");
+            string[] fontsJsonFiles = Directory.GetFiles(folder, "fonts.json", SearchOption.AllDirectories);
+
+            foreach (string fontsJson in fontsJsonFiles)
+            {
+                try
+                {
+                    string json = File.ReadAllText(fontsJson);
+                    Font[]? fonts = json.FromJson<Font[]>();
+
+                    if (fonts == null) continue;
+
+                    bool changed = false;
+
+                    foreach (Font font in fonts)
+                    {
+                        if (string.IsNullOrEmpty(font.File) || font.File.StartsWith("fonts/")) continue;
+
+                        font.File = "fonts/" + font.File;
+                        changed = true;
+                    }
+
+                    if (!changed) continue;
+
+                    File.WriteAllText(fontsJson, JsonConvert.SerializeObject(fonts, Formatting.Indented));
+                    Logger.Encoder($"Updated: {fontsJson}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Encoder($"Error processing {fontsJson}: {ex.Message}");
+                }
+            }
+        }
     }
 }

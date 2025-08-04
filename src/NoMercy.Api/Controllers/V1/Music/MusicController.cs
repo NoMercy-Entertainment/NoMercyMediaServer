@@ -124,7 +124,7 @@ public class MusicController : BaseController
                                         .WithTitle("Most listened artist".Localize())
                                         .WithData(favoritePlaylist))
                                     .Build()
-                                : new(),
+                                : new()
                         ]))
                     .Build(),
                 
@@ -222,7 +222,7 @@ public class MusicController : BaseController
                                     Data = item
                                 }
                             })))
-                    .Build(),
+                    .Build()
             ]
         });
     }
@@ -293,9 +293,9 @@ public class MusicController : BaseController
                                         .WithTitle("Most listened artist".Localize())
                                         .WithData(favoritePlaylist))
                                     .Build()
-                                : new(),
+                                : new()
                         ]))
-                    .Build(),
+                    .Build()
             ]
         });
     }
@@ -335,8 +335,8 @@ public class MusicController : BaseController
                                     Data = item
                                 }
                             })))
-                    .Build(),
-            ],
+                    .Build()
+            ]
         });
     }
 
@@ -377,8 +377,8 @@ public class MusicController : BaseController
                                     Data = item
                                 }
                             })))
-                    .Build(),
-            ],
+                    .Build()
+            ]
         });
     }
 
@@ -416,8 +416,8 @@ public class MusicController : BaseController
                                     Data = item
                                 }
                             })))
-                    .Build(),
-            ],
+                    .Build()
+            ]
         });
     }
 

@@ -118,7 +118,7 @@ public class VideoPlaybackService
                     Pausing = true,
                     Resuming = true,
                     Seeking = true,
-                    Stopping = true,
+                    Stopping = true
                 }
             };
         }
@@ -157,7 +157,7 @@ public class VideoPlaybackService
                 : null,
             SpecialId = state.CurrentItem.PlaylistType == "specials"
                 ? Ulid.Parse(state.CurrentItem.PlaylistId) 
-                : null,
+                : null
         };
 
         await using MediaContext mediaContext = new();

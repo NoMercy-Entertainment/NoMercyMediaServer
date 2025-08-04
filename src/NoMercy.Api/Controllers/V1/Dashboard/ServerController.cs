@@ -308,7 +308,7 @@ public class ServerController(
             Arch = Info.Architecture,
             Version = Software.GetReleaseVersion(),
             BootTime = Info.StartTime,
-            SetupComplete = setupComplete,
+            SetupComplete = setupComplete
         });
     }
 

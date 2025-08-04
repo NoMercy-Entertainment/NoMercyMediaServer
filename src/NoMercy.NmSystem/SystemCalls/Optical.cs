@@ -238,7 +238,7 @@ public static class Optical
 
         // Check for DVD
         if (Directory.Exists(Path.Combine(drivePath, "VIDEO_TS")))
-            return OpticalDiscType.DVD;
+            return OpticalDiscType.Dvd;
 
         // Check for CD (Audio CD or Data CD)
         try
@@ -246,7 +246,7 @@ public static class Optical
             DriveInfo drive = new(drivePath);
             if (drive.DriveType == DriveType.CDRom && drive.IsReady)
                 // If we get here and it's not BD or DVD, it's some form of CD
-                return OpticalDiscType.CD;
+                return OpticalDiscType.Cd;
         }
         catch
         {

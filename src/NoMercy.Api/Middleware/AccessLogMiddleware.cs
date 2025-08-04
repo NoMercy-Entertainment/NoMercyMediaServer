@@ -37,7 +37,7 @@ public class AccessLogMiddleware
     private readonly string[] _ignoreIfAuthenticated =
     [
         "/videoHub",
-        "/musicHub",
+        "/musicHub"
     ];
 
     private readonly string[] _ignoreIfGuest =

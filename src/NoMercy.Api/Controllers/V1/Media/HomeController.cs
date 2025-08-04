@@ -202,7 +202,7 @@ public class HomeController : BaseController
                             Label = t.Value.Name,
                             File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                             Language = t.Key,
-                            Kind = "subtitles",
+                            Kind = "subtitles"
                         }).ToList(), 
                     Sources =
                     [
@@ -212,7 +212,7 @@ public class HomeController : BaseController
                             Type = "application/x-mpegURL",
                             Languages = [trailerInfo.Language ?? ""]
                         }
-                    ],
+                    ]
                 }
             );
         }
@@ -234,7 +234,7 @@ public class HomeController : BaseController
 
         Shell.ExecResult x  = Shell.ExecSync("yt-dlp", sb.ToString(), new()
         {
-            WorkingDirectory = folder,
+            WorkingDirectory = folder
         });
         
         Logger.Encoder(x, LogEventLevel.Debug);
@@ -261,7 +261,7 @@ public class HomeController : BaseController
                         Label = t.Value.Name,
                         File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                         Language = t.Key,
-                        Kind = "subtitles",
+                        Kind = "subtitles"
                     }).ToList(), 
                 Sources =
                 [
@@ -271,7 +271,7 @@ public class HomeController : BaseController
                         Type = "application/x-mpegURL",
                         Languages = [trailerInfo.Language ?? ""]
                     }
-                ],
+                ]
             }
         );
     }

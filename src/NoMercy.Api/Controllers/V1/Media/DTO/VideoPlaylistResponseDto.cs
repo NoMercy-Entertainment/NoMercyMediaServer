@@ -88,7 +88,7 @@ public class VideoPlaylistResponseDto
             ? new ProgressDto
             {
                 Time = userData.Time ?? 0,
-                Date = userData.UpdatedAt,
+                Date = userData.UpdatedAt
             }
             : null;
         Image = episode.Still is not null ? "https://image.tmdb.org/t/p/original" + episode.Still : null;
@@ -127,7 +127,7 @@ public class VideoPlaylistResponseDto
         {
             FileName = $"{baseFolder}{font.FileName}",
             FileHash = font.FileHash,
-            FileSize = font.FileSize,
+            FileSize = font.FileSize
         }).ToList() ?? [];
 
         Audio = videoFile.Metadata?.Audio ?? [];
@@ -203,7 +203,7 @@ public class VideoPlaylistResponseDto
         {
             FileName = $"{baseFolder}{font.FileName}",
             FileHash = font.FileHash,
-            FileSize = font.FileSize,
+            FileSize = font.FileSize
         }).ToList() ?? [];
         
         Audio = videoFile.Metadata?.Audio ?? [];

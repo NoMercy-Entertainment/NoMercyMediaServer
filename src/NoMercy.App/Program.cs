@@ -56,13 +56,13 @@ internal class Program
                 (object sender, string scheme, string url, out string contentType) =>
                 {
                     contentType = "text/javascript";
-                    return new MemoryStream(@"
+                    return new MemoryStream("""
                         (() =>{
                             window.setTimeout(() => {
                                 alert(`🎉 Dynamically inserted JavaScript.`);
                             }, 1000);
                         })();
-                    "u8.ToArray());
+                    """u8.ToArray());
                 })
             .RegisterWebMessageReceivedHandler((object sender, string message) =>
             {

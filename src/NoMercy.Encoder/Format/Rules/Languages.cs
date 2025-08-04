@@ -219,7 +219,7 @@ public class Languages
             Tha, Tib, Tir, Ton, Tsn, Tso, Tuk,
             Tur, Twi, Uig, Ukr, Urd, Uzb, Ven,
             Vie, Vol, Wel, Wln, Wol, Xho, Yid,
-            Yor, Zha, Zul, Ipk,
+            Yor, Zha, Zul, Ipk
         ];
     }
 }

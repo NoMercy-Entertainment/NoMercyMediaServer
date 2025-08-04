@@ -115,8 +115,8 @@ public class JobDispatcher
         {
             Id = id,
             FolderId = folderId,
-            foundTrack = foundTrack, folderMetaData = folderMetaData,
-            mediaFile = mediaFile, LibraryId = libraryId,
+            FoundTrack = foundTrack, FolderMetaData = folderMetaData,
+            MediaFile = mediaFile, LibraryId = libraryId,
             InputFolder = inputFolder, InputFile = inputFile
         };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);

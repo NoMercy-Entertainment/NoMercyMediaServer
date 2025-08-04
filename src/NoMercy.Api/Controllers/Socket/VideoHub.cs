@@ -68,7 +68,7 @@ public class VideoHub : ConnectionHub
                 : null,
             SpecialId = request.PlaylistType == "specials"
                 ? Ulid.Parse(request.PlaylistId) 
-                : null,
+                : null
         };
 
         await using MediaContext mediaContext = new();
@@ -78,8 +78,8 @@ public class VideoHub : ConnectionHub
         query = request.PlaylistType switch
         {
             "movie" => query.On(x => new { x.VideoFileId, x.UserId, x.MovieId }),
-            "tv" => query.On(x => new { x.VideoFileId, x.UserId, x.TvId, }),
-            "collection" => query.On(x => new { x.VideoFileId, x.UserId, x.CollectionId, }),
+            "tv" => query.On(x => new { x.VideoFileId, x.UserId, x.TvId }),
+            "collection" => query.On(x => new { x.VideoFileId, x.UserId, x.CollectionId }),
             "specials" => query.On(x => new { x.VideoFileId, x.UserId, x.SpecialId }),
             _ => throw new ArgumentException("Invalid playlist type", request.PlaylistType)
         };
@@ -251,7 +251,7 @@ public class VideoHub : ConnectionHub
                 Pausing = !state.PlayState,
                 Resuming = state.PlayState,
                 Previous = playlist.IndexOf(item) == 0,
-                Next = playlist.IndexOf(item) == playlist.Count - 1,
+                Next = playlist.IndexOf(item) == playlist.Count - 1
             }
         };
     }
@@ -368,7 +368,7 @@ public class VideoHub : ConnectionHub
                         Pausing = true,
                         Muting = true,
                         Seeking = true,
-                        Stopping = true,
+                        Stopping = true
                     }
                 };
             }
@@ -385,7 +385,7 @@ public class VideoHub : ConnectionHub
                         Seeking = true,
                         Muting = true,
                         Previous = playerState.CurrentItem is null || playerState.Playlist.IndexOf(playerState.CurrentItem) == 0,
-                        Next = playerState.CurrentItem is null || playerState.Playlist.IndexOf(playerState.CurrentItem) == playerState.Playlist.Count - 1,
+                        Next = playerState.CurrentItem is null || playerState.Playlist.IndexOf(playerState.CurrentItem) == playerState.Playlist.Count - 1
                     }
                 };
             }

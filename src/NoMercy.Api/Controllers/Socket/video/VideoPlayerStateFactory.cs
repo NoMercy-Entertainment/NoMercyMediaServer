@@ -58,11 +58,11 @@ public class VideoPlayerStateFactory
             {
                 Video = new()
                 {
-                    Width = width,
+                    Width = width
                 },
                 Audio = audioLanguage is not null 
                     ? new() {
-                        Language = audioLanguage,
+                        Language = audioLanguage
                     } 
                     : null,
                 Subtitle = subtitleLanguage is not null 
@@ -72,7 +72,7 @@ public class VideoPlayerStateFactory
                         Type = subtitleType,
                         Codec = subtitleCodec
                     } 
-                    : null,
+                    : null
             };
         }
         
@@ -99,7 +99,7 @@ public class VideoPlayerStateFactory
                     Pausing = false,
                     Resuming = true,
                     Previous = playlist.IndexOf(item) == 0,
-                    Next = playlist.IndexOf(item) == playlist.Count - 1,
+                    Next = playlist.IndexOf(item) == playlist.Count - 1
                 }
             }
         };

@@ -372,7 +372,7 @@ public partial class FileManager(
                 Width = videoFile.Width,
                 Height = videoFile.Height,
                 Codec = videoFile.CodecName,
-                BitRate = videoFile.BitRate,
+                BitRate = videoFile.BitRate
             });
         }
         
@@ -418,7 +418,7 @@ public partial class FileManager(
                 Channels = audioFile.Channels,
                 BitRate = audioFile.BitRate,
                 ChannelLayout = audioFile.ChannelLayout,
-                SampleRate = audioFile.SampleRateHz,
+                SampleRate = audioFile.SampleRateHz
             });
         }
         
@@ -533,7 +533,7 @@ public partial class FileManager(
                 EndTime = parsedChapter.EndTime,
                 StartTime = parsedChapter.StartTime,
                 Title = parsedChapter.Title,
-                Id = parsedChapter.Id,
+                Id = parsedChapter.Id
             });
         }
 
@@ -626,7 +626,7 @@ public partial class FileManager(
                 Id = chapterParser.Subtitles.IndexOf(subtitleParserResult),
                 StartTime = subtitleParserResult.StartTime,
                 EndTime = subtitleParserResult.EndTime,
-                Title = subtitleParserResult.Lines.First(),
+                Title = subtitleParserResult.Lines.First()
             };
 
             chapters.Add(chapter);

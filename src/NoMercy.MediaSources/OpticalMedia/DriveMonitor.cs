@@ -267,8 +267,8 @@ public partial class DriveMonitor
             return discType switch
             {
                 OpticalDiscType.BluRay => await ProcessBluRay(drivePath),
-                OpticalDiscType.DVD => await ProcessDvd(drivePath),
-                OpticalDiscType.CD => await ProcessCd(drivePath),
+                OpticalDiscType.Dvd => await ProcessDvd(drivePath),
+                OpticalDiscType.Cd => await ProcessCd(drivePath),
                 _ => null
             };
         }
@@ -482,8 +482,8 @@ public partial class DriveMonitor
         return discType switch
         {
             OpticalDiscType.BluRay => await PlayBluRay(drivePath, playlistId, token),
-            OpticalDiscType.DVD => await PlayDvd(drivePath, token),
-            OpticalDiscType.CD => await PlayCd(drivePath, token),
+            OpticalDiscType.Dvd => await PlayDvd(drivePath, token),
+            OpticalDiscType.Cd => await PlayCd(drivePath, token),
             _ => false
         };
     }
@@ -503,12 +503,12 @@ public partial class DriveMonitor
                 Shell.ExecStdErrSync(AppFiles.FfProbePath, $" -hide_banner -v info -i \"bluray:{path}\"");
 
             playlist = ExtractBluRayPlaylists(directoryInfo, playlistString)
-                .First(p => p.playlistId == playlistId);
+                .First(p => p.PlaylistId == playlistId);
         }
         else
         {
             playlist = Contents.First(c => c.Path == path)
-                .BluRayPlaylists.First(p => p.playlistId == playlistId);
+                .BluRayPlaylists.First(p => p.PlaylistId == playlistId);
         }
 
         StringBuilder masterPlaylist = new();

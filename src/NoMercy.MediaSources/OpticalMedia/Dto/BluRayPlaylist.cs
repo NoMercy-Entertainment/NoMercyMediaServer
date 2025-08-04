@@ -8,7 +8,7 @@ namespace NoMercy.MediaSources.OpticalMedia.Dto;
 public partial class BluRayPlaylist
 {
     [JsonProperty("complete_name")] public string CompleteName { get; set; } = string.Empty;
-    [JsonProperty("playlist_id")] public string playlistId { get; set; } = string.Empty;
+    [JsonProperty("playlist_id")] public string PlaylistId { get; set; } = string.Empty;
     [JsonProperty("format")] public string Format { get; set; } = string.Empty;
     [JsonProperty("file_size")] public long FileSize { get; set; }
     [JsonProperty("duration")] public TimeSpan Duration { get; set; }
@@ -36,7 +36,7 @@ public partial class BluRayPlaylist
             if (line.StartsWith("Complete name"))
             {
                 playlist.CompleteName = value;
-                playlist.playlistId = value.Split('\\').LastOrDefault()
+                playlist.PlaylistId = value.Split('\\').LastOrDefault()
                     ?.Split('.').FirstOrDefault() ?? string.Empty;
             }
             else if (line.StartsWith("Format "))

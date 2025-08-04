@@ -237,7 +237,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                 Pausing = true,
                 Stopping = true,
                 Seeking = true,
-                Muting = true,
+                Muting = true
             }
         };
     }
@@ -435,14 +435,14 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                     Width = state.CurrentQuality.Width,
                     BitRate = null,
                     FileSize = null,
-                    Height = null,
+                    Height = null
                 }
                 : null,
             Audio = state.CurrentAudio?.Language is not null 
                 ? new() 
                 {
                     Language = state.CurrentAudio.Language,
-                    FileSize = null,
+                    FileSize = null
                 }
                 : null,
             Subtitle = state.CurrentCaption?.Language is not null
@@ -451,13 +451,13 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                     Language = state.CurrentCaption.Language,
                     Type = state.CurrentCaption.Type,
                     Codec = state.CurrentCaption.Codec,
-                    FileSize = null,
+                    FileSize = null
                 }
                 : null,
             LibraryId = mediaContext.Libraries
                 .Where(l => l.Type == state.CurrentItem!.LibraryType)
                 .Select(l => l.Id)
-                .FirstOrDefault(),
+                .FirstOrDefault()
         };
 
         await mediaContext.PlaybackPreferences
@@ -498,14 +498,14 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                     Width = video.Width,
                     BitRate = null,
                     FileSize = null,
-                    Height = null,
+                    Height = null
                 }
                 : null,
             Audio = audio?.Language is not null 
                 ? new() 
                 {
                     Language = audio.Language,
-                    FileSize = null,
+                    FileSize = null
                 }
                 : null,
             Subtitle = subtitle?.Language is not null
@@ -514,9 +514,9 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                     Language = subtitle.Language,
                     Type = subtitle.Type,
                     Codec = subtitle.Codec,
-                    FileSize = null,
+                    FileSize = null
                 }
-                : null,
+                : null
         };
         
         await using MediaContext mediaContext = new();

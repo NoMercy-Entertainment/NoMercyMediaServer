@@ -78,7 +78,7 @@ public class MovieManager(
             VoteAverage = movieAppends.VoteAverage,
             VoteCount = movieAppends.VoteCount,
             
-            CreatedAt = folderCreatedAt,
+            CreatedAt = folderCreatedAt
         };
 
         await movieRepository.Add(movie);
