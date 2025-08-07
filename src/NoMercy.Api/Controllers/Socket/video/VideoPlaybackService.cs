@@ -48,11 +48,10 @@ public class VideoPlaybackService
             int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
 
             // Logger.App($"{playerState.Time}-{duration}");
-            if (playerState.Time >= duration - TimerInterval)
-            {
-                RemoveTimer(user.Id);
-                HandleTrackCompletion(user, playerState).Wait();
-            }
+            if (playerState.Time < duration - TimerInterval) return;
+            
+            RemoveTimer(user.Id);
+            HandleTrackCompletion(user, playerState).Wait();
         }, null, 100, TimerInterval);
 
         _timers[user.Id] = timer;
@@ -65,13 +64,27 @@ public class VideoPlaybackService
 
     private async Task HandleTrackCompletion(User user, VideoPlayerState state)
     {
-        if (state.CurrentItem is null) return;
+        if (state.CurrentItem == null) return;
+        RemoveTimer(user.Id);
 
-        UpdateState(state, -1);
+        int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
+        
+        if(currentIndex + 1 == state.Playlist.Count)
+        {
+            UpdateState(state, -1);
+
+            await UpdatePlaybackState(user, state);
+        
+            _stateManager.RemoveState(user.Id);
+
+            return;
+        }
+        
+        UpdateState(state, currentIndex + 1);
 
         await UpdatePlaybackState(user, state);
         
-        _stateManager.RemoveState(user.Id);
+        StartPlaybackTimer(user);
     }
 
     public async Task UpdatePlaybackState(User user, VideoPlayerState? state)

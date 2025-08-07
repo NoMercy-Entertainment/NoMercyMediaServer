@@ -1,3 +1,4 @@
+using NoMercy.Api.Controllers.V1.Media;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -21,6 +22,86 @@ public class HomeService
         _mediaContext = mediaContext;
     }
 
+    public async Task<List<GenreRowDto<GenreRowItemDto>>> GetHomePageContent(Guid userId, string language, string country, PageRequestDto request)
+    {
+        List<GenreRowDto<GenreRowItemDto>> genres = [];
+        List<int> movieIds = [];
+        List<int> tvIds = [];
+        
+        List<Genre> genreItems = await HomeResponseDto
+            .GetHome(_mediaContext, userId, language, request.Take, request.Page);
+
+        foreach (Genre genre in genreItems)
+        {
+            string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
+            GenreRowDto<GenreRowItemDto> genreRowDto = new()
+            {
+                Title = name,
+                MoreLink = new($"/genre/{genre.Id}", UriKind.Relative),
+                Id = genre.Id.ToString(),
+
+                Source = genre.GenreMovies.Select(movie => new HomeSourceDto(movie.MovieId, "movie"))
+                    .Concat(genre.GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, "tv")))
+                    .Randomize()
+                    .Take(36)
+            };
+
+            tvIds.AddRange(genreRowDto.Source
+                .Where(source => source.MediaType == "tv")
+                .Select(source => source.Id));
+
+            movieIds.AddRange(genreRowDto.Source
+                .Where(source => source.MediaType == "movie")
+                .Select(source => source.Id));
+
+            genres.Add(genreRowDto);
+        }
+
+        List<Tv> tvData = [];
+        await foreach (Tv tv in _homeRepository.GetHomeTvsQuery(_mediaContext, tvIds, language))
+        {
+            tvData.Add(tv);
+        }
+
+        List<Movie> movieData = [];
+        await foreach (Movie movie in _homeRepository.GetHomeMoviesQuery(_mediaContext, movieIds, language))
+        {
+            movieData.Add(movie);
+        }
+
+        foreach (GenreRowDto<GenreRowItemDto> genre in genres)
+            genre.Items = genre.Source
+                .Select(source =>
+                {
+                    switch (source.MediaType)
+                    {
+                        case "tv":
+                        {
+                            Tv? tv = tvData.FirstOrDefault(tv => tv.Id == source.Id);
+                            return tv?.Id == null
+                                ? null
+                                : new GenreRowItemDto(tv,
+                                    language);
+                        }
+                        case "movie":
+                        {
+                            Movie? movie = movieData.FirstOrDefault(movie => movie.Id == source.Id);
+                            return movie?.Id == null
+                                ? null
+                                : new GenreRowItemDto(movie,
+                                    language);
+                        }
+                        default:
+                        {
+                            return null;
+                        }
+                    }
+                })
+                .Where(genreRow => genreRow != null);
+        
+        return genres.Where(genre => genre.Items.Any()).ToList();
+    }
+    
     public async Task<Render> GetHomeData(Guid userId, string language, string country)
     {
         List<UserData> continueWatching = _homeRepository

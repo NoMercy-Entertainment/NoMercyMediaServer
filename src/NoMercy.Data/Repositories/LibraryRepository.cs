@@ -281,11 +281,22 @@ public class LibraryRepository(MediaContext context)
 
     #region Public Methods
 
-    public async Task<IEnumerable<Library>> GetLibraries(Guid userId)
+    public async Task<List<Library>> GetLibraries(Guid userId)
     {
-        List<Library> libraries = [];
-        await foreach (Library library in GetLibrariesQuery(context, userId)) libraries.Add(library);
-        return libraries;
+        return await context.Libraries
+            .AsNoTracking()
+            .Where(library => library.LibraryUsers
+                .FirstOrDefault(u => u.UserId.Equals(userId)) != null
+            )
+            .Include(library => library.FolderLibraries)
+            .ThenInclude(folderLibrary => folderLibrary.Folder)
+            .ThenInclude(folder => folder.EncoderProfileFolder)
+            .ThenInclude(library => library.EncoderProfile)
+            .Include(library => library.LanguageLibraries)
+            .ThenInclude(languageLibrary => languageLibrary.Language)
+            .Include(library => library.LibraryMovies)
+            .Include(library => library.LibraryTvs)
+            .ToListAsync();
     }
 
     public Task<Library?> GetLibraryByIdAsync(Ulid libraryId, Guid userId, string language, int take, int page)
@@ -528,4 +539,31 @@ public class LibraryRepository(MediaContext context)
     }
 
     #endregion
+
+    public async Task<IEnumerable<Movie>> GetMissingLibraryMovies(Guid userId, Ulid libraryId, string language, int requestTake, int requestPage)
+    {
+        List<Movie> movies = [];
+        await foreach (Movie movie in GetLibraryMoviesQuery(context, userId, libraryId, language, requestPage * requestTake, requestTake))
+        {
+            if (movie.VideoFiles.Count == 0)
+                movies.Add(movie);
+        }
+        return movies;
+    }
+
+    public async Task<IEnumerable<Episode>> GetMissingLibraryShows(Guid userId, Ulid libraryId, string language, int requestTake, int requestPage)
+    {
+        List<Episode> episodes = [];
+        
+        await foreach (Tv tv in GetLibraryShowsQuery(context, userId, libraryId, language, requestPage * requestTake, requestTake))
+        {
+            foreach (Episode episode in tv.Episodes)
+            {
+                if (episode.VideoFiles.Count == 0)
+                    episodes.Add(episode);
+            }
+        }
+        
+        return episodes;
+    }
 }

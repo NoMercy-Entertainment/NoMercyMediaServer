@@ -262,4 +262,42 @@ public class TvShowsController(TvShowRepository tvShowRepository, MediaContext m
             Message = "Added to library"
         });
     }
+    
+    [HttpGet]
+    [Route("missing")]
+    public async Task<IActionResult> Missing(int id)
+    {
+        Guid userId = User.UserId();
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view library");
+        string language = Language();
+        
+        IEnumerable<Episode> episodes = await tvShowRepository
+            .GetMissingLibraryShows(userId, id, language);
+        
+        IEnumerable<EpisodeDto> concat = episodes
+            .Select(episode => new EpisodeDto(episode))
+            .OrderBy(episode => episode.SeasonNumber)
+            .ThenBy(episode => episode.EpisodeNumber)
+            .ToList();
+        
+        return Ok(new Render
+        {
+            Data =
+            [
+                new ComponentBuilder<EpisodeDto>()
+                    .WithComponent("NMList")
+                    .WithProps(props => props
+                        .WithItems(
+                            concat.Select(item =>
+                                new ComponentBuilder<EpisodeDto>()
+                                    .WithComponent("NMSeasonCard")
+                                    .WithProps(cardProps => cardProps
+                                        .WithData(item)
+                                        .WithWatch())
+                                    .Build())))
+                    .Build()
+            ]
+        });
+    }
 }

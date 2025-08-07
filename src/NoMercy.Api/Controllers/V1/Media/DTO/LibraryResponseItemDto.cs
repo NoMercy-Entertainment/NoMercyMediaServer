@@ -271,4 +271,5 @@ public record LibraryResponseItemDto
         ColorPalette = person.ColorPalette;
         Poster = person.Profile;
     }
+
 }

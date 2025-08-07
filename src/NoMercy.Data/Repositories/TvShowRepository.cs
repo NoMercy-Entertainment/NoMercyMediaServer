@@ -194,4 +194,44 @@ public class TvShowRepository(MediaContext context)
             .Where(tv => tv.Id == id)
             .ExecuteDeleteAsync();
     }
+    
+    public async Task<IEnumerable<Episode>> GetMissingLibraryShows(Guid userId, int id, string language)
+    {
+        List<Episode> episodes = [];
+
+        IQueryable<Tv> query = context.Tvs
+            .AsNoTracking()
+            .Where(tv => tv.Id == id)
+            .Where(tv => tv.Library.LibraryUsers
+                .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+
+            .Include(tv => tv.Episodes)
+            .ThenInclude(episode => episode.Translations)
+
+            .Include(tv => tv.Episodes)
+            .ThenInclude(episode => episode.VideoFiles)
+            .ThenInclude(file => file.UserData
+                .Where(userData => userData.UserId.Equals(userId)));
+        
+        Tv? tv = await query.FirstOrDefaultAsync();
+        
+        if (tv == null)
+            return episodes;
+
+        foreach (Episode episode in tv.Episodes)
+        {
+            if (episode.VideoFiles.Count > 0)
+                continue;
+
+            Translation? episodeTranslation = episode.Translations
+                .FirstOrDefault(t => t.Iso6391 == language);
+            
+            if (episodeTranslation == null)
+                continue;
+
+            episodes.Add(episode);
+        }
+        
+        return episodes;
+    }
 }

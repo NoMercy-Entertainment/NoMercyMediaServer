@@ -18,23 +18,23 @@ public static class Dev
 {
     public static async Task Run()
     {
-        await using MediaContext context = new();
-        Library? lib = await context.Libraries
-            .Include(lib => lib.FolderLibraries)
-            .ThenInclude(fl => fl.Folder)
-            .FirstOrDefaultAsync(l => l.Type == "anime");
-
-        string? path = lib?.FolderLibraries
-            .Select(fl => fl.Folder.Path)
-            .FirstOrDefault();
-        
-        if (string.IsNullOrEmpty(path))
-        {
-            Logger.Encoder("No anime library found");
-            return;
-        }
-        
-        PrefixFontFiles(path);
+        // await using MediaContext context = new();
+        // Library? lib = await context.Libraries
+        //     .Include(lib => lib.FolderLibraries)
+        //     .ThenInclude(fl => fl.Folder)
+        //     .FirstOrDefaultAsync(l => l.Type == "anime");
+        //
+        // string? path = lib?.FolderLibraries
+        //     .Select(fl => fl.Folder.Path)
+        //     .FirstOrDefault();
+        //
+        // if (string.IsNullOrEmpty(path))
+        // {
+        //     Logger.Encoder("No anime library found");
+        //     return;
+        // }
+        //
+        // PrefixFontFiles(path);
 
         // await Task.Delay(TimeSpan.FromSeconds(10));
         // MediaContext context = new();

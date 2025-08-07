@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Services;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
+using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -30,6 +32,57 @@ public class HomeController : BaseController
         _homeService = homeService;
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to view home");
+        
+        Guid userId = User.UserId();
+        string language = Language();
+        string country = Country();
+    
+        List<GenreRowDto<GenreRowItemDto>> result = await _homeService.GetHomePageContent(userId, language, country, request);
+        // IActionResult response =  GetPaginatedResponse(result, request);
+        
+        List<GenreRowDto<GenreRowItemDto>> newData = result.ToList();
+        bool hasMore = newData.Count() >= request.Take;
+
+        newData = newData.Take(request.Take).ToList();
+
+        PaginatedResponse<GenreRowDto<GenreRowItemDto>> response = new()
+        {
+            Data = newData,
+            NextPage = hasMore ? request.Page + 1 : null,
+            HasMore = hasMore
+        };
+        
+        // IActionResult response =  GetPaginatedResponse(result, request);
+        if (request.Page == 0)
+        {
+            LibraryRepository libraryRepository = new(new());
+            IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
+
+            foreach (Library library in libraries.OrderByDescending(library => library.Order))
+            {
+                IEnumerable<Movie> movies =
+                    await libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
+                IEnumerable<Tv> shows =
+                    await libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
+
+                response.Data = response.Data.Prepend(new()
+                {
+                    Title = "Latest in " + library.Title,
+                    MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+                    Items = movies.Select(movie => new GenreRowItemDto(movie, country))
+                        .Concat(shows.Select(tv => new GenreRowItemDto(tv, country)))
+                });
+            }
+        }
+
+        return Ok(response);
+    }
+    
     [HttpGet("home")]
     public async Task<IActionResult> ContinueWatching()
     {
