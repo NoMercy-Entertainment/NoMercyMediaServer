@@ -86,8 +86,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         string language = Language();
         string country = Country();
 
-        await using MediaContext mediaContext = new();
-        Special? special = await SpecialResponseDto.GetSpecial(mediaContext, userId, id, language, country);
+        Special? special = await SpecialResponseDto.GetSpecial(context, userId, id, language, country);
 
         if (special is null)
             return NotFoundResponse("Special not found");
@@ -105,12 +104,12 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         List<SpecialItemsDto> items = [];
 
         IAsyncEnumerable<Movie> specialMovies =
-            SpecialResponseDto.GetSpecialMovies(mediaContext, userId, movieIds, language, country);
+            SpecialResponseDto.GetSpecialMovies(context, userId, movieIds, language, country);
         await foreach (Movie movie in specialMovies)
             items.Add(new(movie));
 
         IAsyncEnumerable<Tv> specialTvs =
-            SpecialResponseDto.GetSpecialTvs(mediaContext, userId, tvIds, language, country);
+            SpecialResponseDto.GetSpecialTvs(context, userId, tvIds, language, country);
         await foreach (Tv tv in specialTvs)
             items.Add(new(tv));
 
@@ -128,9 +127,8 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view a special");
 
-        await using MediaContext mediaContext = new();
         Special? special = await SpecialResponseDto
-            .GetSpecialAvailable(mediaContext, userId, id);
+            .GetSpecialAvailable(context, userId, id);
 
         bool hasFiles = special is not null && (
             special.Items
@@ -190,8 +188,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like a special");
 
-        await using MediaContext mediaContext = new();
-        Special? collection = await mediaContext.Specials
+        Special? collection = await context.Specials
             .AsNoTracking()
             .Where(collection => collection.Id == id)
             .FirstOrDefaultAsync();
@@ -201,7 +198,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
         if (request.Value)
         {
-            await mediaContext.SpecialUser.Upsert(new(collection.Id, userId))
+            await context.SpecialUser.Upsert(new(collection.Id, userId))
                 .On(m => new { m.SpecialId, m.UserId })
                 .WhenMatched(m => new()
                 {
@@ -212,14 +209,14 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         }
         else
         {
-            SpecialUser? collectionUser = await mediaContext.SpecialUser
+            SpecialUser? collectionUser = await context.SpecialUser
                 .Where(collectionUser =>
                     collectionUser.SpecialId == collection.Id && collectionUser.UserId.Equals(userId))
                 .FirstOrDefaultAsync();
 
-            if (collectionUser is not null) mediaContext.SpecialUser.Remove(collectionUser);
+            if (collectionUser is not null) context.SpecialUser.Remove(collectionUser);
 
-            await mediaContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         return Ok(new StatusResponseDto<string>

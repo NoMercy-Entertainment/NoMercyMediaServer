@@ -196,7 +196,7 @@ public class EncodeVideoJob : AbstractEncoderJob
         string fileName = movie?.CreateFileName() ?? episode!.CreateFileName();
         string basePath = Path.Combine(folder.Path, folderName);
         int baseId = movie?.Id ?? episode!.Tv.Id;
-        string? imgPath = movie?.Backdrop ?? episode!.Still;
+        string? imgPath = movie?.Backdrop ?? episode?.Still;
 
         return new()
         {

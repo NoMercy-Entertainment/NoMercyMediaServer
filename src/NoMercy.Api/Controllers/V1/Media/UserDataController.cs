@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Music;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
@@ -17,7 +18,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/userData")]
-public class UserDataController : BaseController
+public class UserDataController(HomeRepository homeRepository, MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -48,70 +49,16 @@ public class UserDataController : BaseController
                 Message = "You do not have permission to view continue watching"
             });
 
-        // string language = Language();
+        string language = Language();
         string country = Country();
 
-        await using MediaContext mediaContext = new();
-        List<UserData> continueWatching = await mediaContext.UserData
-            .AsNoTracking()
-            .Where(user => user.UserId.Equals(userId))
-            .Include(movie => movie.VideoFile)
-            .Include(userData => userData.Movie!)
-            .ThenInclude(movie => movie.Media
-                .Where(media => media.Site == "Youtube")
-            )
-            .Include(userData => userData.Movie!)
-            .ThenInclude(movie => movie.CertificationMovies
-                .Where(certificationMovie => certificationMovie.Certification.Iso31661 == country)
-            )
-            .ThenInclude(certificationMovie => certificationMovie.Certification)
-            .Include(userData => userData.Movie!)
-            .ThenInclude(movie => movie.VideoFiles)
-            .Include(userData => userData.Tv!)
-            .ThenInclude(tv => tv.Media
-                .Where(media => media.Site == "Youtube")
-            )
-            .Include(userData => userData.Tv!)
-            .ThenInclude(tv => tv.CertificationTvs
-                .Where(certificationTv => certificationTv.Certification.Iso31661 == country)
-            )
-            .ThenInclude(certificationTv => certificationTv.Certification)
-            .Include(userData => userData.Tv!)
-            .ThenInclude(tv => tv.Episodes
-                .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0)
-            )
-            .ThenInclude(episode => episode.VideoFiles)
-            .Include(userData => userData.Collection!)
-            .ThenInclude(collection => collection.CollectionMovies)
-            .ThenInclude(collectionMovie => collectionMovie.Movie)
-            .ThenInclude(movie => movie.CertificationMovies)
-            .ThenInclude(certificationMovie => certificationMovie.Certification)
-            .Include(userData => userData.Collection!)
-            .ThenInclude(collection => collection.CollectionMovies)
-            .ThenInclude(collectionMovie => collectionMovie.Movie)
-            .ThenInclude(movie => movie.Media
-                .Where(media => media.Site == "Youtube")
-            )
-            .Include(userData => userData.Collection!)
-            .ThenInclude(collection => collection.CollectionMovies)
-            .ThenInclude(collectionMovie => collectionMovie.Movie)
-            .ThenInclude(movie => movie.VideoFiles)
-            .Include(userData => userData.Special)
-            .OrderByDescending(userData => userData.UpdatedAt)
-            .ToListAsync();
-
-        IEnumerable<UserData> filteredContinueWatching = continueWatching
-            .DistinctBy(userData => new
-            {
-                userData.MovieId,
-                userData.CollectionId,
-                userData.TvId,
-                userData.SpecialId
-            }).ToList();
+        List<UserData> continueWatching = homeRepository
+            .GetContinueWatching(mediaContext, userId, language, country)
+            .ToList();
 
         return Ok(new CarouselResponseDto<NmCardDto>
         {
-            Data = filteredContinueWatching
+            Data = continueWatching
                 .Select(item => new NmCardDto(item, country))
                 .DistinctBy(item => item.Link)
         });

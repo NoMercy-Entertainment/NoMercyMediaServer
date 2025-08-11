@@ -55,7 +55,7 @@ public class VideoHub : ConnectionHub
             SubtitleType = request.SubtitleType,
             UserId = user.Id,
             Type = request.PlaylistType,
-            Time = request.Time / 1000,
+            Time = request.Time,
             VideoFileId = request.VideoId,
             MovieId = request.PlaylistType == "movie" 
                 ? request.TmdbId

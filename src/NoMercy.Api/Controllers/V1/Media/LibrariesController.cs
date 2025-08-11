@@ -29,8 +29,7 @@ public class LibrariesController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view libraries");
 
-        IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
-        List<LibrariesResponseItemDto> response = libraries
+        List<LibrariesResponseItemDto> response = (await libraryRepository.GetLibraries(userId))
             .Select(library => new LibrariesResponseItemDto(library))
             .ToList();
 

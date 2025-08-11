@@ -43,8 +43,7 @@ public class HomeController : BaseController
         string country = Country();
     
         List<GenreRowDto<GenreRowItemDto>> result = await _homeService.GetHomePageContent(userId, language, country, request);
-        // IActionResult response =  GetPaginatedResponse(result, request);
-        
+      
         List<GenreRowDto<GenreRowItemDto>> newData = result.ToList();
         bool hasMore = newData.Count() >= request.Take;
 
@@ -56,28 +55,26 @@ public class HomeController : BaseController
             NextPage = hasMore ? request.Page + 1 : null,
             HasMore = hasMore
         };
+
+        if (request.Page != 0) return Ok(response);
         
-        // IActionResult response =  GetPaginatedResponse(result, request);
-        if (request.Page == 0)
+        LibraryRepository libraryRepository = new(new());
+        IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
+
+        foreach (Library library in libraries.OrderByDescending(library => library.Order))
         {
-            LibraryRepository libraryRepository = new(new());
-            IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
+            IEnumerable<Movie> movies =
+                await libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
+            IEnumerable<Tv> shows =
+                await libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
 
-            foreach (Library library in libraries.OrderByDescending(library => library.Order))
+            response.Data = response.Data.Prepend(new()
             {
-                IEnumerable<Movie> movies =
-                    await libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
-                IEnumerable<Tv> shows =
-                    await libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
-
-                response.Data = response.Data.Prepend(new()
-                {
-                    Title = "Latest in " + library.Title,
-                    MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
-                    Items = movies.Select(movie => new GenreRowItemDto(movie, country))
-                        .Concat(shows.Select(tv => new GenreRowItemDto(tv, country)))
-                });
-            }
+                Title = "Latest in " + library.Title,
+                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+                Items = movies.Select(movie => new GenreRowItemDto(movie, country))
+                    .Concat(shows.Select(tv => new GenreRowItemDto(tv, country)))
+            });
         }
 
         return Ok(response);

@@ -28,9 +28,19 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
                 .RunAsync();
     }
 
-    public Task StoreEpisodeTranslations(IEnumerable<Translation> translations)
+    public Task StoreEpisodeTranslations(List<Translation> translations)
     {
-        return context.Translations.UpsertRange(translations.ToArray())
+        int[] episodeIds = context.Episodes
+            .Select(e => e.Id)
+            .ToArray()
+            .Where(e => translations.Any(t => e == t.EpisodeId))
+            .ToArray();
+        
+        translations = translations
+            .Where(t => t.EpisodeId is not null && episodeIds.Contains(t.EpisodeId.Value))
+            .ToList();
+        
+        return context.Translations.UpsertRange(translations)
             .On(t => new { t.Iso31661, t.Iso6391, t.EpisodeId })
             .WhenMatched((ts, ti) => new()
             {
