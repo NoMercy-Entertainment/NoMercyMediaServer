@@ -2,9 +2,9 @@ namespace NoMercy.Encoder.Format.Rules;
 
 public static class VideoFormats
 {
-    public static readonly string Mkv = "matroska";
-    public static readonly string Mp4 = "mp4";
-    public static readonly string Hls = "hls";
-    public static readonly string Webm = "webm";
-    public static readonly string Flv = "flv";
+    public const string Mkv = "matroska";
+    public const string Mp4 = "mp4";
+    public const string Hls = "hls";
+    public const string Webm = "webm";
+    public const string Flv = "flv";
 }

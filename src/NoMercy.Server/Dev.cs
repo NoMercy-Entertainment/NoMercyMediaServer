@@ -2,7 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.Encoder;
+using NoMercy.Encoder.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using SixLabors.ImageSharp;
@@ -18,6 +21,12 @@ public static class Dev
 {
     public static async Task Run()
     {
+        // Ffprobe ffprobe = new("G:\\Marvels\\Films\\Download\\Werewolf.By.Night.2022.2160p.DSNP.WEB-DL.x265.10bit.HDR.DDP5.1.Atmos-KOGi\\Werewolf.By.Night.2022.HDR.2160p.WEB.h265-KOGi.mkv");
+        // Ffprobe ffprobe = new("M:\\Download\\complete\\The.Apothecary.Diaries.S02E21.Taibon.1080p.CR.WEB-DL.MULTi.AAC2.0.H.264-VARYG.mkv");
+        // Ffprobe ffprobe = new("F:\\Films\\Download\\Brave.(2012).mkv");
+        // Ffprobe ffprobeData = await ffprobe.GetStreamData();
+        // Logger.App(ffprobeData);
+        
         // await using MediaContext context = new();
         // Library? lib = await context.Libraries
         //     .Include(lib => lib.FolderLibraries)

@@ -1,3 +1,5 @@
+using NoMercy.NmSystem.Information;
+
 namespace NoMercy.NmSystem.FileSystem;
 
 public static class Folders
@@ -24,7 +26,7 @@ public static class Folders
                 Interlocked.Add(ref startDirectorySize, fileInfo.Length);
 
             if (recursive)
-                Parallel.ForEach(directoryInfo.GetDirectories(), (subDirectory) =>
+                Parallel.ForEach(directoryInfo.GetDirectories(), Config.ParallelOptions, (subDirectory) =>
                     Interlocked.Add(ref startDirectorySize, GetDirectorySize(subDirectory, recursive)));
 
             return startDirectorySize;

@@ -115,11 +115,6 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
         mediaContext.UserData.RemoveRange(userData);
         await mediaContext.SaveChangesAsync();
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["home"]
-        });
-
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",

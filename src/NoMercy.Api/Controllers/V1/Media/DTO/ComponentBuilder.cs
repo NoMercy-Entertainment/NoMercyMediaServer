@@ -17,10 +17,10 @@ public class ComponentBuilder<T>
         return this;
     }
 
-    public ComponentBuilder<T> WithProps(Action<ComponentPropsBuilder<T>> propsBuilder)
+    public ComponentBuilder<T> WithProps(Action<ComponentPropsBuilder<T>, Ulid> propsBuilder)
     {
         ComponentPropsBuilder<T> builder = new(_component.Props);
-        propsBuilder(builder);
+        propsBuilder(builder, _component.Id);
         return this;
     }
 

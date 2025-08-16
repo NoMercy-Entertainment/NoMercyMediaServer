@@ -94,14 +94,14 @@ public class MusicController : BaseController
                 new ComponentBuilder<dynamic>()
                     .WithComponent("NMContainer")
                     .WithUpdate("pageLoad", "/music/start/favorites")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("favorites")
                         .WithNextId("favorite-artists")
                         .WithItems([
                             favoriteArtist is not null
                                 ? new ComponentBuilder<dynamic>()
                                     .WithComponent("NMMusicHomeCard")
-                                    .WithProps(p => p
+                                    .WithProps((props, _) => props
                                         .WithId("favorite-artist")
                                         .WithTitle("Most listened artist".Localize())
                                         .WithData(favoriteArtist))
@@ -110,7 +110,7 @@ public class MusicController : BaseController
                             favoriteAlbum is not null
                                 ? new ComponentBuilder<dynamic>()
                                     .WithComponent("NMMusicHomeCard")
-                                    .WithProps(p => p
+                                    .WithProps((props, _) => props
                                         .WithId("favorite-album")
                                         .WithTitle("Most listened album".Localize())
                                         .WithData(favoriteAlbum))
@@ -119,7 +119,7 @@ public class MusicController : BaseController
                             favoritePlaylist is not null
                                 ? new ComponentBuilder<dynamic>()
                                     .WithComponent("NMMusicHomeCard")
-                                    .WithProps(p => p
+                                    .WithProps((props, _) => props
                                         .WithId("favorite-playlist")
                                         .WithTitle("Most listened artist".Localize())
                                         .WithData(favoritePlaylist))
@@ -131,7 +131,7 @@ public class MusicController : BaseController
                 new ComponentBuilder<CarouselResponseItemDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/music/start/favorite-artists")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("favorite-artists")
                         .WithPreviousId("favorite-albums")
                         .WithNextId("favorite-albums")
@@ -150,7 +150,7 @@ public class MusicController : BaseController
                 new ComponentBuilder<CarouselResponseItemDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/music/start/favorite-albums")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("favorite-albums")
                         .WithPreviousId("favorite-artists")
                         .WithNextId("playlists")
@@ -169,7 +169,7 @@ public class MusicController : BaseController
                 new ComponentBuilder<CarouselResponseItemDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/music/start/playlists")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("playlists")
                         .WithPreviousId("favorite-albums")
                         .WithNextId("artists")
@@ -189,7 +189,7 @@ public class MusicController : BaseController
                 new ComponentBuilder<CarouselResponseItemDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/music/start/artists")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("artists")
                         .WithPreviousId("playlists")
                         .WithNextId("albums")
@@ -209,7 +209,7 @@ public class MusicController : BaseController
                 new ComponentBuilder<CarouselResponseItemDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/music/start/albums")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("albums")
                         .WithTitle("Albums".Localize())
                         .WithMoreLink(new("/music/albums", UriKind.Relative))
@@ -263,14 +263,14 @@ public class MusicController : BaseController
                 new ComponentBuilder<dynamic>()
                     .WithComponent("NMContainer")
                     .WithUpdate("pageLoad", "/music/start/favorites")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("favorites")
                         .WithNextId("favorite-artists")
                         .WithItems([
                             favoriteArtist is not null
                                 ? new ComponentBuilder<dynamic>()
                                     .WithComponent("NMMusicHomeCard")
-                                    .WithProps(p => p
+                                    .WithProps((p, _) => p
                                         .WithId("favorite-artist")
                                         .WithTitle("Most listened artist".Localize())
                                         .WithData(favoriteArtist))
@@ -279,7 +279,7 @@ public class MusicController : BaseController
                             favoriteAlbum is not null
                                 ? new ComponentBuilder<dynamic>()
                                     .WithComponent("NMMusicHomeCard")
-                                    .WithProps(p => p
+                                    .WithProps((p, _) => p
                                         .WithId("favorite-album")
                                         .WithTitle("Most listened album".Localize())
                                         .WithData(favoriteAlbum))
@@ -288,7 +288,7 @@ public class MusicController : BaseController
                             favoritePlaylist is not null
                                 ? new ComponentBuilder<dynamic>()
                                     .WithComponent("NMMusicHomeCard")
-                                    .WithProps(p => p
+                                    .WithProps((p, _) => p
                                         .WithId("favorite-playlist")
                                         .WithTitle("Most listened artist".Localize())
                                         .WithData(favoritePlaylist))
@@ -321,7 +321,7 @@ public class MusicController : BaseController
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/music/start/favorite-artists")
                     .WithReplacing(request.ReplaceId)
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("favorite-artists")
                         .WithPreviousId("favorite-albums")
                         .WithNextId("favorite-albums")
@@ -362,7 +362,7 @@ public class MusicController : BaseController
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/music/start/favorite-albums")
                     .WithReplacing(request.ReplaceId)
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("favorite-albums")
                         .WithPreviousId("favorite-artists")
                         .WithNextId("playlists")
@@ -401,7 +401,7 @@ public class MusicController : BaseController
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/music/start/playlists")
                     .WithReplacing(request.ReplaceId)
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId("playlists")
                         .WithPreviousId("favorite-albums")
                         .WithNextId("artists")
@@ -487,7 +487,7 @@ public class MusicController : BaseController
             return NotFoundResponse("No results found");
 
         if (albums.Count > 0)
-            foreach (Album? album in albums)
+            foreach (Album album in albums)
                 if (album.AlbumTrack.Count > 0)
                     foreach (IEnumerable<Artist> artist in album.AlbumTrack.Select(albumTrack => albumTrack.Track
                                  .ArtistTrack
@@ -495,7 +495,7 @@ public class MusicController : BaseController
                         artists.AddRange(artist);
 
         if (playlists.Count > 0)
-            foreach (Playlist? playlist in playlists)
+            foreach (Playlist playlist in playlists)
                 if (playlist.Tracks.Count > 0)
                     foreach (IEnumerable<Artist> artist in playlist.Tracks
                                  .Select(playlistTrack => playlistTrack.Track.ArtistTrack
@@ -503,7 +503,7 @@ public class MusicController : BaseController
                         artists.AddRange(artist);
 
         if (songs.Count > 0)
-            foreach (Track? song in songs)
+            foreach (Track song in songs)
             {
                 if (song.ArtistTrack.Count > 0)
                     artists.AddRange(song.ArtistTrack.Select(artistTrack => artistTrack.Artist));

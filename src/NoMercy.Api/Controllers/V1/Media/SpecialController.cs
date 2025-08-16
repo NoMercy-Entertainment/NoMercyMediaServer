@@ -38,14 +38,14 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
                 [
                     new ComponentBuilder<SpecialsResponseItemDto>()
                         .WithComponent("NMGrid")
-                        .WithProps(props => props
+                        .WithProps((props, _) => props
                             .WithItems(
                                 specials
                                     .Select(special => new SpecialsResponseItemDto(special))
                                     .Select(item =>
                                         new ComponentBuilder<SpecialsResponseItemDto>()
                                             .WithComponent("NMCard")
-                                            .WithProps(cardProps => cardProps
+                                            .WithProps((props, _) => props
                                                 .WithData(item)
                                                 .WithWatch())
                                             .Build())))
@@ -57,7 +57,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         {
             Data = Letters.Select(genre => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
                 .WithComponent("NMCarousel")
-                .WithProps(props => props
+                .WithProps((props, _) => props
                     .WithId(genre)
                     .WithTitle(genre)
                     .WithItems(
@@ -67,7 +67,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
                                 : item.Title.StartsWith(genre))
                             .Select(item => new ComponentBuilder<NmCardDto>()
                                 .WithComponent("NMCard")
-                                .WithProps(cardProps => cardProps
+                                .WithProps((props, _) => props
                                     .WithData(item)
                                     .WithWatch())
                                 .Build())))

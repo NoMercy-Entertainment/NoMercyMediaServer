@@ -1,14 +1,18 @@
 using System.Collections.Concurrent;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
+using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.Providers.Other;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
+using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.MediaProcessing.Libraries;
@@ -161,5 +165,20 @@ public class LibraryManager(
     public async ValueTask DisposeAsync()
     {
         await libraryRepository.DisposeAsync();
+    }
+
+    public async Task RescanFiles(Ulid libraryId, int id)
+    {
+        Library? library = await libraryRepository.GetLibraryByIdWithFolders(libraryId);
+        if (library is null)
+        {
+            Logger.App("Library with ID " + libraryId + " not found", LogEventLevel.Warning);
+            return;
+        }
+        
+        FileRepository fileRepository = new();
+        FileManager fileManager = new(fileRepository);
+        
+        await fileManager.FindFiles(id, library);
     }
 }

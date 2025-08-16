@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using Serilog.Events;
@@ -61,7 +62,7 @@ public static class GenresSeed
             .Where(l => l.Iso6391 != "en")
             .ToListAsync();
 
-        await Parallel.ForEachAsync(languages, async (language, _) =>
+        await Parallel.ForEachAsync(languages, Config.ParallelOptions, async (language, _) =>
         {
             Logger.Setup($"Adding Genres for {language.EnglishName}", LogEventLevel.Verbose);
 

@@ -1,32 +1,33 @@
+
 namespace NoMercy.Encoder.Format.Rules;
 
 public static class VideoPresets
 {
     // Basic presets
-    public static string UltraFast = "ultrafast";
-    public static string SuperFast = "superfast";
-    public static string VeryFast = "veryfast";
-    public static string Faster = "faster";
-    public static string Fast = "fast";
-    public static string Medium = "medium";
-    public static string Slow = "slow";
-    public static string Slower = "slower";
-    public static string VerySlow = "veryslow";
-    public static string Placebo = "placebo";
+    public const string UltraFast = "ultrafast";
+    public const string SuperFast = "superfast";
+    public const string VeryFast = "veryfast";
+    public const string Faster = "faster";
+    public const string Fast = "fast";
+    public const string Medium = "medium";
+    public const string Slow = "slow";
+    public const string Slower = "slower";
+    public const string VerySlow = "veryslow";
+    public const string Placebo = "placebo";
 
     // NVENC presets
-    public static string Default = "default";
-    public static string Hp = "hp";
-    public static string Hq = "hq";
-    public static string Ll = "ll";
-    public static string Llhq = "llhq";
-    public static string Llhp = "llhp";
-    public static string Lossless = "lossless";
-    public static string P1 = "p1";
-    public static string P2 = "p2";
-    public static string P3 = "p3";
-    public static string P4 = "p4";
-    public static string P5 = "p5";
-    public static string P6 = "p6";
-    public static string P7 = "p7";
+    public const string Default = "default";
+    public const string Hp = "hp";
+    public const string Hq = "hq";
+    public const string Ll = "ll";
+    public const string Llhq = "llhq";
+    public const string Llhp = "llhp";
+    public const string Lossless = "lossless";
+    public const string P1 = "p1";
+    public const string P2 = "p2";
+    public const string P3 = "p3";
+    public const string P4 = "p4";
+    public const string P5 = "p5";
+    public const string P6 = "p6";
+    public const string P7 = "p7";
 }

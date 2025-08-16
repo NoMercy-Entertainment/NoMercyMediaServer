@@ -296,4 +296,12 @@
     <Key>Trailer not found</Key>
     <Value lang="nl">Trailer not found</Value>
   </Entry>
+  <Entry>
+    <Key>Show deleted</Key>
+    <Value lang="nl">Show deleted</Value>
+  </Entry>
+  <Entry>
+    <Key>Item not found</Key>
+    <Value lang="nl">Item not found</Value>
+  </Entry>
 </I18N>

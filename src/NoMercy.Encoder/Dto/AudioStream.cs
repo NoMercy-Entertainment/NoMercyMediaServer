@@ -1,0 +1,55 @@
+using Newtonsoft.Json;
+using NoMercy.Encoder.Core;
+using NoMercy.NmSystem.Extensions;
+
+namespace NoMercy.Encoder.Dto;
+
+public class AudioStream
+{
+    [JsonProperty("index")] public int Index { get; set; }
+    [JsonProperty("profile")] public string Profile { get; set; }
+    [JsonProperty("codec_name")] public string CodecName { get; set; }
+    [JsonProperty("codec_long_name")] public string CodecLongName { get; set; }
+    [JsonProperty("codec_type")] public CodecType CodecType { get; set; }
+    [JsonProperty("time_base")] public string TimeBase { get; set; }
+    [JsonProperty("duration")] public double Duration { get; set; }
+    [JsonProperty("language")] public string Language { get; set; }
+    [JsonProperty("language_name")] public string LanguageName => IsoLanguageMapper.GetLanguageName(Language)!;
+    [JsonProperty("size")] public long Size { get; set; }
+    
+    [JsonProperty("sample_fmt")] public string SampleFmt { get; set; }
+    [JsonProperty("sample_rate")] public long? SampleRate { get; set; }
+    [JsonProperty("channels")] public long? Channels { get; set; }
+    [JsonProperty("channel_layout")] public string ChannelLayout { get; set; }
+    [JsonProperty("bits_per_sample")] public long? BitsPerSample { get; set; }
+    [JsonProperty("bit_rate")]  public long? BitRate { get; set; }
+    
+    [JsonProperty("is_default")] public bool IsDefault  { get; set; }
+    [JsonProperty("is_dub")] public bool IsDub  { get; set; }
+    [JsonProperty("is_forced")] public bool IsForced  { get; set; }
+    [JsonProperty("is_visual_impaired")] public bool IsVisualImpaired  { get; set; }
+    
+    public AudioStream(FfprobeSourceDataStream ffprobeSourceDataStream)
+    {
+        Index = ffprobeSourceDataStream.Index;
+        Profile = ffprobeSourceDataStream.Profile;
+        CodecName = ffprobeSourceDataStream.CodecName;
+        CodecLongName = ffprobeSourceDataStream.CodecLongName;
+        CodecType = ffprobeSourceDataStream.CodecType;
+        TimeBase = ffprobeSourceDataStream.TimeBase;
+        Duration = ffprobeSourceDataStream.Tags.Duration.ToSeconds();
+        Language = ffprobeSourceDataStream.Tags.Language;
+        Size = ffprobeSourceDataStream.Tags.NumberOfBytes;
+        SampleFmt = ffprobeSourceDataStream.SampleFmt;
+        SampleRate = ffprobeSourceDataStream.SampleRate;
+        Channels = ffprobeSourceDataStream.Channels;
+        ChannelLayout = ffprobeSourceDataStream.ChannelLayout;
+        BitsPerSample = ffprobeSourceDataStream.BitsPerSample;
+        BitRate = ffprobeSourceDataStream.BitRate;
+        
+        IsDefault = ffprobeSourceDataStream.Disposition.TryGetValue("default", out int defaultValue) && defaultValue == 1;
+        IsDub = ffprobeSourceDataStream.Disposition.TryGetValue("dub", out int dubValue) && dubValue == 1;
+        IsForced = ffprobeSourceDataStream.Disposition.TryGetValue("forced", out int forcedValue) && forcedValue == 1;
+        IsVisualImpaired = ffprobeSourceDataStream.Disposition.TryGetValue("visual_impaired", out int visualImpairedValue) && visualImpairedValue == 1;
+    }
+}

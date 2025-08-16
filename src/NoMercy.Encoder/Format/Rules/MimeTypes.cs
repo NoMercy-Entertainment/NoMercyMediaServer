@@ -1,3 +1,5 @@
+// ReSharper disable MemberCanBePrivate.Global
+
 namespace NoMercy.Encoder.Format.Rules;
 
 public static class MimeTypes

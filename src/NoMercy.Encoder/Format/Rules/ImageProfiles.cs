@@ -3,27 +3,27 @@ namespace NoMercy.Encoder.Format.Rules;
 public static class ImageProfiles
 {
     // JPEG Profiles
-    public static readonly string Baseline = "baseline";
-    public static readonly string Extended = "extended";
-    public static readonly string Progressive = "progressive";
-    public static readonly string Lossless = "lossless";
-    public static readonly string Hierarchical = "hierarchical";
+    public const string Baseline = "baseline";
+    public const string Extended = "extended";
+    public const string Progressive = "progressive";
+    public const string Lossless = "lossless";
+    public const string Hierarchical = "hierarchical";
 
     // GIF Profiles
-    public static readonly string Gif87A = "gif87a";
-    public static readonly string Gif89A = "gif89a";
+    public const string Gif87A = "gif87a";
+    public const string Gif89A = "gif89a";
 
     // PNG Profiles
-    public static readonly string Png8 = "png8";
-    public static readonly string Png24 = "png24";
-    public static readonly string Png32 = "png32";
-    public static readonly string Png48 = "png48";
-    public static readonly string Png64 = "png64";
+    public const string Png8 = "png8";
+    public const string Png24 = "png24";
+    public const string Png32 = "png32";
+    public const string Png48 = "png48";
+    public const string Png64 = "png64";
 
     // BMP Profiles
-    public static readonly string Bmp1 = "bmp1";
-    public static readonly string Bmp2 = "bmp2";
-    public static readonly string Bmp3 = "bmp3";
+    public const string Bmp1 = "bmp1";
+    public const string Bmp2 = "bmp2";
+    public const string Bmp3 = "bmp3";
 
     // TIFF Profiles
 }

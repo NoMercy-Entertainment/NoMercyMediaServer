@@ -43,12 +43,12 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
                 [
                     new ComponentBuilder<NmCardDto>()
                         .WithComponent("NMGrid")
-                        .WithProps(props => props
+                        .WithProps((props, _) => props
                             .WithItems(
                                 concat.Select(item =>
                                     new ComponentBuilder<NmCardDto>()
                                         .WithComponent("NMCard")
-                                        .WithProps(cardProps => cardProps
+                                        .WithProps((props, _) => props
                                             .WithData(item)
                                             .WithWatch())
                                         .Build())))
@@ -61,7 +61,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
         {
             Data = Letters.Select(genre => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
                 .WithComponent("NMCarousel")
-                .WithProps(props => props
+                .WithProps((props, _) => props
                     .WithId(genre)
                     .WithTitle(genre)
                     .WithItems(
@@ -71,7 +71,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
                                 : item.Title.StartsWith(genre))
                             .Select(item => new ComponentBuilder<NmCardDto>()
                                 .WithComponent("NMCard")
-                                .WithProps(cardProps => cardProps
+                                .WithProps((props, _) => props
                                     .WithData(item)
                                     .WithWatch())
                                 .Build())))

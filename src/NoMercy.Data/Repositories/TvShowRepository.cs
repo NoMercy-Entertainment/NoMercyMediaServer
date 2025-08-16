@@ -206,7 +206,7 @@ public class TvShowRepository(MediaContext context)
                 .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
 
             .Include(tv => tv.Episodes)
-            .ThenInclude(episode => episode.Translations)
+            .ThenInclude(episode => episode.Translations.Where(t => t.Iso6391 == language))
 
             .Include(tv => tv.Episodes)
             .ThenInclude(episode => episode.VideoFiles)
@@ -223,8 +223,7 @@ public class TvShowRepository(MediaContext context)
             if (episode.VideoFiles.Count > 0)
                 continue;
 
-            Translation? episodeTranslation = episode.Translations
-                .FirstOrDefault(t => t.Iso6391 == language);
+            Translation? episodeTranslation = episode.Translations.FirstOrDefault();
             
             if (episodeTranslation == null)
                 continue;

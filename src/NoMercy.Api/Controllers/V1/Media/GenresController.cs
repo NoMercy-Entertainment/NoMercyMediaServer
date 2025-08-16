@@ -44,13 +44,13 @@ public class GenresController : BaseController
             [
                 new ComponentBuilder<NmGenreCardDto>()
                     .WithComponent("NMGrid")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithItems(
                             genres
                                 .Select(item =>
                                     new ComponentBuilder<NmGenreCardDto>()
                                         .WithComponent("NMGenreCard")
-                                        .WithProps(cardProps => cardProps
+                                        .WithProps((props, _) => props
                                             .WithData(item)
                                             .WithWatch())
                                         .Build())))
@@ -89,12 +89,12 @@ public class GenresController : BaseController
                 [
                     new ComponentBuilder<NmCardDto>()
                         .WithComponent("NMGrid")
-                        .WithProps(props => props
+                        .WithProps((props, _) => props
                             .WithItems(
                                 concat.Select(item =>
                                     new ComponentBuilder<NmCardDto>()
                                         .WithComponent("NMCard")
-                                        .WithProps(cardProps => cardProps
+                                        .WithProps((props, _) => props
                                             .WithData(item)
                                             .WithWatch())
                                         .Build())))

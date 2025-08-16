@@ -66,7 +66,7 @@ public partial class MusicLogic : IAsyncDisposable
     public async Task Process()
     {
         Logger.App($"Processing Folder: {Folder?.Path}", LogEventLevel.Verbose);
-        await Parallel.ForEachAsync(Files ?? [], async (file, cancellationToken) =>
+        await Parallel.ForEachAsync(Files ?? [], Config.ParallelOptions, async (file, cancellationToken) =>
         {
             try
             {

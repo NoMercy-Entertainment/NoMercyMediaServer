@@ -4,6 +4,7 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Season;
@@ -21,7 +22,7 @@ public class SeasonManager(
     {
         List<TmdbSeasonAppends> seasonAppends = [];
 
-        await Parallel.ForEachAsync(show.Seasons, async (season, _) =>
+        await Parallel.ForEachAsync(show.Seasons, Config.ParallelOptions, async (season, _) =>
         {
             try
             {

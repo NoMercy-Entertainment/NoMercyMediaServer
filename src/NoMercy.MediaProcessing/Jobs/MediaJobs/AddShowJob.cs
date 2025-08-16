@@ -11,6 +11,7 @@ using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.Networking.Dto;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
@@ -57,7 +58,7 @@ public class AddShowJob : AbstractMediaJob
         IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(show, HighPriority);
 
         ConcurrentBag<Episode> episodes = [];
-        await Parallel.ForEachAsync(seasons, async (season, _) =>
+        await Parallel.ForEachAsync(seasons, Config.ParallelOptions, async (season, _) =>
         {
             IEnumerable<Episode> eps = await episodeManager.Add(show, season, HighPriority);
             foreach (Episode episode in eps)

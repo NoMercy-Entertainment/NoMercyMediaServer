@@ -118,10 +118,10 @@ public class Classes
 
     public class CropArea
     {
-        public double W { get; set; }
-        public double H { get; set; }
-        public double X { get; set; }
-        public double Y { get; set; }
+        public double W { get; }
+        public double H { get; }
+        public double X { get; }
+        public double Y { get; }
 
         public CropArea()
         {

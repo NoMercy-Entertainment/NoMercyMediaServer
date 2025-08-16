@@ -24,7 +24,11 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/movie/{id:int}")] // match themoviedb.org API
-public class MoviesController(MovieRepository movieRepository, MediaContext mediaContext) : BaseController
+public class MoviesController(
+    MovieRepository movieRepository, 
+    JobDispatcher jobDispatcher,
+    MediaContext mediaContext
+    ) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Movie(int id)
@@ -156,19 +160,15 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
 
         if (movie is null)
             return UnprocessableEntityResponse("Movie not found");
-
+        
         try
         {
-            Logger.MovieDb($"Rescanning {movie.Title} for files", LogEventLevel.Debug);
-
-            FileRepository fileRepository = new();
-            FileManager fileManager = new(fileRepository);
-
-            await fileManager.FindFiles(id, movie.Library);
+            jobDispatcher.DispatchJob<RescanFilesJob>(id, movie.LibraryId);
         }
         catch (Exception e)
         {
-            Logger.MovieDb(e.Message, LogEventLevel.Error);
+            Logger.Encoder(e.Message, LogEventLevel.Error);
+            return InternalServerErrorResponse(e.Message);
         }
 
         return Ok(new StatusResponseDto<string>
@@ -199,7 +199,6 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
 
         try
         {
-            JobDispatcher jobDispatcher = new();
             jobDispatcher.DispatchJob<AddMovieJob>(id, movie.Library.Id);
         }
         catch (Exception e)
@@ -225,8 +224,23 @@ public class MoviesController(MovieRepository movieRepository, MediaContext medi
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add tv shows");
-
-        await movieRepository.AddMovieAsync(id);
+        
+        Library? library = await mediaContext.Libraries
+            .Where(f => f.Type == "movie")
+            .FirstOrDefaultAsync();
+        
+        if (library is null)
+            return UnprocessableEntityResponse("No movie library found");
+        
+        try
+        {
+            jobDispatcher.DispatchJob<AddMovieJob>(id, library.Id);
+        }
+        catch (Exception e)
+        {
+            Logger.Encoder(e.Message, LogEventLevel.Error);
+            return InternalServerErrorResponse(e.Message);
+        }
 
         return Ok(new StatusResponseDto<string>
         {

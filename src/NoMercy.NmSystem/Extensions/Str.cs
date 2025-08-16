@@ -296,7 +296,7 @@ public static partial class Str
             .Replace("`", ".");
 
         // Replace any remaining non-ASCII characters with dots
-        name = Regex.Replace(name, @"[^\u0000-\u007F]+", ".");
+        name = Regex.Replace(name, @"[^\u0000-\u007F\u00C0-\u017F\u0100-\u024F]+", ".");
 
         // Collapse multiple dots
         name = Regex.Replace(name, @"\.+", ".");
@@ -388,7 +388,7 @@ public static partial class Str
     {
         if (string.IsNullOrEmpty(hms)) return 0;
 
-        int[] parts = hms.Split(':').Select(int.Parse).ToArray();
+        int[] parts = hms.Split('.').ElementAt(0).Split(':').Select(int.Parse).ToArray();
         if (parts.Length < 3) parts = new[] { 0 }.Concat(parts).ToArray();
 
         return parts[0] * 60 * 60 + parts[1] * 60 + parts[2];

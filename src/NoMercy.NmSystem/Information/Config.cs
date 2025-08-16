@@ -40,4 +40,9 @@ public static class Config
     public static KeyValuePair<string, int> DataWorkers { get; set; } = new("data", 10);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 5);
     public static KeyValuePair<string, int> RequestWorkers { get; set; } = new("request", 15);
+    
+    public static readonly ParallelOptions ParallelOptions = new()
+    {
+        MaxDegreeOfParallelism = (int)Math.Floor(Environment.ProcessorCount / 2.0),
+    };
 }

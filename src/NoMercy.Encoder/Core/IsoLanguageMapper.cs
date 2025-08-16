@@ -387,4 +387,11 @@ public class IsoLanguageMapper
             IsoToLanguage.ToDictionary(kvp => kvp.Value, kvp => kvp.Key, StringComparer.OrdinalIgnoreCase);
         return languageToIso.TryGetValue(language, out string? isoCode) ? isoCode : null;
     }
+
+    public static string? GetLanguageName(string isoCode)
+    { 
+        Dictionary<string, string> languageToIso =
+            IsoToLanguage.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+        return languageToIso.TryGetValue(isoCode, out string? language) ? language : null;
+    }
 }

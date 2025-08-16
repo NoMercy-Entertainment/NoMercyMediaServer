@@ -10,6 +10,7 @@ using NoMercy.Database.Models;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Information;
 using Serilog.Events;
 using SubtitlesParserV2;
 using SubtitlesParserV2.Models;
@@ -197,7 +198,7 @@ public partial class FileManager(
 
         if (items.Count == 0) return;
 
-        await Parallel.ForEachAsync(items, async (item, _) =>
+        await Parallel.ForEachAsync(items, Config.ParallelOptions, async (item, _) =>
         {
             await StoreVideoItem(item);
         });

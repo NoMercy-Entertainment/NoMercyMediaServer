@@ -72,7 +72,7 @@ public static class Program
         List<TaskDelegate> startupTasks =
         [
             new(DatabaseSeeder.Run),
-            new(Dev.Run)
+            // new(Dev.Run)
         ];
 
         await Setup.Start.Init(startupTasks);
@@ -99,6 +99,7 @@ public static class Program
 
         new Thread(() => app.RunAsync()).Start();
 
+        await Dev.Run();
         await DriveMonitor.Start();
 
         _ = LibraryFileWatcher.Instance;

@@ -137,7 +137,7 @@ public class X264 : BaseVideo
             [
                 VideoTunes.Film, VideoTunes.Animation,
                 VideoTunes.Grain, VideoTunes.StillImage,
-                VideoTunes.Fastdecode, VideoTunes.Zerolatency,
+                VideoTunes.FastDecode, VideoTunes.ZeroLatency,
                 VideoTunes.Psnr, VideoTunes.Ssim
             ];
         }

@@ -12,6 +12,7 @@ using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -51,7 +52,7 @@ public class AddRecordingJob : AbstractMusicRecordingJob
         CoverArtImageManagerManager.CoverPalette? coverPalette =
             await CoverArtImageManagerManager.Add(FolderMetaData.MusicBrainzRelease.Id);
 
-        await Parallel.ForEachAsync(FolderMetaData.MusicBrainzRelease.Media, async (media, t) =>
+        await Parallel.ForEachAsync(FolderMetaData.MusicBrainzRelease.Media, Config.ParallelOptions, async (media, t) =>
         {
             if (!await recordingManager.Store(FolderMetaData.MusicBrainzRelease, FoundTrack, media,
                     Folder, mediaFolder, coverPalette)) return;
@@ -65,7 +66,7 @@ public class AddRecordingJob : AbstractMusicRecordingJob
                 return;
             }
 
-            await Parallel.ForEachAsync(FoundTrack.ArtistCredit, t, async (artist, _) =>
+            await Parallel.ForEachAsync(FoundTrack.ArtistCredit, Config.ParallelOptions, async (artist, _) =>
             {
                 Logger.MusicBrainz($"Storing Artist: {artist.MusicBrainzArtist.Name}", LogEventLevel.Verbose);
                 await artistManager.Store(artist.MusicBrainzArtist, albumLibrary, Folder, mediaFolder, FoundTrack);

@@ -5,6 +5,7 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Episode;
@@ -56,7 +57,7 @@ public class EpisodeManager(
     {
         List<TmdbEpisodeAppends> episodeAppends = [];
 
-        await Parallel.ForEachAsync(season.Episodes, async (episode, _) =>
+        await Parallel.ForEachAsync(season.Episodes, Config.ParallelOptions, async (episode, _) =>
         {
             try
             {

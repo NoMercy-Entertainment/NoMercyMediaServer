@@ -1,3 +1,6 @@
+// ReSharper disable MemberCanBeProtected.Global
+// ReSharper disable MemberCanBePrivate.Global
+
 using FFMpegCore;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.Extensions;

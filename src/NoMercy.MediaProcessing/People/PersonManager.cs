@@ -3,6 +3,7 @@ using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -484,7 +485,7 @@ public class PersonManager(
         {
             List<TmdbPersonAppends> personAppends = [];
 
-            await Parallel.ForEachAsync(ids, async (id, _) =>
+            await Parallel.ForEachAsync(ids, Config.ParallelOptions, async (id, _) =>
             {
                 try
                 {

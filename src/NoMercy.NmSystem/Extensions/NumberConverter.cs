@@ -46,6 +46,62 @@ public partial class NumberConverter
         };
     }
 
+    public static string NormalizeAspectRatio(double width, double height)
+    {
+        int w = (int)Math.Round(width);
+        int h = (int)Math.Round(height);
+        return NormalizeAspectRatio(w, h);
+    }
+    
+    public static string NormalizeAspectRatio(int width, int height)
+    {
+        if (width <= 0 || height <= 0)
+            return "1:1";
+
+        int gcd = CalculateGcd(width, height);
+        int normalizedWidth = width / gcd;
+        int normalizedHeight = height / gcd;
+    
+        // Check for common aspect ratios and normalize them
+        Dictionary<(int w, int h), string> commonRatios = new()
+        {
+            { (16, 9), "16:9" },
+            { (4, 3), "4:3" },
+            { (3, 2), "3:2" },
+            { (5, 4), "5:4" },
+            { (21, 9), "21:9" },
+            { (32, 9), "32:9" },
+            { (1, 1), "1:1" }
+        };
+    
+        // Check if it matches a common ratio (with some tolerance)
+        foreach (KeyValuePair<(int w, int h), string> ratio in commonRatios)
+        {
+            if (IsCloseToRatio(normalizedWidth, normalizedHeight, ratio.Key.w, ratio.Key.h))
+                return ratio.Value;
+        }
+    
+        return $"{normalizedWidth}:{normalizedHeight}";
+    }
+
+    private static bool IsCloseToRatio(int w1, int h1, int w2, int h2, double tolerance = 0.02)
+    {
+        double ratio1 = (double)w1 / h1;
+        double ratio2 = (double)w2 / h2;
+        return Math.Abs(ratio1 - ratio2) < tolerance;
+    }
+
+    private static int CalculateGcd(int a, int b)
+    {
+        while (b != 0)
+        {
+            int temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
+
     internal static string ConvertNumbersInString(string input)
     {
         return MyRegex().Replace(input, match => NumberToWords(int.Parse(match.Value)));

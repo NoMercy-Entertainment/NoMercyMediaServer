@@ -65,28 +65,44 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         context.Response.ContentType = MimeTypes.GetMimeTypeFromFile(file.PhysicalPath);
 
-        if (!context.Request.Headers.TryGetValue("Range", out StringValues rangeValue))
+        bool isMp4 = Path.GetExtension(filePhysicalPath).Equals(".mp4", StringComparison.OrdinalIgnoreCase);
+        bool hasRangeRequest = context.Request.Headers.TryGetValue("Range", out StringValues rangeValue);
+
+        // Force partial content for MP4 files or when range is requested
+        if (!hasRangeRequest && !isMp4)
         {
             await context.Response.SendFileAsync(file.PhysicalPath);
             return;
         }
 
-        string?[] ranges = rangeValue.ToString()
-            .Replace("bytes=", "")
-            .Split('-')
-            .ToArray();
+        // Parse range or default to start of file for MP4
+        long start = 0;
+        long end;
 
-        long end = fileLength - 1;
-        long start = Convert.ToInt64(ranges[0]);
+        if (hasRangeRequest)
+        {
+            string?[] ranges = rangeValue.ToString()
+                .Replace("bytes=", "")
+                .Split('-')
+                .ToArray();
 
-        if (ranges.Length > 1 && !string.IsNullOrEmpty(ranges[1])) end = Convert.ToInt64(ranges[1]);
+            start = Convert.ToInt64(ranges[0]);
+            end = ranges.Length > 1 && !string.IsNullOrEmpty(ranges[1]) 
+                ? Convert.ToInt64(ranges[1]) 
+                : fileLength - 1;
+        }
+        else
+        {
+            // For MP4 without range request, serve initial chunk (e.g., first 1MB)
+            end = Math.Min(start + (1024 * 1024) - 1, fileLength - 1);
+        }
 
         long length = end - start + 1;
 
         context.Response.StatusCode = (int)HttpStatusCode.PartialContent;
         context.Response.Headers.ContentRange = new ContentRangeHeaderValue(start, end, fileLength).ToString();
         context.Response.Headers.AcceptRanges = "bytes";
-        context.Request.ContentLength = length;
+        context.Response.ContentLength = length;
 
         await using (FileStream fs = File.OpenRead(file.PhysicalPath))
         {

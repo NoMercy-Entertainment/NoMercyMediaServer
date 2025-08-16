@@ -128,7 +128,7 @@ public class X265 : BaseVideo
 
             return
             [
-                VideoTunes.Fastdecode, VideoTunes.Zerolatency,
+                VideoTunes.FastDecode, VideoTunes.ZeroLatency,
                 VideoTunes.Psnr, VideoTunes.Ssim
             ];
         }

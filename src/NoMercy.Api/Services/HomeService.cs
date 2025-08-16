@@ -236,24 +236,24 @@ public class HomeService
                     new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMHomeCard")
                     .WithUpdate("pageLoad", "/home/card")
-                    .WithProps(props => props.WithData(homeCardItem))
+                    .WithProps((props, id) => props.WithData(homeCardItem))
                     .Build()
                 } : [],
                 
                 new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/home/continue")
-                    .WithProps(props => props
+                    .WithProps((props, id) => props
                         .WithId("continue")
                         .WithNextId($"library_{list.ElementAtOrDefault(0)?.Id}")
                         .WithTitle("Continue watching".Localize())
                         .WithMoreLink(null)
-                        .WithItems(GetContinueWatchingItems(continueWatching, country)))
+                        .WithItems(GetContinueWatchingItems(continueWatching, country, id)))
                     .Build(),
 
                 ..list.Select((genre, index) => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
-                    .WithProps(props => props
+                    .WithProps((props, id) => props
                         .WithId($"library_{genre.Id}")
                         .WithPreviousId(index == 0
                             ? "continue"
@@ -267,7 +267,7 @@ public class HomeService
                             genre.Items.Select(item =>
                                 new ComponentBuilder<NmCardDto>()
                                     .WithComponent("NMCard")
-                                    .WithProps(cardProps => cardProps
+                                    .WithProps((props, _) => props
                                         .WithData(item)
                                         .WithWatch())
                                     .Build())))
@@ -275,7 +275,7 @@ public class HomeService
 
                 ..genres.Select((genre, index) => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
-                    .WithProps(props => props
+                    .WithProps((props, id) => props
                         .WithId($"library_{genre.Id}")
                         .WithPreviousId(index == 0
                             ? "continue"
@@ -289,7 +289,7 @@ public class HomeService
                             genre.Items.Select(item =>
                                 new ComponentBuilder<NmCardDto?>()
                                     .WithComponent("NMCard")
-                                    .WithProps(cardProps => cardProps
+                                    .WithProps((props, _) => props
                                         .WithData(item)
                                         .WithWatch())
                                     .Build())))
@@ -324,7 +324,7 @@ public class HomeService
                     .WithComponent("NMHomeCard")
                     .WithUpdate("pageLoad", "/home/card")
                     .WithReplacing(replaceId)
-                    .WithProps(props => props.WithData(homeCardItem))
+                    .WithProps((props, _) => props.WithData(homeCardItem))
                     .Build()
             ]
         };
@@ -446,23 +446,23 @@ public class HomeService
                 new ComponentBuilder<NmCardDto?>()
                     .WithComponent("NMHomeCard")
                     .WithUpdate("pageLoad", "/home/card")
-                    .WithProps(props => props.WithData(homeCardItem))
+                    .WithProps((props, id) => props.WithData(homeCardItem))
                     .Build(),
 
                 new ComponentBuilder<NmCarouselDto<NmCardDto>>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/home/continue")
-                    .WithProps(props => props
+                    .WithProps((props, id) => props
                         .WithNextId(genres.FirstOrDefault()?.Id ?? "continue")
                         .WithPreviousId("continue")
                         .WithTitle("Continue watching".Localize())
                         .WithMoreLink(null)
-                        .WithItems(GetContinueWatchingItems(continueWatching, country)))
+                        .WithItems(GetContinueWatchingItems(continueWatching, country, id)))
                     .Build(),
 
                 ..list.Select((genre, index) => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
                     .WithComponent("NMCarousel")
-                    .WithProps(props => props
+                    .WithProps((props, id) => props
                         .WithId(genre.Id)
                         .WithPreviousId(index == 0
                             ? "continue"
@@ -476,7 +476,7 @@ public class HomeService
                             genre.Items.Select(item =>
                                 new ComponentBuilder<NmCardDto>()
                                     .WithComponent("NMCard")
-                                    .WithProps(cardProps => cardProps
+                                    .WithProps((props, _) => props
                                         .WithData(item)
                                         .WithWatch())
                                     .Build())))
@@ -484,7 +484,7 @@ public class HomeService
 
                 ..genres.Select((genre, index) => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
                     .WithComponent("NMCarousel")
-                    .WithProps(props => props
+                    .WithProps((props, id) => props
                         .WithId(genre.Id)
                         .WithPreviousId(index == 0
                             ? $"library_{list.LastOrDefault()?.Id ?? "continue"}"
@@ -498,7 +498,7 @@ public class HomeService
                             genre.Items.Select(item =>
                                 new ComponentBuilder<NmCardDto>()
                                     .WithComponent("NMCard")
-                                    .WithProps(cardProps => cardProps
+                                    .WithProps((props, _) => props
                                         .WithData(item)
                                         .WithWatch())
                                     .Build())))
@@ -521,19 +521,19 @@ public class HomeService
                 new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/home/continue")
-                    .WithProps(props => props
+                    .WithProps((props, id) => props
                         .WithNextId(28)
                         .WithPreviousId("continue")
                         .WithTitle("Continue watching".Localize())
                         .WithMoreLink(null)
-                        .WithItems(GetContinueWatchingItems(continueWatching, country)))
+                        .WithItems(GetContinueWatchingItems(continueWatching, country, id)))
                     .Build()
             ]
         };
     }
 
-    private static IEnumerable<ComponentDto<NmCardDto>> GetContinueWatchingItems(
-        IEnumerable<UserData> continueWatching, string country)
+    private static IEnumerable<ComponentDto<NmCardDto>> GetContinueWatchingItems(IEnumerable<UserData> continueWatching,
+        string country, Ulid id)
     {
         return continueWatching
             .Select(item => new ComponentDto<NmCardDto>
@@ -554,7 +554,8 @@ public class HomeService
                             {
                                 "args", new Dictionary<string, object>
                                 {
-                                    { "url", new Uri($"/userdata/continue", UriKind.Relative) }
+                                    { "url", new Uri("/userdata/continue", UriKind.Relative) },
+                                    { "replaceKey", id }
                                 }
                             }
                         }

@@ -2,7 +2,7 @@ namespace NoMercy.Encoder.Format.Rules;
 
 public static class SubtitleFormats
 {
-    public static readonly string Ass = "ass";
-    public static readonly string Srt = "srt";
-    public static readonly string WebVtt = "vtt";
+    public const string Ass = "ass";
+    public const string Srt = "srt";
+    public const string WebVtt = "vtt";
 }

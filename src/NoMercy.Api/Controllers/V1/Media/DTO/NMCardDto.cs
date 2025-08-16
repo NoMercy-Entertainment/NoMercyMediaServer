@@ -17,7 +17,8 @@ public class NmCardDto
     [JsonProperty("rating")] public RatingClass? Rating { get; set; }
     [JsonProperty("year")] public int? Year { get; set; }
     [JsonProperty("duration")] public int? Duration { get; set; }
-
+    [JsonProperty("type")] public string Type { get; set; }
+    
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
     [JsonProperty("logo")] public string? Logo { get; set; }
@@ -50,6 +51,7 @@ public class NmCardDto
         Logo = movie.Images.FirstOrDefault()?.FilePath;
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
+        Type = "movie";
 
         Link = new($"/movie/{Id}", UriKind.Relative);
         NumberOfItems = 1;
@@ -84,6 +86,7 @@ public class NmCardDto
         Logo = tv.Images.FirstOrDefault()?.FilePath;
         TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
         Year = tv.FirstAirDate.ParseYear();
+        Type = "tv";
 
         Link = new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
@@ -120,6 +123,7 @@ public class NmCardDto
         TitleSort = collection.Title.TitleSort(collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)
             ?.Movie.ReleaseDate);
         Year = collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();
+        Type = "collection";
 
         Link = new($"/collection/{Id}", UriKind.Relative);
         NumberOfItems = collection.CollectionMovies.Count;
@@ -150,6 +154,7 @@ public class NmCardDto
         TitleSort = special.Title.TitleSort();
         Year = special.Items.MinBy(movie => movie.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
                ?? special.Items.Select(tv => tv.Episode?.Tv).FirstOrDefault()?.FirstAirDate.ParseYear();
+        Type = "special";
 
         Link = new($"/specials/{Id}", UriKind.Relative);
 
@@ -195,6 +200,7 @@ public class NmCardDto
             TitleSort = item.Special.Title.TitleSort();
             Overview = item.Special.Overview;
             Duration = item.VideoFile.Duration?.ToSeconds();
+            Type = "special";
 
             Link = new($"/specials/{Id}/watch", UriKind.Relative);
 
@@ -238,6 +244,7 @@ public class NmCardDto
             Year = item.Collection.CollectionMovies
                 .MinBy(movie => movie.Movie.ReleaseDate?.ParseYear())
                 ?.Movie.ReleaseDate.ParseYear() ?? 0;
+            Type = "collection";
 
             Link = new($"/collection/{Id}/watch", UriKind.Relative);
 
@@ -267,6 +274,7 @@ public class NmCardDto
             Overview = item.Movie.Overview;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/movie/{Id}/watch", UriKind.Relative);
+            Type = "movie";
 
             NumberOfItems = 1;
             HaveItems = item.Movie.VideoFiles.Count(v => v.Folder != null);
@@ -292,6 +300,7 @@ public class NmCardDto
             Overview = item.Tv.Overview;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/tv/{Id}/watch", UriKind.Relative);
+            Type = "tv";
 
             NumberOfItems = item.Tv.NumberOfEpisodes;
             HaveItems = item.Tv.Episodes

@@ -62,4 +62,9 @@ public class ComponentPropsBuilder<T>
         _props.Items = items.Cast<ComponentDto<T>>();
         return this;
     }
+
+    public void WithItems<T1>(IEnumerable<T1> selectMany)
+    {
+        _props.Items = selectMany.Cast<ComponentDto<T>>();
+    }
 }

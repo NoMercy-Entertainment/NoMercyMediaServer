@@ -114,7 +114,7 @@ public class LibrariesController(
                 new ComponentBuilder<NmCardDto?>()
                     .WithComponent("NMHomeCard")
                     .WithUpdate("pageLoad", "/home/card")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithNextId("continue")
                         .WithPreviousId("")
                         .WithData(homeCardItem))
@@ -122,7 +122,7 @@ public class LibrariesController(
 
                 ..list.Select(genre => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId(genre.Id)
                         .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
                         .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
@@ -132,7 +132,7 @@ public class LibrariesController(
                             genre.Items.Select(item =>
                                 new ComponentBuilder<NmCardDto>()
                                     .WithComponent("NMCard")
-                                    .WithProps(cardProps => cardProps
+                                    .WithProps((props, _) => props
                                         .WithData(item)
                                         .WithWatch())
                                     .Build())))
@@ -217,7 +217,7 @@ public class LibrariesController(
                 new ComponentBuilder<NmCardDto?>()
                     .WithComponent("NMHomeCard")
                     .WithUpdate("pageLoad", "/home/card")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithNextId("continue")
                         .WithPreviousId("")
                         .WithData(homeCardItem))
@@ -225,7 +225,7 @@ public class LibrariesController(
 
                 ..list.Select(genre => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithId(genre.Id)
                         .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
                         .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
@@ -235,7 +235,7 @@ public class LibrariesController(
                             genre.Items.Select(item =>
                                 new ComponentBuilder<NmCardDto>()
                                     .WithComponent("NMCard")
-                                    .WithProps(cardProps => cardProps
+                                    .WithProps((props, _) => props
                                         .WithData(item)
                                         .WithWatch())
                                     .Build())))
@@ -272,12 +272,12 @@ public class LibrariesController(
                 [
                     new ComponentBuilder<LibraryResponseItemDto>()
                         .WithComponent("NMGrid")
-                        .WithProps(props => props
+                        .WithProps((props, _) => props
                             .WithItems(
                                 concat.Select(item =>
                                     new ComponentBuilder<LibraryResponseItemDto>()
                                         .WithComponent("NMCard")
-                                        .WithProps(cardProps => cardProps
+                                        .WithProps((props, _) => props
                                             .WithData(item)
                                             .WithWatch())
                                         .Build())))
@@ -290,7 +290,7 @@ public class LibrariesController(
         {
             Data = Letters.Select(genre => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
                 .WithComponent("NMCarousel")
-                .WithProps(props => props
+                .WithProps((props, _) => props
                     .WithId(genre)
                     .WithTitle(genre)
                     .WithItems(
@@ -306,7 +306,7 @@ public class LibrariesController(
                                         : item.Title.StartsWith(genre)))
                             .Select(item => new ComponentBuilder<LibraryResponseItemDto>()
                                 .WithComponent("NMCard")
-                                .WithProps(cardProps => cardProps
+                                .WithProps((props, _) => props
                                     .WithData(item)
                                     .WithWatch())
                                 .Build())))
@@ -342,12 +342,12 @@ public class LibrariesController(
             [
                 new ComponentBuilder<LibraryResponseItemDto>()
                     .WithComponent("NMGrid")
-                    .WithProps(props => props
+                    .WithProps((props, _) => props
                         .WithItems(
                             concat.Select(item =>
                                 new ComponentBuilder<LibraryResponseItemDto>()
                                     .WithComponent("NMCard")
-                                    .WithProps(cardProps => cardProps
+                                    .WithProps((props, _) => props
                                         .WithData(item)
                                         .WithWatch())
                                     .Build())))

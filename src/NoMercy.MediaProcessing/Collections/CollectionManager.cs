@@ -7,6 +7,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
@@ -177,7 +178,7 @@ public class CollectionManager(
     {
         List<TmdbMovieAppends> movies = [];
 
-        await Parallel.ForEachAsync(collectionAppends.Parts, async (movie, _) =>
+        await Parallel.ForEachAsync(collectionAppends.Parts, Config.ParallelOptions, async (movie, _) =>
         {
             TmdbMovieClient movieClient = new(movie.Id);
             TmdbMovieAppends? movieAppends = await movieClient.WithAllAppends();

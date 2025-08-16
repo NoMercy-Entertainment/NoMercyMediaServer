@@ -170,7 +170,7 @@ public class FileRepository : IFileRepository
                 ? match.Groups["album"].Value
                 : Regex.Replace(directoryInfo.Name, @"\[\d{4}\]\s?", "");
 
-            await Parallel.ForEachAsync(audioFiles, (file, _) =>
+            await Parallel.ForEachAsync(audioFiles, Config.ParallelOptions, (file, _) =>
             {
                 fileList.Add(new()
                 {
@@ -196,7 +196,7 @@ public class FileRepository : IFileRepository
         }
         else if (videoFiles.Length > 0)
         {
-            await Parallel.ForEachAsync(videoFiles, async (file, _) =>
+            await Parallel.ForEachAsync(videoFiles, Config.ParallelOptions, async (file, _) =>
             {
                 try
                 {
@@ -492,7 +492,7 @@ public class FileRepository : IFileRepository
         string year = "0";
         List<MusicBrainzReleaseAppends> releases = new();
         object lockObject = new();
-        await Parallel.ForEachAsync(mediaFiles, async (mediaFile, _) =>
+        await Parallel.ForEachAsync(mediaFiles, Config.ParallelOptions, async (mediaFile, _) =>
         {
             mediaFile.TagFile ??= TagFile.Create(mediaFile.Path);
             mediaFile.FFprobe ??= FfProbe.Create(mediaFile.Path);
@@ -601,7 +601,7 @@ public class FileRepository : IFileRepository
             });
         }
 
-        await Parallel.ForEachAsync(releases, async (release, _) =>
+        await Parallel.ForEachAsync(releases, Config.ParallelOptions, async (release, _) =>
         {
             if (files.Any(x => x.Match.Id == release.Id)) return;
 
@@ -653,7 +653,7 @@ public class FileRepository : IFileRepository
     {
         object lockObject = new();
         lookupReleaseIds = lookupReleaseIds.DistinctBy(x => x).ToList();
-        await Parallel.ForEachAsync(lookupReleaseIds, async (releaseId, _) =>
+        await Parallel.ForEachAsync(lookupReleaseIds, Config.ParallelOptions, async (releaseId, _) =>
         {
             MusicBrainzReleaseAppends? musicBrainzRelease =
                 await musicBrainzReleaseClient.WithAllAppends(releaseId, true);
@@ -720,7 +720,7 @@ public class FileRepository : IFileRepository
             .Where(x => x.Score >= 95)
             .DistinctBy(x => x.Id);
 
-        await Parallel.ForEachAsync(foundReleases, (release, _) =>
+        await Parallel.ForEachAsync(foundReleases, Config.ParallelOptions, (release, _) =>
         {
             lock (lockObject)
             {
@@ -787,7 +787,7 @@ public class FileRepository : IFileRepository
 
         if (!string.IsNullOrEmpty(albumName))
             foundReleases = foundReleases.Where(r => r.Title.ContainsSanitized(albumName));
-        await Parallel.ForEachAsync(foundReleases, (release, _) =>
+        await Parallel.ForEachAsync(foundReleases, Config.ParallelOptions, (release, _) =>
         {
             lock (lockObject)
             {
@@ -808,7 +808,7 @@ public class FileRepository : IFileRepository
         int highestScore = 0;
         object lockObject = new();
 
-        await Parallel.ForEachAsync(matchedReleases, (release, _) =>
+        await Parallel.ForEachAsync(matchedReleases, Config.ParallelOptions, (release, _) =>
         {
             int score = CalculateMatchScore(release, mediaFiles);
             lock (lockObject)
@@ -834,12 +834,12 @@ public class FileRepository : IFileRepository
 
         if (release.Media.Length == 0) return 0;
 
-        Parallel.ForEach(release.Media, media =>
+        Parallel.ForEach(release.Media, Config.ParallelOptions, media =>
         {
             if (media.Tracks.Length == 0 || media.TrackCount == 0)
                 return;
 
-            Parallel.ForEach(localFiles, file =>
+            Parallel.ForEach(localFiles, Config.ParallelOptions, file =>
             {
                 try
                 {

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers.Monitoring;
+using NoMercy.NmSystem.Information;
 using NoMercy.Queue;
 
 namespace NoMercy.Data.Jobs;
@@ -42,7 +43,7 @@ public class StorageJob : IShouldQueue
             .ThenInclude(file => file.Metadata)
             .ToListAsync();
 
-        await Parallel.ForEachAsync(libraries, (library, _) =>
+        await Parallel.ForEachAsync(libraries, Config.ParallelOptions, (library, _) =>
         {
             List<Metadata?> movieMetaData = library.LibraryMovies
                 .Select(l => l.Movie)
@@ -118,10 +119,9 @@ public class StorageJob : IShouldQueue
         return totalSize;
     }
 
-    private static async Task CountFolder(List<string> folders, string library, StorageDto storage,
-        CancellationToken cancellationToken = default)
+    private static async Task CountFolder(List<string> folders, string library, StorageDto storage)
     {
-        await Parallel.ForEachAsync(folders, cancellationToken, (folder, _) =>
+        await Parallel.ForEachAsync(folders, Config.ParallelOptions, (folder, _) =>
         {
             long size = GetDirectorySize(new(folder));
 

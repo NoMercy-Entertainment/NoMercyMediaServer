@@ -16,7 +16,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
     private bool _fileListingEnabled;
     private bool _regexFilterEnabled = true;
     private string? Filter { get; set; }
-
+    
     private readonly Regex _folderNameRegex =
         new(
             @"video_.*|audio_.*|subtitles|scans|cds.*|ost|album|music|original|fonts|thumbs|metadata|NCED|NCOP|\s\(\d\)\.|~",
@@ -101,7 +101,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
         {
             IOrderedEnumerable<string> directories = Directory.GetDirectories(folderPath).OrderBy(f => f);
 
-            Parallel.ForEach(directories, (directory, _) =>
+            Parallel.ForEach(directories, Config.ParallelOptions, (directory, _) =>
             {
                 string folderName = Path.GetFileName(directory);
 
@@ -176,7 +176,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
             IOrderedEnumerable<string> directories = Directory.GetDirectories(folderPath).OrderBy(f => f);
 
-            Parallel.ForEach(directories, (directory, _) =>
+            Parallel.ForEach(directories, Config.ParallelOptions, (directory, _) =>
             {
                 string dir = Path.GetFullPath(directory.ToUtf8());
                 Logger.App($"Scanning {dir}");
@@ -243,7 +243,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
         ConcurrentBag<MediaFile> files = [];
         try
         {
-            Parallel.ForEach(Directory.GetFiles(folderPath), (file, _) =>
+            Parallel.ForEach(Directory.GetFiles(folderPath), Config.ParallelOptions, (file, _) =>
             {
                 file = Path.GetFullPath(file.ToUtf8());
 
