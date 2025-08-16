@@ -191,7 +191,9 @@ public class HomeController : BaseController
             }
         }
 
-        Shell.ExecResult result = await Shell.ExecAsync(AppFiles.YtdlpPath, $"{trailerId} -f bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio[ext=m4a] -j");
+        string arg =
+            $"-f bestvideo+bestaudio -j https://youtube.com/watch?v={trailerId} ";
+        Shell.ExecResult result = await Shell.ExecAsync(AppFiles.YtdlpPath, arg);
         
         if(!result.Success || string.IsNullOrEmpty(result.StandardOutput))
         {
@@ -268,26 +270,36 @@ public class HomeController : BaseController
         }
         
         StringBuilder sb = new();
-        
-        sb.Append(" -f bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio[ext=m4a] ");
+
+        sb.Append(AppFiles.YtdlpPath);
+        sb.Append(" -f bestvideo+bestaudio ");
         
         if (!string.IsNullOrEmpty(language))
-            sb.Append(" -o \"subtitle:%(language)s.%(ext)s\" --sub-langs all --write-subs ");
+            sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
         
         sb.Append(trailerId);
 
         sb.Append(" -o - ");
-        sb.Append($"| {AppFiles.FfmpegPath} -i pipe: -c:v libx264 -c:a aac -preset ultrafast ");
+        sb.Append($" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -preset ultrafast ");
         sb.Append(" -hls_allow_cache 1 -hls_flags independent_segments -hls_segment_type mpegts -segment_list_type m3u8 -segment_time_delta 1 -start_number 0 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_list_size 0 -hls_segment_filename video_%05d.ts video.m3u8 ");
-        
-        Logger.Encoder(AppFiles.YtdlpPath + " " + sb, LogEventLevel.Debug);
 
-        Shell.ExecResult x  = Shell.ExecSync("yt-dlp", sb.ToString(), new()
+        if (Software.IsWindows)
         {
-            WorkingDirectory = folder
-        });
-        
-        Logger.Encoder(x, LogEventLevel.Debug);
+            Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
+            _ = Shell.ExecSync("cmd", $"/c \"{sb}\"", new()
+            {
+                WorkingDirectory = folder
+            });
+            
+        }
+        else
+        {
+            Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
+            _ = Shell.ExecSync("/bin/bash", $"-c \"{sb}\"", new()
+            {
+                WorkingDirectory = folder
+            });
+        }
 
         while (!System.IO.File.Exists(Path.Combine(folder, "video_00001.ts")))
         {
