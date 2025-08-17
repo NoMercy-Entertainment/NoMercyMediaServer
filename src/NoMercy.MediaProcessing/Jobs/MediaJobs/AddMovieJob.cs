@@ -53,10 +53,15 @@ public class AddMovieJob : AbstractMediaJob
         {
             QueryKey = ["libraries", LibraryId.ToString()]
         });
-
+        
         Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
-            QueryKey = ["movie", Id.ToString()]
+            QueryKey = ["base","info", Id.ToString()]
+        });
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["base","collection", movieAppends.BelongsToCollection?.Id.ToString()]
         });
     }
 }

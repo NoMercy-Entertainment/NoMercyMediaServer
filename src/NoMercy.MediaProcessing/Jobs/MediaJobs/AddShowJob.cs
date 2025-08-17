@@ -77,10 +77,10 @@ public class AddShowJob : AbstractMediaJob
         {
             QueryKey = ["libraries", LibraryId.ToString()]
         });
-
+        
         Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
-            QueryKey = ["tv", Id.ToString()]
+            QueryKey = ["base","info", Id.ToString()]
         });
     }
 }

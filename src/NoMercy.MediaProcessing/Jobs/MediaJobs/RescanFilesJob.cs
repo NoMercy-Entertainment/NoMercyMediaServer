@@ -4,6 +4,7 @@
 
 using NoMercy.Database;
 using NoMercy.MediaProcessing.Libraries;
+using NoMercy.Networking.Dto;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -25,5 +26,10 @@ public class RescanFilesJob : AbstractMediaJob
         LibraryManager libraryManager = new(libraryRepository, jobDispatcher);
         
         await libraryManager.RescanFiles(LibraryId, Id);
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["base","info", Id.ToString()]
+        });
     }
 }
