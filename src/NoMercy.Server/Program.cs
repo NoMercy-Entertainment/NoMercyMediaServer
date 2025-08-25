@@ -7,6 +7,7 @@ using CommandLine;
 using Microsoft.AspNetCore;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaSources.OpticalMedia;
+using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Server.Seeds;
@@ -84,27 +85,25 @@ public static class Program
             Config.Started = true;
             stopWatch.Stop();
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 Task.Delay(300).Wait();
 
                 Logger.App($"Internal Address: {Networking.Networking.InternalAddress}");
                 Logger.App($"External Address: {Networking.Networking.ExternalAddress}");
 
-                if (!Console.IsOutputRedirected) ConsoleMessages.ServerRunning();
+                if (!Console.IsOutputRedirected) await ConsoleMessages.ServerRunning();
 
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
+
+                // Move these here to run in background
+                await Dev.Run();
+                await DriveMonitor.Start();
+                _ = LibraryFileWatcher.Instance;
             });
         });
 
-        new Thread(() => app.RunAsync()).Start();
-
-        await Dev.Run();
-        await DriveMonitor.Start();
-
-        _ = LibraryFileWatcher.Instance;
-
-        await Task.Delay(-1);
+        await app.RunAsync();
     }
 
     private static async Task Shutdown()

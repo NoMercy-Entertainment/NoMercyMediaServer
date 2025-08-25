@@ -259,7 +259,7 @@ public class HomeService
                             ? "continue"
                             : $"library_{list.ElementAtOrDefault(index - 1)?.Id}")
                         .WithNextId(index == list.Count - 1
-                            ? genres.FirstOrDefault()?.Id
+                            ? $"library_{genres.FirstOrDefault()?.Id}"
                             : $"library_{list.ElementAtOrDefault(index + 1)?.Id}")
                         .WithTitle("Latest in " + genre.Title)
                         .WithMoreLink(genre.MoreLink)
@@ -280,9 +280,9 @@ public class HomeService
                         .WithPreviousId(index == 0
                             ? "continue"
                             : $"library_{list.ElementAtOrDefault(index - 1)?.Id}")
-                        .WithNextId(index == list.Count - 1
-                            ? genres.FirstOrDefault()?.Id
-                            : $"library_{list.ElementAtOrDefault(index + 1)?.Id}")
+                        .WithNextId(index == genres.Count - 1
+                            ? $"library_{list.FirstOrDefault()?.Id}"
+                            : $"library_{genres.ElementAtOrDefault(index + 1)?.Id}")
                         .WithTitle(genre.Title)
                         .WithMoreLink(genre.MoreLink)
                         .WithItems(

@@ -4,6 +4,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using Serilog.Events;
 using NoMercy.Helpers;
+using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -106,9 +107,7 @@ public static class Register
 
         Logger.Register("Server assigned successfully");
 
-#pragma warning disable CS0618 // Type or member is obsolete
         Certificate.RenewSslCertificate().Wait();
-#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public static async Task GetTunnelAvailability()

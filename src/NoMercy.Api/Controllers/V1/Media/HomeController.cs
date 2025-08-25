@@ -344,13 +344,31 @@ public class HomeController : BaseController
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
-
-        string language = Language();
-
-        string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
-        if (Directory.Exists(folder))
-            Directory.CreateDirectory(folder);
         
+        string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
+        
+        if (!Directory.Exists(folder))
+            return Ok(new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Trailer removed"
+            });
+        
+        try
+        {
+            Directory.Delete(folder, recursive: true);
+            Logger.Encoder($"Trailer folder deleted: {folder}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Encoder($"Failed to delete trailer folder {folder}: {ex.Message}", LogEventLevel.Error);
+            return StatusCode(500, new StatusResponseDto<string>
+            {
+                Status = "error",
+                Message = "Failed to remove trailer"
+            });
+        }
+
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",

@@ -8,14 +8,19 @@ using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
+using NoMercy.Queue;
+using NoMercy.Queue.Extensions;
+using NoMercy.Queue.Jobs;
+using NoMercy.Queue.Workers;
 
 namespace NoMercy.Server.AppConfig;
 
 public static class ApplicationConfiguration
 {
-    public static async Task ConfigureApp(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
+    public static void ConfigureApp(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
     {
         ConfigureLocalization(app);
+        ConfigureCronJobs(app);
         ConfigureMiddleware(app);
         ConfigureSwaggerUi(app, provider);
         ConfigureWebSockets(app);
@@ -24,7 +29,13 @@ public static class ApplicationConfiguration
 
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
     }
-    
+
+    private static void ConfigureCronJobs(IApplicationBuilder app)
+    {
+        CronWorker cronWorker = app.ApplicationServices.GetRequiredService<CronWorker>();
+        cronWorker.RegisterJobWithSchedule<CertificateRenewalJob>("certificate-renewal", app.ApplicationServices);
+    }
+
     private static void ConfigureLocalization(IApplicationBuilder app)
     {
         string[] supportedCultures = ["en-US", "nl-NL"]; // Add other supported locales

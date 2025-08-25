@@ -3,9 +3,9 @@ using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 using Exception = System.Exception;
 
-namespace NoMercy.Queue;
+namespace NoMercy.Queue.Workers;
 
-public class Worker(JobQueue queue, string name = "default")
+public class QueueWorker(JobQueue queue, string name = "default")
 {
     private long? _currentJobId;
     private bool _isRunning = true;
@@ -16,7 +16,7 @@ public class Worker(JobQueue queue, string name = "default")
 
     public void Start()
     {
-        Logger.Queue($"Worker {name} - {CurrentIndex}: started");
+        Logger.Queue($"QueueWorker {name} - {CurrentIndex}: started");
 
         Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
@@ -41,7 +41,7 @@ public class Worker(JobQueue queue, string name = "default")
                         OnWorkCompleted(EventArgs.Empty);
 
                         Logger.Queue(
-                            $"Worker {name} - {CurrentIndex}: Job {job.Id} of Type {classInstance} processed successfully.",
+                            $"QueueWorker {name} - {CurrentIndex}: Job {job.Id} of Type {classInstance} processed successfully.",
                             LogEventLevel.Verbose);
                     }
                 }
@@ -52,7 +52,7 @@ public class Worker(JobQueue queue, string name = "default")
                     _currentJobId = null;
 
                     Logger.Queue(
-                        $"Worker {name} - {CurrentIndex}: Job {job.Id} of Type {job.Payload} failed with error: {ex}",
+                        $"QueueWorker {name} - {CurrentIndex}: Job {job.Id} of Type {job.Payload} failed with error: {ex}",
                         LogEventLevel.Error);
                 }
 
@@ -74,7 +74,7 @@ public class Worker(JobQueue queue, string name = "default")
 
     public void Stop()
     {
-        Logger.Queue($"Worker {name} - {CurrentIndex}: stopped", LogEventLevel.Information);
+        Logger.Queue($"QueueWorker {name} - {CurrentIndex}: stopped", LogEventLevel.Information);
         _isRunning = false;
     }
 

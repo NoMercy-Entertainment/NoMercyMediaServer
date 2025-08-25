@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Queue.Workers;
 using Serilog.Events;
 
 namespace NoMercy.Queue;
@@ -9,7 +10,7 @@ namespace NoMercy.Queue;
 public static class QueueRunner
 {
     private static readonly
-        Dictionary<string, (int count, List<Worker> workerInstances, CancellationTokenSource _cancellationTokenSource)>
+        Dictionary<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource _cancellationTokenSource)>
         Workers = new()
         {
             [Config.QueueWorkers.Key] = (Config.QueueWorkers.Value, [], new()),
@@ -37,7 +38,7 @@ public static class QueueRunner
             .ForEachAsync(job => job.ReservedAt = null);
         await queueContext.SaveChangesAsync();
 
-        foreach (KeyValuePair<string, (int count, List<Worker> workerInstances, CancellationTokenSource
+        foreach (KeyValuePair<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource
                      _cancellationTokenSource)> keyValuePair in Workers)
             for (int i = 0; i < keyValuePair.Value.count; i++)
                 taskList.Add(Task.Run(() => new Thread(() => SpawnWorker(keyValuePair.Key)).Start()));
@@ -47,13 +48,13 @@ public static class QueueRunner
 
     private static Task SpawnWorker(string name)
     {
-        Worker workerInstance = new(JobQueue, name);
+        QueueWorker queueWorkerInstance = new(JobQueue, name);
 
-        workerInstance.WorkCompleted += QueueWorkerCompleted(name, workerInstance);
+        queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name, queueWorkerInstance);
 
-        Workers[name].workerInstances.Add(workerInstance);
+        Workers[name].workerInstances.Add(queueWorkerInstance);
 
-        workerInstance.Start();
+        queueWorkerInstance.Start();
 
         return Task.CompletedTask;
     }
@@ -63,14 +64,14 @@ public static class QueueRunner
 
     public static Task Start(string name)
     {
-        foreach (Worker workerInstance in Workers[name].workerInstances) workerInstance.Start();
+        foreach (QueueWorker workerInstance in Workers[name].workerInstances) workerInstance.Start();
 
         return Task.CompletedTask;
     }
 
     public static Task StartAll()
     {
-        foreach (KeyValuePair<string, (int count, List<Worker> workerInstances, CancellationTokenSource
+        foreach (KeyValuePair<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource
                      _cancellationTokenSource)> keyValuePair in Workers) Start(keyValuePair.Key);
 
         return Task.CompletedTask;
@@ -78,14 +79,14 @@ public static class QueueRunner
 
     public static Task Stop(string name)
     {
-        foreach (Worker workerInstance in Workers[name].workerInstances) workerInstance.Stop();
+        foreach (QueueWorker workerInstance in Workers[name].workerInstances) workerInstance.Stop();
 
         return Task.CompletedTask;
     }
 
     public static Task StopAll()
     {
-        foreach (KeyValuePair<string, (int count, List<Worker> workerInstances, CancellationTokenSource
+        foreach (KeyValuePair<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource
                      _cancellationTokenSource)> keyValuePair in Workers) Stop(keyValuePair.Key);
 
         return Task.CompletedTask;
@@ -93,14 +94,14 @@ public static class QueueRunner
 
     public static Task Restart(string name)
     {
-        foreach (Worker workerInstance in Workers[name].workerInstances) workerInstance.Restart();
+        foreach (QueueWorker workerInstance in Workers[name].workerInstances) workerInstance.Restart();
 
         return Task.CompletedTask;
     }
 
     public static Task RestartAll()
     {
-        foreach (KeyValuePair<string, (int count, List<Worker> workerInstances, CancellationTokenSource
+        foreach (KeyValuePair<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource
                      _cancellationTokenSource)> keyValuePair in Workers) Restart(keyValuePair.Key);
 
         return Task.CompletedTask;
@@ -109,7 +110,7 @@ public static class QueueRunner
     #endregion
 
 
-    private static WorkCompletedEventHandler QueueWorkerCompleted(string name, Worker instance)
+    private static WorkCompletedEventHandler QueueWorkerCompleted(string name, QueueWorker instance)
     {
         return (_, _) =>
         {
@@ -171,7 +172,7 @@ public static class QueueRunner
         _isUpdating = true;
         Workers[name]._cancellationTokenSource.Cancel();
 
-        (int count, List<Worker> workerInstances, CancellationTokenSource _cancellationTokenSource) valueTuple =
+        (int count, List<QueueWorker> workerInstances, CancellationTokenSource _cancellationTokenSource) valueTuple =
             Workers[name];
         valueTuple.count = max;
         valueTuple._cancellationTokenSource = new();
@@ -186,8 +187,8 @@ public static class QueueRunner
         return true;
     }
 
-    public static int GetWorkerIndex(string name, Worker worker)
+    public static int GetWorkerIndex(string name, QueueWorker queueWorker)
     {
-        return Workers[name].workerInstances.IndexOf(worker);
+        return Workers[name].workerInstances.IndexOf(queueWorker);
     }
 }

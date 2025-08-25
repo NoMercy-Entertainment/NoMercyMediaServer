@@ -30,6 +30,8 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue;
+using NoMercy.Queue.Extensions;
+using NoMercy.Queue.Jobs;
 using NoMercy.Server.services;
 using NoMercy.Server.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -53,21 +55,25 @@ public static class ServiceConfiguration
 
     private static void ConfigureKestrel(IServiceCollection services)
     {
+        services.RegisterCronJob<CertificateRenewalJob>("certificate-renewal");
     }
 
     private static void ConfigureCoreServices(IServiceCollection services)
     {
         // Add Memory Cache
         services.AddMemoryCache();
+        services.AddCronWorker();
 
         // Add Singleton Services
-        // services.AddSingleton<JobQueue>();
         services.AddScoped<JobQueue>();
+        services.AddScoped<CertificateRenewalJob>();
+        
         services.AddSingleton<ResourceMonitor>();
         services.AddSingleton<Networking.Networking>();
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();
         services.AddSingleton<DriveMonitor>();
+        
 
         // Add DbContexts
         services.AddDbContext<QueueContext>(optionsAction =>
@@ -225,9 +231,6 @@ public static class ServiceConfiguration
             .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings = JsonHelper.Settings; });
 
         services.AddResponseCompression(options => { options.EnableForHttps = true; });
-
-        // services.AddTransient<DynamicStaticFilesMiddleware>();
-        // services.AddSingleton(LibraryFileWatcher.Instance);
 
         ConfigureApiVersioning(services);
         ConfigureSwagger(services);

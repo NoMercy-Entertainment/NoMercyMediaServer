@@ -45,4 +45,5 @@ public class QueueContext : DbContext
 
     public virtual DbSet<QueueJob> QueueJobs { get; set; }
     public virtual DbSet<FailedJob> FailedJobs { get; set; }
+    public virtual DbSet<CronJob> CronJobs { get; set; }
 }

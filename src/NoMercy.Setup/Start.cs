@@ -22,11 +22,9 @@ public class Start
     public static void VsConsoleWindow(int i)
     {
         IntPtr hWnd = GetConsoleWindow();
-        if (hWnd != IntPtr.Zero)
-        {
-            ConsoleVisible = i;
-            ShowWindow(hWnd, i);
-        }
+        if (hWnd == IntPtr.Zero) return;
+        ConsoleVisible = i;
+        ShowWindow(hWnd, i);
     }
 
     public static async Task Init(List<TaskDelegate> tasks)
@@ -82,7 +80,7 @@ public class Start
         {
             Logger.App(
                 "Your server is ready and we will hide the console window in 10 seconds\n you can show it again by right-clicking the tray icon");
-            Task.Delay(10000)
+            await Task.Delay(10000)
                 .ContinueWith(_ => VsConsoleWindow(0));
         }
     }

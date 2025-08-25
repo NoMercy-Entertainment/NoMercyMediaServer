@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Data.Repositories;
 
