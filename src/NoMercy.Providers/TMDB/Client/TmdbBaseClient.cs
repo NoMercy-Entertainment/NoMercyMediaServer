@@ -26,7 +26,7 @@ public class TmdbBaseClient : IDisposable
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
-        Language = "en-US";
+        Language = "en,null";
     }
 
     protected TmdbBaseClient(int id, string language = "en-US")
@@ -38,7 +38,7 @@ public class TmdbBaseClient : IDisposable
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.Timeout = TimeSpan.FromMinutes(5);
-        Language = language;
+        Language = language + ",null";
         Id = id;
     }
 
@@ -64,7 +64,9 @@ public class TmdbBaseClient : IDisposable
     {
         query ??= new();
         
-        query["language"] = Language;
+        query["language"] = priority is true
+            ? Language 
+            : "";
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 

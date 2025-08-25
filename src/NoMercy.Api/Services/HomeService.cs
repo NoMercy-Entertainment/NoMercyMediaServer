@@ -250,7 +250,7 @@ public class HomeService
                         .WithMoreLink(null)
                         .WithItems(GetContinueWatchingItems(continueWatching, country, id)))
                     .Build(),
-
+                
                 ..list.Select((genre, index) => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithProps((props, id) => props

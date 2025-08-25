@@ -127,7 +127,7 @@ public class MovieRepository(MediaContext context)
         if (tvLibrary == null) return;
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<AddMovieJob>(id, tvLibrary);
+        jobDispatcher.DispatchJob<AddMovieJob>(id, tvLibrary.Id);
     }
 
     public Task DeleteMovieAsync(int id)

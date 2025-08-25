@@ -26,6 +26,7 @@ public class LibrariesController(
     LibraryRepository libraryRepository,
     EncoderRepository encoderRepository,
     FolderRepository folderRepository,
+    JobDispatcher jobDispatcher,
     LanguageRepository languageRepository
 ) : BaseController
 {
@@ -292,16 +293,12 @@ public class LibrariesController(
         {
             foreach (LibraryMovie movie in library.LibraryMovies)
             {
-                FileRepository fileRepository = new();
-                FileManager fileManager = new(fileRepository);
-                await fileManager.FindFiles(movie.MovieId, library);
+                jobDispatcher.DispatchJob<RescanFilesJob>(movie.MovieId, movie.LibraryId);
             }
 
             foreach (LibraryTv show in library.LibraryTvs)
             {
-                FileRepository fileRepository = new();
-                FileManager fileManager = new(fileRepository);
-                await fileManager.FindFiles(show.TvId, library);
+                jobDispatcher.DispatchJob<RescanFilesJob>(show.TvId, show.LibraryId);
             }
         }
 
@@ -327,16 +324,12 @@ public class LibrariesController(
 
         foreach (LibraryMovie movie in library.LibraryMovies)
         {
-            FileRepository fileRepository = new();
-            FileManager fileManager = new(fileRepository);
-            await fileManager.FindFiles(movie.MovieId, library);
+            jobDispatcher.DispatchJob<RescanFilesJob>(movie.MovieId, movie.LibraryId);
         }
 
         foreach (LibraryTv show in library.LibraryTvs)
         {
-            FileRepository fileRepository = new();
-            FileManager fileManager = new(fileRepository);
-            await fileManager.FindFiles(show.TvId, library);
+            jobDispatcher.DispatchJob<RescanFilesJob>(show.TvId, show.LibraryId);
         }
 
         return Ok(new StatusResponseDto<List<dynamic>>
@@ -366,7 +359,6 @@ public class LibrariesController(
         
         foreach (Library library in librariesList)
         {
-            JobDispatcher jobDispatcher = new();
             jobDispatcher.DispatchJob<RescanLibraryJob>(library.Id);
         }
 
@@ -383,7 +375,6 @@ public class LibrariesController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh the library");
 
-        JobDispatcher jobDispatcher = new();
         jobDispatcher.DispatchJob<RescanLibraryJob>(id);
 
         return Ok(new StatusResponseDto<List<dynamic>>
