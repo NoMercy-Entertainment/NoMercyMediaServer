@@ -40,30 +40,13 @@ public static class Certificate
 
         try
         {
-            X509Certificate2 publicX509 = X509CertificateLoader.LoadCertificateFromFile(AppFiles.CertFile);
-
-            string privateKeyText = File.ReadAllText(AppFiles.KeyFile);
-            string[] privateKeyBlocks = privateKeyText.Split("-", StringSplitOptions.RemoveEmptyEntries);
-        
-            if (privateKeyBlocks.Length < 2)
-                throw new InvalidDataException("Invalid private key format - missing key data");
+            string certPem = File.ReadAllText(AppFiles.CertFile);
+            string keyPem = File.ReadAllText(AppFiles.KeyFile);
             
-            byte[] privateKeyBytes = Convert.FromBase64String(privateKeyBlocks[1]);
-
-            using RSA rsa = RSA.Create();
-            switch (privateKeyBlocks[0])
-            {
-                case "BEGIN PRIVATE KEY":
-                    rsa.ImportPkcs8PrivateKey(privateKeyBytes, out _);
-                    break;
-                case "BEGIN RSA PRIVATE KEY":
-                    rsa.ImportRSAPrivateKey(privateKeyBytes, out _);
-                    break;
-                default:
-                    throw new NotSupportedException($"Unsupported private key format: {privateKeyBlocks[0]}");
-            }
-
-            return publicX509.CopyWithPrivateKey(rsa);
+            using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
+            
+            byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
+            return X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
         }
         catch (Exception ex)
         {
