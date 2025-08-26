@@ -1,9 +1,9 @@
 pkgname = nomercymediaserver
-pkgver = 0.1.141-1
+pkgver = 0.1.142-1
 pkgdesc = NoMercy-MediaServer
 url = https://nomercy.tv
-builddate = 1756163529
-size = 80928129
+builddate = 1756169506
+size = 80927883
 arch = x86_64
 license = custom
 depend = glibc
