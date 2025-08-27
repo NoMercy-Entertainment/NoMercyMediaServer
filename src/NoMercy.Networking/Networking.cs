@@ -139,7 +139,7 @@ public class Networking
 
         string externalIp = await response.Content.ReadAsStringAsync();
 
-        ExternalDomain = $"{Regex.Replace(externalIp.Replace("\"", ""), "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        ExternalDomain = $"{Regex.Replace(Regex.Replace(ExternalIp, "\\.", "-"), ":", "-")}.{Info.DeviceId}.nomercy.tv";
         ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
 
         return externalIp.Replace("\"", "");
@@ -157,11 +157,11 @@ public class Networking
 
         await SendUpdate();
         
-        ExternalDomain = $"{Regex.Replace(ExternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        ExternalDomain = $"{Regex.Replace(Regex.Replace(ExternalIp, "\\.", "-"), ":", "-")}.{Info.DeviceId}.nomercy.tv";
         ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
         Logger.Setup($"External Address: {ExternalAddress}");
         
-        InternalDomain = $"{Regex.Replace(InternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        InternalDomain = $"{Regex.Replace(Regex.Replace(InternalIp, "\\.", "-"), ":", "-")}.{Info.DeviceId}.nomercy.tv";
         InternalAddress = $"https://{InternalDomain}:{Config.InternalServerPort}";
         Logger.Setup($"Internal Address: {InternalAddress}");
     }
@@ -205,7 +205,7 @@ public class Networking
 
         GetNatStatus();
 
-        ExternalDomain = $"{Regex.Replace(ExternalIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
+        ExternalDomain = $"{Regex.Replace(Regex.Replace(ExternalIp, "\\.", "-"), ":", "-")}.{Info.DeviceId}.nomercy.tv";
         ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
     }
 
@@ -309,8 +309,11 @@ public class Networking
                 "NoMercy MediaServer (UDP)"));
 
             Logger.Setup($"IP address obtained from UPNP: {ExternalIp}");
-
-            ExternalIp = _device.GetExternalIP().ToString();
+            
+            if(string.IsNullOrEmpty(ExternalIp))
+            {
+                ExternalIp = _device.GetExternalIP().ToString();
+            }
         }
         catch (Exception e)
         {

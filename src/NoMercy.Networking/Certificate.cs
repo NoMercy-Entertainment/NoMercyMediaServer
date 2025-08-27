@@ -1,5 +1,4 @@
 using System.Security.Authentication;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -18,6 +17,12 @@ public static class Certificate
     {
         options.ConfigureEndpointDefaults(listenOptions => 
             listenOptions.UseHttps(HttpsConnectionAdapterOptions()));
+        
+        options.AddServerHeader = false;
+        options.Limits.MaxRequestBodySize = null;
+        options.Limits.MaxRequestBufferSize = null;
+        options.Limits.MaxConcurrentConnections = null;
+        options.Limits.MaxConcurrentUpgradedConnections = null;
         options.AddServerHeader = false;
     }
     
@@ -38,20 +43,13 @@ public static class Certificate
         if (!File.Exists(AppFiles.KeyFile))
             throw new FileNotFoundException($"Private key file not found: {AppFiles.KeyFile}");
 
-        try
-        {
-            string certPem = File.ReadAllText(AppFiles.CertFile);
-            string keyPem = File.ReadAllText(AppFiles.KeyFile);
-            
-            using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
-            
-            byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
-            return X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
-        }
-        catch (Exception ex)
-        {
-            throw new CryptographicException($"Failed to load certificate: {ex.Message}", ex);
-        }
+        string certPem = File.ReadAllText(AppFiles.CertFile);
+        string keyPem = File.ReadAllText(AppFiles.KeyFile);
+        
+        using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
+        
+        byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
+        return X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
     }
 
 

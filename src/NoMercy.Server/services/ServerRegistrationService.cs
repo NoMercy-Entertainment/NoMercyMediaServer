@@ -8,7 +8,7 @@ namespace NoMercy.Server.services;
 
 public class ServerRegistrationService : IHostedService, IDisposable
 {
-    private CloudflareTunnelService _tunnelService { get; set; } = null!;
+    private CloudflareTunnelService? _tunnelService { get; set; }
     private Task? _executingTask;
     private readonly CancellationTokenSource _stoppingCts = new();
 
@@ -89,7 +89,7 @@ public class ServerRegistrationService : IHostedService, IDisposable
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_executingTask == null) return;
+        if (_executingTask == null || _tunnelService == null) return;
 
         try
         {

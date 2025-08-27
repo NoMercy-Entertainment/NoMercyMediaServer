@@ -123,32 +123,26 @@ public static class Program
             Host = IPAddress.Any.ToString(),
             Port = Config.InternalServerPort,
             Scheme = Uri.UriSchemeHttps
+        };  
+        UriBuilder localhostIPv6Url = new()
+        {
+            Host = IPAddress.IPv6Any.ToString(),
+            Port = Config.InternalServerPort,
+            Scheme = Uri.UriSchemeHttps
         };
 
-        List<string> urls = [localhostIPv4Url.ToString()];
+        List<string> urls = [localhostIPv4Url.ToString(), localhostIPv6Url.ToString()];
 
         return WebHost.CreateDefaultBuilder([])
-            .ConfigureLogging(logging =>
-            {
-                logging.ClearProviders();
-                logging.AddFilter("Microsoft", LogLevel.None);
-            })
             .ConfigureServices(services =>
             {
                 services.AddSingleton<StartupOptions>(options);
                 services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
                 services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
+                services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
             })
             .ConfigureKestrel(Certificate.KestrelConfig)
             .UseUrls(urls.ToArray())
-            .UseKestrel(options =>
-            {
-                options.AddServerHeader = false;
-                options.Limits.MaxRequestBodySize = null;
-                options.Limits.MaxRequestBufferSize = null;
-                options.Limits.MaxConcurrentConnections = null;
-                options.Limits.MaxConcurrentUpgradedConnections = null;
-            })
             .UseQuic()
             .UseSockets()
             .UseStartup<Startup>();
