@@ -74,15 +74,6 @@ public class Start
         foreach (GpuAccelerator accelerator in FFmpegHardwareConfig.Accelerators)
             Logger.Encoder(
                 $"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}");
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-            OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
-        {
-            Logger.App(
-                "Your server is ready and we will hide the console window in 10 seconds\n you can show it again by right-clicking the tray icon");
-            await Task.Delay(10000)
-                .ContinueWith(_ => VsConsoleWindow(0));
-        }
     }
 
     private static async Task RunStartup(List<TaskDelegate> startupTasks)

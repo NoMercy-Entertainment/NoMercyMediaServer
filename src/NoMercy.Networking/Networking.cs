@@ -10,6 +10,7 @@ using Mono.Nat;
 using Newtonsoft.Json;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -102,11 +103,11 @@ public class Networking
         }
     }
 
-    public static string InternalDomain { get; private set; } = "";
-    public static string InternalAddress { get; private set; } = "";
+    public static string InternalDomain => $"{InternalIp.SafeHost()}.{Info.DeviceId}.nomercy.tv";
+    public static string InternalAddress => $"https://{InternalDomain}:{Config.InternalServerPort}";
 
-    public static string ExternalDomain { get; private set; } = "";
-    public static string ExternalAddress { get; private set; } = "";
+    public static string ExternalDomain => $"{ExternalIp.SafeHost()}.{Info.DeviceId}.nomercy.tv";
+    public static string ExternalAddress => $"https://{ExternalDomain}:{Config.ExternalServerPort}";
 
     public static bool Ipv6Enabled => CheckIpv6();
 
@@ -118,14 +119,11 @@ public class Networking
 
         IPEndPoint? endPoint = socket.LocalEndPoint as IPEndPoint;
 
-        string? localIp = endPoint?.Address.ToString().Replace("\"", "");
+        string? localIp = endPoint?.Address.ToString();
 
         if (localIp == null) return "";
 
-        InternalDomain = $"{Regex.Replace(localIp, "\\.", "-")}.{Info.DeviceId}.nomercy.tv";
-        InternalAddress = $"https://{InternalDomain}:{Config.InternalServerPort}";
-
-        return localIp;
+        return localIp.Replace("\"", "");
     }
 
     private static async Task<string> GetExternalIp()
@@ -138,9 +136,6 @@ public class Networking
         if (!response.IsSuccessStatusCode) throw new("The NoMercy API is not available");
 
         string externalIp = await response.Content.ReadAsStringAsync();
-
-        ExternalDomain = $"{Regex.Replace(Regex.Replace(ExternalIp, "\\.", "-"), ":", "-")}.{Info.DeviceId}.nomercy.tv";
-        ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
 
         return externalIp.Replace("\"", "");
     }
@@ -157,12 +152,7 @@ public class Networking
 
         await SendUpdate();
         
-        ExternalDomain = $"{Regex.Replace(Regex.Replace(ExternalIp, "\\.", "-"), ":", "-")}.{Info.DeviceId}.nomercy.tv";
-        ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
         Logger.Setup($"External Address: {ExternalAddress}");
-        
-        InternalDomain = $"{Regex.Replace(Regex.Replace(InternalIp, "\\.", "-"), ":", "-")}.{Info.DeviceId}.nomercy.tv";
-        InternalAddress = $"https://{InternalDomain}:{Config.InternalServerPort}";
         Logger.Setup($"Internal Address: {InternalAddress}");
     }
     
@@ -204,9 +194,6 @@ public class Networking
         HasFoundDevice = true;
 
         GetNatStatus();
-
-        ExternalDomain = $"{Regex.Replace(Regex.Replace(ExternalIp, "\\.", "-"), ":", "-")}.{Info.DeviceId}.nomercy.tv";
-        ExternalAddress = $"https://{ExternalDomain}:{Config.ExternalServerPort}";
     }
 
     private static void UnknownDeviceFound(object? sender, DeviceEventUnknownArgs args)
@@ -308,12 +295,11 @@ public class Networking
                 0,
                 "NoMercy MediaServer (UDP)"));
 
-            Logger.Setup($"IP address obtained from UPNP: {ExternalIp}");
+            string ip = _device.GetExternalIP().ToString();
+
+            Logger.Setup($"IP address obtained from UPNP: {ip}");
             
-            if(string.IsNullOrEmpty(ExternalIp))
-            {
-                ExternalIp = _device.GetExternalIP().ToString();
-            }
+            ExternalIp = ip;
         }
         catch (Exception e)
         {

@@ -1,6 +1,8 @@
+using System.Text.RegularExpressions;
+
 namespace NoMercy.NmSystem.Extensions;
 
-public static class Url
+public static partial class Url
 {
     public static Uri ToHttps(this Uri url)
     {
@@ -41,4 +43,16 @@ public static class Url
             return false;
         }
     }
+    
+    public static string SafeHost(this string url)
+    {
+        url = ReplaceIpV4().Replace(url, "-");
+        url = ReplaceIpV6().Replace(url, "-");
+        return url;
+    }
+
+    [GeneratedRegex(":")]
+    private static partial Regex ReplaceIpV6();
+    [GeneratedRegex("\\.")]
+    private static partial Regex ReplaceIpV4();
 }

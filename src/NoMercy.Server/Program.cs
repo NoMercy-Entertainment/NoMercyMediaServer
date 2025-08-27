@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
@@ -100,6 +101,16 @@ public static class Program
                 await Dev.Run();
                 await DriveMonitor.Start();
                 _ = LibraryFileWatcher.Instance;
+                
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                    OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
+                {
+                    Logger.App(
+                        "Your server is ready and we will hide the console window in 10 seconds\n you can show it again by right-clicking the tray icon");
+                    await Task.Delay(10000)
+                        .ContinueWith(_ => Setup.Start.VsConsoleWindow(0));
+                }
+                
             });
         });
 
