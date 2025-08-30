@@ -134,7 +134,7 @@ public static class Program
             Host = IPAddress.Any.ToString(),
             Port = Config.InternalServerPort,
             Scheme = Uri.UriSchemeHttps
-        };  
+        };
         UriBuilder localhostIPv6Url = new()
         {
             Host = IPAddress.IPv6Any.ToString(),
@@ -142,7 +142,12 @@ public static class Program
             Scheme = Uri.UriSchemeHttps
         };
 
-        List<string> urls = [localhostIPv4Url.ToString(), localhostIPv6Url.ToString()];
+        List<string> urls = [
+            localhostIPv4Url.ToString()
+        ];
+        
+        if(Software.IsWindows || Software.IsMac)
+            urls.Add(localhostIPv6Url.ToString());
 
         return WebHost.CreateDefaultBuilder([])
             .ConfigureServices(services =>

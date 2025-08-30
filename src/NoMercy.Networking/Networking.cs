@@ -129,7 +129,7 @@ public class Networking
     private static async Task<string> GetExternalIp()
     {
         Logger.Setup("Getting external IP address");
-
+        
         GenericHttpClient apiClient = new(Config.ApiBaseUrl);
         apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
         HttpResponseMessage response = await apiClient.SendAsync(HttpMethod.Get, "v1/ip");
@@ -298,8 +298,12 @@ public class Networking
             string ip = _device.GetExternalIP().ToString();
 
             Logger.Setup($"IP address obtained from UPNP: {ip}");
+            Logger.Setup($"IP address obtained from API: {ExternalIp}");
             
-            ExternalIp = ip;
+            if(string.IsNullOrEmpty(ExternalIp))
+            {
+                ExternalIp = ip;
+            }
         }
         catch (Exception e)
         {
