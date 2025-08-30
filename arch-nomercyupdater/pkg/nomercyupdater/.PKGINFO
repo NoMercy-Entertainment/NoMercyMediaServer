@@ -1,9 +1,9 @@
 pkgname = nomercyupdater
-pkgver = 0.1.144-1
+pkgver = 0.1.145-1
 pkgdesc = NoMercy-Updater
 url = https://nomercy.tv
-builddate = 1756339276
-size = 80983528
+builddate = 1756582527
+size = 80983541
 arch = x86_64
 license = custom
 depend = glibc
