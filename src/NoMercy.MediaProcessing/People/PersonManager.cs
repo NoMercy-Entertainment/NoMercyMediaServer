@@ -2,7 +2,6 @@ using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -266,12 +265,6 @@ public class PersonManager(
             .ToList();
 
         await personRepository.StoreImagesAsync(posters);
-
-        IEnumerable<Image> posterJobItems = posters
-            .Select(x => new Image { FilePath = x.FilePath })
-            .ToArray();
-        if (posterJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(person.Id, posterJobItems);
     }
 
     private (List<int> peopleIds, List<Cast> casts, List<Crew> crews, List<Role> roles, List<Job> jobs) CollectPeople(

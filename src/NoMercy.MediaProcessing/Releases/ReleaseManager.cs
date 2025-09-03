@@ -2,7 +2,6 @@ using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
-using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -29,11 +28,14 @@ public class ReleaseManager(
 
         MusicBrainzReleaseClient musicBrainzReleaseClient = new();
         MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(id);
-        if (releaseAppends == null) return (null, null);
+        
+        if (releaseAppends == null) 
+            return (null, null);
 
-        CoverArtImageManagerManager.CoverPalette? coverPalette =
-            await CoverArtImageManagerManager.Add(releaseAppends.Id);
-        if (coverPalette is not null) await CoverArtCoverArtClient.Download(coverPalette.Url);
+        CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(releaseAppends.Id);
+        
+        if (coverPalette is not null) 
+            await CoverArtCoverArtClient.Download(coverPalette.Url);
 
         await Store(releaseAppends, albumLibrary, libraryFolder, mediaFolder, coverPalette);
 
@@ -70,7 +72,6 @@ public class ReleaseManager(
                 Cover = coverPalette?.Url is not null
                     ? $"/{coverPalette.Url.FileName()}"
                     : null,
-                _colorPalette = coverPalette?.Palette ?? string.Empty
             };
 
             await releaseRepository.Store(release);
@@ -86,8 +87,6 @@ public class ReleaseManager(
             await musicGenreRepository.LinkToRelease(genres);
 
             Logger.MusicBrainz($"Release {releaseAppends.Title} stored", LogEventLevel.Verbose);
-
-            jobDispatcher.DispatchJob<ProcessFanartReleaseImagesJob>(releaseAppends.Id);
         }
         catch (Exception e)
         {

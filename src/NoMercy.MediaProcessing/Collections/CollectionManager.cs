@@ -1,10 +1,8 @@
-using System.Globalization;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -29,12 +27,6 @@ public class CollectionManager(
 
         if (collectionAppends is null) return null;
 
-        string colorPalette = await MovieDbImageManager
-            .MultiColorPalette([
-                new("poster", collectionAppends.PosterPath),
-                new("backdrop", collectionAppends.BackdropPath)
-            ]);
-
         Collection collection = new()
         {
             Id = collectionAppends.Id,
@@ -46,7 +38,6 @@ public class CollectionManager(
             Poster = collectionAppends.PosterPath,
             Overview = collectionAppends.Overview,
             Parts = collectionAppends.Parts.Length,
-            _colorPalette = colorPalette,
 
             LibraryId = library.Id
         };
@@ -115,14 +106,6 @@ public class CollectionManager(
         await collectionRepository.StoreImages(posters);
         Logger.MovieDb($"Movie: {collection.Name}: Posters stored", LogEventLevel.Debug);
 
-        IEnumerable<Image> posterJobItems = posters
-            .Select(x => new Image { FilePath = x.FilePath })
-            .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
-                        e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
-            .ToArray();
-        if (posterJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(collection.Id, posterJobItems);
-
         IEnumerable<Image> backdrops = collection.Images.Backdrops
             .Select(image => new Image
             {
@@ -142,12 +125,6 @@ public class CollectionManager(
         await collectionRepository.StoreImages(backdrops);
         Logger.MovieDb($"Collection: {collection.Name}: backdrops stored", LogEventLevel.Debug);
 
-        IEnumerable<Image> backdropJobItems = backdrops
-            .Select(x => new Image { FilePath = x.FilePath })
-            .ToArray();
-        if (backdropJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(collection.Id, backdropJobItems);
-
         IEnumerable<Image> logos = collection.Images.Logos.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
@@ -165,13 +142,6 @@ public class CollectionManager(
 
         await collectionRepository.StoreImages(logos);
         Logger.MovieDb($"Collection: {collection.Name}: Logos stored", LogEventLevel.Debug);
-
-        IEnumerable<Image> logosJobItems = logos
-            .Where(x => !x.FilePath.EndsWith(".svg"))
-            .Select(x => new Image { FilePath = x.FilePath })
-            .ToArray();
-        if (logosJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(collection.Id, logosJobItems);
     }
 
     public async Task AddCollectionMovies(TmdbCollectionAppends collectionAppends, Library library)

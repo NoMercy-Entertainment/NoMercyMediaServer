@@ -58,15 +58,20 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
             priority: priority);
     }
 
-    public Task<TmdbSeasonChanges?> Changes(string startDate, string endDate, bool? priority = false)
+    public async Task<TmdbSeasonChanges?> Changes(string startDate, string endDate, bool? priority = false)
     {
+        // First get the season details to obtain the season ID
+        var seasonDetails = await Details(priority);
+        if (seasonDetails == null) return null;
+        
         Dictionary<string, string?> queryParams = new()
         {
             ["start_date"] = startDate,
             ["end_date"] = endDate
         };
 
-        return Get<TmdbSeasonChanges>("tv/" + Id + "/season/" + _seasonNumber + "/changes", queryParams,
+        // Use the season ID for the changes endpoint
+        return await Get<TmdbSeasonChanges>("tv/season/" + seasonDetails.Id + "/changes", queryParams,
             priority: priority);
     }
 

@@ -35,7 +35,6 @@ public class MovieRepository(MediaContext context) : IMovieRepository
                 LibraryId = ti.LibraryId,
                 CreatedAt = ti.CreatedAt,
                 UpdatedAt = ti.UpdatedAt,
-                _colorPalette = ti._colorPalette
             })
             .RunAsync();
     }

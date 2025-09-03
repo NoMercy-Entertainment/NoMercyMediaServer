@@ -162,11 +162,11 @@ public class NmCardDto
 
         int haveMovies = special.Items
             .Select(item => item.Movie)
-            .Count(movie => movie is not null && movie.VideoFiles.Any());
+            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
 
         int haveEpisodes = special.Items
             .Select(item => item.Episode)
-            .Count(movie => movie is not null && movie.VideoFiles.Any());
+            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
 
         HaveItems = haveMovies + haveEpisodes;
 
@@ -207,9 +207,9 @@ public class NmCardDto
             NumberOfItems = item.Special.Items.Count;
             
             int availableMovies = item.Special.Items
-                .Count(specialItem => specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Any() == true);
+                .Count(specialItem => specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count != 0 == true);
             int availableEpisodes = item.Special.Items
-                .Count(specialItem => specialItem.Episode != null && specialItem.Episode?.VideoFiles.Any() == true);
+                .Count(specialItem => specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count != 0 == true);
             HaveItems = availableMovies + availableEpisodes;
 
             ContentRatings = item.Special.Items

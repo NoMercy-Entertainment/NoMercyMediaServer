@@ -213,7 +213,7 @@ public class CollectionRepository(MediaContext context)
                 .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
             .Include(movie => movie.CollectionMovies)
             .Where(collectionMovie => collectionMovie.CollectionMovies
-                .Any(movie => movie.Movie.VideoFiles.Any()))
+                .Any(movie => movie.Movie.VideoFiles.Count != 0))
             .Include(movie => movie.CollectionMovies)
             .ThenInclude(collectionMovie => collectionMovie.Movie)
             .ThenInclude(movie => movie.VideoFiles)

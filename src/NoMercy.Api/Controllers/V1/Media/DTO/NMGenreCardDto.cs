@@ -155,11 +155,11 @@ public class NmGenreCardDto
 
         int haveMovies = special.Items
             .Select(item => item.Movie)
-            .Count(movie => movie is not null && movie.VideoFiles.Any());
+            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
 
         int haveEpisodes = special.Items
             .Select(item => item.Episode)
-            .Count(movie => movie is not null && movie.VideoFiles.Any());
+            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
 
         HaveItems = haveMovies + haveEpisodes;
 
@@ -198,7 +198,7 @@ public class NmGenreCardDto
 
         Link = new($"/music/genres/{collection.Id}", UriKind.Relative);
         NumberOfItems = collection.AlbumMusicGenres.Count + collection.ArtistMusicGenres.Count;
-        HaveItems = collection.AlbumMusicGenres.Count(genreAlbum => genreAlbum.Album.AlbumTrack.Any())
-                    + collection.ArtistMusicGenres.Count(genreArtist => genreArtist.Artist.ArtistTrack.Any());
+        HaveItems = collection.AlbumMusicGenres.Count(genreAlbum => genreAlbum.Album.AlbumTrack.Count != 0)
+                    + collection.ArtistMusicGenres.Count(genreArtist => genreArtist.Artist.ArtistTrack.Count != 0);
     }
 }

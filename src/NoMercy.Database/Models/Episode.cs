@@ -14,7 +14,7 @@ namespace NoMercy.Database.Models;
 [Index(nameof(AirDate))]
 [Index(nameof(ImdbId))]
 [Index(nameof(TvdbId))]
-public class Episode : ColorPalettes
+public class Episode : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]

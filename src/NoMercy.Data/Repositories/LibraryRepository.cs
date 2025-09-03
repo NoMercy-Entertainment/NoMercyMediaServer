@@ -228,16 +228,10 @@ public class LibraryRepository(MediaContext context)
                 .Include(library => library.LibraryTvs)
                 .ToListAsync();
 
-    private static readonly Func<MediaContext, IAsyncEnumerable<FolderDto>> GetFoldersAsyncQuery =
+    private static readonly Func<MediaContext, Task<List<FolderDto>>> GetFoldersAsyncQuery =
         EF.CompileAsyncQuery((MediaContext mediaContext) => mediaContext.Folders.AsNoTracking()
-            .Select(folder => new FolderDto
-            {
-                Id = folder.Id,
-                Path = folder.Path,
-                EncoderProfiles = folder.EncoderProfileFolder
-                    .Select(e => e.EncoderProfile)
-                    .ToArray()
-            }));
+            .Select(folder => new FolderDto(folder))
+            .ToList());
 
     private static readonly Func<MediaContext, Guid, string, Task<Tv?>> GetRandomTvShowQuery =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, string language) =>
@@ -296,6 +290,7 @@ public class LibraryRepository(MediaContext context)
             .ThenInclude(languageLibrary => languageLibrary.Language)
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
+            .OrderBy(library => library.Order)
             .ToListAsync();
     }
 
@@ -420,9 +415,7 @@ public class LibraryRepository(MediaContext context)
 
     public async Task<List<FolderDto>> GetFoldersAsync()
     {
-        List<FolderDto> folders = [];
-        await foreach (FolderDto folder in GetFoldersAsyncQuery(context)) folders.Add(folder);
-        return folders;
+        return await GetFoldersAsyncQuery(context);
     }
     
     public async Task<Tv?> GetRandomTvShow(Guid userId, string language)

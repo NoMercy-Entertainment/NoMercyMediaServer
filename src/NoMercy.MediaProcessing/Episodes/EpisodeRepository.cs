@@ -23,7 +23,6 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
                     Still = ei.Still,
                     TvId = ei.TvId,
                     SeasonId = ei.SeasonId,
-                    _colorPalette = ei._colorPalette
                 })
                 .RunAsync();
     }

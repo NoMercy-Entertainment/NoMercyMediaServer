@@ -7,7 +7,7 @@ namespace NoMercy.Database.Models;
 [PrimaryKey(nameof(Id))]
 [Index(nameof(MediaId), nameof(TvFromId), IsUnique = true)]
 [Index(nameof(MediaId), nameof(MovieFromId), IsUnique = true)]
-public class Recommendation : ColorPalettes
+public class Recommendation : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [JsonProperty("id")]

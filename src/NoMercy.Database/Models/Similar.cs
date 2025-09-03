@@ -13,7 +13,7 @@ namespace NoMercy.Database.Models;
 [Index(nameof(TvToId))]
 [Index(nameof(MovieFromId))]
 [Index(nameof(MovieToId))]
-public class Similar : ColorPalettes
+public class Similar : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [JsonProperty("id")]

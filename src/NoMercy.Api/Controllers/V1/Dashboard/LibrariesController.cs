@@ -14,6 +14,8 @@ using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.SystemCalls;
+using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
+using FolderLibraryDto = NoMercy.Data.Repositories.FolderLibraryDto;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -106,19 +108,37 @@ public class LibrariesController(
 
         try
         {
-            library.Title = request.Title;
-            library.PerfectSubtitleMatch = request.PerfectSubtitleMatch;
-            library.Realtime = request.Realtime;
-            library.SpecialSeasonName = request.SpecialSeasonName;
-            library.Type = request.Type;
-            library.LanguageLibraries.Clear();
+            // Only update fields that are provided in the request
+            if (request.Title != null)
+                library.Title = request.Title;
+            
+            if (request.PerfectSubtitleMatch.HasValue)
+                library.PerfectSubtitleMatch = request.PerfectSubtitleMatch.Value;
+            
+            if (request.Realtime.HasValue)
+                library.Realtime = request.Realtime.Value;
+            
+            if (request.SpecialSeasonName != null)
+                library.SpecialSeasonName = request.SpecialSeasonName;
+            
+            if (request.Type != null)
+                library.Type = request.Type;
 
-            List<Language> languages = await languageRepository.GetLanguagesAsync();
-            foreach (string subtitle in request.Subtitles)
+            // Only update subtitles if provided
+            if (request.Subtitles != null)
             {
-                Language? language = languages.FirstOrDefault(l => l.Iso6391 == subtitle);
-                if (language is null) continue;
-                library.LanguageLibraries.Add(new() { LibraryId = library.Id, LanguageId = language.Id });
+                library.LanguageLibraries.Clear();
+                List<Language> languages = await languageRepository.GetLanguagesAsync();
+                foreach (string subtitle in request.Subtitles)
+                {
+                    Language? language = languages.FirstOrDefault(l => l.Iso6391 == subtitle);
+                    if (language is null) continue;
+                    library.LanguageLibraries.Add(new()
+                    {
+                        LibraryId = library.Id, 
+                        LanguageId = language.Id
+                    });
+                }
             }
 
             await libraryRepository.UpdateLibraryAsync(library);
@@ -131,66 +151,67 @@ public class LibrariesController(
             });
         }
 
-        try
+        // Only update folder libraries if provided
+        if (request.FolderLibrary != null)
         {
-            List<Folder> folders = await folderRepository.GetFoldersByLibraryIdAsync(request.FolderLibrary);
-            FolderLibrary[] folderLibraries = folders.Select(folder => new FolderLibrary
+            try
             {
-                LibraryId = library.Id, FolderId = folder.Id
-            }).ToArray();
-            await folderRepository.AddFolderLibraryAsync(folderLibraries);
-        }
-        catch (Exception e)
-        {
-            return UnprocessableEntity(new StatusResponseDto<string>
+                List<Folder> folders = await folderRepository.GetFoldersByLibraryIdAsync(request.FolderLibrary);
+                FolderLibrary[] folderLibraries = folders.Select(folder => new FolderLibrary
+                {
+                    LibraryId = library.Id, 
+                    FolderId = folder.Id
+                }).ToArray();
+                
+                await folderRepository.AddFolderLibraryAsync(folderLibraries);
+            }
+            catch (Exception e)
             {
-                Status = "error",
-                Message = "Something went wrong updating the library folders: {0}",
-                Args = [e.Message]
-            });
-        }
+                return UnprocessableEntity(new StatusResponseDto<string>
+                {
+                    Status = "error",
+                    Message = "Something went wrong updating the library folders: {0}",
+                    Args = [e.Message]
+                });
+            }
 
-        try
-        {
-            List<LanguageLibrary> languages = await languageRepository.GetLanguagesAsync(request.Subtitles);
+            try
+            {
+                List<EncoderProfile> encoderProfiles = await encoderRepository.GetEncoderProfilesAsync();
+                List<EncoderProfileFolder> encoderProfileFolders = [];
+
+                List<Folder> folders = await folderRepository.GetFoldersByLibraryIdAsync(request.FolderLibrary);
             
-            LanguageLibrary[] languageLibraries = languages.Select(language => new LanguageLibrary
-            {
-                LibraryId = library.Id, LanguageId = language.LanguageId
-            }).ToArray();
-            
-            await libraryRepository.AddLanguageLibraryAsync(languageLibraries);
-        }
-        catch (Exception e)
-        {
-            return Ok(new StatusResponseDto<string>
-            {
-                Status = "error",
-                Message = "Something went wrong updating the library subtitles: {0}",
-                Args = [e.Message]
-            });
-        }
+                foreach (FolderLibraryDto folder in request.FolderLibrary)
+                {
+                    Folder? folderDb = folders.FirstOrDefault(f => f.Id == folder.FolderId);
+                    if (folderDb is null) continue;
+                    
+                    foreach (EncoderProfileDto profile in folder.Folder.EncoderProfiles)
+                    {
+                        EncoderProfile? encoderProfile = encoderProfiles.FirstOrDefault(ep => ep.Id == profile.Id);
+                        if (encoderProfile is null) continue;
+                    
+                        encoderProfileFolders.Add(new()
+                        {
+                            FolderId = folderDb.Id, 
+                            EncoderProfileId = encoderProfile.Id
+                        });
+                    }
+                }
 
-        try
-        {
-            List<Data.Repositories.FolderDto> folders = await libraryRepository.GetFoldersAsync();
-            List<EncoderProfileFolder> encoderProfileFolders = [];
-
-            foreach (Data.Repositories.FolderDto folder in folders)
-                encoderProfileFolders.AddRange(folder.EncoderProfiles.Select(profile =>
-                    new EncoderProfileFolder { FolderId = folder.Id, EncoderProfileId = profile.Id }));
-
-            await libraryRepository.AddEncoderProfileFolderAsync(encoderProfileFolders);
-        }
-        catch (Exception e)
-        {
-            Logger.App(e);
-            return Ok(new StatusResponseDto<string>
+                await libraryRepository.AddEncoderProfileFolderAsync(encoderProfileFolders);
+            }
+            catch (Exception e)
             {
-                Status = "error",
-                Message = "Something went wrong updating the library encoder profiles: {0}",
-                Args = [e.Message]
-            });
+                Logger.App(e);
+                return Ok(new StatusResponseDto<string>
+                {
+                    Status = "error",
+                    Message = "Something went wrong updating the library encoder profiles: {0}",
+                    Args = [e.Message]
+                });
+            }
         }
 
         return Ok(new StatusResponseDto<Library>
@@ -255,9 +276,8 @@ public class LibrariesController(
                 Library? lib = libraries.FirstOrDefault(l => l.Id == item.Id);
                 if (lib is null) continue;
                 lib.Order = item.Order;
+                await libraryRepository.UpdateLibraryAsync(lib);
             }
-
-            await libraryRepository.UpdateLibraryAsync(libraries.First());
             
             return Ok(new StatusResponseDto<string>
             {

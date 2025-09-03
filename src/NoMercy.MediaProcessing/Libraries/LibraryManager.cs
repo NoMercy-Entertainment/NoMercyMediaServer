@@ -6,6 +6,7 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -35,7 +36,7 @@ public class LibraryManager(
 
         int depth = GetDepth();
 
-        foreach (string path in paths)
+        await Parallel.ForEachAsync(paths, Config.ParallelOptions, async (path, _) =>
         {
             Logger.App("Scanning " + path);
             switch (_library.Type)
@@ -49,7 +50,7 @@ public class LibraryManager(
                     await ScanVideoFolder(path, depth);
                     break;
             }
-        }
+        });
 
         Logger.App("Scanning done");
     }
@@ -59,8 +60,11 @@ public class LibraryManager(
         await using MediaScan mediaScan = new();
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .Process(path, depth);
-
-        foreach (MediaFolderExtend folder in rootFolders.OrderBy(f => f.Path)) await ProcessVideoFolder(folder);
+        
+        await Parallel.ForEachAsync(rootFolders.OrderBy(f => f.Path), Config.ParallelOptions, async (rootFolder, _) =>
+        {
+            await ProcessVideoFolder(rootFolder);
+        });
 
         Logger.App("Found " + rootFolders.Count + " subfolders");
     }
@@ -74,7 +78,10 @@ public class LibraryManager(
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();
 
-        foreach (MediaFolderExtend rootFolder in rootFolders.OrderBy(f => f.Path)) ProcessMusicFolder(rootFolder);
+        Parallel.ForEach(rootFolders.OrderBy(f => f.Path), Config.ParallelOptions, (rootFolder, _) =>
+        {
+            ProcessMusicFolder(rootFolder);
+        });
 
         Logger.App("Found " + rootFolders.Count + " subfolders");
     }

@@ -136,7 +136,7 @@ public record SpecialItemsDto
 
         NumberOfItems = tv.Episodes.Count(e => e.SeasonNumber > 0);
         int have = tv.Episodes.Where(e => e.SeasonNumber > 0)
-            .Count(episode => episode.VideoFiles.Any());
+            .Count(episode => episode.VideoFiles.Count != 0);
 
         HaveItems = have;
 

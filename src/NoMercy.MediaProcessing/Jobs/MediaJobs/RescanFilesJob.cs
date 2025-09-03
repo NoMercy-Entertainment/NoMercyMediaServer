@@ -14,7 +14,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class RescanFilesJob : AbstractMediaJob
 {
-    public override string QueueName => "queue";
+    public override string QueueName => "image";
     public override int Priority => 10;
 
     public override async Task Handle()
@@ -31,5 +31,20 @@ public class RescanFilesJob : AbstractMediaJob
         {
             QueryKey = ["base","info", Id.ToString()]
         });
+
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["libraries", LibraryId.ToString()]
+        });
+
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["home"]
+        });
+        
+        // Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        // {
+        //     QueryKey = ["base","collection", movieAppends.BelongsToCollection?.Id.ToString()]
+        // });
     }
 }

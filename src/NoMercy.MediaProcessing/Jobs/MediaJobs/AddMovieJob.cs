@@ -44,24 +44,9 @@ public class AddMovieJob : AbstractMediaJob
 
         if (movieAppends.BelongsToCollection != null)
             jobDispatcher.DispatchJob<AddCollectionJob>(movieAppends.BelongsToCollection.Id, LibraryId);
-
-        await fileManager.FindFiles(Id, movieLibrary);
+        
+        jobDispatcher.DispatchJob<RescanFilesJob>(Id, movieLibrary);
 
         Logger.App($"Movie {Id} added to library, extra data will be added in the background");
-
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["libraries", LibraryId.ToString()]
-        });
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["base","info", Id.ToString()]
-        });
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["base","collection", movieAppends.BelongsToCollection?.Id.ToString()]
-        });
     }
 }

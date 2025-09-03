@@ -19,6 +19,7 @@ using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.MediaProcessing.People;
@@ -51,11 +52,39 @@ public static class ServiceConfiguration
         ConfigureAuth(services);
         ConfigureApi(services);
         ConfigureCors(services);
+        ConfigureCronJobs(services);
     }
 
     private static void ConfigureKestrel(IServiceCollection services)
     {
+    }
+    
+    private static void ConfigureCronJobs(IServiceCollection services)
+    {
+        services.AddScoped<CertificateRenewalJob>();
         services.RegisterCronJob<CertificateRenewalJob>("certificate-renewal");
+        
+        services.AddScoped<TvPaletteCronJob>();
+        services.RegisterCronJob<TvPaletteCronJob>("tv-palette-job");
+        services.AddScoped<SeasonPaletteCronJob>();
+        services.RegisterCronJob<SeasonPaletteCronJob>("season-palette-job");
+        services.AddScoped<EpisodePaletteCronJob>();
+        services.RegisterCronJob<EpisodePaletteCronJob>("episode-palette-job");
+        services.AddScoped<MoviePaletteCronJob>();
+        services.RegisterCronJob<MoviePaletteCronJob>("movie-palette-job");
+        services.AddScoped<CollectionPaletteCronJob>();
+        services.RegisterCronJob<CollectionPaletteCronJob>("collection-palette-job");
+        services.AddScoped<PersonPaletteCronJob>();
+        services.RegisterCronJob<PersonPaletteCronJob>("person-palette-job");
+        
+        services.AddScoped<ImagePaletteCronJob>();
+        services.RegisterCronJob<ImagePaletteCronJob>("image-palette-job");
+        services.AddScoped<RecommendationPaletteCronJob>();
+        services.RegisterCronJob<RecommendationPaletteCronJob>("recommendation-palette-job");
+        services.AddScoped<SimilarPaletteCronJob>();
+        services.RegisterCronJob<SimilarPaletteCronJob>("similar-palette-job");
+        services.AddScoped<ProcessFanartArtistImagesCronJob>();
+        services.RegisterCronJob<ProcessFanartArtistImagesCronJob>("fanart-images-job");
     }
 
     private static void ConfigureCoreServices(IServiceCollection services)
@@ -66,7 +95,6 @@ public static class ServiceConfiguration
 
         // Add Singleton Services
         services.AddScoped<JobQueue>();
-        services.AddScoped<CertificateRenewalJob>();
         
         services.AddSingleton<ResourceMonitor>();
         services.AddSingleton<Networking.Networking>();
@@ -133,12 +161,26 @@ public static class ServiceConfiguration
         services.AddScoped<ILocalizer, Localizer>();
     }
 
+    
     private static void ConfigureLogging(IServiceCollection services)
     {
-        // Configure Logging
-        services.AddLogging(options =>
+        services.AddLogging(logging =>
         {
-            options.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Debug);
+            logging.ClearProviders();
+            logging.AddFilter("Microsoft", LogLevel.Critical);
+            logging.AddFilter("System", LogLevel.Critical);
+            logging.AddFilter("Network", LogLevel.Critical);
+            logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Critical);
+            logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Critical);
+
+            logging.AddFilter("Microsoft.AspNetCore", LogLevel.Critical);
+            logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Critical);
+            logging.AddFilter("Microsoft.AspNetCore.Routing", LogLevel.Critical);
+            logging.AddFilter("Microsoft.AspNetCore.Mvc", LogLevel.Critical);
+
+            logging.AddFilter("Microsoft.AspNetCore.HostFiltering.HostFilteringMiddleware", LogLevel.Critical);
+            logging.AddFilter("Microsoft.AspNetCore.Cors.Infrastructure.CorsMiddleware", LogLevel.Critical);
+            logging.AddFilter("Microsoft.AspNetCore.Middleware", LogLevel.Critical);
         });
     }
 

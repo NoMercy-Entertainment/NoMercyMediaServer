@@ -31,7 +31,6 @@ public class ReleaseGroupManager(IReleaseGroupRepository releaseGroupRepository)
             Cover = coverPalette?.Url is not null
                 ? $"/{coverPalette.Url.FileName()}"
                 : null,
-            _colorPalette = coverPalette?.Palette ?? string.Empty
         };
 
         await releaseGroupRepository.Store(insert);

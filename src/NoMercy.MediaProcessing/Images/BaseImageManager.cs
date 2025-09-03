@@ -67,6 +67,8 @@ public class BaseImageManager : IBaseImageManager, IDisposable
     public static async Task<string> ColorPalette(DownloadUrl client, string type, Uri path, bool? download = true)
     {
         Image<Rgba32>? imageData = await client.Invoke(path, download);
+        if (imageData == null)
+            return "";
 
         return GenerateColorPalette(new List<ColorPaletteArgument>
         {

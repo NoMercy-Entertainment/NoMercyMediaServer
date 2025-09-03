@@ -1,10 +1,8 @@
-using System.Globalization;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -29,12 +27,6 @@ public class MovieManager(
 
         string baseUrl = BaseUrl(movieAppends.Title, movieAppends.ReleaseDate);
 
-        string colorPalette = await MovieDbImageManager
-            .MultiColorPalette([
-                new("poster", movieAppends.PosterPath),
-                new("backdrop", movieAppends.BackdropPath)
-            ]);
-
         DateTime folderCreatedAt = DateTime.UtcNow;
 
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
@@ -52,7 +44,6 @@ public class MovieManager(
         {
             LibraryId = library.Id,
             Folder = baseUrl,
-            _colorPalette = colorPalette,
 
             Id = movieAppends.Id,
             Title = movieAppends.Title,
@@ -179,9 +170,6 @@ public class MovieManager(
 
         await movieRepository.StoreSimilar(similar);
 
-        IEnumerable<Similar> jobItems = similar.Select(x => new Similar { MovieFromId = x.MovieFromId });
-        jobDispatcher.DispatchJob<SimilarPaletteJob, Similar>(movie.Id, jobItems);
-
         Logger.MovieDb($"Movie: {movie.Title}: Similar stored", LogEventLevel.Debug);
     }
 
@@ -204,9 +192,6 @@ public class MovieManager(
 
         IEnumerable<Recommendation> jobItems = recommendations
             .Select(x => new Recommendation { MovieFromId = x.MovieFromId });
-
-        jobDispatcher.DispatchJob<RecommendationPaletteJob, Recommendation>(movie.Id, jobItems);
-        Logger.MovieDb($"Movie: {movie.Title}: Recommendations stored", LogEventLevel.Debug);
     }
 
     public async Task StoreVideos(TmdbMovieAppends movie)
@@ -249,14 +234,6 @@ public class MovieManager(
         await movieRepository.StoreImages(posters);
         Logger.MovieDb($"Movie: {movie.Title}: Posters stored", LogEventLevel.Debug);
 
-        IEnumerable<Image> posterJobItems = posters
-            .Select(x => new Image { FilePath = x.FilePath })
-            .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
-                        e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
-            .ToArray();
-        if (posterJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(movie.Id, posterJobItems);
-
         IEnumerable<Image> backdrops = movie.Images.Backdrops
             .Select(image => new Image
             {
@@ -276,14 +253,6 @@ public class MovieManager(
         await movieRepository.StoreImages(backdrops);
         Logger.MovieDb($"Movie: {movie.Title}: backdrops stored", LogEventLevel.Debug);
 
-        IEnumerable<Image> backdropJobItems = backdrops
-            .Select(x => new Image { FilePath = x.FilePath })
-            .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
-                        e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
-            .ToArray();
-        if (backdropJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(movie.Id, backdropJobItems);
-
         IEnumerable<Image> logos = movie.Images.Logos.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
@@ -301,15 +270,6 @@ public class MovieManager(
 
         await movieRepository.StoreImages(logos);
         Logger.MovieDb($"Movie: {movie.Title}: Logos stored", LogEventLevel.Debug);
-
-        IEnumerable<Image> logosJobItems = logos
-            .Where(x => !x.FilePath.EndsWith(".svg"))
-            .Select(x => new Image { FilePath = x.FilePath })
-            .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
-                        e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
-            .ToArray();
-        if (logosJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(movie.Id, logosJobItems);
     }
 
     public async Task StoreKeywords(TmdbMovieAppends movie)

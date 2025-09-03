@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Database.Models;
 
 namespace NoMercy.Data.Logic;
 
@@ -10,4 +11,14 @@ public class EncoderProfileParamsDto
     [JsonProperty("profile")] public string Profile { get; set; } = string.Empty;
     [JsonProperty("codec")] public string Codec { get; set; } = string.Empty;
     [JsonProperty("audio")] public string Audio { get; set; } = string.Empty;
+
+    public EncoderProfileParamsDto()
+    {
+        
+    }
+    public EncoderProfileParamsDto(EncoderProfile argEncoderProfile)
+    {
+        
+    }
+
 }

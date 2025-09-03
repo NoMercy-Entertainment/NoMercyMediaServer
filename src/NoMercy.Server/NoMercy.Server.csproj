@@ -37,27 +37,27 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Asp.Versioning.Http" Version="8.1.0"/>
-        <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0"/>
-        <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0"/>
-        <PackageReference Include="AspNetCore.SwaggerUI.Themes" Version="2.0.0"/>
-        <PackageReference Include="Castle.Core" Version="5.2.1"/>
-        <PackageReference Include="FFMpegCore" Version="5.2.0"/>
+        <PackageReference Include="Asp.Versioning.Http" Version="8.1.0" />
+        <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
+        <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
+        <PackageReference Include="AspNetCore.SwaggerUI.Themes" Version="2.0.0" />
+        <PackageReference Include="Castle.Core" Version="5.2.1" />
+        <PackageReference Include="FFMpegCore" Version="5.2.0" />
         <PackageReference Include="H.NotifyIcon" Version="2.3.0" />
-        <PackageReference Include="I18N.DotNet" Version="1.3.1"/>
-        <PackageReference Include="MediaBrowser.Model.Signed" Version="3.0.647"/>
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.7"/>
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.7"/>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="9.0.7"/>
-        <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.13.0" />
-        <PackageReference Include="MimeMapping" Version="3.1.0"/>
+        <PackageReference Include="I18N.DotNet" Version="1.3.1" />
+        <PackageReference Include="MediaBrowser.Model.Signed" Version="3.0.647" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="9.0.8" />
+        <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.14.0" />
+        <PackageReference Include="MimeMapping" Version="3.1.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4-beta1" />
-        <PackageReference Include="Sentry" Version="5.13.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="9.0.3" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.3" />
-        <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="9.0.3" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.3" />
-        <PackageReference Include="System.Net.WebSockets" Version="4.3.0"/>
+        <PackageReference Include="Sentry" Version="5.14.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="9.0.4" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.4" />
+        <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="9.0.4" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.4" />
+        <PackageReference Include="System.Net.WebSockets" Version="4.3.0" />
         <PackageReference Include="Ulid" Version="1.4.1" />
     </ItemGroup>
     <ItemGroup>

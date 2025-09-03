@@ -34,9 +34,6 @@ public class AddShowJob : AbstractMediaJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        FileRepository fileRepository = new();
-        FileManager fileManager = new(fileRepository);
-
         ShowRepository showRepository = new(context);
         ShowManager showManager = new(showRepository, jobDispatcher);
 
@@ -69,18 +66,6 @@ public class AddShowJob : AbstractMediaJob
         
         await episodeRepository.StoreEpisodes(episodes); 
 
-        await fileManager.FindFiles(Id, tvLibrary);
-
-        Logger.App($"Show {show.Name} added to the library, extra data will be added in the background");
-
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["libraries", LibraryId.ToString()]
-        });
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["base","info", Id.ToString()]
-        });
+        jobDispatcher.DispatchJob<RescanFilesJob>(Id, tvLibrary);
     }
 }

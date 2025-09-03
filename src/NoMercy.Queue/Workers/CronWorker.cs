@@ -15,7 +15,9 @@ public class CronWorker : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CronWorker> _logger;
     private readonly Dictionary<string, Type> _registeredJobs = new();
-    private readonly List<CronJob> _codeDefinedJobs = new();
+    private readonly List<CronJob> _codeDefinedJobs = [];
+    private readonly Dictionary<string, CancellationTokenSource> _jobCancellationTokens = new();
+    private readonly Dictionary<string, Task> _jobTasks = new();
 
     public CronWorker(IServiceProvider serviceProvider, ILogger<CronWorker> logger)
     {
@@ -23,87 +25,124 @@ public class CronWorker : BackgroundService
         _logger = logger;
     }
 
-    public void RegisterJob<T>(string jobType, string name, string cronExpression, object? parameters = null) 
+    public void RegisterJob<T>(string jobType, string name, string cronExpression, object? parameters = null)
         where T : class, ICronJobExecutor
     {
         _registeredJobs[jobType] = typeof(T);
-        _codeDefinedJobs.Add(new()
+        
+        CronJob job = new()
         {
             Name = name,
             CronExpression = cronExpression,
             JobType = jobType,
             Parameters = parameters != null ? JsonConvert.SerializeObject(parameters) : null,
-            IsEnabled = true
-        });
+            IsEnabled = true,
+            NextRun = CronService.GetNextOccurrence(cronExpression, DateTime.Now)
+        };
+        
+        _codeDefinedJobs.Add(job);
+        
+        // Start individual worker for this job
+        StartJobWorker(job);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public void RegisterJobWithSchedule<T>(string jobType, IServiceProvider serviceProvider)
+        where T : class, ICronJobExecutor
     {
-        _logger.LogInformation("Cron Worker started");
+        _registeredJobs[jobType] = typeof(T);
 
-        while (!stoppingToken.IsCancellationRequested)
+        using IServiceScope scope = serviceProvider.CreateScope();
+        T executor = scope.ServiceProvider.GetRequiredService<T>();
+
+        DateTime currentTime = DateTime.Now;
+        DateTime nextRun = CronService.GetNextOccurrence(executor.CronExpression, currentTime);
+
+        _logger.LogInformation("Registered job {JobType}: {JobName}, Cron: {Cron}, Next run: {NextRun}",
+            jobType, executor.JobName, executor.CronExpression, nextRun);
+
+        CronJob job = new()
+        {
+            Name = executor.JobName,
+            CronExpression = executor.CronExpression,
+            JobType = jobType,
+            Parameters = null,
+            IsEnabled = true,
+            NextRun = nextRun,
+            CreatedAt = currentTime,
+            UpdatedAt = currentTime
+        };
+
+        _codeDefinedJobs.Add(job);
+        
+        // Start individual worker for this job
+        StartJobWorker(job);
+    }
+
+    private void StartJobWorker(CronJob job)
+    {
+        CancellationTokenSource cts = new();
+        _jobCancellationTokens[job.JobType] = cts;
+
+        Task task = Task.Run(async () => await JobWorkerLoop(job, cts.Token), cts.Token);
+        _jobTasks[job.JobType] = task;
+
+        _logger.LogInformation("Started worker thread for job: {JobName}", job.Name);
+    }
+
+    private async Task JobWorkerLoop(CronJob job, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Job worker started for: {JobName}", job.Name);
+
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                await ProcessJobs(stoppingToken);
+                DateTime currentTime = DateTime.Now;
+
+                // Check if it's time to run
+                if (job.NextRun.HasValue && currentTime >= job.NextRun.Value)
+                {
+                    _logger.LogInformation("Executing cron job: {JobName} (Scheduled: {NextRun}, Current: {CurrentTime})",
+                        job.Name, job.NextRun, currentTime);
+
+                    bool success = await ExecuteJob(job, currentTime, cancellationToken);
+
+                    if (success)
+                    {
+                        job.LastRun = currentTime;
+                        job.NextRun = CronService.GetNextOccurrence(job.CronExpression, currentTime);
+                        job.UpdatedAt = currentTime;
+
+                        _logger.LogInformation("Successfully executed cron job: {JobName}. Next run: {NextRun}",
+                            job.Name, job.NextRun);
+
+                        // Update database if this is a database job
+                        await UpdateDatabaseJob(job, cancellationToken);
+                    }
+                }
+
+                // Check every 30 seconds instead of 1 minute for better precision
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Job worker cancelled for: {JobName}", job.Name);
+                break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while processing cron jobs");
+                _logger.LogError(ex, "Error in job worker for: {JobName}", job.Name);
+                
+                // Continue running even if there's an error
+                await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
             }
-
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
         }
     }
 
-    private async Task ProcessJobs(CancellationToken cancellationToken)
-    {
-        DateTime currentTime = DateTime.UtcNow;
-
-        // Process code-defined jobs
-        foreach (CronJob job in _codeDefinedJobs.Where(j => j.IsEnabled))
-        {
-            if (!await ProcessJob(job, currentTime, cancellationToken)) continue;
-            
-            job.LastRun = currentTime;
-            job.NextRun = CronService.GetNextOccurrence(job.CronExpression, currentTime);
-            job.UpdatedAt = currentTime;
-        }
-
-        // Process database jobs - Create scope here for DbContext
-        using IServiceScope scope = _serviceProvider.CreateScope();
-        await using QueueContext dbContext = scope.ServiceProvider.GetRequiredService<QueueContext>();
-
-        List<CronJob> dbJobs = await dbContext.CronJobs
-            .Where(j => j.IsEnabled)
-            .ToListAsync(cancellationToken);
-
-        foreach (CronJob job in dbJobs)
-        {
-            if (!await ProcessJob(job, currentTime, cancellationToken)) continue;
-            
-            job.LastRun = currentTime;
-            job.NextRun = CronService.GetNextOccurrence(job.CronExpression, currentTime);
-            job.UpdatedAt = currentTime;
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    private async Task<bool> ProcessJob(CronJob job, DateTime currentTime, CancellationToken cancellationToken)
+    private async Task<bool> ExecuteJob(CronJob job, DateTime currentTime, CancellationToken cancellationToken)
     {
         try
-        { 
-            if (job.NextRun.HasValue && currentTime < job.NextRun.Value)
-                return false;
-
-            if (!job.NextRun.HasValue)
-            {
-                DateTime lastRun = job.LastRun ?? currentTime;
-                if (!CronService.ShouldRun(job.CronExpression, lastRun, currentTime))
-                    return false;
-            }
-            
+        {
             if (!_registeredJobs.TryGetValue(job.JobType, out Type? jobExecutorType))
             {
                 _logger.LogWarning("Job type {JobType} not registered for job {JobName}", job.JobType, job.Name);
@@ -112,18 +151,131 @@ public class CronWorker : BackgroundService
 
             using IServiceScope scope = _serviceProvider.CreateScope();
             ICronJobExecutor executor = (ICronJobExecutor)scope.ServiceProvider.GetRequiredService(jobExecutorType);
+            
+            using CancellationTokenSource timeoutCts = new(TimeSpan.FromMinutes(30));
+            using CancellationTokenSource combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            _logger.LogInformation("Executing cron job: {JobName}", job.Name);
-
-            await executor.ExecuteAsync(job.Parameters ?? string.Empty, cancellationToken);
-
-            _logger.LogInformation("Successfully executed cron job: {JobName}", job.Name);
+            await executor.ExecuteAsync(job.Parameters ?? string.Empty, combinedCts.Token);
             return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("Job execution cancelled for: {JobName}", job.Name);
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogError("Job execution timed out for: {JobName}", job.Name);
+            return false;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to execute cron job: {JobName}", job.Name);
             return false;
         }
+    }
+
+    private async Task UpdateDatabaseJob(CronJob job, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            await using QueueContext dbContext = scope.ServiceProvider.GetRequiredService<QueueContext>();
+
+            CronJob? dbJob = await dbContext.CronJobs
+                .FirstOrDefaultAsync(j => j.JobType == job.JobType, cancellationToken);
+
+            if (dbJob != null)
+            {
+                dbJob.LastRun = job.LastRun;
+                dbJob.NextRun = job.NextRun;
+                dbJob.UpdatedAt = job.UpdatedAt;
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update database for job: {JobName}", job.Name);
+        }
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Cron Worker started with individual job workers");
+
+        // Load and start workers for database jobs
+        await StartDatabaseJobWorkers(stoppingToken);
+
+        // Keep the main service running
+        try
+        {
+            await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Cron Worker stopping...");
+        }
+    }
+
+    private async Task StartDatabaseJobWorkers(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            await using QueueContext dbContext = scope.ServiceProvider.GetRequiredService<QueueContext>();
+
+            List<CronJob> dbJobs = await dbContext.CronJobs
+                .Where(j => j.IsEnabled)
+                .ToListAsync(cancellationToken);
+
+            foreach (CronJob job in dbJobs)
+            {
+                if (_registeredJobs.ContainsKey(job.JobType))
+                {
+                    StartJobWorker(job);
+                }
+                else
+                {
+                    _logger.LogWarning("Database job {JobName} has unregistered job type: {JobType}", 
+                        job.Name, job.JobType);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start database job workers");
+        }
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Stopping all job workers...");
+
+        // Cancel all job workers
+        foreach (CancellationTokenSource cts in _jobCancellationTokens.Values)
+        {
+            await cts.CancelAsync();
+        }
+
+        // Wait for all workers to complete
+        if (_jobTasks.Values.Count != 0)
+        {
+            try
+            {
+                await Task.WhenAll(_jobTasks.Values).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                _logger.LogWarning("Some job workers did not stop within the timeout period");
+            }
+        }
+
+        // Dispose resources
+        foreach (CancellationTokenSource cts in _jobCancellationTokens.Values)
+        {
+            cts.Dispose();
+        }
+
+        await base.StopAsync(cancellationToken);
     }
 }

@@ -182,11 +182,11 @@ public record GenreRowItemDto
 
         int haveMovies = special.Items
             .Select(item => item.Movie)
-            .Count(movie => movie is not null && movie.VideoFiles.Any());
+            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
 
         int haveEpisodes = special.Items
             .Select(item => item.Episode)
-            .Count(movie => movie is not null && movie.VideoFiles.Any());
+            .Count(movie => movie is not null && movie.VideoFiles.Count != 0);
 
         HaveItems = haveMovies + haveEpisodes;
 

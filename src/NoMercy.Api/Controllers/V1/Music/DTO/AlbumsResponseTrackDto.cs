@@ -37,7 +37,7 @@ public record AlbumsResponseTrackDto
         Date = artistTrack.Track.Date;
         Disc = artistTrack.Track.DiscNumber;
         Duration = artistTrack.Track.Duration;
-        Favorite = artistTrack.Track.TrackUser.Any();
+        Favorite = artistTrack.Track.TrackUser.Count != 0;
         Filename = artistTrack.Track.Filename;
         Folder = artistTrack.Track.Folder;
         Id = artistTrack.Track.Id;

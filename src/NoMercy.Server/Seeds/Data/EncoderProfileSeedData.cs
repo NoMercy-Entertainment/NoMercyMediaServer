@@ -9,7 +9,7 @@ public static class EncoderProfileSeedData
     {
         return
         [
-            new EncoderProfile
+            new()
             {
                 Id = Ulid.Parse("01HQ6298ZSZYKJT83WDWTPG4G8"),
                 Name = "Marvel 4k",
@@ -133,7 +133,7 @@ public static class EncoderProfileSeedData
                     }
                 ]
             },
-            new EncoderProfile
+            new()
             {
                 Id = Ulid.Parse("01HQ629JAYQDEQAH0GW3ZHGW8Z"),
                 Name = "1080p high",
@@ -183,7 +183,7 @@ public static class EncoderProfileSeedData
                     }
                 ]
             },
-            new EncoderProfile
+            new()
             {
                 Id = Ulid.Parse("01HQ629SJ32FTV2Q46NX3H1CK9"),
                 Name = "1080p regular",
@@ -239,7 +239,7 @@ public static class EncoderProfileSeedData
                     }
                 ]
             },
-            new EncoderProfile
+            new()
             {
                 Id = Ulid.Parse("01HR360AKTW47XC6ZQ2V9DF024"),
                 Name = "1080p low",
@@ -295,7 +295,7 @@ public static class EncoderProfileSeedData
                     }
                 ]
             },
-            new EncoderProfile
+            new()
             {
                 Id = Ulid.Parse("01JRH6Q85QT0D08F9J9577J04K"),
                 Name = "Music",

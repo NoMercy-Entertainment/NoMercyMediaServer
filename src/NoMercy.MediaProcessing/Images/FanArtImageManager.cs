@@ -1,3 +1,4 @@
+using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -9,7 +10,8 @@ using Image = NoMercy.Database.Models.Image;
 namespace NoMercy.MediaProcessing.Images;
 
 public class FanArtImageManager(
-    ImageRepository imageRepository
+    ImageRepository imageRepository, 
+    MediaContext context
 ) : IFanArtImageManager
 {
     public static async Task<string> ColorPalette(string type, Uri url, bool? download = true)
@@ -22,7 +24,8 @@ public class FanArtImageManager(
         return await BaseImageManager.MultiColorPalette(FanArtImageClient.Download, items, download);
     }
 
-    public async Task<Image?> StoreArtistImages(FanArtArtistDetails fanArtArtistDetails, Guid artistId, Artist dbArtist)
+    public async Task<ICollection<Image>> StoreArtistImages(FanArtArtistDetails fanArtArtistDetails, Guid artistId,
+        Artist dbArtist)
     {
         try
         {
@@ -35,7 +38,6 @@ public class FanArtImageManager(
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = artistId,
                     Site = image.Url.BasePath(),
-                    _colorPalette = ColorPalette("image", image.Url).Result
                 });
             List<Image> logos = fanArtArtistDetails.Logos.ToList()
                 .ConvertAll<Image>(image => new()
@@ -46,7 +48,6 @@ public class FanArtImageManager(
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = artistId,
                     Site = image.Url.BasePath(),
-                    _colorPalette = ColorPalette("image", image.Url).Result
                 });
             List<Image> banners = fanArtArtistDetails.Banners.ToList()
                 .ConvertAll<Image>(image => new()
@@ -57,7 +58,6 @@ public class FanArtImageManager(
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = artistId,
                     Site = image.Url.BasePath(),
-                    _colorPalette = ColorPalette("image", image.Url).Result
                 });
             List<Image> hdLogos = fanArtArtistDetails.HdLogos.ToList()
                 .ConvertAll<Image>(image => new()
@@ -68,7 +68,6 @@ public class FanArtImageManager(
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = artistId,
                     Site = image.Url.BasePath(),
-                    _colorPalette = ColorPalette("image", image.Url).Result
                 });
             List<Image> artistBackgrounds = fanArtArtistDetails.Backgrounds.ToList()
                 .ConvertAll<Image>(image => new()
@@ -79,7 +78,6 @@ public class FanArtImageManager(
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = artistId,
                     Site = image.Url.BasePath(),
-                    _colorPalette = ColorPalette("image", image.Url).Result
                 });
 
             List<Image> images = thumbs
@@ -89,17 +87,15 @@ public class FanArtImageManager(
                 .Concat(artistBackgrounds)
                 .ToList();
 
-            await imageRepository.StoreArtistImages(images, dbArtist);
-
-            return thumbs.FirstOrDefault();
+            return await imageRepository.StoreArtistImages(images, dbArtist);
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404")) return null;
+            if (e.Message.Contains("404")) return [];
             Logger.FanArt(e.Message, LogEventLevel.Verbose);
         }
 
-        return null;
+        return [];
     }
 
     public async Task StoreReleaseImages(FanArtAlbum fanArt, Guid releaseId)
@@ -120,7 +116,6 @@ public class FanArtImageManager(
                         AlbumId = releaseId,
                         Site = image.Url.BasePath(),
                         Name = fanArt.Name,
-                        _colorPalette = ColorPalette("image", image.Url).Result
                     }));
 
                 cdArts.AddRange(albums.CdArt
@@ -133,7 +128,6 @@ public class FanArtImageManager(
                         AlbumId = releaseId,
                         Site = image.Url.BasePath(),
                         Name = fanArt.Name,
-                        _colorPalette = ColorPalette("image", image.Url).Result
                     }));
             }
 
@@ -148,14 +142,10 @@ public class FanArtImageManager(
             Image? albumCover = covers.FirstOrDefault();
 
             dbRelease.Cover = albumCover?.FilePath ?? dbRelease.Cover;
-            dbRelease._colorPalette = albumCover?._colorPalette.Replace("\"image\"", "\"cover\"")
-                                      ?? dbRelease._colorPalette;
 
             foreach (AlbumReleaseGroup albumRelease in dbRelease.AlbumReleaseGroup)
             {
                 albumRelease.Album.Cover = albumCover?.FilePath ?? albumRelease.Album.Cover;
-                albumRelease.Album._colorPalette = albumCover?._colorPalette.Replace("\"image\"", "\"cover\"")
-                                                   ?? albumRelease.Album._colorPalette;
             }
 
             await imageRepository.CommitReleaseChanges();
@@ -168,17 +158,26 @@ public class FanArtImageManager(
         }
     }
 
-    public async Task StoreReleaseImages(Dictionary<Guid, Albums> fanArtArtistAlbums, Guid artistId, Artist dbArtist)
+    public async Task<List<Image>> StoreReleaseImages(Dictionary<Guid, Albums> fanArtArtistAlbums, Guid artistId, Artist dbArtist)
     {
-        // foreach ((Guid id,  var fanArtArtistAlbum) in fanArtArtistAlbums)
-        // {
-        //     await StoreReleaseImages(fanArtArtistAlbum, artistId, dbArtist);
-        // }
+        List<Album> albums = dbArtist.AlbumArtist
+            .Select(a => a.Album)
+            .ToList();
 
-        await Task.CompletedTask;
+        Dictionary<Guid, Albums> filteredAlbums = fanArtArtistAlbums
+            .Where(fa => albums.Any(a => a.Id == fa.Key))
+            .ToDictionary();
+        
+        List<Image> images = [];
+        foreach ((Guid id, Albums fanArtArtistAlbum) in filteredAlbums)
+        {
+            images.AddRange(await StoreReleaseImages(fanArtArtistAlbum, artistId, dbArtist));
+        }
+
+        return images;
     }
 
-    private async Task StoreReleaseImages(Albums fanArtArtistAlbums, Guid albumId, Artist dbArtist)
+    private async Task<ICollection<Image>> StoreReleaseImages(Albums fanArtArtistAlbums, Guid albumId, Artist dbArtist)
     {
         try
         {
@@ -191,11 +190,8 @@ public class FanArtImageManager(
                     FilePath = "/" + image.Url.FileName(),
                     AlbumId = albumId,
                     Site = image.Url.BasePath(),
-                    _colorPalette = ColorPalette("image", image.Url).Result
                 })
                 .ToList();
-
-            await imageRepository.StoreArtistImages(cdArts, dbArtist);
 
             List<Image> covers = fanArtArtistAlbums.Cover
                 .Select(image => new Image
@@ -206,16 +202,21 @@ public class FanArtImageManager(
                     FilePath = "/" + image.Url.FileName(),
                     AlbumId = albumId,
                     Site = image.Url.BasePath(),
-                    _colorPalette = ColorPalette("image", image.Url).Result
                 })
                 .ToList();
+            
+            List<Image> images = cdArts
+                .Concat(covers)
+                .ToList();
 
-            await imageRepository.StoreArtistImages(covers, dbArtist);
+            return await imageRepository.StoreArtistImages(images, dbArtist);
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404")) return;
+            if (e.Message.Contains("404")) return [];
             Logger.FanArt(e.Message, LogEventLevel.Verbose);
         }
+        
+        return [];
     }
 }

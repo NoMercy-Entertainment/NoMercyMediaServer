@@ -304,4 +304,32 @@
     <Key>Item not found</Key>
     <Value lang="nl">Item not found</Value>
   </Entry>
+  <Entry>
+    <Key>You do not have permission to update server information</Key>
+    <Value lang="nl">You do not have permission to update server information</Value>
+  </Entry>
+  <Entry>
+    <Key>Library {0} does not exist.</Key>
+    <Value lang="nl">Library {0} does not exist.</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully added folder to {0} library.</Key>
+    <Value lang="nl">Successfully added folder to {0} library.</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully deleted folder {0}.</Key>
+    <Value lang="nl">Successfully deleted folder {0}.</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully updated {0} library.</Key>
+    <Value lang="nl">Successfully updated {0} library.</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully sorted libraries.</Key>
+    <Value lang="nl">Successfully sorted libraries.</Value>
+  </Entry>
+  <Entry>
+    <Key>No libraries exist.</Key>
+    <Value lang="nl">No libraries exist.</Value>
+  </Entry>
 </I18N>

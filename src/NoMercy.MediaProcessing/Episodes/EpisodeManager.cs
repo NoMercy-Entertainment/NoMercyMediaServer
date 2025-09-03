@@ -1,10 +1,8 @@
-using System.Globalization;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -42,7 +40,6 @@ public class EpisodeManager(
                 TvdbId = episode.TmdbEpisodeExternalIds.TvdbId,
                 VoteAverage = episode.VoteAverage,
                 VoteCount = episode.VoteCount,
-                _colorPalette = MovieDbImageManager.ColorPalette("still", episode.StillPath).Result
             });
         
         Logger.MovieDb($"Show {show.Name}: Season {season.SeasonNumber} Episodes stored", LogEventLevel.Debug);
@@ -124,15 +121,6 @@ public class EpisodeManager(
             Logger.MovieDb(
                 $"Show {showName}: Season {episode.SeasonNumber} Episode {episode.EpisodeNumber}: Images stored",
                 LogEventLevel.Debug);
-
-            IEnumerable<Image> posterJobItems = stills
-                .Select(x => new Image { FilePath = x.FilePath })
-                .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
-                            e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
-                .ToArray();
-
-            if (posterJobItems.Any())
-                jobDispatcher.DispatchJob<ImagePaletteJob, Image>(episode.Id, posterJobItems);
         }
         catch (Exception e)
         {

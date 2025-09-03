@@ -49,7 +49,7 @@ public record PlaylistTrackDto
         Disc = artistTrack.Track.DiscNumber;
         Track = artistTrack.Track.TrackNumber;
         Duration = artistTrack.Track.Duration;
-        Favorite = artistTrack.Track.TrackUser.Any();
+        Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
         Lyrics = artistTrack.Track.Lyrics;
         Type = "tracks";
@@ -86,7 +86,7 @@ public record PlaylistTrackDto
         Disc = trackTrack.Track.DiscNumber;
         Track = trackTrack.Track.TrackNumber;
         Duration = trackTrack.Track.Duration;
-        Favorite = trackTrack.Track.TrackUser.Any();
+        Favorite = trackTrack.Track.TrackUser.Count != 0;
         Quality = trackTrack.Track.Quality;
         Lyrics = trackTrack.Track.Lyrics;
         Type = "tracks";
@@ -123,7 +123,7 @@ public record PlaylistTrackDto
         Disc = artistTrack.Track.DiscNumber;
         Track = artistTrack.Track.TrackNumber;
         Duration = artistTrack.Track.Duration;
-        Favorite = artistTrack.Track.TrackUser.Any();
+        Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
         Lyrics = artistTrack.Track.Lyrics;
         Type = "tracks";

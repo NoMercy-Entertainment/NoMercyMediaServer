@@ -1,6 +1,5 @@
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
 
@@ -41,13 +40,6 @@ public class JobDispatcher
     {
         TJob job = new() { Id = id, LibraryId = library.Id };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, priority ?? job.Priority);
-    }
-
-    internal void DispatchJob<TJob, TChild>(int id, IEnumerable<TChild> jobItems)
-        where TJob : AbstractPaletteJob<TChild>, new()
-    {
-        TJob job = new() { Id = id, Storage = jobItems.ToArray() };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
 
     internal void DispatchJob<TJob, TChild>(TChild data)

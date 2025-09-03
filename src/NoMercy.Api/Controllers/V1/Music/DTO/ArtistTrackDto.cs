@@ -45,7 +45,7 @@ public record ArtistTrackDto
         Duration = artistTrack.Track.Duration;
         AlbumId = artistTrack.Track.AlbumTrack.First().AlbumId;
         AlbumName = artistTrack.Track.AlbumTrack.First().Album.Name;
-        Favorite = artistTrack.Track.TrackUser.Any();
+        Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
         Lyrics = artistTrack.Track.Lyrics;
 
@@ -71,7 +71,7 @@ public record ArtistTrackDto
         Disc = track.DiscNumber;
         Track = track.TrackNumber;
         Duration = track.Duration;
-        Favorite = track.TrackUser.Any();
+        Favorite = track.TrackUser.Count != 0;
         Quality = track.Quality;
         AlbumName = track.AlbumTrack.First().Album.Name;
         Link = new($"/music/tracks/{track.Id}", UriKind.Relative);

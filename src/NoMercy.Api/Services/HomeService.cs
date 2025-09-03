@@ -182,7 +182,7 @@ public class HomeService
                 .Where(genreRow => genreRow != null)
                 .ToList() as List<NmCardDto>;
 
-        genres = genres.Where(genre => genre.Items.Any()).ToList();
+        genres = genres.Where(genre => genre.Items.Count != 0).ToList();
 
         NmCardDto? homeCardItem = genres.Where(g => g.Title != string.Empty)
             .Randomize().FirstOrDefault()
@@ -224,7 +224,7 @@ public class HomeService
                     .ToList()
             };
 
-            if (item.Items.Any())
+            if (item.Items.Count != 0)
                 list.Add(item);
         }
 
@@ -414,7 +414,7 @@ public class HomeService
                 .Where(item => item != null)
                 .ToList();
 
-        genres = genres.Where(genre => genre.Items.Any()).ToList();
+        genres = genres.Where(genre => genre.Items.Count != 0).ToList();
         NmCardDto? homeCardItem = genres.Where(g => g.Title != string.Empty)
             .Randomize().FirstOrDefault()?.Items.Randomize().FirstOrDefault();
 

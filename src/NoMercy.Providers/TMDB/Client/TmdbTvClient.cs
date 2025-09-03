@@ -75,7 +75,7 @@ public class TmdbTvClient : TmdbBaseClient
             ["end_date"] = endDate
         };
 
-        return Get<TmdbTvChanges>("tv/" + Id + "/changes", queryParams, priority: priority);
+        return Get<TmdbTvChanges>("tv/changes", queryParams, priority: priority);
     }
 
     public Task<TmdbTvContentRatings?> ContentRatings(bool? priority = false)
@@ -150,7 +150,7 @@ public class TmdbTvClient : TmdbBaseClient
 
     public Task<TmdbTvAiringToday?> AiringToday(bool? priority = false)
     {
-        return Get<TmdbTvAiringToday>("tv/" + Id + "/airing_today", priority: priority);
+        return Get<TmdbTvAiringToday>("tv/airing_today", priority: priority);
     }
 
     public Task<TmdbTvOnTheAir?> OnTheAir(bool? priority = false)
@@ -158,9 +158,10 @@ public class TmdbTvClient : TmdbBaseClient
         return Get<TmdbTvOnTheAir>("tv/on_the_air", priority: priority);
     }
 
-    public Task<List<TmdbTvShow>?> Popular(int limit = 10, bool? priority = false)
+    public async Task<List<TmdbTvShow>?> Popular(int limit = 10, bool? priority = false)
     {
-        return Paginated<TmdbTvShow>("tv/popular", limit);
+        var response = await Get<TmdbPaginatedResponse<TmdbTvShow>>("tv/popular", priority: priority);
+        return response?.Results?.Take(limit).ToList();
     }
 
     public Task<TmdbTvTopRated?> TopRated(bool? priority = false)

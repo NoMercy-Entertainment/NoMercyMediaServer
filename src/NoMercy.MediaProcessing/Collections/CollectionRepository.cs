@@ -21,7 +21,6 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
                 Parts = ti.Parts,
                 LibraryId = ti.LibraryId,
                 TitleSort = ti.TitleSort,
-                _colorPalette = ti._colorPalette
             })
             .RunAsync();
     }

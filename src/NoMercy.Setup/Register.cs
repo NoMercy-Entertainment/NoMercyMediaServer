@@ -99,7 +99,6 @@ public static class Register
                 NoTranscoding = newUser.NoTranscoding,
                 VideoTranscoding = newUser.VideoTranscoding,
                 Manage = newUser.Manage,
-                UpdatedAt = newUser.UpdatedAt
             })
             .RunAsync();
 

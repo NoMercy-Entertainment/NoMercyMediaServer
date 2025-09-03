@@ -118,7 +118,6 @@ public partial class RecordingManager(
                     Cover = coverPalette?.Url is not null
                         ? $"/{coverPalette.Url.FileName()}"
                         : null,
-                    _colorPalette = coverPalette?.Palette ?? string.Empty
                 };
 
                 await recordingRepository.Store(insert);

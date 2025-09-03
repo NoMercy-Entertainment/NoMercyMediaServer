@@ -47,7 +47,7 @@ public record ArtistResponseItemDto
         if (ColorPalette is not null) ColorPalette.Backdrop = img?.ColorPalette?.Image;
         Disambiguation = artist.Disambiguation;
         Description = description;
-        Favorite = artist.ArtistUser.Any();
+        Favorite = artist.ArtistUser.Count != 0;
         Folder = artist.Folder;
         Id = artist.Id;
         LibraryId = artist.LibraryId;

@@ -6,6 +6,6 @@ namespace NoMercy.MediaProcessing.Images;
 
 public interface IFanArtImageManager
 {
-    Task<Image?> StoreArtistImages(FanArtArtistDetails fanArtArtistDetails, Guid artistId, Artist dbArtist);
+    Task<ICollection<Image>> StoreArtistImages(FanArtArtistDetails fanArtArtistDetails, Guid artistId, Artist dbArtist);
     Task StoreReleaseImages(FanArtAlbum fanArtAlbum, Guid albumId);
 }

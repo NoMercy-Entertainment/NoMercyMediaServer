@@ -26,7 +26,7 @@ public static class Dev
         // Ffprobe ffprobe = new("F:\\Films\\Download\\Brave.(2012).mkv");
         // Ffprobe ffprobeData = await ffprobe.GetStreamData();
         // Logger.App(ffprobeData);
-        
+        //
         // await using MediaContext context = new();
         // Library? lib = await context.Libraries
         //     .Include(lib => lib.FolderLibraries)
@@ -42,7 +42,7 @@ public static class Dev
         //     Logger.Encoder("No anime library found");
         //     return;
         // }
-        //
+        
         // PrefixFontFiles(path);
 
         // await Task.Delay(TimeSpan.FromSeconds(10));
@@ -95,21 +95,21 @@ public static class Dev
         //     SentrySdk.CaptureException(ex);
         // }
 
-        // MediaContext context = new();
-        // List<Folder> folders = context.Folders
-        //     .Include(l => l.FolderLibraries)
-        //     .ThenInclude(fl => fl.Library)
-        //     .Where(f => f.FolderLibraries
-        //         .Any(fl => fl.Library.Type == "movie" || fl.Library.Type == "tv"))
-        //     .ToList();
-        //
-        // foreach (Folder folder in folders)
-        // {
-        //     await Task.Run(() =>
-        //     {
-        //         ProcessM3U8Files(folder.Path);
-        //     });
-        // }
+        MediaContext context = new();
+        List<Folder> folders = context.Folders
+            .Include(l => l.FolderLibraries)
+            .ThenInclude(fl => fl.Library)
+            .Where(f => f.FolderLibraries
+                .Any(fl => fl.Library.Type == "movie" || fl.Library.Type == "tv"))
+            .ToList();
+        await Task.Run(() =>
+        {
+            foreach (Folder folder in folders)
+            {
+                // ProcessM3U8Files(folder.Path);
+                ConvertAacToTs(folder.Path);
+            }
+        });
 
         // OpenSubtitlesClient client = new();
         // OpenSubtitlesClient subtitlesClient = await client.Login();
@@ -217,6 +217,89 @@ public static class Dev
         catch (Exception ex)
         {
             Console.WriteLine($"Error processing M3U8 files: {ex.Message}");
+        }
+    }
+    
+    private static void ConvertAacToTs(string rootPath)
+    {
+        try
+        {
+            Logger.Encoder($"Converting AAC files to TS extensions in {rootPath}");
+
+            // Group AAC files by their directory
+            string[] aacFiles = Directory.GetFiles(rootPath, "*.aac", SearchOption.AllDirectories);
+            IEnumerable<IGrouping<string, string>> aacFilesByDirectory = aacFiles.GroupBy(file => Path.GetDirectoryName(file)!);
+
+            foreach (IGrouping<string, string> directoryGroup in aacFilesByDirectory)
+            {
+                string directory = directoryGroup.Key;
+                List<(string oldName, string newName)> renamedFiles = [];
+
+                // First, rename all AAC files in this directory
+                foreach (string aacFile in directoryGroup)
+                {
+                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(aacFile);
+                    string newTsFile = Path.Combine(directory, fileNameWithoutExt + ".ts");
+
+                    if (!File.Exists(newTsFile))
+                    {
+                        File.Move(aacFile, newTsFile);
+                        Logger.Encoder($"Renamed: {aacFile} -> {newTsFile}");
+                        
+                        renamedFiles.Add((Path.GetFileName(aacFile), Path.GetFileName(newTsFile)));
+                    }
+                    else
+                    {
+                        Logger.Encoder($"Target file already exists: {newTsFile}");
+                    }
+                }
+
+                // Then update the M3U8 file once for all changes in this directory
+                if (renamedFiles.Count > 0)
+                {
+                    UpdateM3U8FilesForDirectory(directory, renamedFiles);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Encoder($"Error converting AAC to TS: {ex.Message}");
+        }
+    }
+
+    private static void UpdateM3U8FilesForDirectory(string directory, List<(string oldName, string newName)> renamedFiles)
+    {
+        try
+        {
+            // Look for M3U8 files in the current directory
+            string[] m3U8Files = Directory.GetFiles(directory, "*.m3u8", SearchOption.TopDirectoryOnly);
+
+            foreach (string m3U8File in m3U8Files)
+            {
+                string content = File.ReadAllText(m3U8File);
+                string originalContent = content;
+
+                // Apply all filename replacements
+                foreach ((string oldName, string newName) in renamedFiles)
+                {
+                    content = content.Replace(oldName, newName);
+                    
+                    // Also handle relative path references like "audio_eng/filename.aac"
+                    string relativePath = Path.GetFileName(directory) + "/" + oldName;
+                    string newRelativePath = Path.GetFileName(directory) + "/" + newName;
+                    content = content.Replace(relativePath, newRelativePath);
+                }
+
+                // Only write if content actually changed
+                if (content == originalContent) continue;
+                
+                File.WriteAllText(m3U8File, content);
+                Logger.Encoder($"Updated M3U8: {m3U8File} - replaced {renamedFiles.Count} file references");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Encoder($"Error updating M3U8 files in directory {directory}: {ex.Message}");
         }
     }
 

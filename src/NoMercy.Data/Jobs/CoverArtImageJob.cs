@@ -32,7 +32,7 @@ public class CoverArtImageJob : IShouldQueue
         {
             if (MusicBrainzRelease is null) return;
 
-            CoverPalette? coverPalette = await FetchCover(MusicBrainzRelease);
+            Uri? coverPalette = await FetchCover(MusicBrainzRelease);
             if (coverPalette is null) return;
 
             await using MediaContext mediaContext = new();
@@ -42,9 +42,8 @@ public class CoverArtImageJob : IShouldQueue
                 .FirstOrDefaultAsync(a => a.Id == MusicBrainzRelease.Id);
             if (album is null) return;
 
-            album._colorPalette = coverPalette.Palette ?? album._colorPalette;
-            album.Cover = coverPalette.Url is not null
-                ? "/" + coverPalette.Url.FileName()
+            album.Cover = coverPalette is not null
+                ? "/" + coverPalette.FileName()
                 : album.Cover;
             album.UpdatedAt = DateTime.Now;
 
@@ -52,9 +51,8 @@ public class CoverArtImageJob : IShouldQueue
 
             foreach (AlbumTrack albumTrack in album.AlbumTrack)
             {
-                albumTrack.Track._colorPalette = coverPalette.Palette ?? albumTrack.Track._colorPalette;
-                albumTrack.Track.Cover = coverPalette.Url is not null
-                    ? "/" + coverPalette.Url.FileName()
+                albumTrack.Track.Cover = coverPalette is not null
+                    ? "/" + coverPalette.FileName()
                     : albumTrack.Track.Cover;
                 albumTrack.Track.UpdatedAt = DateTime.Now;
 
@@ -68,13 +66,7 @@ public class CoverArtImageJob : IShouldQueue
         }
     }
 
-    private class CoverPalette : Image
-    {
-        public string? Palette { get; set; }
-        public Uri? Url { get; init; }
-    }
-
-    private static async Task<CoverPalette?> FetchCover(MusicBrainzReleaseAppends musicBrainzReleaseAppends)
+    private static async Task<Uri?> FetchCover(MusicBrainzReleaseAppends musicBrainzReleaseAppends)
     {
         bool hasCover = musicBrainzReleaseAppends.CoverArtArchive.Front;
         if (!hasCover) return null;
@@ -91,12 +83,7 @@ public class CoverArtImageJob : IShouldQueue
         {
             if (!coverItem.CoverArtThumbnails.Large.HasSuccessStatus("image/*")) continue;
 
-            return new()
-            {
-                // Palette =
-                //     await ImageLogic.CoverArtImage.ColorPalette("cover", coverItem.CoverArtThumbnails.Large),
-                Url = coverItem.CoverArtThumbnails.Large
-            };
+            return coverItem.CoverArtThumbnails.Large;
         }
 
         return null;

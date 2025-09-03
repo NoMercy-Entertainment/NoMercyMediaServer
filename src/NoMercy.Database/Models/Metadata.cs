@@ -128,7 +128,7 @@ public class Metadata : MetadataTracks
 
         if (FontsFile != null) totalSize += FontsFile.FileSize ?? 0;
 
-        if (Chapters != null) totalSize += ChapterFile?.FileSize ?? 0;
+        if (ChapterFile != null) totalSize += ChapterFile.FileSize ?? 0;
 
         return totalSize;
     }

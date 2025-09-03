@@ -1,7 +1,6 @@
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
-using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -62,8 +61,6 @@ public class ArtistManager(
         {
             Logger.MusicBrainz(e.Message, LogEventLevel.Error);
         }
-
-        jobDispatcher.DispatchJob<ProcessFanartArtistImagesJob>(artistCredit.MusicBrainzArtist.Id);
     }
 
     /** this is the store for a Recording artist */
@@ -96,7 +93,6 @@ public class ArtistManager(
         await LinkToLibrary(artistCredit, library);
         await LinkToTrack(artistCredit, release);
 
-        jobDispatcher.DispatchJob<ProcessFanartArtistImagesJob>(artistCredit.Id);
     }
 
     private async Task LinkToTrack(MusicBrainzArtistDetails artistCredit, MusicBrainzTrack track)

@@ -6,9 +6,9 @@ namespace NoMercy.MediaProcessing.Images;
 
 public class ImageRepository(MediaContext context) : IImageRepository
 {
-    public Task StoreArtistImages(IEnumerable<Image> images, Artist dbArtist)
+    public async Task<ICollection<Image>> StoreArtistImages(IEnumerable<Image> images, Artist dbArtist)
     {
-        return context.Images.UpsertRange(images)
+        return await context.Images.UpsertRange(images)
             .On(v => new { v.FilePath, v.ArtistId })
             .WhenMatched((s, i) => new()
             {
@@ -21,15 +21,14 @@ public class ImageRepository(MediaContext context) : IImageRepository
                 ArtistId = i.ArtistId,
                 Type = i.Type,
                 Site = i.Site,
-                _colorPalette = i._colorPalette,
-                UpdatedAt = i.UpdatedAt
+                UpdatedAt = DateTime.Now
             })
-            .RunAsync();
+            .RunAndReturnAsync();
     }
 
-    public Task StoreReleaseImages(IEnumerable<Image> images)
+    public async Task<ICollection<Image>> StoreReleaseImages(IEnumerable<Image> images)
     {
-        return context.Images.UpsertRange(images)
+        return await context.Images.UpsertRange(images)
             .On(v => new { v.FilePath, v.AlbumId })
             .WhenMatched((s, i) => new()
             {
@@ -43,10 +42,9 @@ public class ImageRepository(MediaContext context) : IImageRepository
                 AlbumId = i.AlbumId,
                 Type = i.Type,
                 Site = i.Site,
-                _colorPalette = i._colorPalette,
-                UpdatedAt = i.UpdatedAt
+                UpdatedAt = DateTime.Now
             })
-            .RunAsync();
+            .RunAndReturnAsync();
     }
 
     public Task<ReleaseGroup> GetReleaseImages(Guid id)

@@ -61,7 +61,7 @@ public record InfoResponseItemDto
         MediaType = "movie";
         Link = new($"/movie/{Id}", UriKind.Relative);
         Watched = movie.VideoFiles
-            .Any(videoFile => videoFile.UserData.Any());
+            .Any(videoFile => videoFile.UserData.Count != 0);
 
         Favorite = movie.MovieUser.Count != 0;
 
@@ -269,7 +269,7 @@ public record InfoResponseItemDto
         Link = new($"/tv/{Id}", UriKind.Relative);
         Watched = tv.Episodes
             .Any(episode => episode.VideoFiles
-                .Any(videoFile => videoFile.UserData.Any()));
+                .Any(videoFile => videoFile.UserData.Count != 0));
 
         Favorite = tv.TvUser.Count != 0;
 

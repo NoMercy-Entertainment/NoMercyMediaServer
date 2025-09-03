@@ -36,7 +36,7 @@ public record TracksResponseItemDto
         Link = new($"/music/tracks/{track.Id}", UriKind.Relative);
 
         ColorPalette = track.ColorPalette;
-        Favorite = track.TrackUser.Any();
+        Favorite = track.TrackUser.Count != 0;
         Type = "favorites";
 
         Artists = track.ArtistTrack

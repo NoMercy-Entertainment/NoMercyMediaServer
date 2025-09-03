@@ -3,7 +3,6 @@ using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -55,7 +54,6 @@ public class SeasonManager(
                 Poster = s.PosterPath,
                 SeasonNumber = s.SeasonNumber,
                 TvId = show.Id,
-                _colorPalette = MovieDbImageManager.ColorPalette("poster", s.PosterPath).Result
             });
 
         await seasonRepository.StoreAsync(seasons);
@@ -117,11 +115,5 @@ public class SeasonManager(
 
         await seasonRepository.StoreImagesAsync(posters);
         Logger.MovieDb($"Show {showName}: Season {season.SeasonNumber}: Images stored", LogEventLevel.Debug);
-
-        IEnumerable<Image> posterJobItems = posters
-            .Select(x => new Image { FilePath = x.FilePath })
-            .ToArray();
-        if (posterJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(season.Id, posterJobItems);
-    }
+}
 }

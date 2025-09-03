@@ -15,7 +15,7 @@ namespace NoMercy.Database.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.2");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.7");
 
             modelBuilder.Entity("NoMercy.Database.Models.ActivityLog", b =>
                 {
@@ -56,7 +56,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ActivityLogs", (string)null);
+                    b.ToTable("ActivityLogs");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Album", b =>
@@ -141,7 +141,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Year");
 
-                    b.ToTable("Albums", (string)null);
+                    b.ToTable("Albums");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.AlbumArtist", b =>
@@ -158,7 +158,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("ArtistId");
 
-                    b.ToTable("AlbumArtist", (string)null);
+                    b.ToTable("AlbumArtist");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.AlbumLibrary", b =>
@@ -175,7 +175,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("LibraryId");
 
-                    b.ToTable("AlbumLibrary", (string)null);
+                    b.ToTable("AlbumLibrary");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.AlbumMusicGenre", b =>
@@ -192,7 +192,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("MusicGenreId");
 
-                    b.ToTable("AlbumMusicGenre", (string)null);
+                    b.ToTable("AlbumMusicGenre");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.AlbumReleaseGroup", b =>
@@ -209,7 +209,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("ReleaseGroupId");
 
-                    b.ToTable("AlbumReleaseGroup", (string)null);
+                    b.ToTable("AlbumReleaseGroup");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.AlbumTrack", b =>
@@ -226,7 +226,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TrackId");
 
-                    b.ToTable("AlbumTrack", (string)null);
+                    b.ToTable("AlbumTrack");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.AlbumUser", b =>
@@ -243,7 +243,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AlbumUser", (string)null);
+                    b.ToTable("AlbumUser");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.AlternativeTitle", b =>
@@ -278,7 +278,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("Title", "TvId")
                         .IsUnique();
 
-                    b.ToTable("AlternativeTitles", (string)null);
+                    b.ToTable("AlternativeTitles");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Artist", b =>
@@ -359,7 +359,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Year");
 
-                    b.ToTable("Artists", (string)null);
+                    b.ToTable("Artists");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.ArtistLibrary", b =>
@@ -376,7 +376,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("LibraryId");
 
-                    b.ToTable("ArtistLibrary", (string)null);
+                    b.ToTable("ArtistLibrary");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.ArtistMusicGenre", b =>
@@ -393,7 +393,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("MusicGenreId");
 
-                    b.ToTable("ArtistMusicGenre", (string)null);
+                    b.ToTable("ArtistMusicGenre");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.ArtistReleaseGroup", b =>
@@ -410,7 +410,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("ReleaseGroupId");
 
-                    b.ToTable("ArtistReleaseGroup", (string)null);
+                    b.ToTable("ArtistReleaseGroup");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.ArtistTrack", b =>
@@ -427,7 +427,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TrackId");
 
-                    b.ToTable("ArtistTrack", (string)null);
+                    b.ToTable("ArtistTrack");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.ArtistUser", b =>
@@ -444,7 +444,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ArtistUser", (string)null);
+                    b.ToTable("ArtistUser");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Cast", b =>
@@ -503,7 +503,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("CreditId", "TvId", "RoleId")
                         .IsUnique();
 
-                    b.ToTable("Casts", (string)null);
+                    b.ToTable("Casts");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Certification", b =>
@@ -537,7 +537,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("Iso31661", "Rating")
                         .IsUnique();
 
-                    b.ToTable("Certifications", (string)null);
+                    b.ToTable("Certifications");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.CertificationMovie", b =>
@@ -554,7 +554,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("MovieId");
 
-                    b.ToTable("CertificationMovie", (string)null);
+                    b.ToTable("CertificationMovie");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.CertificationTv", b =>
@@ -571,7 +571,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TvId");
 
-                    b.ToTable("CertificationTv", (string)null);
+                    b.ToTable("CertificationTv");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Collection", b =>
@@ -633,7 +633,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TitleSort");
 
-                    b.ToTable("Collections", (string)null);
+                    b.ToTable("Collections");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.CollectionLibrary", b =>
@@ -650,7 +650,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("LibraryId");
 
-                    b.ToTable("CollectionLibrary", (string)null);
+                    b.ToTable("CollectionLibrary");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.CollectionMovie", b =>
@@ -667,7 +667,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("MovieId");
 
-                    b.ToTable("CollectionMovie", (string)null);
+                    b.ToTable("CollectionMovie");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.CollectionUser", b =>
@@ -684,7 +684,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("CollectionUser", (string)null);
+                    b.ToTable("CollectionUser");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Configuration", b =>
@@ -723,7 +723,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("Key")
                         .IsUnique();
 
-                    b.ToTable("Configuration", (string)null);
+                    b.ToTable("Configuration");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Country", b =>
@@ -754,7 +754,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("NativeName");
 
-                    b.ToTable("Countries", (string)null);
+                    b.ToTable("Countries");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Creator", b =>
@@ -769,7 +769,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TvId");
 
-                    b.ToTable("Creators", (string)null);
+                    b.ToTable("Creators");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Crew", b =>
@@ -828,7 +828,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("CreditId", "TvId", "JobId")
                         .IsUnique();
 
-                    b.ToTable("Crews", (string)null);
+                    b.ToTable("Crews");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Device", b =>
@@ -904,7 +904,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("DeviceId")
                         .IsUnique();
 
-                    b.ToTable("Devices", (string)null);
+                    b.ToTable("Devices");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.EncoderProfile", b =>
@@ -957,7 +957,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("EncoderProfiles", (string)null);
+                    b.ToTable("EncoderProfiles");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.EncoderProfileFolder", b =>
@@ -974,7 +974,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("FolderId");
 
-                    b.ToTable("EncoderProfileFolder", (string)null);
+                    b.ToTable("EncoderProfileFolder");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Episode", b =>
@@ -984,6 +984,12 @@ namespace NoMercy.Database.Migrations
 
                     b.Property<DateTime?>("AirDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<int>("EpisodeNumber")
                         .HasColumnType("INTEGER");
@@ -1020,6 +1026,12 @@ namespace NoMercy.Database.Migrations
                     b.Property<int?>("TvdbId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<float?>("VoteAverage")
                         .HasColumnType("REAL");
 
@@ -1050,7 +1062,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TvdbId");
 
-                    b.ToTable("Episodes", (string)null);
+                    b.ToTable("Episodes");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Folder", b =>
@@ -1068,7 +1080,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("Path")
                         .IsUnique();
 
-                    b.ToTable("Folders", (string)null);
+                    b.ToTable("Folders");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.FolderLibrary", b =>
@@ -1085,7 +1097,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("LibraryId");
 
-                    b.ToTable("FolderLibrary", (string)null);
+                    b.ToTable("FolderLibrary");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Genre", b =>
@@ -1102,7 +1114,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Genres", (string)null);
+                    b.ToTable("Genres");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.GenreMovie", b =>
@@ -1119,7 +1131,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("MovieId");
 
-                    b.ToTable("GenreMovie", (string)null);
+                    b.ToTable("GenreMovie");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.GenreTv", b =>
@@ -1136,7 +1148,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TvId");
 
-                    b.ToTable("GenreTv", (string)null);
+                    b.ToTable("GenreTv");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.GuestStar", b =>
@@ -1166,7 +1178,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("CreditId", "EpisodeId")
                         .IsUnique();
 
-                    b.ToTable("GuestStars", (string)null);
+                    b.ToTable("GuestStars");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Image", b =>
@@ -1337,7 +1349,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("FilePath", "TvId")
                         .IsUnique();
 
-                    b.ToTable("Images", (string)null);
+                    b.ToTable("Images");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Job", b =>
@@ -1366,7 +1378,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("CreditId")
                         .IsUnique();
 
-                    b.ToTable("Jobs", (string)null);
+                    b.ToTable("Jobs");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Keyword", b =>
@@ -1383,7 +1395,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Keywords", (string)null);
+                    b.ToTable("Keywords");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.KeywordMovie", b =>
@@ -1400,7 +1412,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("MovieId");
 
-                    b.ToTable("KeywordMovie", (string)null);
+                    b.ToTable("KeywordMovie");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.KeywordTv", b =>
@@ -1417,7 +1429,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TvId");
 
-                    b.ToTable("KeywordTv", (string)null);
+                    b.ToTable("KeywordTv");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Language", b =>
@@ -1449,7 +1461,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Languages", (string)null);
+                    b.ToTable("Languages");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.LanguageLibrary", b =>
@@ -1466,7 +1478,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("LibraryId");
 
-                    b.ToTable("LanguageLibrary", (string)null);
+                    b.ToTable("LanguageLibrary");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Library", b =>
@@ -1536,7 +1548,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Type");
 
-                    b.ToTable("Libraries", (string)null);
+                    b.ToTable("Libraries");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.LibraryMovie", b =>
@@ -1553,7 +1565,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("MovieId");
 
-                    b.ToTable("LibraryMovie", (string)null);
+                    b.ToTable("LibraryMovie");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.LibraryTrack", b =>
@@ -1570,7 +1582,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TrackId");
 
-                    b.ToTable("LibraryTrack", (string)null);
+                    b.ToTable("LibraryTrack");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.LibraryTv", b =>
@@ -1587,7 +1599,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TvId");
 
-                    b.ToTable("LibraryTv", (string)null);
+                    b.ToTable("LibraryTv");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.LibraryUser", b =>
@@ -1604,7 +1616,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("LibraryUser", (string)null);
+                    b.ToTable("LibraryUser");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Media", b =>
@@ -1698,7 +1710,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("VideoFileId", "Src")
                         .IsUnique();
 
-                    b.ToTable("Medias", (string)null);
+                    b.ToTable("Medias");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.MediaAttachment", b =>
@@ -1709,7 +1721,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MediaAttachments", (string)null);
+                    b.ToTable("MediaAttachments");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.MediaStream", b =>
@@ -1719,7 +1731,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MediaStreams", (string)null);
+                    b.ToTable("MediaStreams");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Message", b =>
@@ -1729,7 +1741,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Messages", (string)null);
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Metadata", b =>
@@ -1828,7 +1840,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("Filename", "HostFolder")
                         .IsUnique();
 
-                    b.ToTable("Metadata", (string)null);
+                    b.ToTable("Metadata");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Movie", b =>
@@ -1847,8 +1859,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -1958,7 +1969,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TitleSort");
 
-                    b.ToTable("Movies", (string)null);
+                    b.ToTable("Movies");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.MovieUser", b =>
@@ -1975,7 +1986,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("MovieUser", (string)null);
+                    b.ToTable("MovieUser");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.MusicGenre", b =>
@@ -1992,7 +2003,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("MusicGenres", (string)null);
+                    b.ToTable("MusicGenres");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.MusicGenreReleaseGroup", b =>
@@ -2009,7 +2020,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("ReleaseGroupId");
 
-                    b.ToTable("MusicGenreReleaseGroup", (string)null);
+                    b.ToTable("MusicGenreReleaseGroup");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.MusicGenreTrack", b =>
@@ -2026,7 +2037,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TrackId");
 
-                    b.ToTable("MusicGenreTrack", (string)null);
+                    b.ToTable("MusicGenreTrack");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.MusicPlay", b =>
@@ -2059,7 +2070,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("MusicPlays", (string)null);
+                    b.ToTable("MusicPlays");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Notification", b =>
@@ -2069,7 +2080,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Notifications", (string)null);
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.NotificationUser", b =>
@@ -2086,7 +2097,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("NotificationUser", (string)null);
+                    b.ToTable("NotificationUser");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Person", b =>
@@ -2183,7 +2194,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TitleSort");
 
-                    b.ToTable("People", (string)null);
+                    b.ToTable("People");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.PlaybackPreference", b =>
@@ -2257,7 +2268,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("UserId", "TvId")
                         .IsUnique();
 
-                    b.ToTable("PlaybackPreferences", (string)null);
+                    b.ToTable("PlaybackPreferences");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Playlist", b =>
@@ -2311,7 +2322,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Playlists", (string)null);
+                    b.ToTable("Playlists");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.PlaylistTrack", b =>
@@ -2328,7 +2339,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TrackId");
 
-                    b.ToTable("PlaylistTrack", (string)null);
+                    b.ToTable("PlaylistTrack");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.PriorityProvider", b =>
@@ -2352,7 +2363,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("ProviderId");
 
-                    b.ToTable("PriorityProvider", (string)null);
+                    b.ToTable("PriorityProvider");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Provider", b =>
@@ -2364,7 +2375,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Providers", (string)null);
+                    b.ToTable("Providers");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Recommendation", b =>
@@ -2376,6 +2387,12 @@ namespace NoMercy.Database.Migrations
                     b.Property<string>("Backdrop")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<int>("MediaId")
                         .HasColumnType("INTEGER");
@@ -2408,6 +2425,12 @@ namespace NoMercy.Database.Migrations
                     b.Property<int?>("TvToId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<string>("_colorPalette")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -2430,7 +2453,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("MediaId", "TvFromId")
                         .IsUnique();
 
-                    b.ToTable("Recommendations", (string)null);
+                    b.ToTable("Recommendations");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.ReleaseGroup", b =>
@@ -2483,7 +2506,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("LibraryId");
 
-                    b.ToTable("ReleaseGroups", (string)null);
+                    b.ToTable("ReleaseGroups");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Role", b =>
@@ -2517,7 +2540,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("GuestStarId")
                         .IsUnique();
 
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.RunningTask", b =>
@@ -2527,7 +2550,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RunningTasks", (string)null);
+                    b.ToTable("RunningTasks");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Season", b =>
@@ -2537,6 +2560,12 @@ namespace NoMercy.Database.Migrations
 
                     b.Property<DateTime?>("AirDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<int>("EpisodeCount")
                         .HasColumnType("INTEGER");
@@ -2562,6 +2591,12 @@ namespace NoMercy.Database.Migrations
                     b.Property<int>("TvId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<string>("_colorPalette")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -2580,7 +2615,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TvId");
 
-                    b.ToTable("Seasons", (string)null);
+                    b.ToTable("Seasons");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Similar", b =>
@@ -2592,6 +2627,12 @@ namespace NoMercy.Database.Migrations
                     b.Property<string>("Backdrop")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<int>("MediaId")
                         .HasColumnType("INTEGER");
@@ -2624,6 +2665,12 @@ namespace NoMercy.Database.Migrations
                     b.Property<int?>("TvToId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<string>("_colorPalette")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -2650,7 +2697,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("MediaId", "TvFromId")
                         .IsUnique();
 
-                    b.ToTable("Similar", (string)null);
+                    b.ToTable("Similar");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Special", b =>
@@ -2707,7 +2754,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Specials", (string)null);
+                    b.ToTable("Specials");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.SpecialItem", b =>
@@ -2741,7 +2788,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("SpecialId", "MovieId")
                         .IsUnique();
 
-                    b.ToTable("SpecialItems", (string)null);
+                    b.ToTable("SpecialItems");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.SpecialUser", b =>
@@ -2756,7 +2803,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SpecialUser", (string)null);
+                    b.ToTable("SpecialUser");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Track", b =>
@@ -2846,7 +2893,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TrackNumber");
 
-                    b.ToTable("Tracks", (string)null);
+                    b.ToTable("Tracks");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.TrackUser", b =>
@@ -2863,7 +2910,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("TrackUser", (string)null);
+                    b.ToTable("TrackUser");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Translation", b =>
@@ -3002,7 +3049,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("TvId", "Iso6391", "Iso31661")
                         .IsUnique();
 
-                    b.ToTable("Translations", (string)null);
+                    b.ToTable("Translations");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Tv", b =>
@@ -3015,8 +3062,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -3148,7 +3194,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TvdbId");
 
-                    b.ToTable("Tvs", (string)null);
+                    b.ToTable("Tvs");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.TvUser", b =>
@@ -3165,7 +3211,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("TvUser", (string)null);
+                    b.ToTable("TvUser");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.User", b =>
@@ -3226,7 +3272,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Owner");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.UserData", b =>
@@ -3323,7 +3369,7 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("VideoFileId", "UserId", "TvId")
                         .IsUnique();
 
-                    b.ToTable("UserData", (string)null);
+                    b.ToTable("UserData");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.VideoFile", b =>
@@ -3416,7 +3462,7 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("Quality");
 
-                    b.ToTable("VideoFiles", (string)null);
+                    b.ToTable("VideoFiles");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.ActivityLog", b =>

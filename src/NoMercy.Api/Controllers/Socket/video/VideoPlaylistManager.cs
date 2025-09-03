@@ -73,7 +73,7 @@ public class VideoPlaylistManager
                 .OrderByDescending(p => p.Progress?.Date)
                 .FirstOrDefault();
         }
-        if (item is null && playlist.Any())
+        if (item is null && playlist.Count != 0)
         {
             item = playlist.FirstOrDefault();
         }
@@ -98,7 +98,7 @@ public class VideoPlaylistManager
                 .OrderByDescending(p => p.Progress?.Date)
                 .FirstOrDefault();
         }
-        if (item is null && playlist.Any())
+        if (item is null && playlist.Count != 0)
         {
             item = playlist.FirstOrDefault();
         }
@@ -133,7 +133,7 @@ public class VideoPlaylistManager
                 .OrderByDescending(p => p.Progress?.Date)
                 .FirstOrDefault();
         }
-        if (item is null && playlist.Any())
+        if (item is null && playlist.Count != 0)
         {
             item = playlist.FirstOrDefault();
         }

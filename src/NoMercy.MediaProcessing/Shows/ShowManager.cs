@@ -3,7 +3,6 @@ using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
@@ -29,12 +28,6 @@ public class ShowManager(
         string baseUrl = BaseUrl(showAppends.Name, showAppends.FirstAirDate);
         string mediaType = showRepository.GetMediaType(showAppends);
 
-        string colorPalette = await MovieDbImageManager
-            .MultiColorPalette([
-                new("poster", showAppends.PosterPath),
-                new("backdrop", showAppends.BackdropPath)
-            ]);
-
         DateTime folderCreatedAt = DateTime.UtcNow;
 
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
@@ -53,7 +46,6 @@ public class ShowManager(
             LibraryId = library.Id,
             Folder = baseUrl,
             MediaType = mediaType,
-            _colorPalette = colorPalette,
 
             Id = showAppends.Id,
             Backdrop = showAppends.BackdropPath,
@@ -193,9 +185,6 @@ public class ShowManager(
 
         await showRepository.StoreSimilar(similar);
 
-        IEnumerable<Similar> jobItems = similar.Select(x => new Similar { TvFromId = x.TvFromId });
-        jobDispatcher.DispatchJob<SimilarPaletteJob, Similar>(show.Id, jobItems);
-
         Logger.MovieDb($"Show {show.Name}: Similar stored", LogEventLevel.Debug);
     }
 
@@ -215,11 +204,6 @@ public class ShowManager(
             .ToArray();
 
         await showRepository.StoreRecommendations(recommendations);
-
-        IEnumerable<Recommendation> jobItems = recommendations
-            .Select(x => new Recommendation { TvFromId = x.TvFromId });
-
-        jobDispatcher.DispatchJob<RecommendationPaletteJob, Recommendation>(show.Id, jobItems);
 
         Logger.MovieDb($"Show {show.Name}: Recommendations stored", LogEventLevel.Debug);
     }
@@ -264,12 +248,6 @@ public class ShowManager(
 
         await showRepository.StoreImages(posters);
 
-        IEnumerable<Image> posterJobItems = posters
-            .Select(x => new Image { FilePath = x.FilePath })
-            .ToArray();
-        if (posterJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(show.Id, posterJobItems);
-
         IEnumerable<Image> backdrops = show.Images.Backdrops
             .Select(image => new Image
             {
@@ -289,12 +267,6 @@ public class ShowManager(
         await showRepository.StoreImages(backdrops);
         Logger.MovieDb($"Show {show.Name}: backdrops stored", LogEventLevel.Debug);
 
-        IEnumerable<Image> backdropJobItems = backdrops
-            .Select(x => new Image { FilePath = x.FilePath })
-            .ToArray();
-        if (backdropJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(show.Id, backdropJobItems);
-
         IEnumerable<Image> logos = show.Images.Logos.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
@@ -312,14 +284,7 @@ public class ShowManager(
 
         await showRepository.StoreImages(logos);
         Logger.MovieDb($"Show {show.Name}: Logos stored", LogEventLevel.Debug);
-
-        IEnumerable<Image> logosJobItems = logos
-            .Where(x => !x.FilePath.EndsWith(".svg"))
-            .Select(x => new Image { FilePath = x.FilePath })
-            .ToArray();
-        if (backdropJobItems.Any())
-            jobDispatcher.DispatchJob<ImagePaletteJob, Image>(show.Id, logosJobItems);
-    }
+   }
 
     internal async Task StoreKeywords(TmdbTvShowAppends show)
     {

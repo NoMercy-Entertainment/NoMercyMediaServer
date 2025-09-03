@@ -20,7 +20,6 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
                 Poster = si.Poster,
                 SeasonNumber = si.SeasonNumber,
                 TvId = si.TvId,
-                _colorPalette = si._colorPalette
             })
             .RunAsync();
     }

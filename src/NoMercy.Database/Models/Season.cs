@@ -9,7 +9,7 @@ namespace NoMercy.Database.Models;
 [Index(nameof(Title))]
 [Index(nameof(SeasonNumber))]
 [Index(nameof(AirDate))]
-public class Season : ColorPalettes
+public class Season : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]

@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
@@ -51,13 +52,25 @@ public partial class FileManager(
         {
             case "movie":
                 await StoreMovie();
+                Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+                {
+                    QueryKey = ["libraries", library.Id.ToString()]
+                });
                 break;
             case "tv":
             case "anime":
                 await StoreTvShow();
+                Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+                {
+                    QueryKey = ["libraries", library.Id.ToString()]
+                });
                 break;
             case "music":
                 await StoreMusic();
+                Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+                {
+                    QueryKey = ["music"]
+                });
                 break;
             default:
                 Logger.App("Unknown library type");
@@ -202,7 +215,7 @@ public partial class FileManager(
         {
             await StoreVideoItem(item);
         });
-
+        
         Logger.App($"Found {items.Count} files for {Show?.Title}");
     }
 

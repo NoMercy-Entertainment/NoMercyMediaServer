@@ -293,7 +293,7 @@ public class TvShowsController(
             .GroupBy(episode => episode.SeasonNumber)
             .ToList();
 
-        if (!concat.Any())
+        if (concat.Count == 0)
         {
             Episode noItems = new()
             {

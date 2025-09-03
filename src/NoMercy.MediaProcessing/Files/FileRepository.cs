@@ -318,7 +318,6 @@ public class FileRepository : IFileRepository
                         VoteCount = details.VoteCount,
                         AirDate = details.AirDate,
                         SeasonId = season?.Id ?? 0,
-                        _colorPalette = await MovieDbImageManager.ColorPalette("still", details.StillPath)
                     };
 
                     context.Episodes.Add(episode);

@@ -7,9 +7,8 @@ using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Information;
-using NoMercy.Queue;
-using NoMercy.Queue.Extensions;
 using NoMercy.Queue.Jobs;
 using NoMercy.Queue.Workers;
 
@@ -34,6 +33,18 @@ public static class ApplicationConfiguration
     {
         CronWorker cronWorker = app.ApplicationServices.GetRequiredService<CronWorker>();
         cronWorker.RegisterJobWithSchedule<CertificateRenewalJob>("certificate-renewal", app.ApplicationServices);
+        
+        cronWorker.RegisterJobWithSchedule<TvPaletteCronJob>("tv-palette-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<SeasonPaletteCronJob>("season-palette-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<EpisodePaletteCronJob>("episode-palette-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<MoviePaletteCronJob>("movie-palette-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<CollectionPaletteCronJob>("collection-palette-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<PersonPaletteCronJob>("person-palette-job", app.ApplicationServices);
+        
+        cronWorker.RegisterJobWithSchedule<ImagePaletteCronJob>("image-palette-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<RecommendationPaletteCronJob>("recommendation-palette-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<SimilarPaletteCronJob>("similar-palette-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<ProcessFanartArtistImagesCronJob>("fanart-images-job", app.ApplicationServices);
     }
 
     private static void ConfigureLocalization(IApplicationBuilder app)

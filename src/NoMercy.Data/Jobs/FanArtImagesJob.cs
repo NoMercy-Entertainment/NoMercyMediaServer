@@ -60,7 +60,6 @@ public class FanArtImagesJob : IShouldQueue
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = musicBrainzArtist.Id,
                     Site = image.Url.BasePath(),
-                    _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                 });
 
             List<Image> logos = fanArt.Logos.ToList()
@@ -72,7 +71,6 @@ public class FanArtImagesJob : IShouldQueue
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = musicBrainzArtist.Id,
                     Site = image.Url.BasePath(),
-                    _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                 });
             List<Image> banners = fanArt.Banners.ToList()
                 .ConvertAll<Image>(image => new()
@@ -83,7 +81,6 @@ public class FanArtImagesJob : IShouldQueue
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = musicBrainzArtist.Id,
                     Site = image.Url.BasePath(),
-                    _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                 });
             List<Image> hdLogos = fanArt.HdLogos.ToList()
                 .ConvertAll<Image>(image => new()
@@ -94,7 +91,6 @@ public class FanArtImagesJob : IShouldQueue
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = musicBrainzArtist.Id,
                     Site = image.Url.BasePath(),
-                    _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                 });
             List<Image> artistBackgrounds = fanArt.Backgrounds.ToList()
                 .ConvertAll<Image>(image => new()
@@ -105,7 +101,6 @@ public class FanArtImagesJob : IShouldQueue
                     FilePath = "/" + image.Url.FileName(),
                     ArtistId = musicBrainzArtist.Id,
                     Site = image.Url.BasePath(),
-                    _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                 });
 
             List<Image> images = thumbs
@@ -122,9 +117,6 @@ public class FanArtImagesJob : IShouldQueue
             Image? artistCover = thumbs.FirstOrDefault();
             dbArtist.Cover = artistCover?.FilePath ?? dbArtist.Cover;
 
-            dbArtist._colorPalette = artistCover?._colorPalette.Replace("\"image\"", "\"cover\"")
-                                     ?? dbArtist._colorPalette;
-
             await mediaContext.SaveChangesAsync();
 
             await mediaContext.Images.UpsertRange(images)
@@ -140,7 +132,6 @@ public class FanArtImagesJob : IShouldQueue
                     ArtistId = i.ArtistId,
                     Type = i.Type,
                     Site = i.Site,
-                    _colorPalette = i._colorPalette,
                     UpdatedAt = i.UpdatedAt
                 })
                 .RunAsync();
@@ -174,7 +165,6 @@ public class FanArtImagesJob : IShouldQueue
                         ArtistId = musicBrainzRelease.Id,
                         Site = image.Url.BasePath(),
                         Name = fanArt.Name,
-                        _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                     }));
 
                 cdArts.AddRange(albums.CdArt
@@ -187,7 +177,6 @@ public class FanArtImagesJob : IShouldQueue
                         ArtistId = musicBrainzRelease.Id,
                         Site = image.Url.BasePath(),
                         Name = fanArt.Name,
-                        _colorPalette = FanArtImageManager.ColorPalette("image", image.Url).Result
                     }));
             }
 
@@ -205,14 +194,10 @@ public class FanArtImagesJob : IShouldQueue
             Image? albumCover = covers.FirstOrDefault();
 
             dbRelease.Cover = albumCover?.FilePath ?? dbRelease.Cover;
-            dbRelease._colorPalette = albumCover?._colorPalette.Replace("\"image\"", "\"cover\"")
-                                      ?? dbRelease._colorPalette;
 
             foreach (AlbumReleaseGroup albumRelease in dbRelease.AlbumReleaseGroup)
             {
                 albumRelease.Album.Cover = albumCover?.FilePath ?? albumRelease.Album.Cover;
-                albumRelease.Album._colorPalette = albumCover?._colorPalette.Replace("\"image\"", "\"cover\"")
-                                                   ?? albumRelease.Album._colorPalette;
             }
 
             await mediaContext.SaveChangesAsync();
@@ -231,7 +216,6 @@ public class FanArtImagesJob : IShouldQueue
                     AlbumId = i.AlbumId,
                     Type = i.Type,
                     Site = i.Site,
-                    _colorPalette = i._colorPalette,
                     UpdatedAt = i.UpdatedAt
                 })
                 .RunAsync();

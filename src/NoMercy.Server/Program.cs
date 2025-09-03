@@ -157,6 +157,10 @@ public static class Program
                 services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
                 services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
             })
+            .ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+            })
             .ConfigureKestrel(Certificate.KestrelConfig)
             .UseUrls(urls.ToArray())
             .UseQuic()

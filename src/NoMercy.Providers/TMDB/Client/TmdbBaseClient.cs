@@ -13,6 +13,7 @@ public class TmdbBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new("https://api.themoviedb.org/3/");
     private readonly string Language;
+    private bool _disposed = false;
 
     public int Id { get; private set; }
 
@@ -74,13 +75,34 @@ public class TmdbBaseClient : IDisposable
 
         Logger.MovieDb(newUrl, LogEventLevel.Verbose);
 
-        string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+        try
+        {
+            string response = await GetQueue().Enqueue(() => {
+                if (_disposed)
+                {
+                    throw new ObjectDisposedException(nameof(TmdbBaseClient), "Cannot access a disposed TMDB client.");
+                }
+                return _client.GetStringAsync(newUrl);
+            }, newUrl, priority);
 
-        if (!skipCache) await CacheController.Write(newUrl, response);
+            if (!skipCache) await CacheController.Write(newUrl, response);
 
-        T? data = response.FromJson<T>();
+            T? data = response.FromJson<T>();
 
-        return data;
+            return data;
+        }
+        catch (ObjectDisposedException)
+        {
+            // If the client is disposed, return null gracefully
+            Logger.MovieDb($"TMDB client disposed during operation for {newUrl}", LogEventLevel.Debug);
+            return null;
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("404") || ex.Message.Contains("422") || ex.Message.Contains("400"))
+        {
+            // Handle common HTTP errors gracefully - return null for not found, unprocessable entity, or bad request
+            Logger.MovieDb($"HTTP error for {newUrl}: {ex.Message}", LogEventLevel.Debug);
+            return null;
+        }
     }
 
     protected async Task<List<T>?> Paginated<T>(string url, int limit) where T : class
@@ -108,6 +130,10 @@ public class TmdbBaseClient : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        
+        _disposed = true;
         _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
