@@ -20,7 +20,6 @@ public class PermissionsResponseItemDto : User
         VideoTranscoding = user.VideoTranscoding;
         NoTranscoding = user.NoTranscoding;
         CreatedAt = user.CreatedAt;
-        UpdatedAt = user.UpdatedAt;
 
         LibraryUser = user.LibraryUser
             .Select(libraryUser => new LibraryUserDto

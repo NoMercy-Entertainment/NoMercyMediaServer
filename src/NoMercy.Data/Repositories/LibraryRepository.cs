@@ -447,8 +447,7 @@ public class LibraryRepository(MediaContext context)
                 Realtime = li.Realtime,
                 SpecialSeasonName = li.SpecialSeasonName,
                 Type = li.Type,
-                Order = li.Order,
-                UpdatedAt = li.UpdatedAt
+                Order = li.Order
             })
             .RunAsync();
 

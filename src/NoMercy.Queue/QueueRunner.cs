@@ -163,8 +163,7 @@ public static class QueueRunner
             .WhenMatched((s, i) => new()
             {
                 Value = max.ToString(),
-                ModifiedBy = i.ModifiedBy,
-                UpdatedAt = i.UpdatedAt
+                ModifiedBy = i.ModifiedBy
             })
             .RunAsync();
 

@@ -46,8 +46,7 @@ public class TasksController : BaseController
                 Title = "Scan media library",
                 Value = 0,
                 Type = "library",
-                CreatedAt = DateTime.Parse("2024-01-25 09:26:56"),
-                UpdatedAt = DateTime.Parse("2024-01-25 09:26:56")
+                CreatedAt = DateTime.Parse("2024-01-25 09:26:56")
             }
         ];
 

@@ -30,8 +30,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
                 PlaceOfBirth = pi.PlaceOfBirth,
                 Popularity = pi.Popularity,
                 Profile = pi.Profile,
-                TitleSort = pi.Name,
-                UpdatedAt = pi.UpdatedAt
+                TitleSort = pi.Name
             })
             .RunAsync();
     }
@@ -56,8 +55,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
                 EpisodeId = ti.EpisodeId,
                 MovieId = ti.MovieId,
                 CollectionId = ti.CollectionId,
-                PersonId = ti.PersonId,
-                UpdatedAt = ti.UpdatedAt
+                PersonId = ti.PersonId
             })
             .RunAsync();
     }
@@ -77,8 +75,7 @@ public class PersonRepository(MediaContext context) : IPersonRepository
                 VoteCount = ti.VoteCount,
                 Width = ti.Width,
                 Type = ti.Type,
-                PersonId = ti.PersonId,
-                UpdatedAt = ti.UpdatedAt
+                PersonId = ti.PersonId
             })
             .RunAsync();
     }

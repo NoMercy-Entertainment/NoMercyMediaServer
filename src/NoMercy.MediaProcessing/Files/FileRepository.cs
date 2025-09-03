@@ -46,7 +46,6 @@ public class FileRepository : IFileRepository
                 Quality = vi.Quality,
                 Subtitles = vi.Subtitles,
                 _tracks = vi._tracks,
-                UpdatedAt = vi.UpdatedAt,
                 MetadataId = vi.MetadataId
             })
             .RunAsync();

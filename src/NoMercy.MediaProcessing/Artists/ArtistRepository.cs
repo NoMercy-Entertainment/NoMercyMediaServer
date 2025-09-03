@@ -20,8 +20,7 @@ public class ArtistRepository(MediaContext context) : IArtistRepository
                 Folder = i.Folder,
                 HostFolder = i.HostFolder,
                 LibraryId = i.LibraryId,
-                FolderId = i.FolderId,
-                UpdatedAt = i.UpdatedAt
+                FolderId = i.FolderId
             })
             .RunAsync();
     }

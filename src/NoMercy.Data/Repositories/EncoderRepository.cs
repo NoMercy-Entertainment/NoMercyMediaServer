@@ -27,8 +27,7 @@ public class EncoderRepository(MediaContext context)
                 Id = li.Id,
                 Name = li.Name,
                 Container = li.Container,
-                Param = li.Param,
-                UpdatedAt = li.UpdatedAt
+                Param = li.Param
             })
             .RunAsync();
     }

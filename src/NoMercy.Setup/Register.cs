@@ -79,7 +79,6 @@ public static class Register
             Allowed = true,
             Manage = true,
             CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now,
             AudioTranscoding = true,
             NoTranscoding = true,
             VideoTranscoding = true
@@ -98,7 +97,7 @@ public static class Register
                 AudioTranscoding = newUser.AudioTranscoding,
                 NoTranscoding = newUser.NoTranscoding,
                 VideoTranscoding = newUser.VideoTranscoding,
-                Manage = newUser.Manage,
+                Manage = newUser.Manage
             })
             .RunAsync();
 

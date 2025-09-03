@@ -235,7 +235,7 @@ public class FFmpegCommandBuilder
                 AddStreamMetadata(command, stream, index);
             }
 
-            AddHlsParameters(commandDictionary, stream.HlsPlaylistFilename, false);
+            AddHlsParameters(commandDictionary, stream.HlsPlaylistFilename, true);
 
             command.Append(BuildParameterString(commandDictionary));
             stream.CreateFolder();

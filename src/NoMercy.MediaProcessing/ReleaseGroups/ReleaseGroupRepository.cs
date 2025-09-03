@@ -16,8 +16,7 @@ public class ReleaseGroupRepository(MediaContext context) : IReleaseGroupReposit
                 Title = i.Title,
                 Description = i.Description,
                 Year = i.Year,
-                LibraryId = i.LibraryId,
-                UpdatedAt = i.UpdatedAt
+                LibraryId = i.LibraryId
             })
             .RunAsync();
     }

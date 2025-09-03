@@ -20,8 +20,7 @@ public class ImageRepository(MediaContext context) : IImageRepository
                 VoteCount = i.VoteCount,
                 ArtistId = i.ArtistId,
                 Type = i.Type,
-                Site = i.Site,
-                UpdatedAt = DateTime.Now
+                Site = i.Site
             })
             .RunAndReturnAsync();
     }
@@ -41,8 +40,7 @@ public class ImageRepository(MediaContext context) : IImageRepository
                 VoteCount = i.VoteCount,
                 AlbumId = i.AlbumId,
                 Type = i.Type,
-                Site = i.Site,
-                UpdatedAt = DateTime.Now
+                Site = i.Site
             })
             .RunAndReturnAsync();
     }

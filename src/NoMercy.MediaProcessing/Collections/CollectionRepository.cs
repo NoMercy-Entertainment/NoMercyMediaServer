@@ -92,8 +92,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
                 SeasonId = ti.SeasonId,
                 EpisodeId = ti.EpisodeId,
                 CollectionId = ti.CollectionId,
-                PersonId = ti.PersonId,
-                UpdatedAt = ti.UpdatedAt
+                PersonId = ti.PersonId
             })
             .RunAsync();
     }
@@ -113,8 +112,7 @@ public class CollectionRepository(MediaContext context) : ICollectionRepository
                 VoteCount = ti.VoteCount,
                 Width = ti.Width,
                 Type = ti.Type,
-                CollectionId = ti.CollectionId,
-                UpdatedAt = ti.UpdatedAt
+                CollectionId = ti.CollectionId
             })
             .RunAsync();
     }

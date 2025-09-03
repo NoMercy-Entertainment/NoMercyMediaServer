@@ -44,8 +44,6 @@ public class CollectionPaletteCronJob : ICronJobExecutor
                         new("poster", collecttion.Poster),
                         new("backdrop", collecttion.Backdrop)
                     ]);
-                
-                collecttion.UpdatedAt = DateTime.Now;
 
                 context.Collections.Update(collecttion);
             }

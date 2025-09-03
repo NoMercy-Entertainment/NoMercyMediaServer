@@ -43,8 +43,7 @@ public static class UsersSeed
                 AudioTranscoding = serverUser.Enabled,
                 NoTranscoding = serverUser.Enabled,
                 VideoTranscoding = serverUser.Enabled,
-                Owner = serverUser.IsOwner,
-                UpdatedAt = DateTime.Now
+                Owner = serverUser.IsOwner
             })
             .ToArray();
 
@@ -61,8 +60,7 @@ public static class UsersSeed
                     AudioTranscoding = ui.AudioTranscoding,
                     NoTranscoding = ui.NoTranscoding,
                     VideoTranscoding = ui.VideoTranscoding,
-                    Owner = ui.Owner,
-                    UpdatedAt = ui.UpdatedAt
+                    Owner = ui.Owner
                 })
                 .RunAsync();
 

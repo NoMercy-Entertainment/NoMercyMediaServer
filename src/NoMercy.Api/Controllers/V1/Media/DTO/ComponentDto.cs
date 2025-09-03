@@ -91,7 +91,6 @@ public record RenderPropsItemDto
         Id = item.MovieId?.ToString() ?? item.TvId?.ToString() ??
             item.SpecialId?.ToString() ?? item.CollectionId.ToString() ?? string.Empty;
         Type = item.Type;
-        UpdatedAt = item.UpdatedAt;
         CreatedAt = item.CreatedAt;
 
         if (item.Movie is not null)

@@ -75,8 +75,7 @@ public class MusicDescriptionJob : AbstractMusicDescriptionJob
                 {
                     ArtistId = s.ArtistId,
                     Iso31661 = s.Iso31661,
-                    Description = s.Description,
-                    UpdatedAt = s.UpdatedAt
+                    Description = s.Description
                 })
                 .RunAsync();
         }
@@ -125,8 +124,7 @@ public class MusicDescriptionJob : AbstractMusicDescriptionJob
                 {
                     ReleaseGroupId = s.ReleaseGroupId,
                     Iso31661 = s.Iso31661,
-                    Description = s.Description,
-                    UpdatedAt = i.UpdatedAt
+                    Description = s.Description
                 })
                 .RunAsync();
         }

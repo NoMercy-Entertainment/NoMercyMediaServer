@@ -43,8 +43,7 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
                 EpisodeId = ti.EpisodeId,
                 MovieId = ti.MovieId,
                 CollectionId = ti.CollectionId,
-                PersonId = ti.PersonId,
-                UpdatedAt = ti.UpdatedAt
+                PersonId = ti.PersonId
             })
             .RunAsync();
     }
@@ -64,8 +63,7 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
                 VoteCount = ti.VoteCount,
                 Width = ti.Width,
                 Type = ti.Type,
-                SeasonId = ti.SeasonId,
-                UpdatedAt = ti.UpdatedAt
+                SeasonId = ti.SeasonId
             })
             .RunAsync();
     }

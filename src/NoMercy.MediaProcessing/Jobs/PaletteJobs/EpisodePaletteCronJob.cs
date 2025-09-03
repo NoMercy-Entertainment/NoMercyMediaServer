@@ -40,8 +40,6 @@ public class EpisodePaletteCronJob : ICronJobExecutor
             foreach (Episode episode in episodeChunk)
             {
                 episode._colorPalette = await MovieDbImageManager.ColorPalette("still", episode.Still);
-                
-                episode.UpdatedAt = DateTime.Now;
 
                 context.Episodes.Update(episode);
             }

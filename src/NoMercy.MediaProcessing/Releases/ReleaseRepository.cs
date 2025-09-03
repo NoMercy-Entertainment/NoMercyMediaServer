@@ -19,7 +19,6 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
                 Year = i.Year,
                 Country = i.Country,
                 Tracks = i.Tracks,
-                UpdatedAt = i.UpdatedAt,
 
                 LibraryId = i.LibraryId,
                 Folder = i.Folder,

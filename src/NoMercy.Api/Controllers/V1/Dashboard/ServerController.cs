@@ -312,37 +312,10 @@ public class ServerController(
         });
     }
 
-    [HttpGet]
-    [Route("resources")]
-    public IActionResult Resources()
-    {
-        if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to view server resources");
-
-        Resource? resource;
-        try
-        {
-            resource = ResourceMonitor.Monitor();
-        }
-        catch (Exception e)
-        {
-            return UnprocessableEntityResponse("Resource monitor could not be started: " + e.Message);
-        }
-
-        List<ResourceMonitorDto> storage = StorageMonitor.Main();
-
-        return Ok(new ResourceInfoDto
-        {
-            Cpu = resource.Cpu,
-            Gpu = resource.Gpu,
-            Memory = resource.Memory,
-            Storage = storage
-        });
-    }
 
     [HttpPatch]
     [Route("info")]
-    public async Task<IActionResult> Update([FromBody] ServerUpdateRequest request)
+    public async Task<IActionResult> UpdateServerInfo([FromBody] ServerUpdateRequest request)
     {
         Guid userId = User.UserId();
         if (!User.IsModerator())
@@ -378,7 +351,7 @@ public class ServerController(
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
             client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
 
-            HttpRequestMessage httpRequestMessage = new(HttpMethod.Patch, "server/name")
+            HttpRequestMessage httpRequestMessage = new(HttpMethod.Patch, "name")
             {
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
@@ -414,6 +387,34 @@ public class ServerController(
         }
     }
 
+    [HttpGet]
+    [Route("resources")]
+    public IActionResult Resources()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to view server resources");
+
+        Resource? resource;
+        try
+        {
+            resource = ResourceMonitor.Monitor();
+        }
+        catch (Exception e)
+        {
+            return UnprocessableEntityResponse("Resource monitor could not be started: " + e.Message);
+        }
+
+        List<ResourceMonitorDto> storage = StorageMonitor.Main();
+
+        return Ok(new ResourceInfoDto
+        {
+            Cpu = resource.Cpu,
+            Gpu = resource.Gpu,
+            Memory = resource.Memory,
+            Storage = storage
+        });
+    }
+    
     [HttpGet]
     [Route("paths")]
     public IActionResult ServerPaths()

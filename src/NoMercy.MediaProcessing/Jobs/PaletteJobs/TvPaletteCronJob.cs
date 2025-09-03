@@ -44,8 +44,6 @@ public class TvPaletteCronJob : ICronJobExecutor
                         new("poster", tv.Poster),
                         new("backdrop", tv.Backdrop)
                     ]);
-                
-                tv.UpdatedAt = DateTime.Now;
 
                 context.Tvs.Update(tv);
             }

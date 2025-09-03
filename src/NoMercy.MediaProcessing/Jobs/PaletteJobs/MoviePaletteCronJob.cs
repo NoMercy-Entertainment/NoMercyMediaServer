@@ -44,8 +44,6 @@ public class MoviePaletteCronJob : ICronJobExecutor
                         new("poster", movie.Poster),
                         new("backdrop", movie.Backdrop)
                     ]);
-                
-                movie.UpdatedAt = DateTime.Now;
 
                 context.Movies.Update(movie);
             }

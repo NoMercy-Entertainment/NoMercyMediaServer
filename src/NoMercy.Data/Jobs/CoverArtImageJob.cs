@@ -45,7 +45,6 @@ public class CoverArtImageJob : IShouldQueue
             album.Cover = coverPalette is not null
                 ? "/" + coverPalette.FileName()
                 : album.Cover;
-            album.UpdatedAt = DateTime.Now;
 
             await mediaContext.SaveChangesAsync();
 
@@ -54,7 +53,6 @@ public class CoverArtImageJob : IShouldQueue
                 albumTrack.Track.Cover = coverPalette is not null
                     ? "/" + coverPalette.FileName()
                     : albumTrack.Track.Cover;
-                albumTrack.Track.UpdatedAt = DateTime.Now;
 
                 await mediaContext.SaveChangesAsync();
             }

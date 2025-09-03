@@ -69,7 +69,6 @@ public class CronWorker : BackgroundService
             IsEnabled = true,
             NextRun = nextRun,
             CreatedAt = currentTime,
-            UpdatedAt = currentTime
         };
 
         _codeDefinedJobs.Add(job);
@@ -111,7 +110,6 @@ public class CronWorker : BackgroundService
                     {
                         job.LastRun = currentTime;
                         job.NextRun = CronService.GetNextOccurrence(job.CronExpression, currentTime);
-                        job.UpdatedAt = currentTime;
 
                         _logger.LogInformation("Successfully executed cron job: {JobName}. Next run: {NextRun}",
                             job.Name, job.NextRun);
@@ -189,7 +187,6 @@ public class CronWorker : BackgroundService
             {
                 dbJob.LastRun = job.LastRun;
                 dbJob.NextRun = job.NextRun;
-                dbJob.UpdatedAt = job.UpdatedAt;
                 await dbContext.SaveChangesAsync(cancellationToken);
             }
         }

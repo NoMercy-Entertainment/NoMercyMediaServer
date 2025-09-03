@@ -46,7 +46,6 @@ public class ImagePaletteCronJob : ICronJobExecutor
             await Parallel.ForEachAsync(imageChunk, Config.ParallelOptions, async (image, _) =>
             {
                 image._colorPalette = await MovieDbImageManager.ColorPalette("image", image.FilePath);
-                image.UpdatedAt = DateTime.Now;
                 
                 context.Images.Update(image);
             });

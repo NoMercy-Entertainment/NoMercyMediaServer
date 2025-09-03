@@ -131,8 +131,7 @@ public class FanArtImagesJob : IShouldQueue
                     VoteCount = i.VoteCount,
                     ArtistId = i.ArtistId,
                     Type = i.Type,
-                    Site = i.Site,
-                    UpdatedAt = i.UpdatedAt
+                    Site = i.Site
                 })
                 .RunAsync();
         }
@@ -215,8 +214,7 @@ public class FanArtImagesJob : IShouldQueue
                     VoteCount = i.VoteCount,
                     AlbumId = i.AlbumId,
                     Type = i.Type,
-                    Site = i.Site,
-                    UpdatedAt = i.UpdatedAt
+                    Site = i.Site
                 })
                 .RunAsync();
         }

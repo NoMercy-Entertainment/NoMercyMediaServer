@@ -70,8 +70,6 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
         {
             FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(artist.Id);
             if (fanArt is null) return;
-            
-            artist.UpdatedAt = DateTime.Now;
             context.Artists.Update(artist);
             await context.SaveChangesAsync(cancellationToken);
             
@@ -89,15 +87,13 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
             foreach (Image image in images)
             {
                 image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
-                image.UpdatedAt = DateTime.Now;
             }
                     
             await context.Images.UpsertRange(images.Where(i => i.ArtistId != null))
                 .On(i => new { i.FilePath, i.ArtistId })
                 .WhenMatched((db, src) => new()
                 {
-                    _colorPalette = src._colorPalette,
-                    UpdatedAt = DateTime.Now
+                    _colorPalette = src._colorPalette
                 })
                 .RunAsync(cancellationToken);
                     
@@ -105,8 +101,7 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
                 .On(i => new { i.FilePath, i.AlbumId })
                 .WhenMatched((db, src) => new()
                 {
-                    _colorPalette = src._colorPalette,
-                    UpdatedAt = DateTime.Now
+                    _colorPalette = src._colorPalette
                 })
                 .RunAsync(cancellationToken);
                     
@@ -116,7 +111,6 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
                     
             artist.Cover = cover.FilePath;
             artist._colorPalette = cover._colorPalette.Replace("\"image\"", "\"cover\"");
-            artist.UpdatedAt = DateTime.Now;
                     
             context.Artists.Update(artist);
                     

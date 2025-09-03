@@ -34,8 +34,7 @@ public static class ConfigSeed
                 .WhenMatched((_, vi) => new()
                 {
                     Key = vi.Key,
-                    Value = vi.Value,
-                    UpdatedAt = DateTime.Now
+                    Value = vi.Value
                 })
                 .RunAsync();
         }

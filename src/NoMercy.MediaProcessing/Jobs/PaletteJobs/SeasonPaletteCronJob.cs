@@ -40,8 +40,6 @@ public class SeasonPaletteCronJob : ICronJobExecutor
             foreach (Season season in seasonChunk)
             {
                 season._colorPalette = await MovieDbImageManager.ColorPalette("poster", season.Poster);
-                
-                season.UpdatedAt = DateTime.Now;
 
                 context.Seasons.Update(season);
             }

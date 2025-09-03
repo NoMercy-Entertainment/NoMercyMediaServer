@@ -257,10 +257,6 @@
     <Value lang="nl">You do not have permission to view optical drives</Value>
   </Entry>
   <Entry>
-    <Key>The route v1/server/server/name could not be found.</Key>
-    <Value lang="nl">The route v1/server/server/name could not be found.</Value>
-  </Entry>
-  <Entry>
     <Key>Favorite Artists</Key>
     <Value lang="nl">Favorite Artists</Value>
   </Entry>
@@ -331,5 +327,37 @@
   <Entry>
     <Key>No libraries exist.</Key>
     <Value lang="nl">No libraries exist.</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to create a new library</Key>
+    <Value lang="nl">You do not have permission to create a new library</Value>
+  </Entry>
+  <Entry>
+    <Key>Something went wrong creating a new library: {0}</Key>
+    <Value lang="nl">Something went wrong creating a new library: {0}</Value>
+  </Entry>
+  <Entry>
+    <Key>Something went wrong adding the folder: {0}</Key>
+    <Value lang="nl">Something went wrong adding the folder: {0}</Value>
+  </Entry>
+  <Entry>
+    <Key>The route v1/server/server/name could not be found.</Key>
+    <Value lang="nl">The route v1/server/server/name could not be found.</Value>
+  </Entry>
+  <Entry>
+    <Key>The server name field is required.</Key>
+    <Value lang="nl">The server name field is required.</Value>
+  </Entry>
+  <Entry>
+    <Key>Attempt to read property "server_name" on array</Key>
+    <Value lang="nl">Attempt to read property "server_name" on array</Value>
+  </Entry>
+  <Entry>
+    <Key>SQLSTATE[42S22]: Column not found: 1054 Unknown column 'server_name' in 'field list' (Connection: mysql, SQL: update `servers` set `server_name` = EAGLE, `servers`.`updated_at` = 2025-09-03 17:20:45 where `user_id` = 6aa35c70-7136-44f3-baba-e1d464433426 and `id` = fcbb730a-a562-2ca5-d054-5d6acf2a1aaa)</Key>
+    <Value lang="nl">SQLSTATE[42S22]: Column not found: 1054 Unknown column 'server_name' in 'field list' (Connection: mysql, SQL: update `servers` set `server_name` = EAGLE, `servers`.`updated_at` = 2025-09-03 17:20:45 where `user_id` = 6aa35c70-7136-44f3-baba-e1d464433426 and `id` = fcbb730a-a562-2ca5-d054-5d6acf2a1aaa)</Value>
+  </Entry>
+  <Entry>
+    <Key>Server name changed</Key>
+    <Value lang="nl">Server name changed</Value>
   </Entry>
 </I18N>

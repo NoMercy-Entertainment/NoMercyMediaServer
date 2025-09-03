@@ -89,8 +89,7 @@ public class ConfigurationController : BaseController
                 {
                     Id = o.Id,
                     Value = n.Value,
-                    ModifiedBy = n.ModifiedBy,
-                    UpdatedAt = n.UpdatedAt
+                    ModifiedBy = n.ModifiedBy
                 })
                 .RunAsync();
         }
@@ -109,8 +108,7 @@ public class ConfigurationController : BaseController
                 {
                     Id = o.Id,
                     Value = n.Value,
-                    ModifiedBy = n.ModifiedBy,
-                    UpdatedAt = n.UpdatedAt
+                    ModifiedBy = n.ModifiedBy
                 })
                 .RunAsync();
         }
@@ -165,8 +163,7 @@ public class ConfigurationController : BaseController
                 {
                     Id = o.Id,
                     Value = Config.Swagger.ToString(),
-                    ModifiedBy = n.ModifiedBy,
-                    UpdatedAt = n.UpdatedAt
+                    ModifiedBy = n.ModifiedBy
                 })
                 .RunAsync();
         }
@@ -183,8 +180,7 @@ public class ConfigurationController : BaseController
                 {
                     Id = o.Id,
                     Value = request.ServerName,
-                    ModifiedBy = n.ModifiedBy,
-                    UpdatedAt = n.UpdatedAt
+                    ModifiedBy = n.ModifiedBy
                 })
                 .RunAsync();
 

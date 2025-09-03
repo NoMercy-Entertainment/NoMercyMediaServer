@@ -109,7 +109,6 @@ public class ConnectionHub : Hub
                 Os = di.Os,
                 Type = di.Type,
                 Version = di.Version,
-                UpdatedAt = di.UpdatedAt,
                 VolumePercent = di.VolumePercent
             })
             .RunAsync();

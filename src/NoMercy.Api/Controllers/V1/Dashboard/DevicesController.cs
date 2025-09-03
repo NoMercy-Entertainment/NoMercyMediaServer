@@ -48,7 +48,6 @@ public class DevicesController : BaseController
                 Version = x.Version,
                 Ip = x.Ip,
                 CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt,
                 ActivityLogs = x.ActivityLogs
                     .Select(activityLog => new ActivityLogDto
                     {
@@ -56,7 +55,6 @@ public class DevicesController : BaseController
                         Type = activityLog.Type,
                         Time = activityLog.Time,
                         CreatedAt = activityLog.CreatedAt,
-                        UpdatedAt = activityLog.UpdatedAt,
                         UserId = activityLog.UserId,
                         DeviceId = activityLog.DeviceId.ToString()
                     })

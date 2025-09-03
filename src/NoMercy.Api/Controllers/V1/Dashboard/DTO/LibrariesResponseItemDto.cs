@@ -38,7 +38,6 @@ public record LibrariesResponseItemDto
         Type = library.Type;
         Order = library.Order;
         CreatedAt = library.CreatedAt;
-        UpdatedAt = library.UpdatedAt;
         Pagination = library.LibraryMovies.Count + library.LibraryTvs.Count > 300 ? "letter" : "auto";
         Link = library.LibraryMovies.Count + library.LibraryTvs.Count > 300
             ? new($"/{Id}/letter/A", UriKind.Relative)

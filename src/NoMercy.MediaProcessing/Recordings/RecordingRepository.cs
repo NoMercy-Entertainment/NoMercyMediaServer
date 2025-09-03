@@ -17,7 +17,6 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
                 DiscNumber = ti.DiscNumber,
                 TrackNumber = ti.TrackNumber,
                 Date = ti.Date,
-                UpdatedAt = ti.UpdatedAt,
 
                 Folder = update ? ts.Folder : ti.Folder,
                 FolderId = update ? ts.FolderId : ti.FolderId,

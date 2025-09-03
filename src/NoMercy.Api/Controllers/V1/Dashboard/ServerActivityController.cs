@@ -32,7 +32,6 @@ public class ServerActivityController : BaseController
                 Type = x.Type,
                 Time = x.Time,
                 CreatedAt = x.CreatedAt,
-                UpdatedAt = x.UpdatedAt,
                 UserId = x.UserId,
                 DeviceId = x.DeviceId,
                 Device = x.Device.Name,

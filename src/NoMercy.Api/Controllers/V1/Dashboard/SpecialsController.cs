@@ -63,8 +63,7 @@ public class SpecialsController : BaseController
                 .WhenMatched((ls, li) => new()
                 {
                     Id = li.Id,
-                    Title = li.Title,
-                    UpdatedAt = li.UpdatedAt
+                    Title = li.Title
                 })
                 .RunAsync();
 

@@ -44,11 +44,6 @@ public class SimilarPaletteCronJob : ICronJobExecutor
                         new("poster", similar.Poster),
                         new("backdrop", similar.Backdrop)
                     ]);
-                
-                if(similar.TvFrom != null)
-                    similar.TvFrom.UpdatedAt = DateTime.Now;
-                if(similar.MovieFrom != null)
-                    similar.MovieFrom!.UpdatedAt = DateTime.Now;
 
                 context.Similar.Update(similar);
             }

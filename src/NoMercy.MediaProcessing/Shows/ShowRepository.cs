@@ -45,8 +45,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
                 Folder = ti.Folder,
                 LibraryId = ti.LibraryId,
                 MediaType = ti.MediaType,
-                CreatedAt = ti.CreatedAt,
-                UpdatedAt = ti.UpdatedAt
+                CreatedAt = ti.CreatedAt
             })
             .RunAsync();
     }
@@ -95,8 +94,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
                 EpisodeId = ti.EpisodeId,
                 MovieId = ti.MovieId,
                 CollectionId = ti.CollectionId,
-                PersonId = ti.PersonId,
-                UpdatedAt = ti.UpdatedAt
+                PersonId = ti.PersonId
             })
             .RunAsync();
     }
@@ -175,8 +173,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
                 TvId = ti.TvId,
                 Name = ti.Name,
                 Site = ti.Site,
-                Size = ti.Size,
-                UpdatedAt = ti.UpdatedAt
+                Size = ti.Size
             })
             .RunAsync();
     }
@@ -196,8 +193,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
                 VoteCount = ti.VoteCount,
                 Width = ti.Width,
                 Type = ti.Type,
-                TvId = ti.TvId,
-                UpdatedAt = ti.UpdatedAt
+                TvId = ti.TvId
             })
             .RunAsync();
     }

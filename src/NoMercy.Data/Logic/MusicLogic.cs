@@ -301,8 +301,7 @@ public partial class MusicLogic : IAsyncDisposable
                     Title = i.Title,
                     Description = i.Description,
                     Year = i.Year,
-                    LibraryId = i.LibraryId,
-                    UpdatedAt = i.UpdatedAt
+                    LibraryId = i.LibraryId
                 })
                 .RunAsync();
 
@@ -375,8 +374,7 @@ public partial class MusicLogic : IAsyncDisposable
                     LibraryId = i.LibraryId,
                     Folder = i.Folder,
                     FolderId = i.FolderId,
-                    HostFolder = i.HostFolder,
-                    UpdatedAt = i.UpdatedAt
+                    HostFolder = i.HostFolder
                 })
                 .RunAsync();
 
@@ -446,8 +444,7 @@ public partial class MusicLogic : IAsyncDisposable
                     Folder = i.Folder,
                     HostFolder = i.HostFolder,
                     LibraryId = i.LibraryId,
-                    FolderId = i.FolderId,
-                    UpdatedAt = i.UpdatedAt
+                    FolderId = i.FolderId
                 })
                 .RunAsync();
         }
@@ -529,7 +526,6 @@ public partial class MusicLogic : IAsyncDisposable
                     DiscNumber = ti.DiscNumber,
                     TrackNumber = ti.TrackNumber,
                     Date = ti.Date,
-                    UpdatedAt = ti.UpdatedAt,
 
                     Folder = file == "" ? ts.Folder : ti.Folder,
                     FolderId = file == "" ? ts.FolderId : ti.FolderId,

@@ -79,7 +79,6 @@ public static class Dev
         //     _video = pi._video,
         //     _audio = pi._audio,
         //     _subtitle = pi._subtitle,
-        //     UpdatedAt = DateTime.Now
         // })
         // .RunAsync();
 
@@ -95,21 +94,21 @@ public static class Dev
         //     SentrySdk.CaptureException(ex);
         // }
 
-        MediaContext context = new();
-        List<Folder> folders = context.Folders
-            .Include(l => l.FolderLibraries)
-            .ThenInclude(fl => fl.Library)
-            .Where(f => f.FolderLibraries
-                .Any(fl => fl.Library.Type == "movie" || fl.Library.Type == "tv"))
-            .ToList();
-        await Task.Run(() =>
-        {
-            foreach (Folder folder in folders)
-            {
-                // ProcessM3U8Files(folder.Path);
-                ConvertAacToTs(folder.Path);
-            }
-        });
+        // MediaContext context = new();
+        // List<Folder> folders = context.Folders
+        //     .Include(l => l.FolderLibraries)
+        //     .ThenInclude(fl => fl.Library)
+        //     .Where(f => f.FolderLibraries
+        //         .Any(fl => fl.Library.Type == "movie" || fl.Library.Type == "tv"))
+        //     .ToList();
+        // await Task.Run(() =>
+        // {
+        //     foreach (Folder folder in folders)
+        //     {
+        //         // ProcessM3U8Files(folder.Path);
+        //         ConvertAacToTs(folder.Path);
+        //     }
+        // });
 
         // OpenSubtitlesClient client = new();
         // OpenSubtitlesClient subtitlesClient = await client.Login();

@@ -36,8 +36,7 @@ public static class EncoderProfilesSeed
                     Param = vi.Param,
                     _videoProfiles = vi._videoProfiles,
                     _audioProfiles = vi._audioProfiles,
-                    _subtitleProfiles = vi._subtitleProfiles,
-                    UpdatedAt = vi.UpdatedAt
+                    _subtitleProfiles = vi._subtitleProfiles
                 })
                 .RunAsync();
         }

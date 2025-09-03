@@ -60,7 +60,6 @@ public record PersonResponseItemDto
         Profile = person.Profile;
         ColorPalette = person.ColorPalette;
         CreatedAt = person.CreatedAt;
-        UpdatedAt = person.UpdatedAt;
         ExternalIds = person.ExternalIds;
         Gender = person.Gender;
         Link = new($"/person/{Id}", UriKind.Relative);

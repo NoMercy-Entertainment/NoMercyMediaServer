@@ -40,8 +40,6 @@ public class PersonPaletteCronJob : ICronJobExecutor
             foreach (Person person in peopleChunk)
             {
                 person._colorPalette = await MovieDbImageManager.ColorPalette("profile", person.Profile);
-                
-                person.UpdatedAt = DateTime.Now;
 
                 context.People.Update(person);
             }

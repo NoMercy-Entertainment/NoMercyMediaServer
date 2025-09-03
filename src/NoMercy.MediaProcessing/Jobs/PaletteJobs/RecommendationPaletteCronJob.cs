@@ -46,11 +46,6 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
                         new("backdrop", recommendation.Backdrop)
                     ]);
                 
-                if(recommendation.TvFrom != null)
-                    recommendation.TvFrom.UpdatedAt = DateTime.Now;
-                if(recommendation.MovieFrom != null)
-                    recommendation.MovieFrom!.UpdatedAt = DateTime.Now;
-                
                 context.Recommendations.Update(recommendation);
             });
         }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
 
@@ -62,6 +63,16 @@ public class MediaContext : DbContext
             .Property(t => t.JobId)
             .IsRequired(false);
 
+        List<IMutableEntityType> entityTypes = modelBuilder.Model.GetEntityTypes()
+            .Where(t => t.ClrType.IsSubclassOf(typeof(Timestamps)) || t.ClrType == typeof(Timestamps))
+            .ToList();
+
+        foreach (IMutableEntityType entityType in entityTypes)
+        {
+            string? tableName = entityType.GetTableName();
+            modelBuilder.Entity(entityType.ClrType)
+                .ToTable(tb => tb.HasTrigger($"update_{tableName}_updated_at"));
+        }
 
         base.OnModelCreating(modelBuilder);
     }

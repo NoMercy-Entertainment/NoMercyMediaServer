@@ -52,7 +52,6 @@ public record PeopleResponseItemDto
         Poster = person.Profile;
         ColorPalette = person.ColorPalette;
         CreatedAt = person.CreatedAt;
-        UpdatedAt = person.UpdatedAt;
         MediaType = "person";
         Type = "person";
         Link = new($"/person/{Id}", UriKind.Relative);
