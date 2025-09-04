@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace NoMercy.Providers.TMDB.Models.Movies;
+namespace NoMercy.Providers.TMDB.Models.Shared;
 
 public class TmdbPaymentDetails
 {

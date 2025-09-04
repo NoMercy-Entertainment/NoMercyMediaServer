@@ -15,7 +15,7 @@ public class TmdbMovieAppends : TmdbMovieDetails
     [JsonProperty("similar")] public TmdbMovieSimilar Similar { get; set; } = new();
     [JsonProperty("translations")] public TmdbCombinedTranslations Translations { get; set; } = new();
     [JsonProperty("videos")] public TmdbMovieVideos Videos { get; set; } = new();
-    [JsonProperty("watch/providers")] public TmdbMovieWatchProviders WatchProviders { get; set; } = new();
+    [JsonProperty("watch/providers")] public TmdbWatchProviders WatchProviders { get; set; } = new();
     [JsonProperty("genres")] public new TmdbGenre[] Genres { get; set; } = [];
     [JsonProperty("release_dates")] public TmdbMovieReleaseDates ReleaseDates { get; set; } = new();
 }

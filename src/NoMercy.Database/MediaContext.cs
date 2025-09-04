@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Metadata;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
@@ -22,6 +23,8 @@ public class MediaContext : DbContext
             o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
         
         options.EnableSensitiveDataLogging();
+        
+        options.AddInterceptors(new EntityBaseUpdatedAtInterceptor());
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -76,7 +79,7 @@ public class MediaContext : DbContext
 
         base.OnModelCreating(modelBuilder);
     }
-
+    
     public virtual DbSet<ActivityLog> ActivityLogs { get; init; }
     public virtual DbSet<Cast> Casts { get; init; }
     public virtual DbSet<CertificationMovie> CertificationMovie { get; init; }

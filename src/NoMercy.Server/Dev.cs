@@ -2,10 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.Encoder;
-using NoMercy.Encoder.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using SixLabors.ImageSharp;
@@ -42,7 +39,7 @@ public static class Dev
         //     Logger.Encoder("No anime library found");
         //     return;
         // }
-        
+
         // PrefixFontFiles(path);
 
         // await Task.Delay(TimeSpan.FromSeconds(10));
@@ -99,16 +96,23 @@ public static class Dev
         //     .Include(l => l.FolderLibraries)
         //     .ThenInclude(fl => fl.Library)
         //     .Where(f => f.FolderLibraries
-        //         .Any(fl => fl.Library.Type == "movie" || fl.Library.Type == "tv"))
+        //         .Any(fl => fl.Library.Title == "Anime"))
         //     .ToList();
-        // await Task.Run(() =>
+        //
+        // foreach (Folder folder in folders)
         // {
-        //     foreach (Folder folder in folders)
+        //     await Task.Run(() =>
         //     {
-        //         // ProcessM3U8Files(folder.Path);
-        //         ConvertAacToTs(folder.Path);
-        //     }
-        // });
+        //         string[] subFolders = Directory.GetDirectories(folder.Path);
+        //         Logger.Encoder($"Cluster: {Path.GetFileName(folder.Path)} - {subFolders.Length} subfolders found");
+        //         foreach (string subFolder in subFolders)
+        //         {
+        //             //     Logger.Encoder($"Processing: {subFolder}");
+        //             // ProcessM3U8Files(folder.Path);
+        //             ConvertAacToTs(subFolder);
+        //         }
+        //     });
+        // }
 
         // OpenSubtitlesClient client = new();
         // OpenSubtitlesClient subtitlesClient = await client.Login();
@@ -218,7 +222,7 @@ public static class Dev
             Console.WriteLine($"Error processing M3U8 files: {ex.Message}");
         }
     }
-    
+
     private static void ConvertAacToTs(string rootPath)
     {
         try
@@ -227,7 +231,8 @@ public static class Dev
 
             // Group AAC files by their directory
             string[] aacFiles = Directory.GetFiles(rootPath, "*.aac", SearchOption.AllDirectories);
-            IEnumerable<IGrouping<string, string>> aacFilesByDirectory = aacFiles.GroupBy(file => Path.GetDirectoryName(file)!);
+            IEnumerable<IGrouping<string, string>> aacFilesByDirectory =
+                aacFiles.GroupBy(file => Path.GetDirectoryName(file)!);
 
             foreach (IGrouping<string, string> directoryGroup in aacFilesByDirectory)
             {
@@ -244,7 +249,7 @@ public static class Dev
                     {
                         File.Move(aacFile, newTsFile);
                         Logger.Encoder($"Renamed: {aacFile} -> {newTsFile}");
-                        
+
                         renamedFiles.Add((Path.GetFileName(aacFile), Path.GetFileName(newTsFile)));
                     }
                     else
@@ -254,10 +259,7 @@ public static class Dev
                 }
 
                 // Then update the M3U8 file once for all changes in this directory
-                if (renamedFiles.Count > 0)
-                {
-                    UpdateM3U8FilesForDirectory(directory, renamedFiles);
-                }
+                if (renamedFiles.Count > 0) UpdateM3U8FilesForDirectory(directory, renamedFiles);
             }
         }
         catch (Exception ex)
@@ -266,7 +268,8 @@ public static class Dev
         }
     }
 
-    private static void UpdateM3U8FilesForDirectory(string directory, List<(string oldName, string newName)> renamedFiles)
+    private static void UpdateM3U8FilesForDirectory(string directory,
+        List<(string oldName, string newName)> renamedFiles)
     {
         try
         {
@@ -282,7 +285,7 @@ public static class Dev
                 foreach ((string oldName, string newName) in renamedFiles)
                 {
                     content = content.Replace(oldName, newName);
-                    
+
                     // Also handle relative path references like "audio_eng/filename.aac"
                     string relativePath = Path.GetFileName(directory) + "/" + oldName;
                     string newRelativePath = Path.GetFileName(directory) + "/" + newName;
@@ -291,7 +294,7 @@ public static class Dev
 
                 // Only write if content actually changed
                 if (content == originalContent) continue;
-                
+
                 File.WriteAllText(m3U8File, content);
                 Logger.Encoder($"Updated M3U8: {m3U8File} - replaced {renamedFiles.Count} file references");
             }
@@ -326,12 +329,6 @@ public static class Dev
         return dominant.ToHexString();
     }
 
-    public class Font
-    {
-        [JsonProperty("mimeType")] public string MimeType { get; set; } = string.Empty;
-        [JsonProperty("file")] public string File { get; set; } = string.Empty;
-    }
-
     private static void PrefixFontFiles(string rootPath)
     {
         string[] subFolders = Directory.GetDirectories(rootPath);
@@ -342,7 +339,6 @@ public static class Dev
             string[] fontsJsonFiles = Directory.GetFiles(folder, "fonts.json", SearchOption.AllDirectories);
 
             foreach (string fontsJson in fontsJsonFiles)
-            {
                 try
                 {
                     string json = File.ReadAllText(fontsJson);
@@ -369,7 +365,12 @@ public static class Dev
                 {
                     Logger.Encoder($"Error processing {fontsJson}: {ex.Message}");
                 }
-            }
         }
+    }
+
+    public class Font
+    {
+        [JsonProperty("mimeType")] public string MimeType { get; set; } = string.Empty;
+        [JsonProperty("file")] public string File { get; set; } = string.Empty;
     }
 }

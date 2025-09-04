@@ -354,7 +354,7 @@ public class LibrariesController(
 
         return Ok(new StatusResponseDto<List<dynamic>>
         {
-            Status = "ok", Message = "Rescanning {0} library.", Args = [id]
+            Status = "ok", Message = "Rescanning {0} library.", Args = [library.Title]
         });
     }
 
@@ -390,16 +390,21 @@ public class LibrariesController(
 
     [HttpPost]
     [Route("{id:ulid}/refresh")]
-    public IActionResult Refresh(Ulid id)
+    public async Task<IActionResult> Refresh(Ulid id)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh the library");
+
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
+        
+        if (library is null)
+            return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Library not found" });
 
         jobDispatcher.DispatchJob<RescanLibraryJob>(id);
 
         return Ok(new StatusResponseDto<List<dynamic>>
         {
-            Status = "ok", Message = "Rescanning {0} library.", Args = [id]
+            Status = "ok", Message = "Rescanning {0} library.", Args = [library.Title]
         });
     }
 
@@ -453,7 +458,7 @@ public class LibrariesController(
         {
             Status = "ok", 
             Message = "Successfully added folder to {0} library.", 
-            Args = [id.ToString()],
+            Args = [pathAsync.Path],
             Data = folderLibrary
         });
     }
@@ -559,7 +564,7 @@ public class LibrariesController(
             {
                 Status = "ok", 
                 Message = "Successfully added encoder profile to {0} folder.", 
-                Args = [id.ToString()]
+                Args = [folder.Path]
             });
         }
         catch (Exception e)

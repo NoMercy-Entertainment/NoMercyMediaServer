@@ -174,10 +174,7 @@ public class MoviesController(
         {
             Status = "ok",
             Message = "Rescanning {0} for files",
-            Args = new object[]
-            {
-                movie.Title
-            }
+            Args = [movie.Title]
         });
     }
 

@@ -45,7 +45,6 @@ public class MetadataTests
                 30 + 20 + 40 + 25 + // Preview sizes
                 15 + 25 + // Font sizes
                 100; // FontsFile size
-                // No ChapterFile is set, so its contribution is 0
 
         // Act
         long totalSize = metadata.CalculateTotalSize();

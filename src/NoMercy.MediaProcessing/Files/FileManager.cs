@@ -368,11 +368,7 @@ public partial class FileManager(
             {
                 fileName = $"/{videoFile.Width}x{videoFile.Height}/{videoFile.Width}x{videoFile.Height}.m3u8";
                 videoFolderPath = videoFolders.FirstOrDefault(vf => vf.Contains($"video_{videoFile.Width}x{videoFile.Height}"));
-                if(string.IsNullOrEmpty(videoFolderPath))
-                {
-                    Logger.App($"No video folder found for video_{videoFile.Width}x{videoFile.Height}", LogEventLevel.Warning);
-                    continue;
-                }
+                if(string.IsNullOrEmpty(videoFolderPath)) continue;
             }
             
             string videoFilePath = Directory.GetFiles(videoFolderPath).First(file => file.EndsWith("m3u8"));
@@ -411,11 +407,7 @@ public partial class FileManager(
                 fileName = $"/audio_{audioFile.Language}/audio_{audioFile.Language}.m3u8";
                 audioFolderPath = audioFolders.FirstOrDefault(vf => vf.Contains($"audio_{audioFile.Language}"));
             }
-            if(string.IsNullOrEmpty(audioFolderPath))
-            {
-                Logger.App($"No audio folder found for audio_{audioFile.Language}_{audioFile.CodecName}", LogEventLevel.Warning);
-                continue;
-            }
+            if(string.IsNullOrEmpty(audioFolderPath)) continue;
             
             string audioFilePath = Directory.GetFiles(audioFolderPath)
                 .First(file => file.EndsWith("m3u8"));
@@ -600,7 +592,7 @@ public partial class FileManager(
     private static (int Width, int Height) GetImageDimensionsFromVtt(string filePath)
     {
         string vttContents = File.ReadAllText(filePath);
-        Regex regex = new(@"#xywh=\d+,\d+,(?<width>\d+),(?<height>\d+)");
+        Regex regex = ImageDimensions();
         Match match = regex.Match(vttContents);
 
         if (match.Success)
@@ -619,11 +611,7 @@ public partial class FileManager(
             
         SubtitleParserResultModel? chapterParser = SubtitleParser.ParseStream(fileStream);
         
-        if(chapterParser?.Subtitles == null || chapterParser.Subtitles.Count == 0)
-        {
-            Logger.App($"No chapters found in {chapterFile}", LogEventLevel.Warning);
-            return null;
-        }
+        if(chapterParser?.Subtitles == null || chapterParser.Subtitles.Count == 0) return null;
 
         List<IChapter> chapters = [];
 
@@ -652,18 +640,16 @@ public partial class FileManager(
     private T? GetMetaDataItem<T>(string hostFolder, string key, IEnumerable<IVideoTrack> extraFiles) where T : class
     {
         IVideoTrack? item = extraFiles.FirstOrDefault(file => file.Kind == key);
-        if (item != null)
+        if (item == null) return null;
+        
+        string path = Path.Combine(hostFolder, (Path.GetFileName(item.File) ?? "").Replace("/", ""));
+        return new IHash
         {
-            string path = Path.Combine(hostFolder, (Path.GetFileName(item.File) ?? "").Replace("/", ""));
-            return new IHash
-            {
-                FileName = Path.DirectorySeparatorChar + Path.GetFileName(item.File),
-                FileSize = GetFileSize(path),
-                FileHash = ComputeFileHash(path)
-            } as T;
-        }
+            FileName = Path.DirectorySeparatorChar + Path.GetFileName(item.File),
+            FileSize = GetFileSize(path),
+            FileHash = ComputeFileHash(path)
+        } as T;
 
-        return null;
     }
 
     private static List<IVideoTrack> GetExtraFiles(string hostFolder)
@@ -716,27 +702,26 @@ public partial class FileManager(
 
         List<Subtitle> subtitles = [];
 
-        if (Directory.Exists(subtitleFolder))
+        if (!Directory.Exists(subtitleFolder)) return subtitles;
+        
+        string[] subtitleFiles = Directory.GetFiles(subtitleFolder);
+        foreach (string subtitleFile in subtitleFiles)
         {
-            string[] subtitleFiles = Directory.GetFiles(subtitleFolder);
-            foreach (string subtitleFile in subtitleFiles)
+            Regex regex = SubtitleFileRegex();
+            Match match = regex.Match(subtitleFile);
+
+            if (match.Groups["type"].Value != "sign" && match.Groups["type"].Value != "song" &&
+                match.Groups["type"].Value != "full") continue;
+
+            if (match.Groups["ext"].Value == "sup") continue;
+            if (match.Groups["ext"].Value == "vob") continue;
+
+            subtitles.Add(new()
             {
-                Regex regex = SubtitleFileRegex();
-                Match match = regex.Match(subtitleFile);
-
-                if (match.Groups["type"].Value != "sign" && match.Groups["type"].Value != "song" &&
-                    match.Groups["type"].Value != "full") continue;
-
-                if (match.Groups["ext"].Value == "sup") continue;
-                if (match.Groups["ext"].Value == "vob") continue;
-
-                subtitles.Add(new()
-                {
-                    Language = match.Groups["lang"].Value,
-                    Type = match.Groups["type"].Value,
-                    Ext = match.Groups["ext"].Value
-                });
-            }
+                Language = match.Groups["lang"].Value,
+                Type = match.Groups["type"].Value,
+                Ext = match.Groups["ext"].Value
+            });
         }
 
         return subtitles;
@@ -821,4 +806,7 @@ public partial class FileManager(
 
     [GeneratedRegex(@"(?<lang>\w{3}).(?<type>\w{3,4}).(?<ext>\w{3})$")]
     private static partial Regex SubtitleFileRegex();
+    
+    [GeneratedRegex(@"#xywh=\d+,\d+,(?<width>\d+),(?<height>\d+)")]
+    private static partial Regex ImageDimensions();
 }

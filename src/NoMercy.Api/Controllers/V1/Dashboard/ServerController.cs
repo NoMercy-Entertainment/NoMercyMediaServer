@@ -19,6 +19,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue;
 using Serilog.Events;
 using SixLabors.ImageSharp;
@@ -26,12 +27,10 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Dithering;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
-using AppFiles = NoMercy.NmSystem.Information.AppFiles;
-using Config = NoMercy.NmSystem.Information.Config;
 using Configuration = NoMercy.Database.Models.Configuration;
 using HttpClient = System.Net.Http.HttpClient;
 using Image = NoMercy.Database.Models.Image;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
+using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -44,7 +43,7 @@ public class ServerController(
     IHostApplicationLifetime appLifetime,
     MediaContext context,
     FileRepository fileRepository,
-    MediaProcessing.Jobs.JobDispatcher jobDispatcher) : BaseController
+    JobDispatcher jobDispatcher) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -294,7 +293,7 @@ public class ServerController(
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view server information");
-        
+
         bool setupComplete = context.Libraries.Any()
                              && context.Folders.Any()
                              && context.EncoderProfiles.Any();
@@ -414,7 +413,7 @@ public class ServerController(
             Storage = storage
         });
     }
-    
+
     [HttpGet]
     [Route("paths")]
     public IActionResult ServerPaths()
@@ -550,7 +549,7 @@ public class ServerController(
 
         return dominant.ToHexString();
     }
-    
+
     [HttpPost]
     [Route("changeIp")]
     public async Task<IActionResult> ChangeIp([FromBody] ChangeIpRequest request)
@@ -571,7 +570,7 @@ public class ServerController(
             Message = $"IP address changed to {request.Ip}"
         });
     }
-    
+
     public class ChangeIpRequest
     {
         public string Ip { get; set; } = string.Empty;

@@ -186,10 +186,7 @@ public class TvShowsController(
         {
             Status = "ok",
             Message = "Rescanning {0} for files",
-            Args = new object[]
-            {
-                tv.Title
-            }
+            Args = [tv.Title]
         });
     }
 
@@ -221,17 +218,13 @@ public class TvShowsController(
             .Where(f => f.Type == "tv")
             .FirstOrDefaultAsync();
 
-        JobDispatcher jobDispatcher = new();
         jobDispatcher.DispatchJob<AddShowJob>(id, tvLibrary?.Id ?? tv.Library.Id);
 
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
             Message = "Rescanning {0} for files",
-            Args = new object[]
-            {
-                tv.Title
-            }
+            Args = [tv.Title]
         });
     }
 

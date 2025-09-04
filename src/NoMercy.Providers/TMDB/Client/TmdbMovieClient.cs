@@ -131,9 +131,9 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
         return Get<TmdbMovieVideos>("movie/" + Id + "/videos", priority: priority);
     }
 
-    public Task<TmdbMovieWatchProviders?> WatchProviders(bool? priority = false)
+    public Task<TmdbWatchProviders?> WatchProviders(bool? priority = false)
     {
-        return Get<TmdbMovieWatchProviders>("movie/" + Id + "/watch/providers", priority: priority);
+        return Get<TmdbWatchProviders>("movie/" + Id + "/watch/providers", priority: priority);
     }
 
     public Task<TmdbMovieLatest?> Latest(bool? priority = false)
