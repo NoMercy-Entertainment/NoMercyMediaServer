@@ -16,7 +16,7 @@ public class EntityBaseUpdatedAtInterceptor : SaveChangesInterceptor
             .Entries()
             .Where(e => e.State == EntityState.Modified)
             .Select(e => e.Entity)
-            .Cast<Timestamps>();
+            .OfType<Timestamps>();
 
         foreach (Timestamps entry in entries)
         {

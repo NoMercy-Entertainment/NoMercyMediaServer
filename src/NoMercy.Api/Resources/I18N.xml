@@ -360,4 +360,8 @@
     <Key>Server name changed</Key>
     <Value lang="nl">Server name changed</Value>
   </Entry>
+  <Entry>
+    <Key>Something went wrong updating the library encoder profiles: {0}</Key>
+    <Value lang="nl">Something went wrong updating the library encoder profiles: {0}</Value>
+  </Entry>
 </I18N>

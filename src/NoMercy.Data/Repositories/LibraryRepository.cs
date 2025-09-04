@@ -477,7 +477,7 @@ public class LibraryRepository(MediaContext context)
         return context.SaveChangesAsync();
     }
 
-    public Task AddEncoderProfileFolderAsync(EncoderProfileFolder encoderProfileFolder)
+    public Task<int> AddEncoderProfileFolderAsync(EncoderProfileFolder encoderProfileFolder)
     {
         return context.EncoderProfileFolder.Upsert(encoderProfileFolder)
             .On(epf => new { epf.FolderId, epf.EncoderProfileId })
@@ -489,7 +489,7 @@ public class LibraryRepository(MediaContext context)
             .RunAsync();
     }
 
-    public Task AddEncoderProfileFolderAsync(List<EncoderProfileFolder> encoderProfileFolders)
+    public Task<int> AddEncoderProfileFolderAsync(List<EncoderProfileFolder> encoderProfileFolders)
     {
         return context.EncoderProfileFolder.UpsertRange(encoderProfileFolders)
             .On(epl => new { epl.FolderId, epl.EncoderProfileId })
@@ -501,7 +501,7 @@ public class LibraryRepository(MediaContext context)
             .RunAsync();
     }
 
-    public Task AddEncoderProfileFolderAsync(EncoderProfileFolder[] encoderProfileFolders)
+    public Task<int> AddEncoderProfileFolderAsync(EncoderProfileFolder[] encoderProfileFolders)
     {
         return context.EncoderProfileFolder.UpsertRange(encoderProfileFolders)
             .On(epf => new { epf.FolderId, epf.EncoderProfileId })
@@ -513,7 +513,7 @@ public class LibraryRepository(MediaContext context)
             .RunAsync();
     }
 
-    public Task AddLanguageLibraryAsync(LanguageLibrary[] languageLibraries)
+    public Task<int> AddLanguageLibraryAsync(LanguageLibrary[] languageLibraries)
     {
         return context.LanguageLibrary.UpsertRange(languageLibraries)
             .On(ll => new { ll.LibraryId, ll.LanguageId })
@@ -557,5 +557,14 @@ public class LibraryRepository(MediaContext context)
         }
         
         return episodes;
+    }
+
+    public async Task<int> SyncEncoderProfileFolderAsync(List<EncoderProfileFolder> encoderProfileFolders, List<Folder> folders)
+    {
+        await context.EncoderProfileFolder
+            .Where(epf => folders.Select(f => f.Id).Contains(epf.FolderId))
+            .ExecuteDeleteAsync();
+        
+        return await AddEncoderProfileFolderAsync(encoderProfileFolders);
     }
 }

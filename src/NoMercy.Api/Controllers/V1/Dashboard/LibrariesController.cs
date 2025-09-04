@@ -163,7 +163,7 @@ public class LibrariesController(
                     FolderId = folder.Id
                 }).ToArray();
                 
-                await folderRepository.AddFolderLibraryAsync(folderLibraries);
+                await folderRepository.SyncFolderLibraryAsync(folderLibraries, folders);
             }
             catch (Exception e)
             {
@@ -200,7 +200,7 @@ public class LibrariesController(
                     }
                 }
 
-                await libraryRepository.AddEncoderProfileFolderAsync(encoderProfileFolders);
+                await libraryRepository.SyncEncoderProfileFolderAsync(encoderProfileFolders, folders);
             }
             catch (Exception e)
             {
