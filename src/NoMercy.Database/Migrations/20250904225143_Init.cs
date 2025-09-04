@@ -540,9 +540,9 @@ namespace NoMercy.Database.Migrations
                     Video = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     VoteAverage = table.Column<double>(type: "REAL", nullable: true),
                     VoteCount = table.Column<int>(type: "INTEGER", nullable: true),
-                    LibraryId = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    LibraryId = table.Column<string>(type: "TEXT", nullable: false),
                     ColorPalette = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
@@ -615,9 +615,9 @@ namespace NoMercy.Database.Migrations
                     Type = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     VoteAverage = table.Column<double>(type: "REAL", nullable: true),
                     VoteCount = table.Column<int>(type: "INTEGER", nullable: true),
-                    LibraryId = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    LibraryId = table.Column<string>(type: "TEXT", nullable: false),
                     ColorPalette = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
@@ -814,16 +814,16 @@ namespace NoMercy.Database.Migrations
                     HostFolder = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     FolderSize = table.Column<long>(type: "INTEGER", nullable: false),
                     AudioTrackId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    Video = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Audio = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Subtitles = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Previews = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Fonts = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     FontsFile = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     ChaptersFile = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Chapters = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    Video = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Audio = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Subtitles = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1405,6 +1405,8 @@ namespace NoMercy.Database.Migrations
                     LibraryId = table.Column<string>(type: "TEXT", nullable: true),
                     TvId = table.Column<int>(type: "INTEGER", nullable: true),
                     MovieId = table.Column<int>(type: "INTEGER", nullable: true),
+                    CollectionId = table.Column<int>(type: "INTEGER", nullable: true),
+                    SpecialId = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     Video = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -1415,6 +1417,12 @@ namespace NoMercy.Database.Migrations
                 {
                     table.PrimaryKey("PK_PlaybackPreferences", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_PlaybackPreferences_Collections_CollectionId",
+                        column: x => x.CollectionId,
+                        principalTable: "Collections",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
                         name: "FK_PlaybackPreferences_Libraries_LibraryId",
                         column: x => x.LibraryId,
                         principalTable: "Libraries",
@@ -1424,6 +1432,12 @@ namespace NoMercy.Database.Migrations
                         name: "FK_PlaybackPreferences_Movies_MovieId",
                         column: x => x.MovieId,
                         principalTable: "Movies",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PlaybackPreferences_Specials_SpecialId",
+                        column: x => x.SpecialId,
+                        principalTable: "Specials",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -1456,6 +1470,8 @@ namespace NoMercy.Database.Migrations
                     TvToId = table.Column<int>(type: "INTEGER", nullable: true),
                     MovieFromId = table.Column<int>(type: "INTEGER", nullable: true),
                     MovieToId = table.Column<int>(type: "INTEGER", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     ColorPalette = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
@@ -1500,6 +1516,8 @@ namespace NoMercy.Database.Migrations
                     SeasonNumber = table.Column<int>(type: "INTEGER", nullable: false),
                     TvId = table.Column<int>(type: "INTEGER", nullable: false),
                     MovieId = table.Column<int>(type: "INTEGER", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     ColorPalette = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
@@ -1535,6 +1553,8 @@ namespace NoMercy.Database.Migrations
                     TvToId = table.Column<int>(type: "INTEGER", nullable: true),
                     MovieFromId = table.Column<int>(type: "INTEGER", nullable: true),
                     MovieToId = table.Column<int>(type: "INTEGER", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     ColorPalette = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
@@ -1676,6 +1696,8 @@ namespace NoMercy.Database.Migrations
                     VoteCount = table.Column<int>(type: "INTEGER", nullable: true),
                     TvId = table.Column<int>(type: "INTEGER", nullable: false),
                     SeasonId = table.Column<int>(type: "INTEGER", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     ColorPalette = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
                 },
                 constraints: table =>
@@ -3370,6 +3392,11 @@ namespace NoMercy.Database.Migrations
                 column: "TitleSort");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PlaybackPreferences_CollectionId",
+                table: "PlaybackPreferences",
+                column: "CollectionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PlaybackPreferences_LibraryId",
                 table: "PlaybackPreferences",
                 column: "LibraryId");
@@ -3378,6 +3405,11 @@ namespace NoMercy.Database.Migrations
                 name: "IX_PlaybackPreferences_MovieId",
                 table: "PlaybackPreferences",
                 column: "MovieId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlaybackPreferences_SpecialId",
+                table: "PlaybackPreferences",
+                column: "SpecialId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlaybackPreferences_TvId",

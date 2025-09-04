@@ -10,16 +10,16 @@ namespace NoMercy.Networking;
 
 public class ChromeCast
 {
-    private static readonly IChromecastLocator Locator = new MdnsChromecastLocator();
-    private static readonly CancellationTokenSource Source = new(TimeSpan.FromMilliseconds(1500));
+    private static readonly ChromecastLocator Locator = new();
     private static IEnumerable<ChromecastReceiver> _chromecastReceivers = new List<ChromecastReceiver>();
     private static ChromecastClient? _client;
 
     public static async Task Init()
     {
-        _chromecastReceivers = (await Locator.FindReceiversAsync(Source.Token)).ToList();
+        _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
 
-        foreach (ChromecastReceiver chromecast in _chromecastReceivers) Logger.Ping(chromecast.Name);
+        foreach (ChromecastReceiver chromecast in _chromecastReceivers) 
+            Logger.Ping($"Found chromecast: {chromecast.Name}");
     }
 
     public static string[] GetChromeCasts()
@@ -127,7 +127,7 @@ public class ChromeCast
 
     public static ChromecastStatus? GetChromecastStatus()
     {
-        return _client?.GetChromecastStatus();
+        return _client?.ChromecastStatus;
     }
 
     public static MediaStatus? GetMediaStatus()
