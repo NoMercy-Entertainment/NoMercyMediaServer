@@ -67,5 +67,10 @@ public class AddShowJob : AbstractMediaJob
         await episodeRepository.StoreEpisodes(episodes); 
 
         jobDispatcher.DispatchJob<RescanFilesJob>(Id, tvLibrary);
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["base","info", Id.ToString()]
+        });
     }
 }

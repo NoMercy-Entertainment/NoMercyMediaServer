@@ -31,7 +31,7 @@ public class AddEpisodeExtraDataJob : AbstractShowExtraDataJob<TmdbEpisodeAppend
         PersonRepository personRepository = new(context);
         PersonManager personManager = new(personRepository, jobDispatcher);
         
-        foreach (TmdbEpisodeAppends? episode in Storage)
+        foreach (TmdbEpisodeAppends episode in Storage)
         {
             await personManager.Store(episode);
             await episodeManager.StoreTranslations(Name, episode);

@@ -98,7 +98,7 @@ public static class Dev
         //     .Where(f => f.FolderLibraries
         //         .Any(fl => fl.Library.Title == "Anime"))
         //     .ToList();
-        //
+        
         // foreach (Folder folder in folders)
         // {
         //     await Task.Run(() =>
@@ -109,7 +109,8 @@ public static class Dev
         //         {
         //             //     Logger.Encoder($"Processing: {subFolder}");
         //             // ProcessM3U8Files(folder.Path);
-        //             ConvertAacToTs(subFolder);
+        //             // ConvertAacToTs(subFolder);
+        //             FixM3U8AacReferences(subFolder);
         //         }
         //     });
         // }
@@ -193,184 +194,220 @@ public static class Dev
         // Logger.Tvdb(languages);
     }
 
-    private static void ProcessM3U8Files(string rootPath)
-    {
-        try
-        {
-            Logger.Encoder($"Processing M3U8 files in {rootPath}");
-            string[] m3U8TmpFiles = Directory.GetFiles(rootPath, "*.m3u8.tmp", SearchOption.AllDirectories)
-                                    ?? throw new ArgumentNullException(nameof(m3U8TmpFiles), "No M3U8 files found");
+    // private static void ProcessM3U8Files(string rootPath)
+    // {
+    //     try
+    //     {
+    //         Logger.Encoder($"Processing M3U8 files in {rootPath}");
+    //         string[] m3U8TmpFiles = Directory.GetFiles(rootPath, "*.m3u8.tmp", SearchOption.AllDirectories)
+    //                                 ?? throw new ArgumentNullException(nameof(m3U8TmpFiles), "No M3U8 files found");
 
-            foreach (string tmpFile in m3U8TmpFiles)
-            {
-                string originalFile = tmpFile[..^4]; // Remove .tmp extension
-                if (File.Exists(originalFile))
-                {
-                    Logger.Encoder($"replacing {originalFile} with {tmpFile}");
-                    File.Delete(originalFile);
-                    File.Move(tmpFile, originalFile);
-                }
-                else
-                {
-                    Logger.Encoder($"renaming {tmpFile} to {originalFile}");
-                    File.Move(tmpFile, originalFile);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error processing M3U8 files: {ex.Message}");
-        }
-    }
+    //         foreach (string tmpFile in m3U8TmpFiles)
+    //         {
+    //             string originalFile = tmpFile[..^4]; // Remove .tmp extension
+    //             if (File.Exists(originalFile))
+    //             {
+    //                 Logger.Encoder($"replacing {originalFile} with {tmpFile}");
+    //                 File.Delete(originalFile);
+    //                 File.Move(tmpFile, originalFile);
+    //             }
+    //             else
+    //             {
+    //                 Logger.Encoder($"renaming {tmpFile} to {originalFile}");
+    //                 File.Move(tmpFile, originalFile);
+    //             }
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"Error processing M3U8 files: {ex.Message}");
+    //     }
+    // }
 
-    private static void ConvertAacToTs(string rootPath)
-    {
-        try
-        {
-            Logger.Encoder($"Converting AAC files to TS extensions in {rootPath}");
+    // private static void ConvertAacToTs(string rootPath)
+    // {
+    //     try
+    //     {
+    //         Logger.Encoder($"Converting AAC files to TS extensions in {rootPath}");
 
-            // Group AAC files by their directory
-            string[] aacFiles = Directory.GetFiles(rootPath, "*.aac", SearchOption.AllDirectories);
-            IEnumerable<IGrouping<string, string>> aacFilesByDirectory =
-                aacFiles.GroupBy(file => Path.GetDirectoryName(file)!);
+    //         // Group AAC files by their directory
+    //         string[] aacFiles = Directory.GetFiles(rootPath, "*.aac", SearchOption.AllDirectories);
+    //         IEnumerable<IGrouping<string, string>> aacFilesByDirectory =
+    //             aacFiles.GroupBy(file => Path.GetDirectoryName(file)!);
 
-            foreach (IGrouping<string, string> directoryGroup in aacFilesByDirectory)
-            {
-                string directory = directoryGroup.Key;
-                List<(string oldName, string newName)> renamedFiles = [];
+    //         foreach (IGrouping<string, string> directoryGroup in aacFilesByDirectory)
+    //         {
+    //             string directory = directoryGroup.Key;
+    //             List<(string oldName, string newName)> renamedFiles = [];
 
-                // First, rename all AAC files in this directory
-                foreach (string aacFile in directoryGroup)
-                {
-                    string fileNameWithoutExt = Path.GetFileNameWithoutExtension(aacFile);
-                    string newTsFile = Path.Combine(directory, fileNameWithoutExt + ".ts");
+    //             // First, rename all AAC files in this directory
+    //             foreach (string aacFile in directoryGroup)
+    //             {
+    //                 string fileNameWithoutExt = Path.GetFileNameWithoutExtension(aacFile);
+    //                 string newTsFile = Path.Combine(directory, fileNameWithoutExt + ".ts");
 
-                    if (!File.Exists(newTsFile))
-                    {
-                        File.Move(aacFile, newTsFile);
-                        Logger.Encoder($"Renamed: {aacFile} -> {newTsFile}");
+    //                 if (!File.Exists(newTsFile))
+    //                 {
+    //                     File.Move(aacFile, newTsFile);
+    //                     Logger.Encoder($"Renamed: {aacFile} -> {newTsFile}");
 
-                        renamedFiles.Add((Path.GetFileName(aacFile), Path.GetFileName(newTsFile)));
-                    }
-                    else
-                    {
-                        Logger.Encoder($"Target file already exists: {newTsFile}");
-                    }
-                }
+    //                     renamedFiles.Add((Path.GetFileName(aacFile), Path.GetFileName(newTsFile)));
+    //                 }
+    //                 else
+    //                 {
+    //                     Logger.Encoder($"Target file already exists: {newTsFile}");
+    //                 }
+    //             }
 
-                // Then update the M3U8 file once for all changes in this directory
-                if (renamedFiles.Count > 0) UpdateM3U8FilesForDirectory(directory, renamedFiles);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Encoder($"Error converting AAC to TS: {ex.Message}");
-        }
-    }
+    //             // Then update the M3U8 file once for all changes in this directory
+    //             if (renamedFiles.Count > 0) UpdateM3U8FilesForDirectory(directory, renamedFiles);
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Logger.Encoder($"Error converting AAC to TS: {ex.Message}");
+    //     }
+    // }
+    
+    // private static void FixM3U8AacReferences(string rootPath)
+    // {
+    //     try
+    //     {
+    //         Logger.Encoder($"Fixing AAC references in M3U8 files in {rootPath}");
 
-    private static void UpdateM3U8FilesForDirectory(string directory,
-        List<(string oldName, string newName)> renamedFiles)
-    {
-        try
-        {
-            // Look for M3U8 files in the current directory
-            string[] m3U8Files = Directory.GetFiles(directory, "*.m3u8", SearchOption.TopDirectoryOnly);
+    //         // Find all M3U8 files recursively
+    //         string[] m3U8Files = Directory.GetFiles(rootPath, "*.m3u8", SearchOption.AllDirectories);
 
-            foreach (string m3U8File in m3U8Files)
-            {
-                string content = File.ReadAllText(m3U8File);
-                string originalContent = content;
+    //         foreach (string m3U8File in m3U8Files)
+    //         {
+    //             string content = File.ReadAllText(m3U8File);
+    //             string originalContent = content;
 
-                // Apply all filename replacements
-                foreach ((string oldName, string newName) in renamedFiles)
-                {
-                    content = content.Replace(oldName, newName);
+    //             // Replace all .aac extensions with .ts extensions
+    //             content = content.Replace(".aac", ".ts");
 
-                    // Also handle relative path references like "audio_eng/filename.aac"
-                    string relativePath = Path.GetFileName(directory) + "/" + oldName;
-                    string newRelativePath = Path.GetFileName(directory) + "/" + newName;
-                    content = content.Replace(relativePath, newRelativePath);
-                }
+    //             // Only write if content actually changed
+    //             if (content != originalContent)
+    //             {
+    //                 File.WriteAllText(m3U8File, content);
+                
+    //                 // Count how many replacements were made
+    //                 int replacements = (originalContent.Length - content.Length) / (".aac".Length - ".ts".Length);
+    //                 Logger.Encoder($"Updated M3U8: {m3U8File} - fixed {replacements} AAC references");
+    //             }
+    //         }
 
-                // Only write if content actually changed
-                if (content == originalContent) continue;
+    //         Logger.Encoder("Finished fixing AAC references in M3U8 files");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Logger.Encoder($"Error fixing M3U8 AAC references: {ex.Message}");
+    //     }
+    // }
 
-                File.WriteAllText(m3U8File, content);
-                Logger.Encoder($"Updated M3U8: {m3U8File} - replaced {renamedFiles.Count} file references");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Encoder($"Error updating M3U8 files in directory {directory}: {ex.Message}");
-        }
-    }
+    // private static void UpdateM3U8FilesForDirectory(string directory,
+    //     List<(string oldName, string newName)> renamedFiles)
+    // {
+    //     try
+    //     {
+    //         // Look for M3U8 files in the current directory
+    //         string[] m3U8Files = Directory.GetFiles(directory, "*.m3u8", SearchOption.TopDirectoryOnly);
 
-    public static string GetDominantColor(string path)
-    {
-        using Image<Rgb24> image = Image.Load<Rgb24>(path);
-        image.Mutate(x => x
-            .Resize(new ResizeOptions
-            {
-                Sampler = KnownResamplers.NearestNeighbor,
-                Size = new(100, 0)
-            })
-            .Quantize(new OctreeQuantizer
-            {
-                Options =
-                {
-                    MaxColors = 1,
-                    Dither = new OrderedDither(1),
-                    DitherScale = 1
-                }
-            }));
+    //         foreach (string m3U8File in m3U8Files)
+    //         {
+    //             string content = File.ReadAllText(m3U8File);
+    //             string originalContent = content;
 
-        Rgb24 dominant = image[0, 0];
+    //             // Apply all filename replacements
+    //             foreach ((string oldName, string newName) in renamedFiles)
+    //             {
+    //                 content = content.Replace(oldName, newName);
 
-        return dominant.ToHexString();
-    }
+    //                 // Also handle relative path references like "audio_eng/filename.aac"
+    //                 string relativePath = Path.GetFileName(directory) + "/" + oldName;
+    //                 string newRelativePath = Path.GetFileName(directory) + "/" + newName;
+    //                 content = content.Replace(relativePath, newRelativePath);
+    //             }
 
-    private static void PrefixFontFiles(string rootPath)
-    {
-        string[] subFolders = Directory.GetDirectories(rootPath);
+    //             // Only write if content actually changed
+    //             if (content == originalContent) continue;
 
-        foreach (string folder in subFolders)
-        {
-            Logger.Encoder($"Cluster: {Path.GetFileName(folder)}");
-            string[] fontsJsonFiles = Directory.GetFiles(folder, "fonts.json", SearchOption.AllDirectories);
+    //             File.WriteAllText(m3U8File, content);
+    //             Logger.Encoder($"Updated M3U8: {m3U8File} - replaced {renamedFiles.Count} file references");
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Logger.Encoder($"Error updating M3U8 files in directory {directory}: {ex.Message}");
+    //     }
+    // }
 
-            foreach (string fontsJson in fontsJsonFiles)
-                try
-                {
-                    string json = File.ReadAllText(fontsJson);
-                    Font[]? fonts = json.FromJson<Font[]>();
+    // public static string GetDominantColor(string path)
+    // {
+    //     using Image<Rgb24> image = Image.Load<Rgb24>(path);
+    //     image.Mutate(x => x
+    //         .Resize(new ResizeOptions
+    //         {
+    //             Sampler = KnownResamplers.NearestNeighbor,
+    //             Size = new(100, 0)
+    //         })
+    //         .Quantize(new OctreeQuantizer
+    //         {
+    //             Options =
+    //             {
+    //                 MaxColors = 1,
+    //                 Dither = new OrderedDither(1),
+    //                 DitherScale = 1
+    //             }
+    //         }));
 
-                    if (fonts == null) continue;
+    //     Rgb24 dominant = image[0, 0];
 
-                    bool changed = false;
+    //     return dominant.ToHexString();
+    // }
 
-                    foreach (Font font in fonts)
-                    {
-                        if (string.IsNullOrEmpty(font.File) || font.File.StartsWith("fonts/")) continue;
+    // private static void PrefixFontFiles(string rootPath)
+    // {
+    //     string[] subFolders = Directory.GetDirectories(rootPath);
 
-                        font.File = "fonts/" + font.File;
-                        changed = true;
-                    }
+    //     foreach (string folder in subFolders)
+    //     {
+    //         Logger.Encoder($"Cluster: {Path.GetFileName(folder)}");
+    //         string[] fontsJsonFiles = Directory.GetFiles(folder, "fonts.json", SearchOption.AllDirectories);
 
-                    if (!changed) continue;
+    //         foreach (string fontsJson in fontsJsonFiles)
+    //             try
+    //             {
+    //                 string json = File.ReadAllText(fontsJson);
+    //                 Font[]? fonts = json.FromJson<Font[]>();
 
-                    File.WriteAllText(fontsJson, JsonConvert.SerializeObject(fonts, Formatting.Indented));
-                    Logger.Encoder($"Updated: {fontsJson}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Encoder($"Error processing {fontsJson}: {ex.Message}");
-                }
-        }
-    }
+    //                 if (fonts == null) continue;
 
-    public class Font
-    {
-        [JsonProperty("mimeType")] public string MimeType { get; set; } = string.Empty;
-        [JsonProperty("file")] public string File { get; set; } = string.Empty;
-    }
+    //                 bool changed = false;
+
+    //                 foreach (Font font in fonts)
+    //                 {
+    //                     if (string.IsNullOrEmpty(font.File) || font.File.StartsWith("fonts/")) continue;
+
+    //                     font.File = "fonts/" + font.File;
+    //                     changed = true;
+    //                 }
+
+    //                 if (!changed) continue;
+
+    //                 File.WriteAllText(fontsJson, JsonConvert.SerializeObject(fonts, Formatting.Indented));
+    //                 Logger.Encoder($"Updated: {fontsJson}");
+    //             }
+    //             catch (Exception ex)
+    //             {
+    //                 Logger.Encoder($"Error processing {fontsJson}: {ex.Message}");
+    //             }
+    //     }
+    // }
+
+    // public class Font
+    // {
+    //     [JsonProperty("mimeType")] public string MimeType { get; set; } = string.Empty;
+    //     [JsonProperty("file")] public string File { get; set; } = string.Empty;
+    // }
 }

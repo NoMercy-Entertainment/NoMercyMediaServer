@@ -364,4 +364,12 @@
     <Key>Something went wrong updating the library encoder profiles: {0}</Key>
     <Value lang="nl">Something went wrong updating the library encoder profiles: {0}</Value>
   </Entry>
+  <Entry>
+    <Key>You do not have permission to update the library</Key>
+    <Value lang="nl">You do not have permission to update the library</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view folders</Key>
+    <Value lang="nl">You do not have permission to view folders</Value>
+  </Entry>
 </I18N>

@@ -47,7 +47,12 @@ public class AddCollectionJob : AbstractMediaJob
         {
             QueryKey = ["libraries", LibraryId.ToString()]
         });
-
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["collection"]
+        });
+        
         Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
             QueryKey = ["collection", Id.ToString()]
