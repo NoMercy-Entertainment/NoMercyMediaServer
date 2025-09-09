@@ -17,5 +17,5 @@ public class TmdbTvShowAppends : TmdbTvShowDetails
     [JsonProperty("similar")] public TmdbTvSimilar Similar { get; set; } = new();
     [JsonProperty("translations")] public TmdbCombinedTranslations Translations { get; set; } = new();
     [JsonProperty("videos")] public TmdbTvVideos Videos { get; set; } = new();
-    [JsonProperty("watch/providers")] public TmdbWatchProviders TmdbWatchProviders { get; set; } = new();
+    [JsonProperty("watch/providers")] public TmdbWatchProviders WatchProviders { get; set; } = new();
 }

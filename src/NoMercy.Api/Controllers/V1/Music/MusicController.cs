@@ -521,7 +521,7 @@ public class MusicController : BaseController
             topAlbum != null ? "Albums" : "Top Result";
         List<ArtistDto> artistsList =
             topTrack?.ArtistTrack.Select(artistTrack => new ArtistDto(artistTrack, country)).ToList() ??
-            new List<ArtistDto>();
+            [];
         Track? topTrackItem = topTrack?.ArtistTrack.FirstOrDefault()?.Track;
         if (topTrackItem != null)
             topTrackItem = topArtist?.ArtistTrack.FirstOrDefault()?.Track;

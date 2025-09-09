@@ -1,11 +1,13 @@
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
-using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
+using NoMercy.Providers.TMDB.Models.Networks;
+using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 using Serilog.Events;
 
@@ -321,39 +323,132 @@ public class ShowManager(
 
     internal async Task StoreWatchProviders(TmdbTvShowAppends show)
     {
+        List<WatchProvider> watchProviders = [];
+        List<WatchProviderMedia> watchProviderMedias = [];
+
+        foreach ((string countryCode, string providerType, TmdbPaymentDetails provider, string? link) in TmdbWatchProviders.ExtractProviders(show.WatchProviders.TmdbWatchProviderResults))
+        {
+            if (watchProviders.All(wp => wp.Id != provider.ProviderId))
+            {
+                watchProviders.Add(new()
+                {
+                    Id = provider.ProviderId,
+                    Name = provider.ProviderName,
+                    Logo = provider.LogoPath,
+                    DisplayPriority = provider.DisplayPriority
+                });
+            }
+
+            watchProviderMedias.Add(new()
+            {
+                WatchProviderId = provider.ProviderId,
+                TvId = show.Id,
+                CountryCode = countryCode,
+                ProviderType = providerType,
+                Link = link
+            });
+        }
+
+        if (watchProviders.Count != 0)
+            await showRepository.StoreWatchProviders(watchProviders);
+
+        if (watchProviderMedias.Count != 0)
+            await showRepository.StoreWatchProviderMedias(watchProviderMedias);
+
         Logger.MovieDb($"Show {show.Name}: WatchProviders stored", LogEventLevel.Debug);
-        await Task.CompletedTask;
     }
 
     internal async Task StoreNetworks(TmdbTvShowAppends show)
     {
-        // List<Network> networks = show.Networks.Results.ToList()
-        //     .ConvertAll<Network>(x => new Network(x));
-        //
-        // await showRepository.StoreNetworks(networks)
+        if (show.Networks.Length == 0) 
+        {
+            Logger.MovieDb($"Show {show.Name}: No networks found", LogEventLevel.Debug);
+            return;
+        }
+        
+        TmdbTvClient showClient = new(show.Id);
+
+        List<Network> networks = [];
+
+        foreach (TmdbNetwork network in show.Networks)   
+        {
+            TmdbTmdbNetworkDetails? nw = await showClient.NetworkDetails(network.Id);
+            if (nw == null) continue;
+            
+            if (networks.All(n => n.Id != nw.Id))
+            {
+                networks.Add(new()
+                {
+                    Id = nw.Id,
+                    Name = nw.Name,
+                    Logo = nw.LogoPath,
+                    OriginCountry = nw.OriginCountry,
+                    Headquarters = nw.Headquarters,
+                    Homepage = nw.Homepage,
+                });
+            }
+        }
+
+        List<NetworkTv> networkTvs = show.Networks
+            .Select(network => new NetworkTv
+            {
+                NetworkId = network.Id,
+                TvId = show.Id
+            }).ToList();
+
+        if (networks.Count != 0)
+            await showRepository.StoreNetworks(networks);
+
+        if (networkTvs.Count != 0)
+            await showRepository.StoreNetworkTvs(networkTvs);
 
         Logger.MovieDb($"Show {show.Name}: Networks stored", LogEventLevel.Debug);
-        await Task.CompletedTask;
     }
 
     internal async Task StoreCompanies(TmdbTvShowAppends show)
     {
-        // List<Company> companies = show.ProductionCompanies.Results.ToList()
-        //     .ConvertAll<ProductionCompany>(x => new ProductionCompany(x));
-        //
-        // await showRepository.StoreCompanies(companies)
+        if (show.ProductionCompanies.Length == 0)
+        {
+            Logger.MovieDb($"Show {show.Name}: No production companies found", LogEventLevel.Debug);
+            return;
+        }
+        
+        TmdbTvClient showClient = new(show.Id);
+
+        List<Company> companies = [];
+
+        await Parallel.ForEachAsync(show.ProductionCompanies, Config.ParallelOptions, async (productionCompany, _) =>
+        {
+            TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(productionCompany.Id);
+            if (nw == null) return;
+
+            if (companies.All(n => n.Id != nw.Id))
+            {
+                companies.Add(new()
+                {
+                    Id = nw.Id,
+                    Name = nw.Name,
+                    Logo = nw.LogoPath,
+                    OriginCountry = nw.OriginCountry,
+                    Headquarters = nw.Headquarters,
+                    Homepage = nw.Homepage,
+                });
+            }
+        });
+
+        List<CompanyTv> companyTvs = show.ProductionCompanies
+            .Select(company => new CompanyTv
+            {
+                CompanyId = company.Id,
+                TvId = show.Id
+            }).ToList();
+
+        if (companies.Count != 0)
+            await showRepository.StoreCompanies(companies);
+
+        if (companyTvs.Count != 0)
+            await showRepository.StoreCompanyTvs(companyTvs);
 
         Logger.MovieDb($"Show {show.Name}: Companies stored", LogEventLevel.Debug);
-        await Task.CompletedTask;
-    }
-
-    internal async Task StoreCast(TmdbTvShowAppends show)
-    {
-        await Task.CompletedTask;
-    }
-
-    internal async Task StoreCrew(TmdbTvShowAppends show)
-    {
-        await Task.CompletedTask;
     }
 }

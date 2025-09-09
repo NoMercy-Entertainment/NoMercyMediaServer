@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
@@ -13,7 +11,7 @@ namespace NoMercy.Database.Models;
 [Index(nameof(LibraryId))]
 [Index(nameof(ImdbId))]
 [Index(nameof(ReleaseDate))]
-public class Movie : ColorPalettes
+public class Movie : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
@@ -43,17 +41,6 @@ public class Movie : ColorPalettes
     [JsonProperty("video")] public string? Video { get; set; }
     [JsonProperty("vote_average")] public double? VoteAverage { get; set; }
     [JsonProperty("vote_count")] public int? VoteCount { get; set; }
-    
-    [JsonProperty("created_at")]
-    public DateTime CreatedAt { get; set; }
-
-    [DefaultValue("CURRENT_TIMESTAMP")]
-    [JsonProperty("updated_at")]
-    [TypeConverter("TIMESTAMP")]
-    [Timestamp]
-    [Required]
-    [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
@@ -82,31 +69,9 @@ public class Movie : ColorPalettes
     
     [JsonProperty("playback_preferences")] 
     public ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
-
-    public Movie()
-    {
-        //
-    }
-
-    // public Movie(Providers.TMDB.Models.Movies.TmdbMovie input, Ulid libraryId)
-    // {
-    //     Id = input.Id;
-    //     Title = input.Title;
-    //     TitleSort = input.Title.TitleSort(input.ReleaseDate);
-    //     Adult = input.Adult;
-    //     Backdrop = input.BackdropPath;
-    //     OriginalTitle = input.OriginalTitle;
-    //     OriginalLanguage = input.OriginalLanguage;
-    //     Overview = input.Overview;
-    //     Popularity = input.Popularity;
-    //     Poster = input.PosterPath;
-    //     ReleaseDate = input.ReleaseDate;
-    //     Tagline = input.Tagline;
-    //     VoteAverage = input.VoteAverage;
-    //     VoteCount = input.VoteCount;
-    //
-    //     LibraryId = libraryId;
-    // }
+    
+    [JsonProperty("watch_providers")] public ICollection<WatchProviderMedia> WatchProviderMedia { get; set; } = [];
+    [JsonProperty("companies")] public ICollection<CompanyMovie> CompaniesMovies { get; set; } = [];
 
     public string CreateFolderName()
     {

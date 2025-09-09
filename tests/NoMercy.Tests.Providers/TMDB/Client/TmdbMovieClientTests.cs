@@ -1,7 +1,6 @@
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
-using NoMercy.Tests.Providers.TMDB.Mocks;
 
 namespace NoMercy.Tests.Providers.TMDB.Client;
 

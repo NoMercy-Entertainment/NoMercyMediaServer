@@ -6,23 +6,25 @@ namespace NoMercy.MediaProcessing.Movies;
 
 public interface IMovieRepository
 {
-    public Task Add(Movie movie);
-    public Task LinkToLibrary(Library library, Movie movie);
-    public Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);
-    public Task StoreTranslations(IEnumerable<Translation> translations);
-    public Task StoreContentRatings(IEnumerable<CertificationMovie> certifications);
-    public Task StoreSimilar(IEnumerable<Similar> similar);
-    public Task StoreRecommendations(IEnumerable<Recommendation> recommendations);
-    public Task StoreVideos(IEnumerable<Media> videos);
-    public Task StoreImages(IEnumerable<Image> images);
-    public Task StoreKeywords(IEnumerable<Keyword> keywords);
-    public Task LinkKeywordsToMovie(IEnumerable<KeywordMovie> keywordMovies);
-    public Task StoreGenres(IEnumerable<GenreMovie> genreMovies);
+    Task Add(Movie movie);
+    Task LinkToLibrary(Library library, Movie movie);
+    Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);
+    Task StoreTranslations(IEnumerable<Translation> translations);
+    Task StoreContentRatings(IEnumerable<CertificationMovie> certifications);
+    Task StoreSimilar(IEnumerable<Similar> similar);
+    Task StoreRecommendations(IEnumerable<Recommendation> recommendations);
+    Task StoreVideos(IEnumerable<Media> videos);
+    Task StoreImages(IEnumerable<Image> images);
+    Task StoreKeywords(IEnumerable<Keyword> keywords);
+    Task LinkKeywordsToMovie(IEnumerable<KeywordMovie> keywordMovies);
+    Task StoreGenres(IEnumerable<GenreMovie> genreMovies);
 
-    public Task StoreWatchProviders();
-    public Task StoreNetworks();
-    public Task StoreCompanies();
+    Task StoreWatchProviders(List<WatchProvider> watchProviders);
+    Task StoreCompanies(List<Company> companies);
 
     IEnumerable<CertificationMovie> GetCertificationMovies(TmdbMovieAppends movie,
         IEnumerable<CertificationCriteria> certificationCriteria);
+
+    Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias);
+    Task StoreCompanyMovies(List<CompanyMovie> companyMovies);
 }

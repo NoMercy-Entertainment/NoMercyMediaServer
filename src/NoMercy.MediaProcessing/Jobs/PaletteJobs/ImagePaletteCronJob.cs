@@ -34,7 +34,7 @@ public class ImagePaletteCronJob : ICronJobExecutor
             .OrderByDescending(x => x.UpdatedAt)
             .Take(200)
             .ToList()
-            .Chunk(2)
+            .Chunk(5)
             .ToList();
         
         _logger.LogTrace("Found {Count} image chunks to process", images.Count);

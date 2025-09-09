@@ -1,5 +1,6 @@
 ﻿using NoMercy.Providers.TMDB.Models.Certifications;
 using NoMercy.Providers.TMDB.Models.Genres;
+using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 
@@ -182,5 +183,15 @@ public class TmdbTvClient : TmdbBaseClient
         };
 
         return Get<TmdbGenreTv>("genre/tv/list", queryParams, priority: priority);
+    }
+    
+    public Task<TmdbTmdbNetworkDetails?> NetworkDetails(int id, bool? priority = false)
+    {
+        return Get<TmdbTmdbNetworkDetails>("network/" + id, priority: priority);
+    }
+
+    public Task<TmdbTmdbNetworkDetails?> CompanyDetails(int id, bool? priority = false)
+    {
+        return Get<TmdbTmdbNetworkDetails>("company/" + id, priority: priority);
     }
 }

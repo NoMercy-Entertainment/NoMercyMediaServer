@@ -1,9 +1,6 @@
-using FluentAssertions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.Shared;
-using NoMercy.Tests.Providers.TMDB;
-using Xunit;
 
 namespace NoMercy.Tests.Providers.TMDB.Client;
 
@@ -79,7 +76,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         
         result.Crew.Should().NotBeNull();
         // Crew data might be empty for some seasons, so we validate structure if present
-        if (result.Crew.Any())
+        if (result.Crew.Length != 0)
         {
             result.Crew.Should().AllSatisfy(crew =>
             {
@@ -111,7 +108,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         
         result.Crew.Should().NotBeNull();
         // Crew data might be empty for some seasons, so we validate structure if present
-        if (result.Crew.Any())
+        if (result.Crew.Length != 0)
         {
             result.Crew.Should().AllSatisfy(crew =>
             {
@@ -151,7 +148,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         result!.Id.Should().BeGreaterThan(0);
         result.Posters.Should().NotBeNull();
         
-        if (result.Posters.Any())
+        if (result.Posters.Length != 0)
         {
             result.Posters.Should().AllSatisfy(poster =>
             {
@@ -177,7 +174,7 @@ public class TmdbSeasonClientIntegrationTests : TmdbTestBase
         result!.Results.Should().NotBeNull();
         
         // Videos might be empty for some seasons, so only validate if they exist
-        if (result.Results.Any())
+        if (result.Results.Length != 0)
         {
             result.Results.Should().AllSatisfy(video =>
             {

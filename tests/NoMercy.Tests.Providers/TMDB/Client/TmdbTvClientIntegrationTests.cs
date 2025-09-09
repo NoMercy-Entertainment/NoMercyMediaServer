@@ -155,7 +155,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result.Results.Should().NotBeNull();
 
-        if (result.Results.Any())
+        if (result.Results.Length != 0)
             result.Results.Should().AllSatisfy(video =>
             {
                 video.Id.Should().NotBeNullOrEmpty();
@@ -267,7 +267,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result.Results.Should().NotBeNull();
 
-        if (result.Results.Any())
+        if (result.Results.Length != 0)
             result.Results.Should().AllSatisfy(keyword =>
             {
                 keyword.Id.Should().BeGreaterThan(0);
@@ -283,7 +283,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         using TmdbTvClient client = new(ValidTvShowId);
 
         // Act
-        var result = await client.WatchProviders();
+        TmdbWatchProviders? result = await client.WatchProviders();
 
         // Assert
         result.Should().NotBeNull();
@@ -305,7 +305,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result.Results.Should().NotBeNull();
 
-        if (result.Results.Any())
+        if (result.Results.Length != 0)
             result.Results.Should().AllSatisfy(rating =>
             {
                 rating.Iso31661.Should().NotBeNullOrEmpty();
@@ -327,7 +327,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result.Results.Should().NotBeNull();
 
-        if (result.Results.Any())
+        if (result.Results.Length != 0)
             result.Results.Should().AllSatisfy(title =>
             {
                 title.Iso31661.Should().NotBeNullOrEmpty();
@@ -349,7 +349,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result.Results.Should().NotBeNull();
 
-        if (result.Results.Any())
+        if (result.Results.Length != 0)
             result.Results.Should().AllSatisfy(group =>
             {
                 group.Id.Should().NotBeNullOrEmpty();
@@ -397,7 +397,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result.Results.Should().NotBeNull();
 
-        if (result.Results.Any())
+        if (result.Results.Length != 0)
             result.Results.Should().AllSatisfy(screening =>
             {
                 screening.Id.Should().BeGreaterThan(0);

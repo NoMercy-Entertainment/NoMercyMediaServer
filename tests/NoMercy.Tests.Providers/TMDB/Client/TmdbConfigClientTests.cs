@@ -1,6 +1,4 @@
-using FluentAssertions;
 using NoMercy.Providers.TMDB.Client;
-using Xunit;
 
 namespace NoMercy.Tests.Providers.TMDB.Client;
 

@@ -38,7 +38,6 @@ public class AddMovieExtraDataJob : AbstractMediaExraDataJob<TmdbMovieAppends>
         await movieManager.StoreAlternativeTitles(Storage);
         await movieManager.StoreWatchProviders(Storage);
         await movieManager.StoreVideos(Storage);
-        await movieManager.StoreNetworks(Storage);
         await movieManager.StoreCompanies(Storage);
         await movieManager.StoreKeywords(Storage);
         

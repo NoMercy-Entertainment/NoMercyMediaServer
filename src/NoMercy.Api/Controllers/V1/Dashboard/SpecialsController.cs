@@ -259,7 +259,7 @@ public class SpecialsController : BaseController
 
         // const int depth = 1;
 
-        List<string?> titles = new();
+        List<string?> titles = [];
 
         // foreach (var special in specialsList)
         // {

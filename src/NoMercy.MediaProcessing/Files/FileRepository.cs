@@ -488,7 +488,7 @@ public class FileRepository : IFileRepository
     {
         string prevMusicBrainzReleaseId = string.Empty;
         string year = "0";
-        List<MusicBrainzReleaseAppends> releases = new();
+        List<MusicBrainzReleaseAppends> releases = [];
         object lockObject = new();
         await Parallel.ForEachAsync(mediaFiles, Config.ParallelOptions, async (mediaFile, _) =>
         {

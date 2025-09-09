@@ -26,7 +26,7 @@ public class TrailerInfo
     [JsonProperty("release_timestamp")] public object ReleaseTimestamp { get; set; }
     [JsonProperty("_format_sort_fields")] public string[] FormatSortFields { get; set; }
     [JsonProperty("automatic_captions")] public Dictionary<string, Caption> AutomaticCaptions { get; set; }
-    [JsonProperty("subtitles")] public Dictionary<string, Caption> Subtitles { get; set; }
+    [JsonProperty("subtitles")] public Dictionary<string, Caption[]> Subtitles { get; set; }
     [JsonProperty("comment_count")] public long CommentCount { get; set; }
     [JsonProperty("chapters")] public object Chapters { get; set; }
     [JsonProperty("heatmap")] public Heatmap[] Heatmap { get; set; }

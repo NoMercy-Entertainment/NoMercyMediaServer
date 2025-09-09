@@ -5,6 +5,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
@@ -48,6 +49,13 @@ public record InfoResponseItemDto
     [JsonProperty("seasons")] public IEnumerable<SeasonDto> Seasons { get; set; } = [];
     [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
+    [JsonProperty("grouped_watch_providers")]
+    public IEnumerable<IGrouping<string, WatchProviderDto>> GroupedWatchProviders { get; set; } = [];
+
+    [JsonProperty("watch_providers")] public IEnumerable<WatchProviderDto> WatchProviders { get; set; } = [];
+    [JsonProperty("companies")] public IEnumerable<CompanyDto> Companies { get; set; } = [];
+    [JsonProperty("networks")] public IEnumerable<NetworkDto> Networks { get; set; } = [];
+
     public InfoResponseItemDto(Movie movie, string? country)
     {
         string? overview = movie.Translations.FirstOrDefault()?.Overview;
@@ -77,8 +85,6 @@ public record InfoResponseItemDto
         ColorPalette = movie.ColorPalette;
         Backdrop = movie.Images.FirstOrDefault(image => image is { Type: "backdrop", Iso6391: null })?.FilePath ??
                    movie.Backdrop;
-        // Poster = movie.Images.FirstOrDefault(image => image is { Type: "poster", Iso6391: null })?.FilePath ??
-        //          movie.Poster;
         Poster = movie.Poster;
 
         ExternalIds = new()
@@ -131,15 +137,6 @@ public record InfoResponseItemDto
         Cast = cast;
         Crew = crew;
 
-        // Directors = crew.Where(people => people.Job == "Director");
-        // Directors = movie.Crew
-        //     .Where(people => people.Job.Task == "Director")
-        //     .Select(people => new PeopleDto(people));
-        //
-        // Writers = movie.Crew
-        //     .Where(people => people.Job.Task == "Writer")
-        //     .Select(people => new PeopleDto(people));
-
         Director = crew.FirstOrDefault(people => people.Job == "Director");
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
@@ -148,14 +145,21 @@ public record InfoResponseItemDto
 
         Recommendations = movie.RecommendationFrom
             .Select(recommendation => new RelatedDto(recommendation, "movie"));
+
+        GroupedWatchProviders = movie.WatchProviderMedia
+            .Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
+
+        WatchProviders = movie.WatchProviderMedia
+            .DistinctBy(wpm => wpm.WatchProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
+
+        Companies = movie.CompaniesMovies
+            .Select(cm => new CompanyDto(cm));
     }
 
     public InfoResponseItemDto(TmdbMovieAppends tmdbMovie, string? country)
     {
-        // string? title = tmdbMovie.Translations.Translations
-        //     .FirstOrDefault(translation => translation.Iso31661 == country)?
-        //     .Data.Title;
-
         string? overview = tmdbMovie.Translations.Translations
             .FirstOrDefault(translation => translation.Iso31661 == country)?
             .Data.Overview;
@@ -191,16 +195,6 @@ public record InfoResponseItemDto
         Translations = tmdbMovie.Translations.Translations
             .Select(translation => new TranslationDto(translation));
 
-        // ContentRatings = movie.ReleaseDates.Results
-        //     .Where(certificationMovie => certificationMovie.Iso31661 == "US" || certificationMovie.Iso31661 == country)
-        //     .Select(certificationMovie => new ContentRatings
-        //     {
-        //         Rating = certificationMovie.ReleaseDates
-        //             .First(cert => cert.Iso6391 == "US" || cert.Iso6391 == country).Certification,
-        //         Iso31661 = certificationMovie.Iso31661
-        //     })
-        //     .ToArray();
-        //
         Keywords = tmdbMovie.Keywords.Results
             .Select(keywordMovie => keywordMovie.Name);
 
@@ -233,15 +227,6 @@ public record InfoResponseItemDto
         Cast = cast;
         Crew = crew;
 
-        // Directors = crew.Where(people => people.Job == "Director");
-        // Directors = movie.Credits.Crew
-        //     .Where(people => people.Job == "Director")
-        //     .Select(people => new PeopleDto(people));
-
-        // Writers = movie.Credits.Crew
-        //     .Where(people => people.Job == "Writer")
-        //     .Select(people => new PeopleDto(people));
-
         Director = crew.FirstOrDefault(people => people.Job == "Director");
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
@@ -250,6 +235,19 @@ public record InfoResponseItemDto
 
         Recommendations = tmdbMovie.Recommendations.Results
             .Select(recommendation => new RelatedDto(recommendation, "movie"));
+
+        GroupedWatchProviders = TmdbWatchProviders.ExtractProviders(tmdbMovie.WatchProviders.TmdbWatchProviderResults)
+            .Where(wpm => wpm.CountryCode == country)
+            .Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
+
+        WatchProviders = TmdbWatchProviders.ExtractProviders(tmdbMovie.WatchProviders.TmdbWatchProviderResults)
+            .Where(wpm => wpm.CountryCode == country)
+            .DistinctBy(wpm => wpm.Provider.ProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
+
+        Companies = tmdbMovie.ProductionCompanies
+            .Select(cm => new CompanyDto(cm));
     }
 
     public InfoResponseItemDto(Tv tv, string? country)
@@ -293,7 +291,6 @@ public record InfoResponseItemDto
         ColorPalette = tv.ColorPalette;
         Backdrop = tv.Images.FirstOrDefault(image => image is { Type: "backdrop", Iso6391: null })?.FilePath ??
                    tv.Backdrop;
-        // Poster = tv.Images.FirstOrDefault(image => image is { Type: "poster", Iso6391: null })?.FilePath ?? tv.Poster;
         Poster = tv.Poster;
 
         ExternalIds = new()
@@ -360,13 +357,6 @@ public record InfoResponseItemDto
         Link = new($"/tv/{Id}", UriKind.Relative);
         Director = crew.FirstOrDefault(people => people.Job == "Director");
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
-        // Directors = tv.Crew
-        //     .Where(people => people.Job.Task == "Director")
-        //     .Select(people => new PeopleDto(people));
-        //
-        // Writers = tv.Crew
-        //     .Where(people => people.Job.Task == "Writer")
-        //     .Select(people => new PeopleDto(people));
 
         Creator = tv.Creators
             .Select(people => new PeopleDto(people)).FirstOrDefault();
@@ -390,12 +380,27 @@ public record InfoResponseItemDto
             .Include(t => t.Episodes)
             .ThenInclude(episode => episode.VideoFiles)
             .ToArray();
+
         Recommendations = tv.RecommendationFrom
             .Select(recommendation => new RelatedDto(recommendation, "tv", recommendations));
 
         Seasons = tv.Seasons
             .OrderBy(season => season.SeasonNumber)
             .Select(season => new SeasonDto(season));
+
+        GroupedWatchProviders = tv.WatchProviderMedia
+            .Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
+
+        WatchProviders = tv.WatchProviderMedia
+            .DistinctBy(wpm => wpm.WatchProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
+
+        Networks = tv.NetworkTvs
+            .Select(ntv => new NetworkDto(ntv));
+
+        Companies = tv.CompaniesTvs
+            .Select(ctv => new CompanyDto(ctv));
     }
 
     public InfoResponseItemDto(TmdbTvShowAppends tmdbTv, string? country)
@@ -491,13 +496,6 @@ public record InfoResponseItemDto
 
         Director = crew.FirstOrDefault(people => people.Job == "Director");
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
-        // Directors = tv.Credits.Crew
-        //     .Where(people => people.Job == "Director")
-        //     .Select(people => new PeopleDto(people));
-        //
-        // Writers = tv.Credits.Crew
-        //     .Where(people => people.Job == "Writer")
-        //     .Select(people => new PeopleDto(people));
 
         Creator = tmdbTv.CreatedBy
             .Select(people => new PeopleDto(people)).FirstOrDefault();
@@ -507,12 +505,24 @@ public record InfoResponseItemDto
 
         Recommendations = tmdbTv.Recommendations.Results
             .Select(recommendation => new RelatedDto(recommendation, "tv"));
-        //
-        // Seasons = tv.Seasons
-        //     .OrderBy(season => season.SeasonNumber)
-        //     .Select(season => new SeasonDto(tv.Id, season, country))
-        //     .ToArray();
+
         Seasons = [];
+
+        GroupedWatchProviders = TmdbWatchProviders.ExtractProviders(tmdbTv.WatchProviders.TmdbWatchProviderResults)
+            .Where(wpm => wpm.CountryCode == country)
+            .Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
+
+        WatchProviders = TmdbWatchProviders.ExtractProviders(tmdbTv.WatchProviders.TmdbWatchProviderResults)
+            .Where(wpm => wpm.CountryCode == country)
+            .DistinctBy(wpm => wpm.Provider.ProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
+
+        Companies = tmdbTv.ProductionCompanies
+            .Select(cm => new CompanyDto(cm));
+        
+        Networks = tmdbTv.Networks
+            .Select(ntv => new NetworkDto(ntv));
     }
 
     public InfoResponseItemDto(Collection collection, string country)
@@ -600,5 +610,19 @@ public record InfoResponseItemDto
         Director = crew.FirstOrDefault(people => people.Job == "Director");
 
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
+
+        GroupedWatchProviders = collection.CollectionMovies
+            .SelectMany(cm => cm.Movie.WatchProviderMedia)
+            .Select(wpm => new WatchProviderDto(wpm))
+            .GroupBy(p => p.ProviderType);
+
+        WatchProviders = collection.CollectionMovies
+            .SelectMany(cm => cm.Movie.WatchProviderMedia)
+            .DistinctBy(wpm => wpm.WatchProviderId)
+            .Select(wpm => new WatchProviderDto(wpm));
+
+        Companies = collection.CollectionMovies
+            .SelectMany(cm => cm.Movie.CompaniesMovies)
+            .Select(ctv => new CompanyDto(ctv));
     }
 }

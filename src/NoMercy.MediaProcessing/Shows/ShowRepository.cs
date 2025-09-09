@@ -44,8 +44,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
                 VoteCount = ti.VoteCount,
                 Folder = ti.Folder,
                 LibraryId = ti.LibraryId,
-                MediaType = ti.MediaType,
-                CreatedAt = ti.CreatedAt
+                MediaType = ti.MediaType
             })
             .RunAsync();
     }
@@ -233,44 +232,63 @@ public class ShowRepository(MediaContext context) : IShowRepository
             })
             .RunAsync();
     }
-
-    public Task StoreWatchProviders()
+    
+    public async Task StoreNetworks(IEnumerable<Network> networks)
     {
-        return Task.CompletedTask;
+        await context.Networks.UpsertRange(networks)
+            .On(n => n.Id)
+            .WhenMatched(n => new()
+            {
+                Name = n.Name,
+                Logo = n.Logo,
+                OriginCountry = n.OriginCountry,
+                Description = n.Description,
+                Headquarters = n.Headquarters,
+                Homepage = n.Homepage
+            })
+            .RunAsync();
     }
 
-    public Task StoreNetworks()
+    public async Task StoreNetworkTvs(IEnumerable<NetworkTv> networkTvs)
     {
-        // List<Keyword> keywords = Tv?.Networks.Results.ToList()
-        //     .ConvertAll<Network>(x => new Network(x)).ToArray() ?? [];
-        //
-        // return context.Networks.UpsertRange(keywords)
-        //     .On(v => new { v.Id })
-        //     .WhenMatched((ts, ti) => new Network
-        //     {
-        //         Id = ti.Id,
-        //         Title = ti.Title,
-        //     })
-        //     .RunAsync();
-
-        return Task.CompletedTask;
+        await context.NetworkTv.UpsertRange(networkTvs)
+            .On(nt => new { nt.NetworkId, nt.TvId })
+            .WhenMatched(nt => new()
+            {
+                NetworkId = nt.NetworkId,
+                TvId = nt.TvId
+            })
+            .RunAsync();
     }
 
-    public Task StoreCompanies()
+    public Task StoreCompanies(List<Company> companies)
     {
-        // List<Company> companies = Tv?.ProductionCompanies.Results.ToList()
-        //     .ConvertAll<ProductionCompany>(x => new ProductionCompany(x)).ToArray() ?? [];
-        //
-        // return context.Companies.UpsertRange(companies)
-        //     .On(v => new { v.Id })
-        //     .WhenMatched((ts, ti) => new ProductionCompany
-        //     {
-        //         Id = ti.Id,
-        //         Title = ti.Title,
-        //     })
-        //     .RunAsync();
+        return context.Companies.UpsertRange(companies)
+            .On(v => new { v.Id })
+            .WhenMatched((ts, ti) => new()
+            {
+                Id = ti.Id,
+                Name = ti.Name,
+                Description = ti.Description,
+                Headquarters = ti.Headquarters,
+                Homepage = ti.Homepage,
+                Logo = ti.Logo,
+                OriginCountry = ti.OriginCountry,
+                ParentCompany = ti.ParentCompany
+            })
+            .RunAsync();
+    }
 
-        return Task.CompletedTask;
+    public Task StoreCompanyTvs(List<CompanyTv> companyTvs)
+    {
+        return context.CompanyTv.UpsertRange(companyTvs.ToArray())
+            .On(v => new { v.CompanyId, v.TvId })
+            .WhenMatched((ts, ti) => new()
+            {
+                CompanyId = ti.CompanyId,
+                TvId = ti.TvId
+            })
+            .RunAsync();
     }
 
     public string GetMediaType(TmdbTvShowAppends show)
@@ -278,5 +296,33 @@ public class ShowRepository(MediaContext context) : IShowRepository
         bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
 
         return isAnime ? "anime" : "tv";
+    }
+    
+    public Task StoreWatchProviders(List<WatchProvider> watchProviders)
+    {
+        return context.WatchProviders.UpsertRange(watchProviders)
+            .On(v => new { v.Id })
+            .WhenMatched((ts, ti) => new()
+            {
+                Id = ti.Id,
+                Name = ti.Name,
+                Logo = ti.Logo,
+                DisplayPriority = ti.DisplayPriority
+            })
+            .RunAsync();
+    }
+
+    public Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias)
+    {
+        return context.WatchProviderMedia.UpsertRange(watchProviderMedias.ToArray())
+            .On(v => new { v.WatchProviderId, v.CountryCode, v.ProviderType, v.MovieId, v.TvId })
+            .WhenMatched((ts, ti) => new()
+            {
+                WatchProviderId = ti.WatchProviderId,
+                TvId = ti.TvId,
+                ProviderType = ti.ProviderType,
+                CountryCode = ti.CountryCode,
+            })
+            .RunAsync();
     }
 }

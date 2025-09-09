@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using NoMercy.Data.Repositories;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Data.Logic;

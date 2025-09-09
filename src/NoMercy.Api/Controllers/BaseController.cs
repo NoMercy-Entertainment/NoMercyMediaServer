@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.V1.DTO;
@@ -247,12 +248,15 @@ public class BaseController : Controller
 
     protected string Language()
     {
-        return HttpContext.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en";
+        return HttpContext.Request.Headers.AcceptLanguage.FirstOrDefault() ??
+               LocalizationHelper.GlobalLocalizer.TargetLanguage;
+
     }
 
     protected string Country()
     {
-        return HttpContext.Request.Headers["country"].FirstOrDefault() ?? "US";
+        return HttpContext.Request.Headers["country"].FirstOrDefault() ??
+               RegionInfo.CurrentRegion.TwoLetterISORegionName;
     }
 
     protected static readonly string[] Numbers =

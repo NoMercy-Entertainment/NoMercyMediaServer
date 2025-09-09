@@ -1,12 +1,14 @@
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
-using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercy.Providers.TMDB.Models.Networks;
+using NoMercy.Providers.TMDB.Models.Shared;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Movies;
@@ -307,29 +309,87 @@ public class MovieManager(
 
     public async Task StoreWatchProviders(TmdbMovieAppends movie)
     {
-        Logger.MovieDb($"Movie: {movie.Title}: WatchProviders stored", LogEventLevel.Debug);
-        await Task.CompletedTask;
-    }
+        List<WatchProvider> watchProviders = [];
+        List<WatchProviderMedia> watchProviderMedias = [];
 
-    public async Task StoreNetworks(TmdbMovieAppends movie)
-    {
-        // List<Network> networks = movie.Networks.Results.ToList()
-        //     .ConvertAll<Network>(x => new Network(x));
-        //
-        // await movieRepository.StoreNetworks(networks)
+        foreach ((string countryCode, string providerType, TmdbPaymentDetails provider, string? link) in TmdbWatchProviders.ExtractProviders(movie.WatchProviders.TmdbWatchProviderResults))
+        {
+            if (watchProviders.All(wp => wp.Id != provider.ProviderId))
+            {
+                watchProviders.Add(new()
+                {
+                    Id = provider.ProviderId,
+                    Name = provider.ProviderName,
+                    Logo = provider.LogoPath,
+                    DisplayPriority = provider.DisplayPriority
+                });
+            }
 
-        Logger.MovieDb($"Movie: {movie.Title}: Networks stored", LogEventLevel.Debug);
-        await Task.CompletedTask;
+            watchProviderMedias.Add(new()
+            {
+                WatchProviderId = provider.ProviderId,
+                MovieId = movie.Id,
+                CountryCode = countryCode,
+                ProviderType = providerType,
+                Link = link
+            });
+        }
+
+        if (watchProviders.Count != 0)
+            await movieRepository.StoreWatchProviders(watchProviders);
+
+        if (watchProviderMedias.Count != 0)
+            await movieRepository.StoreWatchProviderMedias(watchProviderMedias);
+
+        Logger.MovieDb($"Show {movie.Title}: WatchProviders stored", LogEventLevel.Debug);
     }
 
     public async Task StoreCompanies(TmdbMovieAppends movie)
     {
-        // List<Company> companies = movie.ProductionCompanies.Results.ToList()
-        //     .ConvertAll<ProductionCompany>(x => new ProductionCompany(x));
-        //
-        // await movieRepository.StoreCompanies(companies)
+        if (movie.ProductionCompanies.Length == 0)
+        {
+            Logger.MovieDb($"Movie: {movie.Title}: No production companies found", LogEventLevel.Debug);
+            return;
+        }
+        
+        TmdbTvClient showClient = new(movie.Id);
+
+        List<Company> companies = [];
+
+        await Parallel.ForEachAsync(movie.ProductionCompanies, Config.ParallelOptions, async (productionCompany, _) =>
+        {
+            TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(productionCompany.Id);
+            if (nw == null) return;
+
+            if (companies.All(n => n.Id != nw.Id))
+            {
+                companies.Add(new()
+                {
+                    Id = nw.Id,
+                    Name = nw.Name,
+                    Logo = nw.LogoPath,
+                    OriginCountry = nw.OriginCountry,
+                    Headquarters = nw.Headquarters,
+                    Homepage = nw.Homepage,
+                });
+            }
+        });
+        
+        List<CompanyMovie> companyMovies = movie.ProductionCompanies
+            .Select(company => new CompanyMovie
+            {
+                CompanyId = company.Id,
+                MovieId = movie.Id
+            }).ToList();
+
+        if (companies.Count != 0)
+            await movieRepository.StoreCompanies(companies);
+
+        if (companyMovies.Count != 0)
+            await movieRepository.StoreCompanyMovies(companyMovies);
 
         Logger.MovieDb($"Movie: {movie.Title}: Companies stored", LogEventLevel.Debug);
-        await Task.CompletedTask;
     }
+    
+    
 }

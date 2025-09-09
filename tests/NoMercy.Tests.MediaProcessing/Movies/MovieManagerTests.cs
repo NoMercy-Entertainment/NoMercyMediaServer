@@ -151,15 +151,8 @@ public class MovieManagerTests
     {
         await _movieManager.StoreWatchProviders(_movieAppends);
 
-        // No repository call, just log
-    }
-
-    [Fact]
-    public async Task StoreNetworks_ShouldStoreNetworks()
-    {
-        await _movieManager.StoreNetworks(_movieAppends);
-
-        // No repository call, just log
+        _movieRepositoryMock.Verify(m => m.StoreWatchProviders(It.IsAny<List<WatchProvider>>()), Times.Once);
+        _movieRepositoryMock.Verify(m => m.StoreWatchProviderMedias(It.IsAny<List<WatchProviderMedia>>()), Times.Once);
     }
 
     [Fact]
@@ -167,6 +160,7 @@ public class MovieManagerTests
     {
         await _movieManager.StoreCompanies(_movieAppends);
 
-        // No repository call, just log
+        _movieRepositoryMock.Verify(m => m.StoreCompanies(It.IsAny<List<Company>>()), Times.Once);
+        _movieRepositoryMock.Verify(m => m.StoreCompanyMovies(It.IsAny<List<CompanyMovie>>()), Times.Once);
     }
 }

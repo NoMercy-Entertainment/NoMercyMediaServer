@@ -81,7 +81,7 @@ public record CollectionMovieDto
         Backdrop = tmdbMovie.BackdropPath;
         Favorite = false;
         Watched = false;
-        // Logo = movie.LogoPath;
+        // Logo = movie.Logo;
         Genres = [];
         Link = new($"/movie/{Id}", UriKind.Relative);
         MediaType = "movie";

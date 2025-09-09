@@ -271,21 +271,21 @@ public class QueueIntegrationTests : IDisposable
 
         QueueJob[] jobs =
         [
-            new QueueJob
+            new()
             {
                 Queue = "priority-test",
                 Payload = SerializationHelper.Serialize(lowPriorityJob),
                 AvailableAt = DateTime.UtcNow,
                 Priority = 1
             },
-            new QueueJob
+            new()
             {
                 Queue = "priority-test",
                 Payload = SerializationHelper.Serialize(highPriorityJob),
                 AvailableAt = DateTime.UtcNow,
                 Priority = 10
             },
-            new QueueJob
+            new()
             {
                 Queue = "priority-test",
                 Payload = SerializationHelper.Serialize(mediumPriorityJob),

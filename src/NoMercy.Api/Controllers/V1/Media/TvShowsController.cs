@@ -185,7 +185,7 @@ public class TvShowsController(
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
-            Message = "Rescanning {0} for files",
+            Message = "Rescanning {0} for files in the background",
             Args = [tv.Title]
         });
     }
@@ -223,7 +223,7 @@ public class TvShowsController(
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
-            Message = "Rescanning {0} for files",
+            Message = "Refreshing {0} data in background",
             Args = [tv.Title]
         });
     }
@@ -263,7 +263,8 @@ public class TvShowsController(
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
-            Message = "Added to library"
+            Message = "Adding {0} in the background",
+            Args = [show.Name]
         });
     }
     

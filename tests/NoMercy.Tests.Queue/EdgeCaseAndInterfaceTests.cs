@@ -1,6 +1,5 @@
 using System.Reflection;
 using NoMercy.Queue;
-using NoMercy.Queue.Interfaces;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 

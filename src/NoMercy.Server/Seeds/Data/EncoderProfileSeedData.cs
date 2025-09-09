@@ -49,6 +49,7 @@ public static class EncoderProfileSeedData
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
                         Keyint = 48,
+                        ConvertHdrToSdr = true,
                         CustomArguments =
                         [
                             new ValueTuple<string, string>
@@ -89,6 +90,7 @@ public static class EncoderProfileSeedData
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
                         Keyint = 48,
+                        ConvertHdrToSdr = true,
                         CustomArguments =
                         [
                             new ValueTuple<string, string>
@@ -152,6 +154,7 @@ public static class EncoderProfileSeedData
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
                         Keyint = 48,
+                        ConvertHdrToSdr = true,
                         CustomArguments =
                         [
                             new ValueTuple<string, string>
@@ -202,6 +205,7 @@ public static class EncoderProfileSeedData
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
                         Keyint = 48,
+                        ConvertHdrToSdr = true,
                         CustomArguments =
                         [
                             new ValueTuple<string, string>
@@ -258,6 +262,7 @@ public static class EncoderProfileSeedData
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
                         Keyint = 48,
+                        ConvertHdrToSdr = true,
                         CustomArguments =
                         [
                             new ValueTuple<string, string>

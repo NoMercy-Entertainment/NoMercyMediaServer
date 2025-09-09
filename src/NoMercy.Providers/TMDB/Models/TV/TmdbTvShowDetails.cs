@@ -20,7 +20,7 @@ public class TmdbTvShowDetails : TmdbTvShow
     [JsonProperty("networks")] public TmdbNetwork[] Networks { get; set; } = [];
     [JsonProperty("number_of_episodes")] public int NumberOfEpisodes { get; set; }
     [JsonProperty("number_of_seasons")] public int NumberOfSeasons { get; set; }
-    [JsonProperty("production_companies")] public TmdbNetwork[] ProductionCompanies { get; set; } = [];
+    [JsonProperty("production_companies")] public TmdbProductionCompany[] ProductionCompanies { get; set; } = [];
     [JsonProperty("production_countries")] public TmdbProductionCountry[] ProductionCountries { get; set; } = [];
     [JsonProperty("seasons")] public List<TmdbSeason> Seasons { get; set; } = [];
     [JsonProperty("spoken_languages")] public TmdbSpokenLanguage[] SpokenLanguages { get; set; } = [];

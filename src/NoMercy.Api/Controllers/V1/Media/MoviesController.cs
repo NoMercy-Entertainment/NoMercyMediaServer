@@ -173,7 +173,7 @@ public class MoviesController(
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
-            Message = "Rescanning {0} for files",
+            Message = "Rescanning {0} for files in the background",
             Args = [movie.Title]
         });
     }
@@ -206,11 +206,8 @@ public class MoviesController(
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
-            Message = "Refreshing {0}",
-            Args = new object[]
-            {
-                movie.Title
-            }
+            Message = "Refreshing {0} in the background",
+            Args = [movie.Title]
         });
     }
 
@@ -241,7 +238,8 @@ public class MoviesController(
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
-            Message = "Added to library"
+            Message = "Adding {0} in the background",
+            Args = [library.Title]
         });
     }
 }

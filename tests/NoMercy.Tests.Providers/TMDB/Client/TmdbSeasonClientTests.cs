@@ -1,9 +1,6 @@
-using FluentAssertions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.Shared;
-using NoMercy.Tests.Providers.TMDB;
-using Xunit;
 
 namespace NoMercy.Tests.Providers.TMDB.Client;
 
@@ -206,7 +203,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Cast.Should().NotBeNull();
         result.Crew.Should().NotBeNull();
-        if (result.Cast.Any())
+        if (result.Cast.Length != 0)
         {
             result.Cast.First().Name.Should().NotBeNullOrEmpty();
         }
@@ -246,7 +243,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Cast.Should().NotBeNull();
         result.Crew.Should().NotBeNull();
-        if (result.Cast.Any())
+        if (result.Cast.Length != 0)
         {
             result.Cast.First().Name.Should().NotBeNullOrEmpty();
             result.Cast.First().Character.Should().NotBeNullOrEmpty();
@@ -320,7 +317,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Id.Should().BeGreaterThan(0);
         result.Posters.Should().NotBeNull();
-        if (result.Posters.Any())
+        if (result.Posters.Length != 0)
         {
             result.Posters.First().FilePath.Should().NotBeNullOrEmpty();
             result.Posters.First().Width.Should().BeGreaterThan(0);
@@ -360,7 +357,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         result.Should().NotBeNull();
         result!.Id.Should().BeGreaterThan(0);
         result.Translations.Should().NotBeNull();
-        if (result.Translations.Any())
+        if (result.Translations.Length != 0)
         {
             result.Translations.First().Iso6391.Should().NotBeNullOrEmpty();
             result.Translations.First().Iso31661.Should().NotBeNullOrEmpty();
@@ -399,7 +396,7 @@ public class TmdbSeasonClientTests : TmdbTestBase
         // Assert
         result.Should().NotBeNull();
         result!.Results.Should().NotBeNull();
-        if (result.Results.Any())
+        if (result.Results.Length != 0)
         {
             result.Results.First().Key.Should().NotBeNullOrEmpty();
             result.Results.First().Name.Should().NotBeNullOrEmpty();

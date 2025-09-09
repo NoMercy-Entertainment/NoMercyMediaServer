@@ -15,6 +15,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
+using HttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -235,7 +236,7 @@ public class HomeController : BaseController
             return NotFoundResponse("Trailer not found");
         }
         
-        if (System.IO.File.Exists(Path.Combine(folder, "video_00001.ts")))
+        if (System.IO.File.Exists(Path.Combine(folder, "video_00002.ts")))
         {
             return Ok(
                 new VideoPlaylistResponseDto
@@ -249,9 +250,10 @@ public class HomeController : BaseController
                     Origin = Info.DeviceId,
                     PlaylistId = trailerInfo.Id,
                     Tracks = trailerInfo.Subtitles
+                        .Where(t => t.Value.Any(s => s.Ext == "vtt"))
                         .Select(t => new IVideoTrack
                         {
-                            Label = t.Value.Name,
+                            Label = t.Value.First(s => s.Ext == "vtt").Name,
                             File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                             Language = t.Key,
                             Kind = "subtitles"
@@ -268,40 +270,44 @@ public class HomeController : BaseController
                 }
             );
         }
-        
-        StringBuilder sb = new();
 
-        sb.Append(AppFiles.YtdlpPath);
-        sb.Append(" -f bestvideo+bestaudio ");
-        
-        if (!string.IsNullOrEmpty(language))
-            sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
-        
-        sb.Append(trailerId);
-
-        sb.Append(" -o - ");
-        sb.Append($" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -preset ultrafast ");
-        sb.Append(" -hls_allow_cache 1 -hls_flags independent_segments -hls_segment_type mpegts -segment_list_type m3u8 -segment_time_delta 1 -start_number 0 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_list_size 0 -hls_segment_filename video_%05d.ts video.m3u8 ");
-
-        if (Software.IsWindows)
+        _ = Task.Run(async () =>
         {
-            Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
-            _ = Shell.ExecSync("cmd", $"/c \"{sb}\"", new()
-            {
-                WorkingDirectory = folder
-            });
+            StringBuilder sb = new();
             
-        }
-        else
-        {
-            Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
-            _ = Shell.ExecSync("/bin/bash", $"-c \"{sb}\"", new()
-            {
-                WorkingDirectory = folder
-            });
-        }
+            sb.Append(AppFiles.YtdlpPath);
+            sb.Append(" -f bestvideo+bestaudio ");
+            
+            if (!string.IsNullOrEmpty(language))
+                sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
+            
+            sb.Append(trailerId);
+            
+            sb.Append(" -o - ");
+            sb.Append($" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast ");
+            sb.Append("-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 ");
 
-        while (!System.IO.File.Exists(Path.Combine(folder, "video_00001.ts")))
+            if (Software.IsWindows)
+            {
+                Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
+                Shell.ExecSync("cmd", $"/c \"{sb}\"", new()
+                {
+                    WorkingDirectory = folder
+                });
+            }
+            else
+            {
+                Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
+                Shell.ExecSync("/bin/bash", $"-c \"{sb}\"", new()
+                {
+                    WorkingDirectory = folder
+                });
+            }
+
+            return Task.CompletedTask;
+        });
+
+        while (!System.IO.File.Exists(Path.Combine(folder, "video_00002.ts")))
         {
             Task.Delay(1000).Wait();
         }
@@ -318,9 +324,10 @@ public class HomeController : BaseController
                 Origin = Info.DeviceId,
                 PlaylistId = trailerInfo.Id,
                 Tracks = trailerInfo.Subtitles
+                    .Where(t => t.Value.Any(s => s.Ext == "vtt"))
                     .Select(t => new IVideoTrack
                     {
-                        Label = t.Value.Name,
+                        Label = t.Value.First(s => s.Ext == "vtt").Name,
                         File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                         Language = t.Key,
                         Kind = "subtitles"

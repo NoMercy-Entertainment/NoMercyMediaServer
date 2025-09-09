@@ -6,25 +6,28 @@ namespace NoMercy.MediaProcessing.Shows;
 
 public interface IShowRepository
 {
-    public Task AddAsync(Tv show);
-    public Task LinkToLibrary(Library library, Tv show);
-    public Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);
-    public Task StoreTranslations(IEnumerable<Translation> translations);
-    public Task StoreContentRatings(IEnumerable<CertificationTv> certifications);
-    public Task StoreSimilar(IEnumerable<Similar> similar);
-    public Task StoreRecommendations(IEnumerable<Recommendation> recommendations);
-    public Task StoreVideos(IEnumerable<Media> videos);
-    public Task StoreImages(IEnumerable<Image> images);
-    public Task StoreKeywords(IEnumerable<Keyword> keywords);
-    public Task LinkKeywordsToTv(IEnumerable<KeywordTv> keywordTvs);
-    public Task StoreGenres(IEnumerable<GenreTv> genreTvs);
+    Task AddAsync(Tv show);
+    Task LinkToLibrary(Library library, Tv show);
+    Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);
+    Task StoreTranslations(IEnumerable<Translation> translations);
+    Task StoreContentRatings(IEnumerable<CertificationTv> certifications);
+    Task StoreSimilar(IEnumerable<Similar> similar);
+    Task StoreRecommendations(IEnumerable<Recommendation> recommendations);
+    Task StoreVideos(IEnumerable<Media> videos);
+    Task StoreImages(IEnumerable<Image> images);
+    Task StoreKeywords(IEnumerable<Keyword> keywords);
+    Task LinkKeywordsToTv(IEnumerable<KeywordTv> keywordTvs);
+    Task StoreGenres(IEnumerable<GenreTv> genreTvs);
 
-    public Task StoreWatchProviders();
-    public Task StoreNetworks();
-    public Task StoreCompanies();
+    Task StoreWatchProviders(List<WatchProvider> watchProviders);
+    Task StoreNetworks(IEnumerable<Network> networks);
+    Task StoreNetworkTvs(IEnumerable<NetworkTv> networkTvs);
+    Task StoreCompanies(List<Company> companies);
 
     IEnumerable<CertificationTv> GetCertificationTvs(TmdbTvShowAppends show,
         IEnumerable<CertificationCriteria> certificationCriteria);
 
-    public string GetMediaType(TmdbTvShowAppends show);
+    string GetMediaType(TmdbTvShowAppends show);
+    Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias);
+    Task StoreCompanyTvs(List<CompanyTv> companyTvs);
 }

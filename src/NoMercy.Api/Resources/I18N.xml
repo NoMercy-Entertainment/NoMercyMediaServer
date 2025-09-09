@@ -372,4 +372,16 @@
     <Key>You do not have permission to view folders</Key>
     <Value lang="nl">You do not have permission to view folders</Value>
   </Entry>
+  <Entry>
+    <Key>Refreshing {0}</Key>
+    <Value lang="nl">Refreshing {0}</Value>
+  </Entry>
+  <Entry>
+    <Key>Refreshing {0} data in background</Key>
+    <Value lang="nl">Refreshing {0} data in background</Value>
+  </Entry>
+  <Entry>
+    <Key>Adding {0} in the background</Key>
+    <Value lang="nl">Adding {0} in the background</Value>
+  </Entry>
 </I18N>

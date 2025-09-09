@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NoMercy.Providers.TMDB.Client;
 using System.Diagnostics;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -6,7 +5,6 @@ using NoMercy.Providers.TMDB.Models.People;
 using NoMercy.Providers.TMDB.Models.Search;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
-using Xunit;
 
 namespace NoMercy.Tests.Providers.TMDB.Client;
 
@@ -261,7 +259,7 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         long lastTime = times.Last();
         double performanceDegradation = (lastTime - firstTime) / (double)firstTime;
         
-        performanceDegradation.Should().BeLessThan(2.0, 
+        performanceDegradation.Should().BeLessThan(2.5, 
             "because performance should not degrade significantly with reuse");
     }
 

@@ -33,6 +33,7 @@ public class EpisodeDto
         VideoFile? videoFile = episode.VideoFiles.FirstOrDefault();
         UserData? userData = videoFile?.UserData.FirstOrDefault();
 
+        TvId = episode.TvId;
         Id = episode.Id;
         Title = !string.IsNullOrEmpty(title)
             ? title

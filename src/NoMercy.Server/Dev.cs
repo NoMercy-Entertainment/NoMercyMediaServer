@@ -1,17 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
-using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.NewtonSoftConverters;
-using NoMercy.NmSystem.SystemCalls;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Dithering;
-using SixLabors.ImageSharp.Processing.Processors.Quantization;
-using Image = SixLabors.ImageSharp.Image;
-
 namespace NoMercy.Server;
 
 public static class Dev

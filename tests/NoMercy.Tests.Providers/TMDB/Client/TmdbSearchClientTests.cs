@@ -1,4 +1,3 @@
-using FluentAssertions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -7,7 +6,6 @@ using NoMercy.Providers.TMDB.Models.People;
 using NoMercy.Providers.TMDB.Models.Search;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
-using Xunit;
 
 namespace NoMercy.Tests.Providers.TMDB.Client;
 

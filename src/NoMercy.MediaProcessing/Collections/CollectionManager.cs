@@ -1,6 +1,5 @@
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
-using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Movies;

@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Metadata;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
@@ -103,6 +102,10 @@ public class MediaContext : DbContext
     public virtual DbSet<Genre> Genres { get; init; }
     public virtual DbSet<GuestStar> GuestStars { get; init; }
     public virtual DbSet<Image> Images { get; init; }
+    public virtual DbSet<WatchProvider> WatchProviders { get; init; }
+    public virtual DbSet<WatchProviderMedia> WatchProviderMedia { get; init; }
+    public virtual DbSet<Network> Networks { get; init; }
+    public virtual DbSet<NetworkTv> NetworkTv { get; init; }
 
     public virtual DbSet<Job> Jobs { get; init; }
     public virtual DbSet<KeywordMovie> KeywordMovie { get; init; }
@@ -131,8 +134,6 @@ public class MediaContext : DbContext
     public virtual DbSet<Notification> Notifications { get; init; }
     public virtual DbSet<Person> People { get; init; }
     public virtual DbSet<Playlist> Playlists { get; init; }
-    public virtual DbSet<PriorityProvider> PriorityProvider { get; init; }
-    public virtual DbSet<Provider> Providers { get; init; }
     public virtual DbSet<Recommendation> Recommendations { get; init; }
     public virtual DbSet<Role> Roles { get; init; }
     public virtual DbSet<RunningTask> RunningTasks { get; init; }
@@ -145,6 +146,9 @@ public class MediaContext : DbContext
     public virtual DbSet<UserData> UserData { get; init; }
     public virtual DbSet<User> Users { get; init; }
     public virtual DbSet<VideoFile> VideoFiles { get; init; }
+    public virtual DbSet<Company> Companies { get; init; }
+    public virtual DbSet<CompanyMovie> CompanyMovie { get; init; }
+    public virtual DbSet<CompanyTv> CompanyTv { get; init; }
 
     public virtual DbSet<AlbumArtist> AlbumArtist { get; init; }
     public virtual DbSet<AlbumLibrary> AlbumLibrary { get; init; }

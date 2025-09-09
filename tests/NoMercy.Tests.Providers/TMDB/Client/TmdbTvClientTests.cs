@@ -549,7 +549,7 @@ public class TmdbTvClientTests : TmdbTestBase
         result.Cast.Should().NotBeEmpty();
         // Crew data might be empty for some shows like GTST, so we validate structure if present
         result.Crew.Should().NotBeNull();
-        if (result.Crew.Any())
+        if (result.Crew.Length != 0)
             result.Crew.Should().AllSatisfy(crew =>
             {
                 crew.Name.Should().NotBeNullOrEmpty();

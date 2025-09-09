@@ -699,6 +699,125 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("CollectionUser");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.Company", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Headquarters")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Homepage")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Logo")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginCountry")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ParentCompany")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Companies", t =>
+                        {
+                            t.HasTrigger("update_Companies_updated_at");
+                        });
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.CompanyMovie", b =>
+                {
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("CompanyId", "MovieId");
+
+                    b.HasIndex("MovieId");
+
+                    b.HasIndex("CompanyId", "MovieId")
+                        .IsUnique();
+
+                    b.ToTable("CompanyMovie", t =>
+                        {
+                            t.HasTrigger("update_CompanyMovie_updated_at");
+                        });
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.CompanyTv", b =>
+                {
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TvId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("CompanyId", "TvId");
+
+                    b.HasIndex("TvId");
+
+                    b.HasIndex("CompanyId", "TvId")
+                        .IsUnique();
+
+                    b.ToTable("CompanyTv", t =>
+                        {
+                            t.HasTrigger("update_CompanyTv_updated_at");
+                        });
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.Configuration", b =>
                 {
                     b.Property<int>("Id")
@@ -1895,7 +2014,8 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -2005,7 +2125,10 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TitleSort");
 
-                    b.ToTable("Movies");
+                    b.ToTable("Movies", t =>
+                        {
+                            t.HasTrigger("update_Movies_updated_at");
+                        });
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.MovieUser", b =>
@@ -2109,6 +2232,90 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("MusicPlays", t =>
                         {
                             t.HasTrigger("update_MusicPlays_updated_at");
+                        });
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Network", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Headquarters")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Homepage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Logo")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginCountry")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("Networks", t =>
+                        {
+                            t.HasTrigger("update_Networks_updated_at");
+                        });
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.NetworkTv", b =>
+                {
+                    b.Property<int>("NetworkId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TvId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("NetworkId", "TvId");
+
+                    b.HasIndex("TvId");
+
+                    b.HasIndex("NetworkId", "TvId")
+                        .IsUnique();
+
+                    b.ToTable("NetworkTv", t =>
+                        {
+                            t.HasTrigger("update_NetworkTv_updated_at");
                         });
                 });
 
@@ -2388,42 +2595,6 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("TrackId");
 
                     b.ToTable("PlaylistTrack");
-                });
-
-            modelBuilder.Entity("NoMercy.Database.Models.PriorityProvider", b =>
-                {
-                    b.Property<int>("Priority")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Country")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ProviderId")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Priority", "Country", "ProviderId");
-
-                    b.HasIndex("Country");
-
-                    b.HasIndex("Priority");
-
-                    b.HasIndex("ProviderId");
-
-                    b.ToTable("PriorityProvider");
-                });
-
-            modelBuilder.Entity("NoMercy.Database.Models.Provider", b =>
-                {
-                    b.Property<string>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Providers");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Recommendation", b =>
@@ -3131,7 +3302,8 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -3263,7 +3435,10 @@ namespace NoMercy.Database.Migrations
 
                     b.HasIndex("TvdbId");
 
-                    b.ToTable("Tvs");
+                    b.ToTable("Tvs", t =>
+                        {
+                            t.HasTrigger("update_Tvs_updated_at");
+                        });
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.TvUser", b =>
@@ -3540,6 +3715,98 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("VideoFiles", t =>
                         {
                             t.HasTrigger("update_VideoFiles_updated_at");
+                        });
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.WatchProvider", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("DisplayPriority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Logo")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WatchProviders", t =>
+                        {
+                            t.HasTrigger("update_WatchProviders_updated_at");
+                        });
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.WatchProviderMedia", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Link")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProviderType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TvId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("WatchProviderId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MovieId");
+
+                    b.HasIndex("TvId");
+
+                    b.HasIndex("WatchProviderId", "CountryCode", "ProviderType", "MovieId", "TvId")
+                        .IsUnique();
+
+                    b.ToTable("WatchProviderMedia", t =>
+                        {
+                            t.HasTrigger("update_WatchProviderMedia_updated_at");
                         });
                 });
 
@@ -3981,6 +4248,44 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("Collection");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.CompanyMovie", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Company", "Company")
+                        .WithMany("CompanyMovie")
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercy.Database.Models.Movie", "Movie")
+                        .WithMany("CompaniesMovies")
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Movie");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.CompanyTv", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Company", "Company")
+                        .WithMany("CompanyTv")
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercy.Database.Models.Tv", "Tv")
+                        .WithMany("CompaniesTvs")
+                        .HasForeignKey("TvId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Tv");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Creator", b =>
@@ -4517,6 +4822,25 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.NetworkTv", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Network", "Network")
+                        .WithMany("NetworkTv")
+                        .HasForeignKey("NetworkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercy.Database.Models.Tv", "Tv")
+                        .WithMany("NetworkTvs")
+                        .HasForeignKey("TvId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Network");
+
+                    b.Navigation("Tv");
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.NotificationUser", b =>
                 {
                     b.HasOne("NoMercy.Database.Models.Notification", "Notification")
@@ -4610,17 +4934,6 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("Playlist");
 
                     b.Navigation("Track");
-                });
-
-            modelBuilder.Entity("NoMercy.Database.Models.PriorityProvider", b =>
-                {
-                    b.HasOne("NoMercy.Database.Models.Provider", "Provider")
-                        .WithMany()
-                        .HasForeignKey("ProviderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Provider");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Recommendation", b =>
@@ -4974,6 +5287,31 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("Movie");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.WatchProviderMedia", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Movie", "Movie")
+                        .WithMany("WatchProviderMedia")
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("NoMercy.Database.Models.Tv", "Tv")
+                        .WithMany("WatchProviderMedia")
+                        .HasForeignKey("TvId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("NoMercy.Database.Models.WatchProvider", "WatchProvider")
+                        .WithMany("WatchProviderMedias")
+                        .HasForeignKey("WatchProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Movie");
+
+                    b.Navigation("Tv");
+
+                    b.Navigation("WatchProvider");
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.Album", b =>
                 {
                     b.Navigation("AlbumArtist");
@@ -5019,6 +5357,13 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("Translations");
 
                     b.Navigation("UserData");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Company", b =>
+                {
+                    b.Navigation("CompanyMovie");
+
+                    b.Navigation("CompanyTv");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Device", b =>
@@ -5107,6 +5452,8 @@ namespace NoMercy.Database.Migrations
 
                     b.Navigation("CertificationMovies");
 
+                    b.Navigation("CompaniesMovies");
+
                     b.Navigation("Crew");
 
                     b.Navigation("GenreMovies");
@@ -5136,6 +5483,8 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("UserData");
 
                     b.Navigation("VideoFiles");
+
+                    b.Navigation("WatchProviderMedia");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.MusicGenre", b =>
@@ -5147,6 +5496,11 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("MusicGenreReleaseGroups");
 
                     b.Navigation("MusicGenreTracks");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Network", b =>
+                {
+                    b.Navigation("NetworkTv");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Person", b =>
@@ -5236,6 +5590,8 @@ namespace NoMercy.Database.Migrations
 
                     b.Navigation("CertificationTvs");
 
+                    b.Navigation("CompaniesTvs");
+
                     b.Navigation("Creators");
 
                     b.Navigation("Crew");
@@ -5249,6 +5605,8 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("KeywordTvs");
 
                     b.Navigation("Media");
+
+                    b.Navigation("NetworkTvs");
 
                     b.Navigation("PlaybackPreferences");
 
@@ -5267,6 +5625,8 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("TvUser");
 
                     b.Navigation("UserData");
+
+                    b.Navigation("WatchProviderMedia");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.User", b =>
@@ -5295,6 +5655,11 @@ namespace NoMercy.Database.Migrations
             modelBuilder.Entity("NoMercy.Database.Models.VideoFile", b =>
                 {
                     b.Navigation("UserData");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.WatchProvider", b =>
+                {
+                    b.Navigation("WatchProviderMedias");
                 });
 #pragma warning restore 612, 618
         }

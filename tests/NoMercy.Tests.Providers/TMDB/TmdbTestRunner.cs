@@ -1,6 +1,4 @@
 using System.Reflection;
-using FluentAssertions;
-using Xunit;
 
 namespace NoMercy.Tests.Providers.TMDB;
 

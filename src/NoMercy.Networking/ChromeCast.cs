@@ -1,6 +1,5 @@
 using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster;
-using Sharpcaster.Interfaces;
 using Sharpcaster.Models;
 using Sharpcaster.Models.ChromecastStatus;
 using Sharpcaster.Models.Media;

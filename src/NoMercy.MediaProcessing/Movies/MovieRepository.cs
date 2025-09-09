@@ -33,7 +33,6 @@ public class MovieRepository(MediaContext context) : IMovieRepository
                 VoteCount = ti.VoteCount,
                 Folder = ti.Folder,
                 LibraryId = ti.LibraryId,
-                CreatedAt = ti.CreatedAt,
             })
             .RunAsync();
     }
@@ -222,42 +221,62 @@ public class MovieRepository(MediaContext context) : IMovieRepository
             .RunAsync();
     }
 
-    public Task StoreWatchProviders()
+    public Task StoreCompanies(List<Company> companies)
     {
-        return Task.CompletedTask;
+        return context.Companies.UpsertRange(companies)
+            .On(v => new { v.Id })
+            .WhenMatched((ts, ti) => new()
+            {
+                Id = ti.Id,
+                Name = ti.Name,
+                Description = ti.Description,
+                Headquarters = ti.Headquarters,
+                Homepage = ti.Homepage,
+                Logo = ti.Logo,
+                OriginCountry = ti.OriginCountry,
+                ParentCompany = ti.ParentCompany
+            })
+            .RunAsync();
     }
 
-    public Task StoreNetworks()
+    public Task StoreCompanyMovies(List<CompanyMovie> companyMovies)
     {
-        // List<Keyword> keywords = Movie?.Networks.Results.ToList()
-        //     .ConvertAll<Network>(x => new Network(x)).ToArray() ?? [];
-        //
-        // return context.Networks.UpsertRange(keywords)
-        //     .On(v => new { v.Id })
-        //     .WhenMatched((ts, ti) => new Network
-        //     {
-        //         Id = ti.Id,
-        //         Title = ti.Title,
-        //     })
-        //     .RunAsync();
-
-        return Task.CompletedTask;
+        return context.CompanyMovie.UpsertRange(companyMovies)
+            .On(v => new { v.CompanyId, v.MovieId })
+            .WhenMatched((ts, ti) => new()
+            {
+                CompanyId = ti.CompanyId,
+                MovieId = ti.MovieId
+            })
+            .RunAsync();
     }
 
-    public Task StoreCompanies()
+    public Task StoreWatchProviders(List<WatchProvider> watchProviders)
     {
-        // List<Company> companies = Movie?.ProductionCompanies.Results.ToList()
-        //     .ConvertAll<ProductionCompany>(x => new ProductionCompany(x)).ToArray() ?? [];
-        //
-        // return context.Companies.UpsertRange(companies)
-        //     .On(v => new { v.Id })
-        //     .WhenMatched((ts, ti) => new ProductionCompany
-        //     {
-        //         Id = ti.Id,
-        //         Title = ti.Title,
-        //     })
-        //     .RunAsync();
-
-        return Task.CompletedTask;
+        return context.WatchProviders.UpsertRange(watchProviders)
+            .On(v => new { v.Id })
+            .WhenMatched((ts, ti) => new()
+            {
+                Id = ti.Id,
+                Name = ti.Name,
+                Logo = ti.Logo,
+                DisplayPriority = ti.DisplayPriority
+            })
+            .RunAsync();
     }
+    
+    public Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias)
+    {
+        return context.WatchProviderMedia.UpsertRange(watchProviderMedias)
+            .On(v => new { v.WatchProviderId, v.CountryCode, v.ProviderType, v.MovieId, v.TvId })
+            .WhenMatched((ts, ti) => new()
+            {
+                WatchProviderId = ti.WatchProviderId,
+                MovieId = ti.MovieId,
+                CountryCode = ti.CountryCode,
+                ProviderType = ti.ProviderType
+            })
+            .RunAsync();
+    }
+
 }
