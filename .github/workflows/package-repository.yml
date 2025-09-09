@@ -3,11 +3,17 @@ name: Package Repository
 on:
   release:
     types: [published]
+  workflow_dispatch:
   workflow_run:
     workflows: ["Build Executables"]
     types:
       - completed
-  workflow_dispatch:
+    branches:
+
+      - master
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -18,6 +24,7 @@ permissions:
 jobs:
   build_packages:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
