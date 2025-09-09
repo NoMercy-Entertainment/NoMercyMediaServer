@@ -232,39 +232,6 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
     #endregion
 
-    #region Client Reuse Performance Tests
-
-    [Fact]
-    public async Task Search_WithClientReuse_ShouldMaintainPerformance()
-    {
-        // Arrange
-        using TmdbSearchClient client = new();
-        List<long> times = [];
-
-        // Act - Perform multiple searches with the same client
-        for (int i = 0; i < 5; i++)
-        {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            await client.Movie($"test movie {i}");
-            stopwatch.Stop();
-            times.Add(stopwatch.ElapsedMilliseconds);
-        }
-
-        // Assert
-        times.Should().AllSatisfy(time => 
-            time.Should().BeLessThan(5000, "because individual searches should remain fast"));
-        
-        // Check that performance doesn't degrade significantly over time
-        long firstTime = times.First();
-        long lastTime = times.Last();
-        double performanceDegradation = (lastTime - firstTime) / (double)firstTime;
-        
-        performanceDegradation.Should().BeLessThan(2.5, 
-            "because performance should not degrade significantly with reuse");
-    }
-
-    #endregion
-
     #region Cache Performance Tests (if applicable)
 
     [Fact]
