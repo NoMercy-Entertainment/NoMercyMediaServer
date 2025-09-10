@@ -75,9 +75,9 @@ public class MovieRepository(MediaContext context)
             .Where(movie => movie.Library.LibraryUsers
                 .FirstOrDefault(libraryUser => libraryUser.UserId.Equals(userId)) != null)
             .Include(movie => movie.Media
-                .Where(media => media.Type == "video"))
+                .Where(media => media.Type == "video" && media.Iso6391 == language))
             .Include(movie => movie.Images
-                .Where(image => image.Type == "logo"))
+                .Where(image => image.Type == "logo" && image.Iso6391 == "en" && image.Width > image.Height))
             .Include(movie => movie.Translations
                 .Where(translation => translation.Iso6391 == language))
             

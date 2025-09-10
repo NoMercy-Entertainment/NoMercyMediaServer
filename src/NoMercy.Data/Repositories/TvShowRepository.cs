@@ -128,7 +128,7 @@ public class TvShowRepository(MediaContext context)
                 .ThenInclude(season => season.Episodes)
                 .ThenInclude(tv => tv.Tv)
                 .ThenInclude(tv => tv.Images
-                    .Where(image => image.Type == "logo"))
+                    .Where(image => image.Type == "logo" && image.Iso6391 == "en" && image.Width > image.Height))
             .Include(tv => tv.Seasons)
                 .ThenInclude(season => season.Episodes)
                 .ThenInclude(tv => tv.VideoFiles)
