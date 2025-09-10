@@ -232,7 +232,7 @@ public class FileRepository : IFileRepository
 
         Regex regex = Str.MatchNumbers();
         Match match2 = regex.Match(parsed.Title);
-
+    
         if (match2.Success)
         {
             parsed.Season = 1;

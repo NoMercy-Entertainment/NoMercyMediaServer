@@ -29,7 +29,7 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
             .OrderByDescending(x => x.TvFrom != null ? x.TvFrom.UpdatedAt : x.MovieFrom!.UpdatedAt)
             .Take(200)
             .ToList()
-            .Chunk(2)
+            .Chunk(5)
             .ToList();
         
         _logger.LogTrace("Found {Count} recommendation chunks to process", recommendations.Count);

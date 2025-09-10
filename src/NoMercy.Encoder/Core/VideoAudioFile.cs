@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Format.Audio;
@@ -108,7 +109,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         return this;
     }
 
-    private string ChooseCrop(Dictionary<string, int> crops)
+    private string ChooseCrop(ConcurrentDictionary<string, int> crops)
     {
         string maxKey = "";
         int maxValue = 0;
@@ -133,21 +134,21 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         double max = Math.Floor(duration / 2);
         double step = Math.Floor(max / sections);
 
-        Dictionary<string, int> counts = new();
+        ConcurrentDictionary<string, int> counts = new();
         Regex regex = CropDetectRegex();
 
         List<string> results = [];
 
-        for (int i = 0; i < sections; i++)
+        Parallel.For(0, sections, Config.ParallelOptions, (i, _) =>
         {
             string cropSection =
                 $"-threads 1 -nostats -hide_banner -ss {i * step} -i \"{path}\" -vframes 10 -vf cropdetect -t {1} -f null -";
 
             string result = Shell.ExecStdErrSync(FfmpegPath, cropSection);
             results.Add(result);
-        }
+        });
 
-        foreach (string output in results)
+        Parallel.ForEach(results, Config.ParallelOptions, (output) =>
         {
             MatchCollection matches = regex.Matches(output);
 
@@ -156,7 +157,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
                 string crop = match.Groups[1].Value;
                 if (!counts.TryAdd(crop, 1)) counts[crop]++;
             }
-        }
+        });
 
         return ChooseCrop(counts);
     }

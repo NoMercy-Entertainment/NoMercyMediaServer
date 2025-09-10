@@ -84,11 +84,11 @@ public class VideoPlaylistResponseDto
         PlaylistType = playlistType;
         PlaylistId = playlistId;
         Year = episode.Tv.FirstAirDate.ParseYear();
-        Progress = userData?.UpdatedAt is not null
+        Progress = userData?.LastPlayedDate is not null
             ? new ProgressDto
             {
                 Time = userData.Time ?? 0,
-                Date = userData.UpdatedAt
+                Date = DateTime.Parse(userData.LastPlayedDate)
             }
             : null;
         Image = episode.Still is not null ? "https://image.tmdb.org/t/p/original" + episode.Still : null;
@@ -115,6 +115,11 @@ public class VideoPlaylistResponseDto
                 Kind = t.Kind
             })
             .Concat(subs.TextTracks)
+            .Concat([new()
+            {
+                File = $"{baseFolder}/fonts.json",
+                Kind = "fonts",
+            }])
             .OrderBy(track => track.Language)
             .ToList();
 
@@ -164,11 +169,11 @@ public class VideoPlaylistResponseDto
         PlaylistType = playlistType;
         PlaylistId = playlistId;
         Year = movie.ReleaseDate.ParseYear();
-        Progress = userData?.UpdatedAt is not null
+        Progress = userData?.LastPlayedDate is not null
             ? new ProgressDto
             {
                 Time = userData.Time ?? 0,
-                Date = userData.UpdatedAt
+                Date = DateTime.Parse(userData.LastPlayedDate)
             }
             : null;
         Image = movie.Backdrop is not null ? "https://image.tmdb.org/t/p/original" + movie.Backdrop : null;
@@ -195,6 +200,11 @@ public class VideoPlaylistResponseDto
                 Kind = t.Kind
             })
             .Concat(subs.TextTracks)
+            .Concat([new()
+            {
+                File = $"{baseFolder}/fonts.json",
+                Kind = "fonts",
+            }])
             .OrderBy(track => track.Language)
             .ToList();
         

@@ -116,7 +116,7 @@ public class HomeRepository
                 .ThenInclude(certificationTv => certificationTv.Certification)
 
                 .Include(userData => userData.VideoFile)
-                .OrderByDescending(userData => userData.UpdatedAt)
+                .OrderByDescending(userData => userData.LastPlayedDate)
                 .AsEnumerable()
                 .DistinctBy(userData => new
                 {

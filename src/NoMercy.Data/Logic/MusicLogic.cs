@@ -370,7 +370,6 @@ public partial class MusicLogic : IAsyncDisposable
                     Year = i.Year,
                     Country = i.Country,
                     Tracks = i.Tracks,
-
                     LibraryId = i.LibraryId,
                     Folder = i.Folder,
                     FolderId = i.FolderId,

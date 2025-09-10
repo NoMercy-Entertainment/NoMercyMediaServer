@@ -30,17 +30,22 @@ public static class Shell
     {
         options ??= new();
         using Process process = new();
-        process.StartInfo = new()
-        {
-            FileName = executable,
-            Arguments = arguments,
-            WorkingDirectory = options.WorkingDirectory ?? string.Empty,
-            RedirectStandardOutput = options.CaptureStdOut,
-            RedirectStandardError = options.CaptureStdErr && !options.MergeStdErrToOut,
-            RedirectStandardInput = options.RedirectInput,
-            UseShellExecute = options.UseShellExecute,
-            CreateNoWindow = options.CreateNoWindow
-        };
+
+        process.StartInfo.FileName = executable;
+        process.StartInfo.Arguments = arguments;
+        process.StartInfo.WorkingDirectory = options.WorkingDirectory ?? string.Empty;
+        
+        if(options.CaptureStdOut)
+            process.StartInfo.RedirectStandardOutput = true;
+        
+        if (options.RedirectInput)
+            process.StartInfo.RedirectStandardInput = true;
+        
+        if (options.UseShellExecute)
+            process.StartInfo.UseShellExecute = true;
+        
+        if (options.CreateNoWindow)
+            process.StartInfo.CreateNoWindow = true;
 
         if (options.MergeStdErrToOut)
             process.StartInfo.RedirectStandardError = false;
