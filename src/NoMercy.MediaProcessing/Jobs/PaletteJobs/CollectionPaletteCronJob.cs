@@ -23,7 +23,7 @@ public class CollectionPaletteCronJob : ICronJobExecutor
     {
         await using MediaContext context = new();
 
-        List<Collection[]> collecttions = context.Collections
+        List<Collection[]> collections = context.Collections
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
             .Take(200)
@@ -31,27 +31,27 @@ public class CollectionPaletteCronJob : ICronJobExecutor
             .Chunk(5)
             .ToList();
         
-        _logger.LogTrace("Found {Count} collecttion chunks to process", collecttions.Count);
+        _logger.LogTrace("Found {Count} collection chunks to process", collections.Count);
 
-        foreach (Collection[] collecttionChunk in collecttions)
+        foreach (Collection[] collectionChunk in collections)
         {
-            _logger.LogTrace("Processing collecttion chunk of size: {Size}", collecttionChunk.Length);
+            _logger.LogTrace("Processing collection chunk of size: {Size}", collectionChunk.Length);
 
-            foreach (Collection collecttion in collecttionChunk)
+            foreach (Collection collection in collectionChunk)
             {
-                collecttion._colorPalette = await MovieDbImageManager
+                collection._colorPalette = await MovieDbImageManager
                     .MultiColorPalette([
-                        new("poster", collecttion.Poster),
-                        new("backdrop", collecttion.Backdrop)
+                        new("poster", collection.Poster),
+                        new("backdrop", collection.Backdrop)
                     ]);
 
-                context.Collections.Update(collecttion);
+                context.Collections.Update(collection);
             }
         }
         
         await context.SaveChangesAsync(cancellationToken);
             
-        _logger.LogTrace("Collection palette job completed, updated: {Count}", collecttions.Sum(x => x.Length));
+        _logger.LogTrace("Collection palette job completed, updated: {Count}", collections.Sum(x => x.Length));
 
     }
 }

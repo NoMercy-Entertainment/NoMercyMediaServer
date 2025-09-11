@@ -512,7 +512,7 @@ public class TmdbTvClientIntegrationTests : TmdbTestBase
         result.Should().NotBeNull();
         result.Id.Should().BeGreaterThan(0);
         result.Name.Should().NotBeNullOrEmpty();
-        result.FirstAirDate.Should().NotBeNull();
+        result.Type.Should().NotBeNull();
     }
 
     [Fact]

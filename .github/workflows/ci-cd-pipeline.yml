@@ -1,14 +1,23 @@
-name: Package Repository
+name: CI/CD Pipeline
 
 on:
+  push:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+    branches:
+      - dev
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+    branches:
+      - dev
   release:
     types: [published]
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Build Executables"]
-    types:
-      - completed
-      
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -18,23 +27,120 @@ permissions:
   pages: write
   id-token: write
   actions: read
+  pull-requests: write
 
 jobs:
-  build_packages:
+  test:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      should_build: ${{ steps.changes.outputs.should_build }}
+    
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
+          
+      - name: Restore dependencies
+        run: dotnet restore NoMercy.Server.sln
+
+      - name: Run tests
+        run: >
+          dotnet test NoMercy.Server.sln 
+          --configuration Release
+          --runtime linux-x64
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverletArgs.runsettings
+          --verbosity minimal
+
+      - name: Check for source changes
+        id: changes
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          elif git diff --quiet HEAD~1 HEAD -- src/; then
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        id: bump-version
+        if: success() && github.ref == 'refs/heads/dev' && steps.changes.outputs.should_build == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git config --global --add safe.directory ${{ github.workspace }}
+          git fetch --tags
+          
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "1.0.0")
+          MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1 | sed 's/v//')
+          MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+          PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+          
+          NEW_PATCH=$(($PATCH + 1))
+          NEW_VERSION=$MAJOR.$MINOR.$NEW_PATCH 
+          
+          sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" src/NoMercy.Server/NoMercy.Server.csproj
+          git add src/NoMercy.Server/NoMercy.Server.csproj
+          git commit -m "Update version to ${NEW_VERSION}"
+          git push origin dev
+
+      - name: Get Version
+        id: get-version
+        uses: kzrnm/get-net-sdk-project-versions-action@v2
+        with:
+          proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
+
+      - name: Merge Dev into Master
+        if: success() && github.ref == 'refs/heads/dev' && steps.changes.outputs.should_build == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git fetch origin
+          git checkout master
+          git pull --rebase origin master
+          git merge origin/dev --no-edit --allow-unrelated-histories -X theirs
+          git push origin master
+          git checkout dev
+          git rebase master
+          git push --force-with-lease origin dev
+
+  build_executables:
+    needs: test
+    if: needs.test.outputs.should_build == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      # Setup .NET SDK for the NoMercy.Server project
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
 
-      - name: Build NoMercy.Server
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Restore dependencies
+        run: dotnet restore NoMercy.Server.sln
+
+      - name: Publish NoMercy.Server
         run: |
           mkdir -p ./output
+      
+          # Publish for Linux
           dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj \
             --configuration Release \
             --runtime linux-x64 \
@@ -48,11 +154,50 @@ jobs:
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyMediaServer \
             --output ./output
-          chmod +x ./output/NoMercyMediaServer
+          mv ./output/NoMercyMediaServer ./output/NoMercyMediaServer-linux-x64
+      
+          # Windows Build
+          dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:EnableCompressionInSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false \
+            /p:PublishReadyToRun=false \
+            /p:OutputFileName=NoMercyMediaServer \
+            --output ./output
+          mv ./output/NoMercyMediaServer.exe ./output/NoMercyMediaServer-windows-x64.exe
 
-      - name: Build NoMercy.Updater
+          # macOS Build
+          dotnet publish ./src/NoMercy.Server/NoMercy.Server.csproj \
+            --configuration Release \
+            --runtime osx-x64 \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:EnableCompressionInSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false \
+            /p:PublishReadyToRun=false \
+            /p:OutputFileName=NoMercyMediaServer \
+            --output ./output
+          
+          mkdir -p ./output/NoMercyMediaServer.app/Contents/{MacOS,Resources}
+          cp ./output/NoMercyMediaServer ./output/NoMercyMediaServer.app/Contents/MacOS/
+          cp ./src/NoMercy.Server/Assets/MacOS/Info.plist ./output/NoMercyMediaServer.app/Contents/
+          cp ./src/NoMercy.Server/Assets/MacOS/icon.icns ./output/NoMercyMediaServer.app/Contents/Resources/AppIcon.icns
+          chmod +x ./output/NoMercyMediaServer.app/Contents/MacOS/NoMercyMediaServer
+          tar -czf ./output/NoMercyMediaServer-macos-x64.tar.gz -C ./output NoMercyMediaServer.app
+          mv ./output/NoMercyMediaServer ./output/NoMercyMediaServer-macos-x64
+
+      - name: Publish NoMercy.Updater
         run: |
-          mkdir -p ./output
+          # Publish for Linux
           dotnet publish ./src/NoMercy.Updater/NoMercy.Updater.csproj \
             --configuration Release \
             --runtime linux-x64 \
@@ -66,19 +211,63 @@ jobs:
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyUpdater \
             --output ./output
-          chmod +x ./output/NoMercyUpdater
+          mv ./output/NoMercyUpdater ./output/NoMercyUpdater-linux-x64
+      
+          # Windows Build
+          dotnet publish ./src/NoMercy.Updater/NoMercy.Updater.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:EnableCompressionInSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false \
+            /p:PublishReadyToRun=false \
+            /p:OutputFileName=NoMercyUpdater \
+            --output ./output
+          mv ./output/NoMercyUpdater.exe ./output/NoMercyUpdater-windows-x64.exe
+      
+          # macOS Build
+          dotnet publish ./src/NoMercy.Updater/NoMercy.Updater.csproj \
+            --configuration Release \
+            --runtime osx-x64 \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:EnableCompressionInSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false \
+            /p:PublishReadyToRun=false \
+            /p:OutputFileName=NoMercyUpdater \
+            --output ./output
+
+          mkdir -p ./output/NoMercyUpdater.app/Contents/{MacOS,Resources}
+          cp ./output/NoMercyUpdater ./output/NoMercyUpdater.app/Contents/MacOS/
+          cp ./src/NoMercy.Server/Assets/MacOS/Info.plist.updater ./output/NoMercyUpdater.app/Contents/Info.plist
+          cp ./src/NoMercy.Server/Assets/MacOS/icon.icns ./output/NoMercyUpdater.app/Contents/Resources/AppIcon.icns
+          chmod +x ./output/NoMercyUpdater.app/Contents/MacOS/NoMercyUpdater
+          tar -czf ./output/NoMercyUpdater-macos-x64.tar.gz -C ./output NoMercyUpdater.app
+          mv ./output/NoMercyUpdater ./output/NoMercyUpdater-macos-x64
 
       - name: Pull App Files
         uses: actions/checkout@v4
         with:
           repository: NoMercy-Entertainment/NoMercyApp
-          path: ./src/NoMercy.App/wwwroot
+          path: ./src/NoMercy.App/Resources/wwwroot
           fetch-depth: 0
           ref: gh-pages
 
-      - name: Build NoMercy.App
+      - name: Move App Files
         run: |
-          mkdir -p ./output
+          mv ./src/NoMercy.App/Resources/wwwroot/* ./src/NoMercy.App/Resources
+          rm -rf ./src/NoMercy.App/Resources/wwwroot
+
+      - name: Publish NoMercy.App
+        run: |
+          # Publish for Linux
           dotnet publish ./src/NoMercy.App/NoMercy.App.csproj \
             --configuration Release \
             --runtime linux-x64 \
@@ -91,14 +280,165 @@ jobs:
             /p:DebugSymbols=false \
             /p:PublishReadyToRun=false \
             /p:OutputFileName=NoMercyApp \
+            /p:PublishTrimmed=true \
             --output ./output
-          chmod +x ./output/NoMercyApp
+          mv ./output/NoMercyApp ./output/NoMercyApp-linux-x64
+      
+          # Windows Build
+          dotnet publish ./src/NoMercy.App/NoMercy.App.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:EnableCompressionInSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false \
+            /p:PublishReadyToRun=false \
+            /p:OutputFileName=NoMercyApp \
+            /p:PublishTrimmed=true \
+            --output ./output
+          mv ./output/NoMercyApp.exe ./output/NoMercyApp-windows-x64.exe
+      
+          # macOS Build
+          dotnet publish ./src/NoMercy.App/NoMercy.App.csproj \
+            --configuration Release \
+            --runtime osx-x64 \
+            --self-contained true \
+            /p:PublishSingleFile=true \
+            /p:IncludeNativeLibrariesForSelfExtract=true \
+            /p:IncludeAllContentForSelfExtract=true \
+            /p:EnableCompressionInSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false \
+            /p:PublishReadyToRun=false \
+            /p:OutputFileName=NoMercyApp \
+            /p:PublishTrimmed=true \
+            --output ./output
 
-      - name: Get Version
-        uses: kzrnm/get-net-sdk-project-versions-action@v2
-        id: get-version
+          mkdir -p ./output/NoMercyApp.app/Contents/{MacOS,Resources}
+          cp ./output/NoMercyApp ./output/NoMercyApp.app/Contents/MacOS/
+          cp ./src/NoMercy.Server/Assets/MacOS/Info.plist.app ./output/NoMercyApp.app/Contents/Info.plist
+          cp ./src/NoMercy.Server/Assets/MacOS/icon.icns ./output/NoMercyApp.app/Contents/Resources/AppIcon.icns
+          chmod +x ./output/NoMercyApp.app/Contents/MacOS/NoMercyApp
+          tar -czf ./output/NoMercyApp-macos-x64.tar.gz -C ./output NoMercyApp.app
+          mv ./output/NoMercyApp ./output/NoMercyApp-macos-x64
+
+      - name: Create DMGs for macOS
+        continue-on-error: true
+        run: |
+          npm install -g create-dmg
+          
+          # Create DMG for MediaServer
+          npx create-dmg \
+            ./output/NoMercyMediaServer.app \
+            ./output \
+            --overwrite \
+            --dmg-title="NoMercyMediaServer" \
+            --window-size 500 300 \
+            --icon-size 128 \
+            --icon NoMercyMediaServer.app 100 150 \
+            --app-drop-link 400 150
+
+          # Create DMG for Updater
+          npx create-dmg \
+            ./output/NoMercyUpdater.app \
+            ./output \
+            --overwrite \
+            --dmg-title="NoMercyUpdater" \
+            --window-size 500 300 \
+            --icon-size 128 \
+            --icon NoMercyUpdater.app 100 150 \
+            --app-drop-link 400 150
+
+          # Create DMG for App
+          npx create-dmg \
+            ./output/NoMercyApp.app \
+            ./output \
+            --overwrite \
+            --dmg-title="NoMercyApp" \
+            --window-size 500 300 \
+            --icon-size 128 \
+            --icon NoMercyApp.app 100 150 \
+            --app-drop-link 400 150
+
+      - name: Rename DMG files
+        continue-on-error: true
+        run: |
+          mv "./output/NoMercy MediaServer 1.0.0.dmg" ./output/NoMercyMediaServer-macos-x64.dmg || true
+          mv "./output/NoMercy Updater 1.0.0.dmg" ./output/NoMercyUpdater-macos-x64.dmg || true
+          mv "./output/NoMercy 1.0.0.dmg" ./output/NoMercyApp-macos-x64.dmg || true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
+          name: executables
+          path: ./output/*
+          retention-days: 30
+
+      - name: Get Short SHA
+        id: get_short_sha
+        run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+        
+      - name: Create Release
+        if: github.ref == 'refs/heads/master' || github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.test.outputs.version }}
+          name: NoMercy MediaServer v${{ needs.test.outputs.version }}
+          body: |            
+            ## What's New
+            This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
+            
+            ## Downloads
+            Binary executables are available for:
+            - Windows (x64)
+            - macOS (x64)
+            - Linux (x64)
+            
+            Each platform includes the MediaServer, Updater, and App components.
+            
+            ## Installation
+            Download the appropriate files for your platform and follow the installation instructions in our documentation.
+            
+            ## Feedback
+            If you encounter any issues, please report them on our GitHub repository.
+
+            Build: ${{ steps.get_short_sha.outputs.short_sha }}
+          draft: false
+          prerelease: false
+          files: |
+            ./output/NoMercyMediaServer-*
+            ./output/NoMercyUpdater-*
+            ./output/NoMercyApp-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build_packages:
+    needs: [test, build_executables]
+    if: (needs.test.outputs.should_build == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/master' || github.event_name == 'release')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: executables
+          path: ./output
+
+      - name: Make Linux executables executable
+        run: |
+          chmod +x ./output/NoMercyMediaServer-linux-x64
+          chmod +x ./output/NoMercyUpdater-linux-x64
+          chmod +x ./output/NoMercyApp-linux-x64
 
       - name: Install Package Build Dependencies
         run: |
@@ -151,7 +491,6 @@ jobs:
 
       - name: Setup Package Directories
         run: |
-          VERSION=${{ steps.get-version.outputs.version }}
           mkdir -p packages/{apt,rpm,arch,debian,redhat}
           mkdir -p packages/apt/{pool/main/n,dists/stable/main/binary-amd64}
           mkdir -p packages/rpm/pool/x86_64
@@ -161,7 +500,7 @@ jobs:
 
       - name: Build DEB Packages
         run: |
-          VERSION=${{ steps.get-version.outputs.version }}
+          VERSION=${{ needs.test.outputs.version }}
           
           # Function to create DEB package
           create_deb_package() {
@@ -270,9 +609,9 @@ jobs:
           }
     
           # Build packages
-          create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-          create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-          create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+          create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
+          create_deb_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater-linux-x64" "NoMercy-Updater.desktop"
+          create_deb_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp-linux-x64" "NoMercy-App.desktop"
       
           # Update package index
           cd packages/apt
@@ -282,7 +621,7 @@ jobs:
 
       - name: Build RPM Packages and Sign Repository
         run: |
-          VERSION=${{ steps.get-version.outputs.version }}
+          VERSION=${{ needs.test.outputs.version }}
 
           # Setup RPM build environment
           mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
@@ -295,10 +634,6 @@ jobs:
             local desktop_file=$4
 
             # Copy source files
-            cp "${bin_path}" ~/rpmbuild/SOURCES/"${name}"
-            cp "./src/NoMercy.Server/Assets/Linux/${desktop_file}" ~/rpmbuild/SOURCES/
-            cp "./src/NoMercy.Server/Assets/Linux/icon.png" ~/rpmbuild/SOURCES/
-
             cat > ~/rpmbuild/SPECS/"${name}".spec << EOF
           Name: ${name}
           Version: ${VERSION}
@@ -332,21 +667,12 @@ jobs:
           * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - ${VERSION}-1
           - Initial package
           EOF
-            
-            # Build RPM package
-            rpmbuild -bb ~/rpmbuild/SPECS/"${name}".spec
-            
-            # Move and create symlink
-            mv ~/rpmbuild/RPMS/x86_64/"${name}-${VERSION}-1.x86_64.rpm" packages/rpm/pool/x86_64/
-            cd packages/rpm/pool/x86_64
-            ln -sf "${name}-${VERSION}-1.x86_64.rpm" "${name}-latest.x86_64.rpm"
-            cd -
           }
             
           # Build packages
-          create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-          create_rpm_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-          create_rpm_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+          create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
+          create_rpm_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater-linux-x64" "NoMercy-Updater.desktop"
+          create_rpm_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp-linux-x64" "NoMercy-App.desktop"
           
           # Generate repo metadata
           createrepo_c packages/rpm
@@ -361,24 +687,17 @@ jobs:
 
       - name: Build Arch Packages and Sign Database
         run: |
-          VERSION=${{ steps.get-version.outputs.version }}
+          VERSION=${{ needs.test.outputs.version }}
 
           # Function to create Arch package
-           create_arch_package() {
+          create_arch_package() {
             local name=$1
             local friendly_name=$2
             local bin_path=$3
             local desktop_file=$4
-            local PACKAGE_ROOT=./packages/arch-${name}
-            mkdir -p ${PACKAGE_ROOT}/pkg/${name}/usr/{bin,share/{applications,icons/hicolor/scalable/apps}}
 
-            # Copy files directly to package structure
-            cp ${bin_path} ${PACKAGE_ROOT}/pkg/${name}/usr/bin/${name}
-            cp ./src/NoMercy.Server/Assets/Linux/${desktop_file} ${PACKAGE_ROOT}/pkg/${name}/usr/share/applications/
-            cp ./src/NoMercy.Server/Assets/Linux/icon.png ${PACKAGE_ROOT}/pkg/${name}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-
-            # Create .PKGINFO
-            cat > ${PACKAGE_ROOT}/pkg/${name}/.PKGINFO <<EOF
+            # Create package info
+            cat > "${name}.PKGINFO" << EOF
           pkgname = ${name}
           pkgver = ${VERSION}-1
           pkgdesc = ${friendly_name}
@@ -389,23 +708,12 @@ jobs:
           license = custom
           depend = glibc
           EOF
-
-             # Create package manually with tar and zstd
-            cd ${PACKAGE_ROOT}/pkg
-            tar -cf - ${name} | zstd -z -c -T0 > ../${name}-${VERSION}-1-x86_64.pkg.tar.zst
-            cd ../../..
-
-            # Move and create symlink
-            mv ${PACKAGE_ROOT}/${name}-${VERSION}-1-x86_64.pkg.tar.zst ./packages/arch/pool/x86_64/
-            cd ./packages/arch/pool/x86_64
-            ln -sf ${name}-${VERSION}-1-x86_64.pkg.tar.zst ${name}-latest-x86_64.pkg.tar.zst
-            cd -
           }
 
           # Build packages
-          create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer" "NoMercy-MediaServer.desktop"
-          create_arch_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater" "NoMercy-Updater.desktop"
-          create_arch_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp" "NoMercy-App.desktop"
+          create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "./output/NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
+          create_arch_package "nomercyupdater" "NoMercy-Updater" "./output/NoMercyUpdater-linux-x64" "NoMercy-Updater.desktop"
+          create_arch_package "nomercyapp" "NoMercy-App" "./output/NoMercyApp-linux-x64" "NoMercy-App.desktop"
 
           # Generate repo database
           cd packages/arch/pool/x86_64
@@ -425,9 +733,7 @@ jobs:
           cd packages/arch/pool/x86_64
 
           # Trust the key
-          gpg --batch --yes --pinentry-mode loopback \
-            -u "${{ vars.GPG_KEY_ID }}" \
-            -o nomercy.db.sig --detach-sign nomercy.db
+          gpg --batch --yes --pinentry-mode loopback
 
           # Create pacman.conf
           cat > ../../pacman.conf << EOF
@@ -480,8 +786,8 @@ jobs:
           # Calculate hashes from root of dists/stable
           cd .. # Move to dists directory
           for file in $(find stable/main -type f); do
-            size=$(wc -c < "$file")
-            sha256=$(sha256sum "$file" | cut -d' ' -f1)
+            sha256=$(sha256sum "${file}" | cut -d' ' -f1)
+            size=$(stat -c%s "${file}")
             echo " $sha256 $size ${file#stable/}" >> stable/Release
           done
 
@@ -497,15 +803,13 @@ jobs:
       
       - name: Generate Repository Index
         run: |
-          VERSION=${{ steps.get-version.outputs.version }}
+          VERSION=${{ needs.test.outputs.version }}
 
           # Function to get package versions
           get_versions() {
-            local path=$1
+            local dir=$1
             local pattern=$2
-            cd $path
-            ls -1 $pattern | grep -v latest | sed 's/.*[_-]\([0-9.]*\)[_-].*$/\1/' | sort -V
-            cd -
+            find "$dir" -name "$pattern" -printf '%f\n' | sort -V | tail -5
           }
 
           # Get versions for all packages
@@ -525,15 +829,11 @@ jobs:
           <!DOCTYPE html>
           <html>
           <head>
-            <title>NoMercy Package Repository</title>
+            <title>NoMercy Repository</title>
           </head>
           <body>
-            <h1>NoMercy Package Repository</h1>
-            <h2>Installation Instructions</h2>
-
-            <h3>Latest Version ($VERSION)</h3>
-
-            <h4>Debian/Ubuntu</h4>
+            <h1>NoMercy Repository</h1>
+            <h2>Ubuntu/Debian Installation</h2>
             <pre>
           # For latest version
           echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
@@ -541,15 +841,13 @@ jobs:
           sudo apt update
           sudo apt install nomercymediaserver nomercyupdater nomercyapp
           </pre>
-
-            <h4>RedHat/Fedora</h4>
+            <h2>CentOS/RHEL/Fedora Installation</h2>
             <pre>
           # For latest version
           sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo
           sudo dnf install nomercymediaserver nomercyupdater nomercyapp
           </pre>
-
-            <h4>Arch Linux</h4>
+            <h2>Arch Linux Installation</h2>
             <pre>
           # For latest version
           echo "[nomercy]
@@ -560,53 +858,6 @@ jobs:
           sudo pacman -Sy
           sudo pacman -S nomercymediaserver nomercyupdater nomercyapp
           </pre>
-
-            <h3>Available Versions</h3>
-
-            <h4>DEB Packages - MediaServer</h4>
-            <ul>
-            $(for ver in $MS_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
-            </ul>
-
-            <h4>DEB Packages - Updater</h4>
-            <ul>
-            $(for ver in $UP_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
-            </ul>
-
-            <h4>DEB Packages - App</h4>
-            <ul>
-            $(for ver in $APP_DEB_VERSIONS; do echo "<li>$ver</li>"; done)
-            </ul>
-
-            <h4>RPM Packages - MediaServer</h4>
-            <ul>
-            $(for ver in $MS_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
-            </ul>
-
-            <h4>RPM Packages - Updater</h4>
-            <ul>
-            $(for ver in $UP_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
-            </ul>
-
-            <h4>RPM Packages - App</h4>
-            <ul>
-            $(for ver in $APP_RPM_VERSIONS; do echo "<li>$ver</li>"; done)
-            </ul>
-
-            <h4>Arch Packages - MediaServer</h4>
-            <ul>
-            $(for ver in $MS_ARCH_VERSIONS; do echo "<li>$ver</li>"; done)
-            </ul>
-
-            <h4>Arch Packages - Updater</h4>
-            <ul>
-            $(for ver in $UP_ARCH_VERSIONS; do echo "<li>$ver</li>"; done)
-            </ul>
-
-            <h4>Arch Packages - App</h4>
-            <ul>
-            $(for ver in $APP_ARCH_VERSIONS; do echo "<li>$ver</li>"; done)
-            </ul>
           </body>
           </html>
           EOF
