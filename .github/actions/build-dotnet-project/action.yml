@@ -57,7 +57,7 @@ runs:
         
         PROJECT_PATH="./src/NoMercy.${{ inputs.project }}/NoMercy.${{ inputs.project }}.csproj"
         
-        # Set correct executable name based on project
+        # Set correct project names based on actual target names
         if [ "${{ inputs.project }}" == "Server" ]; then
           PROJECT_NAME="NoMercyMediaServer"
         else
@@ -130,7 +130,7 @@ runs:
     - name: Create macOS App Bundle
       shell: bash
       run: |
-        # Set correct executable name based on project
+        # Set correct project names based on actual target names
         if [ "${{ inputs.project }}" == "Server" ]; then
           PROJECT_NAME="NoMercyMediaServer"
         else
@@ -166,7 +166,7 @@ runs:
       shell: bash
       continue-on-error: true
       run: |
-        # Set correct executable name based on project
+        # Set correct project names based on actual target names
         if [ "${{ inputs.project }}" == "Server" ]; then
           PROJECT_NAME="NoMercyMediaServer"
         else
