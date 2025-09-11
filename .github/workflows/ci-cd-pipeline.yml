@@ -34,7 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get-version.outputs.version }}
-      should_build: ${{ steps.changes.outputs.should_build }}
     
     steps:
       - uses: actions/checkout@v5
@@ -58,40 +57,49 @@ jobs:
           --settings tests/coverletArgs.runsettings
           --verbosity minimal
 
-      - name: Check for source changes
-        id: changes
-        run: |
-          if [[ "${{ github.event_name }}" == "release" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "should_build=true" >> $GITHUB_OUTPUT
-          elif git diff --quiet HEAD~1 HEAD -- src/; then
-            echo "should_build=false" >> $GITHUB_OUTPUT
-          else
-            echo "should_build=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Bump version
         id: bump-version
-        if: success() && github.ref == 'refs/heads/dev' && steps.changes.outputs.should_build == 'true'
+        if: success() && github.ref == 'refs/heads/dev'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git config --global --add safe.directory ${{ github.workspace }}
+          
+          # Explicitly fetch all tags
           git fetch --tags
           
+          # Get the latest version tag
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "1.0.0")
+          
+          echo "LATEST_TAG=$LATEST_TAG"
+
+          # Extract components
           MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1 | sed 's/v//')
           MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
           PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
-          
+
+          # Validate components
+          echo "MAJOR=$MAJOR, MINOR=$MINOR, PATCH=$PATCH"
+
+          # Increment patch version
           NEW_PATCH=$(($PATCH + 1))
           NEW_VERSION=$MAJOR.$MINOR.$NEW_PATCH 
           
+          echo "New version will be: $NEW_VERSION"
+        
           sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" src/NoMercy.Server/NoMercy.Server.csproj
-          git add src/NoMercy.Server/NoMercy.Server.csproj
-          git commit -m "Update version to ${NEW_VERSION}"
-          git push origin dev
+
+          # Check if there are any changes to commit
+          if git diff --quiet src/NoMercy.Server/NoMercy.Server.csproj; then
+            echo "No version changes detected, skipping commit"
+          else
+            echo "Version changes detected, committing..."
+            git add src/NoMercy.Server/NoMercy.Server.csproj
+            git commit -m "Update version to ${NEW_VERSION}"
+            git push origin dev
+          fi
 
       - name: Get Version
         id: get-version
@@ -100,13 +108,22 @@ jobs:
           proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
 
       - name: Merge Dev into Master
-        if: success() && github.ref == 'refs/heads/dev' && steps.changes.outputs.should_build == 'true'
+        if: success() && github.ref == 'refs/heads/dev'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git fetch origin
+          
+          # Check if dev branch has any commits ahead of master
+          COMMITS_AHEAD=$(git rev-list --count origin/master..origin/dev 2>/dev/null || echo "0")
+          if [ "$COMMITS_AHEAD" -eq 0 ]; then
+            echo "Dev branch is not ahead of master, skipping merge"
+            exit 0
+          fi
+          
+          echo "Dev branch is $COMMITS_AHEAD commits ahead of master, proceeding with merge"
           git checkout master
           git pull --rebase origin master
           git merge origin/dev --no-edit --allow-unrelated-histories -X theirs
@@ -117,7 +134,7 @@ jobs:
 
   build_executables:
     needs: test
-    if: needs.test.outputs.should_build == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    if: always() && needs.test.result == 'success'
     runs-on: macos-latest
 
     steps:
@@ -417,7 +434,7 @@ jobs:
 
   build_packages:
     needs: [test, build_executables]
-    if: (needs.test.outputs.should_build == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/master' || github.event_name == 'release')
+    if: always() && needs.test.result == 'success' && needs.build_executables.result == 'success' && (github.ref == 'refs/heads/master' || github.event_name == 'release')
     runs-on: ubuntu-latest
     
     steps:
