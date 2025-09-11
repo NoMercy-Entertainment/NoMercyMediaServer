@@ -96,6 +96,11 @@ jobs:
       github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
       - name: Setup .NET Environment
         uses: ./.github/actions/setup-dotnet
         with:
