@@ -38,24 +38,34 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 1  # Only current commit needed
+          fetch-tags: true  # Only fetch tags for version bumping
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "9.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
           
       - name: Restore dependencies
-        run: dotnet restore NoMercy.Server.sln
+        run: dotnet restore NoMercy.Server.sln --verbosity minimal
 
-      - name: Run tests
+      - name: Run fast tests (Unit + ErrorHandling)
         run: >
           dotnet test NoMercy.Server.sln 
-          --configuration Release
-          --runtime linux-x64
-          --collect:"XPlat Code Coverage"
-          --settings tests/coverletArgs.runsettings
+          --configuration Debug
+          --no-restore
           --verbosity minimal
+          --logger trx
+          --blame-hang-timeout 5m
+          --filter "Category=Unit|Category=ErrorHandling"
 
       - name: Bump version
         id: bump-version
@@ -67,8 +77,7 @@ jobs:
           git config user.email "actions@github.com"
           git config --global --add safe.directory ${{ github.workspace }}
           
-          # Explicitly fetch all tags
-          git fetch --tags
+          # Tags are already fetched with checkout, no need for additional fetch
           
           # Get the latest version tag
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "1.0.0")
@@ -131,6 +140,82 @@ jobs:
           git checkout dev
           git rebase master
           git push --force-with-lease origin dev
+
+  # Optional coverage job - only runs on master or when manually triggered
+  coverage:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - uses: actions/checkout@v5
+        
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+          
+      - name: Restore dependencies
+        run: dotnet restore NoMercy.Server.sln --verbosity minimal
+
+      - name: Run tests with coverage
+        run: >
+          dotnet test NoMercy.Server.sln 
+          --configuration Release
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverletArgs.runsettings
+          --verbosity minimal
+
+  # Integration tests - only runs on master, releases, or manually
+  integration_tests:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - uses: actions/checkout@v5
+        
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+          
+      - name: Restore dependencies
+        run: dotnet restore NoMercy.Server.sln --verbosity minimal
+
+      - name: Run integration tests
+        run: >
+          dotnet test NoMercy.Server.sln 
+          --configuration Debug
+          --no-restore
+          --verbosity minimal
+          --logger trx
+          --blame-hang-timeout 10m
+          --filter "Category=Integration"
+
+      - name: Run performance tests
+        run: >
+          dotnet test NoMercy.Server.sln 
+          --configuration Release
+          --no-restore
+          --verbosity minimal
+          --logger trx
+          --blame-hang-timeout 15m
+          --filter "Category=Performance"
 
   build_executables:
     needs: test
@@ -274,7 +359,7 @@ jobs:
         with:
           repository: NoMercy-Entertainment/NoMercyApp
           path: ./src/NoMercy.App/Resources/wwwroot
-          fetch-depth: 0
+          fetch-depth: 1  # Only need latest files, not history
           ref: gh-pages
 
       - name: Move App Files
