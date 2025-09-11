@@ -127,7 +127,8 @@ runs:
         PROJECT_NAME="NoMercy${{ inputs.project }}"
         
         echo "Creating macOS App Bundle for $PROJECT_NAME..."
-        mkdir -p "./output/$PROJECT_NAME.app/Contents/{MacOS,Resources}"
+        mkdir -p "./output/$PROJECT_NAME.app/Contents/MacOS"
+        mkdir -p "./output/$PROJECT_NAME.app/Contents/Resources"
         cp "./output/$PROJECT_NAME" "./output/$PROJECT_NAME.app/Contents/MacOS/"
         
         # Copy appropriate Info.plist based on project
