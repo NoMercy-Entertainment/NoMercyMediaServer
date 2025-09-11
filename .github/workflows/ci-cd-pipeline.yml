@@ -86,6 +86,7 @@ jobs:
     secrets: inherit
     with:
       version: ${{ needs.version_management.outputs.version }}
+      GPG_PUBLIC_KEY: ${{ vars.GPG_PUBLIC_KEY }}
 
   # Step 7: Update Repository for non-source changes (docs, workflows, etc.)
   update_repository_only:

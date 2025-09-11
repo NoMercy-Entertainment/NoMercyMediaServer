@@ -7,12 +7,13 @@ on:
         description: 'Package version'
         required: true
         type: string
+      GPG_PUBLIC_KEY:
+        description: 'GPG public key'
+        required: true
+        type: string
     secrets:
       GPG_PRIVATE_KEY:
         description: 'GPG private key for signing'
-        required: true
-      GPG_PUBLIC_KEY:
-        description: 'GPG public key'
         required: true
 
 jobs:
@@ -32,7 +33,7 @@ jobs:
 
       - name: Create Public Key File
         run: |
-          echo "${{ secrets.GPG_PUBLIC_KEY }}" > packages/nomercy_repo.gpg.pub
+          echo "${{ inputs.GPG_PUBLIC_KEY }}" > packages/nomercy_repo.gpg.pub
           chmod 644 packages/nomercy_repo.gpg.pub
 
       - name: Generate APT Repository Metadata and Sign
