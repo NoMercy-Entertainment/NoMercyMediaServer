@@ -1,0 +1,12 @@
+Origin: NoMercy Entertainment
+Label: NoMercy
+Suite: stable
+Codename: stable
+Version: 1.0
+Architectures: amd64
+Components: main
+Description: NoMercy Entertainment Repository
+Date: Thu, 11 Sep 2025 15:39:21 UTC
+SHA256:
+ cf4ad7f31dd0c16230c4876c34c064fbfe75890913bdb166447e8219bb8d9253 3225 main/binary-amd64/Packages
+ 69b01478cad3b997b2d22817704b3cede9bc067c50b0a6222507f43cfdaee42e 677 main/binary-amd64/Packages.gz
