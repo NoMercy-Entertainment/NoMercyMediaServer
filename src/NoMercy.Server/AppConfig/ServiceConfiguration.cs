@@ -85,7 +85,11 @@ public static class ServiceConfiguration
         services.RegisterCronJob<SimilarPaletteCronJob>("similar-palette-job");
         services.AddScoped<ProcessFanartArtistImagesCronJob>();
         services.RegisterCronJob<ProcessFanartArtistImagesCronJob>("fanart-images-job");
+        
+        services.AddScoped<ArtistPaletteCronJob>();
+        services.RegisterCronJob<ArtistPaletteCronJob>("artist-palette-job");
     }
+    
 
     private static void ConfigureCoreServices(IServiceCollection services)
     {

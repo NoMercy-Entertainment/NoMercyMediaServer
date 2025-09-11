@@ -45,6 +45,8 @@ public static class ApplicationConfiguration
         cronWorker.RegisterJobWithSchedule<RecommendationPaletteCronJob>("recommendation-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<SimilarPaletteCronJob>("similar-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<ProcessFanartArtistImagesCronJob>("fanart-images-job", app.ApplicationServices);
+        
+        cronWorker.RegisterJobWithSchedule<ArtistPaletteCronJob>("artist-palette-job", app.ApplicationServices);
     }
 
     private static void ConfigureLocalization(IApplicationBuilder app)
