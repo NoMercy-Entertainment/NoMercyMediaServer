@@ -1,0 +1,36 @@
+name: 'Generate Repository Website'
+description: 'Generate modern repository website with templating'
+inputs:
+  version:
+    description: 'Current package version'
+    required: true
+  output-path:
+    description: 'Output directory for website files'
+    required: true
+    default: './packages'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup output directory
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.output-path }}/assets"
+
+    - name: Copy CSS template
+      shell: bash
+      run: |
+        cp "${{ github.action_path }}/templates/style.css" "${{ inputs.output-path }}/assets/"
+
+    - name: Copy JavaScript template
+      shell: bash
+      run: |
+        cp "${{ github.action_path }}/templates/script.js" "${{ inputs.output-path }}/assets/"
+
+    - name: Generate HTML from template
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        
+        # Use sed to replace template variables in the HTML template
+        sed "s/{{VERSION}}/${VERSION}/g" "${{ github.action_path }}/templates/index.html" > "${{ inputs.output-path }}/index.html"
