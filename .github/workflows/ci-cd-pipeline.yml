@@ -64,7 +64,6 @@ jobs:
           --no-restore
           --verbosity minimal
           --logger trx
-          --parallel
           --blame-hang-timeout 5m
           --filter "Category=Unit|Category=ErrorHandling"
 
@@ -205,7 +204,6 @@ jobs:
           --no-restore
           --verbosity minimal
           --logger trx
-          --parallel
           --blame-hang-timeout 10m
           --filter "Category=Integration"
 
