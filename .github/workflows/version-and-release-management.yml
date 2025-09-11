@@ -18,11 +18,15 @@ jobs:
       should_deploy: ${{ steps.check-deploy.outputs.should_deploy }}
     
     steps:
-      - name: Setup .NET Environment
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET Environment  
         uses: ./.github/actions/setup-dotnet
         with:
-          fetch-tags: true
-          fetch-depth: 0
+          dotnet-version: 9.0.x
 
       - name: Get latest tag
         id: get-tag

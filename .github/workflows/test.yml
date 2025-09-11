@@ -15,6 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
       - name: Setup .NET Environment
         uses: ./.github/actions/setup-dotnet
         with:
@@ -36,6 +41,11 @@ jobs:
     if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
       - name: Setup .NET Environment
         uses: ./.github/actions/setup-dotnet
         with:
@@ -55,6 +65,11 @@ jobs:
     if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
       - name: Setup .NET Environment
         uses: ./.github/actions/setup-dotnet
         with:
