@@ -6,6 +6,8 @@
 
 **"Empower Ownership: Overcome Licensing Barriers and Effortlessly Archive Your Media Collection with Privacy and Simplicity."**
 
+[![CI/CD Pipeline](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/actions)
+
 ## Features
 
 - **Automatic Encoding**: Effortlessly convert your media files into various formats.
