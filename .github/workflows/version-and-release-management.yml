@@ -42,15 +42,22 @@ jobs:
           if [[ "${{ github.event_name }}" == "release" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "has_source_changes=true" >> $GITHUB_OUTPUT
             echo "needs_merge=true" >> $GITHUB_OUTPUT
-          # For dev pushes, check if source files actually changed (with fallback)
-          elif git diff --quiet HEAD~1 HEAD -- src/ 2>/dev/null; then
-            echo "has_source_changes=false" >> $GITHUB_OUTPUT
-            echo "needs_merge=true" >> $GITHUB_OUTPUT
-            echo "No source changes detected, but other files may have changed - will merge to master"
+          # Check for workflow changes that affect CI/CD pipeline - treat as source changes
+          elif git diff --quiet HEAD~1 HEAD -- .github/workflows/ .github/actions/ 2>/dev/null; then
+            # No workflow changes, check source files
+            if git diff --quiet HEAD~1 HEAD -- src/ 2>/dev/null; then
+              echo "has_source_changes=false" >> $GITHUB_OUTPUT
+              echo "needs_merge=true" >> $GITHUB_OUTPUT
+              echo "No source or workflow changes detected, but other files may have changed - will merge to master"
+            else
+              echo "has_source_changes=true" >> $GITHUB_OUTPUT
+              echo "needs_merge=true" >> $GITHUB_OUTPUT
+              echo "Source changes detected - proceeding with version bump and merge"
+            fi
           else
             echo "has_source_changes=true" >> $GITHUB_OUTPUT
             echo "needs_merge=true" >> $GITHUB_OUTPUT
-            echo "Source changes detected OR git diff failed (playing it safe) - proceeding with version bump and merge"
+            echo "Workflow/Action changes detected - treating as source changes to validate CI/CD pipeline"
           fi
 
       - name: Bump version
