@@ -1,3 +1,4 @@
+// Version management test - trigger workflow with manual version bump
 using System.Diagnostics;
 using System.Net;
 using System.Reflection;
