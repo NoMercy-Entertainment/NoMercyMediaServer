@@ -18,7 +18,6 @@ public class Startup
     {
         ServiceConfiguration.ConfigureServices(services);
 
-        // Add the StartupOptions and SeedingOptions to the service container
         services.AddSingleton(_options);
     }
 
