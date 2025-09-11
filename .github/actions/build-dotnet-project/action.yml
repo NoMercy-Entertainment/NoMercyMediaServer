@@ -56,7 +56,13 @@ runs:
         mkdir -p ./output
         
         PROJECT_PATH="./src/NoMercy.${{ inputs.project }}/NoMercy.${{ inputs.project }}.csproj"
-        PROJECT_NAME="NoMercy${{ inputs.project }}"
+        
+        # Set correct executable name based on project
+        if [ "${{ inputs.project }}" == "Server" ]; then
+          PROJECT_NAME="NoMercyMediaServer"
+        else
+          PROJECT_NAME="NoMercy${{ inputs.project }}"
+        fi
         
         # Determine if we need PublishTrimmed
         TRIMMED_FLAG=""
@@ -124,7 +130,12 @@ runs:
     - name: Create macOS App Bundle
       shell: bash
       run: |
-        PROJECT_NAME="NoMercy${{ inputs.project }}"
+        # Set correct executable name based on project
+        if [ "${{ inputs.project }}" == "Server" ]; then
+          PROJECT_NAME="NoMercyMediaServer"
+        else
+          PROJECT_NAME="NoMercy${{ inputs.project }}"
+        fi
         
         echo "Creating macOS App Bundle for $PROJECT_NAME..."
         mkdir -p "./output/$PROJECT_NAME.app/Contents/MacOS"
@@ -155,7 +166,12 @@ runs:
       shell: bash
       continue-on-error: true
       run: |
-        PROJECT_NAME="NoMercy${{ inputs.project }}"
+        # Set correct executable name based on project
+        if [ "${{ inputs.project }}" == "Server" ]; then
+          PROJECT_NAME="NoMercyMediaServer"
+        else
+          PROJECT_NAME="NoMercy${{ inputs.project }}"
+        fi
         
         echo "Creating DMG for $PROJECT_NAME..."
         npm install -g create-dmg
