@@ -26,7 +26,7 @@ public class EpisodePaletteCronJob : ICronJobExecutor
         List<Episode[]> episodes = context.Episodes
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(200)
+            .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
@@ -43,10 +43,11 @@ public class EpisodePaletteCronJob : ICronJobExecutor
 
                 context.Episodes.Update(episode);
             }
-        }
-        
-        await context.SaveChangesAsync(cancellationToken);
             
+            await context.SaveChangesAsync(cancellationToken);
+            
+        }
+
         _logger.LogTrace("Episode palette job completed, updated: {Count}", episodes.Sum(x => x.Length));
 
     }

@@ -32,7 +32,7 @@ public class ImagePaletteCronJob : ICronJobExecutor
             .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
                         e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(200)
+            .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
@@ -49,9 +49,10 @@ public class ImagePaletteCronJob : ICronJobExecutor
                 
                 context.Images.Update(image);
             });
+            
+            await context.SaveChangesAsync(cancellationToken);
+            
         }
-        
-        await context.SaveChangesAsync(cancellationToken);
             
         _logger.LogTrace("Image palette job completed, processed {Count} images", images.Sum(x => x.Length));
     }

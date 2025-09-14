@@ -27,7 +27,7 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
         List<Recommendation[]> recommendations = context.Recommendations
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.TvFrom != null ? x.TvFrom.UpdatedAt : x.MovieFrom!.UpdatedAt)
-            .Take(200)
+            .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
@@ -48,9 +48,10 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
                 
                 context.Recommendations.Update(recommendation);
             });
+            
+            await context.SaveChangesAsync(cancellationToken);
+            
         }
-        
-        await context.SaveChangesAsync(cancellationToken);
             
         _logger.LogTrace("Recommendation palette job completed, updated: {Count}", recommendations.Sum(x => x.Length));
     }

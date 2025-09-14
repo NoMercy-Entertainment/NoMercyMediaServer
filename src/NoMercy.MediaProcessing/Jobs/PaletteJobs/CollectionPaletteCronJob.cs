@@ -26,7 +26,7 @@ public class CollectionPaletteCronJob : ICronJobExecutor
         List<Collection[]> collections = context.Collections
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(200)
+            .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
@@ -47,10 +47,11 @@ public class CollectionPaletteCronJob : ICronJobExecutor
 
                 context.Collections.Update(collection);
             }
-        }
-        
-        await context.SaveChangesAsync(cancellationToken);
             
+            await context.SaveChangesAsync(cancellationToken);
+            
+        }
+
         _logger.LogTrace("Collection palette job completed, updated: {Count}", collections.Sum(x => x.Length));
 
     }

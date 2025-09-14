@@ -26,7 +26,7 @@ public class TvPaletteCronJob : ICronJobExecutor
         List<Tv[]> tvs = context.Tvs
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(200)
+            .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
@@ -47,10 +47,11 @@ public class TvPaletteCronJob : ICronJobExecutor
 
                 context.Tvs.Update(tv);
             }
-        }
-        
-        await context.SaveChangesAsync(cancellationToken);
             
+            await context.SaveChangesAsync(cancellationToken);
+            
+        }
+
         _logger.LogTrace("Tv palette job completed, updated: {Count}", tvs.Sum(x => x.Length));
 
     }

@@ -26,7 +26,7 @@ public class PersonPaletteCronJob : ICronJobExecutor
         List<Person[]> people = context.People
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(200)
+            .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
@@ -43,10 +43,11 @@ public class PersonPaletteCronJob : ICronJobExecutor
 
                 context.People.Update(person);
             }
-        }
-        
-        await context.SaveChangesAsync(cancellationToken);
             
+            await context.SaveChangesAsync(cancellationToken);
+            
+        }
+
         _logger.LogTrace("Person palette job completed, updated: {Count}", people.Sum(x => x.Length));
 
     }

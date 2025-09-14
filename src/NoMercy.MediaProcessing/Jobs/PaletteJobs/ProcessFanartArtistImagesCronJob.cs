@@ -40,7 +40,7 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
             )
             .OrderByDescending(artist => artist.UpdatedAt)
             
-            .Take(200)
+            .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
@@ -55,6 +55,9 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
             {
                 await ProcessImages(context, artist, cancellationToken);
             }
+            
+            await context.SaveChangesAsync(cancellationToken);
+            
         }
             
         _logger.LogTrace("Fanart Artist images job completed, updated: {Count}", artists.Count);
@@ -113,8 +116,6 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
             artist._colorPalette = cover._colorPalette.Replace("\"image\"", "\"cover\"");
                     
             context.Artists.Update(artist);
-                    
-            await context.SaveChangesAsync(cancellationToken);
         }
         catch (Exception e)
         {

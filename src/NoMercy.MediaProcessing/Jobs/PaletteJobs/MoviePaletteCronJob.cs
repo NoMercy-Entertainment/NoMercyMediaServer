@@ -26,7 +26,7 @@ public class MoviePaletteCronJob : ICronJobExecutor
         List<Movie[]> movies = context.Movies
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(200)
+            .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
@@ -47,10 +47,11 @@ public class MoviePaletteCronJob : ICronJobExecutor
 
                 context.Movies.Update(movie);
             }
-        }
-        
-        await context.SaveChangesAsync(cancellationToken);
             
+            await context.SaveChangesAsync(cancellationToken);
+            
+        }
+
         _logger.LogTrace("Movie palette job completed, updated: {Count}", movies.Sum(x => x.Length));
 
     }
