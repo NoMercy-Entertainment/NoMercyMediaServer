@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -40,16 +41,24 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
             
             await Parallel.ForEachAsync(recommendationChunk, Config.ParallelOptions, async (recommendation, _) =>
             {
-                recommendation._colorPalette = await MovieDbImageManager
-                    .MultiColorPalette([
-                        new("poster", recommendation.Poster),
-                        new("backdrop", recommendation.Backdrop)
-                    ]);
+                try
+                {
+                    recommendation._colorPalette = await MovieDbImageManager
+                        .MultiColorPalette([
+                            new("poster", recommendation.Poster),
+                            new("backdrop", recommendation.Backdrop)
+                        ]);
+                }
+                catch (Exception)
+                {
+                    recommendation._colorPalette = "{}";
+                }
                 
                 context.Recommendations.Update(recommendation);
             });
-            
-            await context.SaveChangesAsync(cancellationToken);
+
+            if (context.Database.HasPendingModelChanges())
+                await context.SaveChangesAsync(cancellationToken);
             
         }
             

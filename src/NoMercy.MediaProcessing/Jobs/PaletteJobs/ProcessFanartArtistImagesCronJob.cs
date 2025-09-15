@@ -89,7 +89,16 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
 
             foreach (Image image in images)
             {
-                image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
+                try
+                {
+                    image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
+                }
+                catch (Exception e)
+                {
+                    image._colorPalette = "{}";
+                }
+                
+                context.Images.Update(image);
             }
                     
             await context.Images.UpsertRange(images.Where(i => i.ArtistId != null))

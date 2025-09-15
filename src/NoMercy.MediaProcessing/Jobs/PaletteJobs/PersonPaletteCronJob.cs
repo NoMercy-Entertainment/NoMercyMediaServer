@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -39,13 +40,20 @@ public class PersonPaletteCronJob : ICronJobExecutor
 
             foreach (Person person in peopleChunk)
             {
-                person._colorPalette = await MovieDbImageManager.ColorPalette("profile", person.Profile);
+                try
+                {
+                    person._colorPalette = await MovieDbImageManager.ColorPalette("profile", person.Profile);
+                }
+                catch (Exception e)
+                {
+                    person._colorPalette = "{}";
+                }
 
                 context.People.Update(person);
             }
-            
-            await context.SaveChangesAsync(cancellationToken);
-            
+
+            if (context.Database.HasPendingModelChanges())
+                await context.SaveChangesAsync(cancellationToken);
         }
 
         _logger.LogTrace("Person palette job completed, updated: {Count}", people.Sum(x => x.Length));

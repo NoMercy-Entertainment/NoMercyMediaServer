@@ -57,7 +57,7 @@ public class CronWorker : BackgroundService
         DateTime currentTime = DateTime.Now;
         DateTime nextRun = CronService.GetNextOccurrence(executor.CronExpression, currentTime);
 
-        _logger.LogInformation("Registered job {JobType}: {JobName}, Cron: {Cron}, Next run: {NextRun}",
+        _logger.LogDebug("Registered job {JobType}: {JobName}, Cron: {Cron}, Next run: {NextRun}",
             jobType, executor.JobName, executor.CronExpression, nextRun);
 
         CronJob job = new()
@@ -85,12 +85,12 @@ public class CronWorker : BackgroundService
         Task task = Task.Run(async () => await JobWorkerLoop(job, cts.Token), cts.Token);
         _jobTasks[job.JobType] = task;
 
-        _logger.LogInformation("Started worker thread for job: {JobName}", job.Name);
+        _logger.LogDebug("Started worker thread for job: {JobName}", job.Name);
     }
 
     private async Task JobWorkerLoop(CronJob job, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Job worker started for: {JobName}", job.Name);
+        _logger.LogDebug("Job worker started for: {JobName}", job.Name);
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -101,7 +101,7 @@ public class CronWorker : BackgroundService
                 // Check if it's time to run
                 if (job.NextRun.HasValue && currentTime >= job.NextRun.Value)
                 {
-                    _logger.LogInformation("Executing cron job: {JobName} (Scheduled: {NextRun}, Current: {CurrentTime})",
+                    _logger.LogDebug("Executing cron job: {JobName} (Scheduled: {NextRun}, Current: {CurrentTime})",
                         job.Name, job.NextRun, currentTime);
 
                     bool success = await ExecuteJob(job, currentTime, cancellationToken);
@@ -111,7 +111,7 @@ public class CronWorker : BackgroundService
                         job.LastRun = currentTime;
                         job.NextRun = CronService.GetNextOccurrence(job.CronExpression, currentTime);
 
-                        _logger.LogInformation("Successfully executed cron job: {JobName}. Next run: {NextRun}",
+                        _logger.LogDebug("Successfully executed cron job: {JobName}. Next run: {NextRun}",
                             job.Name, job.NextRun);
 
                         // Update database if this is a database job
@@ -163,12 +163,12 @@ public class CronWorker : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogError("Job execution timed out for: {JobName}", job.Name);
+            _logger.LogDebug("Job execution timed out for: {JobName}", job.Name);
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to execute cron job: {JobName}", job.Name);
+            _logger.LogDebug(ex, "Failed to execute cron job: {JobName}", job.Name);
             return false;
         }
     }

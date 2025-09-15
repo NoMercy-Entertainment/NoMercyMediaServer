@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -39,12 +40,20 @@ public class SeasonPaletteCronJob : ICronJobExecutor
 
             foreach (Season season in seasonChunk)
             {
-                season._colorPalette = await MovieDbImageManager.ColorPalette("poster", season.Poster);
+                try
+                {
+                    season._colorPalette = await MovieDbImageManager.ColorPalette("poster", season.Poster);
+                }
+                catch (Exception)
+                {
+                    season._colorPalette = "{}";
+                }
 
                 context.Seasons.Update(season);
             }
-            
-            await context.SaveChangesAsync(cancellationToken);
+
+            if (context.Database.HasPendingModelChanges())
+                await context.SaveChangesAsync(cancellationToken);
             
         }
 

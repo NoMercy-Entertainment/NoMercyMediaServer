@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -39,16 +40,24 @@ public class CollectionPaletteCronJob : ICronJobExecutor
 
             foreach (Collection collection in collectionChunk)
             {
-                collection._colorPalette = await MovieDbImageManager
-                    .MultiColorPalette([
-                        new("poster", collection.Poster),
-                        new("backdrop", collection.Backdrop)
-                    ]);
-
+                try
+                {
+                    collection._colorPalette = await MovieDbImageManager
+                        .MultiColorPalette([
+                            new("poster", collection.Poster),
+                            new("backdrop", collection.Backdrop)
+                        ]);
+                }
+                catch (Exception e)
+                {
+                    collection._colorPalette = "{}";
+                }
+                    
                 context.Collections.Update(collection);
             }
-            
-            await context.SaveChangesAsync(cancellationToken);
+
+            if (context.Database.HasPendingModelChanges())
+                await context.SaveChangesAsync(cancellationToken);
             
         }
 

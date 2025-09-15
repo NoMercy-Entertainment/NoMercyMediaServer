@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -39,16 +40,24 @@ public class SimilarPaletteCronJob : ICronJobExecutor
 
             foreach (Similar similar in similarChunk)
             {
-                similar._colorPalette = await MovieDbImageManager
-                    .MultiColorPalette([
-                        new("poster", similar.Poster),
-                        new("backdrop", similar.Backdrop)
-                    ]);
+                try
+                {
+                    similar._colorPalette = await MovieDbImageManager
+                        .MultiColorPalette([
+                            new("poster", similar.Poster),
+                            new("backdrop", similar.Backdrop)
+                        ]);
+                }
+                catch (Exception)
+                {
+                    similar._colorPalette = "{}";
+                }
 
                 context.Similar.Update(similar);
             }
-            
-            await context.SaveChangesAsync(cancellationToken);
+
+            if (context.Database.HasPendingModelChanges())
+                await context.SaveChangesAsync(cancellationToken);
             
         }
 

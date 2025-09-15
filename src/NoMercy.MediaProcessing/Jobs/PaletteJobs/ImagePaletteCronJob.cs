@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -28,6 +29,7 @@ public class ImagePaletteCronJob : ICronJobExecutor
         await using MediaContext context = new();
 
         List<Image[]> images = context.Images
+            .Where(i => i.Site == "https://image.tmdb.org/t/p/")
             .Where(x => string.IsNullOrEmpty(x._colorPalette) && !x.FilePath.EndsWith(".svg"))
             .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
                         e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
@@ -45,12 +47,20 @@ public class ImagePaletteCronJob : ICronJobExecutor
             
             await Parallel.ForEachAsync(imageChunk, Config.ParallelOptions, async (image, _) =>
             {
-                image._colorPalette = await MovieDbImageManager.ColorPalette("image", image.FilePath);
+                try
+                {
+                    image._colorPalette = await MovieDbImageManager.ColorPalette("image", image.FilePath);
+                }
+                catch (Exception e)
+                {
+                    image._colorPalette = "{}";
+                }
                 
                 context.Images.Update(image);
             });
             
-            await context.SaveChangesAsync(cancellationToken);
+            if (context.Database.HasPendingModelChanges())
+                await context.SaveChangesAsync(cancellationToken);
             
         }
             

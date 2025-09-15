@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -39,16 +40,24 @@ public class TvPaletteCronJob : ICronJobExecutor
 
             foreach (Tv tv in tvChunk)
             {
-                tv._colorPalette = await MovieDbImageManager
-                    .MultiColorPalette([
-                        new("poster", tv.Poster),
-                        new("backdrop", tv.Backdrop)
-                    ]);
+                try
+                {
+                    tv._colorPalette = await MovieDbImageManager
+                        .MultiColorPalette([
+                            new("poster", tv.Poster),
+                            new("backdrop", tv.Backdrop)
+                        ]);
+                }
+                catch (Exception)
+                {
+                    tv._colorPalette = "{}";
+                }
 
                 context.Tvs.Update(tv);
             }
-            
-            await context.SaveChangesAsync(cancellationToken);
+
+            if (context.Database.HasPendingModelChanges())
+                await context.SaveChangesAsync(cancellationToken);
             
         }
 

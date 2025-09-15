@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -39,16 +40,24 @@ public class MoviePaletteCronJob : ICronJobExecutor
 
             foreach (Movie movie in movieChunk)
             {
-                movie._colorPalette = await MovieDbImageManager
-                    .MultiColorPalette([
-                        new("poster", movie.Poster),
-                        new("backdrop", movie.Backdrop)
-                    ]);
+                try
+                {
+                    movie._colorPalette = await MovieDbImageManager
+                        .MultiColorPalette([
+                            new("poster", movie.Poster),
+                            new("backdrop", movie.Backdrop)
+                        ]);
+                }
+                catch (Exception e)
+                {
+                    movie._colorPalette = "{}";
+                }
 
                 context.Movies.Update(movie);
             }
-            
-            await context.SaveChangesAsync(cancellationToken);
+
+            if (context.Database.HasPendingModelChanges())
+                await context.SaveChangesAsync(cancellationToken);
             
         }
 
