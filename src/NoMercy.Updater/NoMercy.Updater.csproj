@@ -21,6 +21,8 @@
     <PropertyGroup>
         <IsTestProject>false</IsTestProject>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <!-- Suppress NU1701 for MediaBrowser.Model.Signed and NETSDK1206 RID warnings -->
+        <NoWarn>$(NoWarn);NU1701;NETSDK1206</NoWarn>
     </PropertyGroup>
     <PropertyGroup>
         <TargetName>NoMercyUpdater</TargetName>

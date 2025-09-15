@@ -47,9 +47,9 @@ public sealed class CloudflareTunnelService : IHostedService
             };
 
             _tunnelProcess.OutputDataReceived += (_, args) =>
-                Logger.Setup(args.Data, LogEventLevel.Verbose);
+                Logger.Setup(args.Data ?? string.Empty, LogEventLevel.Verbose);
             _tunnelProcess.ErrorDataReceived += (_, args) =>
-                Logger.Setup(args.Data, LogEventLevel.Verbose);
+                Logger.Setup(args.Data ?? string.Empty, LogEventLevel.Verbose);
             _tunnelProcess.Exited += (_, args) =>
                 Logger.Setup($"Cloudflare tunnel process exited: {args}", LogEventLevel.Warning);
 
@@ -99,7 +99,8 @@ public sealed class CloudflareTunnelService : IHostedService
     public void Dispose()
     {
         Dispose(true);
-        GC.SuppressFinalize(this);
+        // No finalizer defined for this sealed type, so don't call SuppressFinalize
+        // GC.SuppressFinalize(this);
     }
 
     private void Dispose(bool disposing)
@@ -108,6 +109,7 @@ public sealed class CloudflareTunnelService : IHostedService
 
         if (disposing)
         {
+            Logger.Setup($"Disposing CloudflareTunnelService for {_tunnelName}");
             StopTunnel();
             _tunnelProcess?.Dispose();
         }

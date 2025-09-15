@@ -18,6 +18,8 @@
         <RepositoryUrl>https://github.com/NoMercy-Entertainment/NoMercyMediaServer</RepositoryUrl>
         <PackageTags>streaming media content-management private streaming-video streaming-audio blurayrip video-encoder</PackageTags>
         <NeutralLanguage>en</NeutralLanguage>
+        <!-- Suppress NU1701 for MediaBrowser.Model.Signed which targets older .NET Framework but is required by the project -->
+        <NoWarn>$(NoWarn);NU1701;NETSDK1206</NoWarn>
     </PropertyGroup>
     <PropertyGroup>
         <IsTestProject>false</IsTestProject>

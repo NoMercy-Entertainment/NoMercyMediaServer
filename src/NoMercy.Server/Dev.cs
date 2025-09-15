@@ -4,6 +4,9 @@ public static class Dev
 {
     public static async Task Run()
     {
+        // Ensure this async method contains an await to avoid CS1998 when no work is awaited
+        await Task.CompletedTask;
+
         // Ffprobe ffprobe = new("G:\\Marvels\\Films\\Download\\Werewolf.By.Night.2022.2160p.DSNP.WEB-DL.x265.10bit.HDR.DDP5.1.Atmos-KOGi\\Werewolf.By.Night.2022.HDR.2160p.WEB.h265-KOGi.mkv");
         // Ffprobe ffprobe = new("M:\\Download\\complete\\The.Apothecary.Diaries.S02E21.Taibon.1080p.CR.WEB-DL.MULTi.AAC2.0.H.264-VARYG.mkv");
         // Ffprobe ffprobe = new("F:\\Films\\Download\\Brave.(2012).mkv");
