@@ -6,9 +6,9 @@ namespace NoMercy.Encoder.Dto;
 public class ImageStream
 {
     [JsonProperty("index")] public int Index { get; set; }
-    [JsonProperty("profile")] public string Profile { get; set; }
-    [JsonProperty("codec_name")] public string CodecName { get; set; }
-    [JsonProperty("codec_long_name")] public string CodecLongName { get; set; }
+    [JsonProperty("profile")] public string? Profile { get; set; }
+    [JsonProperty("codec_name")] public string? CodecName { get; set; }
+    [JsonProperty("codec_long_name")] public string? CodecLongName { get; set; }
     [JsonProperty("codec_type")] public CodecType CodecType { get; set; }
     [JsonProperty("size")] public long Size { get; set; }
     [JsonProperty("filename")] public string? Filename { get; set; }

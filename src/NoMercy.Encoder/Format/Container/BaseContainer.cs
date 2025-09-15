@@ -11,7 +11,9 @@ public class BaseContainer : Classes
 {
     #region Properties
 
+#pragma warning disable CS0114 // Member hides inherited member; missing override keyword
     public virtual ContainerDto ContainerDto { get; protected set; } = AvailableContainers.First(c => c.IsDefault);
+#pragma warning restore CS0114 // Member hides inherited member; missing override keyword
 
     public MediaAnalysis? MediaAnalysis;
     public readonly List<BaseVideo> VideoStreams = [];

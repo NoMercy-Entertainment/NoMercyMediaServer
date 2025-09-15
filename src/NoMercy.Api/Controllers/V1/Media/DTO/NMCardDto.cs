@@ -17,7 +17,7 @@ public class NmCardDto
     [JsonProperty("rating")] public RatingClass? Rating { get; set; }
     [JsonProperty("year")] public int? Year { get; set; }
     [JsonProperty("duration")] public int? Duration { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("type")] public string? Type { get; set; }
     
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
@@ -207,9 +207,9 @@ public class NmCardDto
             NumberOfItems = item.Special.Items.Count;
             
             int availableMovies = item.Special.Items
-                .Count(specialItem => specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count != 0 == true);
+                .Count(specialItem => specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count != 0);
             int availableEpisodes = item.Special.Items
-                .Count(specialItem => specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count != 0 == true);
+                .Count(specialItem => specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count != 0);
             HaveItems = availableMovies + availableEpisodes;
 
             ContentRatings = item.Special.Items

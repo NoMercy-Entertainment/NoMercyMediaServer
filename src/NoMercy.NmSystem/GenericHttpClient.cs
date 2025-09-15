@@ -22,7 +22,7 @@ public class GenericHttpClient
                     (result, timeSpan, rtCount, context) =>
                     {
                         Console.WriteLine(
-                            $"Retry {rtCount}: {result?.Result?.RequestMessage?.RequestUri?.ToString() ?? baseUrl ?? "unknown"} after {timeSpan.TotalSeconds} seconds due to: {result.Exception?.Message ?? result.Result?.StatusCode.ToString()}");
+                            $"Retry {rtCount}: {result?.Result?.RequestMessage?.RequestUri?.ToString() ?? baseUrl ?? "unknown"} after {timeSpan.TotalSeconds} seconds due to: {result?.Exception?.Message ?? result?.Result?.StatusCode.ToString() ?? "unknown error"}");
                     }),
             Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(timeoutSeconds),
                 Polly.Timeout.TimeoutStrategy.Optimistic)

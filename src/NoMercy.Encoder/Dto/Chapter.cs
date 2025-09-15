@@ -6,7 +6,7 @@ namespace NoMercy.Encoder.Dto;
 public class Chapter
 {
     [JsonProperty("id")] public double Id { get; set; }
-    [JsonProperty("title")] public string Title { get; set; }
+    [JsonProperty("title")] public string? Title { get; set; }
     
     [JsonProperty("start")] public long Start { get; set; }
     [JsonProperty("end")] public long End { get; set; }
@@ -17,12 +17,12 @@ public class Chapter
     [JsonProperty("start_his")] public string StartHis => StartTime.ToHis();
     [JsonProperty("end_his")] public string EndHis => EndTime.ToHis();
     
-    [JsonProperty("time_base")] public string TimeBase { get; set; }
+    [JsonProperty("time_base")] public string? TimeBase { get; set; }
     
     public Chapter(FfprobeSourceDataChapter ffprobeSourceDataChapter, int index)
     {
         Id = index + 1;
-        Title = ffprobeSourceDataChapter.Tags.Title;
+        Title = ffprobeSourceDataChapter.Tags?.Title;
         Start = ffprobeSourceDataChapter.Start;
         End = ffprobeSourceDataChapter.End;
         StartTime = ffprobeSourceDataChapter.StartTime;

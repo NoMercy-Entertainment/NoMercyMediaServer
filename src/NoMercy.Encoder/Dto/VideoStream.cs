@@ -6,11 +6,11 @@ namespace NoMercy.Encoder.Dto;
 public class VideoStream
 {
     [JsonProperty("index")] public int Index { get; set; }
-    [JsonProperty("profile")] public string Profile { get; set; }
-    [JsonProperty("codec_name")] public string CodecName { get; set; }
-    [JsonProperty("codec_long_name")] public string CodecLongName { get; set; }
+    [JsonProperty("profile")] public string? Profile { get; set; }
+    [JsonProperty("codec_name")] public string? CodecName { get; set; }
+    [JsonProperty("codec_long_name")] public string? CodecLongName { get; set; }
     [JsonProperty("codec_type")] public CodecType CodecType { get; set; }
-    [JsonProperty("time_base")] public string TimeBase { get; set; }
+    [JsonProperty("time_base")] public string? TimeBase { get; set; }
     [JsonProperty("duration")] public double Duration { get; set; }
     [JsonProperty("size")] public long Size { get; set; }
     
@@ -21,16 +21,16 @@ public class VideoStream
     [JsonProperty("closed_captions")] public bool? ClosedCaptions { get; set; }
     [JsonProperty("film_grain")] public bool? FilmGrain { get; set; }
     [JsonProperty("has_b_frames")] public bool? HasBFrames { get; set; }
-    [JsonProperty("aspect_ratio")] public string AspectRatio { get; set; }
-    [JsonProperty("pix_fmt")] public string PixFmt { get; set; }
+    [JsonProperty("aspect_ratio")] public string? AspectRatio { get; set; }
+    [JsonProperty("pix_fmt")] public string? PixFmt { get; set; }
     [JsonProperty("level")] public long? Level { get; set; }
     [JsonProperty("is_avc")] public bool? IsAvc { get; set; }
-    [JsonProperty("color_range")] public string ColorRange { get; set; }
-    [JsonProperty("color_space")] public string ColorSpace { get; set; }
-    [JsonProperty("color_transfer")] public string ColorTransfer { get; set; }
-    [JsonProperty("color_primaries")] public string ColorPrimaries { get; set; }
-    [JsonProperty("chroma_location")] public string ChromaLocation { get; set; }
-    [JsonProperty("avg_frame_rate")] public string AvgFrameRate { get; set; }
+    [JsonProperty("color_range")] public string? ColorRange { get; set; }
+    [JsonProperty("color_space")] public string? ColorSpace { get; set; }
+    [JsonProperty("color_transfer")] public string? ColorTransfer { get; set; }
+    [JsonProperty("color_primaries")] public string? ColorPrimaries { get; set; }
+    [JsonProperty("chroma_location")] public string? ChromaLocation { get; set; }
+    [JsonProperty("avg_frame_rate")] public string? AvgFrameRate { get; set; }
 
     [JsonProperty("frame_rate")] public int FrameRate { get; set; }
 
@@ -65,7 +65,7 @@ public class VideoStream
         ColorPrimaries = ffprobeSourceDataStream.ColorPrimaries;
         ChromaLocation = ffprobeSourceDataStream.ChromaLocation;
         AvgFrameRate = ffprobeSourceDataStream.AvgFrameRate;
-        FrameRate = ParseFrameRate(ffprobeSourceDataStream.AvgFrameRate);
+        FrameRate = ParseFrameRate(ffprobeSourceDataStream.AvgFrameRate ?? string.Empty);
         IsHdr = DetectHdr(ffprobeSourceDataStream);
         AspectRatio = !string.IsNullOrEmpty(ffprobeSourceDataStream.DisplayAspectRatio) 
             ? ffprobeSourceDataStream.DisplayAspectRatio 

@@ -7,9 +7,9 @@ namespace NoMercy.Helpers.Monitoring;
 
 public class StorageMonitor
 {
-    public static List<Library> Libraries { get; set; } = [];
+    private static List<Library> _libraries = [];
 
-    public static List<StorageDto> Storage { get; set; } = [];
+    public static List<StorageDto> Storage = [];
 
     public static List<ResourceMonitorDto> Main()
     {
@@ -39,7 +39,7 @@ public class StorageMonitor
     {
         using MediaContext context = new();
 
-        Libraries = context.Libraries
+        _libraries = context.Libraries
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .Include(library => library.LibraryTvs)
@@ -53,7 +53,7 @@ public class StorageMonitor
             .ThenInclude(folder => folder.Track)
             .ToList();
 
-        foreach (Library library in Libraries)
+        foreach (Library library in _libraries)
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
             StorageDto movieStorageDto = new()
