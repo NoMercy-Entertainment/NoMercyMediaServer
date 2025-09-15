@@ -13,6 +13,7 @@ public class BaseContainer : Classes
 
     public virtual ContainerDto ContainerDto { get; protected set; } = AvailableContainers.First(c => c.IsDefault);
 
+    public MediaAnalysis? MediaAnalysis;
     public readonly List<BaseVideo> VideoStreams = [];
     public readonly List<BaseAudio> AudioStreams = [];
     public readonly List<BaseSubtitle> SubtitleStreams = [];
