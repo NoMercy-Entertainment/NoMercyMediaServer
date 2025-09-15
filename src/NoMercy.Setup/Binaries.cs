@@ -212,7 +212,7 @@ public static class Binaries
                     break;
                 }
             }
-            catch (System.ComponentModel.Win32Exception ex)
+            catch (System.ComponentModel.Win32Exception)
             {
                 // Ignore the error if the process is not accessible
             }

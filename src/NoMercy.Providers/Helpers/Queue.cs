@@ -66,13 +66,16 @@ public class Queue(QueueOptions options)
     {
         lock (_tasks)
         {
-            List<KeyValuePair<string, Func<Task>>> tasks = new ConcurrentDictionary<string, Func<Task>?>(_tasks)
-                .Where(_ => _currentlyHandled < Options.Concurrent).ToList();
+            List<string> keys = _tasks.Keys.ToList();
 
-            foreach ((string? key, Func<Task>? value) in tasks)
+            foreach (string key in keys)
             {
+                if (_currentlyHandled >= Options.Concurrent) break;
+
+                if (!_tasks.TryGetValue(key, out Func<Task>? value)) continue;
+
                 _currentlyHandled++;
-                _tasks?.Remove(key);
+                _tasks.Remove(key);
 
                 try
                 {

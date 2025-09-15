@@ -12,7 +12,7 @@ public class SubtitleStream
     [JsonProperty("time_base")] public string? TimeBase { get; set; }
     [JsonProperty("duration")] public double Duration { get; set; }
     [JsonProperty("language")] public string? Language { get; set; }
-    [JsonProperty("language_name")] public string? LanguageName => IsoLanguageMapper.GetLanguageName(Language);
+    [JsonProperty("language_name")] public string? LanguageName => IsoLanguageMapper.GetLanguageName(Language ?? string.Empty);
     [JsonProperty("size")] public long Size { get; set; }
     
     [JsonProperty("is_default")] public bool IsDefault  { get; set; }

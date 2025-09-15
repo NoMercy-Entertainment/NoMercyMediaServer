@@ -72,7 +72,7 @@ public static class HlsPlaylistGenerator
                 string? folderName = Path.GetFileName(Path.GetDirectoryName(videoFile));
                 string[] parts = folderName?.Split('_', 'x') ?? ["1920", "1080", ""];
                 string resolution = $"{parts[1]}x{parts[2]}";
-                bool isSdr = parts.Length == 4 && parts[3] == "SDR";
+                bool isSdr = parts is [_, _, _, "SDR"];
 
                 string vCodec = Shell.ExecStdOutAsync(AppFiles.FfProbePath,
                         $"-v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 {videoFile}")

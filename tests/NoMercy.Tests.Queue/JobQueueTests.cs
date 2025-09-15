@@ -390,8 +390,8 @@ public class JobQueueTests : IDisposable
         Assert.Equal(2, queueJobCount);
         
         List<QueueJob> queueJobs = _context.QueueJobs.ToList();
-        Assert.Contains(queueJobs, j => j.Queue == "queue1" && j.Payload == "payload1");
-        Assert.Contains(queueJobs, j => j.Queue == "queue2" && j.Payload == "payload2");
+        Assert.Contains(queueJobs, j => j is { Queue: "queue1", Payload: "payload1" });
+        Assert.Contains(queueJobs, j => j is { Queue: "queue2", Payload: "payload2" });
     }
 
     [Fact]

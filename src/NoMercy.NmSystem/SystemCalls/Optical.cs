@@ -22,7 +22,7 @@ public static class Optical
     {
         Dictionary<string, string?> drives = new();
         foreach (DriveInfo drive in DriveInfo.GetDrives())
-            if (drive.DriveType == DriveType.CDRom && drive.IsReady)
+            if (drive is { DriveType: DriveType.CDRom, IsReady: true })
                 drives[drive.Name] = drive.VolumeLabel.Length > 0 ? drive.VolumeLabel : null;
             else if (drive.DriveType == DriveType.CDRom) drives[drive.Name] = null;
 
@@ -244,7 +244,7 @@ public static class Optical
         try
         {
             DriveInfo drive = new(drivePath);
-            if (drive.DriveType == DriveType.CDRom && drive.IsReady)
+            if (drive is { DriveType: DriveType.CDRom, IsReady: true })
                 // If we get here and it's not BD or DVD, it's some form of CD
                 return OpticalDiscType.Cd;
         }

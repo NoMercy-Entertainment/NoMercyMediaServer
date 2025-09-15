@@ -1134,7 +1134,7 @@ public class CronExpressionBuilderTests
         foreach (DateTime occurrence in occurrences)
         {
             Assert.True(occurrence.DayOfWeek != DayOfWeek.Saturday && occurrence.DayOfWeek != DayOfWeek.Sunday);
-            Assert.True(occurrence.Hour >= 9 && occurrence.Hour <= 17);
+            Assert.True(occurrence.Hour is >= 9 and <= 17);
             Assert.Equal(0, occurrence.Minute); // Always minute 0 due to AtHours override
         }
         

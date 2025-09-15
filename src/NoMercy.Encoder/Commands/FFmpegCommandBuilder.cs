@@ -277,7 +277,7 @@ public class FFmpegCommandBuilder
 
     private bool ShouldSkipHdrProfile(BaseVideo stream)
     {
-        return !stream.IsHdr && (stream.PixelFormat == VideoPixelFormats.Yuv444P || stream.PixelFormat == VideoPixelFormats.Yuv444P10Le);
+        return stream is { IsHdr: false, PixelFormat: VideoPixelFormats.Yuv444P or VideoPixelFormats.Yuv444P10Le };
     }
 
     private void AddContainerParameters(Dictionary<string, dynamic> commandDictionary)

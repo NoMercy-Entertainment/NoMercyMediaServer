@@ -11,9 +11,7 @@ public class BaseContainer : Classes
 {
     #region Properties
 
-#pragma warning disable CS0114 // Member hides inherited member; missing override keyword
-    public virtual ContainerDto ContainerDto { get; protected set; } = AvailableContainers.First(c => c.IsDefault);
-#pragma warning restore CS0114 // Member hides inherited member; missing override keyword
+    public new virtual ContainerDto ContainerDto { get; protected set; } = AvailableContainers.First(c => c.IsDefault);
 
     public MediaAnalysis? MediaAnalysis;
     public readonly List<BaseVideo> VideoStreams = [];
@@ -66,9 +64,8 @@ public class BaseContainer : Classes
         SubtitleCodecs.Copy
     ];
 
-    internal readonly Dictionary<string, dynamic> _extraParameters = [];
-    private readonly Dictionary<string, dynamic> _filters = [];
-    private readonly Dictionary<string, dynamic> _ops = [];
+    internal readonly Dictionary<string, dynamic> _extraParameters = new();
+    private readonly Dictionary<string, dynamic> _ops = new();
     protected internal readonly Dictionary<int, dynamic> Streams = [];
 
     public virtual CodecDto[] AvailableCodecs => [];
