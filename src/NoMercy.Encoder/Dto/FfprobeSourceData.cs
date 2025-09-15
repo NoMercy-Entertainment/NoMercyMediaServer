@@ -107,10 +107,10 @@ public class FfprobeSourceDataStream
 
 public class FfprobeSourceDataStreamTags
 {
-    [JsonProperty("title")] public string Title { get; set; }
-    [JsonProperty("language")] public string Language { get; set; }
+    [JsonProperty("title")] public string? Title { get; set; }
+    [JsonProperty("language")] public string? Language { get; set; }
     [JsonProperty("BPS")] public long Bps { get; set; }
-    [JsonProperty("DURATION")] public string Duration { get; set; }
+    [JsonProperty("DURATION")] public string? Duration { get; set; }
     [JsonProperty("NUMBER_OF_FRAMES")] public long NumberOfFrames { get; set; }
     public long NumberOfBytes { get; set; }
     [JsonProperty("_STATISTICS_WRITING_APP")] public string StatisticsWritingApp { get; set; }

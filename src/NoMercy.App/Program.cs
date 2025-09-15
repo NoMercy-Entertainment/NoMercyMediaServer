@@ -64,9 +64,9 @@ internal class Program
                         })();
                     """u8.ToArray());
                 })
-            .RegisterWebMessageReceivedHandler((object sender, string message) =>
+            .RegisterWebMessageReceivedHandler((object? sender, string message) =>
             {
-                PhotinoWindow window = (PhotinoWindow)sender;
+                PhotinoWindow window = (PhotinoWindow)sender!;
 
                 switch (message)
                 {

@@ -122,7 +122,6 @@ public class Usage
     private long _shows;
     private long _music;
     private long _other;
-    private long _free;
     private long _used;
 
     [JsonProperty("movies")]
@@ -160,21 +159,6 @@ public class Usage
         set => _used = value / 1024 / 8;
     }
 
-    [JsonProperty("free")]
-    // public long Free => 0;
-    // {
-    //     get
-    //     {
-    //         if (Used > 0)
-    //         {
-    //             return (Used + _free) > 0 ? (_free / (Used + _free) * 100) : 0;
-    //         }
-    //         return _free;
-    //     }
-    //     set => _free = (long)value;
-    // }
-    [JsonIgnore]
-    private long Total => Used + _free;
 
     private long CalculatePercentage(long value)
     {

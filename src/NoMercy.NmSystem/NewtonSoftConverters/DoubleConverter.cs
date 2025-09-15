@@ -31,7 +31,7 @@ public class DoubleConverter : JsonConverter
         {
             JsonToken.Null => null,
             JsonToken.Float or JsonToken.Integer => Convert.ToDouble(reader.Value),
-            JsonToken.String when double.TryParse((string)reader.Value, out double result) => result is not double.NaN && result is not double.PositiveInfinity && result is not double.NegativeInfinity
+            JsonToken.String when double.TryParse((string)reader.Value!, out double result) => result is not double.NaN && result is not double.PositiveInfinity && result is not double.NegativeInfinity
                 ? result / 1000000
                 : throw new JsonSerializationException($"Invalid double value: {reader.Value}"),
             _ => throw new JsonSerializationException($"Unexpected token {reader.TokenType} when parsing double.")

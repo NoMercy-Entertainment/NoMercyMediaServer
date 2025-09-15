@@ -44,7 +44,7 @@ public static class JsonHelper
 
     public static T? FromJson<T>(this string? json)
     {
-        return JsonConvert.DeserializeObject<T>(json, Settings);
+        return string.IsNullOrEmpty(json) ? default : JsonConvert.DeserializeObject<T>(json, Settings);
     }
 
     public static string ToJson<T>(this T self)

@@ -187,12 +187,12 @@ public class BaseSubtitle : Classes
         if (stream.SubtitleStream!.Tags?.TryGetValue("title", out description) is false) return variant;
 
         if (
-            description.Contains("sign", StringComparison.CurrentCultureIgnoreCase)
-            || description.Contains("song", StringComparison.CurrentCultureIgnoreCase)
-            || description.Contains("s&s", StringComparison.CurrentCultureIgnoreCase)
+            description?.Contains("sign", StringComparison.CurrentCultureIgnoreCase) == true
+            || description?.Contains("song", StringComparison.CurrentCultureIgnoreCase) == true
+            || description?.Contains("s&s", StringComparison.CurrentCultureIgnoreCase) == true
         )
             variant = "sign";
-        else if (description.Contains("sdh", StringComparison.CurrentCultureIgnoreCase)) variant = "sdh";
+        else if (description?.Contains("sdh", StringComparison.CurrentCultureIgnoreCase) == true) variant = "sdh";
 
         return variant;
     }

@@ -108,12 +108,13 @@ public static class AppFiles
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 // Set appropriate Unix permissions (755)
-                DirectoryInfo dirInfo = new(path)
+                DirectoryInfo dirInfo = new(path);
+                if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
                 {
-                    UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-                                   UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
-                                   UnixFileMode.OtherRead | UnixFileMode.OtherExecute
-                };
+                    dirInfo.UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                                           UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                                           UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
+                }
             }
         }
 
