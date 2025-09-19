@@ -1,11 +1,15 @@
+using NoMercy.Encoder.Core;
+using NoMercy.Encoder.Format.Audio;
+using NoMercy.NmSystem.Information;
+
 namespace NoMercy.Server;
 
 public static class Dev
 {
     public static async Task Run()
     {
-        // Ensure this async method contains an await to avoid CS1998 when no work is awaited
-        await Task.CompletedTask;
+        await VideoAudioFile.GetSubtitleFromWhisperAi(
+            "C:\\Users\\patri\\Videos\\2025-09-11_17-58-09.mkv", AppFiles.TranscodePath, "test.srt", "en");
 
         // Ffprobe ffprobe = new("G:\\Marvels\\Films\\Download\\Werewolf.By.Night.2022.2160p.DSNP.WEB-DL.x265.10bit.HDR.DDP5.1.Atmos-KOGi\\Werewolf.By.Night.2022.HDR.2160p.WEB.h265-KOGi.mkv");
         // Ffprobe ffprobe = new("M:\\Download\\complete\\The.Apothecary.Diaries.S02E21.Taibon.1080p.CR.WEB-DL.MULTi.AAC2.0.H.264-VARYG.mkv");
@@ -181,6 +185,8 @@ public static class Dev
         // TvdbLanguagesClient languagesClient = new();
         // TvdbLanguagesResponse? languages = await languagesClient.Languages();
         // Logger.Tvdb(languages);
+        
+        await Task.CompletedTask;
     }
 
     // private static void ProcessM3U8Files(string rootPath)
