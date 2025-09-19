@@ -11,7 +11,7 @@
   <link rel="icon" type="image/png" href="/apt/pool/main/n/nomercymediaserver/icon.png">
   
   <!-- Styles -->
-  <link rel="stylesheet" href="./assets/style.css">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
   <div class="container">
@@ -164,7 +164,7 @@
             <p>Add the NoMercy repository to your pacman configuration:</p>
             <div class="code-block">
               <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
-              <code>echo -e "\n[nomercy]\nServer = https://repo.nomercy.tv/arch/pool/x86_64" | sudo tee -a /etc/pacman.conf</code>
+              <code>echo "Server = https://repo.nomercy.tv/arch-packages/pool/x86_64" | sudo tee /etc/pacman.d/nomercy-mirrorlist && echo -e "\n[nomercy]\nInclude = /etc/pacman.d/nomercy-mirrorlist" | sudo tee -a /etc/pacman.conf </code>
             </div>
           </div>
           
@@ -173,9 +173,8 @@
             <p>Import and trust the repository signing key:</p>
             <div class="code-block">
               <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
-              <code>curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub
-sudo pacman-key --add nomercy.gpg.pub
-sudo pacman-key --lsign-key 23F1B8BDEE7408FBB2401B66EBBAD4C5328D9E9B</code>
+              <code>curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub && sudo pacman-key --add nomercy.gpg.pub && sudo pacman-key --lsign-key 23F1B8BDEE7408FBB2401B66EBBAD4C5328D9E9B
+              </code>
             </div>
           </div>
           
