@@ -87,7 +87,6 @@ public class ConfigurationController : BaseController
                 .On(e => e.Key)
                 .WhenMatched((o, n) => new()
                 {
-                    Id = o.Id,
                     Value = n.Value,
                     ModifiedBy = n.ModifiedBy
                 })
@@ -106,7 +105,6 @@ public class ConfigurationController : BaseController
                 .On(e => e.Key)
                 .WhenMatched((o, n) => new()
                 {
-                    Id = o.Id,
                     Value = n.Value,
                     ModifiedBy = n.ModifiedBy
                 })
@@ -161,7 +159,6 @@ public class ConfigurationController : BaseController
                 .On(e => e.Key)
                 .WhenMatched((o, n) => new()
                 {
-                    Id = o.Id,
                     Value = Config.Swagger.ToString(),
                     ModifiedBy = n.ModifiedBy
                 })
@@ -178,7 +175,6 @@ public class ConfigurationController : BaseController
                 .On(e => e.Key)
                 .WhenMatched((o, n) => new()
                 {
-                    Id = o.Id,
                     Value = request.ServerName,
                     ModifiedBy = n.ModifiedBy
                 })

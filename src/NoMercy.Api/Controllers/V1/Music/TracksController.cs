@@ -87,8 +87,12 @@ public class TracksController : BaseController
         {
             QueryKey = ["music", "artist", track.ArtistTrack.FirstOrDefault()?.Artist.Id]
         });
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["music","tracks"]
 
-
+        });
+        
         MusicLikeEventDto musicLikeEventDto = new()
         {
             Id = track.Id,
@@ -113,7 +117,6 @@ public class TracksController : BaseController
 
     [HttpGet]
     [Route("{id:guid}/lyrics")]
-    [Obsolete("Obsolete")]
     public async Task<IActionResult> Lyrics(Guid id)
     {
         if (!User.IsAllowed())
