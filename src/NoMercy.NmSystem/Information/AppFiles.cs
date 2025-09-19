@@ -48,6 +48,8 @@ public static class AppFiles
 
     public static string TesseractFolder => Path.Combine(BinariesPath, "tesseract");
     public static string TesseractModelsFolder => Path.Combine(TesseractFolder, "tessdata");
+    
+    public static string WhisperModelPath => Path.Combine(BinariesPath, "ggml-base.bin");
 
     public static string CloudflareDPath => Path.Combine(BinariesPath, "cloudflared" + Info.ExecSuffix);
 
@@ -92,6 +94,7 @@ public static class AppFiles
             SecretsPath,
             TempImagesPath,
             TempPath,
+            TesseractModelsFolder,
             TranscodePath
         ];
     }
