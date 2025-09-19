@@ -73,8 +73,6 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
         {
             FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(artist.Id);
             if (fanArt is null) return;
-            context.Artists.Update(artist);
-            await context.SaveChangesAsync(cancellationToken);
             
             List<Image> releaseImages = await imageManager.StoreReleaseImages(fanArt.ArtistAlbum, artist.Id, artist);
 
@@ -85,7 +83,28 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
                 .Where(image => string.IsNullOrEmpty(image._colorPalette))
                 .ToList();
             
-            if (images.Count == 0) return;
+            if (images.Count == 0)
+            {
+                Image? artistCover = artistImages
+                    .FirstOrDefault(i => !string.IsNullOrEmpty(i._colorPalette));
+                
+                string artistColorPalette = artistCover != null 
+                    ? artistCover._colorPalette.Replace("\"image\"", "\"cover\"") 
+                    : "{}";
+                
+                string coverPath = artistCover != null 
+                    ? artistCover.FilePath 
+                    : artist.Cover ?? string.Empty;
+                
+                await context.Artists
+                    .Where(a => a.Id == artist.Id)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(a => a.Cover, coverPath)
+                        .SetProperty(a => a._colorPalette, artistColorPalette),
+                        cancellationToken);
+                
+                return;
+            }
 
             foreach (Image image in images)
             {

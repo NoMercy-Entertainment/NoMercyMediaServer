@@ -19,7 +19,7 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
                 Year = i.Year,
                 Country = i.Country,
                 Tracks = i.Tracks,
-
+                _colorPalette = i._colorPalette,
                 LibraryId = i.LibraryId,
                 Folder = i.Folder,
                 FolderId = i.FolderId,

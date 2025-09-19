@@ -2,6 +2,7 @@ using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.MusicGenres;
+using NoMercy.Networking.Dto;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -61,6 +62,11 @@ public class ArtistManager(
         {
             Logger.MusicBrainz(e.Message, LogEventLevel.Error);
         }
+
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["music", "artist", artistCredit.MusicBrainzArtist.Id.ToString()]
+        });
     }
 
     /** this is the store for a Recording artist */

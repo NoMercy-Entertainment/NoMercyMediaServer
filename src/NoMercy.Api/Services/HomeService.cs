@@ -339,18 +339,19 @@ public class HomeService
         IEnumerable<ScreensaverDataDto> tvCollection = data
             .Where(image => image is { TvId: not null, Type: "backdrop" })
             .DistinctBy(image => image.TvId)
-            .Select(image => new ScreensaverDataDto(image, logos, "tv"));
+            .Select(image => new ScreensaverDataDto(image, logos, "tv"))
+            .Where(image => image.Meta?.Logo != null);
 
         IEnumerable<ScreensaverDataDto> movieCollection = data
             .Where(image => image is { MovieId: not null, Type: "backdrop" })
             .DistinctBy(image => image.MovieId)
-            .Select(image => new ScreensaverDataDto(image, logos, "movie"));
+            .Select(image => new ScreensaverDataDto(image, logos, "movie"))
+            .Where(image => image.Meta?.Logo != null);
 
         return new()
         {
             Data = tvCollection
                 .Concat(movieCollection)
-                .Where(image => image.Meta?.Logo != null)
                 .Randomize()
         };
     }

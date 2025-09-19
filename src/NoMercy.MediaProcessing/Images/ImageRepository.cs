@@ -12,7 +12,6 @@ public class ImageRepository(MediaContext context) : IImageRepository
             .On(v => new { v.FilePath, v.ArtistId })
             .WhenMatched((s, i) => new()
             {
-                Id = i.Id,
                 AspectRatio = i.AspectRatio,
                 Height = i.Height,
                 FilePath = i.FilePath,
@@ -31,7 +30,6 @@ public class ImageRepository(MediaContext context) : IImageRepository
             .On(v => new { v.FilePath, v.AlbumId })
             .WhenMatched((s, i) => new()
             {
-                Id = i.Id,
                 AspectRatio = i.AspectRatio,
                 Name = i.Name,
                 Height = i.Height,

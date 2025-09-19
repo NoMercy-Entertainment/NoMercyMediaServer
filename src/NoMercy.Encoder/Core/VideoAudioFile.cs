@@ -200,6 +200,14 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
     {
         foreach (BaseSubtitle? subtitle in subtitles)
         {
+            // Ensure the Tesseract language file exists before attempting OCR
+            bool languageFileExists = await TesseractLanguageDownloader.EnsureLanguageFileExists(subtitle.Language);
+            if (!languageFileExists)
+            {
+                Logger.Encoder($"Failed to obtain Tesseract language file for {subtitle.Language}. Skipping OCR for this subtitle.", LogEventLevel.Warning);
+                continue;
+            }
+
             string input = Path.Combine(BasePath, $"{subtitle.HlsPlaylistFilename}.{subtitle.Extension}");
             string orcFile = Path.Combine(BasePath, "subtitles", "temp.txt");
             string output = Path.Combine(BasePath, $"{subtitle.HlsPlaylistFilename}.vtt");
@@ -266,5 +274,30 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             Thumbnail = $"/images/original{imgPath}",
             Message = $"Completed converting subtitles to WebVtt"
         });
+    }
+    
+    public static async Task GetSubtitleFromWhisperAi(string inputFile, string basePath, string fileName, string language)
+    {
+        string whisperCommand =
+            $@" -i ""{inputFile}"" -vn -af ""whisper=model={AppFiles.WhisperModelPath}:language={language}:queue=3:destination={fileName}:format=srt"" -f null -";
+
+        Logger.Encoder($"Generating {IsoLanguageMapper.IsoToLanguage[language]} subtitle with Whisper AI");
+        
+        Logger.Encoder(AppFiles.FfmpegPath + " " + whisperCommand, LogEventLevel.Debug);
+        
+        if (!Directory.Exists(Path.Combine(basePath, "subtitles")))
+            Directory.CreateDirectory(Path.Combine(basePath, "subtitles"));
+        
+        
+        Task<string> execTask = Shell.ExecStdErrAsync(AppFiles.FfmpegPath, whisperCommand, new()
+        {
+            WorkingDirectory = Path.Combine(basePath, "subtitles"),
+            EnvironmentVariables = new()
+            {
+                ["TESSDATA_PREFIX"] = AppFiles.TesseractModelsFolder
+            }
+        });
+        
+        await execTask;
     }
 }

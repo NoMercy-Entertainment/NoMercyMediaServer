@@ -24,8 +24,9 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(Artist artist)
     {
         ColorPalette = artist.ColorPalette;
-        Cover = artist.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = artist.Cover is not null 
+            ? new Uri($"/images/music{artist.Cover}", UriKind.Relative).ToString() 
+            : null;
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;
         Folder = artist.Folder ?? "";
@@ -44,8 +45,9 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(Album album)
     {
         ColorPalette = album.ColorPalette;
-        Cover = album.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = album.Cover is not null 
+            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() 
+            : null;
         Disambiguation = album.Disambiguation;
         Description = album.Description;
         Folder = album.Folder ?? "";
@@ -66,7 +68,9 @@ public record CarouselResponseItemDto
         ColorPalette = artistUser.Artist.ColorPalette;
         Cover = artistUser.Artist.Cover ?? artistUser.Artist.Images
             .FirstOrDefault()?.FilePath;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = Cover is not null 
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() 
+            : null;
         Disambiguation = artistUser.Artist.Disambiguation;
         Description = artistUser.Artist.Description;
         Folder = artistUser.Artist.Folder ?? "";
@@ -85,8 +89,9 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(AlbumUser playlist)
     {
         ColorPalette = playlist.Album.ColorPalette;
-        Cover = playlist.Album.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = playlist.Album.Cover is not null 
+            ? new Uri($"/images/music{playlist.Album.Cover}", UriKind.Relative).ToString() 
+            : null;
         Disambiguation = playlist.Album.Disambiguation;
         Description = playlist.Album.Description;
         Folder = playlist.Album.Folder ?? "";
@@ -105,8 +110,9 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(Playlist playlist)
     {
         ColorPalette = playlist.ColorPalette;
-        Cover = playlist.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = playlist.Cover is not null 
+            ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString() 
+            : null;
         Description = playlist.Description;
         Id = playlist.Id.ToString();
         Name = playlist.Name;
@@ -122,8 +128,9 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(Track track)
     {
         ColorPalette = track.ColorPalette;
-        Cover = track.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = track.Cover is not null 
+            ? new Uri($"/images/music{track.Cover}", UriKind.Relative).ToString() 
+            : null;
         Folder = track.Folder ?? "";
         Id = track.Id.ToString();
         Name = track.Name;

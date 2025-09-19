@@ -8,14 +8,14 @@ using NoMercy.Queue.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 
-public class ArtistPaletteCronJob : ICronJobExecutor
+public class AlbumPaletteCronJob : ICronJobExecutor
 {
-    private readonly ILogger<ArtistPaletteCronJob> _logger;
+    private readonly ILogger<AlbumPaletteCronJob> _logger;
 
     public string CronExpression => new CronExpressionBuilder().EveryMinute();
-    public string JobName => "Artist ColorPalette Job";
+    public string JobName => "Album ColorPalette Job";
 
-    public ArtistPaletteCronJob(ILogger<ArtistPaletteCronJob> logger)
+    public AlbumPaletteCronJob(ILogger<AlbumPaletteCronJob> logger)
     {
         _logger = logger;
     }
@@ -24,40 +24,41 @@ public class ArtistPaletteCronJob : ICronJobExecutor
     {
         await using MediaContext context = new();
 
-        List<Artist[]> artists = context.Artists
+        List<Album[]> albums = context.Albums
             .Where(x => string.IsNullOrEmpty(x._colorPalette) && x.Cover != null)
+            .Include(x => x.Images)
             .OrderByDescending(x => x.UpdatedAt)
             .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
         
-        _logger.LogTrace("Found {Count} artist chunks to process", artists.Count);
+        _logger.LogTrace("Found {Count} album chunks to process", albums.Count);
 
-        foreach (Artist[] artistChunk in artists)
+        foreach (Album[] albumChunk in albums)
         {
-            _logger.LogTrace("Processing artist chunk of size: {Size}", artistChunk.Length);
+            _logger.LogTrace("Processing album chunk of size: {Size}", albumChunk.Length);
 
-            foreach (Artist artist in artistChunk)
+            foreach (Album album in albumChunk)
             {
                 try
                 {
-                    artist._colorPalette = await MovieDbImageManager
-                        .ColorPalette("cover", artist.Cover);
+                    album._colorPalette = await CoverArtImageManagerManager
+                        .ColorPalette("cover", new(album.Images.First().Site + album.Cover));
                 }
                 catch (Exception)
                 {
-                    artist._colorPalette = "{}";
+                    // album._colorPalette = "{}";
                 }
                 
-                context.Artists.Update(artist);
+                context.Albums.Update(album);
             }
 
             if (context.Database.HasPendingModelChanges())
                 await context.SaveChangesAsync(cancellationToken);
         }
 
-        _logger.LogTrace("Artist palette job completed, updated: {Count}", artists.Sum(x => x.Length));
+        _logger.LogTrace("Album palette job completed, updated: {Count}", albums.Sum(x => x.Length));
 
     }
 }

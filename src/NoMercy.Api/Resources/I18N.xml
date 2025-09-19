@@ -384,4 +384,8 @@
     <Key>Adding {0} in the background</Key>
     <Value lang="nl">Adding {0} in the background</Value>
   </Entry>
+  <Entry>
+    <Key>Favorite Tracks</Key>
+    <Value lang="nl">Favorite Tracks</Value>
+  </Entry>
 </I18N>

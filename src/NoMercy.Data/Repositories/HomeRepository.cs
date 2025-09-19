@@ -138,7 +138,7 @@ public class HomeRepository
                                 image.Tv!.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
                 .Where(image => image._colorPalette != "")
                 .Where(image =>
-                    (image.Type == "backdrop" && image.VoteAverage > 5 && (image.Iso6391 == null || image.Iso6391 == "") &&
+                    (image.Type == "backdrop" && (image.Iso6391 == null || image.Iso6391 == "") &&
                      image.Height >= 1080) ||
                     (image.Type == "logo" && image.Iso6391 == "en" && image.Width >= image.Height))
                 .OrderByDescending(image => image.Width)

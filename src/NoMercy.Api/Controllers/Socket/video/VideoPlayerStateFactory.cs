@@ -39,7 +39,7 @@ public class VideoPlayerStateFactory
         if (userPreference is null)
         {
             // Fallback to default playback preference when the user could not be loaded
-            return new VideoPlayerState
+            return new()
             {
                 DeviceId = device.DeviceId,
                 VolumePercentage = device.VolumePercent,
@@ -130,7 +130,7 @@ public class VideoPlayerStateFactory
         string? subtitleType = item.Captions.FirstOrDefault()?.Type;
         string? subtitleCodec = item.Captions.FirstOrDefault()?.Codec;
 
-        return new PlaybackPreference
+        return new()
         {
             Video = new()
             {

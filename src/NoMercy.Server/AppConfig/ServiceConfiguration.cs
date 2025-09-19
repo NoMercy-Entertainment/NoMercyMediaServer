@@ -88,6 +88,8 @@ public static class ServiceConfiguration
         
         services.AddScoped<ArtistPaletteCronJob>();
         services.RegisterCronJob<ArtistPaletteCronJob>("artist-palette-job");
+        services.AddScoped<AlbumPaletteCronJob>();
+        services.RegisterCronJob<AlbumPaletteCronJob>("album-palette-job");
     }
     
 

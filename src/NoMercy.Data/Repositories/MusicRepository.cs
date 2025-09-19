@@ -319,14 +319,14 @@ public class MusicRepository
     public readonly Func<MediaContext, IOrderedQueryable<Album>> GetLatestAlbums =
         (mediaContext) =>
             mediaContext.Albums
-                .Where(album => album.Cover != null && album.AlbumTrack.Count > 0)
+                .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Count > 0)
                 .Include(album => album.AlbumTrack)
                 .ThenInclude(albumTrack => albumTrack.Track)
                 .OrderByDescending(album => album.CreatedAt);
 
     public readonly Func<MediaContext, IOrderedQueryable<Artist>> GetLatestArtists =
         (mediaContext) => mediaContext.Artists
-            .Where(artist => artist.Cover != null && artist.ArtistTrack.Count > 0)
+            .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Count > 0)
             .Include(artist => artist.Images
                 .Where(image => image.Type == "thumb")
                 .OrderByDescending(image => image.VoteCount)

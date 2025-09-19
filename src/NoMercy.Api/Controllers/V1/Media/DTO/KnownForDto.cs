@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.TMDB.Models.People;
@@ -37,6 +38,7 @@ public record KnownForDto
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
     [JsonProperty("episode_count")] public int? EpisodeCount { get; set; }
+    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
 
     [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
@@ -60,6 +62,7 @@ public record KnownForDto
         HasItem = cast.Movie?.VideoFiles.Count != 0 || (cast.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) ?? false);
         NumberOfItems = cast.Movie?.VideoFiles.Count + cast.Tv?.Episodes.Count(e => e.VideoFiles.Count != 0);
         HaveItems = cast.Movie?.VideoFiles.Count != 0 ? 1 : cast.Tv?.Episodes.Count(e => e.VideoFiles.Count != 0) ?? 0;
+        ColorPalette = cast.Movie?.ColorPalette ?? cast.Tv?.ColorPalette;
     }
 
     public KnownForDto(Crew crew)
@@ -82,6 +85,7 @@ public record KnownForDto
         HasItem = crew.Movie?.VideoFiles.Count != 0 || (crew.Tv?.Episodes.Any(e => e.VideoFiles.Count != 0) ?? false);
         NumberOfItems = crew.Movie?.VideoFiles.Count + crew.Tv?.Episodes.Count(e => e.VideoFiles.Count > 0);
         HaveItems = crew.Movie?.VideoFiles.Count != 0 ? 1 : crew.Tv?.Episodes.Count(e => e.VideoFiles.Count > 0) ?? 0;
+        ColorPalette = crew.Movie?.ColorPalette ?? crew.Tv?.ColorPalette;
     }
 
     public KnownForDto(TmdbPersonCredit crew, Person? person)
