@@ -116,8 +116,6 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
                 {
                     image._colorPalette = "{}";
                 }
-                
-                context.Images.Update(image);
             }
                     
             await context.Images.UpsertRange(images.Where(i => i.ArtistId != null))
@@ -142,8 +140,6 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
                     
             artist.Cover = cover.FilePath;
             artist._colorPalette = cover._colorPalette.Replace("\"image\"", "\"cover\"");
-                    
-            context.Artists.Update(artist);
         }
         catch (Exception e)
         {

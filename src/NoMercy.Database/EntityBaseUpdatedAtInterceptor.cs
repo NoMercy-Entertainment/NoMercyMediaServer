@@ -5,12 +5,12 @@ namespace NoMercy.Database;
 
 public class EntityBaseUpdatedAtInterceptor : SaveChangesInterceptor
 {   
-    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
+    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData,
         InterceptionResult<int> result,
         CancellationToken cancellationToken = new())
     {
         if (eventData.Context is null)
-            return base.SavingChangesAsync(eventData, result, cancellationToken);
+            return await base.SavingChangesAsync(eventData, result, cancellationToken);
 
         IEnumerable<Timestamps> entries = eventData.Context.ChangeTracker
             .Entries()
@@ -23,6 +23,6 @@ public class EntityBaseUpdatedAtInterceptor : SaveChangesInterceptor
             entry.UpdatedAt = DateTime.Now;
         }
 
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
+        return await base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 }

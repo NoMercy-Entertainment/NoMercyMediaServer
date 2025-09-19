@@ -48,14 +48,11 @@ public class AlbumPaletteCronJob : ICronJobExecutor
                 }
                 catch (Exception)
                 {
-                    // album._colorPalette = "{}";
+                    album._colorPalette = "{}";
                 }
-                
-                context.Albums.Update(album);
             }
 
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
         }
 
         _logger.LogTrace("Album palette job completed, updated: {Count}", albums.Sum(x => x.Length));

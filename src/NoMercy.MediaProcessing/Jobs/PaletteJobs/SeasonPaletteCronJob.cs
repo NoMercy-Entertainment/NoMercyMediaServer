@@ -48,12 +48,9 @@ public class SeasonPaletteCronJob : ICronJobExecutor
                 {
                     season._colorPalette = "{}";
                 }
-
-                context.Seasons.Update(season);
             }
 
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
             
         }
 

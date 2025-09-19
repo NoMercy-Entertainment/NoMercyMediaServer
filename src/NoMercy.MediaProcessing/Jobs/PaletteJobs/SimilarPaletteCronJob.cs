@@ -52,12 +52,9 @@ public class SimilarPaletteCronJob : ICronJobExecutor
                 {
                     similar._colorPalette = "{}";
                 }
-
-                context.Similar.Update(similar);
             }
 
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
             
         }
 

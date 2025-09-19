@@ -48,12 +48,9 @@ public class PersonPaletteCronJob : ICronJobExecutor
                 {
                     person._colorPalette = "{}";
                 }
-
-                context.People.Update(person);
             }
 
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
         }
 
         _logger.LogTrace("Person palette job completed, updated: {Count}", people.Sum(x => x.Length));

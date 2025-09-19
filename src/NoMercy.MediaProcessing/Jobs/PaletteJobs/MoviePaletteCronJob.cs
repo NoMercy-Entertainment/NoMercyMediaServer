@@ -52,12 +52,9 @@ public class MoviePaletteCronJob : ICronJobExecutor
                 {
                     movie._colorPalette = "{}";
                 }
-
-                context.Movies.Update(movie);
             }
 
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
             
         }
 

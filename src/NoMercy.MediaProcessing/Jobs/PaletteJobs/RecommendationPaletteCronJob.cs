@@ -53,12 +53,9 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
                 {
                     recommendation._colorPalette = "{}";
                 }
-                
-                context.Recommendations.Update(recommendation);
             });
 
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
             
         }
             

@@ -52,12 +52,9 @@ public class TvPaletteCronJob : ICronJobExecutor
                 {
                     tv._colorPalette = "{}";
                 }
-
-                context.Tvs.Update(tv);
             }
 
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
             
         }
 

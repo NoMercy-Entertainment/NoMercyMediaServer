@@ -14,7 +14,7 @@ public class ImagePaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<ImagePaletteCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().EveryHour();
+    public string CronExpression => new CronExpressionBuilder().EveryMinute();
     public string JobName => "Image ColorPalette Job";
 
     public ImagePaletteCronJob(ILogger<ImagePaletteCronJob> logger)
@@ -55,13 +55,9 @@ public class ImagePaletteCronJob : ICronJobExecutor
                 {
                     image._colorPalette = "{}";
                 }
-                
-                context.Images.Update(image);
             });
             
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
-            
+            await context.SaveChangesAsync(cancellationToken);
         }
             
         _logger.LogTrace("Image palette job completed, processed {Count} images", images.Sum(x => x.Length));

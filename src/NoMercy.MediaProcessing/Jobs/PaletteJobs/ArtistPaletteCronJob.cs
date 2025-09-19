@@ -49,12 +49,9 @@ public class ArtistPaletteCronJob : ICronJobExecutor
                 {
                     artist._colorPalette = "{}";
                 }
-                
-                context.Artists.Update(artist);
             }
 
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
         }
 
         _logger.LogTrace("Artist palette job completed, updated: {Count}", artists.Sum(x => x.Length));

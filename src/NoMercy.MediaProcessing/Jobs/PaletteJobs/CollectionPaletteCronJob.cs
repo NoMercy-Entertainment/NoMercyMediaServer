@@ -52,12 +52,9 @@ public class CollectionPaletteCronJob : ICronJobExecutor
                 {
                     collection._colorPalette = "{}";
                 }
-                    
-                context.Collections.Update(collection);
             }
 
-            if (context.Database.HasPendingModelChanges())
-                await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
             
         }
 
