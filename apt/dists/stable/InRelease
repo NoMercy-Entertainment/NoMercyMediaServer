@@ -9,21 +9,21 @@ Version: 1.0
 Architectures: amd64
 Components: main
 Description: NoMercy Entertainment Repository
-Date: Fri, 19 Sep 2025 20:50:12 UTC
+Date: Tue, 23 Sep 2025 02:44:36 UTC
 SHA256:
- 7b34b88ede72354ed570b3208fce52bd7c04fb62b1723026117bd99f71a80184 3225 main/binary-amd64/Packages
- 280df43326f7dbd457bbe7d600741b7162fc9962ca1162a6974048b74d1666be 675 main/binary-amd64/Packages.gz
+ 1f73c6a6caf6eff15a28a1a90cdc29e3496e5ba0fc214cacb87befdd06dcba7d 3225 main/binary-amd64/Packages
+ cbc108deb71286434a20eecad7d24ccc14f496a49610c0b0cb576322f991ea6d 673 main/binary-amd64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iQGzBAEBCgAdFiEEI/G4ve50CPuyQBtm67rUxTKNnpsFAmjNwgQACgkQ67rUxTKN
-npvIjQv/WQzVRZGIE3b5utx3PMqrEgS2Gh2xR2h/yp2RKNxM+5N3qrbpK9COai45
-eE1OLrNc7YcbiizBS9bEWHCVq33aH6sVD/NSUYNEQkNdTOEDo8FE34esgubDvSed
-sgOGsErBESwZKlqF1iTpLO3yWgrpRDR6nLuCmIMjLHyLM6UMDUXxX8DYy2m4yifl
-43+swarojASwonaEKTeqve5TwHwKHIDsL1o0VfX/9cNICThluV7Xe1q70nUsF0OX
-j0Kk1+PmS8VtkanAL7Gb4BHDr2EfMm+Q+g7EJPgwKdNPudROQ8YHfLyamCzrq6DU
-v9zbguBEYhx8yHK2kdMoiMSG1pRu/ovtMZ3a4ovmAdnqsXaR4Y5zM/GTHLvUiV5R
-L0n1Oxe90m5ykZI99MNftg2ILxZfp/bM8Z6SRzr2YrH5gAuBcb8u8CuMqqvTnJwX
-VNX1pluCKzP2LnHw8exM5k8sknwQruBesMgTrrMiWLreQEXBt+wh07u7qhsagv5N
-z99MZbdi
-=2XuC
+iQGzBAEBCgAdFiEEI/G4ve50CPuyQBtm67rUxTKNnpsFAmjSCZQACgkQ67rUxTKN
+npvTTAv/fc02rBJF/v6smaK97srNb73V6mHIh9pTqQaAhQSNgfO5IRYRb6NezSix
+p8pnyKhK/Pra0ZzmxpVO5iRRrXG12cX7s2YeFiP11uexi9wniPDcl+emlRGY4+zc
+PSTVGvZbcHLgtp2jGjQkf63+GSpDnAUTObC4H1WgrGwyikB8WrYzHPDGWaerimeS
+7j7R+Xt263e0Zuww2czn24D/tZ98FwFIcgZf88+8cByhf6FWs9AFbILByx5+1dIy
+I+QXanE3gamWwjmRodjtM7xdzl+OpWS7+Ab4Bjlc1k8XGXY6BrdlqQM/SKKkbD2+
+KC78mB8yVKXCAzvXSMEFFrbtASc2n7nA1tqp1tIs8YjfYR9/HrKwicJ6MqfSPPBV
+r5g1n7xSVTtebvL0k2akqgRrdW3kkMyku8xorF08R30hwnmK1SFmnx2OL3lysVB6
+dyIEIFAaVgpW0FNi/0r7Rvu+BdesPTFwZDlSBiZdpWOS9szfdwgdZekq/TMQ3/hI
+3BDPCIXa
+=GLR2
 -----END PGP SIGNATURE-----
