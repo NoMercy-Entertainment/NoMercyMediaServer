@@ -107,7 +107,6 @@ public static class ServiceConfiguration
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();
         services.AddSingleton<DriveMonitor>();
-        
 
         // Add DbContexts
         services.AddDbContext<QueueContext>(optionsAction =>

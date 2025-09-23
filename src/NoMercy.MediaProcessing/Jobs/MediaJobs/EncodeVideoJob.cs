@@ -54,7 +54,7 @@ public class EncodeVideoJob : AbstractEncoderJob
                 {
                     Message = "Preparing to encode",
                     Status = "running",
-                    Id = Id,
+                    Id = fileMetadata.Id,
                     Title = fileMetadata.Title,
                     BaseFolder = fileMetadata.Path,
                     ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
@@ -95,10 +95,10 @@ public class EncodeVideoJob : AbstractEncoderJob
 
                 string fullCommand = ffmpeg.GetFullCommand();
                 Logger.Encoder(fullCommand);
-
+                
                 ProgressMeta progressMeta = new()
                 {
-                    Id = Id,
+                    Id = fileMetadata.Id,
                     Title = fileMetadata.Title,
                     BaseFolder = fileMetadata.Path,
                     ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
@@ -116,11 +116,11 @@ public class EncodeVideoJob : AbstractEncoderJob
                 };
 
                 await ffmpeg.Run(fullCommand, fileMetadata.Path, progressMeta);
-
+                
                 await sprite.BuildSprite(progressMeta);
-
+                
                 await container.BuildMasterPlaylist();
-
+                
                 await container.ExtractChapters();
 
                 await container.ExtractFonts();
@@ -135,7 +135,7 @@ public class EncodeVideoJob : AbstractEncoderJob
 
                 Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
                 {
-                    Id = Id,
+                    Id = fileMetadata.Id,
                     Status = "running",
                     Title = fileMetadata.Title,
                     Message = "Scanning files"
@@ -147,7 +147,7 @@ public class EncodeVideoJob : AbstractEncoderJob
 
                 Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
                 {
-                    Id = Id,
+                    Id = fileMetadata.Id,
                     Status = "completed",
                     Title = fileMetadata.Title,
                     Message = "Done"
@@ -160,7 +160,7 @@ public class EncodeVideoJob : AbstractEncoderJob
 
             Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
             {
-                Id = Id,
+                Id = fileMetadata.Id,
                 Status = "failed",
                 Title = fileMetadata.Title,
                 Message = e.Message

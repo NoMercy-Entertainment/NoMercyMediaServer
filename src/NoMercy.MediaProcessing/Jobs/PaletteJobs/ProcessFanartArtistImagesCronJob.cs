@@ -144,7 +144,7 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
         catch (Exception e)
         {
             if (e.Message.Contains("404")) return;
-            _logger.LogError(e, "Error while processing image {Id}", artist.Id);
+            _logger.LogError(e, "Error while processing image {Id}: {Err}", artist.Id, e);
         }
     }
 }

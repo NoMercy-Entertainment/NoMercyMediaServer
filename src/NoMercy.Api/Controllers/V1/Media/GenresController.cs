@@ -33,10 +33,16 @@ public class GenresController : BaseController
 
         string language = Language();
 
-        List<NmGenreCardDto> genres = await _genreRepository
+        // First get the raw Genre entities from the database
+        List<Genre> genreEntities = await _genreRepository
             .GetGenresAsync(userId, language, request.Take, request.Page)
-            .Select(genre => new NmGenreCardDto(genre))
             .ToListAsync();
+
+        // Then apply DTO transformation and filtering on the client side
+        List<NmGenreCardDto> genres = genreEntities
+            .Select(genre => new NmGenreCardDto(genre))
+            .Where(g => g.HaveItems > 0)
+            .ToList();
 
         return Ok(new Render
         {

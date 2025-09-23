@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Laraue.EfCoreTriggers.Common.Extensions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
@@ -14,6 +15,7 @@ public class MediaContext : DbContext
 
     public MediaContext()
     {
+        
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
@@ -75,6 +77,19 @@ public class MediaContext : DbContext
             modelBuilder.Entity(entityType.ClrType)
                 .ToTable(tb => tb.HasTrigger($"update_{tableName}_updated_at"));
         }
+
+        // modelBuilder.Entity<Timestamps>()
+        //     .AfterUpdate(trigger => trigger.Action(action => action
+        //         .Upsert<Timestamps>(
+        //             (tableRefs, balances) => true,
+        //             (tableRefs) => new()
+        //             {
+        //                 UpdatedAt = DateTime.Now
+        //             },
+        //             (tableRefs, oldUserBalance) =>  new()
+        //             {
+        //                 UpdatedAt = DateTime.Now
+        //             })));
 
         base.OnModelCreating(modelBuilder);
     }

@@ -388,4 +388,8 @@
     <Key>Favorite Tracks</Key>
     <Value lang="nl">Favorite Tracks</Value>
   </Entry>
+  <Entry>
+    <Key>Rescanning {0} for files in the background</Key>
+    <Value lang="nl">Rescanning {0} for files in the background</Value>
+  </Entry>
 </I18N>
