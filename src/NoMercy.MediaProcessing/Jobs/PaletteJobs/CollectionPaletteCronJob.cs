@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;

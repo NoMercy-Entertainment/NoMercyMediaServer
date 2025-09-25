@@ -15,7 +15,6 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
-using HttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 

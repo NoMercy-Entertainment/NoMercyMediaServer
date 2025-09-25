@@ -43,13 +43,15 @@ public static class AppFiles
     public static string FfmpegFolder => Path.Combine(BinariesPath, "ffmpeg");
     public static string FfmpegPath => Path.Combine(FfmpegFolder, "ffmpeg" + Info.ExecSuffix);
     public static string FfProbePath => Path.Combine(FfmpegFolder, "ffprobe" + Info.ExecSuffix);
+    public static string FfPlayPath => Path.Combine(FfmpegFolder, "ffplay" + Info.ExecSuffix);
     
     public static string YtdlpPath => Path.Combine(BinariesPath, "yt-dlp" + Info.ExecSuffix);
 
     public static string TesseractFolder => Path.Combine(BinariesPath, "tesseract");
     public static string TesseractModelsFolder => Path.Combine(TesseractFolder, "tessdata");
     
-    public static string WhisperModelPath => Path.Combine(BinariesPath, "ggml-base.bin");
+    public static string WhisperModel { get; set; } = "ggml-large-v3";
+    public static string WhisperModelPath => Path.Combine(BinariesPath, WhisperModel + ".bin");
 
     public static string CloudflareDPath => Path.Combine(BinariesPath, "cloudflared" + Info.ExecSuffix);
 

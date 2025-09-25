@@ -13,5 +13,4 @@ public class Data
     [JsonProperty("keys")] public Keys Keys { get; set; } = new();
     [JsonProperty("quote")] public string Quote { get; set; } = string.Empty;
     [JsonProperty("colors")] public string[] Colors { get; set; } = [];
-    [JsonProperty("downloads")] public Downloads Downloads { get; set; } = new();
 }

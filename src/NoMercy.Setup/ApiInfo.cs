@@ -24,7 +24,6 @@ public partial class ApiInfo
     public static string TvdbKey { get; set; } = string.Empty;
     public static string MusixmatchKey { get; set; } = string.Empty;
     public static string JwplayerKey { get; set; } = string.Empty;
-    public static Downloads BinaryList { get; private set; } = new();
 
     public static string[] Colors { get; private set; } =
     [
@@ -51,8 +50,6 @@ public partial class ApiInfo
 
             Quote = data.Data.Quote;
             Colors = data.Data.Colors;
-
-            BinaryList = data.Data.Downloads;
 
             MakeMkvKey = data.Data.Keys.MakeMkvKey;
             TmdbKey = data.Data.Keys.TmdbKey;

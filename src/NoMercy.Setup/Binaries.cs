@@ -1,30 +1,33 @@
-using System.Diagnostics;
-using System.IO.Compression;
+using System.Globalization;
 using System.Runtime.InteropServices;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
 using Serilog.Events;
+using Downloader = NoMercy.NmSystem.SystemCalls.Download;
+using FileAttributes = NoMercy.NmSystem.FileSystem.FileAttributes;
+using HttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Setup;
 
 public static class Binaries
 {
-    private static List<Download> Downloads { get; set; }
     private static readonly HttpClient HttpClient = new();
+    
+    private const string GithubMediaServerApiUrl    = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyMediaServer/releases/latest";
+    private const string GithubFfmpegApiUrl         = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyFFMpeg/releases/latest";
+    private const string GithubTesseractApiUrl      = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyTesseract/releases/latest";
+    private const string GithubWhisperModelApiUrl   = "https://api.github.com/repos/NoMercy-Entertainment/WhisperGmmlModels/releases/latest";
+    
+    private const string GithubYtdlpApiUrl          = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest";
+    private const string GithubCloudflaredApiUrl    = "https://api.github.com/repos/cloudflare/cloudflared/releases/latest";
 
     static Binaries()
     {
         HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            Downloads = ApiInfo.BinaryList.Linux;
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            Downloads = ApiInfo.BinaryList.Mac;
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            Downloads = ApiInfo.BinaryList.Windows;
-        else
-            Downloads = [];
     }
 
     public static Task DownloadAll()
@@ -33,192 +36,404 @@ public static class Binaries
         {
             Logger.Setup("Downloading Binaries");
 
-            foreach (Download program in Downloads)
-            {
-                if (program.Url == null) continue;
-
-                string destinationDirectoryName =
-                    Path.Combine(AppFiles.BinariesPath, program.Path, program.Name + Info.ExecSuffix);
-                bool fileExists = File.Exists(destinationDirectoryName);
-                if (!fileExists)
-                {
-                    destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name);
-                    fileExists = Directory.Exists(destinationDirectoryName);
-                }
-
-                // Parse the LastUpdated date using the correct parameter types
-                if (!DateTimeOffset.TryParse(program.LastUpdated, out DateTimeOffset lastUpdatedOffset))
-                {
-                    Logger.Setup($"Invalid last_updated date format for {program.Name}", LogEventLevel.Warning);
-                    continue;
-                }
-
-                // If file exists, compare dates to check if update is needed
-                if (fileExists)
-                {
-                    DateTime fileDate = File.GetCreationTimeUtc(destinationDirectoryName);
-                    if (fileDate >= lastUpdatedOffset.UtcDateTime) continue; // Skip if file is newer or same age
-                }
-
-                try
-                {
-                    await Download(program);
-                    await Extract(program);
-                    await Cleanup(program);
-
-                    // Set the creation time to match the last_updated time
-                    if (File.Exists(destinationDirectoryName))
-                        File.SetCreationTimeUtc(destinationDirectoryName, lastUpdatedOffset.UtcDateTime);
-                }
-                catch (Exception e)
-                {
-                    Logger.Setup(e);
-                    throw;
-                }
-            }
+            await DownloadApp();
+            await DownloadFfmpeg();
+            await DownloadCloudflared();
+            await DownloadYtdlp();
+            await DownloadWhisperModels(AppFiles.WhisperModel);
+            
+            string currentCulture = CultureInfo.CurrentCulture.EnglishLanguageTag();
+            await DownloadTesseractData(["eng", "jpn", currentCulture]);
         });
     }
 
-    private static async Task Download(Download program)
+    private static bool CheckLocalVersion(GithubReleaseResponse releaseInfo, string destination, out string version)
     {
-        Logger.Setup($"Downloading {program.Name}", LogEventLevel.Verbose);
-
-        string baseName = Path.GetFileName(program.Url?.ToString() ?? "");
-        string filePath = Path.Combine(AppFiles.BinariesPath, baseName);
-
-        HttpResponseMessage result = await HttpClient.GetAsync(program.Url);
-        byte[] content = await result.Content.ReadAsByteArrayAsync();
-
-        await File.WriteAllBytesAsync(filePath, content);
+        version = releaseInfo.TagName.StartsWith("v")
+            ? releaseInfo.TagName[1..]
+            : releaseInfo.TagName;
+        
+        bool fileExists = File.Exists(destination);
+        if (!fileExists) return false;
+        
+        DateTime creationTime = File.GetCreationTimeUtc(destination);
+        DateTimeOffset releaseDate = releaseInfo.PublishedAt != DateTimeOffset.MinValue
+            ? releaseInfo.PublishedAt.UtcDateTime
+            : DateTimeOffset.Now;
+        
+        return creationTime >= releaseDate;
     }
-
-    private static async Task Extract(Download program)
+    
+    private static async Task<GithubReleaseResponse> GetLatestReleaseInfo(string apiUrl)
     {
-        if (program.Url == null) return;
-
-        string sourceArchiveFileName =
-            Path.Combine(AppFiles.BinariesPath, Path.GetFileName(program.Url?.ToString() ?? ""));
-        string destinationDirectoryName = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name);
-
-        Logger.Setup($"Extracting {program.Name} to {destinationDirectoryName}", LogEventLevel.Verbose);
-
-        string extension = Path.GetExtension(program.Url!.ToString());
-        if (!program.NoDelete && (string.IsNullOrEmpty(extension) || extension == ".exe"))
+        HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
+        
+        response.EnsureSuccessStatusCode();
+        
+        string jsonResponse = await response.Content.ReadAsStringAsync();
+        
+        return jsonResponse.FromJson<GithubReleaseResponse>() ?? new GithubReleaseResponse();
+    }
+    
+    private static async Task DownloadApp()
+    {
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
+        if (releaseInfo.Assets.Length == 0)
         {
-            string file = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name + Info.ExecSuffix);
-
-            if (IsFileLocked(sourceArchiveFileName)) CloseApplicationLockingFile(sourceArchiveFileName);
-
-            if (IsFileLocked(file)) CloseApplicationLockingFile(file);
-
-            File.Delete(file);
-            File.Move(sourceArchiveFileName, file);
-            await SetExecutionPermissions(file);
+            Logger.Setup("No assets found for App release.", LogEventLevel.Error);
             return;
         }
 
-        try
+        if (CheckLocalVersion(releaseInfo, AppFiles.AppExePath, out string version))
         {
-            if (!program.NoDelete && Directory.Exists(destinationDirectoryName) &&
-                (sourceArchiveFileName.EndsWith(".zip") || sourceArchiveFileName.EndsWith(".tar.xz") ||
-                 sourceArchiveFileName.EndsWith(".tar.gz") || sourceArchiveFileName.EndsWith("tgz")))
-                Directory.Delete(destinationDirectoryName, true);
-
-            if (sourceArchiveFileName.EndsWith(".zip"))
-            {
-                Directory.CreateDirectory(destinationDirectoryName);
-                ZipFile.ExtractToDirectory(sourceArchiveFileName, destinationDirectoryName);
-                File.Delete(sourceArchiveFileName);
-                await SetExecutionPermissions(destinationDirectoryName);
-            }
-            else if (sourceArchiveFileName.EndsWith(".tar.xz") || sourceArchiveFileName.EndsWith(".tar.gz")
-                                                               || sourceArchiveFileName.EndsWith("tgz"))
-            {
-                Directory.CreateDirectory(destinationDirectoryName);
-                await Shell.ExecAsync("tar", $"xf \"{sourceArchiveFileName}\" -C \"{destinationDirectoryName}\"");
-                File.Delete(sourceArchiveFileName);
-                await SetExecutionPermissions(destinationDirectoryName);
-            }
+            Logger.Setup($"App is already up to date (version {version})", LogEventLevel.Verbose);
+            return;
         }
-        catch (Exception ex)
+        
+        await Downloader.DeleteSourceDownload(AppFiles.AppExePath);
+
+        Uri? downloadUrl = null;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            Logger.Setup($"Failed to extract {program.Name}: {ex.Message}", LogEventLevel.Error);
-            throw new($"Failed to extract {program.Name}", ex);
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyApp-windows-x64.exe", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyApp-linux-arm64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyApp-linux-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyApp-macos-x64.dmg", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
         }
 
-        await Task.Delay(0);
+        if (downloadUrl == null)
+        {
+            Logger.Setup("No suitable NoMercyApp asset found for the current platform.", LogEventLevel.Error);
+            return;
+        }
+        
+        string path = await Downloader.DownloadFile("NoMercyApp", downloadUrl, AppFiles.AppExePath);
+        
+        await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
+        
+        await FilePermissions.SetExecutionPermissions(path);
     }
 
-    private static async Task SetExecutionPermissions(string path)
+    private static async Task DownloadFfmpeg()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubFfmpegApiUrl);
+        if (releaseInfo.Assets.Length == 0)
         {
-            if (File.Exists(path))
-                await Shell.ExecAsync("chmod", $"+x \"{path}\"");
-            else if (Directory.Exists(path)) await Shell.ExecAsync("chmod", $"-R +x \"{path}\"");
-
-            Logger.Setup($"Set execution permissions for {path}", LogEventLevel.Verbose);
-        }
-    }
-
-    private static async Task Cleanup(Download program)
-    {
-        if (program.Filter == "")
-        {
-            await Task.Delay(0);
+            Logger.Setup("No assets found for FFMpeg release.", LogEventLevel.Error);
             return;
         }
 
-        string workingDir = Path.Combine(AppFiles.BinariesPath, program.Path, program.Name, program.Filter);
-        foreach (string file in Directory.GetFiles(workingDir))
+        if (CheckLocalVersion(releaseInfo, AppFiles.FfmpegPath, out string version))
         {
-            string filter = Path.DirectorySeparatorChar + program.Filter;
-            string dirName = file.Replace(filter, "");
+            Logger.Setup($"Ffmpeg is already up to date (version {version})", LogEventLevel.Verbose);
+            return;
+        }
+        
+        await Downloader.DeleteSourceDownload(AppFiles.FfmpegPath);
+        await Downloader.DeleteSourceDownload(AppFiles.FfProbePath);
+        await Downloader.DeleteSourceDownload(AppFiles.FfPlayPath);
+        
+        Uri? downloadUrl = null;
 
-            File.Move(file, dirName);
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Contains("windows"))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Contains("linux") && a.Name.Contains("aarch64"))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Contains("linux") && a.Name.Contains("x86_64"))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Contains("darwin") && a.Name.Contains("arm64"))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Contains("darwin") && a.Name.Contains("x86_64"))?.BrowserDownloadUrl;
         }
 
-        Directory.Delete(workingDir);
+        if (downloadUrl == null)
+        {
+            Logger.Setup("No suitable FFMpeg asset found for the current platform.", LogEventLevel.Error);
+            return;
+        }
+        
+        string path = await Downloader.DownloadFile("FFMpeg", downloadUrl);
+        
+        List<string> files = await Archiving.ExtractArchive(path, AppFiles.FfmpegFolder);
+        foreach (string file in files)
+        {
+            await FileAttributes.SetCreatedAttribute(file, releaseInfo.PublishedAt);
+        }
+        
+        await Downloader.DeleteSourceDownload(path);
+        
+    }
+    
+    private static async Task DownloadYtdlp()
+    {
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubYtdlpApiUrl);
+        if (releaseInfo.Assets.Length == 0)
+        {
+            Logger.Setup("No assets found for yt-dlp release.", LogEventLevel.Error);
+            return;
+        }
+        
+        if (CheckLocalVersion(releaseInfo, AppFiles.YtdlpPath, out string version))
+        {
+            Logger.Setup($"Yt-dlp is already up to date (version {version})", LogEventLevel.Verbose);
+            return;
+        }
+        
+        await Downloader.DeleteSourceDownload(AppFiles.YtdlpPath);
+
+        Uri? downloadUrl = null;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("yt-dlp_x86.exe", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("yt-dlp_linux_aarch64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("yt-dlp_linux", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("yt-dlp_macos", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+
+        if (downloadUrl == null)
+        {
+            Logger.Setup("No suitable yt-dlp asset found for the current platform.", LogEventLevel.Error);
+            return;
+        }
+        
+        string outputPath = await Downloader.DownloadFile("yt-dlp", downloadUrl, AppFiles.YtdlpPath);
+        
+        await FileAttributes.SetCreatedAttribute(outputPath, releaseInfo.PublishedAt);
+        
+        Logger.Setup($"Downloaded yt-dlp to {outputPath}");
     }
 
-    private static bool IsFileLocked(string filePath)
+    private static async Task DownloadCloudflared()
     {
-        try
+        string destinationPath = AppFiles.CloudflareDPath;
+        
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubCloudflaredApiUrl);
+        if (releaseInfo.Assets.Length == 0)
         {
-            using FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-            stream.Close();
+            Logger.Setup("No assets found for cloudflared release.", LogEventLevel.Error);
+            return;
         }
-        catch (IOException)
+        
+        if (CheckLocalVersion(releaseInfo, destinationPath, out string version))
         {
-            return true;
+            Logger.Setup($"Cloudflared is already up to date (version {version})", LogEventLevel.Verbose);
+            return;
+        }
+        
+        await Downloader.DeleteSourceDownload(destinationPath);
+
+        Uri? downloadUrl = null;
+        bool needsExtraction = false;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-windows-amd64.exe"))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-linux-arm"))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-linux-amd64"))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-amd64.tgz"))?.BrowserDownloadUrl;
+            needsExtraction = true;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-arm64.tgz"))?.BrowserDownloadUrl;
+            needsExtraction = true;
         }
 
-        return false;
+        if (downloadUrl == null)
+        {
+            Logger.Setup("No suitable cloudflared asset found for the current platform.", LogEventLevel.Error);
+            return;
+        }
+        
+        string path = await Downloader.DownloadFile("cloudflared", downloadUrl);
+        
+        Logger.Setup($"Downloaded cloudflared to {path}");
+        
+        if (needsExtraction)
+        {
+            List<string> files = await Archiving.ExtractArchive(path, AppFiles.BinariesPath);
+            foreach (string file in files)
+            {
+                await FileAttributes.SetCreatedAttribute(file, releaseInfo.PublishedAt);
+            }
+            await Downloader.DeleteSourceDownload(path);
+        }
+        else
+        {
+            if (File.Exists(destinationPath)) File.Delete(destinationPath);
+            
+            File.Move(path, destinationPath);
+            
+            await FileAttributes.SetCreatedAttribute(destinationPath, releaseInfo.PublishedAt);
+            
+            await FilePermissions.SetExecutionPermissions(destinationPath);
+        }
+        
     }
 
-    private static void CloseApplicationLockingFile(string filePath)
+    private static async Task DownloadWhisperModels(string modelName = "ggml-large-v3")
     {
-        Logger.Setup($"Closing application locking {filePath}", LogEventLevel.Verbose);
+        string destinationPath = Path.Combine(AppFiles.FfmpegFolder, modelName + ".bin");
 
-        foreach (Process process in Process.GetProcesses())
-            try
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubWhisperModelApiUrl);
+        if (releaseInfo.Assets.Length == 0)
+        {
+            Logger.Setup("No assets found for WhisperGmmlModels release.", LogEventLevel.Error);
+            return;
+        }
+        
+        if (CheckLocalVersion(releaseInfo, destinationPath, out string version))
+        {
+            Logger.Setup($"Whisper LLM model is already up to date (version {version})", LogEventLevel.Verbose);
+            return;
+        }
+        
+        await Downloader.DeleteSourceDownload(destinationPath);
+        
+        IEnumerable<Uri> downloadUrls = releaseInfo.Assets
+            .Where(a => a.Name.Contains(modelName, StringComparison.OrdinalIgnoreCase))
+            .Select(a => a.BrowserDownloadUrl)
+            .ToList();
+
+        if (!downloadUrls.Any())
+        {
+            Logger.Setup($"No assets found for model {modelName} in WhisperGmmlModels release.", LogEventLevel.Error);
+            return;
+        }
+
+        List<string> paths = [];
+        foreach (Uri downloadUrl in downloadUrls)
+        {
+            paths.Add(await Downloader.DownloadFile("WhisperGmmlModels", downloadUrl));
+        }
+
+        if (downloadUrls.Count() > 1)
+        {
+            string outputPath = await ConcatenateModelParts(modelName, downloadUrls);
+            
+            foreach (string path in paths)
             {
-                if (process.MainModule?.FileName == null) continue;
-                if (process.MainModule.FileName.Equals(filePath, StringComparison.OrdinalIgnoreCase))
-                {
-                    process.Kill();
-                    process.WaitForExit();
-                    Logger.Setup($"Closed application {process.ProcessName} locking {filePath}", LogEventLevel.Verbose);
-                    break;
-                }
+                await Downloader.DeleteSourceDownload(path);
             }
-            catch (System.ComponentModel.Win32Exception)
+            
+            await FileAttributes.SetCreatedAttribute(outputPath, releaseInfo.PublishedAt);
+            
+            Logger.Setup($"Downloaded and concatenated Whisper model parts to {outputPath}");
+        }
+        else
+        {
+            Logger.Setup($"Downloaded Whisper model to {paths[0]}");
+        }
+    }
+    
+    private static async Task<string> ConcatenateModelParts(string modelName, IEnumerable<Uri> partUrls)
+    {
+        string destinationPath = Path.Combine(AppFiles.FfmpegFolder, modelName + ".bin");
+
+        await using FileStream destinationStream = new(destinationPath, FileMode.Create, FileAccess.Write);
+    
+        foreach (Uri partUrl in partUrls)
+        {
+            string partPath = Path.Combine(AppFiles.BinariesPath, Path.GetFileName(partUrl.ToString()));
+
+            await using FileStream partStream = new(partPath, FileMode.Open, FileAccess.Read);
+            await partStream.CopyToAsync(destinationStream);
+        }
+        
+        Logger.Setup($"Concatenated model parts into {destinationPath}", LogEventLevel.Verbose);
+
+        return destinationPath;
+    }
+    
+    private static async Task DownloadTesseractData(IEnumerable<string> languages)
+    {
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubTesseractApiUrl);
+        if (releaseInfo.Assets.Length == 0)
+        {
+            Logger.Setup("No assets found for TesseractData release.", LogEventLevel.Error);
+            return;
+        }
+
+        foreach (string lang in languages)
+        {
+            Uri? downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals($"{lang}.traineddata", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+
+            if (downloadUrl == null)
             {
-                // Ignore the error if the process is not accessible
+                Logger.Setup($"No asset found for language {lang} in TesseractData release.", LogEventLevel.Warning);
+                continue;
             }
-            catch (InvalidOperationException ex)
+            
+            string destinationPath = Path.Combine(AppFiles.TesseractModelsFolder, $"{lang}.traineddata");
+            
+            if (CheckLocalVersion(releaseInfo, destinationPath, out string version))
             {
-                Logger.Setup($"Process {process.ProcessName} has already exited: {ex.Message}", LogEventLevel.Warning);
+                Logger.Setup($"Tesseract data for {lang} is already up to date (version {version})", LogEventLevel.Verbose);
+                continue;
             }
+            
+            await Downloader.DeleteSourceDownload(destinationPath);
+        
+            string path = await Downloader.DownloadFile($"Tesseract data for {lang}", downloadUrl, $"{lang}.traineddata");
+            
+            File.Move(path, destinationPath);
+            
+            await FileAttributes.SetCreatedAttribute(destinationPath, releaseInfo.PublishedAt);
+            
+            Logger.Setup($"Downloaded Tesseract data for {lang} to {destinationPath}");
+        }
     }
 }
