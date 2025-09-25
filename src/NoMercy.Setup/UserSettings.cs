@@ -32,6 +32,7 @@ public static class UserSettings
         foreach (KeyValuePair<string, string> setting in settings)
         {
             Logger.App($"Configuration: {setting.Key} = {setting.Value}");
+            
             switch (setting.Key)
             {
                 case "internalPort":

@@ -18,10 +18,10 @@ public class TempServer
                 {
                     string code = context.Request.Query["code"].ToString();
 
-                    await Auth.TokenByAuthorizationCode(code);
-
                     context.Response.Headers.Append("Content-Type", "text/html");
                     await context.Response.WriteAsync("<script>window.close();</script>");
+
+                    await Auth.TokenByAuthorizationCode(code);
                 });
             }).Build();
     }

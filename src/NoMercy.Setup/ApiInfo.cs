@@ -8,11 +8,8 @@ using Config = NoMercy.NmSystem.Information.Config;
 
 namespace NoMercy.Setup;
 
-public partial class ApiInfo
+public class ApiInfo
 {
-    public static readonly string ApplicationVersion = Environment.Version.ToString();
-    public static readonly string ApplicationName = "NoMercy MediaServer";
-
     public static string MakeMkvKey { get; set; } = string.Empty;
     public static string TmdbKey { get; set; } = string.Empty;
     public static string OmdbKey { get; set; } = string.Empty;
@@ -25,12 +22,7 @@ public partial class ApiInfo
     public static string MusixmatchKey { get; set; } = string.Empty;
     public static string JwplayerKey { get; set; } = string.Empty;
 
-    public static string[] Colors { get; private set; } =
-    [
-        "#8f00fc",
-        "#705BAD",
-        "#CBAFFF"
-    ];
+    public static string[] Colors { get; private set; } = [];
 
     public static string Quote { get; private set; } = string.Empty;
 
@@ -39,13 +31,15 @@ public partial class ApiInfo
         try
         {
             Logger.Setup("Requesting server info");
+            
             GenericHttpClient apiClient = new(Config.ApiBaseUrl);
             apiClient.SetDefaultHeaders(Config.UserAgent);
+            
             string content = await apiClient.SendAndReadAsync(HttpMethod.Get, "v1/info");
 
             if (content == null) throw new("Failed to get server info");
 
-            ApiInfo? data = content.FromJson<ApiInfo>();
+            ApiInfoResponse? data = content.FromJson<ApiInfoResponse>();
             if (data == null) throw new("Failed to deserialize server info");
 
             Quote = data.Data.Quote;
@@ -56,7 +50,7 @@ public partial class ApiInfo
             OmdbKey = data.Data.Keys.OmdbKey;
             FanArtKey = data.Data.Keys.FanArtKey;
             RottenTomatoes = data.Data.Keys.RottenTomatoes;
-            AcousticIdKey = data.Data.Keys.AcousticId;
+            AcousticIdKey = data.Data.Keys.AcousticIdKey;
             TadbKey = data.Data.Keys.TadbKey;
             TmdbToken = data.Data.Keys.TmdbToken;
             TvdbKey = data.Data.Keys.TvdbKey;
@@ -71,13 +65,3 @@ public partial class ApiInfo
         }
     }
 }
-
-#region Types
-
-public partial class ApiInfo
-{
-    [JsonProperty("status")] public string Status { get; set; } = string.Empty;
-    [JsonProperty("data")] public Data Data { get; set; } = new();
-}
-
-#endregion
