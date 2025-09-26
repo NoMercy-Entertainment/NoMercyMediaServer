@@ -26,11 +26,11 @@
   </Entry>
   <Entry>
     <Key>Rescanning all libraries.</Key>
-    <Value lang="nl">Rescanning all libraries.</Value>
+    <Value lang="nl">Alle bibliotheken opnieuw scannen.</Value>
   </Entry>
   <Entry>
     <Key>Continue Watching</Key>
-    <Value lang="nl">Continue Watching</Value>
+    <Value lang="nl">Blijven Kijken</Value>
   </Entry>
   <Entry>
     <Key>See all</Key>
@@ -38,19 +38,19 @@
   </Entry>
   <Entry>
     <Key>Tv show not found</Key>
-    <Value lang="nl">Tv show not found</Value>
+    <Value lang="nl">Tv-show niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Configuration updated successfully</Key>
-    <Value lang="nl">Configuration updated successfully</Value>
+    <Value lang="nl">Configuratie succesvol bijgewerkt</Value>
   </Entry>
   <Entry>
     <Key>Albums not found</Key>
-    <Value lang="nl">Albums not found</Value>
+    <Value lang="nl">Albums niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Subtitle not found</Key>
-    <Value lang="nl">Subtitle not found</Value>
+    <Value lang="nl">Ondertitel niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>{0} {1}</Key>
@@ -58,171 +58,172 @@
   </Entry>
   <Entry>
     <Key>Specials not found</Key>
-    <Value lang="nl">Specials not found</Value>
+    <Value lang="nl">Specials niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>People not found</Key>
-    <Value lang="nl">People not found</Value>
+    <Value lang="nl">Personen niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Playback recorded</Key>
-    <Value lang="nl">Playback recorded</Value>
+    <Value lang="nl">Afspelen opgenomen</Value>
   </Entry>
   <Entry>
     <Key>Genre not found</Key>
-    <Value lang="nl">Genre not found</Value>
+    <Value lang="nl">Genre niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>An error occurred while saving the entity changes. See the inner exception for details.</Key>
-    <Value lang="nl">An error occurred while saving the entity changes. See the inner exception for details.</Value>
+    <Value lang="nl">Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
+      binnenste uitzondering voor details.</Value>
   </Entry>
   <Entry>
     <Key>Albums not found</Key>
-    <Value lang="nl">Albums not found</Value>
+    <Value lang="nl">Albums niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Artist not found</Key>
-    <Value lang="nl">Artist not found</Value>
+    <Value lang="nl">Artiest niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Tracks not found</Key>
-    <Value lang="nl">Tracks not found</Value>
+    <Value lang="nl">Nummers niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Playlist not found</Key>
-    <Value lang="nl">Playlist not found</Value>
+    <Value lang="nl">Afspeellijst niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to access the dashboard</Key>
-    <Value lang="nl">You do not have permission to access the dashboard</Value>
+    <Value lang="nl">Je hebt geen toestemming om het dashboard te bekijken</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view configuration</Key>
-    <Value lang="nl">You do not have permission to view configuration</Value>
+    <Value lang="nl">Je hebt geen toestemming om de configuratie te bekijken</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view task workers</Key>
-    <Value lang="nl">You do not have permission to view task workers</Value>
+    <Value lang="nl">Je hebt geen toestemming om taakwerkers te bekijken</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view server information</Key>
-    <Value lang="nl">You do not have permission to view server information</Value>
+    <Value lang="nl">Je hebt geen toestemming om serverinformatie te bekijken</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view server paths</Key>
-    <Value lang="nl">You do not have permission to view server paths</Value>
+    <Value lang="nl">Je hebt geen toestemming om serverpaden te bekijken</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view activity</Key>
-    <Value lang="nl">You do not have permission to view activity</Value>
+    <Value lang="nl">Je hebt geen toestemming om activiteit te bekijken</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view devices</Key>
-    <Value lang="nl">You do not have permission to view devices</Value>
+    <Value lang="nl">Je hebt geen toestemming om apparaten te bekijken</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view encoder profiles</Key>
-    <Value lang="nl">You do not have permission to view encoder profiles</Value>
+    <Value lang="nl">Je hebt geen toestemming om encoderprofielen te bekijken</Value>
   </Entry>
   <Entry>
     <Key>Successfully created a new library.</Key>
-    <Value lang="nl">Successfully created a new library.</Value>
+    <Value lang="nl">Nieuwe bibliotheek succesvol aangemaakt.</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view encoder queue</Key>
-    <Value lang="nl">You do not have permission to view encoder queue</Value>
+    <Value lang="nl">Je hebt geen toestemming om de encoderwachtrij te bekijken</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong deleting the library: {0}</Key>
-    <Value lang="nl">Something went wrong deleting the library: {0}</Value>
+    <Value lang="nl">Er ging iets mis bij het verwijderen van de bibliotheek: {0}</Value>
   </Entry>
   <Entry>
     <Key>Successfully deleted {0} library.</Key>
-    <Value lang="nl">Successfully deleted {0} library.</Value>
+    <Value lang="nl">Bibliotheek {0} succesvol verwijderd.</Value>
   </Entry>
   <Entry>
     <Key>No results found</Key>
-    <Value lang="nl">No results found</Value>
+    <Value lang="nl">Geen resultaten gevonden</Value>
   </Entry>
   <Entry>
     <Key>User already exists</Key>
-    <Value lang="nl">User already exists</Value>
+    <Value lang="nl">Gebruiker bestaat al</Value>
   </Entry>
   <Entry>
     <Key>User updated</Key>
-    <Value lang="nl">User updated</Value>
+    <Value lang="nl">Gebruiker bijgewerkt</Value>
   </Entry>
   <Entry>
     <Key>Rescanning all specials.</Key>
-    <Value lang="nl">Rescanning all specials.</Value>
+    <Value lang="nl">Alle specials opnieuw scannen.</Value>
   </Entry>
   <Entry>
     <Key>Rescanning {0} for files</Key>
-    <Value lang="nl">Rescanning {0} for files</Value>
+    <Value lang="nl">{0} scannen voor bestanden</Value>
   </Entry>
   <Entry>
     <Key>Item removed</Key>
-    <Value lang="nl">Item removed</Value>
+    <Value lang="nl">Item verwijderd</Value>
   </Entry>
   <Entry>
     <Key>Successfully updated {0} special.</Key>
-    <Value lang="nl">Successfully updated {0} special.</Value>
+    <Value lang="nl">Special {0} succesvol bijgewerkt.</Value>
   </Entry>
   <Entry>
     <Key>Unknown property Audio</Key>
-    <Value lang="nl">Unknown property Audio</Value>
+    <Value lang="nl">Onbekende eigenschap Audio</Value>
   </Entry>
   <Entry>
     <Key>Unknown property AudioTrack</Key>
-    <Value lang="nl">Unknown property AudioTrack</Value>
+    <Value lang="nl">Onbekende eigenschap AudioTrack</Value>
   </Entry>
   <Entry>
     <Key>Unknown property Chapters</Key>
-    <Value lang="nl">Unknown property Chapters</Value>
+    <Value lang="nl">Onbekende eigenschap Hoofdstukken</Value>
   </Entry>
   <Entry>
     <Key>Unknown property Fonts</Key>
-    <Value lang="nl">Unknown property Fonts</Value>
+    <Value lang="nl">Onbekende eigenschap Lettertypen</Value>
   </Entry>
   <Entry>
     <Key>Unknown property FontsFile</Key>
-    <Value lang="nl">Unknown property FontsFile</Value>
+    <Value lang="nl">Onbekende eigenschap LettertypenBestand</Value>
   </Entry>
   <Entry>
     <Key>Unknown property Previews</Key>
-    <Value lang="nl">Unknown property Previews</Value>
+    <Value lang="nl">Onbekende eigenschap Voorvertoningen</Value>
   </Entry>
   <Entry>
     <Key>Unknown property Subtitles</Key>
-    <Value lang="nl">Unknown property Subtitles</Value>
+    <Value lang="nl">Onbekende eigenschap Ondertitels</Value>
   </Entry>
   <Entry>
     <Key>Unknown property Video</Key>
-    <Value lang="nl">Unknown property Video</Value>
+    <Value lang="nl">Onbekende eigenschap Video</Value>
   </Entry>
   <Entry>
     <Key>updater must be an Initialiser of the TEntity type (Parameter 'updater')</Key>
-    <Value lang="nl">updater must be an Initialiser of the TEntity type (Parameter 'updater')</Value>
+    <Value lang="nl">updater moet een Initialiser van het TEntity type zijn (Parameter 'updater')</Value>
   </Entry>
   <Entry>
     <Key>Rescanning {0} library.</Key>
-    <Value lang="nl">Rescanning {0} library.</Value>
+    <Value lang="nl">Bibliotheek {0} opnieuw scannen.</Value>
   </Entry>
   <Entry>
     <Key>Successfully moved item {0}.</Key>
-    <Value lang="nl">Successfully moved item {0}.</Value>
+    <Value lang="nl">Item {0} succesvol verplaatst.</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong moving the item: {0}</Key>
-    <Value lang="nl">Something went wrong moving the item: {0}</Value>
+    <Value lang="nl">Er ging iets mis bij het verplaatsen van het item: {0}</Value>
   </Entry>
   <Entry>
     <Key>Added to library</Key>
-    <Value lang="nl">Added to library</Value>
+    <Value lang="nl">Toegevoegd aan bibliotheek</Value>
   </Entry>
   <Entry>
     <Key>Wallpaper set successfully</Key>
-    <Value lang="nl">Wallpaper set successfully</Value>
+    <Value lang="nl">Achtergrond succesvol ingesteld</Value>
   </Entry>
   <Entry>
     <Key>{1}</Key>
@@ -230,23 +231,23 @@
   </Entry>
   <Entry>
     <Key>Wallpaper not found</Key>
-    <Value lang="nl">Wallpaper not found</Value>
+    <Value lang="nl">Achtergrond niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Job not found</Key>
-    <Value lang="nl">Job not found</Value>
+    <Value lang="nl">Taak niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Priority updated</Key>
-    <Value lang="nl">Priority updated</Value>
+    <Value lang="nl">Prioriteit bijgewerkt</Value>
   </Entry>
   <Entry>
     <Key>User {0} created successfully</Key>
-    <Value lang="nl">User {0} created successfully</Value>
+    <Value lang="nl">Gebruiker {0} succesvol aangemaakt</Value>
   </Entry>
   <Entry>
     <Key>Movie not found</Key>
-    <Value lang="nl">Movie not found</Value>
+    <Value lang="nl">Film niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>{0}: {1}</Key>
@@ -254,23 +255,23 @@
   </Entry>
   <Entry>
     <Key>You do not have permission to view optical drives</Key>
-    <Value lang="nl">You do not have permission to view optical drives</Value>
+    <Value lang="nl">Je hebt geen toestemming om optische drives te bekijken</Value>
   </Entry>
   <Entry>
     <Key>Favorite Artists</Key>
-    <Value lang="nl">Favorite Artists</Value>
+    <Value lang="nl">Favoriete Artiesten</Value>
   </Entry>
   <Entry>
     <Key>Favorite Albums</Key>
-    <Value lang="nl">Favorite Albums</Value>
+    <Value lang="nl">Favoriete Albums</Value>
   </Entry>
   <Entry>
     <Key>Playlists</Key>
-    <Value lang="nl">Playlists</Value>
+    <Value lang="nl">Afspeellijsten</Value>
   </Entry>
   <Entry>
     <Key>Artists</Key>
-    <Value lang="nl">Artists</Value>
+    <Value lang="nl">Artiesten</Value>
   </Entry>
   <Entry>
     <Key>Albums</Key>
@@ -278,118 +279,132 @@
   </Entry>
   <Entry>
     <Key>Most listened artist</Key>
-    <Value lang="nl">Most listened artist</Value>
+    <Value lang="nl">Meest beluisterde artiest</Value>
   </Entry>
   <Entry>
     <Key>Most listened album</Key>
-    <Value lang="nl">Most listened album</Value>
+    <Value lang="nl">Meest beluisterd album</Value>
   </Entry>
   <Entry>
     <Key>Trailer found</Key>
-    <Value lang="nl">Trailer found</Value>
+    <Value lang="nl">Trailer gevonden</Value>
   </Entry>
   <Entry>
     <Key>Trailer not found</Key>
-    <Value lang="nl">Trailer not found</Value>
+    <Value lang="nl">Trailer niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Show deleted</Key>
-    <Value lang="nl">Show deleted</Value>
+    <Value lang="nl">Show verwijderd</Value>
   </Entry>
   <Entry>
     <Key>Item not found</Key>
-    <Value lang="nl">Item not found</Value>
+    <Value lang="nl">Item niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to update server information</Key>
-    <Value lang="nl">You do not have permission to update server information</Value>
+    <Value lang="nl">Je hebt geen toestemming om serverinformatie bij te werken</Value>
   </Entry>
   <Entry>
     <Key>Library {0} does not exist.</Key>
-    <Value lang="nl">Library {0} does not exist.</Value>
+    <Value lang="nl">Bibliotheek {0} bestaat niet.</Value>
   </Entry>
   <Entry>
     <Key>Successfully added folder to {0} library.</Key>
-    <Value lang="nl">Successfully added folder to {0} library.</Value>
+    <Value lang="nl">Map succesvol toegevoegd aan bibliotheek {0}.</Value>
   </Entry>
   <Entry>
     <Key>Successfully deleted folder {0}.</Key>
-    <Value lang="nl">Successfully deleted folder {0}.</Value>
+    <Value lang="nl">Map {0} succesvol verwijderd.</Value>
   </Entry>
   <Entry>
     <Key>Successfully updated {0} library.</Key>
-    <Value lang="nl">Successfully updated {0} library.</Value>
+    <Value lang="nl">Bibliotheek {0} succesvol bijgewerkt.</Value>
   </Entry>
   <Entry>
     <Key>Successfully sorted libraries.</Key>
-    <Value lang="nl">Successfully sorted libraries.</Value>
+    <Value lang="nl">Bibliotheken succesvol gesorteerd.</Value>
   </Entry>
   <Entry>
     <Key>No libraries exist.</Key>
-    <Value lang="nl">No libraries exist.</Value>
+    <Value lang="nl">Er bestaan geen bibliotheken.</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to create a new library</Key>
-    <Value lang="nl">You do not have permission to create a new library</Value>
+    <Value lang="nl">Je hebt geen toestemming om een nieuwe bibliotheek aan te maken</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong creating a new library: {0}</Key>
-    <Value lang="nl">Something went wrong creating a new library: {0}</Value>
+    <Value lang="nl">Er ging iets mis bij het aanmaken van een nieuwe bibliotheek: {0}</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong adding the folder: {0}</Key>
-    <Value lang="nl">Something went wrong adding the folder: {0}</Value>
+    <Value lang="nl">Er ging iets mis bij het toevoegen van de map: {0}</Value>
   </Entry>
   <Entry>
     <Key>The route v1/server/server/name could not be found.</Key>
-    <Value lang="nl">The route v1/server/server/name could not be found.</Value>
+    <Value lang="nl">De route v1/server/server/name kon niet gevonden worden.</Value>
   </Entry>
   <Entry>
     <Key>The server name field is required.</Key>
-    <Value lang="nl">The server name field is required.</Value>
+    <Value lang="nl">Het servernaamveld is verplicht.</Value>
   </Entry>
   <Entry>
     <Key>Attempt to read property "server_name" on array</Key>
-    <Value lang="nl">Attempt to read property "server_name" on array</Value>
+    <Value lang="nl">Poging om eigenschap "server_name" te lezen van array</Value>
   </Entry>
   <Entry>
-    <Key>SQLSTATE[42S22]: Column not found: 1054 Unknown column 'server_name' in 'field list' (Connection: mysql, SQL: update `servers` set `server_name` = EAGLE, `servers`.`updated_at` = 2025-09-03 17:20:45 where `user_id` = 6aa35c70-7136-44f3-baba-e1d464433426 and `id` = fcbb730a-a562-2ca5-d054-5d6acf2a1aaa)</Key>
-    <Value lang="nl">SQLSTATE[42S22]: Column not found: 1054 Unknown column 'server_name' in 'field list' (Connection: mysql, SQL: update `servers` set `server_name` = EAGLE, `servers`.`updated_at` = 2025-09-03 17:20:45 where `user_id` = 6aa35c70-7136-44f3-baba-e1d464433426 and `id` = fcbb730a-a562-2ca5-d054-5d6acf2a1aaa)</Value>
+    <Key>SQLSTATE[42S22]: Column not found: 1054 Unknown column 'server_name' in 'field list'
+      (Connection: mysql, SQL: update `servers` set `server_name` = EAGLE, `servers`.`updated_at` =
+      2025-09-03 17:20:45 where `user_id` = 6aa35c70-7136-44f3-baba-e1d464433426 and `id` =
+      fcbb730a-a562-2ca5-d054-5d6acf2a1aaa)</Key>
+    <Value lang="nl">SQLSTATE[42S22]: Kolom niet gevonden: 1054 Onbekende kolom 'server_name' in
+      'field list' (Verbinding: mysql, SQL: update `servers` set `server_name` = EAGLE,
+      `servers`.`updated_at` = 2025-09-03 17:20:45 where `user_id` =
+      6aa35c70-7136-44f3-baba-e1d464433426 and `id` = fcbb730a-a562-2ca5-d054-5d6acf2a1aaa)</Value>
   </Entry>
   <Entry>
     <Key>Server name changed</Key>
-    <Value lang="nl">Server name changed</Value>
+    <Value lang="nl">Servernaam gewijzigd</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong updating the library encoder profiles: {0}</Key>
-    <Value lang="nl">Something went wrong updating the library encoder profiles: {0}</Value>
+    <Value lang="nl">Er ging iets mis bij het bijwerken van de bibliotheek encoderprofielen: {0}</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to update the library</Key>
-    <Value lang="nl">You do not have permission to update the library</Value>
+    <Value lang="nl">Je hebt geen toestemming om de bibliotheek bij te werken</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to view folders</Key>
-    <Value lang="nl">You do not have permission to view folders</Value>
+    <Value lang="nl">Je hebt geen toestemming om mappen te bekijken</Value>
   </Entry>
   <Entry>
     <Key>Refreshing {0}</Key>
-    <Value lang="nl">Refreshing {0}</Value>
+    <Value lang="nl">{0} vernieuwen</Value>
   </Entry>
   <Entry>
     <Key>Refreshing {0} data in background</Key>
-    <Value lang="nl">Refreshing {0} data in background</Value>
+    <Value lang="nl">{0} gegevens op de achtergrond vernieuwen</Value>
   </Entry>
   <Entry>
     <Key>Adding {0} in the background</Key>
-    <Value lang="nl">Adding {0} in the background</Value>
+    <Value lang="nl">{0} op de achtergrond toevoegen</Value>
   </Entry>
   <Entry>
     <Key>Favorite Tracks</Key>
-    <Value lang="nl">Favorite Tracks</Value>
+    <Value lang="nl">Favoriete Nummers</Value>
   </Entry>
   <Entry>
     <Key>Rescanning {0} for files in the background</Key>
-    <Value lang="nl">Rescanning {0} for files in the background</Value>
+    <Value lang="nl">{0} op de achtergrond scannen voor bestanden</Value>
+  </Entry>
+  <Entry>
+    <Key>User deleted</Key>
+    <Value lang="nl">Gebruiker verwijderd</Value>
+  </Entry>
+  <Entry>
+    <Key>User not found</Key>
+    <Value lang="nl">Gebruiker niet gevonden</Value>
   </Entry>
 </I18N>

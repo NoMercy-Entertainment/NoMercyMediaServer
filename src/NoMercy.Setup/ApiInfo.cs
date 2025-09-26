@@ -22,7 +22,12 @@ public class ApiInfo
     public static string MusixmatchKey { get; set; } = string.Empty;
     public static string JwplayerKey { get; set; } = string.Empty;
 
-    public static string[] Colors { get; private set; } = [];
+    public static string[] Colors { get; private set; } =
+    [
+        "#8f00fc",
+        "#705BAD",
+        "#CBAFFF"
+    ];
 
     public static string Quote { get; private set; } = string.Empty;
 

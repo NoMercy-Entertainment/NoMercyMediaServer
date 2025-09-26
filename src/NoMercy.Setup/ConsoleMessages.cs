@@ -17,16 +17,16 @@ public abstract class ConsoleMessages
         ConsoleExtensions.Enable();
 
         Console.WriteLine(("╔" + Repeat("═", 46) + "╗").Pastel("#00a10d"));
-        Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"     " +
+        Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + "     " +
                           "Secure Server running: on port:".Pastel("#5ffa71") +
                           $" {Config.InternalServerPort}     ".Pastel("#ffffff") +
                           $"{_("#00a10d")}".Pastel("#00a10d"));
 
         if (Config.IsDev)
-            Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"      " + "  visit:".Pastel("#cccccc") +
+            Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + "      " + "  visit:".Pastel("#cccccc") +
                               $"  {Config.AppBaseUrl}   ".Pastel("#ffffff") + $"{_("#00a10d")}".Pastel("#00a10d"));
         else
-            Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + @"      " + "  visit:".Pastel("#cccccc") +
+            Console.WriteLine($"{_("#00a10d")}".Pastel("#00a10d") + "      " + "  visit:".Pastel("#cccccc") +
                               $"  {Config.AppBaseUrl}       ".Pastel("#ffffff") + $"{_("#00a10d")}".Pastel("#00a10d"));
 
         Console.WriteLine(("╚" + Repeat("═", 46) + "╝").Pastel("#00a10d"));
