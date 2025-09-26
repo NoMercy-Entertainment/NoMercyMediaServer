@@ -33,7 +33,7 @@
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
 
-        <Version>0.1.168</Version>
+        <Version>0.1.169</Version>
         <AssemblyVersion>$(Version).0</AssemblyVersion>
         <FileVersion>$(Version).0</FileVersion>
     </PropertyGroup>
