@@ -19,7 +19,8 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
     {
         foreach (ApiVersionDescription description in _provider.ApiVersionDescriptions)
         {
-            options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
+            string groupName = $"v{description.ApiVersion.MajorVersion}";
+            options.SwaggerDoc(groupName, CreateInfoForApiVersion(description, groupName));
 
             options.AddSecurityDefinition("Keycloak", new()
             {
@@ -63,12 +64,12 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
         }
     }
 
-    private static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
+    private static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description, string groupName)
     {
         OpenApiInfo info = new()
         {
             Title = "NoMercy API",
-            Version = description.ApiVersion.ToString(),
+            Version = groupName, // Use forced group name (e.g., v1)
             Description = "NoMercy API",
             Contact = new()
             {

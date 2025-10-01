@@ -11,6 +11,13 @@ namespace NoMercy.Api.Middleware;
 public class DynamicStaticFilesMiddleware(RequestDelegate next)
 {
     private static readonly ConcurrentDictionary<Ulid, PhysicalFileProvider> Providers = new();
+    
+    // Define streamable media file extensions
+    private static readonly HashSet<string> StreamableExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".3gp", ".ogv",
+        ".mp3", ".aac", ".flac", ".ogg", ".wav", ".wma", ".m4a", ".opus"
+    };
 
     public async Task InvokeAsync(HttpContext context)
     {
@@ -21,8 +28,21 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         }
 
         string? pathValue = context.Request.Path.Value;
-        string rootPath = context.Request.Path.ToString().Split('/')[1];
-        if (rootPath == "api" || rootPath == "index.html" || rootPath.StartsWith("swagger") || rootPath == "images")
+        string[] pathSegments = context.Request.Path.ToString().Split('/', StringSplitOptions.RemoveEmptyEntries);
+        
+        if (pathSegments.Length == 0)
+        {
+            await next(context);
+            return;
+        }
+        
+        string rootPath = pathSegments[0];
+        
+        // Allow API endpoints, Swagger, and other system paths to pass through
+        if (rootPath.Equals("api", StringComparison.OrdinalIgnoreCase) || 
+            rootPath.Equals("index.html", StringComparison.OrdinalIgnoreCase) || 
+            rootPath.StartsWith("swagger", StringComparison.OrdinalIgnoreCase) || 
+            rootPath.Equals("images", StringComparison.OrdinalIgnoreCase))
         {
             await next(context);
             return;
@@ -65,17 +85,17 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         context.Response.ContentType = MimeTypes.GetMimeTypeFromFile(file.PhysicalPath);
 
-        bool isMp4 = Path.GetExtension(filePhysicalPath).Equals(".mp4", StringComparison.OrdinalIgnoreCase);
+        bool isStreamableMedia = IsStreamableMedia(filePhysicalPath);
         bool hasRangeRequest = context.Request.Headers.TryGetValue("Range", out StringValues rangeValue);
 
-        // Force partial content for MP4 files or when range is requested
-        if (!hasRangeRequest && !isMp4)
+        // Force partial content for streamable media files or when range is requested
+        if (!hasRangeRequest && !isStreamableMedia)
         {
             await context.Response.SendFileAsync(file.PhysicalPath);
             return;
         }
 
-        // Parse range or default to start of file for MP4
+        // Parse range or default to start of file for streamable media
         long start = 0;
         long end;
 
@@ -93,7 +113,7 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         }
         else
         {
-            // For MP4 without range request, serve initial chunk (e.g., first 1MB)
+            // For streamable media without range request, serve initial chunk (e.g., first 1MB)
             end = Math.Min(start + (1024 * 1024) - 1, fileLength - 1);
         }
 
@@ -104,19 +124,24 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         context.Response.Headers.AcceptRanges = "bytes";
         context.Response.ContentLength = length;
 
-        await using (FileStream fs = File.OpenRead(file.PhysicalPath))
-        {
-            fs.Seek(start, SeekOrigin.Begin);
-            byte[] buffer = new byte[64 * 1024];
-            int bytesRead;
-            long bytesToRead = length;
+        await using FileStream fs = File.OpenRead(file.PhysicalPath);
+        
+        fs.Seek(start, SeekOrigin.Begin);
+        byte[] buffer = new byte[64 * 1024];
+        int bytesRead;
+        long bytesToRead = length;
 
-            while ((bytesRead = fs.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead))) > 0 && bytesToRead > 0)
-            {
-                await context.Response.Body.WriteAsync(buffer, 0, bytesRead);
-                bytesToRead -= bytesRead;
-            }
+        while ((bytesRead = fs.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead))) > 0 && bytesToRead > 0)
+        {
+            await context.Response.Body.WriteAsync(buffer, 0, bytesRead);
+            bytesToRead -= bytesRead;
         }
+    }
+
+    private static bool IsStreamableMedia(string filePath)
+    {
+        string extension = Path.GetExtension(filePath);
+        return StreamableExtensions.Contains(extension);
     }
 
     public static void AddPath(Ulid requestPath, string physicalPath)

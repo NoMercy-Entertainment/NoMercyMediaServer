@@ -171,21 +171,21 @@ public static class ServiceConfiguration
     {
         services.AddLogging(logging =>
         {
-            logging.ClearProviders();
-            logging.AddFilter("Microsoft", LogLevel.Critical);
-            logging.AddFilter("System", LogLevel.Critical);
-            logging.AddFilter("Network", LogLevel.Critical);
-            logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Critical);
-            logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Critical);
-
-            logging.AddFilter("Microsoft.AspNetCore", LogLevel.Critical);
-            logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Critical);
-            logging.AddFilter("Microsoft.AspNetCore.Routing", LogLevel.Critical);
-            logging.AddFilter("Microsoft.AspNetCore.Mvc", LogLevel.Critical);
-
-            logging.AddFilter("Microsoft.AspNetCore.HostFiltering.HostFilteringMiddleware", LogLevel.Critical);
-            logging.AddFilter("Microsoft.AspNetCore.Cors.Infrastructure.CorsMiddleware", LogLevel.Critical);
-            logging.AddFilter("Microsoft.AspNetCore.Middleware", LogLevel.Critical);
+            // logging.ClearProviders();
+            // logging.AddFilter("Microsoft", LogLevel.Critical);
+            // logging.AddFilter("System", LogLevel.Critical);
+            // logging.AddFilter("Network", LogLevel.Critical);
+            // logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Critical);
+            // logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Critical);
+            //
+            // logging.AddFilter("Microsoft.AspNetCore", LogLevel.Critical);
+            // logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Critical);
+            // logging.AddFilter("Microsoft.AspNetCore.Routing", LogLevel.Critical);
+            // logging.AddFilter("Microsoft.AspNetCore.Mvc", LogLevel.Critical);
+            //
+            // logging.AddFilter("Microsoft.AspNetCore.HostFiltering.HostFilteringMiddleware", LogLevel.Critical);
+            // logging.AddFilter("Microsoft.AspNetCore.Cors.Infrastructure.CorsMiddleware", LogLevel.Critical);
+            // logging.AddFilter("Microsoft.AspNetCore.Middleware", LogLevel.Critical);
         });
     }
 
@@ -235,7 +235,8 @@ public static class ServiceConfiguration
 
     private static void ConfigureApi(IServiceCollection services)
     {
-       
+        ConfigureApiVersioning(services);
+            
         // Add Controllers and JSON Options
         services.AddControllers(options =>
             {
@@ -279,7 +280,6 @@ public static class ServiceConfiguration
 
         services.AddResponseCompression(options => { options.EnableForHttps = true; });
 
-        ConfigureApiVersioning(services);
         ConfigureSwagger(services);
     }
 
@@ -292,7 +292,6 @@ public static class ServiceConfiguration
 
     private static void ConfigureApiVersioning(IServiceCollection services)
     {
-        // Add API versioning
         services.AddApiVersioning(config =>
             {
                 config.ReportApiVersions = true;
@@ -302,7 +301,7 @@ public static class ServiceConfiguration
             })
             .AddApiExplorer(options =>
             {
-                options.GroupNameFormat = "VV";
+                options.GroupNameFormat = "'v'V";
                 options.SubstituteApiVersionInUrl = true;
                 options.DefaultApiVersion = new(1, 0);
             });
@@ -338,3 +337,4 @@ public static class ServiceConfiguration
         });
     }
 }
+

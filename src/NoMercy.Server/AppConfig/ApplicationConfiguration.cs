@@ -19,14 +19,12 @@ public static class ApplicationConfiguration
     public static void ConfigureApp(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
     {
         ConfigureLocalization(app);
-        ConfigureCronJobs(app);
         ConfigureMiddleware(app);
-        ConfigureSwaggerUi(app, provider);
-        ConfigureWebSockets(app);
         ConfigureStaticFiles(app);
         ConfigureDynamicStaticFiles(app);
-
-        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        ConfigureEndpoints(app);
+        ConfigureSwaggerUi(app, provider);
+        ConfigureCronJobs(app);
     }
 
     private static void ConfigureCronJobs(IApplicationBuilder app)
@@ -66,6 +64,7 @@ public static class ApplicationConfiguration
 
     private static void ConfigureMiddleware(IApplicationBuilder app)
     {
+        app.UseDeveloperExceptionPage();
         app.UseRouting();
         app.UseCors("AllowNoMercyOrigins");
 
@@ -80,6 +79,8 @@ public static class ApplicationConfiguration
         app.UseAuthorization();
         app.UseMiddleware<AccessLogMiddleware>();
         app.UseMiddleware<DynamicStaticFilesMiddleware>();
+        
+        app.UseWebSockets();
 
         app.Use(async (context, next) =>
         {
@@ -93,7 +94,6 @@ public static class ApplicationConfiguration
 
             await next();
         });
-        app.UseDeveloperExceptionPage();
     }
 
     private static void ConfigureSwaggerUi(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
@@ -111,20 +111,22 @@ public static class ApplicationConfiguration
             IReadOnlyList<ApiVersionDescription> descriptions = provider.ApiVersionDescriptions;
             foreach (ApiVersionDescription description in descriptions)
             {
-                string url = $"/swagger/{description.GroupName}/swagger.json";
-                string name = description.GroupName.ToUpperInvariant();
+                string groupName = $"v{description.ApiVersion.MajorVersion}";
+                string url = $"/swagger/{groupName}/swagger.json";
+                string name = groupName.ToUpperInvariant();
                 options.SwaggerEndpoint(url, name);
             }
         });
-
-        app.UseMvcWithDefaultRoute();
     }
 
-    private static void ConfigureWebSockets(IApplicationBuilder app)
+    private static void ConfigureEndpoints(IApplicationBuilder app)
     {
-        app.UseWebSockets()
-            .UseEndpoints(endpoints =>
+        app.UseEndpoints(endpoints =>
             {
+                // Map API controllers
+                endpoints.MapControllers();
+                
+                // Map SignalR hubs
                 endpoints.MapHub<VideoHub>("/videoHub", options =>
                 {
                     options.Transports = HttpTransportType.WebSockets;

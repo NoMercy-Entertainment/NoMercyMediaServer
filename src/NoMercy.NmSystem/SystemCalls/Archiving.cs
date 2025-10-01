@@ -12,7 +12,7 @@ public static class Archiving
 
         if (filePath.EndsWith(".zip"))
         {
-            extractedFiles = await ExtractZipFile(filePath, destination);
+            extractedFiles = ExtractZipFile(filePath, destination);
         }
         else if (filePath.EndsWith(".tar.xz") || filePath.EndsWith(".tar.gz") || filePath.EndsWith("tgz"))
         {
@@ -30,7 +30,7 @@ public static class Archiving
         return extractedFiles;
     }
     
-    private static async Task<List<string>> ExtractZipFile(string zipFilePath, string extractToDirectory)
+    private static List<string> ExtractZipFile(string zipFilePath, string extractToDirectory)
     {
         List<string> extractedFiles = [];
 

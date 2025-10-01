@@ -46,7 +46,7 @@ public class TvShowsController(
         if (tv is not null)
             return Ok(new InfoResponseDto
             {
-                Data = new(tv, language)
+                Data = new(tv, country)
             });
 
         TmdbTvClient tmdbTvClient = new(id, language: language);
@@ -59,7 +59,7 @@ public class TvShowsController(
 
         return Ok(new InfoResponseDto
         {
-            Data = new(tvShowAppends, language)
+            Data = new(tvShowAppends, country)
         });
     }
 

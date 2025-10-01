@@ -66,13 +66,20 @@ public static class Binaries
     
     private static async Task<GithubReleaseResponse> GetLatestReleaseInfo(string apiUrl)
     {
-        HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
-        
-        response.EnsureSuccessStatusCode();
-        
-        string jsonResponse = await response.Content.ReadAsStringAsync();
-        
-        return jsonResponse.FromJson<GithubReleaseResponse>() ?? new GithubReleaseResponse();
+        try
+        {
+            HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
+
+            response.EnsureSuccessStatusCode();
+
+            string jsonResponse = await response.Content.ReadAsStringAsync();
+
+            return jsonResponse.FromJson<GithubReleaseResponse>() ?? new GithubReleaseResponse();
+        } catch (Exception e)
+        {
+            Logger.Setup($"Error fetching release info from {apiUrl}: {e.Message}", LogEventLevel.Error);
+            return new();
+        }
     }
     
     private static async Task DownloadApp()
