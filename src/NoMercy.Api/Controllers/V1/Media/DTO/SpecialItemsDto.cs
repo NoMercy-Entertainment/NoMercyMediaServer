@@ -39,6 +39,7 @@ public record SpecialItemsDto
     [JsonProperty("duration")] public int Duration { get; set; }
 
     [JsonProperty("total_duration")] public int TotalDuration { get; set; }
+    [JsonProperty("vote_average")] public double? VoteAverage { get; set; }
 
     public SpecialItemsDto(Movie movie)
     {
@@ -79,6 +80,8 @@ public record SpecialItemsDto
         Rating = movie.CertificationMovies
             .Select(certificationMovie => certificationMovie.Certification)
             .FirstOrDefault() ?? new Certification();
+        
+        VoteAverage = movie.VoteAverage;
 
         NumberOfItems = 1;
         HaveItems = movie.VideoFiles.Count > 0 ? 1 : 0;
@@ -126,6 +129,8 @@ public record SpecialItemsDto
         Type = "tv";
         Link = new($"/tv/{Id}", UriKind.Relative);
         Year = tv.FirstAirDate.ParseYear();
+        
+        VoteAverage = tv.VoteAverage;
 
         Genres = tv.GenreTvs
             .Select(genreTv => new GenreDto(genreTv.Genre));

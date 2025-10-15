@@ -18,6 +18,7 @@ public record CollectionMovieDto
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
     [JsonProperty("title")] public string? Title { get; set; }
+    [JsonProperty("titleSort")] public string? TitleSort { get; set; }
     [JsonProperty("type")] public string Type { get; set; }
     [JsonProperty("year")] public long Year { get; set; }
     [JsonProperty("genres")] public GenreDto[] Genres { get; set; }
@@ -39,6 +40,8 @@ public record CollectionMovieDto
         Title = !string.IsNullOrEmpty(title)
             ? title
             : movie.Title;
+        
+        TitleSort = movie.TitleSort;
         Overview = !string.IsNullOrEmpty(overview)
             ? overview
             : movie.Overview;
@@ -77,6 +80,7 @@ public record CollectionMovieDto
         Overview = tmdbMovie.Overview;
         Id = tmdbMovie.Id;
         Title = tmdbMovie.Title;
+        TitleSort = tmdbMovie.TitleSort(tmdbMovie.ReleaseDate);
         Overview = tmdbMovie.Overview;
         Backdrop = tmdbMovie.BackdropPath;
         Favorite = false;

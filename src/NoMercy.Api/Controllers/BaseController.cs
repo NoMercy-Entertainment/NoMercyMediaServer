@@ -249,7 +249,7 @@ public class BaseController : Controller
     protected string Language()
     {
         return HttpContext.Request.Headers.AcceptLanguage.FirstOrDefault() ??
-               LocalizationHelper.GlobalLocalizer.TargetLanguage;
+                LocalizationHelper.GlobalLocalizer.TargetLanguage;
 
     }
 

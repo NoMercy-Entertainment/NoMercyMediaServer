@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -40,7 +41,9 @@ public class AlbumsController : BaseController
         string language = Language();
 
         foreach (Album album in _musicRepository.GetAlbums(_mediaContext, userId, letter))
+        {
             albums.Add(new(album, language));
+        }
 
         List<AlbumTrack> tracks = await _musicRepository.GetAlbumTracksForIds(_mediaContext, albums.Select(a => a.Id)
             .ToList());
@@ -48,8 +51,32 @@ public class AlbumsController : BaseController
         if (tracks.Count == 0)
             return NotFoundResponse("Albums not found");
 
-        foreach (AlbumsResponseItemDto album in albums) album.Tracks = tracks.Count(track => track.AlbumId == album.Id);
-
+        foreach (AlbumsResponseItemDto album in albums)
+        {
+            album.Tracks = tracks.Count(track => track.AlbumId == album.Id);
+        }
+        
+        return Ok(new Render
+        {
+            Data =
+            [
+                new ComponentBuilder<AlbumsResponseItemDto>()
+                    .WithComponent("NMGrid")
+                    .WithProps((props, _) => props
+                        .WithItems(
+                            albums
+                                .Where(response => response.Tracks > 0)             
+                                .Select(item =>
+                                    new ComponentBuilder<AlbumsResponseItemDto>()
+                                        .WithComponent("NMMusicCard")
+                                        .WithProps((p, _) => p
+                                            .WithData(item)
+                                            .WithWatch())
+                                        .Build())))
+                    .Build()
+            ]
+        });
+        
         return Ok(new AlbumsResponseDto
         {
             Data = albums

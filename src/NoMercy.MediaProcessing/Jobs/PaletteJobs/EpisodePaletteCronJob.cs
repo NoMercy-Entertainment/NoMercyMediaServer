@@ -11,7 +11,7 @@ public class EpisodePaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<EpisodePaletteCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().EveryHour();
+    public string CronExpression => new CronExpressionBuilder().Daily();
     public string JobName => "Episode ColorPalette Job";
 
     public EpisodePaletteCronJob(ILogger<EpisodePaletteCronJob> logger)

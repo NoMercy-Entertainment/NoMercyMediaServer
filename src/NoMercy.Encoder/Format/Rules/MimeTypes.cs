@@ -67,6 +67,7 @@ public static class MimeTypes
             ".woff" => "font/woff",
             ".woff2" => "font/woff2",
             ".eot" => "font/eot",
+            ".apk" => "application/vnd.android.package-archive",
 
             _ => "application/octet-stream"
         };

@@ -11,7 +11,7 @@ public class TvPaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<TvPaletteCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().EveryHour();
+    public string CronExpression => new CronExpressionBuilder().Daily();
     public string JobName => "Tv ColorPalette Job";
 
     public TvPaletteCronJob(ILogger<TvPaletteCronJob> logger)

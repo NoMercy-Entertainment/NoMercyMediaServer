@@ -48,7 +48,7 @@ public class GenresController : BaseController
                                 .Select(item =>
                                     new ComponentBuilder<NmGenreCardDto>()
                                         .WithComponent("NMGenreCard")
-                                        .WithProps((props, _) => props
+                                        .WithProps((p, _) => p
                                             .WithData(item)
                                             .WithWatch())
                                         .Build())))

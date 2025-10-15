@@ -151,7 +151,7 @@ public class LibraryRepository(MediaContext context)
                     .Where(libraryMovie => libraryMovie.VideoFiles
                         .Any(videoFile => videoFile.Folder != null) == true
                     )
-                    .Where(movie => letter == "_"
+                    .Where(movie => (letter == "_" || letter == "#")
                         ? Letters.Any(p => movie.TitleSort.StartsWith(p.ToLower()))
                         : movie.TitleSort.StartsWith(letter.ToLower())
                     )
@@ -184,7 +184,7 @@ public class LibraryRepository(MediaContext context)
                         .Any(episode => episode.VideoFiles
                             .Any(videoFile => videoFile.Folder != null) == true
                         ) == true)
-                    .Where(tv => letter == "_"
+                    .Where(tv => (letter == "_" || letter == "#")
                         ? Letters.Any(p => tv.TitleSort.StartsWith(p.ToLower()))
                         : tv.TitleSort.StartsWith(letter.ToLower())
                     )

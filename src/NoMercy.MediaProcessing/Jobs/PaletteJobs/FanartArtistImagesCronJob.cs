@@ -11,14 +11,14 @@ using Image = NoMercy.Database.Models.Image;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 
-public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
+public class FanartArtistImagesCronJob : ICronJobExecutor
 {
-    private readonly ILogger<ProcessFanartArtistImagesCronJob> _logger;
+    private readonly ILogger<FanartArtistImagesCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().EveryHour();
+    public string CronExpression => new CronExpressionBuilder().Daily();
     public string JobName => "Fanart ColorPalette Job";
 
-    public ProcessFanartArtistImagesCronJob(ILogger<ProcessFanartArtistImagesCronJob> logger)
+    public FanartArtistImagesCronJob(ILogger<FanartArtistImagesCronJob> logger)
     {
         _logger = logger;
     }
@@ -26,7 +26,40 @@ public class ProcessFanartArtistImagesCronJob : ICronJobExecutor
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
         await using MediaContext context = new();
-
+        
+        List<Image[]> imagesWithoutPalette = context.Images
+            .Where(i => string.IsNullOrEmpty(i._colorPalette) && 
+                        i.Site != null && 
+                        i.Site.StartsWith("https://assets.fanart.tv"))
+            .Take(5000)
+            .ToList()
+            .Chunk(5)
+            .ToList();
+        
+        _logger.LogTrace("Found {Count} image chunks to process", imagesWithoutPalette.Count);
+        
+        foreach (Image[] imageChunk in imagesWithoutPalette)
+        {
+            _logger.LogTrace("Processing image chunk of size: {Size}", imageChunk.Length);
+            
+            foreach (Image image in imageChunk)
+            {
+                try
+                {
+                    image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
+                }
+                catch (Exception e)
+                {
+                    image._colorPalette = "{}";
+                }
+            }
+            
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        
+        
+        _logger.LogTrace("Fanart Images job completed, updated: {Count}", imagesWithoutPalette.Count);
+        
         List<Artist[]> artists = context.Artists
             .Include(artist => artist.AlbumArtist)
             .ThenInclude(albumArtist => albumArtist.Album)

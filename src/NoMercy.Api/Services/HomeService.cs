@@ -248,9 +248,10 @@ public class HomeService
             {
                 Id = library.Id.ToString(),
                 Title = library.Title,
-                MoreLink = shouldPaginate
-                    ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
-                    : new($"/libraries/{library.Id}", UriKind.Relative),
+                // MoreLink = shouldPaginate
+                //     ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
+                //     : new($"/libraries/{library.Id}", UriKind.Relative),
+                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
                 Items = movies.Select(movie => new NmCardDto(movie, country))
                     .Concat(shows.Select(tv => new NmCardDto(tv, country)))
                     .ToList()

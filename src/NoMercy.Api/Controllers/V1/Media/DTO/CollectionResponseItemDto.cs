@@ -17,7 +17,7 @@ public record CollectionResponseItemDto
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }
     [JsonProperty("type")] public string Type { get; set; } = string.Empty;
     [JsonProperty("media_type")] public string MediaType { get; set; } = string.Empty;
-    [JsonProperty("duration")] public double Duration { get; set; }
+    [JsonProperty("duration")] public int Duration { get; set; }
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("collection")] public CollectionMovieDto[] Collection { get; set; } = [];
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
@@ -27,12 +27,14 @@ public record CollectionResponseItemDto
     [JsonProperty("genres")] public GenreDto[] Genres { get; set; } = [];
     [JsonProperty("total_duration")] public int TotalDuration { get; set; }
     [JsonProperty("link")] public Uri Link { get; set; } = null!;
+    [JsonProperty("keywords")] public IEnumerable<string> Keywords { get; set; } = [];
 
     [JsonProperty("cast")] public PeopleDto[] Cast { get; set; } = [];
     [JsonProperty("crew")] public PeopleDto[] Crew { get; set; } = [];
     [JsonProperty("backdrops")] public ImageDto[] Backdrops { get; set; } = [];
     [JsonProperty("posters")] public ImageDto[] Posters { get; set; } = [];
     [JsonProperty("content_ratings")] public ContentRating[] ContentRatings { get; set; } = [];
+    [JsonProperty("vote_average")] public double VoteAverage { get; set; }
 
     public CollectionResponseItemDto(Collection? collection)
     {
@@ -66,9 +68,20 @@ public record CollectionResponseItemDto
         Watched = collection.CollectionMovies.Count(collectionMovie => collectionMovie.Movie.MovieUser.Count != 0) ==
                   collection.CollectionMovies.Count;
 
-        Duration = collection.CollectionMovies
-            .Select(movie => movie.Movie.Runtime)
-            .Average() ?? 0;
+        Duration = (int)collection.CollectionMovies
+            .Select(movie => movie.Movie.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds() ?? movie.Movie.Runtime * 60 ?? 0)
+            .Average();
+
+        VoteAverage = collection.CollectionMovies
+            .Where(movie => movie.Movie.VoteAverage != null)
+            .Select(movie => movie.Movie.VoteAverage).Average() ?? 0;
+        
+        Keywords = collection.CollectionMovies
+            .SelectMany(movie => movie.Movie.KeywordMovies)
+            .DistinctBy(keyword => keyword.KeywordId)
+            .Select(keywordMovie => keywordMovie.Keyword.Name)
+            .OrderBy(keyword => keyword)
+            .ToArray();
 
         Genres = collection.CollectionMovies
             .SelectMany(movie => movie.Movie.GenreMovies)
@@ -145,6 +158,12 @@ public record CollectionResponseItemDto
         HaveItems = 0;
         Favorite = false;
         Link = new($"/collection/{Id}", UriKind.Relative);
+        
+        VoteAverage = tmdbCollectionAppends.Parts
+            .Where(movie => movie.VoteAverage > 0)
+            .Select(movie => movie.VoteAverage).Average();
+
+        Keywords = [];
 
         Genres = [];
         Cast = [];

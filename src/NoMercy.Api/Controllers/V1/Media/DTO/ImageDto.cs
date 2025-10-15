@@ -34,21 +34,25 @@ public record ImageDto
 
     public ImageDto(TmdbImage media)
     {
+        Id = long.Parse(media.FilePath.GetHashCode().ToString().Replace("-", "1").TrimStart('0'));
         Src = media.FilePath;
         Width = media.Width;
         Height = media.Height;
         Iso6391 = media.Iso6391;
         VoteAverage = media.VoteAverage;
         VoteCount = media.VoteCount;
+        Type = media.Width >= media.Height ? "backdrop" : "poster";
         ColorPalette = new();
     }
 
     public ImageDto(TmdbProfile image)
     {
+        Id = long.Parse(image.FilePath.GetHashCode().ToString().Replace("-", "1").TrimStart('0'));
         Src = image.FilePath;
         Width = image.Width;
         Height = image.Height;
         Iso6391 = image.Iso6391;
+        Type = "poster";
         VoteAverage = 0;
         VoteCount = 0;
         ColorPalette = new();
