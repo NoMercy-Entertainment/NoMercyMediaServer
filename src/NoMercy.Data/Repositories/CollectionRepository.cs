@@ -113,6 +113,11 @@ public class CollectionRepository(MediaContext context)
                 )
                 .OrderByDescending(image => image.VoteAverage)
             )
+            
+            .Include(collection => collection.CollectionMovies)
+                .ThenInclude(movie => movie.Movie)
+                .ThenInclude(movie => movie.KeywordMovies)
+                .ThenInclude(keywordMovie => keywordMovie.Keyword)
             .FirstOrDefaultAsync();
     }
 

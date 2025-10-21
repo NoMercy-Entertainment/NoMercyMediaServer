@@ -12,7 +12,7 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<RecommendationPaletteCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().EveryHour();
+    public string CronExpression => new CronExpressionBuilder().Daily();
     public string JobName => "Recommendations ColorPalette Job";
 
     public RecommendationPaletteCronJob(ILogger<RecommendationPaletteCronJob> logger)

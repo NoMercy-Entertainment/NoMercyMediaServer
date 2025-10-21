@@ -15,6 +15,7 @@ public class NmGenreCardDto
     [JsonProperty("link")] public Uri Link { get; set; } = null!;
     [JsonProperty("rating")] public RatingClass? Rating { get; set; }
     [JsonProperty("year")] public int? Year { get; set; }
+    [JsonProperty("type")] public string? Type { get; set; }
 
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
@@ -49,6 +50,7 @@ public class NmGenreCardDto
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
 
+        Type = "genre";
         Link = new($"/movie/{Id}", UriKind.Relative);
         NumberOfItems = 1;
         HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
@@ -83,6 +85,7 @@ public class NmGenreCardDto
         TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
         Year = tv.FirstAirDate.ParseYear();
 
+        Type = "genre";
         Link = new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.Episodes
@@ -119,6 +122,7 @@ public class NmGenreCardDto
             ?.Movie.ReleaseDate);
         Year = collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();
 
+        Type = "genre";
         Link = new($"/collection/{Id}", UriKind.Relative);
         NumberOfItems = collection.CollectionMovies.Count;
         HaveItems = collection.CollectionMovies
@@ -149,6 +153,7 @@ public class NmGenreCardDto
         Year = special.Items.MinBy(movie => movie.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
                ?? special.Items.Select(tv => tv.Episode?.Tv).FirstOrDefault()?.FirstAirDate.ParseYear();
 
+        Type = "genre";
         Link = new($"/specials/{Id}", UriKind.Relative);
 
         NumberOfItems = special.Items.Count;
@@ -182,6 +187,7 @@ public class NmGenreCardDto
         Title = genre.Name;
         TitleSort = genre.Name;
 
+        Type = "genre";
         Link = new($"/genre/{genre.Id}", UriKind.Relative);
         NumberOfItems = genre.GenreMovies.Count + genre.GenreTvShows.Count;
         HaveItems = genre.GenreMovies.Count(genreMovie => genreMovie.Movie.VideoFiles
@@ -196,6 +202,7 @@ public class NmGenreCardDto
         Title = collection.Name;
         TitleSort = collection.Name.TitleSort();
 
+        Type = "genre";
         Link = new($"/music/genres/{collection.Id}", UriKind.Relative);
         NumberOfItems = collection.AlbumMusicGenres.Count + collection.ArtistMusicGenres.Count;
         HaveItems = collection.AlbumMusicGenres.Count(genreAlbum => genreAlbum.Album.AlbumTrack.Count != 0)

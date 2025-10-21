@@ -327,6 +327,7 @@ public class NmCardDto
         Overview = tmdbMovie.Overview;
         Backdrop = tmdbMovie.BackdropPath;
         Link = new($"/movie/{Id}", UriKind.Relative);
+        Type = "movie";
         ColorPalette = new();
         Poster = tmdbMovie.PosterPath;
         Year = tmdbMovie.ReleaseDate.ParseYear();

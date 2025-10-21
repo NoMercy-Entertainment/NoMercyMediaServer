@@ -13,7 +13,7 @@ public class ImagePaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<ImagePaletteCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().EveryMinute();
+    public string CronExpression => new CronExpressionBuilder().EveryHour();
     public string JobName => "Image ColorPalette Job";
 
     public ImagePaletteCronJob(ILogger<ImagePaletteCronJob> logger)

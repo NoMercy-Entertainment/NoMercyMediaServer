@@ -21,6 +21,7 @@ public record SpecialResponseItemDto
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
     [JsonProperty("favorite")] public bool Favorite { get; set; }
+    [JsonProperty("watched")] public bool Watched { get; set; }
     [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; }
     [JsonProperty("total_duration")] public int TotalDuration { get; set; }
     [JsonProperty("link")] public Uri Link { get; set; }
@@ -31,6 +32,7 @@ public record SpecialResponseItemDto
     [JsonProperty("posters")] public IEnumerable<ImageDto> Posters { get; set; }
 
     [JsonProperty("content_ratings")] public IEnumerable<Certification?> ContentRatings { get; set; }
+    [JsonProperty("vote_average")] public double VoteAverage { get; set; }
 
     public SpecialResponseItemDto(Special special, List<SpecialItemsDto> items)
     {
@@ -102,12 +104,17 @@ public record SpecialResponseItemDto
         Genres = genres;
 
         Favorite = special.SpecialUser.Count != 0;
+        Watched = special.Items.Count(specialItem => specialItem.UserData.Count > 0) == special.Items.Count;
 
         NumberOfItems = special.Items.Count;
 
         HaveItems = specialItems.Count;
 
         TotalDuration = items.Sum(item => item.TotalDuration);
+        
+        VoteAverage = items
+            .Where(item => item.VoteAverage != null)
+            .Select(item => item.VoteAverage).Average() ?? 0;
 
         ContentRatings = items
             .Select(specialItem => specialItem.Rating)
@@ -143,6 +150,10 @@ public record SpecialResponseItemDto
         Genres = [];
 
         TotalDuration = special.Items.Sum(item => item.Movie?.Runtime ?? 0);
+        
+        VoteAverage = special.Items
+            .Where(item => item.Movie?.VoteAverage != null)
+            .Select(item => item.Movie?.VoteAverage).Average() ?? 0;
 
         ContentRatings = special.Items
             .Select(specialItem => specialItem.Movie?.CertificationMovies

@@ -407,4 +407,8 @@
     <Key>User not found</Key>
     <Value lang="nl">Gebruiker niet gevonden</Value>
   </Entry>
+  <Entry>
+    <Key>Container</Key>
+    <Value lang="nl">Container</Value>
+  </Entry>
 </I18N>

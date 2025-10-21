@@ -42,7 +42,7 @@ public static class ApplicationConfiguration
         cronWorker.RegisterJobWithSchedule<ImagePaletteCronJob>("image-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<RecommendationPaletteCronJob>("recommendation-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<SimilarPaletteCronJob>("similar-palette-job", app.ApplicationServices);
-        cronWorker.RegisterJobWithSchedule<ProcessFanartArtistImagesCronJob>("fanart-images-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<FanartArtistImagesCronJob>("fanart-images-job", app.ApplicationServices);
         
         cronWorker.RegisterJobWithSchedule<ArtistPaletteCronJob>("artist-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<AlbumPaletteCronJob>("album-palette-job", app.ApplicationServices);

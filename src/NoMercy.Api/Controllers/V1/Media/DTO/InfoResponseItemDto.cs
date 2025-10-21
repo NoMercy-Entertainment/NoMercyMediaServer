@@ -22,7 +22,7 @@ public record InfoResponseItemDto
     [JsonProperty("watched")] public bool Watched { get; set; }
     [JsonProperty("favorite")] public bool Favorite { get; set; }
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }
-    [JsonProperty("duration")] public double Duration { get; set; }
+    [JsonProperty("duration")] public int Duration { get; set; }
     [JsonProperty("number_of_items")] public int NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
     [JsonProperty("year")] public int Year { get; set; }
@@ -76,7 +76,7 @@ public record InfoResponseItemDto
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
 
         Duration = movie.VideoFiles.Count != 0
-            ? movie.VideoFiles.Select(videoFile => videoFile.Duration?.ToSeconds() ?? 0).Average()
+            ? movie.VideoFiles.Select(videoFile => videoFile.Duration?.ToSeconds() ?? 0).Average().ToInt()
             : movie.Duration ?? 0;
 
         Year = movie.ReleaseDate.ParseYear();
@@ -141,10 +141,12 @@ public record InfoResponseItemDto
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
         Similar = movie.SimilarFrom
-            .Select(similar => new RelatedDto(similar, "movie"));
+            .Select(similar => new RelatedDto(similar, "movie"))
+            .Where(item => item.Poster != null);
 
         Recommendations = movie.RecommendationFrom
-            .Select(recommendation => new RelatedDto(recommendation, "movie"));
+            .Select(recommendation => new RelatedDto(recommendation, "movie"))
+            .Where(item => item.Poster != null);
 
         GroupedWatchProviders = movie.WatchProviderMedia
             .Select(wpm => new WatchProviderDto(wpm))
@@ -231,10 +233,12 @@ public record InfoResponseItemDto
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
         Similar = tmdbMovie.Similar.Results
-            .Select(similar => new RelatedDto(similar, "movie"));
+            .Select(similar => new RelatedDto(similar, "movie"))
+            .Where(item => item.Poster != null);
 
         Recommendations = tmdbMovie.Recommendations.Results
-            .Select(recommendation => new RelatedDto(recommendation, "movie"));
+            .Select(recommendation => new RelatedDto(recommendation, "movie"))
+            .Where(item => item.Poster != null);
 
         GroupedWatchProviders = TmdbWatchProviders.ExtractProviders(tmdbMovie.WatchProviders.TmdbWatchProviderResults)
             .Where(wpm => wpm.CountryCode == country)
@@ -371,7 +375,8 @@ public record InfoResponseItemDto
             .ThenInclude(episode => episode.VideoFiles)
             .ToArray();
         Similar = tv.SimilarFrom
-            .Select(similar => new RelatedDto(similar, "tv", similars));
+            .Select(similar => new RelatedDto(similar, "tv", similars))
+            .Where(item => item.Poster != null);
 
         IEnumerable<int> recommendationIds = tv.RecommendationFrom
             .Select(recommendation => recommendation.MediaId);
@@ -382,7 +387,8 @@ public record InfoResponseItemDto
             .ToArray();
 
         Recommendations = tv.RecommendationFrom
-            .Select(recommendation => new RelatedDto(recommendation, "tv", recommendations));
+            .Select(recommendation => new RelatedDto(recommendation, "tv", recommendations))
+            .Where(item => item.Poster != null);
 
         Seasons = tv.Seasons
             .OrderBy(season => season.SeasonNumber)
@@ -432,7 +438,7 @@ public record InfoResponseItemDto
             .Select(translation => new TranslationDto(translation));
 
         Duration = tmdbTv.EpisodeRunTime?.Length > 0
-            ? tmdbTv.EpisodeRunTime.Average() * tmdbTv.NumberOfEpisodes
+            ? (tmdbTv.EpisodeRunTime.Average() * tmdbTv.NumberOfEpisodes).ToInt()
             : 0;
 
         NumberOfItems = tmdbTv.NumberOfEpisodes;
@@ -442,10 +448,10 @@ public record InfoResponseItemDto
 
         // ColorPalette = tv.ColorPalette;
         Backdrop = tmdbTv.Images.Backdrops.FirstOrDefault(media => media.Iso6391 is "")?.FilePath ??
-                   tmdbTv.Images.Backdrops.FirstOrDefault()?.FilePath;
+                   tmdbTv.BackdropPath;
 
         Poster = tmdbTv.Images.Posters.FirstOrDefault(poster => poster.Iso6391 is "")?.FilePath ??
-                 tmdbTv.Images.Posters.FirstOrDefault()?.FilePath;
+                 tmdbTv.PosterPath;
 
 
         ExternalIds = new()
@@ -501,10 +507,12 @@ public record InfoResponseItemDto
             .Select(people => new PeopleDto(people)).FirstOrDefault();
 
         Similar = tmdbTv.Similar.Results
-            .Select(similar => new RelatedDto(similar, "tv"));
+            .Select(similar => new RelatedDto(similar, "tv"))
+            .Where(item => item.Poster != null);
 
         Recommendations = tmdbTv.Recommendations.Results
-            .Select(recommendation => new RelatedDto(recommendation, "tv"));
+            .Select(recommendation => new RelatedDto(recommendation, "tv"))
+            .Where(item => item.Poster != null);
 
         Seasons = [];
 

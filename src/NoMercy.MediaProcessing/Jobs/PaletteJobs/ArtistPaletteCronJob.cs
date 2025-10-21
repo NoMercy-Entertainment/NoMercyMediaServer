@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.NmSystem.Information;
 using NoMercy.Queue;
 using NoMercy.Queue.Interfaces;
 
@@ -42,7 +43,7 @@ public class ArtistPaletteCronJob : ICronJobExecutor
                 try
                 {
                     artist._colorPalette = await MovieDbImageManager
-                        .ColorPalette("cover", artist.Cover);
+                        .ColorPalette("cover", AppFiles.MusicImagesPath + artist.Cover);
                 }
                 catch (Exception)
                 {

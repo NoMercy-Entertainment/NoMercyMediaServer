@@ -15,6 +15,7 @@ public record RelatedDto
     [JsonProperty("poster")] public string? Poster { get; set; }
     [JsonProperty("title")] public string? Title { get; set; }
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }
+    [JsonProperty("type")] public string Type { get; set; }
     [JsonProperty("media_type")] public string MediaType { get; set; }
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
@@ -30,6 +31,7 @@ public record RelatedDto
         Backdrop = recommendation.Backdrop;
         Title = recommendation.Title;
         TitleSort = recommendation.TitleSort;
+        Type = type;
         MediaType = type;
         ColorPalette = recommendation.ColorPalette;
         Link = new($"/{type}/{recommendation.MediaId}", UriKind.Relative);
@@ -52,6 +54,7 @@ public record RelatedDto
         Backdrop = similar.Backdrop;
         Title = similar.Title;
         TitleSort = similar.TitleSort;
+        Type = type;
         MediaType = type;
         ColorPalette = similar.ColorPalette;
         Link = new($"/{type}/{similar.MediaId}", UriKind.Relative);
@@ -72,6 +75,7 @@ public record RelatedDto
         Backdrop = tmdbSimilar.BackdropPath;
         Title = tmdbSimilar.Title;
         TitleSort = tmdbSimilar.Title.TitleSort(tmdbSimilar.ReleaseDate);
+        Type = type;
         MediaType = type;
         Link = new($"/{type}/{tmdbSimilar.Id}", UriKind.Relative);
         ColorPalette = new();
@@ -87,6 +91,7 @@ public record RelatedDto
         Backdrop = recommendation.BackdropPath;
         Title = recommendation.Name;
         TitleSort = recommendation.Name.TitleSort();
+        Type = type;
         MediaType = type;
         Link = new($"/{type}/{recommendation.Id}", UriKind.Relative);
         ColorPalette = new();

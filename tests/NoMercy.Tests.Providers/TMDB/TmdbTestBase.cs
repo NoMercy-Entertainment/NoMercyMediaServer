@@ -38,7 +38,7 @@ public abstract class TmdbTestBase : IDisposable
     /// <summary>
     /// Creates a valid season number for testing
     /// </summary>
-    protected const int ValidSeasonNumber = 36; // Current season (September 2025)
+    protected const int ValidSeasonNumber = 54; // Current season (September 2025)
     
     /// <summary>
     /// Creates a valid episode number for testing

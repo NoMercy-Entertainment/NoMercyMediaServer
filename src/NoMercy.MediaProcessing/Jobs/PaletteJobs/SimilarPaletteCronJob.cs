@@ -11,7 +11,7 @@ public class SimilarPaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<SimilarPaletteCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().EveryHour();
+    public string CronExpression => new CronExpressionBuilder().Daily();
     public string JobName => "Similar ColorPalette Job";
 
     public SimilarPaletteCronJob(ILogger<SimilarPaletteCronJob> logger)

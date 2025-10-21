@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue;
 using NoMercy.Queue.Interfaces;
 
@@ -12,7 +14,7 @@ public class AlbumPaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<AlbumPaletteCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().EveryMinute();
+    public string CronExpression => new CronExpressionBuilder().Daily();
     public string JobName => "Album ColorPalette Job";
 
     public AlbumPaletteCronJob(ILogger<AlbumPaletteCronJob> logger)
@@ -44,7 +46,7 @@ public class AlbumPaletteCronJob : ICronJobExecutor
                 try
                 {
                     album._colorPalette = await CoverArtImageManagerManager
-                        .ColorPalette("cover", new(album.Images.First().Site + album.Cover));
+                        .ColorPalette("cover", new(AppFiles.MusicImagesPath + album.Cover));
                 }
                 catch (Exception)
                 {

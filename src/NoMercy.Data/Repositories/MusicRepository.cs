@@ -71,7 +71,7 @@ public class MusicRepository
                 .Include(artist => artist.ArtistUser
                     .Where(albumUser => albumUser.UserId.Equals(userId))
                 )
-                .Where(album => letter == "_"
+                .Where(album => (letter == "_" || letter == "#")
                     ? Letters.Any(p => album.Name.StartsWith(p))
                     : album.Name.StartsWith(letter)
                 )
@@ -154,7 +154,7 @@ public class MusicRepository
                 .Include(artist => artist.AlbumUser
                     .Where(albumUser => albumUser.UserId.Equals(userId))
                 )
-                .Where(album => letter == "_"
+                .Where(album => (letter == "_" || letter == "#")
                     ? Letters.Any(p => album.Name.StartsWith(p))
                     : album.Name.StartsWith(letter)
                 )

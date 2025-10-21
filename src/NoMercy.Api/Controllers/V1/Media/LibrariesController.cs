@@ -1,3 +1,5 @@
+
+
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -54,7 +56,7 @@ public class LibrariesController(
 
         List<NmCarouselDto<NmCardDto>> list = [];
 
-        foreach (Library library in libraries)
+        foreach (Library library in libraries.Where(lib => lib.Type != "music" ))
         {
             IEnumerable<Movie> movies =
                 await libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
@@ -83,7 +85,7 @@ public class LibrariesController(
             Items = collections.Select(collection => new NmCardDto(collection, country))
                 .ToList()
         });
-
+        
         list.Add(new()
         {
             Title = "Specials",
@@ -120,19 +122,23 @@ public class LibrariesController(
                         .WithData(homeCardItem))
                     .Build(),
 
-                ..list.Select(genre => new ComponentBuilder<NmCardDto>()
+                ..list.Select((genre, index) => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithProps((props, _) => props
-                        .WithId(genre.Id)
-                        .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
-                        .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
+                        .WithId($"library_{genre.Id}")
+                        .WithPreviousId(index == 0
+                            ? "continue"
+                            : $"library_{list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id}")
+                        .WithNextId(index == list.Count - 1
+                            ? $"library_{genres.FirstOrDefault()?.Id}"
+                            : $"library_{list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id}")
                         .WithTitle(genre.Title)
                         .WithMoreLink(genre.MoreLink)
                         .WithItems(
                             genre.Items.Select(item =>
                                 new ComponentBuilder<NmCardDto>()
                                     .WithComponent("NMCard")
-                                    .WithProps((props, _) => props
+                                    .WithProps((p, _) => p
                                         .WithData(item)
                                         .WithWatch())
                                     .Build())))

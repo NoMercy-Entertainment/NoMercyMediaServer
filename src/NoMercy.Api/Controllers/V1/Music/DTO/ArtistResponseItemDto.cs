@@ -1,3 +1,4 @@
+using System.Drawing.Imaging;
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
@@ -37,14 +38,19 @@ public record ArtistResponseItemDto
         string? description = artist.Translations
             .FirstOrDefault(translation => translation.Iso31661 == country)?.Description ?? artist.Description;
 
-        Image? img = artist.Images.FirstOrDefault(image => image.Type == "background");
-        Backdrop = img?.FilePath is not null
-            ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
+        Image? thumb = artist.Images.OrderByDescending(i => i.VoteAverage).FirstOrDefault(i => i.Type == "thumb");
+        Image? background = artist.Images.FirstOrDefault(image => image.Type == "background");
+        
+        Backdrop = background?.FilePath is not null
+            ? new Uri($"/images/music{background.FilePath}", UriKind.Relative).ToString()
             : null;
-        Cover = artist.Cover;
+
+        IColorPalettes? palette = artist.ColorPalette ?? thumb?.ColorPalette;
+        
+        Cover = artist.Cover ?? thumb?.FilePath;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
-        ColorPalette = artist.ColorPalette;
-        if (ColorPalette is not null) ColorPalette.Backdrop = img?.ColorPalette?.Image;
+        
+        ColorPalette = palette;
         Disambiguation = artist.Disambiguation;
         Description = description;
         Favorite = artist.ArtistUser.Count != 0;
