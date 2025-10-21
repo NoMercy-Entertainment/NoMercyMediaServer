@@ -471,8 +471,8 @@ public class HomeService
 
         genres = genres.Where(genre => genre.Items.Count != 0).ToList();
         
-        NmCardDto? homeCardItem = genres.Where(g => g.Title != string.Empty)
-            .Randomize().FirstOrDefault()?.Items.Randomize().FirstOrDefault();
+        // NmCardDto? homeCardItem = genres.Where(g => g.Title != string.Empty)
+        //     .Randomize().FirstOrDefault()?.Items.Randomize().FirstOrDefault();
 
         IEnumerable<Library> libraries = await _libraryRepository.GetLibraries(userId);
         List<NmCarouselDto<NmCardDto>> list = [];
@@ -499,13 +499,13 @@ public class HomeService
         {
             Data =
             [
-                new ComponentBuilder<NmCardDto?>()
-                    .WithComponent("NMHomeCard")
-                    .WithUpdate("pageLoad", "/home/card")
-                    .WithProps((props, id) => props.WithData(homeCardItem))
-                    .Build(),
+                // new ComponentBuilder<NmCardDto?>()
+                //     .WithComponent("NMHomeCard")
+                //     .WithUpdate("pageLoad", "/home/card")
+                //     .WithProps((props, id) => props.WithData(homeCardItem))
+                //     .Build(),
 
-                new ComponentBuilder<NmCarouselDto<NmCardDto>>()
+                new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithUpdate("pageLoad", "/home/continue")
                     .WithProps((props, id) => props
@@ -516,7 +516,7 @@ public class HomeService
                         .WithItems(GetContinueWatchingItems(continueWatching, country, id)))
                     .Build(),
 
-                ..list.Select((genre, index) => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
+                ..list.Select((genre, index) => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithProps((props, id) => props
                         .WithId(genre.Id)
@@ -538,7 +538,7 @@ public class HomeService
                                     .Build())))
                     .Build()),
 
-                ..genres.Select((genre, index) => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
+                ..genres.Select((genre, index) => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithProps((props, id) => props
                         .WithId(genre.Id)
