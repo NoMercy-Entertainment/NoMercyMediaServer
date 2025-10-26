@@ -299,7 +299,7 @@ public class LibraryRepository(MediaContext context)
         return GetLibraryByIdAsyncQuery(context, libraryId, userId, language);
     }
 
-    public async Task<IEnumerable<Movie>> GetLibraryMovies(Guid userId, Ulid libraryId, string language, int take,
+    public IQueryable<Movie> GetLibraryMovies(Guid userId, Ulid libraryId, string language, int take,
         int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)
     {
         IQueryable<Movie> x = context.Movies.AsNoTracking()
@@ -339,7 +339,7 @@ public class LibraryRepository(MediaContext context)
             .Take(take);
     }
 
-    public async Task<IEnumerable<Tv>> GetLibraryShows(Guid userId, Ulid libraryId, string language, int take, 
+    public IQueryable<Tv> GetLibraryShows(Guid userId, Ulid libraryId, string language, int take, 
         int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null)
     {
         IQueryable<Tv> x = context.Tvs.AsNoTracking()

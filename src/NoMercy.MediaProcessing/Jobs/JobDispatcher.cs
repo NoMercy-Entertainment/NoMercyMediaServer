@@ -21,6 +21,13 @@ public class JobDispatcher
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
 
+    public void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string filePath)
+        where TJob : AbstractMusicFolderJob, new()
+    {
+        TJob job = new() { LibraryId = libraryId, FolderId = folderId, InputFolder = filePath };
+        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+    }
+
     public void DispatchJob<TJob>(int id, Ulid libraryId)
         where TJob : AbstractMediaJob, new()
     {

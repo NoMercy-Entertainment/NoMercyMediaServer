@@ -3,6 +3,7 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Encoder.Dto;
 
+[Serializable]
 public class ImageStream
 {
     [JsonProperty("index")] public int Index { get; set; }
@@ -28,13 +29,14 @@ public class ImageStream
         CodecName = ffprobeSourceDataStream.CodecName;
         CodecLongName = ffprobeSourceDataStream.CodecLongName;
         CodecType = ffprobeSourceDataStream.CodecType;
-        Size = ffprobeSourceDataStream.Tags.NumberOfBytes;
+        Size = ffprobeSourceDataStream.Tags.TryGetValue("number_of_bytes", out string? numberOfBytes) ? numberOfBytes.ToLong() : 0;
         Width = ffprobeSourceDataStream.Width;
         Height = ffprobeSourceDataStream.Height;
         CodedWidth = ffprobeSourceDataStream.CodedWidth;
         CodedHeight = ffprobeSourceDataStream.CodedHeight;
-        Filename = ffprobeSourceDataStream.Tags.Filename;
-        Title = ffprobeSourceDataStream.Tags.Title;
-        Mimetype = ffprobeSourceDataStream.Tags.MimeType;
+        Filename = ffprobeSourceDataStream.Tags.TryGetValue("filename", out string? filename) ? filename : null;
+        
+        Title = ffprobeSourceDataStream.Tags.TryGetValue("title", out string? title) ? title : null;
+        Mimetype = ffprobeSourceDataStream.Tags.TryGetValue("mimetype", out string? mimeType) ? mimeType :  "und";
     }
 }

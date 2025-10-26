@@ -58,10 +58,10 @@ public class LibrariesController(
 
         foreach (Library library in libraries.Where(lib => lib.Type != "music" ))
         {
-            IEnumerable<Movie> movies =
-                await libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
-            IEnumerable<Tv> shows =
-                await libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
+            List<Movie> movies =
+                libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
+            List<Tv> shows =
+                libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
 
             list.Add(new()
             {
@@ -164,10 +164,10 @@ public class LibrariesController(
 
         foreach (Library library in libraries)
         {
-            IEnumerable<Movie> movies =
-                await libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
-            IEnumerable<Tv> shows =
-                await libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
+            List<Movie> movies =
+                libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
+            List<Tv> shows =
+                libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
 
             list.Add(new()
             {
@@ -260,10 +260,10 @@ public class LibrariesController(
 
         string language = Language();
 
-        IEnumerable<Movie> movies = await libraryRepository
-            .GetLibraryMovies(userId, libraryId, language, request.Take, request.Page);
-        IEnumerable<Tv> shows = await libraryRepository
-            .GetLibraryShows(userId, libraryId, language, request.Take, request.Page);
+        List<Movie> movies = libraryRepository
+            .GetLibraryMovies(userId, libraryId, language, request.Take, request.Page).ToList();
+        List<Tv> shows = libraryRepository
+            .GetLibraryShows(userId, libraryId, language, request.Take, request.Page).ToList();
 
         if (request.Version != "lolomo")
         {

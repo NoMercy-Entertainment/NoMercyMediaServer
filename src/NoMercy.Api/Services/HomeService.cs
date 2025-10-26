@@ -234,11 +234,10 @@ public class HomeService
 
         foreach (Library library in libraries)
         {
-            IEnumerable<Movie> movies =
-                await _libraryRepository.GetLibraryMovies(userId, library.Id, language, 32, 0, m => m.CreatedAt,
-                    "desc");
-            IEnumerable<Tv> shows =
-                await _libraryRepository.GetLibraryShows(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc");
+            List<Movie> movies = 
+                _libraryRepository.GetLibraryMovies(userId, library.Id, language, 32, 0, m => m.CreatedAt,"desc").ToList();
+            List<Tv> shows = 
+                _libraryRepository.GetLibraryShows(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc").ToList();
 
             bool shouldPaginate = (library.Type == MovieMediaType && movieCount > MaximumItemsPerPage)
                                   || (library.Type == TvMediaType && tvCount > MaximumItemsPerPage)
@@ -248,10 +247,10 @@ public class HomeService
             {
                 Id = library.Id.ToString(),
                 Title = library.Title,
-                // MoreLink = shouldPaginate
-                //     ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
-                //     : new($"/libraries/{library.Id}", UriKind.Relative),
-                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+                MoreLink = shouldPaginate
+                    ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
+                    : new($"/libraries/{library.Id}", UriKind.Relative),
+                // MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
                 Items = movies.Select(movie => new NmCardDto(movie, country))
                     .Concat(shows.Select(tv => new NmCardDto(tv, country)))
                     .ToList()
@@ -479,11 +478,10 @@ public class HomeService
 
         foreach (Library library in libraries)
         {
-            IEnumerable<Movie> movies =
-                await _libraryRepository.GetLibraryMovies(userId, library.Id, language, 32, 0, m => m.CreatedAt,
-                    "desc");
-            IEnumerable<Tv> shows =
-                await _libraryRepository.GetLibraryShows(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc");
+            List<Movie> movies =
+                _libraryRepository.GetLibraryMovies(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc").ToList();
+            List<Tv> shows =
+                _libraryRepository.GetLibraryShows(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc").ToList();
 
             list.Add(new()
             {

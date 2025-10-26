@@ -63,10 +63,10 @@ public class HomeController : BaseController
 
         foreach (Library library in libraries.OrderByDescending(library => library.Order))
         {
-            IEnumerable<Movie> movies =
-                await libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
-            IEnumerable<Tv> shows =
-                await libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc");
+            List<Movie> movies =
+                libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
+            List<Tv> shows =
+                libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
 
             response.Data = response.Data.Prepend(new()
             {

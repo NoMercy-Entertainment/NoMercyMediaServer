@@ -3,6 +3,7 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Encoder.Dto;
 
+[Serializable]
 public class VideoStream
 {
     [JsonProperty("index")] public int Index { get; set; }
@@ -31,6 +32,8 @@ public class VideoStream
     [JsonProperty("color_primaries")] public string? ColorPrimaries { get; set; }
     [JsonProperty("chroma_location")] public string? ChromaLocation { get; set; }
     [JsonProperty("avg_frame_rate")] public string? AvgFrameRate { get; set; }
+    
+    [JsonProperty("tags")] public object Tags { get; set; }
 
     [JsonProperty("frame_rate")] public int FrameRate { get; set; }
 
@@ -47,8 +50,8 @@ public class VideoStream
         CodecLongName = ffprobeSourceDataStream.CodecLongName;
         CodecType = ffprobeSourceDataStream.CodecType;
         TimeBase = ffprobeSourceDataStream.TimeBase;
-        Duration = ffprobeSourceDataStream.Tags.Duration.ToSeconds();
-        Size = ffprobeSourceDataStream.Tags.NumberOfBytes;
+        Duration = ffprobeSourceDataStream.Duration.ToSeconds();
+        Size = ffprobeSourceDataStream.Tags.TryGetValue("number_of_bytes", out string? numberOfBytes) ? numberOfBytes.ToLong() : 0;
         IsAvc = ffprobeSourceDataStream.IsAvc;
         Width = ffprobeSourceDataStream.Width;
         Height = ffprobeSourceDataStream.Height;
@@ -73,6 +76,8 @@ public class VideoStream
         
         IsDefault = ffprobeSourceDataStream.Disposition.TryGetValue("default", out int defaultValue) && defaultValue == 1;
         IsForced = ffprobeSourceDataStream.Disposition.TryGetValue("forced", out int forcedValue) && forcedValue == 1;
+        
+        Tags = ffprobeSourceDataStream.Tags;
     }
     
     private static bool DetectHdr(FfprobeSourceDataStream stream)

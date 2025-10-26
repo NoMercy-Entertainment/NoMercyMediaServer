@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 
 namespace NoMercy.Encoder.Dto;
 
+[Serializable]
 public class FfprobeSourceData
 {
     [JsonProperty("streams")] public FfprobeSourceDataStream[] Streams { get; set; } = [];
@@ -40,7 +41,7 @@ public class FfprobeSourceDataFormat
     [JsonProperty("size")] public string? Size { get; set; }
     [JsonProperty("bit_rate")] public long BitRate { get; set; }
     [JsonProperty("probe_score")] public long ProbeScore { get; set; }
-    [JsonProperty("tags")] public FfprobeSourceDataFormatTags Tags { get; set; } = new();
+    [JsonProperty("tags")] public Dictionary<string,string> Tags { get; set; } = new();
 }
 
 public class FfprobeSourceDataFormatTags
@@ -94,7 +95,7 @@ public class FfprobeSourceDataStream
     [JsonProperty("start_time")] public double StartTime { get; set; }
     [JsonProperty("extradata_size")] public int ExtradataSize { get; set; }
     [JsonProperty("disposition")] public Dictionary<string, int> Disposition { get; set; } = new();
-    [JsonProperty("tags")] public FfprobeSourceDataStreamTags Tags { get; set; } = new();
+    [JsonProperty("tags")] public Dictionary<string,string> Tags { get; set; } = new();
     [JsonProperty("sample_fmt")] public string? SampleFmt { get; set; }
     [JsonProperty("sample_rate")] public long? SampleRate { get; set; }
     [JsonProperty("channels")] public long? Channels { get; set; }
@@ -145,4 +146,13 @@ public class FfprobeSourceDataStreamTags
             }
         }
     }
+}
+
+public class FfprobeSourceMusicBrainz
+{
+    [JsonProperty("release_id")] public Guid ReleaseId { get; set; }
+    [JsonProperty("artist_id")] public Guid ArtistId { get; set; }
+    [JsonProperty("release_artist_id")] public Guid ReleaseArtistId { get; set; }
+    [JsonProperty("recording_id")] public Guid RecordingId { get; set; }
+    [JsonProperty("release_track_id")] public Guid ReleaseTrackId { get; set; }
 }

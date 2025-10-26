@@ -47,13 +47,19 @@ public partial class ProcessReleaseFolderJob : AbstractMusicFolderJob
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             .EnableFileListing()
-            .Process(InputFolder, 2);
+            .Process(InputFolder, 2); // change to 1 when updating to the new way
 
         if (rootFolders.Count == 0)
         {
             Logger.App("No folders found in " + InputFolder);
             return;
         }
+
+        // foreach (MediaFolderExtend folder in rootFolders.Where(f => f.Files is null))
+        // {
+        //     Logger.App("Processing folder: " + folder.Path);
+        //     jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, FolderId, folder.Path);
+        // }
 
         await ScanForReleases(rootFolders, albumLibrary, jobDispatcher);
     }

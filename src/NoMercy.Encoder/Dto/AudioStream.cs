@@ -4,6 +4,7 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Encoder.Dto;
 
+[Serializable]
 public class AudioStream
 {
     [JsonProperty("index")] public int Index { get; set; }
@@ -29,6 +30,8 @@ public class AudioStream
     [JsonProperty("is_forced")] public bool IsForced  { get; set; }
     [JsonProperty("is_visual_impaired")] public bool IsVisualImpaired  { get; set; }
     
+    [JsonProperty("tags")] public Dictionary<string,string> Tags { get; set; } = new();
+    
     public AudioStream(FfprobeSourceDataStream ffprobeSourceDataStream)
     {
         Index = ffprobeSourceDataStream.Index;
@@ -37,9 +40,9 @@ public class AudioStream
         CodecLongName = ffprobeSourceDataStream.CodecLongName ?? string.Empty;
         CodecType = ffprobeSourceDataStream.CodecType;
         TimeBase = ffprobeSourceDataStream.TimeBase ?? string.Empty;
-        Duration = ffprobeSourceDataStream.Tags?.Duration?.ToSeconds() ?? 0;
-        Language = ffprobeSourceDataStream.Tags?.Language ?? "und";
-        Size = ffprobeSourceDataStream.Tags?.NumberOfBytes ?? 0;
+        Language = ffprobeSourceDataStream.Tags.TryGetValue("language", out string? language) ? language :  "und";
+        Duration = ffprobeSourceDataStream.Tags.TryGetValue($"DURATION-{Language}", out string? duration) ? duration.ToSeconds() : ffprobeSourceDataStream.Duration.ToSeconds();
+        Size = ffprobeSourceDataStream.Tags.TryGetValue($"NUMBER_OF_BYTES-{Language}", out string? numberOfBytes) ? numberOfBytes.ToLong() : 0;
         SampleFmt = ffprobeSourceDataStream.SampleFmt ?? string.Empty;
         SampleRate = ffprobeSourceDataStream.SampleRate;
         Channels = ffprobeSourceDataStream.Channels;
@@ -47,9 +50,16 @@ public class AudioStream
         BitsPerSample = ffprobeSourceDataStream.BitsPerSample;
         BitRate = ffprobeSourceDataStream.BitRate;
         
+        if(Size == 0 && BitRate != 0 && Duration != 0)
+        {
+            Size = (long)(Duration * BitRate / 8);
+        }
+        
         IsDefault = ffprobeSourceDataStream.Disposition.TryGetValue("default", out int defaultValue) && defaultValue == 1;
         IsDub = ffprobeSourceDataStream.Disposition.TryGetValue("dub", out int dubValue) && dubValue == 1;
         IsForced = ffprobeSourceDataStream.Disposition.TryGetValue("forced", out int forcedValue) && forcedValue == 1;
         IsVisualImpaired = ffprobeSourceDataStream.Disposition.TryGetValue("visual_impaired", out int visualImpairedValue) && visualImpairedValue == 1;
+        
+        Tags = ffprobeSourceDataStream.Tags;
     }
 }

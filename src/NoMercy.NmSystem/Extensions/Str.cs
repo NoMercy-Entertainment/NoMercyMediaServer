@@ -149,6 +149,12 @@ public static partial class Str
         return Convert.ToDouble(value);
     }
 
+    public static long ToLong(this string value)
+    {
+        if (string.IsNullOrEmpty(value)) return 0;
+        return long.Parse(value, CultureInfo.InvariantCulture);
+    }
+
     public static bool ToBoolean(this string value)
     {
         if (string.IsNullOrEmpty(value)) return false;
@@ -392,6 +398,11 @@ public static partial class Str
         if (parts.Length < 3) parts = new[] { 0 }.Concat(parts).ToArray();
 
         return parts[0] * 60 * 60 + parts[1] * 60 + parts[2];
+    }
+
+    public static int ToSeconds(this double hms)
+    {
+        return (int)Math.Round(hms);
     }
 
     public static int ToMilliSeconds(this string hms)

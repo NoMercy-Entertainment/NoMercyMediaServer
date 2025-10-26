@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 
 namespace NoMercy.Encoder.Dto;
 
+[Serializable]
 public class Attachment
 {
     [JsonProperty("index")] public int Index { get; set; }
@@ -15,9 +16,9 @@ public class Attachment
     public Attachment(FfprobeSourceDataStream ffprobeSourceDataStream)
     {
         Index = ffprobeSourceDataStream.Index;
-        Filename = ffprobeSourceDataStream.Tags.Filename;
-        Title = ffprobeSourceDataStream.Tags.Title;
-        Mimetype = ffprobeSourceDataStream.Tags.MimeType;
+        Filename = ffprobeSourceDataStream.Tags.TryGetValue("filename", out string? filename) ? filename : null;
+        Title = ffprobeSourceDataStream.Tags.TryGetValue("title", out string? title) ? title : null;
+        Mimetype = ffprobeSourceDataStream.Tags.TryGetValue("mimetype", out string? mimeType) ? mimeType :  "und";
         Size = ffprobeSourceDataStream.ExtradataSize;
         CodecName = ffprobeSourceDataStream.CodecName;
         CodecLongName = ffprobeSourceDataStream.CodecLongName;

@@ -15,13 +15,13 @@ public class Ffprobe
     private FfprobeSourceData SourceData { get; set; } = new();
     private string Error { get; set; } = string.Empty;
     
-    public readonly List<VideoStream> VideoStreams = [];
-    public readonly List<ImageStream> ImageStreams = [];
-    public readonly List<AudioStream> AudioStreams = [];
-    public readonly List<SubtitleStream> SubtitleStreams = [];
-    public readonly List<Chapter> Chapters = [];
-    public readonly List<Attachment> Attachments = [];
-    public MediaFormat Format { get; set; } = new();
+    public List<VideoStream> VideoStreams = [];
+    public List<ImageStream> ImageStreams = [];
+    public List<AudioStream> AudioStreams = [];
+    public List<SubtitleStream> SubtitleStreams = [];
+    public List<Chapter> Chapters = [];
+    public List<Attachment> Attachments = [];
+    public FfprobeSourceDataFormat Format { get; set; } = new();
     
     public Ffprobe(string filename)
     {
@@ -65,11 +65,8 @@ public class Ffprobe
                 .ToList();
             Chapters.AddRange(chapters
                 .Select(c => new Chapter(c, chapters.IndexOf(c))));
-            
-            Format = new()
-            {
-                
-            };
+
+            Format = data.Format;
 
             return this;
         });

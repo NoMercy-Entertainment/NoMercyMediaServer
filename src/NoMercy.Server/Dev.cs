@@ -1,6 +1,4 @@
-using NoMercy.Encoder.Core;
-using NoMercy.Encoder.Format.Audio;
-using NoMercy.NmSystem.Information;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 namespace NoMercy.Server;
 
@@ -8,15 +6,25 @@ public static class Dev
 {
     public static async Task Run()
     {
-        await VideoAudioFile.GetSubtitleFromWhisperAi(
-            "C:\\Users\\patri\\Videos\\2025-09-11_17-58-09.mkv", AppFiles.TranscodePath, "test.srt", "en");
+        // await VideoAudioFile.GetSubtitleFromWhisperAi(
+        //     "C:\\Users\\patri\\Videos\\2025-09-11_17-58-09.mkv", AppFiles.TranscodePath, "test.srt", "en");
 
-        // Ffprobe ffprobe = new("G:\\Marvels\\Films\\Download\\Werewolf.By.Night.2022.2160p.DSNP.WEB-DL.x265.10bit.HDR.DDP5.1.Atmos-KOGi\\Werewolf.By.Night.2022.HDR.2160p.WEB.h265-KOGi.mkv");
-        // Ffprobe ffprobe = new("M:\\Download\\complete\\The.Apothecary.Diaries.S02E21.Taibon.1080p.CR.WEB-DL.MULTi.AAC2.0.H.264-VARYG.mkv");
-        // Ffprobe ffprobe = new("F:\\Films\\Download\\Brave.(2012).mkv");
+        // Ffprobe ffprobe = new("G:\\Marvels\\Films\\Download\\Doctor.Strange.2016.2160p.BluRay.x265.10bit.SDR.DTS-HD.MA.TrueHD.7.1.Atmos-SWTYBLZ\\Doctor.Strange.2016.2160p.BluRay.x265.10bit.SDR.DTS-HD.MA.TrueHD.7.1.Atmos-SWTYBLZ.mkv");
+        // Ffprobe ffprobe = new("M:\\Music\\C\\Chris Brown\\[2011] F.A.M.E_\\01 Deuces [Chris Brown feat. Tyga & Kevin McCall].mp3");
         // Ffprobe ffprobeData = await ffprobe.GetStreamData();
+        
         // Logger.App(ffprobeData);
-        //
+        
+        // ProcessReleaseFolderJob processReleaseFolderJob = new()
+        // {
+        //     Id = Guid.Empty,
+        //     FolderId = Ulid.Parse("01HQ5W84R600G31Q038AGNSKGT"),
+        //     LibraryId = Ulid.Parse("01HQ5W4JJ9ZAX7721AQJZFQ7E1"),
+        //     InputFolder = "M:\\Music\\C\\Chris Brown"
+        // };
+        
+        // await processReleaseFolderJob.Handle();
+
         // await using MediaContext context = new();
         // Library? lib = await context.Libraries
         //     .Include(lib => lib.FolderLibraries)
