@@ -1,21 +1,21 @@
 # NoMercy Arch Repository Database
-# Generated on Sun Oct 26 03:53:16 UTC 2025
+# Generated on Sun Oct 26 21:56:03 UTC 2025
 
 [Package]
 Name: nomercyapp
-Version: 0.1.172-1
-Filename: nomercyapp-0.1.172-1-x86_64.pkg.tar.zst
-Size: 23199431
+Version: 0.1.173-1
+Filename: nomercyapp-0.1.173-1-x86_64.pkg.tar.zst
+Size: 23222826
 
 [Package]
 Name: nomercymediaserver
-Version: 0.1.172-1
-Filename: nomercymediaserver-0.1.172-1-x86_64.pkg.tar.zst
-Size: 80238651
+Version: 0.1.173-1
+Filename: nomercymediaserver-0.1.173-1-x86_64.pkg.tar.zst
+Size: 80259215
 
 [Package]
 Name: nomercyupdater
-Version: 0.1.172-1
-Filename: nomercyupdater-0.1.172-1-x86_64.pkg.tar.zst
-Size: 80329559
+Version: 0.1.173-1
+Filename: nomercyupdater-0.1.173-1-x86_64.pkg.tar.zst
+Size: 80330770
 
