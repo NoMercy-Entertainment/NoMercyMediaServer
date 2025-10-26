@@ -52,20 +52,21 @@ public class HomeRepository
                 .Include(userData => userData.Movie)
                 .ThenInclude(movie => movie!.VideoFiles)
 
-                .Include(collectionMovie => collectionMovie.Movie)
+                .Include(userData => userData.Movie)
                 .ThenInclude(movie => movie.CertificationMovies)
                 .ThenInclude(certificationMovie => certificationMovie.Certification)
 
                 .Include(userData => userData.Movie)
                 .ThenInclude(movie => movie!.Media.Where(media => media.Site == "Youtube"))
 
-                .Include(episode => episode.Tv)
+                .Include(userData => userData.Tv)
                 .ThenInclude(tv => tv.CertificationTvs
                     .Where(certificationTv => certificationTv.Certification.Iso31661 == country))
                 .ThenInclude(certificationTv => certificationTv.Certification)
 
                 .Include(userData => userData.Tv)
                 .ThenInclude(tv => tv!.Episodes
+                    .Where(episode => episode.SeasonNumber > 0)
                     .Where(episode => episode.VideoFiles.Count != 0)
                 )
                 .ThenInclude(episode => episode.VideoFiles)

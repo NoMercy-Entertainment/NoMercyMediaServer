@@ -79,6 +79,7 @@ public class Episode : ColorPaletteTimeStamps
             "E", EpisodeNumber.ToString("00"),
             ".", Title.CleanFileName(),
             ".NoMercy"
-        );
+        )
+        .CleanFileName();
     }
 }
