@@ -350,7 +350,7 @@ public class LibraryRepository(MediaContext context)
                     .Any(videoFile => videoFile.Folder != null) == true
                 ) == true)
             .Include(tv => tv.Episodes
-                .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0)
+                .Where(episode => episode.SeasonNumber > 0)
             )
             .ThenInclude(episode => episode.VideoFiles)
             .Include(tv => tv.Media
@@ -367,8 +367,7 @@ public class LibraryRepository(MediaContext context)
             .Include(tv => tv.KeywordTvs)
             .ThenInclude(keywordTv => keywordTv.Keyword)
             .Include(tv => tv.CertificationTvs)
-            .ThenInclude(certificationTv => certificationTv.Certification)
-            .OrderBy(tv => tv.TitleSort);
+            .ThenInclude(certificationTv => certificationTv.Certification);
             
             if (orderByExpression is not null && direction == "desc")
                 return x.OrderByDescending(orderByExpression)

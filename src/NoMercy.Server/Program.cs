@@ -75,7 +75,7 @@ public static class Program
 
         List<TaskDelegate> startupTasks =
         [
-            new(DatabaseSeeder.Run),
+            DatabaseSeeder.Run,
             // new(Dev.Run)
         ];
 
@@ -101,8 +101,8 @@ public static class Program
 
                 // Move these here to run in background
                 await Dev.Run();
-                await DriveMonitor.Start();
-                _ = LibraryFileWatcher.Instance;
+                // await DriveMonitor.Start();
+                // _ = LibraryFileWatcher.Instance;
                 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                     OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))

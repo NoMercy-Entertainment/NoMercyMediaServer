@@ -14,6 +14,7 @@ public class AudioTagModel
         public Guid ReleaseArtistId { get; set; }
         public Guid ArtistId { get; set; }
         public Guid ReleaseTrackId { get; set; }
+        public Guid RecordingId { get; set; }
         public string FingerPrint  { get; set; } = string.Empty;
         public Guid AcoustIdId { get; set; }
     }
@@ -36,17 +37,20 @@ public class AudioTagModel
         {
             mb ??= new();
 
-            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzReleaseId, out Guid rid))
-                mb.ReleaseId = rid;
+            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzReleaseId, out Guid rId))
+                mb.ReleaseId = rId;
             
-            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzArtistId, out Guid aid))
-                mb.ArtistId = aid;
+            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzArtistId, out Guid aId))
+                mb.ArtistId = aId;
             
-            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzReleaseArtistId, out Guid raid))
-                mb.ReleaseArtistId = raid;
+            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzReleaseArtistId, out Guid raId))
+                mb.ReleaseArtistId = raId;
             
-            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzTrackId, out Guid tid))
-                mb.ReleaseTrackId = tid;
+            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzTrackId, out Guid tId))
+                mb.ReleaseTrackId = tId;
+            
+            if (Guid.TryParse(fileItem.TagFile.Tag.MusicBrainzTrackId, out Guid recId))
+                mb.RecordingId = recId;
             
             if (tagsContainer.TryGetValue("Acoustid Fingerprint", out string? fingerPrint))
                 mb.FingerPrint = fingerPrint;
@@ -65,6 +69,12 @@ public class AudioTagModel
             
             if (mb.ReleaseTrackId == Guid.Empty && tagsContainer.TryGetValue("MusicBrainz Track Id", out string? trackId))
                 mb.ReleaseTrackId = Guid.Parse(trackId);
+            
+            if (mb.ReleaseTrackId == Guid.Empty && tagsContainer.TryGetValue("MusicBrainz Recording Id", out string? recordingId))
+                mb.RecordingId = Guid.Parse(recordingId);
+            
+            if (mb.ReleaseTrackId == Guid.Empty && tagsContainer.TryGetValue("MusicBrainz Track Id", out string? trackId2))
+                mb.RecordingId = Guid.Parse(trackId2);
         }
         else
         {
@@ -86,6 +96,12 @@ public class AudioTagModel
             
             if (tagsContainer.TryGetValue("MusicBrainz Track Id", out string? trackId))
                 mb.ReleaseTrackId = Guid.Parse(trackId);
+            
+            if (tagsContainer.TryGetValue("MusicBrainz Recording Id", out string? recordingId))
+                mb.RecordingId = Guid.Parse(recordingId);
+            
+            if (tagsContainer.TryGetValue("MusicBrainz Track Id", out string? trackId2))
+                mb.RecordingId = Guid.Parse(trackId2);
             
         }
         

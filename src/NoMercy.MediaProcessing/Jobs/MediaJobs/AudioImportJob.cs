@@ -1,9 +1,10 @@
 using System.Collections.Concurrent;
+using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
@@ -23,10 +24,16 @@ public class AudioImportJob : AbstractMusicFolderJob
         await using MediaContext context = new();
         
         using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
+        using MusicBrainzRecordingClient musicBrainzRecordingClient = new();
+        using MusicBrainzArtistClient musicBrainzArtistClient = new();
 
         _files = await GetFiles();
         
         Dictionary<Guid, List<AudioTagModel>> tags = await GetTags();
+
+        MusicBrainzReleaseAppends? release = null;
+        List<MusicBrainzArtistAppends> releaseArtists = [];
+        List<(MusicBrainzRecordingAppends, MusicBrainzArtistAppends[], MediaFile)> fileLinksToTrack = [];
         
         KeyValuePair<Guid, List<AudioTagModel>> firstRelease = tags
             .OrderByDescending(x => x.Value.Count)
@@ -34,15 +41,58 @@ public class AudioImportJob : AbstractMusicFolderJob
         
         if (firstRelease.Key != Guid.Empty)
         {
-            MusicBrainzReleaseAppends? result = await musicBrainzReleaseClient.WithAllAppends(firstRelease.Key);
-            if (result == null)
+            // Release
+            release = await musicBrainzReleaseClient.WithAllAppends(firstRelease.Key);
+            if (release == null)
             {
-                Logger.Queue($"MusicBrainz release {firstRelease.Key} not found.");
-                // do something else
+                // check fingerprint or acoustid?
                 return;
             }
             
-            Logger.Queue(firstRelease.Value);
+            // Release Artists
+            foreach (ReleaseArtistCredit musicBrainzArtistCredit in release.ArtistCredit)
+            {
+                MusicBrainzArtistAppends? artist = await musicBrainzArtistClient.WithAllAppends(musicBrainzArtistCredit.MusicBrainzArtist.Id);
+                if (artist == null) continue;
+                releaseArtists.Add(artist);
+            }
+            
+            // Tracks
+            List<MusicBrainzTrack> allTracks = release.Media.SelectMany(x => x.Tracks).ToList();
+            List<string> checkedFiles = [];
+            foreach (MusicBrainzTrack track in allTracks)
+            {
+                foreach (AudioTagModel audioTagModel in firstRelease.Value)
+                {
+                    if (audioTagModel.musicBrainz == null || audioTagModel.tags == null || checkedFiles.Contains(audioTagModel.fileItem.Path)) continue;
+                    if ((audioTagModel.musicBrainz.RecordingId != track.Recording.Id &&
+                         audioTagModel.musicBrainz.RecordingId != track.Id &&
+                         audioTagModel.musicBrainz.ReleaseTrackId != track.Recording.Id &&
+                         audioTagModel.musicBrainz.ReleaseTrackId != track.Id) &&
+                        (!audioTagModel.tags.Title.ContainsSanitized(track.Title) ||
+                         (audioTagModel.tags.Track != track.Position &&
+                          !(Math.Abs(float.Parse(audioTagModel.format?.Duration ?? "0") * 1000 - track.Length ??
+                                     0) < 5)))) continue;
+                    // Recording
+                    MusicBrainzRecordingAppends? recording = await musicBrainzRecordingClient.WithAllAppends(track.Recording.Id);
+                    if (recording == null) continue;
+                    
+                    // Recording Artists
+                    List<MusicBrainzArtistAppends> artists = [];
+                    foreach (MusicBrainzArtistCredit musicBrainzArtistCredit in recording.ArtistCredit)
+                    {
+                        MusicBrainzArtistAppends? subArtist = await musicBrainzArtistClient.WithAllAppends(musicBrainzArtistCredit.MusicBrainzArtist.Id);
+                        if (subArtist == null) continue;
+                        artists.Add(subArtist);
+                    }
+                    
+                    // Link file to track
+                    checkedFiles.Add(audioTagModel.fileItem.Path);
+                    fileLinksToTrack.Add((recording, artists.ToArray(), audioTagModel.fileItem));
+                    break;
+                }
+            }
+            await File.WriteAllTextAsync(@"C:\test.json", JsonConvert.SerializeObject(((release, releaseArtists), fileLinksToTrack), Formatting.Indented));
         }
     }
 

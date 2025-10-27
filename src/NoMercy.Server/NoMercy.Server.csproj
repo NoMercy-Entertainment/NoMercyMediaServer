@@ -16,9 +16,11 @@
         <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
         <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
         <RepositoryUrl>https://github.com/NoMercy-Entertainment/NoMercyMediaServer</RepositoryUrl>
-        <PackageTags>streaming media content-management private streaming-video streaming-audio blurayrip video-encoder</PackageTags>
+        <PackageTags>streaming media content-management private streaming-video streaming-audio
+            blurayrip video-encoder</PackageTags>
         <NeutralLanguage>en</NeutralLanguage>
-        <!-- Suppress NU1701 for MediaBrowser.Model.Signed which targets older .NET Framework but is required by the project -->
+        <!-- Suppress NU1701 for MediaBrowser.Model.Signed which targets older .NET Framework but is
+        required by the project -->
         <NoWarn>$(NoWarn);NU1701;NETSDK1206</NoWarn>
     </PropertyGroup>
     <PropertyGroup>
@@ -51,7 +53,8 @@
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.8" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.8" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer" Version="5.1.0" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="9.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson"
+            Version="9.0.8" />
         <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.14.0" />
         <PackageReference Include="MimeMapping" Version="3.1.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4-beta1" />

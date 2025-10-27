@@ -14,6 +14,17 @@ public class MusicBrainzArtistClient : MusicBrainzBaseClient
     {
     }
 
+    public Task<MusicBrainzArtistAppends?> WithAppends(Guid? id, string[] appendices, bool? priority = false)
+    {
+        Dictionary<string, string> queryParams = new()
+        {
+            ["inc"] = string.Join("+", appendices),
+            ["fmt"] = "json"
+        };
+
+        return Get<MusicBrainzArtistAppends>("artist/" + id, queryParams, priority);
+    }
+
     public Task<MusicBrainzArtistAppends?> WithAppends(string[] appendices, bool? priority = false)
     {
         Dictionary<string, string> queryParams = new()
@@ -24,6 +35,18 @@ public class MusicBrainzArtistClient : MusicBrainzBaseClient
 
         return Get<MusicBrainzArtistAppends>("artist/" + Id, queryParams, priority);
     }
+
+    public Task<MusicBrainzArtistAppends?> WithAllAppends(Guid? id, bool? priority = false)
+    {
+        return WithAppends((Guid)id!, [
+            "genres",
+            "recordings",
+            "releases",
+            "release-groups",
+            "works"
+        ], priority);
+    }
+
 
     public Task<MusicBrainzArtistAppends?> WithAllAppends(bool? priority = false)
     {
