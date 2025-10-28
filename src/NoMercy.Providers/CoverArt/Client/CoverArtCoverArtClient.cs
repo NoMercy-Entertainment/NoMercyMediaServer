@@ -31,6 +31,23 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
         }
     }
 
+    public Task<CoverArtCovers?> GroupCover(bool priority = false)
+    {
+        Dictionary<string, string> queryParams = new()
+        {
+            //
+        };
+
+        try
+        {
+            return Get<CoverArtCovers>("release-group/" + Id, queryParams, priority);
+        }
+        catch (Exception)
+        {
+            return Task.FromResult<CoverArtCovers?>(null);
+        }
+    }
+
     public static async Task<Image<Rgba32>?> Download(Uri? url, bool? download = true)
     {
         string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName(url?.LocalPath ?? string.Empty));

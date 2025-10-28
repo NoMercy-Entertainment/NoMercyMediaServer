@@ -4,6 +4,7 @@
 
 using NoMercy.Database.Models;
 using NoMercy.Encoder.Format.Container;
+using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Queue;
 
@@ -19,7 +20,7 @@ public abstract class AbstractMusicRecordingJob : IShouldQueue
     public Guid Id { get; set; }
     public Folder Folder { get; set; } = null!;
     public MusicBrainzTrack FoundTrack { get; set; } = null!;
-    public ProcessMusicFolderJob.FolderMetadata FolderMetaData { get; set; } = null!;
+    public FolderMetadata FolderMetaData { get; set; } = null!;
     public BaseContainer Container { get; set; } = null!;
 
     public abstract string QueueName { get; }

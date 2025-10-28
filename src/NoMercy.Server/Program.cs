@@ -1,4 +1,3 @@
-// Version management test - trigger workflow with manual version bump
 using System.Diagnostics;
 using System.Net;
 using System.Reflection;
@@ -7,11 +6,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
-using NoMercy.MediaProcessing.Files;
-using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.Networking;
-
-// CI/CD Pipeline validation trigger
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Server.Seeds;
@@ -99,7 +94,6 @@ public static class Program
 
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
 
-                // Move these here to run in background
                 await Dev.Run();
                 // await DriveMonitor.Start();
                 // _ = LibraryFileWatcher.Instance;

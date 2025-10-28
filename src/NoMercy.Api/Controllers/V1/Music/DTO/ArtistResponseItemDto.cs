@@ -1,4 +1,3 @@
-using System.Drawing.Imaging;
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;

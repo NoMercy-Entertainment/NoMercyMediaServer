@@ -1,4 +1,5 @@
 using NoMercy.Database.Models;
+using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
@@ -14,10 +15,10 @@ public class JobDispatcher
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
 
-    public void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, Guid releaseId, string filePath)
+    public void DispatchJob<TJob>(Ulid libraryId, string filePath)
         where TJob : AbstractMusicFolderJob, new()
     {
-        TJob job = new() { FolderId = folderId, LibraryId = libraryId, Id = releaseId, InputFolder = filePath };
+        TJob job = new() { LibraryId = libraryId, InputFolder = filePath };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
 
@@ -101,7 +102,7 @@ public class JobDispatcher
     public void DispatchJob<TJob>(
         Guid id,
         Ulid folderId,
-        ProcessMusicFolderJob.FolderMetadata folderMetaData,
+        FolderMetadata folderMetaData,
         MediaFile mediaFile,
         MusicBrainzTrack foundTrack,
         Ulid libraryId,

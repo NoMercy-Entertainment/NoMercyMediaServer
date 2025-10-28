@@ -62,7 +62,7 @@ public class AudioTagModel
                 mb.ReleaseId = Guid.Parse(releaseId);
             
             if (mb.ArtistId == Guid.Empty && tagsContainer.TryGetValue("MusicBrainz Artist Id", out string? albumId))
-                mb.ArtistId = Guid.Parse(albumId.Split(";").FirstOrDefault() ?? albumId);
+                mb.ArtistId = Guid.TryParse(albumId.Split(";").First().Trim(), out Guid albumGuid) ? albumGuid : Guid.Empty;
             
             if (mb.ReleaseArtistId == Guid.Empty && tagsContainer.TryGetValue("MusicBrainz Release Artist Id", out string? albumTrackId))
                 mb.ReleaseArtistId = Guid.Parse(albumTrackId);

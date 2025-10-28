@@ -50,7 +50,7 @@ public class CoverArtImageManagerManager : ICoverArtImageManagerManager
         try
         {
             CoverArtCoverArtClient coverArtCoverArtClient = new(id);
-            CoverArtCovers? covers = await coverArtCoverArtClient.Cover(priority);
+            CoverArtCovers? covers = await coverArtCoverArtClient.GroupCover(priority);
             if (covers is null) return null;
 
             List<CoverArtImage> coverList = covers.Images

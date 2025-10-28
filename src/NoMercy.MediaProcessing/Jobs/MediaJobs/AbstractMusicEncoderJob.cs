@@ -2,6 +2,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Queue;
@@ -20,7 +21,7 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue
     public Ulid FolderId { get; set; }
 
     public MusicBrainzTrack FoundTrack { get; set; } = null!;
-    public ProcessMusicFolderJob.FolderMetadata FolderMetaData { get; set; } = null!;
+    public FolderMetadata FolderMetaData { get; set; } = null!;
     public MediaFile MediaFile { get; set; } = null!;
 
     public string InputFolder { get; set; } = string.Empty;

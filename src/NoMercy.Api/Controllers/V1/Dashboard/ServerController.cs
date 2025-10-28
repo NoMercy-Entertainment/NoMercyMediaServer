@@ -187,7 +187,7 @@ public class ServerController(
             if (library.Type == "music")
             {
                 Logger.App("Adding music files to library", LogEventLevel.Verbose);
-                jobDispatcher.DispatchJob<ProcessMusicFolderJob>(
+                jobDispatcher.DispatchJob<ProcessReleaseFolderJob>(
                     library.Id,
                     request.FolderId,
                     request.Files[0].Id.ToGuid(),

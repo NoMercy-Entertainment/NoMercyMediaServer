@@ -1,4 +1,3 @@
-using Newtonsoft.Json;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;

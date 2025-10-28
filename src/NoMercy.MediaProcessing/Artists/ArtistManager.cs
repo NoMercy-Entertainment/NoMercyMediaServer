@@ -69,6 +69,57 @@ public class ArtistManager(
         });
     }
 
+    /** this is the store for a Release artist */
+    public async Task Store(MusicBrainzArtistAppends artistCredit, MusicBrainzReleaseAppends releaseAppends, Library library, Folder libraryFolder)
+    {
+        Logger.MusicBrainz($"Storing Artist: {artistCredit.Name}", LogEventLevel.Verbose);
+        string artistFolder = MakeArtistFolder(artistCredit.Name);
+        string folder = artistFolder.Replace("/", Str.DirectorySeparator);
+
+        Artist artist = new()
+        {
+            Id = artistCredit.Id,
+            Name = artistCredit.Name,
+            Disambiguation = string.IsNullOrEmpty(artistCredit.Disambiguation)
+                ? null
+                : artistCredit.Disambiguation,
+            Country = artistCredit.Country,
+            TitleSort = artistCredit.SortName,
+
+            LibraryId = library.Id,
+            FolderId = libraryFolder.Id,
+
+            Folder = artistFolder,
+            HostFolder = folder.PathName()
+        };
+
+        await artistRepository.StoreAsync(artist);
+
+        await LinkToLibrary(artistCredit, library);
+        await LinkToRelease(artistCredit, releaseAppends);
+
+        try
+        {
+            List<ArtistMusicGenre> genres = artistCredit.Genres
+                .Select(genre => new ArtistMusicGenre
+                {
+                    ArtistId = artistCredit.Id,
+                    MusicGenreId = genre.Id
+                }).ToList();
+
+            await musicGenreRepository.LinkToArtist(genres);
+        }
+        catch (Exception e)
+        {
+            Logger.MusicBrainz(e.Message, LogEventLevel.Error);
+        }
+
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["music", "artist", artistCredit.Id.ToString()]
+        });
+    }
+
     /** this is the store for a Recording artist */
     public async Task Store(MusicBrainzArtistDetails artistCredit, Library library, Folder libraryFolder,
         MediaFolder mediaFolder, MusicBrainzTrack release)

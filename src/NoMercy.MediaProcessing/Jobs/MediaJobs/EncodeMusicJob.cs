@@ -133,7 +133,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         mediaFolder.Files?.FilterConcurrentBag([container.FileName]);
 
         CoverArtImageManagerManager.CoverPalette? coverPalette =
-            await CoverArtImageManagerManager.Add(FolderMetaData.MusicBrainzRelease.Id);
+            await CoverArtImageManagerManager.Add(FolderMetaData.MusicBrainzRelease.MusicBrainzReleaseGroup.Id);
 
         await Parallel.ForEachAsync(FolderMetaData.MusicBrainzRelease.Media, Config.ParallelOptions, async (media, t) =>
         {

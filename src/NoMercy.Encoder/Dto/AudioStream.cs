@@ -50,7 +50,7 @@ public class AudioStream
         BitsPerSample = ffprobeSourceDataStream.BitsPerSample;
         BitRate = ffprobeSourceDataStream.BitRate;
         
-        if(Size == 0 && BitRate != 0 && Duration != 0)
+        if(Size == 0 && BitRate is not null && Duration is not 0)
         {
             Size = (long)(Duration * BitRate / 8);
         }

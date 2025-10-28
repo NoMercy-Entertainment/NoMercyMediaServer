@@ -23,7 +23,8 @@ public class ReleaseRepository(MediaContext context) : IReleaseRepository
                 LibraryId = i.LibraryId,
                 Folder = i.Folder,
                 FolderId = i.FolderId,
-                HostFolder = i.HostFolder
+                HostFolder = i.HostFolder,
+                Cover = i.Cover,
             })
             .RunAsync();
     }

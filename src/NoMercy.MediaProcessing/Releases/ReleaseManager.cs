@@ -32,7 +32,7 @@ public class ReleaseManager(
         if (releaseAppends == null) 
             return (null, null);
 
-        CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(releaseAppends.Id);
+        CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(releaseAppends.MusicBrainzReleaseGroup.Id);
         
         if (coverPalette is not null) 
             await CoverArtCoverArtClient.Download(coverPalette.Url);
@@ -107,5 +107,77 @@ public class ReleaseManager(
         };
 
         await releaseRepository.LinkToLibrary(insert);
+    }
+
+    public async Task Store(MusicBrainzReleaseAppends releaseAppends, Library library, Folder libraryFolder,
+        MediaFile mediaFile, CoverArtImageManagerManager.CoverPalette? coverPalette)
+    {
+        try
+        {
+            Logger.MusicBrainz($"Storing Release: {releaseAppends.Title}", LogEventLevel.Verbose);
+
+            string folder = Path.GetDirectoryName(mediaFile.Path.Replace(libraryFolder.Path, "")) ?? "";
+
+            Album release = new()
+            {
+                Id = releaseAppends.Id,
+                Name = releaseAppends.Title,
+                Country = releaseAppends.Country,
+                Disambiguation = string.IsNullOrEmpty(releaseAppends.Disambiguation)
+                    ? null
+                    : releaseAppends.Disambiguation,
+                Year = releaseAppends.DateTime?.Year ?? 0,
+                Tracks = releaseAppends.Media.Sum(m => m.TrackCount),
+
+                LibraryId = library.Id,
+                FolderId = libraryFolder.Id,
+                HostFolder = folder.PathName(),
+
+                Folder = folder.Replace(libraryFolder.Path, "")
+                    .Replace("\\", "/"),
+
+                Cover = coverPalette?.Url is not null
+                    ? $"/{coverPalette.Url.FileName()}"
+                    : null,
+                
+                _colorPalette = coverPalette?.Palette ?? string.Empty
+            };
+
+            await releaseRepository.Store(release);
+
+            await LinkToLibrary(releaseAppends, library);
+            await LinkToReleaseGroup(releaseAppends);
+            await LinkToGenre(releaseAppends);
+
+            Logger.MusicBrainz($"Release {releaseAppends.Title} stored", LogEventLevel.Verbose);
+        }
+        catch (Exception e)
+        {
+            Logger.MusicBrainz(e.Message, LogEventLevel.Error);
+        }
+    }
+
+    private async Task LinkToGenre(MusicBrainzReleaseAppends releaseAppends)
+    {
+        List<AlbumMusicGenre> genres = releaseAppends.Genres.Select(genre => new AlbumMusicGenre
+        {
+            AlbumId = releaseAppends.Id,
+            MusicGenreId = genre.Id
+        }).ToList();
+
+        await musicGenreRepository.LinkToRelease(genres);
+    }
+
+    private async Task LinkToReleaseGroup(MusicBrainzReleaseAppends releaseAppends)
+    {
+        Logger.MusicBrainz($"Linking Release to Release Group: {releaseAppends.Title}", LogEventLevel.Verbose);
+
+        AlbumReleaseGroup insert = new()
+        {
+            AlbumId = releaseAppends.Id,
+            ReleaseGroupId = releaseAppends.MusicBrainzReleaseGroup.Id
+        };
+
+        await releaseRepository.LinkToReleaseGroup(insert);
     }
 }
