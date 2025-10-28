@@ -163,7 +163,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         {
             try
             {
-                await recordingManager.Store(releaseAppends, fileLink.recordingAppends, fileLink.mediaFile, folderLibrary, coverPalette);
+                await recordingManager.Store(releaseAppends, fileLink.recordingAppends, fileLink.artistAppends, fileLink.mediaFile, folderLibrary, coverPalette);
             }
             catch (Exception e)
             {

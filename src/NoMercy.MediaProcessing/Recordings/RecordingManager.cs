@@ -264,6 +264,7 @@ public partial class RecordingManager(
     public async Task Store(
         MusicBrainzReleaseAppends releaseAppends, 
         MusicBrainzRecordingAppends recordingAppends, 
+        MusicBrainzArtistAppends[] artistAppends,
         MediaFile mediaFile, 
         Folder libraryFolder,
         CoverArtImageManagerManager.CoverPalette? coverPalette
@@ -302,6 +303,7 @@ public partial class RecordingManager(
 
         await LinkToRelease(insert, releaseAppends);
         await LinkToLibrary(insert, libraryFolder.FolderLibraries.FirstOrDefault()!.Library);
+        await LinkToArtist(insert, artistAppends);
         
         List<MusicGenreTrack> genres = recordingAppends.Genres
             ?.Select(genre => new MusicGenreTrack
@@ -313,5 +315,18 @@ public partial class RecordingManager(
         await musicGenreRepository.LinkToRecording(genres);
 
         Logger.MusicBrainz($"Recording {recordingAppends.Title} stored", LogEventLevel.Verbose);
+    }
+
+    private async Task LinkToArtist(Track insert, MusicBrainzArtistAppends[] artistAppends)
+    {
+        foreach (MusicBrainzArtistAppends artist in artistAppends)
+        {
+            ArtistTrack link = new()
+            {
+                ArtistId = artist.Id,
+                TrackId = insert.Id
+            };
+            await recordingRepository.LinkToArtist(link);
+        }
     }
 }
