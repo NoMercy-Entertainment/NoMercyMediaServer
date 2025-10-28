@@ -15,6 +15,7 @@ public abstract class AbstractMusicFolderJob : IShouldQueue
     public string InputFolder { get; set; } = string.Empty;
     public Ulid LibraryId { get; set; }
     public Ulid FolderId { get; set; }
+    public Guid ReleaseId { get; set; }
 
     public abstract string QueueName { get; }
     public abstract int Priority { get; }
