@@ -75,13 +75,6 @@ public class ArtistsController : BaseController
                     .Build()
             ]
         });
-        
-        return Ok(new ArtistsResponseDto
-        {
-            Data = artists
-                .Where(response => response.Tracks > 0)
-                .OrderBy(artist => artist.Name)
-        });
     }
 
     [HttpGet]

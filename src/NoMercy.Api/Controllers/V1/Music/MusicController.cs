@@ -87,6 +87,36 @@ public class MusicController : BaseController
             .Take(36)
             .ToListAsync();
 
+        List<ComponentDto<dynamic>> topResults = [];
+
+        if (favoriteArtist is not null)
+            topResults.Add(new ComponentBuilder<dynamic>()
+                .WithComponent("NMMusicHomeCard")
+                .WithProps((props, _) => props
+                    .WithId("favorite-artist")
+                    .WithTitle("Most listened artist".Localize())
+                    .WithData(favoriteArtist))
+                .Build());
+
+        if (favoriteAlbum is not null)
+            topResults.Add(new ComponentBuilder<dynamic>()
+                .WithComponent("NMMusicHomeCard")
+                .WithProps((props, _) => props
+                    .WithId("favorite-album")
+                    .WithTitle("Most listened album".Localize())
+                    .WithData(favoriteAlbum))
+                .Build());
+
+        if (favoritePlaylist is not null)
+            topResults.Add(new ComponentBuilder<dynamic>()
+                .WithComponent("NMMusicHomeCard")
+                .WithProps((props, _) => props
+                    .WithId("favorite-playlist")
+                    .WithTitle("Most listened artist".Localize())
+                    .WithData(favoritePlaylist))
+                .Build());
+
+
         return Ok(new Render
         {
             Data =
@@ -97,35 +127,7 @@ public class MusicController : BaseController
                     .WithProps((props, _) => props
                         .WithId("favorites")
                         .WithNextId("favorite-artists")
-                        .WithItems([
-                            favoriteArtist is not null
-                                ? new ComponentBuilder<dynamic>()
-                                    .WithComponent("NMMusicHomeCard")
-                                    .WithProps((props, _) => props
-                                        .WithId("favorite-artist")
-                                        .WithTitle("Most listened artist".Localize())
-                                        .WithData(favoriteArtist))
-                                    .Build()
-                                : new(),
-                            favoriteAlbum is not null
-                                ? new ComponentBuilder<dynamic>()
-                                    .WithComponent("NMMusicHomeCard")
-                                    .WithProps((props, _) => props
-                                        .WithId("favorite-album")
-                                        .WithTitle("Most listened album".Localize())
-                                        .WithData(favoriteAlbum))
-                                    .Build()
-                                : new(),
-                            favoritePlaylist is not null
-                                ? new ComponentBuilder<dynamic>()
-                                    .WithComponent("NMMusicHomeCard")
-                                    .WithProps((props, _) => props
-                                        .WithId("favorite-playlist")
-                                        .WithTitle("Most listened artist".Localize())
-                                        .WithData(favoritePlaylist))
-                                    .Build()
-                                : new()
-                        ]))
+                        .WithItems(topResults))
                     .Build(),
                 
                 new ComponentBuilder<CarouselResponseItemDto>()
@@ -514,6 +516,7 @@ public class MusicController : BaseController
         Artist? topArtist = artists.FirstOrDefault();
         Album? topAlbum = albums.FirstOrDefault();
 
+        Guid id = topTrack?.Id ?? topArtist?.Id ?? topAlbum?.Id ?? Guid.Empty;
         string title = topTrack?.Name ?? topArtist?.Name ?? topAlbum?.Name ?? "Top Result";
         string? cover = topTrack?.Cover ?? topArtist?.Cover ?? topAlbum?.Cover;
         string type = topTrack != null ? "Track" :
@@ -538,6 +541,7 @@ public class MusicController : BaseController
 
         Dictionary<string, object?> topResult = new()
         {
+            { "id", id },
             { "title", title },
             {
                 "cover", cover is not null
@@ -560,44 +564,42 @@ public class MusicController : BaseController
         {
             Data =
             [
-                songResults.Count > 0
-                    ? new()
+                new ComponentDto<dynamic>
+                {
+                    Component = "NMContainer",
+                    Props =
                     {
-                        Component = "NMContainer",
-                        Props =
-                        {
-                            Items =
-                            [
-                                new()
+                        Items =
+                        [
+                            new()
+                            {
+                                Component = "NMTopResultCard",
+                                Props =
                                 {
-                                    Component = "NMTopResultCard",
-                                    Props =
-                                    {
-                                        Title = "Top Result",
-                                        Data = topResult
-                                    }
-                                },
-                                new()
-                                {
-                                    Component = "NMList",
-                                    Props =
-                                    {
-                                        Title = "Tracks",
-                                        Items = songResults.Select(track => new ComponentDto<dynamic>
-                                        {
-                                            Component = "NMTrackRow",
-                                            Props =
-                                            {
-                                                Data = track,
-                                                DisplayList = songResults
-                                            }
-                                        })
-                                    }
+                                    Title = "Top Result",
+                                    Data = topResult
                                 }
-                            ]
-                        }
+                            },
+                            new()
+                            {
+                                Component = "NMList",
+                                Props =
+                                {
+                                    Title = "Tracks",
+                                    Items = songResults.Select(track => new ComponentDto<dynamic>
+                                    {
+                                        Component = "NMTrackRow",
+                                        Props =
+                                        {
+                                            Data = track,
+                                            DisplayList = songResults
+                                        }
+                                    })
+                                }
+                            }
+                        ]
                     }
-                    : new ComponentDto<dynamic>(),
+                },
 
                 new ComponentDto<CarouselResponseItemDto>
                 {

@@ -65,7 +65,8 @@ public class AlbumsController : BaseController
                     .WithProps((props, _) => props
                         .WithItems(
                             albums
-                                .Where(response => response.Tracks > 0)             
+                                .Where(response => response.Tracks > 0)
+                                .OrderBy(album => album.Name)                            
                                 .Select(item =>
                                     new ComponentBuilder<AlbumsResponseItemDto>()
                                         .WithComponent("NMMusicCard")
@@ -75,12 +76,6 @@ public class AlbumsController : BaseController
                                         .Build())))
                     .Build()
             ]
-        });
-        
-        return Ok(new AlbumsResponseDto
-        {
-            Data = albums
-                .Where(response => response.Tracks > 0)
         });
     }
 
