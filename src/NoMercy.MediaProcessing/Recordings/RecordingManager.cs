@@ -312,7 +312,8 @@ public partial class RecordingManager(
                 GenreId = genre.Id
             }).ToList() ?? [];
         
-        await musicGenreRepository.LinkToRecording(genres);
+        if (genres.Count > 0)
+            await musicGenreRepository.LinkToRecording(genres);
 
         Logger.MusicBrainz($"Recording {recordingAppends.Title} stored", LogEventLevel.Verbose);
     }

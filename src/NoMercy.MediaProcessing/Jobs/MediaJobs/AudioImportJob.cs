@@ -36,7 +36,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
         using MusicBrainzRecordingClient musicBrainzRecordingClient = new();
         using MusicBrainzArtistClient musicBrainzArtistClient = new();
-
+        
         _files = await GetFiles();
         
         Dictionary<Guid, List<AudioTagModel>> tags = await GetTags();
@@ -45,18 +45,41 @@ public class AudioImportJob : AbstractMusicFolderJob
         List<MusicBrainzArtistAppends> releaseArtists = [];
         List<(MusicBrainzRecordingAppends, MusicBrainzArtistAppends[], MediaFile)> fileLinksToTrack = [];
         
-        KeyValuePair<Guid, List<AudioTagModel>> firstRelease = tags
-            .OrderByDescending(x => x.Value.Count)
-            .FirstOrDefault();
-        
-        if (firstRelease.Key == Guid.Empty) return;
+        if (InputFolder.Contains("[Singles]"))
+        {
+            foreach (KeyValuePair<Guid, List<AudioTagModel>> tag in tags)
+            {
+                release = await FetchInfo(tag, musicBrainzReleaseClient, musicBrainzArtistClient, releaseArtists,
+                    musicBrainzRecordingClient, fileLinksToTrack, release);
+                if (release == null) continue;
+                await UpdateOrCreate(release, releaseArtists, fileLinksToTrack);
+            }
+        }
+        else
+        {
+            KeyValuePair<Guid, List<AudioTagModel>> firstRelease = tags
+                .OrderByDescending(x => x.Value.Count)
+                .FirstOrDefault();
+
+            release = await FetchInfo(firstRelease, musicBrainzReleaseClient, musicBrainzArtistClient, releaseArtists,
+                musicBrainzRecordingClient, fileLinksToTrack, release);
+            if (release == null) return;
+            await UpdateOrCreate(release, releaseArtists, fileLinksToTrack);
+        }
+    }
+
+    private static async Task<MusicBrainzReleaseAppends?> FetchInfo(KeyValuePair<Guid, List<AudioTagModel>> firstRelease, MusicBrainzReleaseClient musicBrainzReleaseClient,
+        MusicBrainzArtistClient musicBrainzArtistClient, List<MusicBrainzArtistAppends> releaseArtists,
+        MusicBrainzRecordingClient musicBrainzRecordingClient, List<(MusicBrainzRecordingAppends, MusicBrainzArtistAppends[], MediaFile)> fileLinksToTrack, MusicBrainzReleaseAppends? release)
+    {
+        if (firstRelease.Key == Guid.Empty) return release;
         
         // Release
         release = await musicBrainzReleaseClient.WithAllAppends(firstRelease.Key);
         if (release == null)
         {
             // check fingerprint or acoustid?
-            return;
+            return release;
         }
         
         // Release Artists
@@ -103,8 +126,7 @@ public class AudioImportJob : AbstractMusicFolderJob
             }
         }
 
-        await UpdateOrCreate(release, releaseArtists, fileLinksToTrack);
-        // await File.WriteAllTextAsync(Path.Join(AppFiles.CachePath, "test.json"), JsonConvert.SerializeObject(((release, releaseArtists), fileLinksToTrack), Formatting.Indented));
+        return release;
     }
 
     private async Task UpdateOrCreate(MusicBrainzReleaseAppends releaseAppends, List<MusicBrainzArtistAppends> releaseArtists, List<(MusicBrainzRecordingAppends, MusicBrainzArtistAppends[], MediaFile)> fileLinksToTrack)
