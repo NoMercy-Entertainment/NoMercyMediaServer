@@ -39,10 +39,10 @@ public record LibrariesResponseItemDto
         Order = library.Order;
         CreatedAt = library.CreatedAt;
         Pagination = library.LibraryMovies.Count + library.LibraryTvs.Count > 300 ? "letter" : "auto";
-        // Link = library.LibraryMovies.Count + library.LibraryTvs.Count > 300
-        //     ? new($"/libraries/{Id}/letter/A", UriKind.Relative)
-        //     : new($"/libraries/{Id}", UriKind.Relative);
-        Link = new($"/libraries/{Id}", UriKind.Relative);
+        Link = library.LibraryMovies.Count + library.LibraryTvs.Count > 300
+            ? new($"/libraries/{Id}/letter/A", UriKind.Relative)
+            : new($"/libraries/{Id}", UriKind.Relative);
+        // Link = new($"/libraries/{Id}", UriKind.Relative);
         Subtitles = library.LanguageLibraries
             .Select(languageLibrary => languageLibrary.Language.Iso6391)
             .ToArray();
