@@ -144,7 +144,17 @@ public class ReleaseManager(
             };
 
             await releaseRepository.Store(release);
-
+            
+            foreach (MusicBrainzGenreDetails musicBrainzGenreDetails in releaseAppends.Genres)
+            {
+                MusicGenre musicGenre = new()
+                {
+                    Id = musicBrainzGenreDetails.Id,
+                    Name = musicBrainzGenreDetails.Name,
+                };
+                await musicGenreRepository.Store(musicGenre);
+            }
+            
             await LinkToLibrary(releaseAppends, library);
             await LinkToReleaseGroup(releaseAppends);
             await LinkToGenre(releaseAppends);

@@ -2,12 +2,14 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
@@ -16,7 +18,8 @@ namespace NoMercy.MediaProcessing.Recordings;
 
 public partial class RecordingManager(
     IRecordingRepository recordingRepository,
-    IMusicGenreRepository musicGenreRepository
+    IMusicGenreRepository musicGenreRepository,
+    IArtistRepository artistRepository
 ) : BaseManager, IRecordingManager
 {
     // public async Task StoreWithoutFiles(MusicBrainzReleaseAppends releaseAppends, Folder libraryFolder)
@@ -52,7 +55,7 @@ public partial class RecordingManager(
 
     public async Task<bool> Store(MusicBrainzReleaseAppends releaseAppends,
         MusicBrainzTrack musicBrainzTrack, MusicBrainzMedia musicBrainzMedia, Folder libraryFolder,
-        MediaFolder mediaFolder, CoverArtImageManagerManager.CoverPalette? coverPalette)
+        MediaFolder mediaFolder, CoverArtImageManagerManager.CoverPalette? releaseCoverPalette)
     {
         Logger.MusicBrainz(
             $"Storing Recording: {releaseAppends.Title} - {musicBrainzMedia.Position}-{musicBrainzTrack.Position} {musicBrainzTrack.Title}",
@@ -102,8 +105,8 @@ public partial class RecordingManager(
                     Folder = path.Replace(libraryFolder.Path, "").Replace("\\", "/"),
                     HostFolder = path.PathName(),
 
-                    Cover = coverPalette?.Url is not null
-                        ? $"/{coverPalette.Url.FileName()}"
+                    Cover = releaseCoverPalette?.Url is not null
+                        ? $"/{releaseCoverPalette.Url.FileName()}"
                         : null,
                 };
 
@@ -267,11 +270,51 @@ public partial class RecordingManager(
         MusicBrainzArtistAppends[] artistAppends,
         MediaFile mediaFile, 
         Folder libraryFolder,
-        CoverArtImageManagerManager.CoverPalette? coverPalette
+        CoverArtImageManagerManager.CoverPalette? releaseCoverPalette
     )
     {
         Logger.MusicBrainz($"Recording {releaseAppends.Title} found", LogEventLevel.Verbose);
+        
+        foreach (MusicBrainzArtistAppends artist in artistAppends)
+        {
+            try
+            {
+                // CoverArtImageManagerManager.CoverPalette? coverPalette = await FanArtImageManager.Add(artist.Id, true);
+                //
+                // if (coverPalette is not null) 
+                //     await FanArtImageClient.Download(coverPalette.Url!);
+                
+                Artist artistEntity = new()
+                {
+                    Id = artist.Id,
+                    Name = artist.Name,
+                    Disambiguation = artist.Disambiguation,
+                    // Cover = coverPalette?.Url is not null
+                    //     ? $"/{coverPalette.Url.FileName()}"
+                    //     : null,
+                    TitleSort = artist.SortName,
+                    Country = artist.Country,
+                    Year = artist.LifeSpan?.BeginDate?.Year,
 
+                    FolderId = libraryFolder.Id,
+                    Folder = mediaFile.Parsed?.FilePath
+                        .Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
+                        .Replace(libraryFolder.Path, "")
+                        .Replace("\\", "/"),
+                    HostFolder = mediaFile.Parsed?.FilePath
+                        .Replace(Path.DirectorySeparatorChar + mediaFile.Name, "")
+                        .PathName()!,
+
+                    LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId
+                };
+                await artistRepository.StoreAsync(artistEntity);
+            }
+            catch (Exception e)
+            {
+                Logger.MusicBrainz(e, LogEventLevel.Error);
+            }
+        }
+        
         string path = mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "") ??
                       string.Empty;
 
@@ -294,8 +337,8 @@ public partial class RecordingManager(
             Folder = path.Replace(libraryFolder.Path, "").Replace("\\", "/"),
             HostFolder = path.PathName(),
 
-            Cover = coverPalette?.Url is not null
-                ? $"/{coverPalette.Url.FileName()}"
+            Cover = releaseCoverPalette?.Url is not null
+                ? $"/{releaseCoverPalette.Url.FileName()}"
                 : null,
         };
 
@@ -304,7 +347,15 @@ public partial class RecordingManager(
         await LinkToRelease(insert, releaseAppends);
         await LinkToLibrary(insert, libraryFolder.FolderLibraries.FirstOrDefault()!.Library);
         await LinkToArtist(insert, artistAppends);
-        
+        foreach (MusicBrainzGenreDetails musicBrainzGenreDetails in recordingAppends.Genres)
+        {
+            MusicGenre musicGenre = new()
+            {
+                Id = musicBrainzGenreDetails.Id,
+                Name = musicBrainzGenreDetails.Name,
+            };
+            await musicGenreRepository.Store(musicGenre);
+        }
         List<MusicGenreTrack> genres = recordingAppends.Genres
             ?.Select(genre => new MusicGenreTrack
             {

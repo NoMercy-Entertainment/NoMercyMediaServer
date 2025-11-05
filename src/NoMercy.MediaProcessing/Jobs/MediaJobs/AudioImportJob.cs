@@ -17,6 +17,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
+using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
@@ -146,7 +147,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
 
         RecordingRepository recordingRepository = new(context);
-        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
+        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository, artistRepository);
 
         Library albumLibrary = await context.Libraries
             .Where(f => f.Id == LibraryId)
@@ -172,7 +173,6 @@ public class AudioImportJob : AbstractMusicFolderJob
             try
             {
                 await artistManager.Store(artist, releaseAppends, albumLibrary, folderLibrary);
-
                 jobDispatcher.DispatchJob<MusicDescriptionJob>(artist);
             }
             catch (Exception e)
@@ -181,11 +181,11 @@ public class AudioImportJob : AbstractMusicFolderJob
             }
         }
 
-        foreach ((MusicBrainzRecordingAppends recordingAppends, MusicBrainzArtistAppends[] artistAppends, MediaFile mediaFile) fileLink in fileLinksToTrack)
+        foreach ((MusicBrainzRecordingAppends recordingAppends, MusicBrainzArtistAppends[] artistAppends, MediaFile mediaFile) in fileLinksToTrack)
         {
             try
             {
-                await recordingManager.Store(releaseAppends, fileLink.recordingAppends, fileLink.artistAppends, fileLink.mediaFile, folderLibrary, coverPalette);
+                await recordingManager.Store(releaseAppends, recordingAppends, artistAppends, mediaFile, folderLibrary, coverPalette);
             }
             catch (Exception e)
             {

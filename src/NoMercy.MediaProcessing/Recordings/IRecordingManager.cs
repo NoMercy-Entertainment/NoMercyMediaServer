@@ -9,5 +9,5 @@ public interface IRecordingManager
 {
     public Task<bool> Store(MusicBrainzReleaseAppends releaseAppends,
         MusicBrainzTrack musicBrainzTrack, MusicBrainzMedia musicBrainzMedia, Folder libraryFolder,
-        MediaFolder mediaFolder, CoverArtImageManagerManager.CoverPalette? coverPalette);
+        MediaFolder mediaFolder, CoverArtImageManagerManager.CoverPalette? releaseCoverPalette);
 }

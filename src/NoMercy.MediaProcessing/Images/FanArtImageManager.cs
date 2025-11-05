@@ -2,6 +2,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using Serilog.Events;
@@ -218,5 +219,37 @@ public class FanArtImageManager(
         }
         
         return [];
+    }
+
+    public static async Task<CoverArtImageManagerManager.CoverPalette?> Add(Guid id, bool priority = false)
+    {
+        try
+        {
+            FanArtImageClient fanArtImageClient = new (id);
+            CoverArtCovers? fanArtAlbum = await fanArtImageClient.Cover();
+            if (fanArtAlbum is null) return null;
+
+            List<Uri?> coverList = fanArtAlbum.Images.Select(x => x.Image)
+                .ToList();
+
+            foreach (Uri? coverItem in coverList)
+            {
+                if (coverItem is null || !coverItem.HasSuccessStatus("image/*")) continue;
+
+                return new()
+                {
+                    Palette = await ColorPalette("cover", coverItem),
+                    Url = coverItem
+                };
+            }
+
+            return null;
+        }
+        catch (Exception e)
+        {
+            if (e.Message.Contains("404")) return null;
+            Logger.FanArt(e.Message, LogEventLevel.Verbose);
+            return null;
+        }
     }
 }

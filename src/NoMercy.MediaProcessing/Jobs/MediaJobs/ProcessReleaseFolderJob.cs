@@ -56,7 +56,16 @@ public class ProcessReleaseFolderJob : AbstractMusicFolderJob
             jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, InputFolder);
             return;
         }
-
+        
+        // Parallel.ForEach(rootFolders, folder =>
+        // {
+        //     Logger.App("Processing folder: " + folder.Path);
+        //     Folder baseFolder = albumLibrary.FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
+        //         .First(f => folder.Path.Contains(f.Path));
+        //     
+        //     jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, folder.Path);
+        // });
+        
         foreach (MediaFolderExtend folder in rootFolders)
         {
             Logger.App("Processing folder: " + folder.Path);

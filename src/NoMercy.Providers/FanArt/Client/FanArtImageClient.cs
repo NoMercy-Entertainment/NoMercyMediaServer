@@ -14,7 +14,12 @@ public class FanArtImageClient : FanArtBaseClient
     {
         Configuration.ClientKey = ApiInfo.AcousticIdKey;
     }
-
+    
+    public FanArtImageClient(Guid id) : base(id)
+    {
+        Configuration.ClientKey = ApiInfo.AcousticIdKey;
+    }
+    
     public Task<CoverArtCovers?> Cover(bool priority = false)
     {
         Dictionary<string, string> queryParams = new()

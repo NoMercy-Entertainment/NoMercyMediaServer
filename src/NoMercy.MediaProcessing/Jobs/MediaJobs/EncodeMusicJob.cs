@@ -118,7 +118,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
         ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
 
         RecordingRepository recordingRepository = new(context);
-        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository);
+        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository, artistRepository);
 
         await using MediaScan mediaScan = new();
 
