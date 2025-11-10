@@ -23,7 +23,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 public class AudioImportJob : AbstractMusicFolderJob
 {
     public override string QueueName => "queue";
-    public override int Priority => 3;
+    public override int Priority => 6;
 
     private MediaFolderExtend? _rootFolder;
     
