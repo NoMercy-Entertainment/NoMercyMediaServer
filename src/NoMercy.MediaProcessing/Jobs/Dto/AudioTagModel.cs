@@ -115,35 +115,35 @@ public class AudioTagModel
             {
                 case "albumid":
                 case "releaseid":
-                    if (mb.ReleaseId != Guid.Parse(value))
+                    if (Guid.TryParse(value, out Guid releaseId) && mb.ReleaseId != releaseId)
                     {
-                        mb.ReleaseId = Guid.Parse(value);
+                        mb.ReleaseId = releaseId;
                     }
                     continue;
                 case "artistid":
-                    if (mb.ArtistId != Guid.Parse(value))
+                    if (Guid.TryParse(value, out Guid artistId) && mb.ArtistId != artistId)
                     {
-                        mb.ArtistId = Guid.Parse(value);
+                        mb.ArtistId = artistId;
                     }
                     continue;
                 case "albumartistid":
                 case "releaseartistid":
-                    if (mb.ReleaseArtistId != Guid.Parse(value))
+                    if (Guid.TryParse(value, out Guid releaseArtistId) && mb.ReleaseArtistId != releaseArtistId)
                     {
-                        mb.ReleaseArtistId = Guid.Parse(value);
+                        mb.ReleaseArtistId = releaseArtistId;
                     }
                     continue;
                 case "trackid":
                 case "releasetrackid":
-                    if (mb.ReleaseTrackId != Guid.Parse(value))
+                    if (Guid.TryParse(value, out Guid releaseTrackId) && mb.ReleaseTrackId != releaseTrackId)
                     {
-                        mb.ReleaseTrackId = Guid.Parse(value);
+                        mb.ReleaseTrackId = releaseTrackId;
                     }
                     continue;
                 case "recordingid":
-                    if (mb.RecordingId != Guid.Parse(value))
+                    if (Guid.TryParse(value, out Guid recordingId) && mb.RecordingId != recordingId)
                     {
-                        mb.RecordingId = Guid.Parse(value);
+                        mb.RecordingId = recordingId;
                     }
                     continue;
                 case "acoustidfingerprint":
@@ -153,9 +153,9 @@ public class AudioTagModel
                     }
                     continue;
                 case "acoustidid":
-                    if (mb.AcoustIdId != Guid.Parse(value))
+                    if (Guid.TryParse(value, out Guid acoustIdId) && mb.AcoustIdId != acoustIdId)
                     {
-                        mb.AcoustIdId = Guid.Parse(value);
+                        mb.AcoustIdId = acoustIdId;
                     }
                     continue;
             }

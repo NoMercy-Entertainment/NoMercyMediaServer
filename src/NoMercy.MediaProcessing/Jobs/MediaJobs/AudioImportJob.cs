@@ -13,7 +13,6 @@ using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
@@ -60,7 +59,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         Dictionary<Guid, (MusicBrainzReleaseAppends SingleAppends, List<(MediaFile MediaFile, AudioTagModel audioTagModel)> File)> processedSingles = new();
         await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
         {
-            if (audioTag.musicBrainz?.ReleaseId is null || audioTag.musicBrainz.RecordingId == Guid.Empty)
+            if (audioTag.musicBrainz?.ReleaseId is null || audioTag.musicBrainz.ReleaseId == Guid.Empty)
                 continue;
             
             MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(audioTag.musicBrainz.ReleaseId);
@@ -115,7 +114,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         // First pass: count releases without storing all tags in memory
         await foreach ((_, AudioTagModel audioTag) in audioFilesFactory())
         {
-            if (audioTag.musicBrainz?.ReleaseId is null || audioTag.musicBrainz.RecordingId == Guid.Empty)
+            if (audioTag.musicBrainz?.ReleaseId is null || audioTag.musicBrainz.ReleaseId == Guid.Empty)
                 continue;
             
             MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(audioTag.musicBrainz.ReleaseId);
