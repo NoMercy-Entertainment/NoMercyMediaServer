@@ -24,7 +24,7 @@ public abstract class NoMercyImageClient : TmdbBaseClient
 
                 if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
-                string filePath = Path.Join(folder, path.Replace("/", ""));
+                string filePath = Path.Combine(folder, path.Replace("/", "").Replace("\\", ""));
 
                 if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
 

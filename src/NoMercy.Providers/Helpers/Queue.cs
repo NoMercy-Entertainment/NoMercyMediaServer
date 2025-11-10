@@ -108,6 +108,9 @@ public class Queue(QueueOptions options)
 
     public async Task<T> Enqueue<T>(Func<Task<T>> task, string? url, bool? priority = false)
     {
+        if (!string.IsNullOrEmpty(url))
+            url = Path.GetFullPath(url);
+        
         await Semaphore.WaitAsync();
 
         TaskCompletionSource<T> tcs = new();
