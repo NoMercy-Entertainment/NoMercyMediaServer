@@ -267,7 +267,7 @@ public partial class RecordingManager(
 
     public async Task Store(
         MusicBrainzReleaseAppends releaseAppends, 
-        MusicBrainzRecordingAppends recordingAppends, 
+        MusicBrainzTrack trackAppends, 
         MusicBrainzArtistAppends[] artistAppends,
         MediaFile mediaFile, 
         Folder libraryFolder,
@@ -323,9 +323,9 @@ public partial class RecordingManager(
 
         Track insert = new()
         {
-            Id = recordingAppends.Id,
-            Name = recordingAppends.Title,
-            Date = recordingAppends.FirstReleaseDate,
+            Id = trackAppends.Id,
+            Name = trackAppends.Title,
+            Date = trackAppends.Recording.FirstReleaseDate,
             DiscNumber = mediaFile.Parsed.DiscNumber,
             TrackNumber = mediaFile.Parsed.TrackNumber,
 
@@ -350,7 +350,7 @@ public partial class RecordingManager(
         await LinkToRelease(insert, releaseAppends);
         await LinkToLibrary(insert, libraryFolder.FolderLibraries.FirstOrDefault()!.Library);
         await LinkToArtist(insert, artistAppends);
-        foreach (MusicBrainzGenreDetails musicBrainzGenreDetails in recordingAppends.Genres)
+        foreach (MusicBrainzGenreDetails musicBrainzGenreDetails in trackAppends.Genres ?? trackAppends.Recording.Genres)
         {
             MusicGenre musicGenre = new()
             {
@@ -359,7 +359,7 @@ public partial class RecordingManager(
             };
             await musicGenreRepository.Store(musicGenre);
         }
-        List<MusicGenreTrack> genres = recordingAppends.Genres
+        List<MusicGenreTrack> genres = (trackAppends.Genres ?? trackAppends.Recording.Genres)
             ?.Select(genre => new MusicGenreTrack
             {
                 TrackId = insert.Id,
@@ -369,7 +369,7 @@ public partial class RecordingManager(
         if (genres.Count > 0)
             await musicGenreRepository.LinkToRecording(genres);
 
-        Logger.MusicBrainz($"Recording {recordingAppends.Title} stored", LogEventLevel.Verbose);
+        Logger.MusicBrainz($"Recording {trackAppends.Title} stored", LogEventLevel.Verbose);
     }
 
     private async Task LinkToArtist(Track insert, MusicBrainzArtistAppends[] artistAppends)
