@@ -58,9 +58,6 @@ public class AudioImportJob : AbstractMusicFolderJob
             JobDispatcher jobDispatcher
         ) = await Init();
         
-        if (_rootFolder is null)
-            return;
-        
         Dictionary<Guid, (MusicBrainzReleaseAppends SingleAppends, List<(MediaFile MediaFile, AudioTagModel audioTagModel)> File)> processedSingles = new();
         await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
         {
@@ -116,9 +113,6 @@ public class AudioImportJob : AbstractMusicFolderJob
             Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> releases,
             JobDispatcher jobDispatcher
         ) = await Init();
-        
-        if (_rootFolder is null)
-            return;
         
         // First pass: count releases without storing all tags in memory
         await foreach ((_, AudioTagModel audioTag) in audioFilesFactory())
@@ -229,6 +223,8 @@ public class AudioImportJob : AbstractMusicFolderJob
                 
             foreach (MusicBrainzArtistCredit artistCredit in musicBrainzRecording.ArtistCredit)
             {
+                if (_rootFolder is null)
+                    continue;
                 MusicBrainzArtistAppends? artistDetails = await musicBrainzArtistClient.WithAllAppends(artistCredit.MusicBrainzArtist.Id);
                 if (artistDetails is null) continue;
                 await artistManager.Store(artistDetails, albumLibrary, folderLibrary, _rootFolder!, musicBrainzTrack);
@@ -318,7 +314,8 @@ public class AudioImportJob : AbstractMusicFolderJob
             .DisableRegexFilter()
             .EnableFileListing()
             .Process(InputFolder, 1);
-        _rootFolder = rootFolders.FirstOrDefault();
+        
+        _rootFolder ??= rootFolders.FirstOrDefault();
 
         IEnumerable<MediaFile> files = rootFolders.SelectMany(x => x.Files ?? Enumerable.Empty<MediaFile>());
 
