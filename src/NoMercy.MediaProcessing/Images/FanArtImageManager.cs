@@ -225,16 +225,16 @@ public class FanArtImageManager(
     {
         try
         {
-            FanArtImageClient fanArtImageClient = new (id);
-            CoverArtCovers? fanArtAlbum = await fanArtImageClient.Cover();
-            if (fanArtAlbum is null) return null;
+            using FanArtMusicClient fanArtMusicClient = new();
+            FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(id);
+            if (fanArt is null) return null;
 
-            List<Uri?> coverList = fanArtAlbum.Images.Select(x => x.Image)
+            List<Uri> coverList = fanArt.Thumbs.Select(t => t.Url)
                 .ToList();
 
-            foreach (Uri? coverItem in coverList)
+            foreach (Uri coverItem in coverList)
             {
-                if (coverItem is null || !coverItem.HasSuccessStatus("image/*")) continue;
+                if (!coverItem.HasSuccessStatus("image/*")) continue;
 
                 return new()
                 {
