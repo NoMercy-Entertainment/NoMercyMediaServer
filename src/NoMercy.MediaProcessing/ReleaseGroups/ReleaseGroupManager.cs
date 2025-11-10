@@ -34,8 +34,6 @@ public class ReleaseGroupManager(IReleaseGroupRepository releaseGroupRepository)
 
         await releaseGroupRepository.Store(insert);
         
-        
-
         Logger.MusicBrainz($"Release Group {releaseGroup.Title} stored", LogEventLevel.Verbose);
     }
 }

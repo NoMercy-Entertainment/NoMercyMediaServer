@@ -88,7 +88,8 @@ public class Ffprobe
         (string stdOut, string stdErr) = await ExecStdErrOut(ct);
         
         // Logger.Encoder(stdOut, LogEventLevel.Debug);
-        Logger.Encoder(stdErr, LogEventLevel.Debug);
+        if (!string.IsNullOrEmpty(stdErr))
+            Logger.Encoder(stdErr, LogEventLevel.Debug);
         
         return (stdOut.FromJson<FfprobeSourceData>(), stdErr);
     }

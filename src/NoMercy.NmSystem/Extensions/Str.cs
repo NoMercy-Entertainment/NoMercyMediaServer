@@ -216,7 +216,7 @@ public static partial class Str
         return str.RemoveDiacritics().RemoveNonAlphaNumericCharacters().RemoveAccents().Trim();
     }
 
-    public static bool ContainsSanitized(this string str, string value)
+    public static bool ContainsSanitized(this string str, string? value)
     {
         str = str.Sanitize().ToLower();
         value = value.Sanitize().ToLower();
@@ -447,5 +447,29 @@ public static partial class Str
         result = Regex.Replace(result, @"[^a-zA-Z0-9\s-]", "");
 
         return result;
+    }
+
+    public enum TextDirection
+    {
+        LTR,
+        RTL
+    }
+
+    public static TextDirection GetTextDirection(this string str)
+    {
+        // Check for presence of RTL characters
+        foreach (char c in str)
+        {
+            if ((c >= '\u0590' && c <= '\u05FF') || // Hebrew
+                (c >= '\u0600' && c <= '\u06FF') || // Arabic
+                (c >= '\u0750' && c <= '\u077F') || // Arabic Supplement
+                (c >= '\u08A0' && c <= '\u08FF') || // Arabic Extended-A
+                (c >= '\uFB50' && c <= '\uFDFF') || // Arabic Presentation Forms-A
+                (c >= '\uFE70' && c <= '\uFEFF'))   // Arabic Presentation Forms-B
+            {
+                return TextDirection.RTL;
+            }
+        }
+        return TextDirection.LTR;
     }
 }

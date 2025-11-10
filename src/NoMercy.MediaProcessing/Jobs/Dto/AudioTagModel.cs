@@ -23,6 +23,8 @@ public class AudioTagModel
     public FfprobeSourceDataFormat format { get; set; } = new();
     public AudioStream? stream { get; set; }
     public Tag? tags { get; set; }
+        
+    public double duration { get; set; }
     
     public MediaFile fileItem { get; set; }
     
@@ -32,7 +34,7 @@ public class AudioTagModel
         Ffprobe ffProbeData = await ffProbe.GetStreamData();
         Dictionary<string,string> tagsContainer = ffProbeData.Format.Tags;
         MusicBrainz? mb = null;
-
+        
         if (fileItem.TagFile?.Tag is not null)
         {
             mb ??= new();
@@ -105,13 +107,68 @@ public class AudioTagModel
             
         }
         
+        foreach (KeyValuePair<string, string> tag in tagsContainer)
+        {
+            string key = tag.Key.ToLowerInvariant().Replace("musicbrainz_","").Replace("musicbrainz","").Replace(" ","").Replace("_","");
+            string value = tag.Value;
+            switch (key)
+            {
+                case "albumid":
+                case "releaseid":
+                    if (mb.ReleaseId != Guid.Parse(value))
+                    {
+                        mb.ReleaseId = Guid.Parse(value);
+                    }
+                    continue;
+                case "artistid":
+                    if (mb.ArtistId != Guid.Parse(value))
+                    {
+                        mb.ArtistId = Guid.Parse(value);
+                    }
+                    continue;
+                case "albumartistid":
+                case "releaseartistid":
+                    if (mb.ReleaseArtistId != Guid.Parse(value))
+                    {
+                        mb.ReleaseArtistId = Guid.Parse(value);
+                    }
+                    continue;
+                case "trackid":
+                case "releasetrackid":
+                    if (mb.ReleaseTrackId != Guid.Parse(value))
+                    {
+                        mb.ReleaseTrackId = Guid.Parse(value);
+                    }
+                    continue;
+                case "recordingid":
+                    if (mb.RecordingId != Guid.Parse(value))
+                    {
+                        mb.RecordingId = Guid.Parse(value);
+                    }
+                    continue;
+                case "acoustidfingerprint":
+                    if (mb.FingerPrint != value)
+                    {
+                        mb.FingerPrint = value;
+                    }
+                    continue;
+                case "acoustidid":
+                    if (mb.AcoustIdId != Guid.Parse(value))
+                    {
+                        mb.AcoustIdId = Guid.Parse(value);
+                    }
+                    continue;
+            }
+        }
+        
         AudioTagModel metaData = new()
         {
             format = ffProbeData.Format,
             stream = ffProbeData.AudioStreams.FirstOrDefault(),
             musicBrainz = mb,
             tags = fileItem.TagFile?.Tag,
-            fileItem = fileItem
+            fileItem = fileItem,
+            duration = double.Parse(ffProbeData.Format.Duration ?? "0")
         };
         
         return metaData;

@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
@@ -273,25 +274,26 @@ public partial class RecordingManager(
         CoverArtImageManagerManager.CoverPalette? releaseCoverPalette
     )
     {
+        JobDispatcher jobDispatcher = new();
         Logger.MusicBrainz($"Recording {releaseAppends.Title} found", LogEventLevel.Verbose);
         
         foreach (MusicBrainzArtistAppends artist in artistAppends)
         {
             try
             {
-                // CoverArtImageManagerManager.CoverPalette? coverPalette = await FanArtImageManager.Add(artist.Id, true);
-                //
-                // if (coverPalette is not null) 
-                //     await FanArtImageClient.Download(coverPalette.Url!);
+                CoverArtImageManagerManager.CoverPalette? coverPalette = await FanArtImageManager.Add(artist.Id, true);
+                
+                if (coverPalette is not null) 
+                    await FanArtImageClient.Download(coverPalette.Url!);
                 
                 Artist artistEntity = new()
                 {
                     Id = artist.Id,
                     Name = artist.Name,
                     Disambiguation = artist.Disambiguation,
-                    // Cover = coverPalette?.Url is not null
-                    //     ? $"/{coverPalette.Url.FileName()}"
-                    //     : null,
+                    Cover = coverPalette?.Url is not null
+                        ? $"/{coverPalette.Url.FileName()}"
+                        : null,
                     TitleSort = artist.SortName,
                     Country = artist.Country,
                     Year = artist.LifeSpan?.BeginDate?.Year,
@@ -308,6 +310,7 @@ public partial class RecordingManager(
                     LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId
                 };
                 await artistRepository.StoreAsync(artistEntity);
+                jobDispatcher.DispatchJob<MusicDescriptionJob>(artist);
             }
             catch (Exception e)
             {

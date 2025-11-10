@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Artists;
@@ -14,13 +13,10 @@ using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
-using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
-using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -28,206 +24,320 @@ public class AudioImportJob : AbstractMusicFolderJob
 {
     public override string QueueName => "queue";
     public override int Priority => 3;
-    
 
-    private List<MediaFile> _files = []; 
+    private MediaFolderExtend? _rootFolder;
     
     public override async Task Handle()
     {
-        using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
-        using MusicBrainzRecordingClient musicBrainzRecordingClient = new();
-        using MusicBrainzArtistClient musicBrainzArtistClient = new();
-        
-        _files = await GetFiles();
-        
-        Dictionary<Guid, List<AudioTagModel>> tags = await GetTags();
-
-        MusicBrainzReleaseAppends? release = null;
-        List<MusicBrainzArtistAppends> releaseArtists = [];
-        List<(MusicBrainzRecordingAppends, MusicBrainzArtistAppends[], MediaFile)> fileLinksToTrack = [];
-        
         if (InputFolder.Contains("[Singles]"))
         {
-            foreach (KeyValuePair<Guid, List<AudioTagModel>> tag in tags)
-            {
-                release = await FetchInfo(tag, musicBrainzReleaseClient, musicBrainzArtistClient, releaseArtists,
-                    musicBrainzRecordingClient, fileLinksToTrack, release);
-                if (release == null) continue;
-                await UpdateOrCreate(release, releaseArtists, fileLinksToTrack);
-            }
+            await ImportSingles();
         }
         else
         {
-            KeyValuePair<Guid, List<AudioTagModel>> firstRelease = tags
-                .OrderByDescending(x => x.Value.Count)
-                .FirstOrDefault();
-
-            release = await FetchInfo(firstRelease, musicBrainzReleaseClient, musicBrainzArtistClient, releaseArtists,
-                musicBrainzRecordingClient, fileLinksToTrack, release);
-            if (release == null) return;
-            await UpdateOrCreate(release, releaseArtists, fileLinksToTrack);
+            await ImportRelease();
         }
     }
 
-    private static async Task<MusicBrainzReleaseAppends?> FetchInfo(KeyValuePair<Guid, List<AudioTagModel>> firstRelease, MusicBrainzReleaseClient musicBrainzReleaseClient,
-        MusicBrainzArtistClient musicBrainzArtistClient, List<MusicBrainzArtistAppends> releaseArtists,
-        MusicBrainzRecordingClient musicBrainzRecordingClient, List<(MusicBrainzRecordingAppends, MusicBrainzArtistAppends[], MediaFile)> fileLinksToTrack, MusicBrainzReleaseAppends? release)
+    private async Task ImportSingles()
     {
-        if (firstRelease.Key == Guid.Empty) return release;
+        (
+            MediaContext context,
+            MusicBrainzReleaseClient musicBrainzReleaseClient,
+            MusicBrainzArtistClient musicBrainzArtistClient,
+            MusicBrainzRecordingClient musicBrainzRecordingClient,
+            ReleaseGroupManager releaseGroupManager,
+            ReleaseManager releaseManager,
+            ArtistManager artistManager,
+            RecordingManager recordingManager,
+            MusicGenreManager musicGenreManager,
+            Library albumLibrary,
+            Folder folderLibrary,
+            Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> audioFilesFactory,
+            Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> _,
+            JobDispatcher jobDispatcher
+        ) = await Init();
         
-        // Release
-        release = await musicBrainzReleaseClient.WithAllAppends(firstRelease.Key);
-        if (release == null)
-        {
-            // check fingerprint or acoustid?
-            return release;
-        }
+        if (_rootFolder is null)
+            return;
         
-        // Release Artists
-        foreach (ReleaseArtistCredit musicBrainzArtistCredit in release.ArtistCredit)
+        Dictionary<Guid, (MusicBrainzReleaseAppends SingleAppends, List<(MediaFile MediaFile, AudioTagModel audioTagModel)> File)> processedSingles = new();
+        await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
         {
-            MusicBrainzArtistAppends? artist = await musicBrainzArtistClient.WithAllAppends(musicBrainzArtistCredit.MusicBrainzArtist.Id);
-            if (artist == null) continue;
-            releaseArtists.Add(artist);
-        }
-        
-        // Tracks
-        List<MusicBrainzTrack> allTracks = release.Media.SelectMany(x => x.Tracks).ToList();
-        List<string> checkedFiles = [];
-        foreach (MusicBrainzTrack track in allTracks)
-        {
-            foreach (AudioTagModel audioTagModel in firstRelease.Value)
+            if (audioTag.musicBrainz?.ReleaseId is null || audioTag.musicBrainz.RecordingId == Guid.Empty)
+                continue;
+            
+            MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(audioTag.musicBrainz.ReleaseId);
+            if (releaseAppends is null)
+                continue;
+
+            if (processedSingles.TryGetValue(audioTag.musicBrainz.ReleaseId, out (MusicBrainzReleaseAppends SingleAppends, List<(MediaFile MediaFile, AudioTagModel audioTagModel)> File) value))
             {
-                if (audioTagModel.musicBrainz == null || audioTagModel.tags == null || checkedFiles.Contains(audioTagModel.fileItem.Path)) continue;
-                if ((audioTagModel.musicBrainz.RecordingId != track.Recording.Id &&
-                     audioTagModel.musicBrainz.RecordingId != track.Id &&
-                     audioTagModel.musicBrainz.ReleaseTrackId != track.Recording.Id &&
-                     audioTagModel.musicBrainz.ReleaseTrackId != track.Id) &&
-                    (!audioTagModel.tags.Title.ContainsSanitized(track.Title) ||
-                     (audioTagModel.tags.Track != track.Position &&
-                      !(Math.Abs(float.Parse(audioTagModel.format?.Duration ?? "0") * 1000 - track.Length ??
-                                 0) < 5)))) continue;
-                // Recording
-                MusicBrainzRecordingAppends? recording = await musicBrainzRecordingClient.WithAllAppends(track.Recording.Id);
-                if (recording == null) continue;
-                
-                // Recording Artists
-                List<MusicBrainzArtistAppends> artists = [];
-                foreach (MusicBrainzArtistCredit musicBrainzArtistCredit in recording.ArtistCredit)
-                {
-                    MusicBrainzArtistAppends? subArtist = await musicBrainzArtistClient.WithAllAppends(musicBrainzArtistCredit.MusicBrainzArtist.Id);
-                    if (subArtist == null) continue;
-                    artists.Add(subArtist);
-                }
-                
-                // Link file to track
-                checkedFiles.Add(audioTagModel.fileItem.Path);
-                fileLinksToTrack.Add((recording, artists.ToArray(), audioTagModel.fileItem));
-                break;
+                value.File.Add((mediaFile, audioTag));
+            }
+            else
+            {
+                processedSingles.Add(audioTag.musicBrainz.ReleaseId, (releaseAppends, [(mediaFile, audioTag)]));
             }
         }
-
-        return release;
-    }
-
-    private async Task UpdateOrCreate(MusicBrainzReleaseAppends releaseAppends, List<MusicBrainzArtistAppends> releaseArtists, List<(MusicBrainzRecordingAppends, MusicBrainzArtistAppends[], MediaFile)> fileLinksToTrack)
-    {
-        await using MediaContext context = new();
-        JobDispatcher jobDispatcher = new();
         
-        ReleaseGroupRepository releaseGroupRepository = new(context);
-        ReleaseGroupManager releaseGroupManager = new(releaseGroupRepository);
-
-        MusicGenreRepository musicGenreRepository = new(context);
-
-        ReleaseRepository releaseRepository = new(context);
-        ReleaseManager releaseManager = new(releaseRepository, musicGenreRepository, jobDispatcher);
-
-        ArtistRepository artistRepository = new(context);
-        ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
-
-        RecordingRepository recordingRepository = new(context);
-        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository, artistRepository);
-
-        Library albumLibrary = await context.Libraries
-            .Where(f => f.Id == LibraryId)
-            .Include(f => f.FolderLibraries)
-            .ThenInclude(f => f.Folder)
-            .FirstAsync();
-        
-        Folder folderLibrary = albumLibrary.FolderLibraries.First().Folder;
-        
-        Logger.App($"Processing release: {releaseAppends.Title} with id: {releaseAppends.Id}", LogEventLevel.Debug);
-        
-        CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(releaseAppends.MusicBrainzReleaseGroup.Id, true);
-        
-        if (coverPalette is not null) 
-            await CoverArtCoverArtClient.Download(coverPalette.Url);
-
-        await releaseGroupManager.Store(releaseAppends.MusicBrainzReleaseGroup, LibraryId, coverPalette);
-        
-        await releaseManager.Store(releaseAppends, albumLibrary, folderLibrary, fileLinksToTrack.First().Item3, coverPalette);
-
-        foreach (MusicBrainzArtistAppends artist in releaseArtists)
+        foreach ((MusicBrainzReleaseAppends singleRelease, List<(MediaFile mediaFile, AudioTagModel audioTagModel)> files) in processedSingles.Values)
         {
-            try
-            {
-                await artistManager.Store(artist, releaseAppends, albumLibrary, folderLibrary);
-                jobDispatcher.DispatchJob<MusicDescriptionJob>(artist);
-            }
-            catch (Exception e)
-            {
-                Logger.MusicBrainz(e, LogEventLevel.Error);
-            }
+            await AddSingleOrRelease(singleRelease, musicGenreManager, releaseGroupManager, releaseManager, albumLibrary, folderLibrary, files, musicBrainzArtistClient, artistManager, jobDispatcher, musicBrainzRecordingClient, recordingManager);
+
+            jobDispatcher.DispatchJob<MusicDescriptionJob>(singleRelease.MusicBrainzReleaseGroup);
         }
 
-        foreach ((MusicBrainzRecordingAppends recordingAppends, MusicBrainzArtistAppends[] artistAppends, MediaFile mediaFile) in fileLinksToTrack)
-        {
-            try
-            {
-                await recordingManager.Store(releaseAppends, recordingAppends, artistAppends, mediaFile, folderLibrary, coverPalette);
-            }
-            catch (Exception e)
-            {
-                Logger.MusicBrainz(e, LogEventLevel.Error);
-            }
-        }
-
-        jobDispatcher.DispatchJob<MusicDescriptionJob>(releaseAppends.MusicBrainzReleaseGroup);
-
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto()
         {
             QueryKey = ["music", "albums"]
         });
+        try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+        try { musicBrainzArtistClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+        try { musicBrainzRecordingClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+        try { await context.DisposeAsync(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
     }
 
-    private async Task<Dictionary<Guid, List<AudioTagModel>>> GetTags()
+    private async Task ImportRelease()
     {
-        Dictionary<Guid, List<AudioTagModel>> releasesCount =  new();
-        foreach (MediaFile audioFile in _files)
+        (
+            MediaContext context,
+            MusicBrainzReleaseClient musicBrainzReleaseClient,
+            MusicBrainzArtistClient musicBrainzArtistClient,
+            MusicBrainzRecordingClient musicBrainzRecordingClient,
+            ReleaseGroupManager releaseGroupManager,
+            ReleaseManager releaseManager,
+            ArtistManager artistManager,
+            RecordingManager recordingManager,
+            MusicGenreManager musicGenreManager,
+            Library albumLibrary,
+            Folder folderLibrary,
+            Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> audioFilesFactory,
+            Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> releases,
+            JobDispatcher jobDispatcher
+        ) = await Init();
+        
+        if (_rootFolder is null)
+            return;
+        
+        // First pass: count releases without storing all tags in memory
+        await foreach ((_, AudioTagModel audioTag) in audioFilesFactory())
         {
-            AudioTagModel tags = await AudioTagModel.Create(audioFile);
-            if (tags.musicBrainz == null || tags.musicBrainz.ReleaseId == Guid.Empty) continue;
-            if (!releasesCount.ContainsKey(tags.musicBrainz.ReleaseId))
-            {
-                releasesCount.Add(tags.musicBrainz.ReleaseId, [tags]);
+            if (audioTag.musicBrainz?.ReleaseId is null || audioTag.musicBrainz.RecordingId == Guid.Empty)
                 continue;
-            }
             
-            releasesCount[tags.musicBrainz.ReleaseId].Add(tags);
+            MusicBrainzReleaseAppends? releaseAppends = await musicBrainzReleaseClient.WithAllAppends(audioTag.musicBrainz.ReleaseId);
+            try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+            if (releaseAppends is null)
+                continue;
+            
+            if (releases.TryGetValue(releaseAppends.Id, out (MusicBrainzReleaseAppends ReleaseAppends, int Count) value))
+                releases[releaseAppends.Id] = (releaseAppends, value.Count + 1);
+            else
+                releases.Add(releaseAppends.Id, (releaseAppends, 1));
         }
+        
+        // pick the most common release
+        MusicBrainzReleaseAppends? release = releases.OrderByDescending(x => x.Value.Count).FirstOrDefault().Value.ReleaseAppends;
+        if (release is null)
+            return;
 
-        return releasesCount;
+        // Second pass: collect only files that match the chosen release
+        List<(MediaFile MediaFile, AudioTagModel AudioTag)> matchingFiles = [];
+        await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
+        {
+            if (audioTag.musicBrainz?.ReleaseId == release.Id || audioTag.musicBrainz?.ReleaseTrackId != null && release.Media.Any(m => m.Tracks.Any(t => t.Id == audioTag.musicBrainz.ReleaseTrackId)))
+                matchingFiles.Add((mediaFile, audioTag));
+        }
+        
+        await AddSingleOrRelease(release, musicGenreManager, releaseGroupManager, releaseManager, albumLibrary, folderLibrary, matchingFiles, musicBrainzArtistClient, artistManager, jobDispatcher, musicBrainzRecordingClient, recordingManager);
+
+        jobDispatcher.DispatchJob<MusicDescriptionJob>(release.MusicBrainzReleaseGroup);
+
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto()
+        {
+            QueryKey = ["music", "albums"]
+        });
+        try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+        try { musicBrainzArtistClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+        try { musicBrainzRecordingClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+        try { await context.DisposeAsync(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
     }
 
-    private async Task<List<MediaFile>> GetFiles()
+    private async Task AddSingleOrRelease(MusicBrainzReleaseAppends release, MusicGenreManager musicGenreManager,
+        ReleaseGroupManager releaseGroupManager, ReleaseManager releaseManager, Library albumLibrary, Folder folderLibrary,
+        List<(MediaFile MediaFile, AudioTagModel AudioTag)> audioFiles, MusicBrainzArtistClient musicBrainzArtistClient, ArtistManager artistManager,
+        JobDispatcher jobDispatcher, MusicBrainzRecordingClient musicBrainzRecordingClient,
+        RecordingManager recordingManager)
+    {
+        CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(release.MusicBrainzReleaseGroup.Id, true);
+        if (coverPalette is not null) 
+            await CoverArtCoverArtClient.Download(coverPalette.Url);
+            
+        await AddGenres(release.Genres, musicGenreManager);
+        
+        await releaseGroupManager.Store(release.MusicBrainzReleaseGroup, LibraryId, coverPalette);
+        await releaseManager.Store(release, albumLibrary, folderLibrary, audioFiles.First().MediaFile, coverPalette);
+        
+        foreach (ReleaseArtistCredit artistCredit in release.ArtistCredit)
+        {
+            MusicBrainzArtistAppends? artistDetails = await musicBrainzArtistClient.WithAllAppends(artistCredit.MusicBrainzArtist.Id);
+            if (artistDetails is null) continue;
+            await artistManager.Store(artistDetails, release, albumLibrary, folderLibrary);
+            jobDispatcher.DispatchJob<MusicDescriptionJob>(artistDetails);
+        }
+        
+        List<MusicBrainzTrack> allTracks = release.Media
+            .SelectMany(m => m.Tracks)
+            .ToList();
+
+        for (int index = 0; index < allTracks.Count; index++)
+        {
+            MusicBrainzTrack musicBrainzTrack = allTracks[index];
+            
+            int idx = release.Media
+                .ToList()
+                .FindIndex(t => t.Tracks.All(w => w.Id == musicBrainzTrack.Id));
+            
+            (MediaFile mediaFile, AudioTagModel audioTag) = audioFiles
+                .FirstOrDefault(x =>
+                    (
+                        x.AudioTag.musicBrainz?.ReleaseTrackId == musicBrainzTrack.Id ||
+                        x.AudioTag.musicBrainz?.ReleaseTrackId == musicBrainzTrack.Recording.Id ||
+                        x.AudioTag.musicBrainz?.RecordingId == musicBrainzTrack.Id ||
+                        x.AudioTag.musicBrainz?.RecordingId == musicBrainzTrack.Recording.Id
+                    ) ||
+                    (
+                        musicBrainzTrack.Title.ContainsSanitized(x.AudioTag.tags?.Title ?? x.MediaFile.Parsed?.Title) &&
+                        (
+                            Math.Abs(x.AudioTag.duration - musicBrainzTrack.Duration) < 5 ||
+                            musicBrainzTrack.Position == x.AudioTag.tags?.Track ||
+                            musicBrainzTrack.Position == x.MediaFile.Parsed?.TrackNumber ||
+                            musicBrainzTrack.Position == index + 1 ||
+                            musicBrainzTrack.Position * idx == index + 1
+                        )
+                    )
+                );
+            if (mediaFile is null || audioTag is null) continue;
+            
+            MusicBrainzRecordingAppends? musicBrainzRecording = await musicBrainzRecordingClient.WithAllAppends(musicBrainzTrack.Recording.Id);
+            if (musicBrainzRecording is null) continue;
+            
+            await AddGenres(musicBrainzRecording.Genres, musicGenreManager);
+                
+            await recordingManager.Store(release, musicBrainzRecording, [], mediaFile, folderLibrary, coverPalette);
+                
+            foreach (MusicBrainzArtistCredit artistCredit in musicBrainzRecording.ArtistCredit)
+            {
+                MusicBrainzArtistAppends? artistDetails = await musicBrainzArtistClient.WithAllAppends(artistCredit.MusicBrainzArtist.Id);
+                if (artistDetails is null) continue;
+                await artistManager.Store(artistDetails, albumLibrary, folderLibrary, _rootFolder!, musicBrainzTrack);
+                jobDispatcher.DispatchJob<MusicDescriptionJob>(artistDetails);
+            }
+        }
+    }
+
+    private static async Task AddGenres(MusicBrainzGenreDetails[] genres, MusicGenreManager musicGenreManager)
+    {
+        foreach (MusicBrainzGenreDetails musicBrainzGenreDetails in genres)
+            await musicGenreManager.Store(musicBrainzGenreDetails);
+    }
+
+    private async Task<(
+        MediaContext context,
+        MusicBrainzReleaseClient musicBrainzReleaseClient, 
+        MusicBrainzArtistClient musicBrainzArtistClient, 
+        MusicBrainzRecordingClient musicBrainzRecordingClient, 
+        ReleaseGroupManager releaseGroupManager, 
+        ReleaseManager releaseManager, 
+        ArtistManager artistManager, 
+        RecordingManager recordingManager,
+        MusicGenreManager musicGenreManager,
+        Library albumLibrary, 
+        Folder folderLibrary, 
+        Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> audioFilesFactory, 
+        Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> releases,
+        JobDispatcher jobDispatcher
+    )> Init()
+    {
+        using MusicBrainzReleaseClient musicBrainzReleaseClient = new();
+        using MusicBrainzArtistClient musicBrainzArtistClient = new();
+        using MusicBrainzRecordingClient musicBrainzRecordingClient = new();
+        await using MediaContext context = new();
+        
+        try
+        {
+            JobDispatcher jobDispatcher = new();
+        
+            ReleaseGroupRepository releaseGroupRepository = new(context);
+            ReleaseGroupManager releaseGroupManager = new(releaseGroupRepository);
+
+            MusicGenreRepository musicGenreRepository = new(context);
+            MusicGenreManager musicGenreManager = new(musicGenreRepository);
+
+            ReleaseRepository releaseRepository = new(context);
+            ReleaseManager releaseManager = new(releaseRepository, musicGenreRepository, jobDispatcher);
+
+            ArtistRepository artistRepository = new(context);
+            ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
+
+            RecordingRepository recordingRepository = new(context);
+            RecordingManager recordingManager = new(recordingRepository, musicGenreRepository, artistRepository);
+
+            Library albumLibrary = await context.Libraries
+                .Where(f => f.Id == LibraryId)
+                .Include(f => f.FolderLibraries)
+                .ThenInclude(f => f.Folder)
+                .FirstAsync();
+        
+            Folder folderLibrary = albumLibrary.FolderLibraries.First().Folder;
+        
+            Func<IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)>> audioFilesFactory = GetAudioFiles;
+        
+            Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends,int Count)> releases = new();
+            return (context, musicBrainzReleaseClient, musicBrainzArtistClient, musicBrainzRecordingClient, releaseGroupManager, releaseManager, artistManager, recordingManager, musicGenreManager, albumLibrary, folderLibrary, audioFilesFactory, releases, jobDispatcher);
+        }
+        catch (Exception ex)
+        {
+            // If initialization fails, dispose what we created to avoid leaks and surface the error to logs.
+            try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+            try { musicBrainzArtistClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+            try { musicBrainzRecordingClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+            try { await context.DisposeAsync(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+
+            Logger.Error($"NewAudioImportJob.Init failed: {ex}");
+
+            return (null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        }
+    }
+    
+    private async IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)> GetAudioFiles()
     {
         await using MediaScan mediaScan = new();
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             .EnableFileListing()
             .Process(InputFolder, 1);
-        
-        return rootFolders.SelectMany(x => x.Files ?? []).ToList();
+        _rootFolder = rootFolders.FirstOrDefault();
+
+        IEnumerable<MediaFile> files = rootFolders.SelectMany(x => x.Files ?? Enumerable.Empty<MediaFile>());
+
+        // Limit parallelism to avoid high memory/CPU use and IO contention.
+        ParallelOptions parallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1)
+        };
+
+        ConcurrentBag<(MediaFile, AudioTagModel)> bag = new ConcurrentBag<(MediaFile, AudioTagModel)>();
+
+        await Parallel.ForEachAsync(files, parallelOptions, async (mediaFile, _) =>
+        {
+            AudioTagModel audioTagModel = await AudioTagModel.Create(mediaFile);
+            bag.Add((mediaFile, audioTagModel));
+        });
+
+        // Yield items from the bag to preserve the streaming signature while keeping parallel CPU work.
+        foreach ((MediaFile, AudioTagModel) item in bag)
+            yield return (item.Item1, item.Item2);
     }
 }
