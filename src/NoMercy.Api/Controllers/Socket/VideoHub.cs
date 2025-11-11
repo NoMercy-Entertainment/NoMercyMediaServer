@@ -97,7 +97,6 @@ public class VideoHub : ConnectionHub
                 Subtitle = udi.Subtitle,
                 SubtitleType = udi.SubtitleType,
                 LastPlayedDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                UpdatedAt = DateTime.Now
             })
             .RunAsync();
     }
