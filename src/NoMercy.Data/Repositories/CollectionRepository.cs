@@ -231,7 +231,7 @@ public class CollectionRepository(MediaContext context)
             .FirstOrDefaultAsync();
     }
 
-    public Task<Collection?> GetCollectionPlaylistAsync(Guid userId, int id, string language)
+    public Task<Collection?> GetCollectionPlaylistAsync(Guid userId, int id, string language, string country)
     {
         return context.Collections
             .AsNoTracking()
@@ -270,6 +270,12 @@ public class CollectionRepository(MediaContext context)
             .ThenInclude(movie => movie.VideoFiles)
             .ThenInclude(file => file.UserData
                 .Where(userData => userData.UserId.Equals(userId) && userData.Type == "collection"))
+            .Include(collection => collection.CollectionMovies)
+            .ThenInclude(collectionMovie => collectionMovie.Movie)
+            .ThenInclude(tv => tv.CertificationMovies
+                .Where(certification => certification.Certification.Iso31661 == country ||
+                                        certification.Certification.Iso31661 == "US"))
+            .ThenInclude(certificationMovie => certificationMovie.Certification)
             .FirstOrDefaultAsync();
     }
 

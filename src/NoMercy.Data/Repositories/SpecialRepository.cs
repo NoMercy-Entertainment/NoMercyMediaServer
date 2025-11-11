@@ -97,8 +97,8 @@ public class SpecialRepository(MediaContext context)
             .Take(take);
     }
 
-    public readonly Func<MediaContext, Guid, Ulid, string, Task<Special?>> GetSpecialPlaylist =
-        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid id, string language) =>
+    public readonly Func<MediaContext, Guid, Ulid, string, string, Task<Special?>> GetSpecialPlaylist =
+        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid id, string language, string country) =>
             mediaContext.Specials.AsNoTracking()
                 .Where(special => special.Id == id)
                 .Include(special => special.Items
@@ -139,6 +139,12 @@ public class SpecialRepository(MediaContext context)
                 .ThenInclude(movie => movie!.Translations
                     .Where(translation => translation.Iso6391 == language)
                 )
+                .Include(special => special.Items)
+                .ThenInclude(specialItem => specialItem.Movie)
+                .ThenInclude(movie => movie.CertificationMovies
+                    .Where(certification => certification.Certification.Iso31661 == country ||
+                                            certification.Certification.Iso31661 == "US"))
+                .ThenInclude(certificationMovie => certificationMovie.Certification)
                 
                 .Include(special => special.Items)
                 .ThenInclude(specialItem => specialItem.Episode)
@@ -203,5 +209,13 @@ public class SpecialRepository(MediaContext context)
                 .ThenInclude(episode => episode.TvUser
                     .Where(tvUser => tvUser.UserId.Equals(userId))
                 )
+                
+                .Include(special => special.Items)
+                .ThenInclude(specialItem => specialItem.Episode)
+                .ThenInclude(episode => episode!.Tv)
+                .ThenInclude(tv => tv.CertificationTvs
+                    .Where(certification => certification.Certification.Iso31661 == country ||
+                                            certification.Certification.Iso31661 == "US"))
+                .ThenInclude(certificationTv => certificationTv.Certification)
                 .FirstOrDefault());
 }

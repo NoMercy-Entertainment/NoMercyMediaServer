@@ -108,10 +108,11 @@ public class MoviesController(
             return UnauthorizedResponse("You do not have permission to view movies");
 
         string language = Language();
+        string country = Country();
 
         IEnumerable<VideoPlaylistResponseDto> playlist =
-            (await movieRepository.GetMoviePlaylistAsync(userId, id, language))
-            .Select(movie => new VideoPlaylistResponseDto(movie, "movie", id));
+            (await movieRepository.GetMoviePlaylistAsync(userId, id, language, country))
+            .Select(movie => new VideoPlaylistResponseDto(movie, "movie", id, country));
 
         if (!playlist.Any())
             return NotFoundResponse("Movie not found");

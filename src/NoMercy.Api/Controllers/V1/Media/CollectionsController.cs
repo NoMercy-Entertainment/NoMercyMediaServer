@@ -157,14 +157,15 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
             return UnauthorizedResponse("You do not have permission to view collections");
 
         string language = Language();
+        string country = Country();
 
-        Collection? collection = await collectionRepository.GetCollectionPlaylistAsync(userId, id, language);
+        Collection? collection = await collectionRepository.GetCollectionPlaylistAsync(userId, id, language, country);
 
         if (collection is null)
             return NotFoundResponse("Collection not found");
 
         return Ok(collection.CollectionMovies
-            .Select((movie, index) => new VideoPlaylistResponseDto(movie.Movie, "collection", id, index + 1, collection)));
+            .Select((movie, index) => new VideoPlaylistResponseDto(movie.Movie, "collection", id, country, index + 1, collection)));
     }
 
     [HttpPost]

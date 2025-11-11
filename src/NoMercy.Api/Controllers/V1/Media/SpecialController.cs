@@ -160,9 +160,10 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
             return UnauthorizedResponse("You do not have permission to view a special");
 
         string language = Language();
+        string country = Country();
 
         Special? special = await specialRepository
-            .GetSpecialPlaylist(context, userId, id, language);
+            .GetSpecialPlaylist(context, userId, id, language, country);
 
         if (special is null)
             return NotFoundResponse("Special not found");
@@ -170,8 +171,8 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         VideoPlaylistResponseDto[] items = special.Items
             .OrderBy(item => item.Order)
             .Select((item, index) => item.EpisodeId is not null
-                ? new(item.Episode ?? new Episode(), "specials", id, index)
-                : new VideoPlaylistResponseDto(item.Movie ?? new Movie(), "specials", id, index))
+                ? new(item.Episode ?? new Episode(), "specials", id, country, index)
+                : new VideoPlaylistResponseDto(item.Movie ?? new Movie(), "specials", id, country, index))
             .ToArray();
 
         if (items.Length == 0)

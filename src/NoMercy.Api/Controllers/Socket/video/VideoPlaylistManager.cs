@@ -29,14 +29,14 @@ public class VideoPlaylistManager
     }
 
     public async Task<(VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist)> GetPlaylist(
-        Guid userId, string type, dynamic listId, int? itemId, string language)
+        Guid userId, string type, dynamic listId, int? itemId, string language, string country)
     {
         return type switch
         {
-            "specials" => await GetSpecialItems(userId, listId, itemId, language),
-            "collection" => await GetCollectionItems(userId, listId, itemId, language),
-            "tv" => await GetTvItems(userId, listId, itemId, language),
-            "movie" => await GetMovieItems(userId, listId, itemId, language),
+            "specials" => await GetSpecialItems(userId, listId, itemId, language, country),
+            "collection" => await GetCollectionItems(userId, listId, itemId, language, country),
+            "tv" => await GetTvItems(userId, listId, itemId, language, country),
+            "movie" => await GetMovieItems(userId, listId, itemId, language, country),
             _ => throw new ArgumentException("Invalid playlist type", nameof(type))
         };
     }
@@ -54,15 +54,15 @@ public class VideoPlaylistManager
     }
     
     private async Task<(VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist)> GetSpecialItems(
-        Guid userId, dynamic listId, int? itemId, string language)
+        Guid userId, dynamic listId, int? itemId, string language, string country)
     {
-        Special? special = await _specialRepository.GetSpecialPlaylist(_mediaContext, userId, Ulid.Parse(listId), language);
+        Special? special = await _specialRepository.GetSpecialPlaylist(_mediaContext, userId, Ulid.Parse(listId), language, country);
 
         List<VideoPlaylistResponseDto> playlist = special?.Items
             .OrderBy(item => item.Order)
             .Select((item, index) => item.EpisodeId is not null
-                ? new(item.Episode ?? new Episode(), "specials",  listId, index)
-                : new VideoPlaylistResponseDto(item.Movie ?? new Movie(), "specials",  listId, index))
+                ? new(item.Episode ?? new Episode(), "specials",  listId, country, index)
+                : new VideoPlaylistResponseDto(item.Movie ?? new Movie(), "specials", listId, country, index))
             .ToList() ?? [];
         
         VideoPlaylistResponseDto? item = playlist.FirstOrDefault(p => p.Id == itemId);
@@ -82,12 +82,12 @@ public class VideoPlaylistManager
     }
     
     private async Task<(VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist)> GetCollectionItems(
-        Guid userId, dynamic listId, int? itemId, string language)
+        Guid userId, dynamic listId, int? itemId, string language, string country)
     {
-        Collection? collection = await _collectionRepository.GetCollectionPlaylistAsync(userId, int.Parse(listId), language);
+        Collection? collection = await _collectionRepository.GetCollectionPlaylistAsync(userId, int.Parse(listId), language, country);
 
         List<VideoPlaylistResponseDto> playlist = collection?.CollectionMovies
-            .Select((movie, index) => new VideoPlaylistResponseDto(movie.Movie,"collection", listId, index + 1, collection))
+            .Select((movie, index) => new VideoPlaylistResponseDto(movie.Movie,"collection", listId, country, index + 1, collection))
             .ToList() ?? [];
         
         VideoPlaylistResponseDto? item = playlist.FirstOrDefault(p => p.Id == itemId);
@@ -107,20 +107,20 @@ public class VideoPlaylistManager
     }
     
     private async Task<(VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist)> GetTvItems(
-        Guid userId, dynamic listId, int? itemId, string language)
+        Guid userId, dynamic listId, int? itemId, string language, string country)
     {
-        Tv? tv = await _tvShowRepository.GetTvPlaylistAsync(userId, int.Parse(listId), language);
+        Tv? tv = await _tvShowRepository.GetTvPlaylistAsync(userId, int.Parse(listId), language, country);
 
         VideoPlaylistResponseDto[] episodes = tv?.Seasons
             .Where(season => season.SeasonNumber > 0)
             .SelectMany(season => season.Episodes)
-            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", listId))
+            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", listId, country))
             .ToArray() ?? [];
 
         VideoPlaylistResponseDto[] extras = tv?.Seasons
             .Where(season => season.SeasonNumber == 0)
             .SelectMany(season => season.Episodes)
-            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", listId))
+            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", listId, country))
             .ToArray() ?? [];
         
         List<VideoPlaylistResponseDto> playlist = episodes.Concat(extras).ToList();
@@ -142,11 +142,11 @@ public class VideoPlaylistManager
     }
     
     private async Task<(VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist)> GetMovieItems(
-        Guid userId, dynamic listId, int? itemId, string language)
+        Guid userId, dynamic listId, int? itemId, string language, string country)
     {
-        List<Movie> movies = await _movieRepository.GetMoviePlaylistAsync(userId, int.Parse(listId), language);
+        List<Movie> movies = await _movieRepository.GetMoviePlaylistAsync(userId, int.Parse(listId), language, country);
         List<VideoPlaylistResponseDto> playlist = movies
-            .Select(movie => new VideoPlaylistResponseDto(movie, "movie", int.Parse(listId)))
+            .Select(movie => new VideoPlaylistResponseDto(movie, "movie", int.Parse(listId), country))
             .ToList();
         
         VideoPlaylistResponseDto? item = playlist.FirstOrDefault(p => p.Id == itemId) 

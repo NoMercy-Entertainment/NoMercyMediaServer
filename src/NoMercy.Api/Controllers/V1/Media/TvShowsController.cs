@@ -109,8 +109,9 @@ public class TvShowsController(
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string language = Language();
+        string country = Country();
 
-        Tv? tv = await tvShowRepository.GetTvPlaylistAsync(userId, id, language);
+        Tv? tv = await tvShowRepository.GetTvPlaylistAsync(userId, id, language, country);
 
         if (tv is null)
             return NotFoundResponse("Tv show not found");
@@ -118,13 +119,13 @@ public class TvShowsController(
         VideoPlaylistResponseDto[] episodes = tv.Seasons
             .Where(season => season.SeasonNumber > 0)
             .SelectMany(season => season.Episodes)
-            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id))
+            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id, country))
             .ToArray();
 
         VideoPlaylistResponseDto[] extras = tv.Seasons
             .Where(season => season.SeasonNumber == 0)
             .SelectMany(season => season.Episodes)
-            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id))
+            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id, country))
             .ToArray();
 
         return Ok(episodes.Concat(extras).ToArray());

@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
@@ -30,6 +31,7 @@ public class VideoPlaylistResponseDto
     [JsonProperty("fonts")] public List<IFont> Fonts { get; set; } = [];
     [JsonProperty("chapters")] public List<IChapter> Chapters { get; set; } = [];
     [JsonProperty("tracks")] public List<IVideoTrack> Tracks { get; set; } = [];
+    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
     
     [JsonProperty("audio")] public List<IAudio> Audio { get; set; } = [];
     [JsonProperty("captions")] public List<ISubtitle> Captions { get; set; } = [];
@@ -45,7 +47,7 @@ public class VideoPlaylistResponseDto
         
     }
 
-    public VideoPlaylistResponseDto(Episode episode, string playlistType, dynamic playlistId, int? index = null)
+    public VideoPlaylistResponseDto(Episode episode, string playlistType, dynamic playlistId, string country, int? index = null)
     {
         VideoFile? videoFile = episode.VideoFiles.FirstOrDefault();
         if (videoFile is null) return;
@@ -91,8 +93,8 @@ public class VideoPlaylistResponseDto
                 Date = DateTime.Parse(userData.LastPlayedDate)
             }
             : null;
-        Image = episode.Still is not null ? "https://image.tmdb.org/t/p/original" + episode.Still : null;
-        Logo = logo is not null ? "https://image.tmdb.org/t/p/original" + logo : null;
+        Image = episode.Still;
+        Logo = logo;
         File = $"{baseFolder}{videoFile.Filename}";
         Sources =
         [
@@ -138,9 +140,18 @@ public class VideoPlaylistResponseDto
         Audio = videoFile.Metadata?.Audio ?? [];
         Captions = videoFile.Metadata?.Subtitles ?? [];
         Qualities = videoFile.Metadata?.Video ?? [];
+        
+        ContentRatings = episode.Tv.CertificationTvs
+            .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
+                                         || certificationMovie.Certification.Iso31661 == country)
+            .Select(certificationTv => new ContentRating
+            {
+                Rating = certificationTv.Certification.Rating,
+                Iso31661 = certificationTv.Certification.Iso31661
+            });
     }
 
-    public VideoPlaylistResponseDto(Movie movie, string playlistType, dynamic playlistId, int? index = null, Collection? collection = null)
+    public VideoPlaylistResponseDto(Movie movie, string playlistType, dynamic playlistId, string country, int? index = null, Collection? collection = null)
     {
         VideoFile? videoFile = movie.VideoFiles.FirstOrDefault();
         if (videoFile is null) return;
@@ -176,8 +187,8 @@ public class VideoPlaylistResponseDto
                 Date = DateTime.Parse(userData.LastPlayedDate)
             }
             : null;
-        Image = movie.Backdrop is not null ? "https://image.tmdb.org/t/p/original" + movie.Backdrop : null;
-        Logo = logo is not null ? "https://image.tmdb.org/t/p/original" + logo : null;
+        Image = movie.Backdrop;
+        Logo = logo;
         File = $"{baseFolder}{videoFile.Filename}";
         Sources =
         [
@@ -225,6 +236,15 @@ public class VideoPlaylistResponseDto
         Season = 0;
         Episode = index;
         EpisodeId = movie.Id;
+        
+        ContentRatings = movie.CertificationMovies
+            .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
+                                         || certificationMovie.Certification.Iso31661 == country)
+            .Select(certificationMovie => new ContentRating
+            {
+                Rating = certificationMovie.Certification.Rating,
+                Iso31661 = certificationMovie.Certification.Iso31661
+            });
     }
 
     private record Subs

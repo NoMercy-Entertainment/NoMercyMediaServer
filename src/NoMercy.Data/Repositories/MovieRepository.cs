@@ -68,7 +68,7 @@ public class MovieRepository(MediaContext context)
                 .Include(movie => movie.VideoFiles)
                 .Any());
 
-    public async Task<List<Movie>> GetMoviePlaylistAsync(Guid userId, int id, string language)
+    public async Task<List<Movie>> GetMoviePlaylistAsync(Guid userId, int id, string language, string country)
     {
         return await context.Movies.AsNoTracking()
             .Where(movie => movie.Id == id)
@@ -87,6 +87,10 @@ public class MovieRepository(MediaContext context)
             .Include(movie => movie.VideoFiles)
             .ThenInclude(file => file.UserData
                 .Where(userData => userData.UserId.Equals(userId) && userData.Type == "movie"))
+            .Include(movie => movie.CertificationMovies
+                .Where(certification => certification.Certification.Iso31661 == country ||
+                                        certification.Certification.Iso31661 == "US"))
+            .ThenInclude(certificationMovie => certificationMovie.Certification)
             .ToListAsync();
     }
 

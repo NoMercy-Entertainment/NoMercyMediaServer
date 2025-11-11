@@ -104,7 +104,7 @@ public class TvShowRepository(MediaContext context)
                 .Any(episode => episode.VideoFiles.Count != 0));
     }
 
-    public async Task<Tv?> GetTvPlaylistAsync(Guid userId, int id, string language)
+    public async Task<Tv?> GetTvPlaylistAsync(Guid userId, int id, string language, string country)
     {
         return await context.Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
@@ -146,6 +146,14 @@ public class TvShowRepository(MediaContext context)
                 .ThenInclude(episode => episode.Translations
                     .Where(translation => translation.Iso6391 == language)
                 )
+            
+            .Include(tv => tv.Seasons)
+            .ThenInclude(season => season.Episodes)
+            .ThenInclude(tv => tv.Tv)
+            .ThenInclude(tv => tv.CertificationTvs
+                .Where(certification => certification.Certification.Iso31661 == country ||
+                                        certification.Certification.Iso31661 == "US"))
+            .ThenInclude(certificationTv => certificationTv.Certification)
             .FirstOrDefaultAsync();
     }
 

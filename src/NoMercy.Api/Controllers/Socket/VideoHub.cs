@@ -135,10 +135,11 @@ public class VideoHub : ConnectionHub
         if (user is null) return;
 
         string language = GetLanguageFromContext();
+        string country = GetCountryFromContext();
 
         try
         {
-            dynamic? playlistResult = await _videoPlaylistManager.GetPlaylist(user.Id, type, listId, itemId, language);
+            dynamic? playlistResult = await _videoPlaylistManager.GetPlaylist(user.Id, type, listId, itemId, language, country);
             
             await HandlePlaybackState(user, type, listId, playlistResult.Item1, playlistResult.Item2);
         }
