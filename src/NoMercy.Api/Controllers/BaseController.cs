@@ -248,7 +248,7 @@ public class BaseController : Controller
 
     protected string Language()
     {
-        return HttpContext.Request.Headers.AcceptLanguage.FirstOrDefault() ??
+        return HttpContext.Request.Headers.AcceptLanguage.FirstOrDefault()?.Split("_").FirstOrDefault() ??
                 LocalizationHelper.GlobalLocalizer.TargetLanguage;
 
     }

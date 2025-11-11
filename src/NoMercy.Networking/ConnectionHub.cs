@@ -6,6 +6,7 @@ using Microsoft.Extensions.Primitives;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
+using NoMercy.NmSystem;
 
 namespace NoMercy.Networking;
 
@@ -27,9 +28,12 @@ public class ConnectionHub : Hub
         return _httpContextAccessor.HttpContext?.Request.Headers["country"].FirstOrDefault() ?? "US";
     }
     
-    public string GetLanguageFromContext() 
+    public string GetLanguageFromContext()
     {
-        return _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage.FirstOrDefault() ?? "en";
+        return _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage
+                   .FirstOrDefault()?.Split("_")
+                   .FirstOrDefault() ??
+               LocalizationHelper.GlobalLocalizer.TargetLanguage;
     }
 
     public override async Task OnConnectedAsync()
@@ -38,11 +42,6 @@ public class ConnectionHub : Hub
 
         User? user = Context.User.User();
         if (user is null) return;
-
-        StringValues? accessToken = _httpContextAccessor.HttpContext?.Request.Query
-            .FirstOrDefault(x => x.Key == "access_token")
-            .Value;
-        string[] result = accessToken.GetValueOrDefault().ToString().Split("&");
 
         Client client = new()
         {
@@ -53,46 +52,36 @@ public class ConnectionHub : Hub
             IsActive = true
         };
 
-        foreach (string item in result)
+        IQueryCollection? query = _httpContextAccessor.HttpContext?.Request.Query;
+        if (query is not null && query.Count > 1)
         {
-            string[] keyValue = item.Split("=");
+            if (query.TryGetValue("client_id", out StringValues value))
+                client.DeviceId = value;
+            
+            if (query.TryGetValue("custom_name", out StringValues customName))
+                client.CustomName = customName;
+            
+            if (query.TryGetValue("client_volume", out StringValues volumePercent))  
+                client.VolumePercent = int.Parse(volumePercent);
+    
+            if (query.TryGetValue("client_name", out StringValues name))
+                client.Name = name;
+            
+            if (query.TryGetValue("client_type", out StringValues type))
+                client.Type = type;
 
-            if (keyValue.Length < 2) continue;
-
-            keyValue[1] = keyValue[1].Replace("+", " ");
-
-            switch (keyValue[0])
-            {
-                case "access_token":
-                    continue;
-                case "client_id":
-                    client.DeviceId = keyValue[1];
-                    break;
-                case "client_name":
-                    client.Name = keyValue[1];
-                    break;
-                case "client_type":
-                    client.Type = keyValue[1];
-                    break;
-                case "client_version":
-                    client.Version = keyValue[1];
-                    break;
-                case "client_os":
-                    client.Os = keyValue[1];
-                    break;
-                case "client_browser":
-                    client.Browser = keyValue[1];
-                    break;
-                case "client_device":
-                    client.Model = keyValue[1];
-                    break;
-                case "custom_name":
-                    client.CustomName = keyValue[1];
-                    break;
-                case "client_volume":
-                    client.VolumePercent = int.Parse(keyValue[1]);
-                    break;
-            }
+            if (query.TryGetValue("client_version", out StringValues version))
+                client.Version = version;
+            
+            if (query.TryGetValue("client_os", out StringValues os))
+                client.Os = os;
+            
+            if (query.TryGetValue("client_browser", out StringValues browser))
+                client.Browser = browser;
+            
+            if (query.TryGetValue("client_device", out StringValues model))
+                client.Model = model;
+            
         }
 
         await using MediaContext mediaContext = new();

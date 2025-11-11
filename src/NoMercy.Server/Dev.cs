@@ -1,4 +1,11 @@
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using NoMercy.Database;
+using NoMercy.Database.Models;
+using NoMercy.Encoder.Format.Rules;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Server;
 
@@ -6,6 +13,41 @@ public static class Dev
 {
     public static async Task Run()
     {
+        
+        // await using MediaContext context = new();
+        //
+        // Tv show = await context.Tvs
+        //     .Include(tv => tv.Episodes)
+        //     .ThenInclude(episode => episode.VideoFiles)
+        //     .ThenInclude(videoFile => videoFile.Metadata)
+        //     .FirstAsync(tv => tv.Id == 60808);
+        //
+        // foreach (Episode episode in show.Episodes)
+        // {
+        //     foreach (VideoFile videoFile in episode.VideoFiles)
+        //     {
+        //         if (videoFile.Metadata == null) continue;
+        //         
+        //         string hostFolder = videoFile.Metadata.HostFolder;
+        //         if (string.IsNullOrEmpty(hostFolder)) continue;
+        //         
+        //         Logger.App($"Processing Episode: {episode.Title} (S{episode.SeasonNumber}E{episode.EpisodeNumber})");
+        //         Logger.App($"Host Folder: {hostFolder}");
+        //         
+        //         // Check for fonts folder
+        //         string fontsFolder = Path.Combine(hostFolder, "fonts");
+        //         if (!Directory.Exists(fontsFolder))
+        //         {
+        //             Logger.App("No fonts folder found");
+        //             continue;
+        //         }
+        //         
+        //         // Update fonts.json based on actual font files
+        //         await UpdateFontsJson(hostFolder, fontsFolder);
+        //     }
+        // }
+        
+        
         // await VideoAudioFile.GetSubtitleFromWhisperAi(
         //     "C:\\Users\\patri\\Videos\\2025-09-11_17-58-09.mkv", AppFiles.TranscodePath, "test.srt", "en");
 
@@ -403,7 +445,7 @@ public static class Dev
     //             }
     //             catch (Exception ex)
     //             {
-    //                 Logger.Encoder($"Error processing {fontsJson}: {ex.Message}");
+    //             Logger.Encoder($"Error processing {fontsJson}: {ex.Message}");
     //             }
     //     }
     // }
@@ -413,4 +455,71 @@ public static class Dev
     //     [JsonProperty("mimeType")] public string MimeType { get; set; } = string.Empty;
     //     [JsonProperty("file")] public string File { get; set; } = string.Empty;
     // }
+    
+    private static async Task UpdateFontsJson(string hostFolder, string fontsFolder)
+    {
+        try
+        {
+            Logger.App($"Scanning fonts folder: {fontsFolder}");
+            
+            // Get all font files in the fonts folder
+            string[] fontFiles = Directory.GetFiles(fontsFolder, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(f => 
+                {
+                    string ext = Path.GetExtension(f).ToLowerInvariant();
+                    return ext == ".ttf" || ext == ".otf" || ext == ".woff" || ext == ".woff2" || ext == ".ttc";
+                })
+                .ToArray();
+            
+            if (fontFiles.Length == 0)
+            {
+                Logger.App("No font files found in fonts folder");
+                return;
+            }
+            
+            Logger.App($"Found {fontFiles.Length} font files");
+            
+            // Build the font info list
+            List<FontInfo> fonts = [];
+            
+            foreach (string fontFile in fontFiles)
+            {
+                string relativePath = "fonts/" + Path.GetFileName(fontFile);
+                string mimeType = MimeTypes.GetMimeType(Path.GetExtension(fontFile));
+                
+                fonts.Add(new FontInfo
+                {
+                    File = relativePath,
+                    MimeType = mimeType
+                });
+                
+                Logger.App($"  - {Path.GetFileName(fontFile)} ({mimeType})");
+            }
+            
+            // Write fonts.json
+            string fontsJsonPath = Path.Combine(hostFolder, "fonts.json");
+            string json = JsonConvert.SerializeObject(fonts, Formatting.Indented);
+            
+            // Create backup if file exists
+            if (File.Exists(fontsJsonPath))
+            {
+                string backupPath = fontsJsonPath + ".backup";
+                File.Copy(fontsJsonPath, backupPath, true);
+                Logger.App($"Created backup: {backupPath}");
+            }
+            
+            await File.WriteAllTextAsync(fontsJsonPath, json);
+            Logger.App($"Successfully updated fonts.json with {fonts.Count} fonts");
+        }
+        catch (Exception ex)
+        {
+            Logger.App($"Error updating fonts.json: {ex.Message}");
+        }
+    }
+    
+    private class FontInfo
+    {
+        [JsonProperty("file")] public string File { get; set; } = string.Empty;
+        [JsonProperty("mimeType")] public string MimeType { get; set; } = string.Empty;
+    }
 }

@@ -84,7 +84,7 @@ public static class HlsPlaylistGenerator
 
                 string vCodecProfile = MapProfileToCodec(profile);
 
-                double duration = GetVideoDuration(videoFile) / 100000;
+                double duration = GetVideoDuration(videoFile);
                 double totalSize = GetTotalSize(Path.Combine(basePath, folderName ?? ""));
 
                 double bandwidth = totalSize * 8 / duration;

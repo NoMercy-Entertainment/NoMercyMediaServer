@@ -1,9 +1,9 @@
+using System.Text.Json.Serialization;
 using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster;
 using Sharpcaster.Models;
 using Sharpcaster.Models.ChromecastStatus;
 using Sharpcaster.Models.Media;
-using Media = Sharpcaster.Models.Media.Media;
 
 namespace NoMercy.Networking;
 
@@ -106,22 +106,35 @@ public class ChromeCast
         // }
     }
 
+    public class CastCustomData
+    {
+        [JsonPropertyName("accessToken")] public string? AccessToken { get; set; }
+        [JsonPropertyName("basePath")] public string? BasePath { get; set; }
+        [JsonPropertyName("playlist")] public string? Playlist { get; set; }
+        [JsonPropertyName("deepLink")] public string? DeepLink { get; set; }
+    }
+    
     public static async Task CastPlaylist(string value)
     {
         if (_client is null) return;
         Logger.Ping("Casting playlist: " + value);
 
+        CastCustomData customData = new()
+        {
+            AccessToken = Globals.Globals.AccessToken,
+            BasePath = Networking.ExternalAddress,
+            Playlist = $"{Networking.ExternalAddress}/api/v1/{value}/watch",
+            DeepLink = $"tv.nomercy.app://{value}/watch"
+        };
+        
+        string jsonElement = System.Text.Json.JsonSerializer.Serialize(customData);
+
         Media media = new()
         {
-            CustomData = new Dictionary<string, string>
-            {
-                { "accessToken", Globals.Globals.AccessToken! },
-                { "basePath", Networking.ExternalAddress },
-                { "playlist", $"{Networking.ExternalAddress}/api/v1/{value}/watch" }
-            }
+            CustomData = jsonElement
         };
 
-        _ = await _client.MediaChannel.LoadAsync(media);
+        await _client.MediaChannel.LoadAsync(media).ConfigureAwait(false);
     }
 
     public static ChromecastStatus? GetChromecastStatus()

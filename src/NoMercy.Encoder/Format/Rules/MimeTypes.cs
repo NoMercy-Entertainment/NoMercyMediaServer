@@ -62,11 +62,11 @@ public static class MimeTypes
             ".vtt" => "text/vtt",
             ".srt" => "text/srt",
             ".ass" => "text/x-ass",
-            ".ttf" => "application/x-truetype-font",
-            ".otf" => "font/otf",
-            ".woff" => "font/woff",
-            ".woff2" => "font/woff2",
-            ".eot" => "font/eot",
+            ".ttf" => "application/x-font-truetype",
+            ".otf" => "application/x-font-opentype",
+            ".woff" => "application/font-woff",
+            ".woff2" => "application/font-woff2",
+            ".eot" => "application/vnd.ms-fontobject",
             ".apk" => "application/vnd.android.package-archive",
 
             _ => "application/octet-stream"
