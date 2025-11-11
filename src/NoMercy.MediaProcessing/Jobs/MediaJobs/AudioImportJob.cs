@@ -84,9 +84,9 @@ public class AudioImportJob : AbstractMusicFolderJob
             await AddSingleOrRelease(singleRelease, musicGenreManager, releaseGroupManager, releaseManager, albumLibrary, folderLibrary, files, artistClient, artistManager, jobDispatcher, recordingClient, recordingManager);
 
             jobDispatcher.DispatchJob<MusicDescriptionJob>(singleRelease.MusicBrainzReleaseGroup);
+            SendRefresh(["music","start"]);
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub");
         // try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
         // try { musicBrainzArtistClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
         // try { musicBrainzRecordingClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
@@ -146,12 +146,19 @@ public class AudioImportJob : AbstractMusicFolderJob
         await AddSingleOrRelease(release, musicGenreManager, releaseGroupManager, releaseManager, albumLibrary, folderLibrary, matchingFiles, artistClient, artistManager, jobDispatcher, recordingClient, recordingManager);
 
         jobDispatcher.DispatchJob<MusicDescriptionJob>(release.MusicBrainzReleaseGroup);
-
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub");
+        SendRefresh(["music", "start"]);
         // try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
         // try { musicBrainzArtistClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
         // try { musicBrainzRecordingClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
         // try { await context.DisposeAsync(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
+    }
+
+    private static void SendRefresh(dynamic[] query)
+    {
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = query
+        });
     }
 
     private async Task AddSingleOrRelease(MusicBrainzReleaseAppends release, MusicGenreManager musicGenreManager,
@@ -175,6 +182,7 @@ public class AudioImportJob : AbstractMusicFolderJob
             if (artistDetails is null) continue;
             await artistManager.Store(artistDetails, release, albumLibrary, folderLibrary);
             jobDispatcher.DispatchJob<MusicDescriptionJob>(artistDetails);
+            SendRefresh(["music","artist", artistDetails.Id]);
         }
         
         List<MusicBrainzTrack> allTracks = release.Media
@@ -225,8 +233,12 @@ public class AudioImportJob : AbstractMusicFolderJob
                 if (artistDetails is null) continue;
                 await artistManager.Store(artistDetails, albumLibrary, folderLibrary, _rootFolder!, musicBrainzTrack);
                 jobDispatcher.DispatchJob<MusicDescriptionJob>(artistDetails);
+                SendRefresh(["music","artist", artistDetails.Id]);
             }
+            
         }
+        
+        SendRefresh(["music", "album", release.Id]);
     }
 
     private static async Task AddGenres(MusicBrainzGenreDetails[] genres, MusicGenreManager musicGenreManager)
