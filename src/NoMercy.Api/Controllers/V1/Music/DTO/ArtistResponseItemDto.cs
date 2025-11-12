@@ -89,8 +89,8 @@ public record ArtistResponseItemDto
 
         Tracks = artist.ArtistTrack
             .Select(artistTrack => new ArtistTrackDto(artistTrack, country!))
-            .GroupBy(artistTrack => artistTrack.AlbumName + artistTrack.Name)
-            .Select(artistTrack => artistTrack.First())
+            // .GroupBy(artistTrack => artistTrack.AlbumName + artistTrack.Name)
+            // .Select(artistTrack => artistTrack.First())
             .DistinctBy(artistTrack => artistTrack.Id)
             .OrderBy(artistTrack => artistTrack.AlbumName)
             .ThenBy(artistTrack => artistTrack.Disc)

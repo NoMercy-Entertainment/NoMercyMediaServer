@@ -30,10 +30,11 @@ public class MusicRepository
                     .Where(albumUser => albumUser.UserId.Equals(userId))
                 )
                 .Include(artist => artist.Translations)
-                .Include(artist => artist.Images).Include(artist => artist.AlbumArtist
+                .Include(artist => artist.Images)
+                .Include(artist => artist.AlbumArtist
                     .OrderBy(albumArtist => albumArtist.Album.Year)
-                    .Where(artistTrack => artistTrack.Album.AlbumUser
-                        .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+                    // .Where(artistTrack => artistTrack.Album.AlbumUser
+                    //     .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
                 )
                 .Include(artist => artist.AlbumArtist)
                 .ThenInclude(albumArtist => albumArtist.Album)
