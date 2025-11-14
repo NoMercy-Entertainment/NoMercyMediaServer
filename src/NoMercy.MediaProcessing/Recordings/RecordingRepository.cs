@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.MediaProcessing.Recordings;
 
@@ -72,6 +73,16 @@ public class RecordingRepository(MediaContext context) : IRecordingRepository
             {
                 ArtistId = lti.ArtistId,
                 LibraryId = lti.LibraryId
+            })
+            .RunAsync();
+    }
+
+    public async Task<int> UpdateTrackLyricsAsync(Track track, string serializeObject)
+    {
+        return await context.Upsert(track).On(v => new { v.Id })
+            .WhenMatched(v => new()
+            {
+                _lyrics = serializeObject
             })
             .RunAsync();
     }

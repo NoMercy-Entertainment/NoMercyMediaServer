@@ -370,6 +370,8 @@ public partial class RecordingManager(
             await musicGenreRepository.LinkToRecording(genres);
 
         Logger.MusicBrainz($"Recording {trackAppends.Title} stored", LogEventLevel.Verbose);
+        
+        // jobDispatcher.DispatchJob<TrackLyricsJob>(insert);
     }
 
     private async Task LinkToArtist(Track insert, MusicBrainzArtistAppends[] artistAppends)

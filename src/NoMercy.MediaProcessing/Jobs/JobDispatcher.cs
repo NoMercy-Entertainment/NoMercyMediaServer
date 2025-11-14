@@ -121,4 +121,11 @@ public class JobDispatcher
         };
         Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
     }
+
+    public void DispatchJob<TJob>(Track track)
+        where TJob : AbstractLyricJob, new()
+    {
+        TJob job = new() { Track = track };
+        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+    }
 }

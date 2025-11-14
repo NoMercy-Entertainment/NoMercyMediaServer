@@ -266,7 +266,6 @@ public class AudioImportJob : AbstractMusicFolderJob
                 jobDispatcher.DispatchJob<MusicDescriptionJob>(artistDetails);
                 SendRefresh(["music","artist", artistDetails.Id]);
             }
-            
         }
         
         SendRefresh(["music", "album", release.Id]);
@@ -339,7 +338,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         
         _rootFolder ??= rootFolders.FirstOrDefault();
 
-        IEnumerable<MediaFile> files = rootFolders.SelectMany(x => x.Files ?? Enumerable.Empty<MediaFile>());
+        IEnumerable<MediaFile> files = rootFolders.SelectMany(mediaFolderExtend => mediaFolderExtend.Files ?? Enumerable.Empty<MediaFile>());
 
         ConcurrentBag<(MediaFile, AudioTagModel)> bag = [];
 
@@ -348,9 +347,8 @@ public class AudioImportJob : AbstractMusicFolderJob
             AudioTagModel audioTagModel = await AudioTagModel.Create(mediaFile);
             bag.Add((mediaFile, audioTagModel));
         }
-
-        // Yield items from the bag to preserve the streaming signature while keeping parallel CPU work.
-        foreach ((MediaFile, AudioTagModel) item in bag)
-            yield return (item.Item1, item.Item2);
+        
+        foreach ((MediaFile mediaFile, AudioTagModel audioTagModel) in bag)
+            yield return (mediaFile, audioTagModel);
     }
 }

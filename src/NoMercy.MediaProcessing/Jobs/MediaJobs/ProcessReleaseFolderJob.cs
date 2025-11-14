@@ -49,7 +49,7 @@ public class ProcessReleaseFolderJob : AbstractMusicFolderJob
 
         if (rootFolders.Count == 0)
         {
-            Logger.App("Processing folder: " + InputFolder);
+            Logger.App("Processing folder: " + InputFolder, LogEventLevel.Verbose);
             Folder baseFolder = albumLibrary.FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
                 .First(f => InputFolder.Contains(f.Path));
             
