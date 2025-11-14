@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -13,6 +14,7 @@ using NoMercy.Helpers;
 using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Providers.Lrclib.Client;
 using NoMercy.Providers.MusixMatch.Client;
 using NoMercy.Providers.MusixMatch.Models;
 
@@ -22,7 +24,7 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Tags(tags: "Music Tracks")]
 [Authorize]
 [Route("api/v{version:apiVersion}/music/tracks")]
-public class TracksController : BaseController
+public partial class TracksController : BaseController
 {
     public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
     private readonly MusicRepository _musicRepository;
@@ -135,59 +137,9 @@ public class TracksController : BaseController
 
         try
         {
-            MusixmatchClient client = new();
-            MusixMatchTrackSearchParameters parameters = new()
-            {
-                Album = track.AlbumTrack.FirstOrDefault()?.Album.Name ?? "",
-                // Artist = track.ArtistTrack.FirstOrDefault()?.Artist.Name ?? "",
-                Artists = track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
-                Title = track.Name,
-                Duration = track.Duration?.ToSeconds().ToString(),
-                Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc
-            };
-
-            MusixMatchSubtitleGet? lyrics = await client.SongSearch(parameters);
-
-            dynamic? subtitles = lyrics?.Message?.Body?.MacroCalls?
-                .TrackSubtitlesGet?.Message?.Body?.SubtitleList.FirstOrDefault()?.Subtitle?.SubtitleBody;
-
-            if (subtitles is null)
-            {
-                subtitles = lyrics?.Message?.Body?.MacroCalls?.TrackLyricsGet?.Message?.Body?.Lyrics?.LyricsBody;
-                if (subtitles is not null)
-                    subtitles = Regex.Replace(input: subtitles, pattern: "^\"|\"$", replacement: "");
-            }
-
-            if (subtitles is null)
-            {
-                parameters = new()
-                {
-                    // Albums = track.AlbumTrack.FirstOrDefault()?.Albums.Name ?? "",
-                    Artist = track.ArtistTrack.FirstOrDefault()?.Artist.Name ?? "",
-                    // Artists = track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
-                    Title = track.Name,
-                    // Duration = track.Duration?.ToSeconds().ToString(),
-                    Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc
-                };
-
-                lyrics = await client.SongSearch(parameters);
-
-                subtitles = lyrics?.Message?.Body?.MacroCalls?
-                    .TrackSubtitlesGet?.Message?.Body?.SubtitleList.FirstOrDefault()?.Subtitle?.SubtitleBody;
-
-                if (subtitles is null)
-                {
-                    subtitles = lyrics?.Message?.Body?.MacroCalls?.TrackLyricsGet?.Message?.Body?.Lyrics?.LyricsBody;
-                    if (subtitles is not null)
-                        subtitles = Regex.Replace(input: subtitles, pattern: "^\"|\"$", replacement: "");
-                }
-            }
-
-            if (subtitles is null)
-                return NotFoundResponse("Subtitle not found");
-
+            dynamic? subtitles = await SearchLyrics(track);
+            if (subtitles is null) return NotFoundResponse("Subtitle not found");
             subtitles = await _musicRepository.UpdateTrackLyricsAsync(track, JsonConvert.SerializeObject(subtitles));
-
             return Ok(new DataResponseDto<dynamic>
             {
                 Data = subtitles
@@ -197,6 +149,92 @@ public class TracksController : BaseController
         {
             return NotFoundResponse(e.Message);
         }
+    }
+
+    private static async Task<dynamic?> SearchLyrics(Track track)
+    {
+        MusixmatchClient musixmatchClient = new();
+        LrclibClient lrclibClient = new();
+        dynamic? lyric = null;
+        int recursiveCount = 0;
+        string artistNames = string.Join(",", track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name));
+        string duration = track.Duration.ToSeconds().ToString(CultureInfo.InvariantCulture);
+        string albumName = track.AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty;
+        while (true)
+        {
+            MusixMatchSubtitleGet? lyrics = null;
+            switch (recursiveCount)
+            {
+                case 0:
+                case 4:
+                    lyrics = await musixmatchClient.SongSearch(new() { Album = albumName, Artist = artistNames, Title = track.Name, Duration = duration, Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc });
+                    if (recursiveCount == 4)
+                    {
+                        lyric = await lrclibClient.SongSearch(
+                            artists: track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
+                            trackName: track.Name,
+                            albumName: track.AlbumTrack.FirstOrDefault()?.Album.Name,
+                            duration: track.Duration?.ToSeconds()
+                        );
+                        lyric ??= ToFormatLyrics(lyrics);
+                        break;
+                    }
+                    lyric = lyrics?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList
+                        .FirstOrDefault()
+                        ?.Subtitle?.SubtitleBody;
+                    break;
+                case 1:
+                case 5:
+                    lyrics = await musixmatchClient.SongSearch(new() { Artist = artistNames, Title = track.Name, Duration = duration, Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc });
+                    if (recursiveCount == 5)
+                    {
+                        lyric = await lrclibClient.SongSearch(
+                            artists: track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
+                            trackName: track.Name,
+                            duration: track.Duration?.ToSeconds()
+                        );
+                        lyric ??= ToFormatLyrics(lyrics);
+                        break;
+                    }
+                    lyric = lyrics?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList
+                        .FirstOrDefault()
+                        ?.Subtitle?.SubtitleBody;
+                    break;
+                case 2:
+                case 6:
+                    lyrics = await musixmatchClient.SongSearch(new() { Artist = artistNames, Title = track.Name, Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc });
+                    if (recursiveCount == 6)
+                    {
+                        lyric = await lrclibClient.SongSearch(
+                            artists: track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
+                            trackName: track.Name
+                        );
+                        lyric ??= ToFormatLyrics(lyrics);
+                        break;
+                    }
+                    lyric = lyrics?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList
+                        .FirstOrDefault()
+                        ?.Subtitle?.SubtitleBody;
+                    break;
+                case 3:
+                case 7:
+                    lyrics = await musixmatchClient.SongSearch(new() { Title = track.Name, Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc });
+                    if (recursiveCount == 7)
+                    {
+                        lyric = ToFormatLyrics(lyrics);
+                        break;
+                    }
+                    lyric = lyrics?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList
+                        .FirstOrDefault()
+                        ?.Subtitle?.SubtitleBody;
+                    break;
+            }
+            if (lyric is not null || recursiveCount >= 7) break;
+            recursiveCount += 1;
+        }
+        musixmatchClient.Dispose();
+        lrclibClient.Dispose();
+        return lyric;
     }
 
     [HttpPost]
@@ -220,4 +258,28 @@ public class TracksController : BaseController
             Message = "Playback recorded"
         });
     }
+
+    private static dynamic? ToFormatLyrics(MusixMatchSubtitleGet? lyrics)
+    {
+        string text = FormatLyricsRegex().Replace(input: lyrics?.Message?.Body?.MacroCalls?.TrackLyricsGet?.Message?.Body?.Lyrics?.LyricsBody ?? string.Empty, replacement: "");
+        if (string.IsNullOrEmpty(text))
+            return null;
+        
+        return new[]{
+            new MusixMatchFormattedLyric
+            {
+                Text = text,
+                Time = new()
+                {
+                    Total = 0.0,
+                    Minutes = 0,
+                    Seconds = 0,
+                    Hundredths = 0
+                }
+            }
+        };
+    }
+
+    [GeneratedRegex("^\"|\"$")]
+    private static partial Regex FormatLyricsRegex();
 }

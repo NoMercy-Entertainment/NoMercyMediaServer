@@ -274,15 +274,12 @@ public class MusicRepository
 
     public async Task<Lyric[]?> UpdateTrackLyricsAsync(Track track, string lyricsJson)
     {
-        Track? trackEntity = await _mediaContext.Tracks
-            .Where(t => t.Id == track.Id)
-            .FirstOrDefaultAsync();
-
-        if (trackEntity != null)
-        {
-            trackEntity._lyrics = lyricsJson;
-            await _mediaContext.SaveChangesAsync();
-        }
+        await _mediaContext.Upsert(track).On(v => new { v.Id })
+            .WhenMatched(v => new()
+            {
+                _lyrics = lyricsJson
+            })
+            .RunAsync();
 
         return lyricsJson.FromJson<Lyric[]>();
     }

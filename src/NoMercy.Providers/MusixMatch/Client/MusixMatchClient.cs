@@ -11,11 +11,15 @@ public class MusixmatchClient : MusixMatchBaseClient
         Dictionary<string, string?> additionalArguments = new()
         {
             ["q_artist"] = musixMatchTrackParameters.Artist,
-            ["q_artists"] = Join(",", musixMatchTrackParameters.Artists ?? []),
             ["q_track"] = musixMatchTrackParameters.Title,
-            // ["q_album"] = trackParameters.Album,
-            ["q_duration"] = musixMatchTrackParameters.Duration ?? Empty
         };
+        
+        if (musixMatchTrackParameters.Album != null) 
+            additionalArguments.Add("q_album", musixMatchTrackParameters.Album);
+        if (musixMatchTrackParameters.Artists != null && musixMatchTrackParameters.Artists.Length > 0)
+            additionalArguments.Add("q_artists", Join(",", musixMatchTrackParameters.Artists ?? []));
+        if (musixMatchTrackParameters.Duration != null && musixMatchTrackParameters.Duration.Length > 0)
+            additionalArguments.Add("q_duration", musixMatchTrackParameters.Duration ?? Empty);
 
         return Get<MusixMatchSubtitleGet>("macro.subtitles.get", additionalArguments, priority);
     }
