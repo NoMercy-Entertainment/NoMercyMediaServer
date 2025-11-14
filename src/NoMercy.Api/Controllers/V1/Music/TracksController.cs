@@ -11,7 +11,7 @@ using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
-using NoMercyLyricsClient = NoMercy.Providers.NoMercy.Client.NoMercyLyricsClient;
+using NoMercy.Providers.NoMercy.Client;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -132,7 +132,7 @@ public class TracksController : BaseController
 
         try
         {
-            dynamic? subtitles = await NoMercyLyricsClient::SearchLyrics(track);
+            dynamic? subtitles = await NoMercyLyricsClient.SearchLyrics(track);
             if (subtitles is null) return NotFoundResponse("Subtitle not found");
             subtitles = await _musicRepository.UpdateTrackLyricsAsync(track, JsonConvert.SerializeObject(subtitles));
             return Ok(new DataResponseDto<dynamic>
