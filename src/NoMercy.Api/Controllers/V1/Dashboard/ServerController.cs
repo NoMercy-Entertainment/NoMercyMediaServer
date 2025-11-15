@@ -298,16 +298,20 @@ public class ServerController(
                              && context.Folders.Any()
                              && context.EncoderProfiles.Any();
 
-        return Ok(new ServerInfoDto
+        return Ok(new StatusResponseDto<ServerInfoDto>
         {
-            Server = DeviceName(),
-            Cpu = Info.CpuNames,
-            Gpu = Info.GpuNames,
-            Os = $"{Info.Platform.ToTitleCase()} {Info.OsVersion}",
-            Arch = Info.Architecture,
-            Version = Software.GetReleaseVersion(),
-            BootTime = Info.StartTime,
-            SetupComplete = setupComplete
+            Status = "ok",
+            Data = new()
+            {
+                Server = DeviceName(),
+                Cpu = Info.CpuNames,
+                Gpu = Info.GpuNames,
+                Os = $"{Info.Platform.ToTitleCase()} {Info.OsVersion}",
+                Arch = Info.Architecture,
+                Version = Software.GetReleaseVersion(),
+                BootTime = Info.StartTime,
+                SetupComplete = setupComplete
+            }
         });
     }
 

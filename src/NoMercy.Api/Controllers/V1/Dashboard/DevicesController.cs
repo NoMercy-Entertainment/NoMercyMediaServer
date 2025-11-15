@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Query;
 using NoMercy.Api.Controllers.V1.Dashboard.DTO;
+using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models;
@@ -34,7 +35,7 @@ public class DevicesController : BaseController
 
         IIncludableQueryable<Device, ICollection<ActivityLog>> devices = _deviceRepository.GetDevicesAsync();
 
-        IEnumerable<DevicesDto> devicesDtos = devices
+        DevicesDto[] devicesDtos = devices
             .Select(x => new DevicesDto
             {
                 Id = x.Id.ToString(),
@@ -58,9 +59,15 @@ public class DevicesController : BaseController
                         UserId = activityLog.UserId,
                         DeviceId = activityLog.DeviceId.ToString()
                     })
-            });
+            })
+            .ToArray();
 
-        return Task.FromResult<IActionResult>(Ok(devicesDtos.ToArray()));
+
+        return Task.FromResult<IActionResult>(Ok(new StatusResponseDto<DevicesDto[]>
+        {
+            Status = "ok",
+            Data = devicesDtos,
+        }));
     }
 
     [HttpPost]

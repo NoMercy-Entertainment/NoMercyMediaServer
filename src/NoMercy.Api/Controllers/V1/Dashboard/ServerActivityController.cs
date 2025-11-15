@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.V1.Dashboard.DTO;
+using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Database;
 using NoMercy.Helpers;
@@ -39,7 +40,11 @@ public class ServerActivityController : BaseController
             })
             .ToArray();
 
-        return Ok(activityDtos);
+        return Ok(new StatusResponseDto<ServerActivityDto[]>
+        {
+            Status = "ok",
+            Data = activityDtos,
+        });
     }
 
     [HttpPost]
