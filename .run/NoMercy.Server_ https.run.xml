@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="NoMercy.Server: https" type="LaunchSettings" factoryName=".NET Launch Settings Profile">
+  <configuration default="false" name="NoMercy.Server: https" type="LaunchSettings" factoryName=".NET Launch Settings Profile" activateToolWindowBeforeRun="false">
     <option name="LAUNCH_PROFILE_PROJECT_FILE_PATH" value="$PROJECT_DIR$/src/NoMercy.Server/NoMercy.Server.csproj" />
     <option name="LAUNCH_PROFILE_TFM" value="net9.0" />
     <option name="LAUNCH_PROFILE_NAME" value="https" />
@@ -10,6 +10,7 @@
     <option name="SHOW_IIS_EXPRESS_OUTPUT" value="0" />
     <option name="SEND_DEBUG_REQUEST" value="1" />
     <option name="ADDITIONAL_IIS_EXPRESS_ARGUMENTS" value="" />
+    <option name="AUTO_ATTACH_CHILDREN" value="0" />
     <option name="RUNTIME_TYPE" value="coreclr" />
     <method v="2">
       <option name="Build" />

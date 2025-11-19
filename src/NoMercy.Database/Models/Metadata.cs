@@ -195,8 +195,8 @@ public class IPreview
 
 public class IHash
 {
-    [JsonProperty("file_name")] public string? FileName { get; set; }
-    [JsonProperty("file_hash")] public string? FileHash { get; set; }
+    [JsonProperty("file_name")] public string FileName { get; set; } = null!;
+    [JsonProperty("file_hash")] public string? FileHash { get; set; } = null!;
     [JsonProperty("file_size")] public long? FileSize { get; set; }
 }
 

@@ -411,4 +411,20 @@
     <Key>Container</Key>
     <Value lang="nl">Container</Value>
   </Entry>
+  <Entry>
+    <Key>Track not found</Key>
+    <Value lang="nl">Track not found</Value>
+  </Entry>
+  <Entry>
+    <Key>Response status code does not indicate success: 404 (Not Found).</Key>
+    <Value lang="nl">Response status code does not indicate success: 404 (Not Found).</Value>
+  </Entry>
+  <Entry>
+    <Key>Job removed</Key>
+    <Value lang="nl">Job removed</Value>
+  </Entry>
+  <Entry>
+    <Key>Person not found</Key>
+    <Value lang="nl">Person not found</Value>
+  </Entry>
 </I18N>
