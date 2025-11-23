@@ -128,7 +128,12 @@ public class TvShowsController(
             .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id, country))
             .ToArray();
 
-        return Ok(episodes.Concat(extras).ToArray());
+        VideoPlaylistResponseDto[] result = episodes
+            .Concat(extras)
+            .Where(episode => episode.Id != 0)
+            .ToArray();
+
+        return Ok(result);
     }
 
     [HttpPost]

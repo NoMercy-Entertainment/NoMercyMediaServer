@@ -23,9 +23,7 @@ public class NmCardDto
     [JsonProperty("poster")] public string? Poster { get; set; }
     [JsonProperty("logo")] public string? Logo { get; set; }
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-
-    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
-
+    
     [JsonProperty("have_items")] public int? HaveItems { get; set; }
     [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
 
@@ -59,14 +57,16 @@ public class NmCardDto
 
         ColorPalette = movie.ColorPalette;
 
-        ContentRatings = movie.CertificationMovies
+        Rating = movie.CertificationMovies
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                          || certificationMovie.Certification.Iso31661 == country)
-            .Select(certificationMovie => new ContentRating
+            .Select(certificationTv => new RatingClass()
             {
-                Rating = certificationMovie.Certification.Rating,
-                Iso31661 = certificationMovie.Certification.Iso31661
-            });
+                Rating = certificationTv.Certification.Rating,
+                Iso31661 = certificationTv.Certification.Iso31661,
+                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+            })
+            .FirstOrDefault();
     }
 
     public NmCardDto(Tv tv, string country)
@@ -95,14 +95,16 @@ public class NmCardDto
 
         ColorPalette = tv.ColorPalette;
 
-        ContentRatings = tv.CertificationTvs
+        Rating = tv.CertificationTvs
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                          || certificationMovie.Certification.Iso31661 == country)
-            .Select(certificationTv => new ContentRating
+            .Select(certificationTv => new RatingClass()
             {
                 Rating = certificationTv.Certification.Rating,
-                Iso31661 = certificationTv.Certification.Iso31661
-            });
+                Iso31661 = certificationTv.Certification.Iso31661,
+                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+            })
+            .FirstOrDefault();
     }
 
     public NmCardDto(Collection collection, string country)
@@ -132,15 +134,17 @@ public class NmCardDto
 
         ColorPalette = collection.ColorPalette;
 
-        ContentRatings = collection.CollectionMovies
+        Rating = collection.CollectionMovies
             .SelectMany(collectionMovie => collectionMovie.Movie.CertificationMovies)
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                          || certificationMovie.Certification.Iso31661 == country)
-            .Select(certificationMovie => new ContentRating
+            .Select(certificationTv => new RatingClass()
             {
-                Rating = certificationMovie.Certification.Rating,
-                Iso31661 = certificationMovie.Certification.Iso31661
-            });
+                Rating = certificationTv.Certification.Rating,
+                Iso31661 = certificationTv.Certification.Iso31661,
+                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+            })
+            .FirstOrDefault();
     }
 
     public NmCardDto(Special special, string country)
@@ -172,15 +176,17 @@ public class NmCardDto
 
         ColorPalette = special.ColorPalette;
 
-        ContentRatings = special.Items
+        Rating = special.Items
             .SelectMany(item => item.Movie?.CertificationMovies ?? Enumerable.Empty<CertificationMovie>())
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                          || certificationMovie.Certification.Iso31661 == country)
-            .Select(certificationMovie => new ContentRating
+            .Select(certificationTv => new RatingClass()
             {
-                Rating = certificationMovie.Certification.Rating,
-                Iso31661 = certificationMovie.Certification.Iso31661
-            });
+                Rating = certificationTv.Certification.Rating,
+                Iso31661 = certificationTv.Certification.Iso31661,
+                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+            })
+            .FirstOrDefault();
     }
 
     public NmCardDto(UserData item, string country)
@@ -212,25 +218,29 @@ public class NmCardDto
                 .Count(specialItem => specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count != 0);
             HaveItems = availableMovies + availableEpisodes;
 
-            ContentRatings = item.Special.Items
+            Rating = item.Special.Items
                 .SelectMany(specialItem => specialItem.Episode?.Tv.CertificationTvs
                     .Where(certificationTv => certificationTv.Certification.Iso31661 == "US"
                                               || certificationTv.Certification.Iso31661 == country)
-                    .Select(certificationTv => new ContentRating
+                    .Select(certificationTv => new RatingClass()
                     {
                         Rating = certificationTv.Certification.Rating,
-                        Iso31661 = certificationTv.Certification.Iso31661
+                        Iso31661 = certificationTv.Certification.Iso31661,
+                        Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
                     }) ?? [])
                 .Concat(item.Special.Items
                     .Where(specialItem => specialItem.MovieId != null)
                     .SelectMany(specialItem => specialItem.Movie?.CertificationMovies
                         .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                                      || certificationMovie.Certification.Iso31661 == country)
-                        .Select(certificationMovie => new ContentRating
+                        .Select(certificationTv => new RatingClass()
                         {
-                            Rating = certificationMovie.Certification.Rating,
-                            Iso31661 = certificationMovie.Certification.Iso31661
-                        }) ?? []));
+                            Rating = certificationTv.Certification.Rating,
+                            Iso31661 = certificationTv.Certification.Iso31661,
+                            Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                        })?? []))
+                .OrderByDescending(cert => cert.Order)
+                .FirstOrDefault();
         }
         else if (item.Collection is not null)
         {
@@ -253,15 +263,17 @@ public class NmCardDto
                 .SelectMany(collectionMovie => collectionMovie.Movie.VideoFiles)
                 .Count(videoFile => videoFile.Folder != null);
 
-            ContentRatings = item.Collection.CollectionMovies
+            Rating = item.Collection.CollectionMovies
                 .SelectMany(collectionMovie => collectionMovie.Movie.CertificationMovies)
                 .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                              || certificationMovie.Certification.Iso31661 == country)
-                .Select(certificationMovie => new ContentRating
+                .Select(certificationTv => new RatingClass()
                 {
-                    Rating = certificationMovie.Certification.Rating,
-                    Iso31661 = certificationMovie.Certification.Iso31661
-                });
+                    Rating = certificationTv.Certification.Rating,
+                    Iso31661 = certificationTv.Certification.Iso31661,
+                    Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                })
+                .FirstOrDefault();
         }
         else if (item.Movie is not null)
         {
@@ -279,14 +291,16 @@ public class NmCardDto
             NumberOfItems = 1;
             HaveItems = item.Movie.VideoFiles.Count(v => v.Folder != null);
 
-            ContentRatings = item.Movie.CertificationMovies
+            Rating = item.Movie.CertificationMovies
                 .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                              || certificationMovie.Certification.Iso31661 == country)
-                .Select(certificationMovie => new ContentRating
+                .Select(certificationTv => new RatingClass()
                 {
-                    Rating = certificationMovie.Certification.Rating,
-                    Iso31661 = certificationMovie.Certification.Iso31661
-                });
+                    Rating = certificationTv.Certification.Rating,
+                    Iso31661 = certificationTv.Certification.Iso31661,
+                    Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                })
+                .FirstOrDefault();
         }
         else if (item.Tv is not null)
         {
@@ -306,14 +320,16 @@ public class NmCardDto
             HaveItems = item.Tv.Episodes
                 .Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
 
-            ContentRatings = item.Tv.CertificationTvs
+            Rating = item.Tv.CertificationTvs
                 .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                              || certificationMovie.Certification.Iso31661 == country)
-                .Select(certificationTv => new ContentRating
+                .Select(certificationTv => new RatingClass()
                 {
                     Rating = certificationTv.Certification.Rating,
-                    Iso31661 = certificationTv.Certification.Iso31661
-                });
+                    Iso31661 = certificationTv.Certification.Iso31661,
+                    Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                })
+                .FirstOrDefault();
         }
     }
 

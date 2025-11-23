@@ -31,7 +31,7 @@ public class VideoPlaylistResponseDto
     [JsonProperty("fonts")] public List<IFont> Fonts { get; set; } = [];
     [JsonProperty("chapters")] public List<IChapter> Chapters { get; set; } = [];
     [JsonProperty("tracks")] public List<IVideoTrack> Tracks { get; set; } = [];
-    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
+    [JsonProperty("rating")] public RatingClass ContentRating { get; set; }
     
     [JsonProperty("audio")] public List<IAudio> Audio { get; set; } = [];
     [JsonProperty("captions")] public List<ISubtitle> Captions { get; set; } = [];
@@ -141,14 +141,16 @@ public class VideoPlaylistResponseDto
         Captions = videoFile.Metadata?.Subtitles ?? [];
         Qualities = videoFile.Metadata?.Video ?? [];
         
-        ContentRatings = episode.Tv.CertificationTvs
+        ContentRating = episode.Tv.CertificationTvs
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                          || certificationMovie.Certification.Iso31661 == country)
-            .Select(certificationTv => new ContentRating
+            .Select(certificationTv => new RatingClass()
             {
                 Rating = certificationTv.Certification.Rating,
-                Iso31661 = certificationTv.Certification.Iso31661
-            });
+                Iso31661 = certificationTv.Certification.Iso31661,
+                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+            })
+            .First();
     }
 
     public VideoPlaylistResponseDto(Movie movie, string playlistType, dynamic playlistId, string country, int? index = null, Collection? collection = null)
@@ -237,14 +239,16 @@ public class VideoPlaylistResponseDto
         Episode = index;
         EpisodeId = movie.Id;
         
-        ContentRatings = movie.CertificationMovies
+        ContentRating = movie.CertificationMovies
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                          || certificationMovie.Certification.Iso31661 == country)
-            .Select(certificationMovie => new ContentRating
+            .Select(certificationTv => new RatingClass()
             {
-                Rating = certificationMovie.Certification.Rating,
-                Iso31661 = certificationMovie.Certification.Iso31661
-            });
+                Rating = certificationTv.Certification.Rating,
+                Iso31661 = certificationTv.Certification.Iso31661,
+                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+            })
+            .First();
     }
 
     private record Subs
