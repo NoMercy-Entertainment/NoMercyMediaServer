@@ -15,6 +15,7 @@ using NoMercy.Helpers;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -122,6 +123,28 @@ public class ServerController(
             return UnauthorizedResponse("You do not have permission to stop the server");
 
         ApplicationLifetime.StopApplication();
+        return Content("Done");
+    }
+    
+    public class InvalidateRequest
+    {
+        [JsonProperty("queryKey")]
+        public dynamic[] QueryKey { get; set; } = [];
+    }
+    
+
+    [HttpPost]
+    [Route("invalidate")]
+    public IActionResult Invalidate([FromBody] InvalidateRequest request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to invalidate the library cache");
+
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = request.QueryKey
+        });
+        
         return Content("Done");
     }
 

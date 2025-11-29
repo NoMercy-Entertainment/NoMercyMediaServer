@@ -116,17 +116,58 @@ public class EncodeVideoJob : AbstractEncoderJob
                 };
 
                 await ffmpeg.Run(fullCommand, fileMetadata.Path, progressMeta);
+
+                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+                {
+                    Id = fileMetadata.Id,
+                    Status = "running",
+                    Title = fileMetadata.Title,
+                    Message = "Building sprite images"
+                });
                 
                 await sprite.BuildSprite(progressMeta);
                 
+
+                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+                {
+                    Id = fileMetadata.Id,
+                    Status = "running",
+                    Title = fileMetadata.Title,
+                    Message = "Building Master Playlist"
+                });
+                
                 await container.BuildMasterPlaylist();
                 
+                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+                {
+                    Id = fileMetadata.Id,
+                    Status = "running",
+                    Title = fileMetadata.Title,
+                    Message = "Extracting chapters"
+                });
+                
                 await container.ExtractChapters();
+                
+                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+                {
+                    Id = fileMetadata.Id,
+                    Status = "running",
+                    Title = fileMetadata.Title,
+                    Message = "Extracting fonts"
+                });
 
                 await container.ExtractFonts();
 
                 if (ffmpeg.ConvertSubtitle)
                 {
+                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+                    {
+                        Id = fileMetadata.Id,
+                        Status = "running",
+                        Title = fileMetadata.Title,
+                        Message = "Converting subtitles"
+                    });
+                    
                     List<BaseSubtitle> streams = ffmpeg.Container.SubtitleStreams
                         .Where(x => x.ConvertSubtitle)
                         .ToList();

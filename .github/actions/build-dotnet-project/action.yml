@@ -41,6 +41,7 @@ runs:
         repository: NoMercy-Entertainment/NoMercyApp
         path: ./src/NoMercy.App/Resources/wwwroot
         fetch-depth: 1
+        fetch-tags: false
         ref: gh-pages
 
     - name: Move App Files

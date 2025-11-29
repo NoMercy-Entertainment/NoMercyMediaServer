@@ -11,11 +11,14 @@ public class LrclibBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new("https://lrclib.net/api/get");
 
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client;
 
     public LrclibBaseClient()
     {
-        _client.BaseAddress = _baseUrl;
+        _client = new()
+        {
+            BaseAddress = _baseUrl
+        };
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
@@ -39,7 +42,7 @@ public class LrclibBaseClient : IDisposable
 
         if (CacheController.Read(newUrl, out T? result)) return result;
 
-        Logger.MusicBrainz(newUrl, LogEventLevel.Verbose);
+        Logger.MusicBrainz(_baseUrl + newUrl, LogEventLevel.Verbose);
 
         T? data;
 

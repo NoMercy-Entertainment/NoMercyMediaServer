@@ -39,7 +39,14 @@ public static class Auth
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
         {
-            await TokenByBrowserOrPassword();
+            try
+            {
+                await TokenByRefreshGrand();
+            }
+            catch (Exception e)
+            {
+                //
+            }
             return;
         }
 
@@ -51,7 +58,14 @@ public static class Auth
         bool expired = NotBefore == null && expiresInDays >= 0;
 
         if (!expired)
-            await TokenByRefreshGrand();
+            try
+            {
+                await TokenByRefreshGrand();
+            }
+            catch (Exception e)
+            {
+                await TokenByBrowserOrPassword();
+            }
         else
             await TokenByBrowserOrPassword();
 
@@ -149,7 +163,9 @@ public static class Auth
                 if (response.IsSuccessStatusCode)
                 {
                     string content = response.Content.ReadAsStringAsync().Result;
-                    SetTokens(content);
+                    AuthResponse data = content.FromJson<AuthResponse>()
+                                        ?? throw new("Failed to deserialize JSON");
+                    SetTokens(data);
                     authenticated = true;
                     Console.Clear();
                 }
@@ -246,11 +262,8 @@ public static class Auth
         }).Wait();
     }
 
-    private static void SetTokens(string response)
+    private static void SetTokens(AuthResponse data)
     {
-        AuthResponse data = response.FromJson<AuthResponse>()
-                            ?? throw new("Failed to deserialize JSON");
-
         FileStream tmp = File.OpenWrite(AppFiles.TokenFile);
         tmp.SetLength(0);
         tmp.Write(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(data, Formatting.Indented)));
@@ -362,8 +375,11 @@ public static class Auth
         authClient.SetDefaultHeaders(Config.UserAgent);
         string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token",
             new FormUrlEncodedContent(body));
+        
+        AuthResponse data = response.FromJson<AuthResponse>()
+                            ?? throw new("Failed to deserialize JSON");
 
-        SetTokens(response);
+        SetTokens(data);
     }
 
     private static async Task TokenByRefreshGrand()
@@ -387,7 +403,11 @@ public static class Auth
         authClient.SetDefaultHeaders(Config.UserAgent);
         string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token",
             new FormUrlEncodedContent(body));
-        SetTokens(response);
+        
+        AuthResponse data = response.FromJson<AuthResponse>()
+                            ?? throw new("Failed to deserialize JSON");
+        
+        SetTokens(data);
     }
 
     public static async Task TokenByAuthorizationCode(string code)
@@ -410,8 +430,11 @@ public static class Auth
         authClient.SetDefaultHeaders(Config.UserAgent);
         string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token",
             new FormUrlEncodedContent(body));
+        
+        AuthResponse data = response.FromJson<AuthResponse>()
+                            ?? throw new("Failed to deserialize JSON");
 
-        SetTokens(response);
+        SetTokens(data);
     }
 
     private static void OpenBrowser(string url)

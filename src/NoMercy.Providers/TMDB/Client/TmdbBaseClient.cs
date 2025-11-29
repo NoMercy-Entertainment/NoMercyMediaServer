@@ -17,11 +17,14 @@ public class TmdbBaseClient : IDisposable
 
     public int Id { get; private set; }
 
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client;
 
     protected TmdbBaseClient()
     {
-        _client.BaseAddress = _baseUrl;
+        _client = new()
+        {
+            BaseAddress = _baseUrl
+        };
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
@@ -32,8 +35,11 @@ public class TmdbBaseClient : IDisposable
 
     protected TmdbBaseClient(int id, string language = "en-US")
     {
-        _baseUrl = new("https://api.themoviedb.org/3/");
-        _client.BaseAddress = _baseUrl;
+
+        _client = new()
+        {
+            BaseAddress = _baseUrl
+        };
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
@@ -73,7 +79,7 @@ public class TmdbBaseClient : IDisposable
 
         if (!skipCache && CacheController.Read(newUrl, out T? result)) return result;
 
-        Logger.MovieDb(newUrl, LogEventLevel.Verbose);
+        Logger.MovieDb(_baseUrl + newUrl, LogEventLevel.Verbose);
 
         try
         {

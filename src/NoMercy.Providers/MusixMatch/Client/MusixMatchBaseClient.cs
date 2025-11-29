@@ -12,11 +12,14 @@ public class MusixMatchBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new("https://apic-desktop.musixmatch.com/ws/1.1/");
 
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client;
 
     protected MusixMatchBaseClient()
     {
-        _client.BaseAddress = _baseUrl;
+        _client = new()
+        {
+            BaseAddress = _baseUrl
+        };
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -63,7 +66,7 @@ public class MusixMatchBaseClient : IDisposable
 
         if (CacheController.Read(newUrl, out T? result)) return result;
 
-        Logger.MusixMatch(newUrl, LogEventLevel.Verbose);
+        Logger.MusixMatch(_baseUrl + newUrl, LogEventLevel.Verbose);
 
         string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 

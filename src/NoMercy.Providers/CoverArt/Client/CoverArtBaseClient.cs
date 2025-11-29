@@ -11,11 +11,14 @@ public class CoverArtBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new("https://coverartarchive.org/");
 
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client;
 
     protected CoverArtBaseClient()
     {
-        _client.BaseAddress = _baseUrl;
+        _client = new()
+        {
+            BaseAddress = _baseUrl
+        };
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -51,7 +54,7 @@ public class CoverArtBaseClient : IDisposable
 
         if (CacheController.Read(newUrl, out T? result)) return result;
 
-        Logger.CoverArt(newUrl, LogEventLevel.Verbose);
+        Logger.CoverArt(_baseUrl + newUrl, LogEventLevel.Verbose);
 
         string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
