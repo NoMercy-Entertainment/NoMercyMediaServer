@@ -8,12 +8,15 @@ on:
   
 jobs:
   build:
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
-      - uses: "actions/checkout@v5"
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
 
       - name: "TODO to Issue"
-        uses: "alstr/todo-to-issue-action@v5"
+        uses: alstr/todo-to-issue-action@v5
         with:
           INSERT_ISSUE_URLS: "true"
           CLOSE_ISSUES: "true"
