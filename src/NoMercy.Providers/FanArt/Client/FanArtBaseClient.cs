@@ -10,17 +10,21 @@ namespace NoMercy.Providers.FanArt.Client;
 
 public class FanArtBaseClient : IDisposable
 {
-    private readonly Uri _baseUrl = new("http://webservice.fanart.tv/v3/");
+    private readonly Uri _baseUrl = new("http://webservice.fanart.tv/v3.2/");
 
     protected Guid Id { get; private set; }
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client;
 
     protected FanArtBaseClient()
     {
-        _client.BaseAddress = _baseUrl;
+        _client = new()
+        {
+            BaseAddress = _baseUrl
+        };
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtKey);
     }
 
     protected FanArtBaseClient(Guid id)
@@ -32,6 +36,7 @@ public class FanArtBaseClient : IDisposable
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtKey);
         Id = id;
     }
 
@@ -46,14 +51,12 @@ public class FanArtBaseClient : IDisposable
         where T : class
     {
         query ??= new();
-
-        query.Add("api_key", ApiInfo.FanArtKey);
-
+        
         string newUrl = QueryHelpers.AddQueryString(url, query!);
 
         if (CacheController.Read(newUrl, out T? result)) return result;
 
-        Logger.CoverArt(newUrl, LogEventLevel.Verbose);
+        Logger.CoverArt(_baseUrl + newUrl, LogEventLevel.Verbose);
 
         string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 

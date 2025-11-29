@@ -11,11 +11,14 @@ public class MusicBrainzBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new("https://musicbrainz.org/ws/2/");
 
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client;
 
     protected MusicBrainzBaseClient()
     {
-        _client.BaseAddress = _baseUrl;
+        _client = new()
+        {
+            BaseAddress = _baseUrl
+        };
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
@@ -37,7 +40,7 @@ public class MusicBrainzBaseClient : IDisposable
 
     private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 1, Interval = 1000, Start = true });
+        return _queue ??= new(new() { Concurrent = 40, Interval = 1000, Start = true });
     }
 
     protected Guid Id { get; private set; }
@@ -51,7 +54,7 @@ public class MusicBrainzBaseClient : IDisposable
 
         if (CacheController.Read(newUrl, out T? result)) return result;
 
-        Logger.MusicBrainz(newUrl, LogEventLevel.Verbose);
+        Logger.MusicBrainz(_baseUrl + newUrl, LogEventLevel.Verbose);
 
         T? data;
 

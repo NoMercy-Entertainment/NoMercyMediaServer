@@ -14,7 +14,7 @@ public class TvdbBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new("https://api4.thetvdb.com/v4/");
 
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client;
 
     private static TvdbLoginResponse? Token { get; set; }
 
@@ -22,7 +22,11 @@ public class TvdbBaseClient : IDisposable
     {
         Login().Wait();
 
-        _client.BaseAddress = _baseUrl;
+
+        _client = new()
+        {
+            BaseAddress = _baseUrl
+        };
         _client.DefaultRequestHeaders.Accept.Clear();
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {Token?.Data.Token}");
@@ -117,7 +121,7 @@ public class TvdbBaseClient : IDisposable
 
         if (!skipCache && CacheController.Read(newUrl, out T? result)) return result;
 
-        Logger.Tvdb(newUrl, LogEventLevel.Verbose);
+        Logger.Tvdb(_baseUrl + newUrl, LogEventLevel.Verbose);
 
         string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
