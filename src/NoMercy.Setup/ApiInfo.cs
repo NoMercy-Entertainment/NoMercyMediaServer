@@ -12,7 +12,7 @@ public class ApiInfo
     public static string MakeMkvKey { get; set; } = string.Empty;
     public static string TmdbKey { get; set; } = string.Empty;
     public static string OmdbKey { get; set; } = string.Empty;
-    public static string FanArtKey { get; set; } = string.Empty;
+    public static string FanArtApiKey { get; set; } = string.Empty;
     public static string RottenTomatoes { get; set; } = string.Empty;
     public static string AcousticIdKey { get; set; } = string.Empty;
     public static string TadbKey { get; set; } = string.Empty;
@@ -20,6 +20,9 @@ public class ApiInfo
     public static string TvdbKey { get; set; } = string.Empty;
     public static string MusixmatchKey { get; set; } = string.Empty;
     public static string JwplayerKey { get; set; } = string.Empty;
+    
+    // :TODO Make the fanart client key configurable in the dashboard
+    public static string FanArtClientKey { get; set; } = string.Empty;
 
     public static string[] Colors { get; private set; } =
     [
@@ -52,7 +55,7 @@ public class ApiInfo
             MakeMkvKey = data.Data.Keys.MakeMkvKey;
             TmdbKey = data.Data.Keys.TmdbKey;
             OmdbKey = data.Data.Keys.OmdbKey;
-            FanArtKey = data.Data.Keys.FanArtKey;
+            FanArtApiKey = data.Data.Keys.FanArtKey;
             RottenTomatoes = data.Data.Keys.RottenTomatoes;
             AcousticIdKey = data.Data.Keys.AcousticIdKey;
             TadbKey = data.Data.Keys.TadbKey;

@@ -62,11 +62,15 @@ public class LibrariesController(
                 libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
             List<Tv> shows =
                 libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
+            
+            Uri moreLink = library.LibraryMovies.Count + library.LibraryTvs.Count > 300
+                ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
+                : new($"/libraries/{library.Id}", UriKind.Relative);
 
             list.Add(new()
             {
                 Title = library.Title,
-                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+                MoreLink = moreLink,
                 Items = movies.Select(movie => new NmCardDto(movie, country))
                     .Concat(shows.Select(tv => new NmCardDto(tv, country)))
                     .ToList()
