@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           fetch-tags: true
 
       - name: Setup .NET Environment  
@@ -32,7 +32,7 @@ jobs:
         id: get-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
         with:
-          fallback: v0.1.152
+          fallback: v0.1.188
 
       - name: Check for source changes
         id: check-changes
