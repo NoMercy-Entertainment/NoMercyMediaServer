@@ -52,7 +52,6 @@ public class ArtistsController : BaseController
 
         foreach (ArtistsResponseItemDto artist in artists)
             artist.Tracks = tracks.Count(track => track.ArtistId == artist.Id);
-
         
         return Ok(new Render
         {
@@ -61,6 +60,10 @@ public class ArtistsController : BaseController
                 new ComponentBuilder<ArtistsResponseItemDto>()
                     .WithComponent("NMGrid")
                     .WithProps((props, _) => props
+                        .WithProperties(new()
+                        {
+                            { "paddingTop", 16 },
+                        })
                         .WithItems(
                             artists
                                 .Where(response => response.Tracks > 0)

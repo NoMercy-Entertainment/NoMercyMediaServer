@@ -43,6 +43,7 @@ public class GenresController : BaseController
                 new ComponentBuilder<NmGenreCardDto>()
                     .WithComponent("NMGrid")
                     .WithProps((props, _) => props
+                        .WithProperties(new(){})
                         .WithItems(
                             genres
                                 .Select(item =>

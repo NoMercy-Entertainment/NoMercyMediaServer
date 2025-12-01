@@ -48,6 +48,7 @@ public class ComponentPropsBuilder<T>
     public ComponentPropsBuilder<T> WithWatch(bool watch = true)
     {
         _props.Watch = watch;
+        
         return this;
     }
 
@@ -66,5 +67,12 @@ public class ComponentPropsBuilder<T>
     public void WithItems<T1>(IEnumerable<T1> selectMany)
     {
         _props.Items = selectMany.Cast<ComponentDto<T>>();
+    }
+
+    public ComponentPropsBuilder<T> WithProperties(Dictionary<string, dynamic> o)
+    {
+        _props.Properties = o;
+        
+        return this;
     }
 }

@@ -196,7 +196,7 @@ public class MusicController : BaseController
                         .WithPreviousId("playlists")
                         .WithNextId("albums")
                         .WithTitle("Artists".Localize())
-                        .WithMoreLink(new("/music/artists/A", UriKind.Relative))
+                        .WithMoreLink(new("/music/artists/_", UriKind.Relative))
                         .WithItems(latestArtists
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {
@@ -214,7 +214,7 @@ public class MusicController : BaseController
                     .WithProps((props, _) => props
                         .WithId("albums")
                         .WithTitle("Albums".Localize())
-                        .WithMoreLink(new("/music/albums/A", UriKind.Relative))
+                        .WithMoreLink(new("/music/albums/_", UriKind.Relative))
                         .WithItems(latestAlbums
                             .Select(item => new ComponentDto<CarouselResponseItemDto>
                             {

@@ -31,10 +31,12 @@ public record AlbumsResponseItemDto
             ? description
             : album.Description;
 
-        Backdrop = img?.FilePath is not null
+        Backdrop = !string.IsNullOrEmpty(img?.FilePath) 
             ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
-        Cover = album.Cover is not null ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() : null;
+        Cover = !string.IsNullOrEmpty(album.Cover) 
+            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() 
+            : null;
         ColorPalette = album.ColorPalette;
         if (ColorPalette is not null) ColorPalette.Backdrop = img?.ColorPalette?.Image;
         Disambiguation = album.Disambiguation;

@@ -63,6 +63,10 @@ public class AlbumsController : BaseController
                 new ComponentBuilder<AlbumsResponseItemDto>()
                     .WithComponent("NMGrid")
                     .WithProps((props, _) => props
+                        .WithProperties(new()
+                        {
+                            { "paddingTop", 16 },
+                        })
                         .WithItems(
                             albums
                                 .Where(response => response.Tracks > 0)

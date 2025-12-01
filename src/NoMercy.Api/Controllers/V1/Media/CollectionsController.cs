@@ -44,6 +44,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
                     new ComponentBuilder<NmCardDto>()
                         .WithComponent("NMGrid")
                         .WithProps((props, _) => props
+                            .WithProperties(new(){})
                             .WithItems(
                                 concat.Select(item =>
                                     new ComponentBuilder<NmCardDto>()

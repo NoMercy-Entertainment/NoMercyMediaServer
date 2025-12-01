@@ -311,6 +311,7 @@ public class TvShowsController(
                     new ComponentBuilder<EpisodeDto>()
                         .WithComponent("NMGrid")
                         .WithProps((props, id) => props
+                            .WithProperties(new(){})
                             .WithItems<object>([
                                 new ComponentBuilder<EpisodeDto>()
                                     .WithComponent("NMSeasonCard")
@@ -350,6 +351,10 @@ public class TvShowsController(
                                 new ComponentBuilder<object>()
                                     .WithComponent("NMGrid")
                                     .WithProps((gridProps, _) => gridProps
+                                        .WithProperties(new()
+                                        {
+                                            { "paddingTop", 16 },
+                                        })
                                         .WithItems(
                                             seasonGroup.Select(episode =>
                                                 new ComponentBuilder<object>()
