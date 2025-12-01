@@ -51,6 +51,7 @@ public class GenresController : BaseController
                 new ComponentBuilder<NmGenreCardDto>()
                     .WithComponent("NMGrid")
                     .WithProps((props, _) => props
+                        .WithProperties(new(){})
                         .WithItems(
                             genres
                                 .Select(item =>
@@ -96,6 +97,10 @@ public class GenresController : BaseController
                     new ComponentBuilder<NmCardDto>()
                         .WithComponent("NMGrid")
                         .WithProps((props, _) => props
+                            .WithProperties(new()
+                            {
+                                { "paddingTop", 16 },
+                            })
                             .WithItems(
                                 concat.Select(item =>
                                     new ComponentBuilder<NmCardDto>()

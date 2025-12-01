@@ -39,6 +39,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
                     new ComponentBuilder<SpecialsResponseItemDto>()
                         .WithComponent("NMGrid")
                         .WithProps((props, _) => props
+                            .WithProperties(new(){})
                             .WithItems(
                                 specials
                                     .Select(special => new SpecialsResponseItemDto(special))

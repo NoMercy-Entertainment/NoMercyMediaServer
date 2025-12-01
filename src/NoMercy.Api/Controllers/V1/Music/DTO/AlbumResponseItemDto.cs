@@ -28,7 +28,9 @@ public record AlbumResponseItemDto
     public AlbumResponseItemDto(Album album, string? country = "US")
     {
         ColorPalette = album.ColorPalette;
-        Cover = album.Cover is not null ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() : null;
+        Cover = !string.IsNullOrEmpty(album.Cover) ?
+            new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() 
+            : null;
         Disambiguation = album.Disambiguation;
         Description = album.Description;
         Favorite = album.AlbumUser.Count != 0;

@@ -283,6 +283,7 @@ public class LibrariesController(
                     new ComponentBuilder<LibraryResponseItemDto>()
                         .WithComponent("NMGrid")
                         .WithProps((props, _) => props
+                            .WithProperties(new(){})
                             .WithItems(
                                 concat.Select(item =>
                                     new ComponentBuilder<LibraryResponseItemDto>()
@@ -353,6 +354,10 @@ public class LibrariesController(
                 new ComponentBuilder<LibraryResponseItemDto>()
                     .WithComponent("NMGrid")
                     .WithProps((props, _) => props
+                        .WithProperties(new()
+                        {
+                            { "paddingTop", 16 },
+                        })
                         .WithItems(
                             concat.Select(item =>
                                 new ComponentBuilder<LibraryResponseItemDto>()
