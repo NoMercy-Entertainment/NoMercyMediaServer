@@ -44,7 +44,10 @@ public static class MimeTypes
             ".ogg" => "audio/ogg",
             ".midi" or ".mid" => "audio/midi",
             ".flac" => "audio/flac",
-
+            
+            ".m3u8" => "application/vnd.apple.mpegurl",
+            ".m3u" => "application/vnd.apple.mpegurl",
+            
             ".mp4" => "video/mp4",
             ".avi" => "video/x-msvideo",
             ".mov" => "video/quicktime",

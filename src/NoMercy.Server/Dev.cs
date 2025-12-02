@@ -1,11 +1,10 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Encoder.Core;
 
 namespace NoMercy.Server;
 
@@ -16,29 +15,56 @@ public static class Dev
         await using MediaContext context = new();
 
         List<Tv> shows = await context.Tvs
-            .Where(tv => tv.Library.Type == "tv")
+            // .Where(tv => tv.Library.Type == "tv")
             .Include(tv => tv.Episodes)
             .ThenInclude(episode => episode.VideoFiles)
             .ThenInclude(videoFile => videoFile.Metadata)
+            // .Where(tv => tv.Id == 67195)
             .ToListAsync();
-            // .FirstAsync(tv => tv.Id == 60808);
             
         shows.Reverse();
             
         foreach (Tv show in shows)
         foreach (Episode episode in show.Episodes)
         {
-            foreach (VideoFile videoFile in episode.VideoFiles)
+            foreach (NoMercy.Database.Models.VideoFile videoFile in episode.VideoFiles)
+            {
+                if (videoFile.Metadata == null) continue;
+        
+                string hostFolder = videoFile.Metadata.HostFolder;
+                if (string.IsNullOrEmpty(hostFolder)) continue;
+        
+                Logger.App($"Processing Episode: {episode.Title} (S{episode.SeasonNumber}E{episode.EpisodeNumber})");
+                Logger.App($"Host Folder: {hostFolder}");
+                
+                // DiagnoseMasterFolder(hostFolder);
+
+                // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
+            }
+        }
+        
+        List<Movie> movies = await context.Movies
+            .Where(tv => tv.Library.Type == "movie")
+            .Include(episode => episode.VideoFiles)
+            .ThenInclude(videoFile => videoFile.Metadata)
+            // .Where(tv => tv.Id == 60808)
+            .ToListAsync();
+        
+        foreach (Movie movie in movies)
+        {
+            foreach (NoMercy.Database.Models.VideoFile videoFile in movie.VideoFiles)
             {
                 if (videoFile.Metadata == null) continue;
 
                 string hostFolder = videoFile.Metadata.HostFolder;
                 if (string.IsNullOrEmpty(hostFolder)) continue;
 
-                // Logger.App($"Processing Episode: {episode.Title} (S{episode.SeasonNumber}E{episode.EpisodeNumber})");
-                // Logger.App($"Host Folder: {hostFolder}");
+                Logger.App($"Processing Movie: {movie.Title}");
+                Logger.App($"Host Folder: {hostFolder}");
                 
-                // DiagnoseMasterFolder(hostFolder);
+                //DiagnoseMasterFolder(hostFolder);
+
+                // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
             }
         }
 
@@ -153,16 +179,16 @@ public static class Dev
     }
 
     // Diagnostic helper you can call locally to print a short report for an episode folder
-    private static void DiagnoseMasterFolder(string episodeFolder)
+    private static void DiagnoseMasterFolder(string hostFolder)
     {
-        Logger.App($"Diagnosing folder: {episodeFolder}");
-        if (!Directory.Exists(episodeFolder))
+        Logger.App($"Diagnosing folder: {hostFolder}");
+        if (!Directory.Exists(hostFolder))
         {
             Logger.App("Folder does not exist");
             return;
         }
 
-        Dictionary<string, long> bitrates = CalculateBitratesFromMaster(episodeFolder);
+        Dictionary<string, long> bitrates = CalculateBitratesFromMaster(hostFolder);
         if (bitrates.Count == 0)
         {
             Logger.App("No computed bitrates (no master playlists found or all remote/failed).\n");
@@ -178,7 +204,7 @@ public static class Dev
         try
         {
             // Instead of writing a diagnostic JSON file, update the master playlists in-place
-            IEnumerable<string> masters = Directory.GetFiles(episodeFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
+            IEnumerable<string> masters = Directory.GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
                 .Where(f =>
                 {
                     try { return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF"); }
@@ -252,6 +278,60 @@ public static class Dev
         catch (Exception ex)
         {
             Logger.App($"Failed updating playlists: {ex.Message}");
+        }
+    }
+
+
+    private static async Task RecreateMasterPlaylist(string hostFolder, string filename)
+    {
+        if (string.IsNullOrEmpty(hostFolder)) return;
+        if (!Directory.Exists(hostFolder))
+        {
+            Logger.App($"Host folder does not exist: {hostFolder}");
+            return;
+        }
+
+        string targetName = Path.GetFileNameWithoutExtension(filename) ?? "master";
+
+        try
+        {
+            // Find master playlists in the folder (those containing EXT-X-STREAM-INF)
+            var masters = Directory.GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
+                .Where(f =>
+                {
+                    try { return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF"); }
+                    catch { return false; }
+                })
+                .ToList();
+
+            if (masters.Any())
+            {
+                string backupDir = Path.Combine(hostFolder, "_m3u8_backup_" + DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+                Directory.CreateDirectory(backupDir);
+                foreach (string m in masters)
+                {
+                    try
+                    {
+                        string dest = Path.Combine(backupDir, Path.GetFileName(m));
+                        File.Move(m, dest);
+                        Logger.App($"Backed up master playlist {m} -> {dest}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.App($"Failed to backup {m}: {ex.Message}");
+                    }
+                }
+            }
+
+            // Build new master using the HLS playlist generator
+            await HlsPlaylistGenerator.Build(hostFolder, targetName);
+
+            string newMaster = Path.Combine(hostFolder, targetName + ".m3u8");
+            Logger.App($"Recreated master playlist: {newMaster}");
+        }
+        catch (Exception ex)
+        {
+            Logger.App($"Failed recreating master playlist in {hostFolder}: {ex.Message}");
         }
     }
 }

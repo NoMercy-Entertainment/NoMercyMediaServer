@@ -119,3 +119,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./packages
           cname: repo.nomercy.tv
+          keep_files: true
