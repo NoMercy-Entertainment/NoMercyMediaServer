@@ -87,6 +87,12 @@ public static class HlsPlaylistGenerator
 
         masterPlaylist.AppendLine();
 
+        // Check if any video folder has _SDR or _HDR suffix
+        bool hasExplicitSdrOrHdr = folders
+            .Where(f => Path.GetFileName(f).StartsWith("video_", StringComparison.InvariantCultureIgnoreCase))
+            .Select(f => Path.GetFileName(f).ToLowerInvariant())
+            .Any(name => name.EndsWith("_sdr") || name.Contains("_hdr"));
+
         // Group video variants by resolution
         var videoGroups = videoFiles
             .Select(videoFile =>
@@ -110,10 +116,14 @@ public static class HlsPlaylistGenerator
                 catch { }
 
                 // Simple folder name convention for HDR detection:
-                // Folders ending with _SDR are SDR versions
-                // All others (including _HDR or no suffix) are HDR versions
-                bool detectedHdr = true; // Default to HDR
-                string detectedReason = "default (no _SDR suffix)";
+                // If NO folders have _SDR or _HDR suffix at all, treat everything as SDR (preventive measure)
+                // Otherwise:
+                //   - Folders ending with _SDR are SDR versions
+                //   - All others (including _HDR or no suffix) are HDR versions
+                bool detectedHdr = hasExplicitSdrOrHdr; // Default to HDR only if explicit markers exist
+                string detectedReason = hasExplicitSdrOrHdr 
+                    ? "default (no _SDR suffix)" 
+                    : "no explicit _SDR/_HDR markers found, defaulting to SDR";
 
                 if (!string.IsNullOrEmpty(folderName))
                 {
@@ -125,6 +135,7 @@ public static class HlsPlaylistGenerator
                     }
                     else if (folderLower.Contains("_hdr"))
                     {
+                        detectedHdr = true;
                         detectedReason = "folder contains _HDR";
                     }
                 }

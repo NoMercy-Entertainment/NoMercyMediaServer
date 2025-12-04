@@ -5,6 +5,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Encoder.Core;
+using VideoFile = NoMercy.Database.Models.VideoFile;
 
 namespace NoMercy.Server;
 
@@ -27,19 +28,19 @@ public static class Dev
         foreach (Tv show in shows)
         foreach (Episode episode in show.Episodes)
         {
-            foreach (NoMercy.Database.Models.VideoFile videoFile in episode.VideoFiles)
+            foreach (VideoFile videoFile in episode.VideoFiles)
             {
                 if (videoFile.Metadata == null) continue;
         
                 string hostFolder = videoFile.Metadata.HostFolder;
                 if (string.IsNullOrEmpty(hostFolder)) continue;
         
-                Logger.App($"Processing Episode: {episode.Title} (S{episode.SeasonNumber}E{episode.EpisodeNumber})");
-                Logger.App($"Host Folder: {hostFolder}");
+                // Logger.App($"Processing Episode: {episode.Title} (S{episode.SeasonNumber}E{episode.EpisodeNumber})");
+                // Logger.App($"Host Folder: {hostFolder}");
                 
                 // DiagnoseMasterFolder(hostFolder);
 
-                // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
+                await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
             }
         }
         
@@ -52,19 +53,19 @@ public static class Dev
         
         foreach (Movie movie in movies)
         {
-            foreach (NoMercy.Database.Models.VideoFile videoFile in movie.VideoFiles)
+            foreach (VideoFile videoFile in movie.VideoFiles)
             {
                 if (videoFile.Metadata == null) continue;
 
                 string hostFolder = videoFile.Metadata.HostFolder;
                 if (string.IsNullOrEmpty(hostFolder)) continue;
 
-                Logger.App($"Processing Movie: {movie.Title}");
-                Logger.App($"Host Folder: {hostFolder}");
+                // Logger.App($"Processing Movie: {movie.Title}");
+                // Logger.App($"Host Folder: {hostFolder}");
                 
                 //DiagnoseMasterFolder(hostFolder);
 
-                // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
+                await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
             }
         }
 

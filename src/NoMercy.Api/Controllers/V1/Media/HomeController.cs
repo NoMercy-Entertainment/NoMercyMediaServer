@@ -192,7 +192,7 @@ public class HomeController : BaseController
         }
 
         string arg =
-            $"-f bestvideo+bestaudio -j https://youtube.com/watch?v={trailerId} ";
+            $"-f bestvideo+bestaudio -j https://youtube.com/watch?v={trailerId} --extractor-args \"youtube:player_client=default\" ";
         Shell.ExecResult result = await Shell.ExecAsync(AppFiles.YtdlpPath, arg);
         
         if(!result.Success || string.IsNullOrEmpty(result.StandardOutput))
@@ -275,7 +275,7 @@ public class HomeController : BaseController
             StringBuilder sb = new();
             
             sb.Append(AppFiles.YtdlpPath);
-            sb.Append(" -f bestvideo+bestaudio ");
+            sb.Append(" -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" ");
             
             if (!string.IsNullOrEmpty(language))
                 sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
