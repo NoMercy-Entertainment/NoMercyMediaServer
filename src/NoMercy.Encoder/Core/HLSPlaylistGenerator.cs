@@ -1,10 +1,6 @@
 using System.Globalization;
 using System.Text;
-using System.Linq;
-using System.Collections.Generic;
-using System.IO;
 using System.Text.RegularExpressions;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using static NoMercy.Encoder.Core.IsoLanguageMapper;

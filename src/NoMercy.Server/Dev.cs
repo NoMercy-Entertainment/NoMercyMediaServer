@@ -40,7 +40,7 @@ public static class Dev
                 
                 // DiagnoseMasterFolder(hostFolder);
 
-                await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
+                // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
             }
         }
         
@@ -65,7 +65,7 @@ public static class Dev
                 
                 //DiagnoseMasterFolder(hostFolder);
 
-                await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
+                // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
             }
         }
 
@@ -297,7 +297,7 @@ public static class Dev
         try
         {
             // Find master playlists in the folder (those containing EXT-X-STREAM-INF)
-            var masters = Directory.GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
+            List<string> masters = Directory.GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
                 .Where(f =>
                 {
                     try { return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF"); }
