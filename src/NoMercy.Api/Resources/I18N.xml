@@ -131,7 +131,7 @@
   </Entry>
   <Entry>
     <Key>You do not have permission to view encoder queue</Key>
-    <Value lang="nl">Je hebt geen toestemming om de encoderwachtrij te bekijken</Value>
+    <Value lang="nl">Je hebt geen toestemming om de encoder wachtrij te bekijken</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong deleting the library: {0}</Key>
@@ -200,10 +200,6 @@
   <Entry>
     <Key>Unknown property Video</Key>
     <Value lang="nl">Onbekende eigenschap Video</Value>
-  </Entry>
-  <Entry>
-    <Key>updater must be an Initialiser of the TEntity type (Parameter 'updater')</Key>
-    <Value lang="nl">updater moet een Initialiser van het TEntity type zijn (Parameter 'updater')</Value>
   </Entry>
   <Entry>
     <Key>Rescanning {0} library.</Key>
@@ -354,22 +350,12 @@
     <Value lang="nl">Poging om eigenschap "server_name" te lezen van array</Value>
   </Entry>
   <Entry>
-    <Key>SQLSTATE[42S22]: Column not found: 1054 Unknown column 'server_name' in 'field list'
-      (Connection: mysql, SQL: update `servers` set `server_name` = EAGLE, `servers`.`updated_at` =
-      2025-09-03 17:20:45 where `user_id` = 6aa35c70-7136-44f3-baba-e1d464433426 and `id` =
-      fcbb730a-a562-2ca5-d054-5d6acf2a1aaa)</Key>
-    <Value lang="nl">SQLSTATE[42S22]: Kolom niet gevonden: 1054 Onbekende kolom 'server_name' in
-      'field list' (Verbinding: mysql, SQL: update `servers` set `server_name` = EAGLE,
-      `servers`.`updated_at` = 2025-09-03 17:20:45 where `user_id` =
-      6aa35c70-7136-44f3-baba-e1d464433426 and `id` = fcbb730a-a562-2ca5-d054-5d6acf2a1aaa)</Value>
-  </Entry>
-  <Entry>
     <Key>Server name changed</Key>
     <Value lang="nl">Servernaam gewijzigd</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong updating the library encoder profiles: {0}</Key>
-    <Value lang="nl">Er ging iets mis bij het bijwerken van de bibliotheek encoderprofielen: {0}</Value>
+    <Value lang="nl">Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value>
   </Entry>
   <Entry>
     <Key>You do not have permission to update the library</Key>
@@ -413,22 +399,22 @@
   </Entry>
   <Entry>
     <Key>Track not found</Key>
-    <Value lang="nl">Track not found</Value>
+    <Value lang="nl">Track niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Response status code does not indicate success: 404 (Not Found).</Key>
-    <Value lang="nl">Response status code does not indicate success: 404 (Not Found).</Value>
+    <Value lang="nl">Responsstatuscode geeft geen succes aan: 404 (Niet gevonden).</Value>
   </Entry>
   <Entry>
     <Key>Job removed</Key>
-    <Value lang="nl">Job removed</Value>
+    <Value lang="nl">Taak verwijderd</Value>
   </Entry>
   <Entry>
     <Key>Person not found</Key>
-    <Value lang="nl">Person not found</Value>
+    <Value lang="nl">Persoon niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Response status code does not indicate success: 502 (Bad Gateway).</Key>
-    <Value lang="nl">Response status code does not indicate success: 502 (Bad Gateway).</Value>
+    <Value lang="nl">Responsstatuscode geeft geen succes aan: 502 (Onjuiste gateway).</Value>
   </Entry>
 </I18N>

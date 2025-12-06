@@ -8,7 +8,7 @@ namespace NoMercy.MediaProcessing.Jobs.Dto;
 
 public class AudioTagModel
 {
-    public class MusicBrainz 
+    public class MusicBrainzDto 
     {
         public Guid ReleaseId { get; set; }
         public Guid ReleaseArtistId { get; set; }
@@ -19,21 +19,21 @@ public class AudioTagModel
         public Guid AcoustIdId { get; set; }
     }
 
-    public MusicBrainz? musicBrainz { get; set; }
-    public FfprobeSourceDataFormat format { get; set; } = new();
-    public AudioStream? stream { get; set; }
-    public Tag? tags { get; set; }
+    public MusicBrainzDto? MusicBrainz { get; set; }
+    public FfprobeSourceDataFormat Format { get; set; } = new();
+    public AudioStream? Stream { get; set; }
+    public Tag? Tags { get; set; }
         
-    public double duration { get; set; }
+    public double Duration { get; set; }
     
-    public MediaFile fileItem { get; set; }
+    public MediaFile FileItem { get; set; }
     
     public static async Task<AudioTagModel> Create(MediaFile fileItem)
     {
         Ffprobe ffProbe = new(fileItem.Path);
         Ffprobe ffProbeData = await ffProbe.GetStreamData();
         Dictionary<string,string> tagsContainer = ffProbeData.Format.Tags;
-        MusicBrainz? mb = null;
+        MusicBrainzDto? mb = null;
         
         if (fileItem.TagFile?.Tag is not null)
         {
@@ -163,12 +163,12 @@ public class AudioTagModel
         
         AudioTagModel metaData = new()
         {
-            format = ffProbeData.Format,
-            stream = ffProbeData.AudioStreams.FirstOrDefault(),
-            musicBrainz = mb,
-            tags = fileItem.TagFile?.Tag,
-            fileItem = fileItem,
-            duration = double.Parse(ffProbeData.Format.Duration ?? "0")
+            Format = ffProbeData.Format,
+            Stream = ffProbeData.AudioStreams.FirstOrDefault(),
+            MusicBrainz = mb,
+            Tags = fileItem.TagFile?.Tag,
+            FileItem = fileItem,
+            Duration = double.Parse(ffProbeData.Format.Duration ?? "0")
         };
         
         return metaData;

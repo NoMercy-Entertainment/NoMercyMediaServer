@@ -21,47 +21,48 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
         {
             string groupName = $"v{description.ApiVersion.MajorVersion}";
             options.SwaggerDoc(groupName, CreateInfoForApiVersion(description, groupName));
+        }
 
-            options.AddSecurityDefinition("Keycloak", new()
+        // Configure security definitions - only add once, not per version
+        options.AddSecurityDefinition("Keycloak", new()
+        {
+            Type = SecuritySchemeType.OAuth2,
+            Flows = new()
             {
-                Type = SecuritySchemeType.OAuth2,
-                Flows = new()
+                Implicit = new()
                 {
-                    Implicit = new()
+                    AuthorizationUrl = new($"{Config.AuthBaseUrl}protocol/openid-connect/auth"),
+                    Scopes = new Dictionary<string, string>
                     {
-                        AuthorizationUrl = new($"{Config.AuthBaseUrl}protocol/openid-connect/auth"),
-                        Scopes = new Dictionary<string, string>
-                        {
-                            { "openid", "openid" },
-                            { "profile", "profile" }
-                        }
+                        { "openid", "openid" },
+                        { "profile", "profile" }
                     }
                 }
-            });
+            }
+        });
 
-            OpenApiSecurityScheme keycloakSecurityScheme = new()
+        OpenApiSecurityScheme keycloakSecurityScheme = new()
+        {
+            Reference = new()
             {
-                Reference = new()
-                {
-                    Id = "Keycloak",
-                    Type = ReferenceType.SecurityScheme
-                },
-                In = ParameterLocation.Header,
-                Name = "Authorization",
-                Type = SecuritySchemeType.OAuth2,
-                Description = "Use the Keycloak authorization server to authenticate.",
-                Scheme = "Bearer"
-            };
+                Id = "Keycloak",
+                Type = ReferenceType.SecurityScheme
+            },
+            In = ParameterLocation.Header,
+            Name = "Authorization",
+            Type = SecuritySchemeType.OAuth2,
+            Description = "Use the Keycloak authorization server to authenticate.",
+            Scheme = "Bearer"
+        };
 
-            options.AddSecurityRequirement(new()
+        options.AddSecurityRequirement(new()
+        {
+            { keycloakSecurityScheme, [] },
             {
-                { keycloakSecurityScheme, [] },
-                {
-                    new() { Reference = new() { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
-                    []
-                }
-            });
-        }
+                new() { Reference = new() { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
+                []
+            }
+        });
     }
 
     private static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description, string groupName)

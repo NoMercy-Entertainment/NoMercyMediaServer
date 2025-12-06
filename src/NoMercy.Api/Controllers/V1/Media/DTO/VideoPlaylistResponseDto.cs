@@ -144,13 +144,13 @@ public class VideoPlaylistResponseDto
         ContentRating = episode.Tv.CertificationTvs
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                          || certificationMovie.Certification.Iso31661 == country)
-            .Select(certificationTv => new RatingClass()
+            .Select(certificationTv => new RatingClass
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
                 Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
             })
-            .First();
+            .FirstOrDefault();
     }
 
     public VideoPlaylistResponseDto(Movie movie, string playlistType, dynamic playlistId, string country, int? index = null, Collection? collection = null)
@@ -242,13 +242,13 @@ public class VideoPlaylistResponseDto
         ContentRating = movie.CertificationMovies
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
                                          || certificationMovie.Certification.Iso31661 == country)
-            .Select(certificationTv => new RatingClass()
+            .Select(certificationTv => new RatingClass
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
                 Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
             })
-            .First();
+            .FirstOrDefault();
     }
 
     private record Subs

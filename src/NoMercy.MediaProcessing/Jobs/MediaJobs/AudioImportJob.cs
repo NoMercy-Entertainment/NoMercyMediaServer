@@ -66,15 +66,15 @@ public class AudioImportJob : AbstractMusicFolderJob
                 List<(MediaFile MediaFile, AudioTagModel audioTagModel)> File)> processedSingles = new();
             await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
             {
-                if (audioTag.musicBrainz?.ReleaseId is null || audioTag.musicBrainz.ReleaseId == Guid.Empty)
+                if (audioTag.MusicBrainz?.ReleaseId is null || audioTag.MusicBrainz.ReleaseId == Guid.Empty)
                     continue;
 
                 MusicBrainzReleaseAppends? releaseAppends =
-                    await musicBrainzReleaseClient.WithAllAppends(audioTag.musicBrainz.ReleaseId);
+                    await musicBrainzReleaseClient.WithAllAppends(audioTag.MusicBrainz.ReleaseId);
                 if (releaseAppends is null)
                     continue;
 
-                if (processedSingles.TryGetValue(audioTag.musicBrainz.ReleaseId,
+                if (processedSingles.TryGetValue(audioTag.MusicBrainz.ReleaseId,
                         out (MusicBrainzReleaseAppends SingleAppends,
                         List<(MediaFile MediaFile, AudioTagModel audioTagModel)> File) value))
                 {
@@ -82,7 +82,7 @@ public class AudioImportJob : AbstractMusicFolderJob
                 }
                 else
                 {
-                    processedSingles.Add(audioTag.musicBrainz.ReleaseId, (releaseAppends, [(mediaFile, audioTag)]));
+                    processedSingles.Add(audioTag.MusicBrainz.ReleaseId, (releaseAppends, [(mediaFile, audioTag)]));
                 }
             }
 
@@ -130,11 +130,11 @@ public class AudioImportJob : AbstractMusicFolderJob
             // First pass: count releases without storing all tags in memory
             await foreach ((_, AudioTagModel audioTag) in audioFilesFactory())
             {
-                if (audioTag.musicBrainz?.ReleaseId is null || audioTag.musicBrainz.ReleaseId == Guid.Empty)
+                if (audioTag.MusicBrainz?.ReleaseId is null || audioTag.MusicBrainz.ReleaseId == Guid.Empty)
                     continue;
 
                 MusicBrainzReleaseAppends? releaseAppends =
-                    await musicBrainzReleaseClient.WithAllAppends(audioTag.musicBrainz.ReleaseId);
+                    await musicBrainzReleaseClient.WithAllAppends(audioTag.MusicBrainz.ReleaseId);
                 if (releaseAppends is null)
                     continue;
 
@@ -155,14 +155,14 @@ public class AudioImportJob : AbstractMusicFolderJob
             List<(MediaFile MediaFile, AudioTagModel AudioTag)> matchingFiles = [];
             await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
             {
-                if (audioTag.musicBrainz?.ReleaseId == release.Id ||
-                    (audioTag.musicBrainz?.ReleaseTrackId != null &&
+                if (audioTag.MusicBrainz?.ReleaseId == release.Id ||
+                    (audioTag.MusicBrainz?.ReleaseTrackId != null &&
                      release.Media.Any(m =>
                          m.Tracks.Any(t =>
-                             t.Id == audioTag.musicBrainz.ReleaseTrackId ||
-                             t.Id == audioTag.musicBrainz.RecordingId ||
-                             t.Recording.Id == audioTag.musicBrainz.RecordingId ||
-                             t.Recording.Id == audioTag.musicBrainz.ReleaseTrackId))))
+                             t.Id == audioTag.MusicBrainz.ReleaseTrackId ||
+                             t.Id == audioTag.MusicBrainz.RecordingId ||
+                             t.Recording.Id == audioTag.MusicBrainz.RecordingId ||
+                             t.Recording.Id == audioTag.MusicBrainz.ReleaseTrackId))))
                 {
                     matchingFiles.Add((mediaFile, audioTag));
                 }
@@ -233,13 +233,13 @@ public class AudioImportJob : AbstractMusicFolderJob
             AudioTagModel? audioTag = null;
             foreach ((MediaFile file, AudioTagModel tag) in audioFiles)
             {
-                if ((tag.musicBrainz?.ReleaseTrackId != musicBrainzTrack.Id &&
-                     tag.musicBrainz?.ReleaseTrackId != musicBrainzTrack.Recording.Id &&
-                     tag.musicBrainz?.RecordingId != musicBrainzTrack.Id &&
-                     tag.musicBrainz?.RecordingId != musicBrainzTrack.Recording.Id) ||
-                    (!musicBrainzTrack.Title.ContainsSanitized(tag.tags?.Title ?? file.Parsed?.Title) &&
-                     !(Math.Abs(tag.duration - musicBrainzTrack.Duration) < 5) &&
-                     musicBrainzTrack.Position != tag.tags?.Track &&
+                if ((tag.MusicBrainz?.ReleaseTrackId != musicBrainzTrack.Id &&
+                     tag.MusicBrainz?.ReleaseTrackId != musicBrainzTrack.Recording.Id &&
+                     tag.MusicBrainz?.RecordingId != musicBrainzTrack.Id &&
+                     tag.MusicBrainz?.RecordingId != musicBrainzTrack.Recording.Id) ||
+                    (!musicBrainzTrack.Title.ContainsSanitized(tag.Tags?.Title ?? file.Parsed?.Title) &&
+                     !(Math.Abs(tag.Duration - musicBrainzTrack.Duration) < 5) &&
+                     musicBrainzTrack.Position != tag.Tags?.Track &&
                      musicBrainzTrack.Position != file.Parsed?.TrackNumber &&
                      musicBrainzTrack.Position != index + 1 &&
                      musicBrainzTrack.Position * idx != index + 1)) continue;

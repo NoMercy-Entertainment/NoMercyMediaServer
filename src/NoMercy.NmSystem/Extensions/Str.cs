@@ -382,6 +382,21 @@ public static partial class Str
         return string.Join("_", words.Select(word => word[..1].ToUpper() + word[1..].ToLower()));
     }
 
+    public static string ToSnakeCase(this string str)
+    {
+        if (string.IsNullOrEmpty(str))
+            return str;
+
+        StringBuilder sb = new();
+        for (int i = 0; i < str.Length; i++)
+        {
+            if (char.IsUpper(str[i]) && i > 0)
+                sb.Append('_');
+            sb.Append(char.ToLower(str[i]));
+        }
+        return sb.ToString();
+    }
+
     public static string ToUcFirst(this string str)
     {
         if (string.IsNullOrEmpty(str))

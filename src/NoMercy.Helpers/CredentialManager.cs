@@ -27,50 +27,44 @@ public static class CredentialManager
     {
         if (!File.Exists(AppFiles.SecretsStore)) return null;
 
-        using (SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore))
-        {
-            secretsManager.DefaultSerializer = new SecretSerializer();
-            secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
+        using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);
+        secretsManager.DefaultSerializer = new SecretSerializer();
+        secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
 
-            if (secretsManager.TryGetValue(target, out UserPass? output)) return output;
+        if (secretsManager.TryGetValue(target, out UserPass? output)) return output;
 
-            return null;
-        }
+        return null;
     }
 
     public static void SetCredentials(string target, string username, string password, string apiKey)
     {
         bool exists = File.Exists(AppFiles.SecretsStore);
 
-        using (SecretsManager secretsManager =
-               exists ? SecretsManager.LoadStore(AppFiles.SecretsStore) : SecretsManager.CreateStore())
+        using SecretsManager secretsManager =
+            exists ? SecretsManager.LoadStore(AppFiles.SecretsStore) : SecretsManager.CreateStore();
+        secretsManager.DefaultSerializer = new SecretSerializer();
+        if (!exists)
         {
-            secretsManager.DefaultSerializer = new SecretSerializer();
-            if (!exists)
-            {
-                secretsManager.GenerateKey();
-                secretsManager.ExportKey(AppFiles.SecretsKey);
-            }
-            else
-            {
-                secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
-            }
-
-            secretsManager.Set(target, new UserPass(username, password, apiKey));
-
-            secretsManager.SaveStore(AppFiles.SecretsStore);
+            secretsManager.GenerateKey();
+            secretsManager.ExportKey(AppFiles.SecretsKey);
         }
+        else
+        {
+            secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
+        }
+
+        secretsManager.Set(target, new UserPass(username, password, apiKey));
+
+        secretsManager.SaveStore(AppFiles.SecretsStore);
     }
 
     public static bool RemoveCredentials(string target)
     {
         if (!File.Exists(AppFiles.SecretsStore)) return false;
 
-        using (SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore))
-        {
-            secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
-            return secretsManager.Delete(target);
-        }
+        using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);
+        secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
+        return secretsManager.Delete(target);
     }
 
 
