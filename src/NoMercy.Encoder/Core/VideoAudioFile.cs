@@ -178,7 +178,6 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
         FFmpegCommandBuilder commandBuilder = new(
             container: Container,
             mediaAnalysis: fMediaAnalysis,
-            accelerators: Accelerators,
             priority: Priority
         );
 

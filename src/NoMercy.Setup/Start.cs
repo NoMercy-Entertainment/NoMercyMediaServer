@@ -1,10 +1,8 @@
 using System.Runtime.InteropServices;
-using NoMercy.Encoder.Core;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.Queue;
 using AppFiles = NoMercy.NmSystem.Information.AppFiles;
-using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Setup;
 
@@ -71,9 +69,7 @@ public class Start
         };
         queues.Start();
 
-        foreach (GpuAccelerator accelerator in FFmpegHardwareConfig.Accelerators)
-            Logger.Encoder(
-                $"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}");
+        // GPU detection handled by GpuDeviceDetector in NmSystem
     }
 
     private static async Task RunStartup(List<TaskDelegate> startupTasks)

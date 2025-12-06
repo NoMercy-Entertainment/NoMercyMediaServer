@@ -15,6 +15,9 @@ public static class QueueRunner
         {
             [Config.QueueWorkers.Key] = (Config.QueueWorkers.Value, [], new()),
             [Config.EncoderWorkers.Key] = (Config.EncoderWorkers.Value, [], new()),
+            [Config.EncoderVideoWorkers.Key] = (Config.EncoderVideoWorkers.Value, [], new()),
+            [Config.EncoderAudioWorkers.Key] = (Config.EncoderAudioWorkers.Value, [], new()),
+            [Config.EncoderMasterWorkers.Key] = (Config.EncoderMasterWorkers.Value, [], new()),
             [Config.CronWorkers.Key] = (Config.CronWorkers.Value, [], new()),
             [Config.DataWorkers.Key] = (Config.DataWorkers.Value, [], new()),
             [Config.ImageWorkers.Key] = (Config.ImageWorkers.Value, [], new())

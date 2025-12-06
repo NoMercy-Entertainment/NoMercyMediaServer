@@ -30,6 +30,7 @@ using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.NmSystem.Capabilities;
 using NoMercy.Queue;
 using NoMercy.Queue.Extensions;
 using NoMercy.Queue.Jobs;
@@ -98,6 +99,9 @@ public static class ServiceConfiguration
         // Add Memory Cache
         services.AddMemoryCache();
         services.AddCronWorker();
+
+        // Detect GPU hardware devices on startup
+        DetectGpuCapabilities();
 
         // Add Singleton Services
         services.AddScoped<JobQueue>();
@@ -335,6 +339,15 @@ public static class ServiceConfiguration
                         .AllowAnyHeader();
                 });
         });
+    }
+
+    /// <summary>
+    /// Detects GPU capabilities on startup and logs the results
+    /// </summary>
+    private static void DetectGpuCapabilities()
+    {
+        var gpuDetector = new GpuDeviceDetector();
+        gpuDetector.DetectGpuDevices();
     }
 }
 

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercy.Database;
 
@@ -10,9 +11,11 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    partial class MediaContextModelSnapshot : ModelSnapshot
+    [Migration("20251204193413_init9")]
+    partial class init9
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
@@ -2901,95 +2904,6 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("Seasons", t =>
                         {
                             t.HasTrigger("update_Seasons_updated_at");
-                        });
-                });
-
-            modelBuilder.Entity("NoMercy.Database.Models.ServerCapabilityCache", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AudioCodecsJson")
-                        .IsRequired()
-                        .HasMaxLength(-1)
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "audio_codecs");
-
-                    b.Property<decimal>("AudioScore")
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "audio_score");
-
-                    b.Property<DateTime>("CachedAt")
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "cached_at");
-
-                    b.Property<string>("CapabilityScoreJson")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "capability_score");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("FfmpegVersion")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GpuDevicesJson")
-                        .IsRequired()
-                        .HasMaxLength(-1)
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "gpu_devices");
-
-                    b.Property<decimal>("GpuTierScore")
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "gpu_tier_score");
-
-                    b.Property<decimal>("HardwareAccelerationScore")
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "hardware_acceleration_score");
-
-                    b.Property<string>("HardwareJson")
-                        .IsRequired()
-                        .HasMaxLength(-1)
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "hardware");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "notes");
-
-                    b.Property<decimal>("OverallScore")
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "overall_score");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("VideoCodecsJson")
-                        .IsRequired()
-                        .HasMaxLength(-1)
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "video_codecs");
-
-                    b.Property<decimal>("VideoScore")
-                        .HasColumnType("TEXT")
-                        .HasAnnotation("Relational:JsonPropertyName", "video_score");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ServerCapabilityCache", t =>
-                        {
-                            t.HasTrigger("update_ServerCapabilityCache_updated_at");
                         });
                 });
 

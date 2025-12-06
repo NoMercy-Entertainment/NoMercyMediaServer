@@ -36,6 +36,9 @@ public static class Config
 
     public static KeyValuePair<string, int> QueueWorkers { get; set; } = new("queue", 1);
     public static KeyValuePair<string, int> EncoderWorkers { get; set; } = new("encoder", 2);
+    public static KeyValuePair<string, int> EncoderVideoWorkers { get; set; } = new("encoder:video", 0);
+    public static KeyValuePair<string, int> EncoderAudioWorkers { get; set; } = new("encoder:audio", 0);
+    public static KeyValuePair<string, int> EncoderMasterWorkers { get; set; } = new("encoder:master", 0);
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
     public static KeyValuePair<string, int> DataWorkers { get; set; } = new("data", 10);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 5);

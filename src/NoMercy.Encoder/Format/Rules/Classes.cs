@@ -1,4 +1,3 @@
-using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Container;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -27,7 +26,7 @@ public class Classes
     internal string HlsPlaylistType { get; set; } = "vod";
     protected int HlsTime { get; set; } = 4;
 
-    public List<GpuAccelerator> Accelerators { get; set; } = FFmpegHardwareConfig.Accelerators;
+    // GPU acceleration no longer used - handled by GpuDeviceDetector in NmSystem
 
     protected string Type
     {

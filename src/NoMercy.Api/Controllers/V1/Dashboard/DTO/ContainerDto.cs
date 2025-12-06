@@ -126,8 +126,8 @@ public class AudioCodecDto : Classes.CodecDto
             { SimpleValue: "aac" } => new Aac(),
             { SimpleValue: "ac3" } => new Ac3(),
             { SimpleValue: "eac3" } => new Eac3(),
-            { SimpleValue: "flac" } => new Encoder.Format.Audio.Flac(),
-            { SimpleValue: "mp3" } => new Encoder.Format.Audio.Mp3(),
+            { SimpleValue: "flac" } => new NoMercy.Encoder.Format.Audio.Flac(),
+            { SimpleValue: "mp3" } => new NoMercy.Encoder.Format.Audio.Mp3(),
             { SimpleValue: "opus" } => new Opus(),
             { SimpleValue: "truehd" } => new TrueHd(),
             { SimpleValue: "vorbis" } => new Vorbis(),
@@ -164,9 +164,9 @@ public class SubtitleCodecDto : Classes.CodecDto
     {
         BaseSubtitle codecData = codecDto switch
         {
-            { SimpleValue: "vtt" } => new Encoder.Format.Subtitle.Vtt(),
-            { SimpleValue: "srt" } => new Encoder.Format.Subtitle.Srt(),
-            { SimpleValue: "ass" } => new Encoder.Format.Subtitle.Ass(),
+            { SimpleValue: "vtt" } => new NoMercy.Encoder.Format.Subtitle.Vtt(),
+            { SimpleValue: "srt" } => new NoMercy.Encoder.Format.Subtitle.Srt(),
+            { SimpleValue: "ass" } => new NoMercy.Encoder.Format.Subtitle.Ass(),
             { SimpleValue: "copy" } => new Copy(),
             _ => throw new ArgumentOutOfRangeException(nameof(codecDto.SimpleValue))
         };

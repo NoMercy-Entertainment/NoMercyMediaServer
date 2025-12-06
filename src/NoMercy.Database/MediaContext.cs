@@ -95,6 +95,7 @@ public class MediaContext : DbContext
     public virtual DbSet<Device> Devices { get; init; }
     public virtual DbSet<EncoderProfileFolder> EncoderProfileFolder { get; init; }
     public virtual DbSet<EncoderProfile> EncoderProfiles { get; init; }
+    public virtual DbSet<EncoderNode> EncoderNodes { get; init; }
     public virtual DbSet<Episode> Episodes { get; init; }
     public virtual DbSet<FolderLibrary> FolderLibrary { get; init; }
     public virtual DbSet<Folder> Folders { get; init; }
@@ -173,4 +174,6 @@ public class MediaContext : DbContext
     public virtual DbSet<MusicGenreReleaseGroup> MusicGenreReleaseGroup { get; init; }
     
     public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
+    
+    public virtual DbSet<ServerCapabilityCache> ServerCapabilityCaches { get; init; }
 }
