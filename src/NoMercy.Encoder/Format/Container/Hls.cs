@@ -67,8 +67,7 @@ public class Hls : BaseContainer
     public override Hls ApplyFlags()
     {
         base.ApplyFlags();
-        AddCustomArgument("-bsf:v", "h264_mp4toannexb");
-        AddCustomArgument("-force_key_frames:v", "expr:gte(t,n_forced*2)");
+        // Bitstream filter moved to BaseVideo.AddToDictionary (it's a video-specific option, not container)
         AddCustomArgument("-hls_allow_cache", 1);
         AddCustomArgument("-hls_flags", "independent_segments");
         AddCustomArgument("-hls_segment_type", "mpegts");

@@ -25,7 +25,7 @@ public class Classes
     internal string HlsFlags { get; set; } = "independent_segments";
     internal int HlsListSize { get; set; }
     internal string HlsPlaylistType { get; set; } = "vod";
-    protected int HlsTime { get; set; } = 4;
+    protected internal int HlsTime { get; set; } = 4;
 
     public List<GpuAccelerator> Accelerators { get; set; } = FFmpegHardwareConfig.Accelerators;
 

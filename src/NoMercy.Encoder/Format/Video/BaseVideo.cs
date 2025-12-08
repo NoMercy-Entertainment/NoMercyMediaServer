@@ -2,6 +2,7 @@
 // ReSharper disable MemberCanBePrivate.Global
 
 using FFMpegCore;
+using NoMercy.Encoder.Format.Container;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -30,9 +31,11 @@ public abstract class BaseVideo : Classes
     internal string Profile { get; set; } = string.Empty;
     internal string Preset { get; set; } = string.Empty;
     internal string PixelFormat { get; set; } = string.Empty;
+    internal string Level { get; set; } = string.Empty;
     internal int ConstantRateFactor { get; set; }
     internal int FrameRate { get; set; }
     internal int KeyIntMin { get; set; }
+    internal int KeyInt { get; set; }
     internal int OutputWidth { get; set; }
     internal int? OutputHeight { get; set; }
     public int StreamIndex { get; set; }
@@ -174,6 +177,12 @@ public abstract class BaseVideo : Classes
         return this;
     }
 
+    public BaseVideo SetKeyInt(int value)
+    {
+        KeyInt = value;
+        return this;
+    }
+
     public BaseVideo SetBufferSize(int value)
     {
         BufferSize = value;
@@ -261,6 +270,16 @@ public abstract class BaseVideo : Classes
         return this;
     }
 
+    public BaseVideo SetLevel(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return this;
+        if (!AvailableLevels.Contains(value))
+            throw new($"Wrong level value for {value}, available formats are {string.Join(", ", AvailableLevels)}");
+        Level = value;
+        return this;
+    }
+
     public BaseVideo AddOpts(string value)
     {
         // AddFilter(value, "");
@@ -306,38 +325,115 @@ public abstract class BaseVideo : Classes
 
     public override BaseVideo ApplyFlags()
     {
-        if (MaxRate > 0)
-            AddCustomArgument("-maxrate", MaxRate);
-        if (BufferSize > 0)
-            AddCustomArgument("-bufsize", BufferSize);
+        // Set keyframe interval: use explicit KeyInt if provided (> 0), otherwise auto-calculate
+        if (KeyInt > 0)
+        {
+            // Use explicitly set keyframe interval from profile
+            AddCustomArgument("-g", KeyInt);
+            AddCustomArgument("-keyint_min", KeyInt);
+        }
+        else if (Container?.ContainerDto.Name == VideoContainers.Hls && FrameRate > 0)
+        {
+            // For HLS streaming, auto-calculate keyframe interval to match HLS segment time
+            // This ensures each segment has at least one keyframe at its boundary
+            // HlsTime defaults to 4 seconds in Classes base class
+            int keyframeInterval = (int)Math.Ceiling((double)HlsTime * FrameRate);
+            AddCustomArgument("-g", keyframeInterval);
+            AddCustomArgument("-keyint_min", keyframeInterval);
+        }
+        else if (FrameRate > 0)
+        {
+            // For non-HLS formats, use 1-second keyframe interval
+            AddCustomArgument("-g", FrameRate);
+            AddCustomArgument("-keyint_min", FrameRate);
+        }
+
+        if (!string.IsNullOrEmpty(Profile))
+            AddCustomArgument("-profile:v", Profile);
 
         if (Bitrate > 0)
-        {
-            AddCustomArgument("-b:v", Bitrate);
-            AddCustomArgument("-keyint_min", KeyIntMin);
-        }
+            AddCustomArgument("-b:v", $"{Bitrate}k");
+        if (MaxRate > 0)
+            AddCustomArgument("-maxrate", $"{MaxRate}k");
+        if (BufferSize > 0)
+            AddCustomArgument("-bufsize", $"{BufferSize}k");
 
-        if (FrameRate > 0)
-        {
-            AddCustomArgument("-g", FrameRate);
-            AddCustomArgument("-fps", FrameRate);
-        }
+        if (!string.IsNullOrEmpty(Level))
+            AddCustomArgument("-level:v", Level);
 
-        if (ConstantRateFactor > 0)
-        {
-            AddCustomArgument("-crf", ConstantRateFactor);
-            AddCustomArgument("-rc", "vbr");
-            AddCustomArgument("-cq:v", Convert.ToInt32(ConstantRateFactor * 1.12));
-        }
+        // Apply codec-specific quality and rate control flags
+        ApplyCodecSpecificFlags();
 
         if (!string.IsNullOrEmpty(Preset))
             AddCustomArgument("-preset", Preset);
-        if (!string.IsNullOrEmpty(Profile))
-            AddCustomArgument("-profile:v", Profile);
         if (!string.IsNullOrEmpty(Tune))
             AddCustomArgument("-tune:v", Tune);
 
         return this;
+    }
+
+    /// <summary>
+    /// Applies quality control flags conditionally based on the selected video codec.
+    /// Different encoders support different rate control methods and quality parameters.
+    /// For HLS streaming, we prioritize speed over advanced rate control to maximize throughput.
+    /// </summary>
+    private void ApplyCodecSpecificFlags()
+    {
+        bool isNvenc = VideoCodec.Value.Contains("nvenc");
+        bool isAmf = VideoCodec.Value.Contains("amf");
+        bool isQsv = VideoCodec.Value.Contains("qsv");
+        bool isVideotoolbox = VideoCodec.Value.Contains("videotoolbox");
+        bool isSoftware = !isNvenc && !isAmf && !isQsv && !isVideotoolbox;
+
+        if (isSoftware)
+        {
+            // libx264, libx265, libvpx-vp9, librav1e use CRF (Constant Rate Factor)
+            if (ConstantRateFactor > 0)
+            {
+                AddCustomArgument("-crf", ConstantRateFactor);
+                AddCustomArgument("-rc", "vbr");
+                AddCustomArgument("-cq:v", Convert.ToInt32(ConstantRateFactor * 1.12));
+            }
+        }
+        else if (isNvenc)
+        {
+            // NVIDIA NVENC: For HLS streaming, skip -rc flag for maximum encoding speed
+            // The bitrate (-b:v) alone provides sufficient quality control without rate control overhead
+            // Only use -cq when CRF is explicitly specified (quality mode)
+            if (ConstantRateFactor > 0)
+            {
+                AddCustomArgument("-cq:v", ConstantRateFactor);
+            }
+            // Don't add -rc flag for HLS - it's slower and not necessary for streaming
+        }
+        else if (isAmf)
+        {
+            // AMD AMF: Same optimization as NVENC for HLS
+            if (ConstantRateFactor > 0)
+            {
+                AddCustomArgument("-cq", ConstantRateFactor);
+            }
+        }
+        else if (isQsv)
+        {
+            // Intel QSV: Use ICQ only if CRF specified
+            if (ConstantRateFactor > 0)
+            {
+                int icqQuality = Math.Max(1, Math.Min(51, ConstantRateFactor));
+                AddCustomArgument("-global_quality", icqQuality);
+                AddCustomArgument("-rc", "icq");
+            }
+        }
+        else if (isVideotoolbox)
+        {
+            // Apple VideoToolbox
+            if (ConstantRateFactor > 0)
+            {
+                int quality = 100 - (ConstantRateFactor * 2);
+                quality = Math.Max(0, Math.Min(100, quality));
+                AddCustomArgument("-q:v", quality);
+            }
+        }
     }
 
     public BaseVideo Build()
@@ -360,8 +456,53 @@ public abstract class BaseVideo : Classes
         commandDictionary["-map"] = $"[v{index}_hls_0]";
         commandDictionary["-c:v"] = VideoCodec.Value;
 
-        commandDictionary["-movflags"] = "faststart";
+        // Bitstream filter for HLS (convert AVCC to Annex B format for mpegts)
+        if (Container?.ContainerDto.Name == VideoContainers.Hls)
+        {
+            commandDictionary["-bsf:v"] = "h264_mp4toannexb";
+        }
+
         commandDictionary["-metadata"] = $"title=\"{Title.EscapeQuotes()}\"";
+
+        // Apply -movflags faststart only for MP4 output (helps stream header first for progressive download)
+        // For HLS, this flag adds overhead without benefit since segments are independent
+        if (Container?.ContainerDto.Type == "mp4")
+        {
+            commandDictionary["-movflags"] = "faststart";
+        }
+
+        // Add colorspace metadata for proper HDR/SDR display and compliance
+        bool isHdr = PixelFormat == VideoPixelFormats.Yuv444P10Le || PixelFormat == VideoPixelFormats.Yuv420P10Le;
+        
+        commandDictionary["-color_primaries"] = isHdr
+            ? "bt2020"  // HDR uses BT.2020 primaries
+            : "bt709";  // SDR uses BT.709 primaries
+
+        commandDictionary["-color_trc"] = isHdr
+            ? "smpte2084"  // HDR uses SMPTE 2084 (PQ) transfer function
+            : "bt709";     // SDR uses BT.709 transfer function
+
+        commandDictionary["-colorspace"] = isHdr
+            ? "bt2020nc"  // HDR uses BT.2020 NCL matrix
+            : "bt709";    // SDR uses BT.709 matrix
+
+        // Set luminosity/brightness range (TV range: 16-235, Full range: 0-255)
+        // Use TV range for broadcast/streaming compatibility
+        commandDictionary["-color_range"] = "tv";
+
+        // Add HDR luminosity metadata (required for HDR10 compliance)
+        if (isHdr)
+        {
+            // Master Display Metadata for HDR10
+            // Format: G(x,y)B(x,y)R(x,y)WP(x,y)L(max,min)
+            // Standard DCI-P3 with 10000 nits peak, 0.0001 nits minimum
+            commandDictionary["-smpte2086"] = "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)";
+
+            // Content Light Level metadata
+            // MaxCLL: 10000 nits (typical for HDR10)
+            // MaxFALL: 4000 nits (typical average frame-to-frame light level)
+            commandDictionary["-content_light_level"] = "M=10000:m=4000";
+        }
 
         foreach (KeyValuePair<string, dynamic> extraParameter in _extraParameters)
             commandDictionary[extraParameter.Key] = extraParameter.Value;

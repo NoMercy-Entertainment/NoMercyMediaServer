@@ -149,6 +149,7 @@ public static class HlsPlaylistGenerator
                 // Get codec info for CODECS attribute (simplified - probe one file)
                 string profile = "";
                 string levelStr = "";
+                string frameRateStr = "";
                 try
                 {
                     string folderPath = Path.Combine(basePath, folderName ?? string.Empty);
@@ -163,13 +164,14 @@ public static class HlsPlaylistGenerator
                     catch { }
 
                     string probeResult = Shell.ExecStdOutSync(AppFiles.FfProbePath,
-                        $"-v error -select_streams v:0 -show_entries stream=profile,level -of default=noprint_wrappers=1:nokey=1 \"{probeTarget}\"").Trim();
+                        $"-v error -select_streams v:0 -show_entries stream=profile,level,r_frame_rate -of default=noprint_wrappers=1:nokey=1 \"{probeTarget}\"").Trim();
 
                     if (!string.IsNullOrEmpty(probeResult))
                     {
                         string[] parts = probeResult.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
                         if (parts.Length > 0) profile = parts[0].Trim();
                         if (parts.Length > 1) levelStr = parts[1].Trim();
+                        if (parts.Length > 2) frameRateStr = parts[2].Trim();
                     }
                 }
                 catch { }
@@ -177,12 +179,20 @@ public static class HlsPlaylistGenerator
                 int level = int.TryParse(levelStr, out int l) ? l : 40;
                 string vCodecProfile = MapProfileToCodec(profile, level);
 
+                // Parse frame rate (e.g., "24000/1001" or "30/1")
+                double frameRate = ParseFrameRate(frameRateStr);
+                
                 double duration = GetVideoDuration(videoFile);
                 long totalSize = GetTotalSize(Path.Combine(basePath, folderName ?? string.Empty));
 
                 double bandwidth = duration > 0 ? (totalSize * 8.0 / duration) : 0.0;
                 bandwidth = Math.Round(bandwidth);
+                long averageBandwidth = (long)bandwidth;
+                long maxBandwidth = (long)(bandwidth * 1.1); // 10% peak over average
                 bandwidth += 128000; // audio overhead estimate
+
+                // Target duration is typically ceil of max segment duration (usually 6-10 seconds)
+                int targetDuration = Math.Max(6, (int)Math.Ceiling(10.0));
 
                 return new
                 {
@@ -191,6 +201,10 @@ public static class HlsPlaylistGenerator
                     VideoFile = videoFile,
                     VCodecProfile = vCodecProfile,
                     Bandwidth = (long)bandwidth,
+                    AverageBandwidth = averageBandwidth,
+                    MaxBandwidth = maxBandwidth,
+                    FrameRate = frameRate,
+                    TargetDuration = targetDuration,
                     IsSdr = isSdr
                 };
             })
@@ -222,7 +236,32 @@ public static class HlsPlaylistGenerator
                     else 
                         codecs = audioCodec;
 
-                    masterPlaylist.AppendLine($"#EXT-X-STREAM-INF:BANDWIDTH={video.Bandwidth},RESOLUTION={video.Resolution},CODECS=\"{codecs}\",AUDIO=\"audio_{audioGroup}\"{(video.IsSdr ? ",VIDEO-RANGE=SDR" : ",VIDEO-RANGE=PQ")},NAME=\"{streamName}\"");
+                    // Build complete STREAM-INF tag with all metadata
+                    string streamInf = $"#EXT-X-STREAM-INF:BANDWIDTH={video.Bandwidth}";
+                    streamInf += $",AVERAGE-BANDWIDTH={video.AverageBandwidth}";
+                    streamInf += $",RESOLUTION={video.Resolution}";
+                    
+                    if (video.FrameRate > 0)
+                        streamInf += $",FRAME-RATE={video.FrameRate:F3}";
+                    
+                    streamInf += $",CODECS=\"{codecs}\"";
+                    streamInf += $",AUDIO=\"audio_{audioGroup}\"";
+                    
+                    // Add VIDEO-RANGE and COLOUR-SPACE
+                    if (video.IsSdr)
+                    {
+                        streamInf += ",VIDEO-RANGE=SDR,COLOUR-SPACE=BT.709";
+                    }
+                    else
+                    {
+                        streamInf += ",VIDEO-RANGE=PQ,COLOUR-SPACE=BT.2020";
+                        // Extended HDR metadata for PQ (HDR10)
+                        streamInf += ",REQ-VIDEO-LAYOUT=BYTE";
+                    }
+                    
+                    streamInf += $",NAME=\"{streamName}\"";
+                    
+                    masterPlaylist.AppendLine(streamInf);
                     masterPlaylist.AppendLine($"{video.FolderName}/{Path.GetFileName(video.VideoFile)}");
                     masterPlaylist.AppendLine();
                 }
@@ -299,6 +338,35 @@ public static class HlsPlaylistGenerator
     {
         if (string.IsNullOrEmpty(s)) return s;
         return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(s.ToLowerInvariant());
+    }
+
+    private static double ParseFrameRate(string frameRateStr)
+    {
+        if (string.IsNullOrEmpty(frameRateStr))
+            return 0.0;
+
+        try
+        {
+            // Handle fraction format like "24000/1001" or "30/1"
+            if (frameRateStr.Contains('/'))
+            {
+                string[] parts = frameRateStr.Split('/');
+                if (parts.Length == 2 && 
+                    double.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out double numerator) &&
+                    double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double denominator) &&
+                    denominator != 0)
+                {
+                    return numerator / denominator;
+                }
+            }
+            else if (double.TryParse(frameRateStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double rate))
+            {
+                return rate;
+            }
+        }
+        catch { }
+
+        return 0.0;
     }
 }
 

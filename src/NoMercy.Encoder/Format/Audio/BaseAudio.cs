@@ -34,6 +34,7 @@ public class BaseAudio : Classes
     public int AudioChannels { get; set; }
 
     public int AudioQualityLevel { get; set; } = -1;
+    public int AudioSampleRate { get; set; } = -1;
     private string[] AllowedLanguages { get; set; } = ["eng"];
 
     protected virtual int Passes => 1;
@@ -169,6 +170,14 @@ public class BaseAudio : Classes
         return this;
     }
 
+    public BaseAudio SetSampleRate(int value)
+    {
+        if (value < 1)
+            throw new("Wrong sample rate value");
+        AudioSampleRate = value;
+        return this;
+    }
+
     public BaseAudio AddOpt(string value)
     {
         AddCustomArgument(value, null);
@@ -242,6 +251,12 @@ public class BaseAudio : Classes
 
         if (AudioChannels != -1)
             commandDictionary["-ac"] = AudioChannels;
+
+        if (AudioSampleRate != -1)
+            commandDictionary["-ar"] = AudioSampleRate;
+
+        if (_bitRate != -1)
+            commandDictionary["-b:a"] = $"{_bitRate}k";
 
         foreach (KeyValuePair<string, dynamic> extraParameter in _extraParameters)
             commandDictionary[extraParameter.Key] = extraParameter.Value;

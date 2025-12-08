@@ -189,6 +189,7 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
             BaseAudio stream = BaseAudio.Create(profile.Codec)
                 .SetAudioChannels(profile.Channels)
                 .SetAllowedLanguages(profile.AllowedLanguages)
+                .SetSampleRate(profile.SampleRate)
                 .SetHlsSegmentFilename(profile.SegmentName)
                 .SetHlsPlaylistFilename(profile.PlaylistName)
                 .AddOpts(profile.Opts)

@@ -200,9 +200,15 @@ public class FfMpeg : Classes
                 output.AppendLine(e.Data);
                 output2.AppendLine(e.Data);
 
-                ProgressData? parsedData = ParseOutputData(output2.ToString(), totalDuration);
+                // Only parse and send when we have a complete progress block
+                if (!e.Data.StartsWith("progress=")) return;
 
-                if (parsedData == null) return;
+                ProgressData? parsedData = ParseOutputData(output2.ToString(), totalDuration);
+                if (parsedData == null)
+                {
+                    output2.Clear();
+                    return;
+                }
 
                 double progress = parsedData.ProgressPercentage;
                 currentTime = parsedData.CurrentTime;
@@ -211,12 +217,42 @@ public class FfMpeg : Classes
                 int frame = parsedData.Frame;
                 string bitrate = parsedData.Bitrate;
                 double remaining = parsedData.Remaining;
-
                 string remainingHms = TimeSpan.FromSeconds(remaining).ToString(@"d\:hh\:mm\:ss");
-
                 string thumbnail = GetThumbnail(meta);
 
-                Progress progressData = new()
+                // Check if this is the final progress block
+                if (e.Data.Trim() == "progress=end")
+                {
+                    Progress progressData = new()
+                    {
+                        Percentage = 100.0,
+                        Status = "completed",
+                        CurrentTime = currentTime.TotalSeconds,
+                        Duration = totalDuration.TotalSeconds,
+                        Remaining = 0,
+                        RemainingHms = "0:00:00:00",
+                        Fps = fps,
+                        Speed = speed,
+                        Frame = frame,
+                        Bitrate = bitrate,
+                        HasGpu = meta.HasGpu,
+                        IsHdr = meta.IsHdr,
+                        VideoStreams = meta.VideoStreams,
+                        AudioStreams = meta.AudioStreams,
+                        SubtitleStreams = meta.SubtitleStreams,
+                        Thumbnail = thumbnail,
+                        Title = meta.Title,
+                        Id = meta.Id,
+                        Message = $"Encoding {meta.Type}",
+                        ProgressId = ffmpeg.Id
+                    };
+                    progressData.RemainingSplit = new int[] { 0, 0, 0, 0 };
+                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progressData);
+                    output2.Clear();
+                    return;
+                }
+
+                Progress progressDataRunning = new()
                 {
                     Percentage = progress,
                     Status = "running",
@@ -239,14 +275,12 @@ public class FfMpeg : Classes
                     Message = $"Encoding {meta.Type}",
                     ProgressId = ffmpeg.Id
                 };
-
-                progressData.RemainingSplit = progressData.RemainingHms
-                    .Split(":");
-
-                if (progressData.Speed == 0) return;
-
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progressData);
-
+                progressDataRunning.RemainingSplit = progressDataRunning.RemainingHms
+                    .Split(":").Select(s => int.TryParse(s, out var v) ? v : 0).ToArray();
+                if (progressDataRunning.Speed > 0)
+                {
+                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progressDataRunning);
+                }
                 output2.Clear();
             }
             catch (Exception ex)
