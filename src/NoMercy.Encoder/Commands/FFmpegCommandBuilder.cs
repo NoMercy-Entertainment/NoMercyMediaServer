@@ -23,6 +23,9 @@ public class FFmpegCommandBuilder
         _mediaAnalysis = mediaAnalysis;
         _accelerators = accelerators ?? new();
         _priority = priority;
+        
+        // Apply container-specific flags (adds -f, HLS options, etc.)
+        _container.ApplyFlags();
     }
 
     public string BuildCommand()
@@ -66,8 +69,10 @@ public class FFmpegCommandBuilder
     {
         command.Append($" -y -i \"{_container.InputFile}\" ");
 
-        if (_container.IsVideo && _accelerators.Count > 0) 
+        if (_container.IsVideo && _accelerators.Count > 0)
             command.Append(" -gpu any ");
+
+        command.Append(" -map_metadata -1 ");
     }
 
     private void AppendComplexFilters(StringBuilder command)
@@ -226,7 +231,13 @@ public class FFmpegCommandBuilder
             
             stream.AddToDictionary(commandDictionary, index);
             AddContainerParameters(commandDictionary);
+            // Don't add container parameters to audio streams - they're not needed
+            AddHlsParameters(commandDictionary, stream.HlsPlaylistFilename, true);
 
+            // Build the base stream parameters (map, codec, HLS params, etc.)
+            command.Append(BuildParameterString(commandDictionary));
+
+            // Add metadata AFTER the stream parameters
             if (_container.IsAudio)
             {
                 AddAudioMetadata(command, stream);
@@ -236,9 +247,6 @@ public class FFmpegCommandBuilder
                 AddStreamMetadata(command, stream, index);
             }
 
-            AddHlsParameters(commandDictionary, stream.HlsPlaylistFilename, true);
-
-            command.Append(BuildParameterString(commandDictionary));
             stream.CreateFolder();
         }
     }
@@ -278,7 +286,19 @@ public class FFmpegCommandBuilder
 
     private bool ShouldSkipHdrProfile(BaseVideo stream)
     {
-        return stream is { IsHdr: false, PixelFormat: VideoPixelFormats.Yuv444P or VideoPixelFormats.Yuv444P10Le };
+        // Skip profiles that request 10-bit pixel formats (HDR) when the source is not HDR.
+        // This prevents generating HDR outputs from SDR sources. Detection is based on
+        // pixel-format naming (contains "10") which matches our pixel format constants.
+        if (string.IsNullOrEmpty(stream.PixelFormat))
+            return false;
+
+        bool profileRequests10Bit = stream.PixelFormat.Contains("10");
+
+        // If the profile requests 10-bit (HDR) but the input stream is not HDR, skip it.
+        if (profileRequests10Bit && !stream.IsHdr)
+            return true;
+
+        return false;
     }
 
     private void AddContainerParameters(Dictionary<string, dynamic> commandDictionary)

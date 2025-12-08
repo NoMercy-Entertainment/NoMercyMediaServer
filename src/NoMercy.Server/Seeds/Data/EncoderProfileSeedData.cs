@@ -17,88 +17,69 @@ public static class EncoderProfileSeedData
                 EncoderProfileFolder = [],
                 VideoProfiles =
                 [
+                    // HDR 4K profile
                     new()
                     {
-                        Codec = VideoCodecs.H264Nvenc.Value,
-                        Width = FrameSizes._1080p.Width,
-                        Crf = 20,
+                        Codec = VideoCodecs.H265.Value,
+                        Bitrate = 24000,
+                        Width = FrameSizes._4k.Width,
                         SegmentName = ":type:_:framesize:/:type:_:framesize:",
                         PlaylistName = ":type:_:framesize:/:type:_:framesize:",
-                        ColorSpace = ColorSpaces.Yuv444P,
+                        ColorSpace = ColorSpaces.Yuv420P10Le,
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
-                        Keyint = 48,
-                        // // Opts = ["no-scenecut"],
-                        CustomArguments =
-                        [
-                            new ValueTuple<string, string>
-                            {
-                                Item1 = "-x264opts",
-                                Item2 = "no-scenecut"
-                            }
-                        ]
+                        Profile = VideoProfiles.High444,
+                        Level = "5.1",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = false
                     },
+                    // SDR 4K profile
                     new()
                     {
-                        Codec = VideoCodecs.H264Nvenc.Value,
-                        Width = FrameSizes._1080p.Width,
-                        Crf = 20,
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 20000,
+                        Width = FrameSizes._4k.Width,
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         PlaylistName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         ColorSpace = ColorSpaces.Yuv420P,
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
-                        Keyint = 48,
-                        ConvertHdrToSdr = true,
-                        CustomArguments =
-                        [
-                            new ValueTuple<string, string>
-                            {
-                                Item1 = "-x264opts",
-                                Item2 = "no-scenecut"
-                            }
-                        ]
+                        Profile = VideoProfiles.High,
+                        Level = "5.1",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
                     },
+                    // HDR 1080p profile
                     new()
                     {
-                        Codec = VideoCodecs.H264Nvenc.Value,
-                        Width = FrameSizes._4k.Width,
-                        Crf = 20,
+                        Codec = VideoCodecs.H265.Value,
+                        Bitrate = 10656,
+                        Width = FrameSizes._1080p.Width,
                         SegmentName = ":type:_:framesize:/:type:_:framesize:",
                         PlaylistName = ":type:_:framesize:/:type:_:framesize:",
-                        ColorSpace = ColorSpaces.Yuv444P,
+                        ColorSpace = ColorSpaces.Yuv420P10Le,
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
-                        Keyint = 48,
-                        CustomArguments =
-                        [
-                            new ValueTuple<string, string>
-                            {
-                                Item1 = "-x264opts",
-                                Item2 = "no-scenecut"
-                            }
-                        ]
+                        Profile = VideoProfiles.High444,
+                        Level = "4.0",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = false
                     },
+                    // SDR 1080p profile
                     new()
                     {
-                        Codec = VideoCodecs.H264Nvenc.Value,
-                        Width = FrameSizes._4k.Width,
-                        Crf = 20,
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 8695,
+                        Width = FrameSizes._1080p.Width,
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         PlaylistName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         ColorSpace = ColorSpaces.Yuv420P,
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
-                        Keyint = 48,
-                        ConvertHdrToSdr = true,
-                        CustomArguments =
-                        [
-                            new ValueTuple<string, string>
-                            {
-                                Item1 = "-x264opts",
-                                Item2 = "no-scenecut"
-                            }
-                        ]
+                        Profile = VideoProfiles.High,
+                        Level = "4.0",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
                     }
                 ],
                 AudioProfiles =
@@ -107,6 +88,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = AudioCodecs.Aac.Value,
                         Channels = 2,
+                        SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         AllowedLanguages = Languages.AllLanguages()
@@ -114,6 +96,7 @@ public static class EncoderProfileSeedData
                     new()
                     {
                         Codec = AudioCodecs.Eac3.Value,
+                        SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         AllowedLanguages = Languages.AllLanguages()
@@ -145,24 +128,19 @@ public static class EncoderProfileSeedData
                 [
                     new()
                     {
-                        Codec = VideoCodecs.H264Nvenc.Value,
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 10656,
                         Width = FrameSizes._1080p.Width,
-                        Crf = 20,
+
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         PlaylistName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         ColorSpace = ColorSpaces.Yuv420P,
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
-                        Keyint = 48,
-                        ConvertHdrToSdr = true,
-                        CustomArguments =
-                        [
-                            new ValueTuple<string, string>
-                            {
-                                Item1 = "-x264opts",
-                                Item2 = "no-scenecut"
-                            }
-                        ]
+                        Profile = VideoProfiles.High,
+                        Level = "4.0",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
                     }
                 ],
                 AudioProfiles =
@@ -171,6 +149,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = AudioCodecs.Aac.Value,
                         Channels = 2,
+                        SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         AllowedLanguages = Languages.AllLanguages()
@@ -196,24 +175,19 @@ public static class EncoderProfileSeedData
                 [
                     new()
                     {
-                        Codec = VideoCodecs.H264Nvenc.Value,
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 8695,
                         Width = FrameSizes._1080p.Width,
-                        Crf = 23,
+
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         PlaylistName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         ColorSpace = ColorSpaces.Yuv420P,
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
-                        Keyint = 48,
-                        ConvertHdrToSdr = true,
-                        CustomArguments =
-                        [
-                            new ValueTuple<string, string>
-                            {
-                                Item1 = "-x264opts",
-                                Item2 = "no-scenecut"
-                            }
-                        ]
+                        Profile = VideoProfiles.High,
+                        Level = "4.0",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
                     }
                 ],
                 AudioProfiles =
@@ -222,6 +196,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = AudioCodecs.Aac.Value,
                         Channels = 2,
+                        SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         AllowedLanguages = Languages.AllLanguages()
@@ -253,24 +228,19 @@ public static class EncoderProfileSeedData
                 [
                     new()
                     {
-                        Codec = VideoCodecs.H264Nvenc.Value,
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 6956,
                         Width = FrameSizes._1080p.Width,
-                        Crf = 25,
+
                         SegmentName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         PlaylistName = ":type:_:framesize:_SDR/:type:_:framesize:_SDR",
                         ColorSpace = ColorSpaces.Yuv420P,
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
-                        Keyint = 48,
-                        ConvertHdrToSdr = true,
-                        CustomArguments =
-                        [
-                            new ValueTuple<string, string>
-                            {
-                                Item1 = "-x264opts",
-                                Item2 = "no-scenecut"
-                            }
-                        ]
+                        Profile = VideoProfiles.High,
+                        Level = "4.0",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
                     }
                 ],
                 AudioProfiles =
@@ -279,6 +249,7 @@ public static class EncoderProfileSeedData
                     {
                         Codec = AudioCodecs.Aac.Value,
                         Channels = 2,
+                        SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         AllowedLanguages = Languages.AllLanguages()
@@ -313,8 +284,354 @@ public static class EncoderProfileSeedData
                         Codec = AudioCodecs.Mp3.Value
                     }
                 ]
+            },
+            // Standard Quality Presets (HLS Video Streaming)
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8A5T0D08F9J9577J04K"),
+                Name = "HD Streaming (720p)",
+                Container = VideoContainers.Hls,
+                EncoderProfileFolder = [],
+                VideoProfiles =
+                [
+                    new()
+                    {
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 4000,
+                        Width = 1280,
+
+                        SegmentName = ":type:_:framesize:/:type:_:framesize:",
+                        PlaylistName = ":type:_:framesize:/:type:_:framesize:",
+                        ColorSpace = ColorSpaces.Yuv420P,
+                        Preset = VideoPresets.Fast,
+                        Tune = VideoTunes.Hq,
+                        Profile = VideoProfiles.High,
+                        Level = "4.0",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
+                    }
+                ],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Aac.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                        PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ],
+                SubtitleProfiles =
+                [
+                    new()
+                    {
+                        Codec = SubtitleCodecs.Webvtt.Value,
+                        PlaylistName = "subtitles/:filename:.:language:.:variant:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
+            },
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8B5T0D08F9J9577J04K"),
+                Name = "Full HD Streaming (1080p)",
+                Container = VideoContainers.Hls,
+                EncoderProfileFolder = [],
+                VideoProfiles =
+                [
+                    new()
+                    {
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 8000,
+                        Width = FrameSizes._1080p.Width,
+
+                        SegmentName = ":type:_:framesize:/:type:_:framesize:",
+                        PlaylistName = ":type:_:framesize:/:type:_:framesize:",
+                        ColorSpace = ColorSpaces.Yuv420P,
+                        Preset = VideoPresets.Fast,
+                        Tune = VideoTunes.Hq,
+                        Profile = VideoProfiles.High,
+                        Level = "4.0",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
+                    }
+                ],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Aac.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                        PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ],
+                SubtitleProfiles =
+                [
+                    new()
+                    {
+                        Codec = SubtitleCodecs.Webvtt.Value,
+                        PlaylistName = "subtitles/:filename:.:language:.:variant:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    },
+                    new()
+                    {
+                        Codec = SubtitleCodecs.Ass.Value,
+                        PlaylistName = "subtitles/:filename:.:language:.:variant:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
+            },
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8C5T0D08F9J9577J04K"),
+                Name = "4K Streaming",
+                Container = VideoContainers.Hls,
+                EncoderProfileFolder = [],
+                VideoProfiles =
+                [
+                    new()
+                    {
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 18000,
+                        Width = FrameSizes._4k.Width,
+
+                        SegmentName = ":type:_:framesize:/:type:_:framesize:",
+                        PlaylistName = ":type:_:framesize:/:type:_:framesize:",
+                        ColorSpace = ColorSpaces.Yuv420P,
+                        Preset = VideoPresets.Fast,
+                        Tune = VideoTunes.Hq,
+                        Profile = VideoProfiles.High,
+                        Level = "5.1",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
+                    }
+                ],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Aac.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                        PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ],
+                SubtitleProfiles =
+                [
+                    new()
+                    {
+                        Codec = SubtitleCodecs.Webvtt.Value,
+                        PlaylistName = "subtitles/:filename:.:language:.:variant:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    },
+                    new()
+                    {
+                        Codec = SubtitleCodecs.Ass.Value,
+                        PlaylistName = "subtitles/:filename:.:language:.:variant:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
+            },
+            // MP4 Progressive Download Profiles
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8D5T0D08F9J9577J04K"),
+                Name = "MP4 Standard (1080p)",
+                Container = VideoContainers.Mp4,
+                EncoderProfileFolder = [],
+                VideoProfiles =
+                [
+                    new()
+                    {
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 8000,
+                        Width = FrameSizes._1080p.Width,
+
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        ColorSpace = ColorSpaces.Yuv420P,
+                        Preset = VideoPresets.Fast,
+                        Tune = VideoTunes.Hq,
+                        Profile = VideoProfiles.High,
+                        Level = "4.0",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
+                    }
+                ],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Aac.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ],
+                SubtitleProfiles =
+                [
+                    new()
+                    {
+                        Codec = SubtitleCodecs.Webvtt.Value,
+                        PlaylistName = "subtitles/:filename:.:language:.:variant:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
+            },
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8E5T0D08F9J9577J04K"),
+                Name = "MP4 High Quality (4K)",
+                Container = VideoContainers.Mp4,
+                EncoderProfileFolder = [],
+                VideoProfiles =
+                [
+                    new()
+                    {
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 18000,
+                        Width = FrameSizes._4k.Width,
+
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        ColorSpace = ColorSpaces.Yuv420P,
+                        Preset = VideoPresets.Fast,
+                        Tune = VideoTunes.Hq,
+                        Profile = VideoProfiles.High,
+                        Level = "5.1",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = true
+                    }
+                ],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Aac.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ],
+                SubtitleProfiles =
+                [
+                    new()
+                    {
+                        Codec = SubtitleCodecs.Webvtt.Value,
+                        PlaylistName = "subtitles/:filename:.:language:.:variant:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
+            },
+            // Audio Profiles
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8F5T0D08F9J9577J04K"),
+                Name = "MP3 High Quality (320kbps)",
+                Container = AudioContainers.Mp3,
+                EncoderProfileFolder = [],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Mp3.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
+            },
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8G5T0D08F9J9577J04K"),
+                Name = "MP3 Standard (192kbps)",
+                Container = AudioContainers.Mp3,
+                EncoderProfileFolder = [],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Mp3.Value,
+                        Channels = 2,
+                        SampleRate = 44100,
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
+            },
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8H5T0D08F9J9577J04K"),
+                Name = "FLAC Lossless",
+                Container = AudioContainers.Flac,
+                EncoderProfileFolder = [],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Flac.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
+            },
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8I5T0D08F9J9577J04K"),
+                Name = "AAC Standard",
+                Container = AudioContainers.M4A,
+                EncoderProfileFolder = [],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.Aac.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
+            },
+            new()
+            {
+                Id = Ulid.Parse("01JRH6Q8J5T0D08F9J9577J04K"),
+                Name = "Opus (Streaming Audio)",
+                Container = AudioContainers.Ogg,
+                EncoderProfileFolder = [],
+                AudioProfiles =
+                [
+                    new()
+                    {
+                        Codec = AudioCodecs.LibOpus.Value,
+                        Channels = 2,
+                        SampleRate = 48000,
+                        SegmentName = ":filename:",
+                        PlaylistName = ":filename:",
+                        AllowedLanguages = Languages.AllLanguages()
+                    }
+                ]
             }
         ];
     }
 
 }
+

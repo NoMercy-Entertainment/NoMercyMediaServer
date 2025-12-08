@@ -14,7 +14,7 @@ public class Progress : ProgressMeta
     [JsonProperty("duration")] public double Duration { get; set; }
     [JsonProperty("remaining")] public double Remaining { get; set; }
     [JsonProperty("remaining_hms")] public string RemainingHms { get; set; } = string.Empty;
-    [JsonProperty("remaining_split")] public string[] RemainingSplit { get; set; } = [];
+    [JsonProperty("remaining_split")] public int[] RemainingSplit { get; set; } = [];
     [JsonProperty("current_time")] public double CurrentTime { get; set; }
     [JsonProperty("thumbnails")] public string Thumbnail { get; set; } = string.Empty;
     [JsonProperty("process_id")] public int ProgressId { get; set; }

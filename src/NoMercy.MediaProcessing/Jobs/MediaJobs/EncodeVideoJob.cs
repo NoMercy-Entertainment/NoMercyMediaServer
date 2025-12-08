@@ -75,6 +75,14 @@ public class EncodeVideoJob : AbstractEncoderJob
                 BuildAudioStreams(profile, ref container);
                 BuildSubtitleStreams(profile, ref container);
 
+                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+                {
+                    Message = "Preparing to encode",
+                    Status = "running",
+                    Id = fileMetadata.Id,
+                    Title = fileMetadata.Title,
+                });
+
                 BaseImage sprite = new Sprite()
                     .SetScale(320)
                     .SetFilename("thumbs_:framesize:");
@@ -95,7 +103,7 @@ public class EncodeVideoJob : AbstractEncoderJob
 
                 string fullCommand = ffmpeg.GetFullCommand();
                 Logger.Encoder(fullCommand);
-                
+
                 ProgressMeta progressMeta = new()
                 {
                     Id = fileMetadata.Id,
@@ -122,18 +130,31 @@ public class EncodeVideoJob : AbstractEncoderJob
                     Id = fileMetadata.Id,
                     Status = "running",
                     Title = fileMetadata.Title,
-                    Message = "Building sprite images"
+                    Message = "Building sprite images",
+                    BaseFolder = progressMeta.BaseFolder,
+                    ShareBasePath = progressMeta.ShareBasePath,
+                    AudioStreams = progressMeta.AudioStreams,
+                    VideoStreams = progressMeta.VideoStreams,
+                    SubtitleStreams = progressMeta.SubtitleStreams,
+                    HasGpu = progressMeta.HasGpu,
+                    IsHdr = progressMeta.IsHdr,
                 });
                 
                 await sprite.BuildSprite(progressMeta);
                 
-
                 Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
                 {
                     Id = fileMetadata.Id,
                     Status = "running",
                     Title = fileMetadata.Title,
-                    Message = "Building Master Playlist"
+                    Message = "Building Master Playlist",
+                    BaseFolder = progressMeta.BaseFolder,
+                    ShareBasePath = progressMeta.ShareBasePath,
+                    AudioStreams = progressMeta.AudioStreams,
+                    VideoStreams = progressMeta.VideoStreams,
+                    SubtitleStreams = progressMeta.SubtitleStreams,
+                    HasGpu = progressMeta.HasGpu,
+                    IsHdr = progressMeta.IsHdr,
                 });
                 
                 await container.BuildMasterPlaylist();
@@ -143,7 +164,14 @@ public class EncodeVideoJob : AbstractEncoderJob
                     Id = fileMetadata.Id,
                     Status = "running",
                     Title = fileMetadata.Title,
-                    Message = "Extracting chapters"
+                    Message = "Extracting chapters",
+                    BaseFolder = progressMeta.BaseFolder,
+                    ShareBasePath = progressMeta.ShareBasePath,
+                    AudioStreams = progressMeta.AudioStreams,
+                    VideoStreams = progressMeta.VideoStreams,
+                    SubtitleStreams = progressMeta.SubtitleStreams,
+                    HasGpu = progressMeta.HasGpu,
+                    IsHdr = progressMeta.IsHdr,
                 });
                 
                 await container.ExtractChapters();
@@ -153,7 +181,14 @@ public class EncodeVideoJob : AbstractEncoderJob
                     Id = fileMetadata.Id,
                     Status = "running",
                     Title = fileMetadata.Title,
-                    Message = "Extracting fonts"
+                    Message = "Extracting fonts",
+                    BaseFolder = progressMeta.BaseFolder,
+                    ShareBasePath = progressMeta.ShareBasePath,
+                    AudioStreams = progressMeta.AudioStreams,
+                    VideoStreams = progressMeta.VideoStreams,
+                    SubtitleStreams = progressMeta.SubtitleStreams,
+                    HasGpu = progressMeta.HasGpu,
+                    IsHdr = progressMeta.IsHdr,
                 });
 
                 await container.ExtractFonts();
@@ -165,7 +200,14 @@ public class EncodeVideoJob : AbstractEncoderJob
                         Id = fileMetadata.Id,
                         Status = "running",
                         Title = fileMetadata.Title,
-                        Message = "Converting subtitles"
+                        Message = "Converting subtitles",
+                        BaseFolder = progressMeta.BaseFolder,
+                        ShareBasePath = progressMeta.ShareBasePath,
+                        AudioStreams = progressMeta.AudioStreams,
+                        VideoStreams = progressMeta.VideoStreams,
+                        SubtitleStreams = progressMeta.SubtitleStreams,
+                        HasGpu = progressMeta.HasGpu,
+                        IsHdr = progressMeta.IsHdr,
                     });
                     
                     List<BaseSubtitle> streams = ffmpeg.Container.SubtitleStreams
@@ -179,7 +221,14 @@ public class EncodeVideoJob : AbstractEncoderJob
                     Id = fileMetadata.Id,
                     Status = "running",
                     Title = fileMetadata.Title,
-                    Message = "Scanning files"
+                    Message = "Scanning files",
+                    BaseFolder = progressMeta.BaseFolder,
+                    ShareBasePath = progressMeta.ShareBasePath,
+                    AudioStreams = progressMeta.AudioStreams,
+                    VideoStreams = progressMeta.VideoStreams,
+                    SubtitleStreams = progressMeta.SubtitleStreams,
+                    HasGpu = progressMeta.HasGpu,
+                    IsHdr = progressMeta.IsHdr,
                 });
 
                 fileManager.FilterFiles(container.FileName);
@@ -191,7 +240,14 @@ public class EncodeVideoJob : AbstractEncoderJob
                     Id = fileMetadata.Id,
                     Status = "completed",
                     Title = fileMetadata.Title,
-                    Message = "Done"
+                    Message = "Done",
+                    BaseFolder = progressMeta.BaseFolder,
+                    ShareBasePath = progressMeta.ShareBasePath,
+                    AudioStreams = progressMeta.AudioStreams,
+                    VideoStreams = progressMeta.VideoStreams,
+                    SubtitleStreams = progressMeta.SubtitleStreams,
+                    HasGpu = progressMeta.HasGpu,
+                    IsHdr = progressMeta.IsHdr,
                 });
             }
         }
@@ -204,7 +260,7 @@ public class EncodeVideoJob : AbstractEncoderJob
                 Id = fileMetadata.Id,
                 Status = "failed",
                 Title = fileMetadata.Title,
-                Message = e.Message
+                Message = e.Message,
             });
 
             throw;
@@ -266,7 +322,10 @@ public class EncodeVideoJob : AbstractEncoderJob
     {
         foreach (IVideoProfile profile in encoderProfile.VideoProfiles)
         {
-            BaseVideo stream = BaseVideo.Create(profile.Codec)
+            // Automatically select the best codec based on system capabilities
+            string resolvedCodec = CodecSelector.ResolveBestCodec(profile.Codec);
+
+            BaseVideo stream = BaseVideo.Create(resolvedCodec)
                 .SetScale(profile.Width, profile.Height)
                 .SetConstantRateFactor(profile.Crf)
                 .SetFrameRate(profile.Framerate)
@@ -276,8 +335,10 @@ public class EncodeVideoJob : AbstractEncoderJob
                 .SetHlsPlaylistFilename(profile.PlaylistName)
                 .SetColorSpace(profile.ColorSpace)
                 .SetPreset(profile.Preset)
+                .SetProfile(profile.Profile)
                 .SetTune(profile.Tune)
-                .AddOpt("keyint", profile.Keyint)
+                .SetLevel(profile.Level)
+                .SetKeyInt(profile.KeyInt)
                 .AddOpts(profile.Opts)
                 .AddCustomArguments(profile.CustomArguments);
 
@@ -292,6 +353,7 @@ public class EncodeVideoJob : AbstractEncoderJob
             BaseAudio stream = BaseAudio.Create(profile.Codec)
                 .SetAudioChannels(profile.Channels)
                 .SetAllowedLanguages(profile.AllowedLanguages)
+                .SetSampleRate(profile.SampleRate)
                 .SetHlsSegmentFilename(profile.SegmentName)
                 .SetHlsPlaylistFilename(profile.PlaylistName)
                 .AddOpts(profile.Opts)

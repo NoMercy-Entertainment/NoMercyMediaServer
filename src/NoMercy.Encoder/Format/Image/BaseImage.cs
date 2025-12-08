@@ -136,10 +136,11 @@ public class BaseImage : Classes
     public void AddToDictionary(Dictionary<string, dynamic> commandDictionary, int index)
     {
         commandDictionary["-map"] = $"[i{index}_hls_0]";
-        commandDictionary["-c:v"] = ImageCodec.Value;
 
         foreach (KeyValuePair<string, dynamic> extraParameter in _extraParameters)
             commandDictionary[extraParameter.Key] = extraParameter.Value;
+
+        commandDictionary["-c:v"] = ImageCodec.Value;
     }
 
     public void CreateFolder()
