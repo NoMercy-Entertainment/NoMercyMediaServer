@@ -1,4 +1,5 @@
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem.Capabilities;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -16,52 +17,52 @@ public static class CodecSelector
     /// </summary>
     public static Classes.CodecDto SelectH264Codec()
     {
-        if (FFmpegHardwareConfig.HasAccelerator("cuda"))
+        if (FFmpegAccelerationDetector.HasAccelerator("cuda"))
         {
-            Logger.Encoder("H.264: Selected h264_nvenc (NVIDIA GPU)", LogEventLevel.Information);
+            Logger.Encoder("H.264: Selected h264_nvenc (NVIDIA GPU)");
             return VideoCodecs.H264Nvenc;
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("dxva2") || FFmpegHardwareConfig.HasAccelerator("d3d11va"))
+        if (FFmpegAccelerationDetector.HasAccelerator("dxva2") || FFmpegAccelerationDetector.HasAccelerator("d3d11va"))
         {
             // Check if it's AMD (DXVA2) or Intel (QSV preferred)
-            var amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
+            GpuAccelerator? amdAccelerator = FFmpegAccelerationDetector.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
             if (amdAccelerator != null)
             {
-                Logger.Encoder("H.264: Selected h264_amf (AMD GPU)", LogEventLevel.Information);
+                Logger.Encoder("H.264: Selected h264_amf (AMD GPU)");
                 return VideoCodecs.H264Amf;
             }
 
-            var intelAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
+            GpuAccelerator? intelAccelerator = FFmpegAccelerationDetector.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
             if (intelAccelerator != null)
             {
-                Logger.Encoder("H.264: Selected h264_qsv (Intel GPU)", LogEventLevel.Information);
+                Logger.Encoder("H.264: Selected h264_qsv (Intel GPU)");
                 return VideoCodecs.H264Qsv;
             }
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("vaapi"))
+        if (FFmpegAccelerationDetector.HasAccelerator("vaapi"))
         {
-            var vendor = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Accelerator == "vaapi")?.Vendor;
+            GpuVendor? vendor = FFmpegAccelerationDetector.Accelerators.FirstOrDefault(a => a.Accelerator == "vaapi")?.Vendor;
             if (vendor == GpuVendor.Amd)
             {
-                Logger.Encoder("H.264: Selected h264_amf (AMD VAAPI)", LogEventLevel.Information);
+                Logger.Encoder("H.264: Selected h264_amf (AMD VAAPI)");
                 return VideoCodecs.H264Amf;
             }
             if (vendor == GpuVendor.Intel)
             {
-                Logger.Encoder("H.264: Selected h264_qsv (Intel VAAPI)", LogEventLevel.Information);
+                Logger.Encoder("H.264: Selected h264_qsv (Intel VAAPI)");
                 return VideoCodecs.H264Qsv;
             }
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("videotoolbox"))
+        if (FFmpegAccelerationDetector.HasAccelerator("videotoolbox"))
         {
-            Logger.Encoder("H.264: Selected h264_videotoolbox (Apple GPU)", LogEventLevel.Information);
+            Logger.Encoder("H.264: Selected h264_videotoolbox (Apple GPU)");
             return VideoCodecs.H264Videotoolbox;
         }
 
-        Logger.Encoder("H.264: Selected libx264 (Software - no GPU available)", LogEventLevel.Information);
+        Logger.Encoder("H.264: Selected libx264 (Software - no GPU available)");
         return VideoCodecs.H264;
     }
 
@@ -71,51 +72,51 @@ public static class CodecSelector
     /// </summary>
     public static Classes.CodecDto SelectH265Codec()
     {
-        if (FFmpegHardwareConfig.HasAccelerator("cuda"))
+        if (FFmpegAccelerationDetector.HasAccelerator("cuda"))
         {
-            Logger.Encoder("H.265: Selected hevc_nvenc (NVIDIA GPU)", LogEventLevel.Information);
+            Logger.Encoder("H.265: Selected hevc_nvenc (NVIDIA GPU)");
             return VideoCodecs.H265Nvenc;
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("dxva2") || FFmpegHardwareConfig.HasAccelerator("d3d11va"))
+        if (FFmpegAccelerationDetector.HasAccelerator("dxva2") || FFmpegAccelerationDetector.HasAccelerator("d3d11va"))
         {
-            var amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
+            GpuAccelerator? amdAccelerator = FFmpegAccelerationDetector.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
             if (amdAccelerator != null)
             {
-                Logger.Encoder("H.265: Selected hevc_amf (AMD GPU)", LogEventLevel.Information);
+                Logger.Encoder("H.265: Selected hevc_amf (AMD GPU)");
                 return VideoCodecs.H265Amf;
             }
 
-            var intelAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
+            GpuAccelerator? intelAccelerator = FFmpegAccelerationDetector.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
             if (intelAccelerator != null)
             {
-                Logger.Encoder("H.265: Selected hevc_qsv (Intel GPU)", LogEventLevel.Information);
+                Logger.Encoder("H.265: Selected hevc_qsv (Intel GPU)");
                 return VideoCodecs.H265Qsv;
             }
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("vaapi"))
+        if (FFmpegAccelerationDetector.HasAccelerator("vaapi"))
         {
-            var vendor = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Accelerator == "vaapi")?.Vendor;
+            GpuVendor? vendor = FFmpegAccelerationDetector.Accelerators.FirstOrDefault(a => a.Accelerator == "vaapi")?.Vendor;
             if (vendor == GpuVendor.Amd)
             {
-                Logger.Encoder("H.265: Selected hevc_amf (AMD VAAPI)", LogEventLevel.Information);
+                Logger.Encoder("H.265: Selected hevc_amf (AMD VAAPI)");
                 return VideoCodecs.H265Amf;
             }
             if (vendor == GpuVendor.Intel)
             {
-                Logger.Encoder("H.265: Selected hevc_qsv (Intel VAAPI)", LogEventLevel.Information);
+                Logger.Encoder("H.265: Selected hevc_qsv (Intel VAAPI)");
                 return VideoCodecs.H265Qsv;
             }
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("videotoolbox"))
+        if (FFmpegAccelerationDetector.HasAccelerator("videotoolbox"))
         {
-            Logger.Encoder("H.265: Selected hevc_videotoolbox (Apple GPU)", LogEventLevel.Information);
+            Logger.Encoder("H.265: Selected hevc_videotoolbox (Apple GPU)");
             return VideoCodecs.H265Videotoolbox;
         }
 
-        Logger.Encoder("H.265: Selected libx265 (Software - no GPU available)", LogEventLevel.Information);
+        Logger.Encoder("H.265: Selected libx265 (Software - no GPU available)");
         return VideoCodecs.H265;
     }
 
@@ -125,29 +126,29 @@ public static class CodecSelector
     /// </summary>
     public static Classes.CodecDto SelectVp9Codec()
     {
-        if (FFmpegHardwareConfig.HasAccelerator("cuda"))
+        if (FFmpegAccelerationDetector.HasAccelerator("cuda"))
         {
-            Logger.Encoder("VP9: Selected vp9_nvenc (NVIDIA GPU)", LogEventLevel.Information);
+            Logger.Encoder("VP9: Selected vp9_nvenc (NVIDIA GPU)");
             return VideoCodecs.Vp9Nvenc;
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("dxva2"))
+        if (FFmpegAccelerationDetector.HasAccelerator("dxva2"))
         {
-            var amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
+            GpuAccelerator? amdAccelerator = FFmpegAccelerationDetector.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
             if (amdAccelerator != null)
             {
-                Logger.Encoder("VP9: Selected vp9_amf (AMD GPU)", LogEventLevel.Information);
+                Logger.Encoder("VP9: Selected vp9_amf (AMD GPU)");
                 return VideoCodecs.Vp9Amf;
             }
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("videotoolbox"))
+        if (FFmpegAccelerationDetector.HasAccelerator("videotoolbox"))
         {
-            Logger.Encoder("VP9: Selected vp9_videotoolbox (Apple GPU)", LogEventLevel.Information);
+            Logger.Encoder("VP9: Selected vp9_videotoolbox (Apple GPU)");
             return VideoCodecs.Vp9Videotoolbox;
         }
 
-        Logger.Encoder("VP9: Selected libvpx-vp9 (Software - no GPU available)", LogEventLevel.Information);
+        Logger.Encoder("VP9: Selected libvpx-vp9 (Software - no GPU available)");
         return VideoCodecs.Vp9;
     }
 
@@ -157,36 +158,36 @@ public static class CodecSelector
     /// </summary>
     public static Classes.CodecDto SelectAv1Codec()
     {
-        if (FFmpegHardwareConfig.HasAccelerator("cuda"))
+        if (FFmpegAccelerationDetector.HasAccelerator("cuda"))
         {
-            Logger.Encoder("AV1: Selected av1_nvenc (NVIDIA GPU)", LogEventLevel.Information);
+            Logger.Encoder("AV1: Selected av1_nvenc (NVIDIA GPU)");
             return VideoCodecs.Av1Nvenc;
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("dxva2"))
+        if (FFmpegAccelerationDetector.HasAccelerator("dxva2"))
         {
-            var amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
+            GpuAccelerator? amdAccelerator = FFmpegAccelerationDetector.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
             if (amdAccelerator != null)
             {
-                Logger.Encoder("AV1: Selected av1_amf (AMD GPU)", LogEventLevel.Information);
+                Logger.Encoder("AV1: Selected av1_amf (AMD GPU)");
                 return VideoCodecs.Av1Amf;
             }
 
-            var intelAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
+            GpuAccelerator? intelAccelerator = FFmpegAccelerationDetector.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
             if (intelAccelerator != null)
             {
-                Logger.Encoder("AV1: Selected av1_qsv (Intel GPU)", LogEventLevel.Information);
+                Logger.Encoder("AV1: Selected av1_qsv (Intel GPU)");
                 return VideoCodecs.Av1Qsv;
             }
         }
 
-        if (FFmpegHardwareConfig.HasAccelerator("videotoolbox"))
+        if (FFmpegAccelerationDetector.HasAccelerator("videotoolbox"))
         {
-            Logger.Encoder("AV1: Selected av1_videotoolbox (Apple GPU)", LogEventLevel.Information);
+            Logger.Encoder("AV1: Selected av1_videotoolbox (Apple GPU)");
             return VideoCodecs.Av1Videotoolbox;
         }
 
-        Logger.Encoder("AV1: Selected librav1e (Software - no GPU available)", LogEventLevel.Information);
+        Logger.Encoder("AV1: Selected librav1e (Software - no GPU available)");
         return VideoCodecs.Av1;
     }
 

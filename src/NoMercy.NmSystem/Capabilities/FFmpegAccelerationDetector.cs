@@ -14,7 +14,7 @@ public class FFmpegAccelerationDetector
     /// <summary>
     /// List of detected and verified GPU accelerators
     /// </summary>
-    public List<GpuAccelerator> Accelerators { get; private set; } = [];
+    public static List<GpuAccelerator> Accelerators { get; private set; } = [];
 
     /// <summary>
     /// Initialize the detector and discover available GPU accelerators
@@ -30,7 +30,7 @@ public class FFmpegAccelerationDetector
     /// <summary>
     /// Check if a specific accelerator is available
     /// </summary>
-    public bool HasAccelerator(string accelerator) => Accelerators.Any(a => a.Accelerator == accelerator);
+    public static bool HasAccelerator(string accelerator) => Accelerators.Any(a => a.Accelerator == accelerator);
 
     /// <summary>
     /// Verify FFmpeg hardware acceleration support via command execution
@@ -69,7 +69,7 @@ public class FFmpegAccelerationDetector
                 "opencl"
             ));
 
-            Logger.App("OpenCL acceleration fallback detected", LogEventLevel.Information);
+            Logger.App("OpenCL acceleration fallback detected");
         }
     }
 
@@ -84,7 +84,7 @@ public class FFmpegAccelerationDetector
             return;
         }
 
-        Logger.App($"Detecting GPU accelerators for {gpuVendors.Count} vendor(s)...", LogEventLevel.Information);
+        Logger.App($"Detecting GPU accelerators for {gpuVendors.Count} vendor(s)...");
 
         Dictionary<GpuVendor, int> gpuCounts = new()
         {
@@ -139,7 +139,7 @@ public class FFmpegAccelerationDetector
                 "cuda"
             ));
 
-            Logger.App($"NVIDIA CUDA acceleration detected (device {index})", LogEventLevel.Information);
+            Logger.App($"NVIDIA CUDA acceleration detected (device {index})");
         }
         else
         {
@@ -170,7 +170,7 @@ public class FFmpegAccelerationDetector
                 filter: filter
             ));
 
-            Logger.App($"AMD {accelerator} acceleration detected (device {index})", LogEventLevel.Information);
+            Logger.App($"AMD {accelerator} acceleration detected (device {index})");
         }
         else
         {
@@ -201,7 +201,7 @@ public class FFmpegAccelerationDetector
                 filter: filter
             ));
 
-            Logger.App($"Intel {accelerator} acceleration detected (device {index})", LogEventLevel.Information);
+            Logger.App($"Intel {accelerator} acceleration detected (device {index})");
         }
         else
         {
@@ -227,7 +227,7 @@ public class FFmpegAccelerationDetector
                 "videotoolbox"
             ));
 
-            Logger.App($"Apple VideoToolbox acceleration detected (device {index})", LogEventLevel.Information);
+            Logger.App($"Apple VideoToolbox acceleration detected (device {index})");
         }
         else
         {

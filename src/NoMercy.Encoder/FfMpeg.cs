@@ -276,7 +276,7 @@ public class FfMpeg : Classes
                     ProgressId = ffmpeg.Id
                 };
                 progressDataRunning.RemainingSplit = progressDataRunning.RemainingHms
-                    .Split(":").Select(s => int.TryParse(s, out var v) ? v : 0).ToArray();
+                    .Split(":").Select(s => int.TryParse(s, out int v) ? v : 0).ToArray();
                 if (progressDataRunning.Speed > 0)
                 {
                     Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progressDataRunning);

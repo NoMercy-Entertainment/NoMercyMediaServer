@@ -54,7 +54,7 @@ public class EncoderJobsController : ControllerBase
                 jobRequest.VideoCodec, jobRequest.AudioCodec);
 
             // Delegate to EncoderNode service for actual job processing
-            var encodingRequest = new EncodingJobRequest
+            EncodingJobRequest encodingRequest = new EncodingJobRequest
             {
                 JobId = jobRequest.JobId,
                 InputPath = jobRequest.InputPath,
@@ -62,7 +62,7 @@ public class EncoderJobsController : ControllerBase
                 FfmpegCommand = BuildFfmpegCommand(jobRequest)
             };
 
-            var result = await _jobExecutor.ExecuteJobAsync(encodingRequest, CancellationToken.None);
+            JobExecutionResult result = await _jobExecutor.ExecuteJobAsync(encodingRequest, CancellationToken.None);
 
             return Ok(new
             {
@@ -158,7 +158,7 @@ public class EncoderJobsController : ControllerBase
             }
 
             // Delegate to reporting service
-            var status = new JobCompletionStatus
+            JobCompletionStatus status = new JobCompletionStatus
             {
                 Status = completionData?.Status ?? "unknown",
                 CompletedAt = completionData?.CompletedAt ?? DateTime.UtcNow,

@@ -33,7 +33,7 @@ public class GpuDeviceDetector
             if (devices.Count > 0)
             {
                 Logger.App($"GPU detection complete. Found {devices.Count} device(s):", Serilog.Events.LogEventLevel.Information);
-                foreach (var device in devices)
+                foreach (GpuDevice device in devices)
                 {
                     Logger.App($"  - {device.DeviceName} ({device.DeviceType}): {device.MemoryMb}MB, Compute: {device.ComputeCapability}, Encoders: {string.Join(", ", device.SupportedEncoders)}", Serilog.Events.LogEventLevel.Information);
                 }

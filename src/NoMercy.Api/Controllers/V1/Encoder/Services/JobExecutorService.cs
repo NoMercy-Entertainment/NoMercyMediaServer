@@ -33,7 +33,7 @@ public class JobExecutorService : IJobExecutorService
             _logger.LogInformation("Dispatching encoder job {JobId} to queue. Input: {Input}, Output: {Output}", 
                 request.JobId, request.InputPath, request.OutputPath);
             
-            var queueJob = new QueueJob
+            QueueJob queueJob = new QueueJob
             {
                 Queue = "encoder:video",
                 Payload = JsonConvert.SerializeObject(new

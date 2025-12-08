@@ -57,10 +57,10 @@ public class HlsMasterPlaylistExecutor
         sb.AppendLine();
 
         // Audio media playlists grouped by codec
-        foreach (var (codec, tracks) in audioGroups)
+        foreach ((string codec, List<AudioVariant> tracks) in audioGroups)
         {
             string audioGroupId = $"audio_{codec}";
-            foreach (var track in tracks)
+            foreach (AudioVariant track in tracks)
             {
                 string langDisplay = IsoLanguageMapper.IsoToLanguage.TryGetValue(track.Language, out string? langName)
                     ? ToTitleCase(langName)
@@ -76,17 +76,17 @@ public class HlsMasterPlaylistExecutor
         sb.AppendLine();
 
         // Video stream variants grouped by resolution
-        var resolutionGroups = videoQualities
+        List<IGrouping<string, QualityPlaylist>> resolutionGroups = videoQualities
             .GroupBy(v => v.Resolution)
             .OrderByDescending(g => ParseResolution(g.Key))
             .ToList();
 
-        foreach (var resolutionGroup in resolutionGroups)
+        foreach (IGrouping<string, QualityPlaylist> resolutionGroup in resolutionGroups)
         {
             // Order by SDR first, then HDR
-            foreach (var video in resolutionGroup.OrderByDescending(v => v.IsSdr))
+            foreach (QualityPlaylist video in resolutionGroup.OrderByDescending(v => v.IsSdr))
             {
-                foreach (var (codec, audioTracks) in audioGroups)
+                foreach ((string codec, List<AudioVariant> audioTracks) in audioGroups)
                 {
                     string audioCodecStr = MapAudioCodec(codec);
                     string videoCodecStr = video.CodecProfile;
@@ -105,7 +105,7 @@ public class HlsMasterPlaylistExecutor
         if (subtitleVariants.Count > 0)
         {
             string closedCaptionGroupId = "cc";
-            foreach (var subtitle in subtitleVariants)
+            foreach (SubtitleVariant subtitle in subtitleVariants)
             {
                 sb.AppendLine($"#EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID=\"{closedCaptionGroupId}\",LANGUAGE=\"{subtitle.Language}\",NAME=\"{ToTitleCase(subtitle.Language)}\",URI=\"{subtitle.PlaylistPath}\"");
             }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Encoder.Services;
 
@@ -79,7 +80,7 @@ public class JobReportingService : IJobReportingService
                 });
             }
 
-            var queueJob = await _queueContext.QueueJobs
+            QueueJob? queueJob = await _queueContext.QueueJobs
                 .FirstOrDefaultAsync(q => q.Payload.Contains(jobId), cancellationToken);
 
             if (queueJob != null)

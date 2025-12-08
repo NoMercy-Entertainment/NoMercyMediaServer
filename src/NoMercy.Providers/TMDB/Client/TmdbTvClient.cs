@@ -161,7 +161,7 @@ public class TmdbTvClient : TmdbBaseClient
 
     public async Task<List<TmdbTvShow>?> Popular(int limit = 10, bool? priority = false)
     {
-        var response = await Get<TmdbPaginatedResponse<TmdbTvShow>>("tv/popular", priority: priority);
+        TmdbPaginatedResponse<TmdbTvShow>? response = await Get<TmdbPaginatedResponse<TmdbTvShow>>("tv/popular", priority: priority);
         return response?.Results?.Take(limit).ToList();
     }
 

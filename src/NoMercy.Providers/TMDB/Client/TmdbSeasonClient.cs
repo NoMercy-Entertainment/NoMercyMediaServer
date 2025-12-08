@@ -61,7 +61,7 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
     public async Task<TmdbSeasonChanges?> Changes(string startDate, string endDate, bool? priority = false)
     {
         // First get the season details to obtain the season ID
-        var seasonDetails = await Details(priority);
+        TmdbSeasonDetails? seasonDetails = await Details(priority);
         if (seasonDetails == null) return null;
         
         Dictionary<string, string?> queryParams = new()

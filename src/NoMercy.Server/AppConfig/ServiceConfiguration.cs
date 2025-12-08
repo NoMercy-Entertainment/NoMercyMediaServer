@@ -346,7 +346,7 @@ public static class ServiceConfiguration
     /// </summary>
     private static void DetectGpuCapabilities()
     {
-        var gpuDetector = new GpuDeviceDetector();
+        GpuDeviceDetector gpuDetector = new GpuDeviceDetector();
         gpuDetector.DetectGpuDevices();
     }
 }
