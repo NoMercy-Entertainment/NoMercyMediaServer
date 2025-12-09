@@ -21,7 +21,7 @@ public class JobExecutorService : IJobExecutorService
         if (string.IsNullOrWhiteSpace(request.JobId) || string.IsNullOrWhiteSpace(request.InputPath))
         {
             _logger.LogWarning("Invalid job request: JobId={JobId}, InputPath={InputPath}", request.JobId, request.InputPath);
-            return new JobExecutionResult
+            return new()
             {
                 Success = false,
                 ErrorMessage = "JobId and InputPath are required"
@@ -33,7 +33,7 @@ public class JobExecutorService : IJobExecutorService
             _logger.LogInformation("Dispatching encoder job {JobId} to queue. Input: {Input}, Output: {Output}", 
                 request.JobId, request.InputPath, request.OutputPath);
             
-            QueueJob queueJob = new QueueJob
+            QueueJob queueJob = new()
             {
                 Queue = "encoder:video",
                 Payload = JsonConvert.SerializeObject(new
@@ -53,7 +53,7 @@ public class JobExecutorService : IJobExecutorService
 
             _logger.LogInformation("Successfully queued encoder job {JobId} with DB ID: {DbId}", request.JobId, queueJob.Id);
 
-            return new JobExecutionResult
+            return new()
             {
                 Success = true,
                 ErrorMessage = null
@@ -62,7 +62,7 @@ public class JobExecutorService : IJobExecutorService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to dispatch encoding job {JobId}", request.JobId);
-            return new JobExecutionResult
+            return new()
             {
                 Success = false,
                 ErrorMessage = $"Failed to dispatch job: {ex.Message}"

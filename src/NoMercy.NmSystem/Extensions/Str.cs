@@ -475,16 +475,117 @@ public static partial class Str
         // Check for presence of RTL characters
         foreach (char c in str)
         {
-            if ((c >= '\u0590' && c <= '\u05FF') || // Hebrew
-                (c >= '\u0600' && c <= '\u06FF') || // Arabic
-                (c >= '\u0750' && c <= '\u077F') || // Arabic Supplement
-                (c >= '\u08A0' && c <= '\u08FF') || // Arabic Extended-A
-                (c >= '\uFB50' && c <= '\uFDFF') || // Arabic Presentation Forms-A
-                (c >= '\uFE70' && c <= '\uFEFF'))   // Arabic Presentation Forms-B
+            if (c is >= '\u0590' and <= '\u05FF' || // Hebrew
+                c is >= '\u0600' and <= '\u06FF' || // Arabic
+                c is >= '\u0750' and <= '\u077F' || // Arabic Supplement
+                c is >= '\u08A0' and <= '\u08FF' || // Arabic Extended-A
+                c is >= '\uFB50' and <= '\uFDFF' || // Arabic Presentation Forms-A
+                c is >= '\uFE70' and <= '\uFEFF')   // Arabic Presentation Forms-B
             {
                 return TextDirection.RTL;
             }
         }
         return TextDirection.LTR;
+    }
+
+    public static string ToCLIString(this Dictionary<string, dynamic?>? options)
+    {
+        if (options == null || options.Count == 0)
+            return string.Empty;
+
+        StringBuilder sb = new();
+        
+        foreach (KeyValuePair<string, dynamic?> kv in options)
+        {
+            string key = kv.Key;
+            dynamic? value = kv.Value;
+
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+
+            switch (value)
+            {
+                // skip null values
+                case null:
+                    sb.Append(key);
+                    sb.Append(' ');
+                    continue;
+                // boolean flags: true -> include flag, false -> skip
+                case bool b:
+                {
+                    if (b)
+                    {
+                        sb.Append(key);
+                        sb.Append(' ');
+                    }
+
+                    continue;
+                }
+                // string values
+                case string s:
+                {
+                    if (string.IsNullOrEmpty(s))
+                    {
+                        // treat empty string as flag-only
+                        sb.Append(key);
+                    }
+                    else
+                    {
+                        sb.Append(key);
+                        sb.Append(' ');
+                        sb.Append(Escape(s));
+                    }
+
+                    sb.Append(' ');
+
+                    continue;
+                }
+            }
+
+            // enumerable values (arrays, lists) - repeat the flag for each element
+            if (value is System.Collections.IEnumerable enumerable and not string)
+            {
+                foreach (object? item in enumerable)
+                {
+                    if (item is null) continue;
+                    string itemStr = item.ToString() ?? string.Empty;
+
+                    if (string.IsNullOrEmpty(itemStr))
+                    {
+                        sb.Append(key);
+                    }
+                    else
+                    {
+                        sb.Append(key);
+                        sb.Append(' ');
+                        sb.Append(Escape(itemStr));
+                    }
+
+                    sb.Append(' ');
+                }
+
+                continue;
+            }
+
+            // fallback for numbers and other single values
+            string fallback = value.ToString() ?? string.Empty;
+            sb.Append(key);
+            sb.Append(' ');
+            sb.Append(Escape(fallback));
+            sb.Append(' ');
+        }
+
+        return sb.ToString().Trim();
+
+        static string Escape(string value)
+        {
+            if (value.Length == 0) return "\"\"";
+
+            // If value contains spaces or quotes, wrap in quotes and escape internal quotes
+            if (value.IndexOfAny([' ', '\t', '"']) >= 0)
+                return "\"" + value.Replace("\"", "\\\"") + "\"";
+
+            return value;
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using NoMercy.Encoder.Core;
+using NoMercy.EncoderV2.Core.Dictionaries;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.EncoderV2.Jobs;
@@ -62,7 +63,7 @@ public class HlsMasterPlaylistExecutor
             string audioGroupId = $"audio_{codec}";
             foreach (AudioVariant track in tracks)
             {
-                string langDisplay = IsoLanguageMapper.IsoToLanguage.TryGetValue(track.Language, out string? langName)
+                string langDisplay = IsoLanguageDictionary.Iso6392ToLanguage.TryGetValue(track.Language, out string? langName)
                     ? ToTitleCase(langName)
                     : ToTitleCase(track.Language);
 

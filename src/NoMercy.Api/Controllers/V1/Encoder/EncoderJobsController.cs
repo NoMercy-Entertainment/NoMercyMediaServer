@@ -54,7 +54,7 @@ public class EncoderJobsController : ControllerBase
                 jobRequest.VideoCodec, jobRequest.AudioCodec);
 
             // Delegate to EncoderNode service for actual job processing
-            EncodingJobRequest encodingRequest = new EncodingJobRequest
+            EncodingJobRequest encodingRequest = new()
             {
                 JobId = jobRequest.JobId,
                 InputPath = jobRequest.InputPath,
@@ -158,7 +158,7 @@ public class EncoderJobsController : ControllerBase
             }
 
             // Delegate to reporting service
-            JobCompletionStatus status = new JobCompletionStatus
+            JobCompletionStatus status = new()
             {
                 Status = completionData?.Status ?? "unknown",
                 CompletedAt = completionData?.CompletedAt ?? DateTime.UtcNow,

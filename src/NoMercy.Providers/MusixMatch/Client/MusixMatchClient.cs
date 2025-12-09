@@ -16,9 +16,9 @@ public class MusixmatchClient : MusixMatchBaseClient
         
         if (musixMatchTrackParameters.Album != null) 
             additionalArguments.Add("q_album", musixMatchTrackParameters.Album);
-        if (musixMatchTrackParameters.Artists != null && musixMatchTrackParameters.Artists.Length > 0)
+        if (musixMatchTrackParameters.Artists is { Length: > 0 })
             additionalArguments.Add("q_artists", Join(",", musixMatchTrackParameters.Artists ?? []));
-        if (musixMatchTrackParameters.Duration != null && musixMatchTrackParameters.Duration.Length > 0)
+        if (musixMatchTrackParameters.Duration is { Length: > 0 })
             additionalArguments.Add("q_duration", musixMatchTrackParameters.Duration ?? Empty);
 
         return Get<MusixMatchSubtitleGet>("macro.subtitles.get", additionalArguments, priority);

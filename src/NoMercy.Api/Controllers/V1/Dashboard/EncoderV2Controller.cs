@@ -4,9 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.EncoderV2.Api;
-using NoMercy.EncoderV2.Capabilities;
 using NoMercy.EncoderV2.Jobs;
-using NoMercy.EncoderV2.Profiles;
+using NoMercy.EncoderV2.Shared.Dtos;
 using NoMercy.EncoderV2.Validation;
 using NoMercy.Helpers;
 using NoMercy.NmSystem.Extensions;
@@ -86,8 +85,9 @@ public class EncoderV2Controller : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view profiles");
 
-        List<EncodingProfile> profiles = ProductionProfiles.GetAllProfiles();
-        return Ok(profiles.Select(p => MapToResponse(p)).ToList());
+        // List<EncodingProfile> profiles = ProductionProfiles.GetAllProfiles();
+        // return Ok(profiles.Select(p => MapToResponse(p)).ToList());
+        return NoContent();
     }
 
     /// <summary>
@@ -104,11 +104,12 @@ public class EncoderV2Controller : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view profiles");
 
-        EncodingProfile? profile = ProductionProfiles.GetAllProfiles().FirstOrDefault(p => p.ProfileId == profileId);
-        if (profile == null)
-            return NotFound(new { error = $"Profile '{profileId}' not found" });
-
-        return Ok(MapToResponse(profile));
+        // EncodingProfile? profile = ProductionProfiles.GetAllProfiles().FirstOrDefault(p => p.ProfileId == profileId);
+        // if (profile == null)
+        //     return NotFound(new { error = $"Profile '{profileId}' not found" });
+        //
+        // return Ok(MapToResponse(profile));
+        return NoContent();
     }
 
     /// <summary>
@@ -123,12 +124,13 @@ public class EncoderV2Controller : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view profiles");
 
-        List<EncodingProfileResponse> profiles = ProductionProfiles.GetAllProfiles()
-            .Where(p => p.Container.Equals(container, StringComparison.OrdinalIgnoreCase))
-            .Select(p => MapToResponse(p))
-            .ToList();
-
-        return Ok(profiles);
+        // List<EncodingProfileResponse> profiles = ProductionProfiles.GetAllProfiles()
+        //     .Where(p => p.Container.Equals(container, StringComparison.OrdinalIgnoreCase))
+        //     .Select(p => MapToResponse(p))
+        //     .ToList();
+        //
+        // return Ok(profiles);
+        return NoContent();
     }
 
     /// <summary>
@@ -143,12 +145,14 @@ public class EncoderV2Controller : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view profiles");
 
-        List<EncodingProfileResponse> profiles = ProductionProfiles.GetAllProfiles()
-            .Where(p => p.Purpose.Equals(purpose, StringComparison.OrdinalIgnoreCase))
-            .Select(p => MapToResponse(p))
-            .ToList();
-
-        return Ok(profiles);
+        // List<EncodingProfileResponse> profiles = ProductionProfiles.GetAllProfiles()
+        //     .Where(p => p.Purpose.Equals(purpose, StringComparison.OrdinalIgnoreCase))
+        //     .Select(p => MapToResponse(p))
+        //     .ToList();
+        //
+        // return Ok(profiles);
+        
+        return NoContent();
     }
 
     /// <summary>
@@ -203,29 +207,30 @@ public class EncoderV2Controller : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update profiles");
 
-        EncodingProfile? existing = ProductionProfiles.GetAllProfiles().FirstOrDefault(p => p.ProfileId == profileId);
-        if (existing == null)
-            return NotFound(new { error = $"Profile '{profileId}' not found" });
-
-        // Validate updated profile
-        if (!await _validator.ValidateAsync(request))
-        {
-            return BadRequest(new { error = "Invalid profile configuration" });
-        }
-
-        EncodingProfile updated = new()
-        {
-            ProfileId = profileId,
-            Name = request.Name,
-            Container = request.Container,
-            Purpose = request.Purpose ?? "playback",
-            VideoProfile = MapToVideoConfig(request.VideoProfile),
-            AudioProfile = MapToAudioConfig(request.AudioProfile),
-            SubtitleProfile = MapToSubtitleConfig(request.SubtitleProfile),
-            CreatedAt = existing.CreatedAt
-        };
-
-        return Ok(MapToResponse(updated));
+        // EncodingProfile? existing = ProductionProfiles.GetAllProfiles().FirstOrDefault(p => p.ProfileId == profileId);
+        // if (existing == null)
+        //     return NotFound(new { error = $"Profile '{profileId}' not found" });
+        //
+        // // Validate updated profile
+        // if (!await _validator.ValidateAsync(request))
+        // {
+        //     return BadRequest(new { error = "Invalid profile configuration" });
+        // }
+        //
+        // EncodingProfile updated = new()
+        // {
+        //     ProfileId = profileId,
+        //     Name = request.Name,
+        //     Container = request.Container,
+        //     Purpose = request.Purpose ?? "playback",
+        //     VideoProfile = MapToVideoConfig(request.VideoProfile),
+        //     AudioProfile = MapToAudioConfig(request.AudioProfile),
+        //     SubtitleProfile = MapToSubtitleConfig(request.SubtitleProfile),
+        //     CreatedAt = existing.CreatedAt
+        // };
+        //
+        // return Ok(MapToResponse(updated));
+        return NoContent();
     }
 
     /// <summary>
@@ -242,9 +247,9 @@ public class EncoderV2Controller : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete profiles");
 
-        EncodingProfile? existing = ProductionProfiles.GetAllProfiles().FirstOrDefault(p => p.ProfileId == profileId);
-        if (existing == null)
-            return NotFound(new { error = $"Profile '{profileId}' not found" });
+        // EncodingProfile? existing = ProductionProfiles.GetAllProfiles().FirstOrDefault(p => p.ProfileId == profileId);
+        // if (existing == null)
+        //     return NotFound(new { error = $"Profile '{profileId}' not found" });
 
         // In production, would check if profile is in use before deletion
         return NoContent();
@@ -263,7 +268,9 @@ public class EncoderV2Controller : BaseController
             return UnauthorizedResponse("You do not have permission to seed profiles");
 
         // Default profiles are returned by ProductionProfiles.GetAllProfiles()
-        return Ok(new { message = "Default profiles available", count = ProductionProfiles.GetAllProfiles().Count });
+        // return Ok(new { message = "Default profiles available", count = ProductionProfiles.GetAllProfiles().Count });
+
+        return NoContent();
     }
 
     // Helper Methods

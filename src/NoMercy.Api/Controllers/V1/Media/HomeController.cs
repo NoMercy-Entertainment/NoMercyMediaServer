@@ -10,6 +10,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -193,7 +194,7 @@ public class HomeController : BaseController
 
         string arg =
             $"-f bestvideo+bestaudio -j https://youtube.com/watch?v={trailerId} --extractor-args \"youtube:player_client=default\" ";
-        Shell.ExecResult result = await Shell.ExecAsync(AppFiles.YtdlpPath, arg);
+        ExecResult result = await Shell.ExecAsync(AppFiles.YtdlpPath, arg);
         
         if(!result.Success || string.IsNullOrEmpty(result.StandardOutput))
         {

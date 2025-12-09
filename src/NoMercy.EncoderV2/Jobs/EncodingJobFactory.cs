@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using NoMercy.EncoderV2.Capabilities;
+using NoMercy.EncoderV2.Shared.Dtos;
 
 namespace NoMercy.EncoderV2.Jobs;
 

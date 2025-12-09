@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.FileSystem;
 using Serilog.Events;
 
@@ -70,7 +71,7 @@ public static class Archiving
         {
             await Shell.ExecAsync("tar", $"xf \"{tarFilePath}\" -C \"{extractToDirectory}\"");
             
-            Shell.ExecResult result = await Shell.ExecAsync("tar" , $"tf \"{tarFilePath}\"");
+            ExecResult result = await Shell.ExecAsync("tar" , $"tf \"{tarFilePath}\"");
             string output = result.StandardOutput;
             
             foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))

@@ -1,4 +1,4 @@
-namespace NoMercy.EncoderV2.Capabilities;
+namespace NoMercy.EncoderV2.Shared.Dtos;
 
 public record EncoderCapability
 {

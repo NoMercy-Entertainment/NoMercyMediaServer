@@ -103,7 +103,7 @@ public class EncodingJobExecutor
                 options["-pix_fmt"] = video.PixelFormat;
 
             // Merge custom video options
-            if (video.CustomOptions != null && video.CustomOptions.Count > 0)
+            if (video.CustomOptions is { Count: > 0 })
             {
                 foreach (KeyValuePair<string, dynamic> kvp in video.CustomOptions)
                 {
@@ -128,7 +128,7 @@ public class EncodingJobExecutor
                 options["-ar"] = audio.SampleRate.ToString();
 
             // Merge custom audio options
-            if (audio.CustomOptions != null && audio.CustomOptions.Count > 0)
+            if (audio.CustomOptions is { Count: > 0 })
             {
                 foreach (KeyValuePair<string, dynamic> kvp in audio.CustomOptions)
                 {

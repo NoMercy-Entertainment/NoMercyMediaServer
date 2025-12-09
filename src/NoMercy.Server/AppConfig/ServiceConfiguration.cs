@@ -14,6 +14,7 @@ using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.EncoderV2.Composition;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaProcessing.Collections;
@@ -168,6 +169,8 @@ public static class ServiceConfiguration
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();
+        
+        services.AddFfmpegProcessExecutor();
     }
 
     
@@ -346,7 +349,7 @@ public static class ServiceConfiguration
     /// </summary>
     private static void DetectGpuCapabilities()
     {
-        GpuDeviceDetector gpuDetector = new GpuDeviceDetector();
+        GpuDeviceDetector gpuDetector = new();
         gpuDetector.DetectGpuDevices();
     }
 }
