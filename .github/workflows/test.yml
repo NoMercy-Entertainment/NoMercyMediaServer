@@ -183,17 +183,18 @@ jobs:
         run: |
           dotnet restore NoMercy.Server.sln
 
-      - name: Check if src/ changed and run tests
+      - name: Check if code changed and run tests
         shell: bash
         run: |
           set -euo pipefail
           # Get the list of changed files in this commit
           CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD 2>/dev/null || echo "src/")
-          echo "Changed files: $CHANGED"
+          echo "Changed files:"
+          echo "$CHANGED"
           
-          # If anything in src/ or tests/ changed, run tests
-          if echo "$CHANGED" | grep -qE '^(src/|tests/)'; then
-            echo "Running tests due to src/ or tests/ changes..."
+          # If anything in src/ or tests/ changed, or any .cs/.csproj file, run tests
+          if echo "$CHANGED" | grep -E '(src/|tests/|\.cs$|\.csproj$)' > /dev/null; then
+            echo "Running tests due to code changes..."
             dotnet test NoMercy.Server.sln \
               --configuration Debug \
               --verbosity minimal \
@@ -201,7 +202,7 @@ jobs:
               --blame-hang-timeout 5m \
               --filter "Category=Unit|Category=ErrorHandling"
           else
-            echo "No src/ or tests/ changes detected, skipping tests."
+            echo "No code changes detected, skipping tests."
           fi
 
   # Optional coverage job - only runs on master or when manually triggered
