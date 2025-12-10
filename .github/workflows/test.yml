@@ -191,49 +191,66 @@ jobs:
           # Ensure we have enough git history to diff
           git fetch --no-tags --prune --unshallow || true
 
-          if [ -f "$GITHUB_EVENT_PATH" ]; then
-            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              BASE_REF=$(jq -r .pull_request.base.sha < "$GITHUB_EVENT_PATH")
+          # Determine HEAD and BASE refs with safe fallbacks
+          HEAD_REF="${GITHUB_SHA:-$(git rev-parse --verify HEAD 2>/dev/null || true)}"
+          BASE_REF=""
+
+          if [ -f "${GITHUB_EVENT_PATH:-}" ]; then
+            if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
+              BASE_REF=$(jq -r .pull_request.base.sha < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
             else
-              BASE_REF=$(jq -r .before < "$GITHUB_EVENT_PATH")
+              BASE_REF=$(jq -r .before < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+              HEAD_REF=$(jq -r .after < "$GITHUB_EVENT_PATH" 2>/dev/null || echo "$HEAD_REF")
             fi
-          else
-            BASE_REF=$(git rev-parse HEAD^) || true
           fi
+
+          if [ -z "$BASE_REF" ]; then
+            # Try common branch names on origin (main/master) as a sensible base
+            git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
+            git fetch origin --no-tags --prune || true
+            for branch in main master; do
+              if git ls-remote --exit-code --heads origin $branch >/dev/null 2>&1; then
+                BASE_REF=$(git rev-parse "origin/$branch" 2>/dev/null || true)
+                break
+              fi
+            done
+          fi
+
+          # Last resort: use previous commit of HEAD
+          if [ -z "$BASE_REF" ]; then
+            BASE_REF=$(git rev-parse "$HEAD_REF^" 2>/dev/null || true) || true
+          fi
+
           echo "Base ref: $BASE_REF"
-            # Use GitHub API to list changed files (PR files or compare API) to avoid expensive git fetch
-            CHANGED_FILES=""
-            if [ -n "${GITHUB_EVENT_PATH:-}" ] && [ -f "$GITHUB_EVENT_PATH" ]; then
-              if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-                PR_NUM=$(jq -r .pull_request.number < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-                echo "Listing changed files for PR #$PR_NUM via GitHub API"
-                if [ -n "$PR_NUM" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
-                  CHANGED_FILES=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUM/files?per_page=100" | jq -r '.[].filename' || true)
-                else
-                  echo "PR number or GITHUB_TOKEN missing; falling back to git diff"
-                fi
-              else
-                BASE=$(jq -r .before < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-                HEAD=$(jq -r .after < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-                echo "Using compare API for $BASE...$HEAD"
-                if [ -n "$BASE" ] && [ -n "$HEAD" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
-                  CHANGED_FILES=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/compare/$BASE...$HEAD" | jq -r '.files[].filename' || true)
-                else
-                  echo "Compare refs or GITHUB_TOKEN missing; falling back to git diff"
-                fi
+          echo "Head ref: $HEAD_REF"
+
+          # Use GitHub API to list changed files where possible (PRs / compare API)
+          CHANGED_FILES=""
+          if [ -n "${GITHUB_EVENT_PATH:-}" ] && [ -f "$GITHUB_EVENT_PATH" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
+            if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
+              PR_NUM=$(jq -r .pull_request.number < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+              if [ -n "$PR_NUM" ]; then
+                CHANGED_FILES=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUM/files?per_page=100" | jq -r '.[].filename' || true)
+              fi
+            else
+              BASE=$(jq -r .before < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+              HEAD=$(jq -r .after < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
+              if [ -n "$BASE" ] && [ -n "$HEAD" ]; then
+                CHANGED_FILES=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/compare/$BASE...$HEAD" | jq -r '.files[].filename' || true)
               fi
             fi
+          fi
 
-            if [ -z "$CHANGED_FILES" ]; then
-              echo "Falling back to git diff (may require fetching refs)..."
-              git fetch --no-tags --prune --unshallow || true
-              git fetch --all --tags || true
-              git fetch origin "$BASE_REF" || true
-              git fetch origin "$GITHUB_SHA" || true
-              CHANGED_FILES=$(git diff --name-only "$BASE_REF" "$GITHUB_SHA" || true)
-            fi
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "Falling back to git diff (may require fetching refs)..."
+            git fetch --no-tags --prune --unshallow || true
+            git fetch --all --tags || true
+            git fetch origin "$BASE_REF" || true
+            git fetch origin "$HEAD_REF" || true
+            CHANGED_FILES=$(git diff --name-only "$BASE_REF" "$HEAD_REF" || true)
+          fi
 
-            echo "Changed files:"; echo "$CHANGED_FILES"
+          echo "Changed files:"; echo "$CHANGED_FILES"
 
           # Collect changed source csproj paths
           CHANGED_CSPROJS=$(printf '%s\n' "$CHANGED_FILES" | grep '\.csproj$' | grep '^src/' || true)
