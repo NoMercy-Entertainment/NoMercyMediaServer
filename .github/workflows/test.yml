@@ -61,7 +61,8 @@ jobs:
           if [ -z "$download_url" ]; then echo "No download URL found for FFmpeg release"; exit 1; fi
           echo "Found FFmpeg asset: $download_url"
           TMPDIR=$(mktemp -d)
-          asset="$TMPDIR/asset"
+          asset_name=$(basename "$download_url")
+          asset="$TMPDIR/$asset_name"
           curl -L -o "$asset" "$download_url"
           DEST="$HOME/.local/share/NoMercy/root/binaries/ffmpeg"
           mkdir -p "$DEST"
