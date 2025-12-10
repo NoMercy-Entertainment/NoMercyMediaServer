@@ -183,132 +183,25 @@ jobs:
         run: |
           dotnet restore NoMercy.Server.sln
 
-      - name: Determine changed projects and run relevant tests
+      - name: Check if src/ changed and run tests
         shell: bash
         run: |
           set -euo pipefail
-          echo "Determining changed files between base and head..."
-          # Ensure we have enough git history to diff
-          git fetch --no-tags --prune --unshallow || true
-
-          # Determine HEAD and BASE refs with safe fallbacks
-          HEAD_REF="${GITHUB_SHA:-$(git rev-parse --verify HEAD 2>/dev/null || true)}"
-          BASE_REF=""
-
-          if [ -f "${GITHUB_EVENT_PATH:-}" ]; then
-            if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
-              BASE_REF=$(jq -r .pull_request.base.sha < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-            else
-              BASE_REF=$(jq -r .before < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-              HEAD_REF=$(jq -r .after < "$GITHUB_EVENT_PATH" 2>/dev/null || echo "$HEAD_REF")
-            fi
-          fi
-
-          if [ -z "$BASE_REF" ]; then
-            # Try common branch names on origin (main/master) as a sensible base
-            git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
-            git fetch origin --no-tags --prune || true
-            for branch in main master; do
-              if git ls-remote --exit-code --heads origin $branch >/dev/null 2>&1; then
-                BASE_REF=$(git rev-parse "origin/$branch" 2>/dev/null || true)
-                break
-              fi
-            done
-          fi
-
-          # Last resort: use previous commit of HEAD
-          if [ -z "$BASE_REF" ]; then
-            BASE_REF=$(git rev-parse "$HEAD_REF^" 2>/dev/null || true) || true
-          fi
-
-          echo "Base ref: $BASE_REF"
-          echo "Head ref: $HEAD_REF"
-
-          # Use GitHub API to list changed files where possible (PRs / compare API)
-          CHANGED_FILES=""
-          if [ -n "${GITHUB_EVENT_PATH:-}" ] && [ -f "$GITHUB_EVENT_PATH" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
-            if [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
-              PR_NUM=$(jq -r .pull_request.number < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-              if [ -n "$PR_NUM" ]; then
-                CHANGED_FILES=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUM/files?per_page=100" | jq -r '.[].filename' || true)
-              fi
-            else
-              BASE=$(jq -r .before < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-              HEAD=$(jq -r .after < "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-              if [ -n "$BASE" ] && [ -n "$HEAD" ]; then
-                CHANGED_FILES=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/compare/$BASE...$HEAD" | jq -r '.files[].filename' || true)
-              fi
-            fi
-          fi
-
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "Falling back to git diff (may require fetching refs)..."
-            git fetch --no-tags --prune --unshallow || true
-            git fetch --all --tags || true
-            git fetch origin "$BASE_REF" || true
-            git fetch origin "$HEAD_REF" || true
-            CHANGED_FILES=$(git diff --name-only "$BASE_REF" "$HEAD_REF" || true)
-          fi
-
-          echo "Changed files:"; echo "$CHANGED_FILES"
-
-          # Collect changed source csproj paths
-          CHANGED_CSPROJS=$(printf '%s\n' "$CHANGED_FILES" | grep '\.csproj$' | grep '^src/' || true)
-
-          declare -a TESTS_TO_RUN
-
-          # If any test project itself changed or files under tests/ changed, include it
-          while IFS= read -r f; do
-            [ -z "$f" ] && continue
-            if [[ "$f" == tests/* ]]; then
-              # try to find the test project root for this change
-              proj_dir=$(echo "$f" | sed -E 's|(tests/[^/]+).*|\1|')
-              csproj=$(find "$proj_dir" -maxdepth 1 -type f -name '*.csproj' -print -quit || true)
-              if [ -n "$csproj" ]; then
-                TESTS_TO_RUN+=("$csproj")
-              fi
-            fi
-          done <<< "$CHANGED_FILES"
-
-          # Inspect all test csproj files and include those that reference changed src projects
-          while IFS= read -r t; do
-            [ -z "$t" ] && continue
-            # skip if already included
-            skip=false
-            for e in "${TESTS_TO_RUN[@]:-}"; do
-              if [ "$e" = "$t" ]; then skip=true; break; fi
-            done
-            [ "$skip" = true ] && continue
-
-            include=false
-            # if test csproj itself was changed, include
-            if printf '%s\n' "$CHANGED_FILES" | grep -qF "$t"; then
-              include=true
-            else
-              for c in $CHANGED_CSPROJS; do
-                if grep -qi "$(basename "$c")" "$t" 2>/dev/null; then
-                  include=true
-                  break
-                fi
-              done
-            fi
-
-            if [ "$include" = true ]; then
-              TESTS_TO_RUN+=("$t")
-            fi
-          done < <(find tests -name '*.csproj' -print)
-
-          # Deduplicate
-          if [ ${#TESTS_TO_RUN[@]} -gt 0 ]; then
-            echo "Running tests for projects:"
-            printf '%s\n' "${TESTS_TO_RUN[@]}"
-            for p in "${TESTS_TO_RUN[@]}"; do
-              echo "dotnet test $p"
-              dotnet test "$p" --configuration Debug --verbosity minimal --logger trx --blame-hang-timeout 5m --filter "Category=Unit|Category=ErrorHandling"
-            done
+          # Get the list of changed files in this commit
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD 2>/dev/null || echo "src/")
+          echo "Changed files: $CHANGED"
+          
+          # If anything in src/ or tests/ changed, run tests
+          if echo "$CHANGED" | grep -qE '^(src/|tests/)'; then
+            echo "Running tests due to src/ or tests/ changes..."
+            dotnet test NoMercy.Server.sln \
+              --configuration Debug \
+              --verbosity minimal \
+              --logger trx \
+              --blame-hang-timeout 5m \
+              --filter "Category=Unit|Category=ErrorHandling"
           else
-            echo "No specific tests detected; running full fast suite."
-            dotnet test NoMercy.Server.sln --configuration Debug --verbosity minimal --logger trx --blame-hang-timeout 5m --filter "Category=Unit|Category=ErrorHandling"
+            echo "No src/ or tests/ changes detected, skipping tests."
           fi
 
   # Optional coverage job - only runs on master or when manually triggered
