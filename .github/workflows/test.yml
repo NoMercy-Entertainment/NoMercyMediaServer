@@ -187,8 +187,32 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Get the list of changed files in this commit
-          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD 2>/dev/null || echo "src/")
+          
+          # Determine base and head refs from GitHub context
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            BASE=$(jq -r '.pull_request.base.sha' < "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+            HEAD=$(jq -r '.pull_request.head.sha' < "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+          else
+            BASE=$(jq -r '.before' < "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+            HEAD=$(jq -r '.after' < "$GITHUB_EVENT_PATH" 2>/dev/null || echo "")
+          fi
+          
+          # Fallback: try git diff with refs
+          if [ -z "$BASE" ] || [ -z "$HEAD" ]; then
+            BASE=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+            HEAD=$(git rev-parse HEAD 2>/dev/null || echo "")
+          fi
+          
+          echo "Comparing $BASE..$HEAD"
+          
+          # Get changed files
+          if [ -n "$BASE" ] && [ -n "$HEAD" ]; then
+            CHANGED=$(git diff --name-only "$BASE" "$HEAD" 2>/dev/null || echo "src/")
+          else
+            echo "Warning: Could not determine base/head refs, assuming changes"
+            CHANGED="src/"
+          fi
+          
           echo "Changed files:"
           echo "$CHANGED"
           

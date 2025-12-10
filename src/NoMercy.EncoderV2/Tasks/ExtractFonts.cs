@@ -13,10 +13,10 @@ namespace NoMercy.EncoderV2.Tasks;
 
 public class ExtractFonts: ITaskContract
 {
-    private string InputFile { get; set; }
-    private string Destination { get; set; }
-    private string FontsDir { get; set; }
-    private string FontsFile { get; set; }
+    private string InputFile { get; }
+    private string Destination { get; }
+    private string FontsDir { get; }
+    private string FontsFile { get; }
     
     public ExtractFonts(string inputFile, string destination)
     {
