@@ -30,9 +30,32 @@ jobs:
           set -euo pipefail
           API_URL="https://api.github.com/repos/NoMercy-Entertainment/NoMercyFFMpeg/releases/latest"
           echo "Querying $API_URL"
-          # Use jq to select appropriate asset (jq is available on Ubuntu runners)
-          download_url=$(curl -s "$API_URL" | jq -r '.assets[] | select((.name|ascii_downcase) | test("linux|amd64|x86_64|x64")) | .browser_download_url' | head -n1)
+          # Pick the asset matching the runner OS and architecture
+          OS_NAME=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH_NAME=$(uname -m)
+          case "$ARCH_NAME" in
+            x86_64|amd64) ARCH_PATTERN="x86_64|amd64|x64" ;;
+            aarch64|arm64) ARCH_PATTERN="arm64|aarch64" ;;
+            *) ARCH_PATTERN="$ARCH_NAME" ;;
+          esac
+          case "$OS_NAME" in
+            linux) OS_PATTERN="linux" ;;
+            darwin|mac*) OS_PATTERN="darwin|mac|macos" ;;
+            msys*|mingw*|cygwin*|windows) OS_PATTERN="windows|win" ;;
+            *) OS_PATTERN="$OS_NAME" ;;
+          esac
+
+          download_url=$(curl -s "$API_URL" | jq -r --arg osp "$OS_PATTERN" --arg archp "$ARCH_PATTERN" '.assets[] | select((.name|ascii_downcase) | test($osp) and test($archp)) | .browser_download_url' | head -n1)
           if [ -z "$download_url" ]; then
+            # fallback: match by arch only
+            download_url=$(curl -s "$API_URL" | jq -r --arg archp "$ARCH_PATTERN" '.assets[] | select((.name|ascii_downcase) | test($archp)) | .browser_download_url' | head -n1)
+          fi
+          if [ -z "$download_url" ]; then
+            # fallback: match by os only
+            download_url=$(curl -s "$API_URL" | jq -r --arg osp "$OS_PATTERN" '.assets[] | select((.name|ascii_downcase) | test($osp)) | .browser_download_url' | head -n1)
+          fi
+          if [ -z "$download_url" ]; then
+            # final fallback: first asset
             download_url=$(curl -s "$API_URL" | jq -r '.assets[0].browser_download_url // ""')
           fi
           if [ -z "$download_url" ]; then echo "No download URL found for FFmpeg release"; exit 1; fi
@@ -70,6 +93,64 @@ jobs:
           cp "$found" "$DEST/ffmpeg"
           chmod +x "$DEST/ffmpeg"
           echo "Installed ffmpeg to $DEST/ffmpeg"
+
+      - name: Install Tesseract language data (eng.traineddata)
+        run: |
+          set -euo pipefail
+          API_URL="https://api.github.com/repos/NoMercy-Entertainment/NoMercyTesseract/releases/latest"
+          echo "Querying $API_URL for traineddata"
+          # Prefer direct eng.traineddata asset
+          download_url=$(curl -s "$API_URL" | jq -r '.assets[] | select((.name|ascii_downcase) | test("eng\\.traineddata")) | .browser_download_url' | head -n1)
+          if [ -z "$download_url" ]; then
+            # fallback: any .traineddata asset
+            download_url=$(curl -s "$API_URL" | jq -r '.assets[] | select((.name|ascii_downcase) | test("\\.traineddata")) | .browser_download_url' | head -n1)
+          fi
+          if [ -z "$download_url" ]; then
+            # fallback: any archive that might contain tessdata
+            download_url=$(curl -s "$API_URL" | jq -r '.assets[] | select((.name|ascii_downcase) | test("tessdata|tesseract|traineddata|zip|tar")) | .browser_download_url' | head -n1)
+          fi
+          if [ -z "$download_url" ]; then
+            echo "No suitable asset found for NoMercyTesseract release"; exit 1
+          fi
+          echo "Found Tesseract asset: $download_url"
+          TMPDIR=$(mktemp -d)
+          asset="$TMPDIR/asset"
+          curl -L -o "$asset" "$download_url"
+          DEST="$HOME/.local/share/NoMercy/root/binaries/tesseract/tessdata"
+          mkdir -p "$DEST"
+          case "$asset" in
+            *.traineddata)
+              cp "$asset" "$DEST/eng.traineddata"
+              ;;
+            *.zip)
+              unzip -o "$asset" -d "$TMPDIR/extract"
+              ;;
+            *.tar.gz|*.tgz)
+              mkdir -p "$TMPDIR/extract" && tar -xzf "$asset" -C "$TMPDIR/extract"
+              ;;
+            *.tar.xz)
+              mkdir -p "$TMPDIR/extract" && tar -xJf "$asset" -C "$TMPDIR/extract"
+              ;;
+            *)
+              # unknown file type: try to treat as traineddata
+              cp "$asset" "$DEST/eng.traineddata" || true
+              ;;
+          esac
+          # If we extracted, try to locate eng.traineddata within the archive
+          if [ -d "$TMPDIR/extract" ]; then
+            found=$(find "$TMPDIR/extract" -type f -iname "eng.traineddata" -print -quit || true)
+            if [ -z "$found" ]; then
+              # sometimes files are under tessdata/eng.traineddata
+              found=$(find "$TMPDIR/extract" -type f -iname "*eng*traineddata*" -print -quit || true)
+            fi
+            if [ -n "$found" ]; then
+              cp "$found" "$DEST/eng.traineddata"
+            fi
+          fi
+          if [ ! -f "$DEST/eng.traineddata" ]; then
+            echo "eng.traineddata not found after extraction. Listing $TMPDIR/extract:"; ls -R "$TMPDIR/extract" || true; exit 1
+          fi
+          echo "Installed eng.traineddata to $DEST/eng.traineddata"
 
       - name: Restore solution
         run: |
