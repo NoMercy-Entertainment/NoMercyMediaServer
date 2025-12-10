@@ -25,6 +25,52 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 
+      - name: Install FFmpeg (NoMercy release, latest)
+        run: |
+          set -euo pipefail
+          API_URL="https://api.github.com/repos/NoMercy-Entertainment/NoMercyFFMpeg/releases/latest"
+          echo "Querying $API_URL"
+          # Use jq to select appropriate asset (jq is available on Ubuntu runners)
+          download_url=$(curl -s "$API_URL" | jq -r '.assets[] | select((.name|ascii_downcase) | test("linux|amd64|x86_64|x64")) | .browser_download_url' | head -n1)
+          if [ -z "$download_url" ]; then
+            download_url=$(curl -s "$API_URL" | jq -r '.assets[0].browser_download_url // ""')
+          fi
+          if [ -z "$download_url" ]; then echo "No download URL found for FFmpeg release"; exit 1; fi
+          echo "Found FFmpeg asset: $download_url"
+          TMPDIR=$(mktemp -d)
+          asset="$TMPDIR/asset"
+          curl -L -o "$asset" "$download_url"
+          DEST="$HOME/.local/share/NoMercy/root/binaries/ffmpeg"
+          mkdir -p "$DEST"
+          case "$asset" in
+            *.zip)
+              unzip -o "$asset" -d "$TMPDIR/extract"
+              ;;
+            *.tar.gz|*.tgz)
+              mkdir -p "$TMPDIR/extract" && tar -xzf "$asset" -C "$TMPDIR/extract"
+              ;;
+            *.tar.xz)
+              mkdir -p "$TMPDIR/extract" && tar -xJf "$asset" -C "$TMPDIR/extract"
+              ;;
+            *)
+              # treat as raw binary
+              cp "$asset" "$DEST/ffmpeg"
+              chmod +x "$DEST/ffmpeg"
+              echo "Installed raw ffmpeg to $DEST/ffmpeg"
+              exit 0
+              ;;
+          esac
+          found=$(find "$TMPDIR/extract" -type f -name "ffmpeg" -print -quit || true)
+          if [ -z "$found" ]; then
+            found=$(find "$TMPDIR/extract" -type f -name "ffmpeg*" -print -quit || true)
+          fi
+          if [ -z "$found" ]; then
+            echo "ffmpeg binary not found inside archive. Listing contents:"; ls -R "$TMPDIR/extract"; exit 1
+          fi
+          cp "$found" "$DEST/ffmpeg"
+          chmod +x "$DEST/ffmpeg"
+          echo "Installed ffmpeg to $DEST/ffmpeg"
+
       - name: Restore solution
         run: |
           dotnet restore NoMercy.Server.sln
