@@ -25,15 +25,18 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 
+      - name: Restore solution
+        run: |
+          dotnet restore NoMercy.Server.sln
+
       - name: Run fast tests (Unit + ErrorHandling)
         run: >
-          dotnet test NoMercy.Server.sln 
+          dotnet test NoMercy.Server.sln
           --configuration Debug
-          --no-restore
           --verbosity minimal
           --logger trx
           --blame-hang-timeout 5m
-          --filter "Category=Unit|Category=ErrorHandling"
+          --filter "Category!=Integration&Category!=Performance"
 
   # Optional coverage job - only runs on master or when manually triggered
   coverage:
