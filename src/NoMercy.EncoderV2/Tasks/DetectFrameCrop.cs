@@ -65,6 +65,7 @@ public partial class DetectFrameCrop: ITaskContract
     {
         DetectFrameCrop cropDetect = new(inputFile);
         await cropDetect.Run(cts);
+        
         return cropDetect.ChooseCrop(cropDetect._counts);
     }
 
