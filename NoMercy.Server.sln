@@ -49,6 +49,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tests.Providers", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.EncoderV2", "src\NoMercy.EncoderV2\NoMercy.EncoderV2.csproj", "{B9937DDF-4B73-4722-8362-778645D594C3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tests.EncoderV2", "tests\NoMercy.Tests.EncoderV2\NoMercy.Tests.EncoderV2.csproj", "{16C04233-B46E-4CE6-B4E4-687BEA5167D8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,7 +141,11 @@ Global
 		{B9937DDF-4B73-4722-8362-778645D594C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B9937DDF-4B73-4722-8362-778645D594C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B9937DDF-4B73-4722-8362-778645D594C3}.Release|Any CPU.Build.0 = Release|Any CPU
-    EndGlobalSection
+		{16C04233-B46E-4CE6-B4E4-687BEA5167D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16C04233-B46E-4CE6-B4E4-687BEA5167D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16C04233-B46E-4CE6-B4E4-687BEA5167D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16C04233-B46E-4CE6-B4E4-687BEA5167D8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
@@ -168,5 +174,6 @@ Global
 		{47CB436B-1658-4D9F-A8E7-B0A50C16B0ED} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
 		{961855D7-7E0C-494F-944D-7BCC5B8ACB17} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
 		{B9937DDF-4B73-4722-8362-778645D594C3} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
+		{16C04233-B46E-4CE6-B4E4-687BEA5167D8} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
 	EndGlobalSection
 EndGlobal

@@ -14,11 +14,13 @@ public class ExtractChapters: ITaskContract
 {
     private string InputFile { get; set; }
     private string Destination { get; set; }
+    private string FileName { get; set; }
     
-    public ExtractChapters(string inputFile, string destination)
+    public ExtractChapters(string inputFile, string destination, string fileName)
     {
         InputFile = inputFile;
         Destination = destination;
+        FileName = fileName;
     }
     
     private string GetCommand()
@@ -50,9 +52,15 @@ public class ExtractChapters: ITaskContract
         await GenerateFile(root);
     }
 
+    public static async Task RunStatic(string inputFile, string destination, string fileName, CancellationTokenSource cts)
+    {
+        ExtractChapters task = new(inputFile, destination, fileName);
+        await task.Run(cts);
+    }
+
     private async Task GenerateFile(FfprobeChapterRoot root)
     {
-        string chapterFile = $"{Destination}/chapters.vtt";
+        string chapterFile = $"{Destination}/{FileName}.vtt";
         
         if(!Path.Exists(Destination))
             Directory.CreateDirectory(Destination);

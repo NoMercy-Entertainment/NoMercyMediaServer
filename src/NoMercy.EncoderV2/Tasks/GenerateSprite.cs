@@ -25,7 +25,7 @@ public class GenerateSprite: ITaskContract
     private int GridWidth { get; set; }
     private string PathGrep { get; set; }
         
-    public GenerateSprite(string destination, int width, int height, int frameRate = 10)
+    public GenerateSprite(string destination, int width, int height, int frameRate)
     {
         Destination = destination;
         FrameRate = frameRate;
@@ -54,17 +54,14 @@ public class GenerateSprite: ITaskContract
     private string GetCommand()
     {
         // $"-i \"{Path.Combine(ThumbnailsFolder, BaseName + "-%04d.jpg")}\" -filter_complex tile=\"{gridWidth}x{gridHeight}\" -y \"{SpriteFile}\"";
-        Dictionary<string, dynamic?> args = new()
-        {
-            { "-i", PathGrep },
-            { "-filter_complex", $"tile=\"{GridWidth}x{GridHeight}\"" },
-            { "-y", SpriteFile }
-        };
+        StringBuilder command = new();
+        command.Append($"-i \"{PathGrep}\" ");
+        command.Append($"-filter_complex tile=\"{GridWidth}x{GridHeight}\" ");
+        command.Append($"-y \"{SpriteFile}\" ");
         
-        return args.ToCLIString();
+        return command.ToString();
     }
-
-
+    
     public async Task Run(CancellationTokenSource cts)
     {
         if (ImageFiles.Length == 0) return;
@@ -73,7 +70,7 @@ public class GenerateSprite: ITaskContract
         
         Logger.Encoder(montageCommand, LogEventLevel.Debug);
         
-        await Shell.ExecAsync(AppFiles.FfProbePath, montageCommand, new() { WorkingDirectory = Destination }, cts);
+        await Shell.ExecAsync(AppFiles.FfmpegPath, montageCommand, new() { WorkingDirectory = Destination }, cts);
         
         await GenerateFile();
         
@@ -82,6 +79,12 @@ public class GenerateSprite: ITaskContract
             Logger.Encoder($"Deleting folder {ThumbnailsFolder}", LogEventLevel.Debug);
             Directory.Delete(ThumbnailsFolder, true);
         }
+    }
+    
+    public static async Task RunStatic(string destination, int width, int height, int frameRate, CancellationTokenSource cts)
+    {
+        GenerateSprite task = new(destination, width, height, frameRate);
+        await task.Run(cts);
     }
     
     private async Task GenerateFile()

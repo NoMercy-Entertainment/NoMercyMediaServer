@@ -20,7 +20,7 @@ public partial class ConvertSubtitle: ITaskContract
     private string Language { get; }
     private string Type { get; }
     private string Extension => "vtt";
-    private string SubtitleFileName => $"{FileName}_{Language}_{Type}.{Extension}";
+    private string SubtitleFileName => $"{FileName}.{Language}.{Type}.{Extension}";
     
     public ConvertSubtitle(string inputFile, string destination, string fileName, string language, string type)
     {
@@ -36,7 +36,6 @@ public partial class ConvertSubtitle: ITaskContract
     private string GetCommand()
     {
         // return $" -i \"{InputFile}\" -f lavfi -i color=black:s=hd720 -filter_complex \"[0:s:0]ocr=language={Language},metadata=print:key=lavfi.ocr.text:file=temp.txt\" -an -f null -";
-
         StringBuilder ocrCommand = new();
         ocrCommand.Append($"-i \"{InputFile}\" ");
         ocrCommand.Append("-f lavfi -i color=black:s=hd720 ");
@@ -56,9 +55,12 @@ public partial class ConvertSubtitle: ITaskContract
 
         string ocrCommand = GetCommand();
 
-        Logger.Encoder($"Converting {IsoLanguageDictionary.LanguageToIso6392[Language]} subtitle to WebVtt");
+        Logger.Encoder($"Converting {IsoLanguageDictionary.GetLanguageFromIso6392(Language)} subtitle to WebVtt");
         Logger.Encoder(AppFiles.FfmpegPath + " " + ocrCommand, LogEventLevel.Debug);
 
+        if (!Directory.Exists(SubtitlesFolder))
+            Directory.CreateDirectory(SubtitlesFolder);
+        
         await Shell.ExecAsync(AppFiles.FfmpegPath, ocrCommand, new()
         {
             WorkingDirectory = SubtitlesFolder,
@@ -79,8 +81,13 @@ public partial class ConvertSubtitle: ITaskContract
 
         File.Delete(orcFile);
     }
-
-
+    
+    public static async Task RunStatic(string inputFile, string destination, string fileName, string language, string type, CancellationTokenSource cts)
+    {
+        ConvertSubtitle task = new(inputFile, destination, fileName, language, type);
+        await task.Run(cts);
+    }
+    
     private static Subtitle[] ParseSubtitles(string filePath)
     {
         List<Subtitle> subtitles = [];

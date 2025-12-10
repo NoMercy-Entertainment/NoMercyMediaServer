@@ -33,12 +33,12 @@ public abstract class TmdbTestBase : IDisposable
     /// <summary>
     /// Creates a valid TV show ID for testing
     /// </summary>
-    protected const int ValidTvShowId = 11890; // Goede Tijden, Slechte Tijden (GTST) - Active Dutch soap
+    protected const int ValidTvShowId = 246; // Avatar: The Last Airbender
     
     /// <summary>
     /// Creates a valid season number for testing
     /// </summary>
-    protected const int ValidSeasonNumber = 54; // Current season (September 2025)
+    protected const int ValidSeasonNumber = 2; // Book Two: Earth
     
     /// <summary>
     /// Creates a valid episode number for testing
@@ -55,7 +55,7 @@ public abstract class TmdbTestBase : IDisposable
     /// </summary>
     protected const int ValidCollectionId = 263; // The Dark Knight Collection
 
-    /// <summary>
+    /// <summary> 
     /// TMDB API Token from NoMercy API endpoint
     /// </summary>
     private const string TmdbApiToken = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJlZDNiZjg2MGFkZWYwNTM3NzgzZTRhYmVlODZkNjVhZiIsInN1YiI6IjViNTE5MWQ3MGUwYTI2MjU5OTAwZmY0MyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.QndOAaK4WKspNYRhVxp0yq1-plwoJR7iBcwQSn0NQJA";

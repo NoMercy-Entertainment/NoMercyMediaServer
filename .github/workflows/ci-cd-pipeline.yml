@@ -23,6 +23,7 @@ on:
       - 'package.json'
     branches:
       - dev
+      - encoder-v2
   release:
     types: [published]
   workflow_dispatch:

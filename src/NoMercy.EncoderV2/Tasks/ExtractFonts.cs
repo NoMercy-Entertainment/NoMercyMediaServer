@@ -1,7 +1,8 @@
-using Newtonsoft.Json;
+using System.Text;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.EncoderV2.Core.Contracts;
 using NoMercy.EncoderV2.Shared.Dtos;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -14,53 +15,60 @@ public class ExtractFonts: ITaskContract
 {
     private string InputFile { get; set; }
     private string Destination { get; set; }
+    private string FontsDir { get; set; }
+    private string FontsFile { get; set; }
     
     public ExtractFonts(string inputFile, string destination)
     {
         InputFile = inputFile;
-        Destination = Path.Combine(destination, "fonts");
+        Destination = destination;
+        FontsDir = Path.Combine(destination, "fonts");
+        FontsFile = Path.Combine(Destination, "fonts.json");
     }
     
     private string GetCommand()
     {
         // return $@"-dump_attachment:t """" -i ""{inputFile}"" -y -hide_banner -t 0 -f null null";
-        Dictionary<string, dynamic?> args = new()
-        {
-            { "-dump_attachment:t", @"""" },
-            { "-i", InputFile },
-            { "-y", null },
-            { "-hide_banner", null },
-            { "-t", 0 },
-            { "-f", "null" },
-            // TODO: Test if -o null works
-            { "-o", "null" }
-        };
+        StringBuilder command = new();
+        command.Append(@"-dump_attachment:t """" ");
+        command.Append($"-i \"{InputFile}\" ");
+        command.Append("-y ");
+        command.Append("-hide_banner ");
+        command.Append("-t 0 ");
+        command.Append("-f null ");
+        command.Append("- ");
             
-        return args.ToCLIString();
+        return command.ToString();
     }
     
     public async Task Run(CancellationTokenSource cts)
     {
         string command = GetCommand();
-    
-        Logger.Encoder(command, LogEventLevel.Debug);
 
-        if (!Directory.Exists(Destination)) 
-            Directory.CreateDirectory(Destination);
+        Logger.Encoder(command, LogEventLevel.Debug);
         
-        await Shell.ExecAsync(AppFiles.FfProbePath, command, new() { WorkingDirectory = Destination }, cts);
-        
+        if (!Directory.Exists(FontsDir))
+            Directory.CreateDirectory(FontsDir);
+
+        ExecResult res = await Shell.ExecAsync(AppFiles.FfmpegPath, command, new() { WorkingDirectory = FontsDir }, cts);
+        if (res.ExitCode != 0)
+            throw new InvalidOperationException($"ffmpeg extraction failed: {res.StandardError}");
+
         await GenerateFile(cts);
+    }
+
+    public static async Task RunStatic(string inputFile, string destination, CancellationTokenSource cts)
+    {
+        ExtractFonts task = new(inputFile, destination);
+        await task.Run(cts);
     }
 
     private async Task GenerateFile(CancellationTokenSource cts)
     {
-        string attachmentsFile = Path.Combine(Destination, "fonts.json");
-
-        string[] files = Directory.GetFiles(Destination);
+        string[] files = Directory.GetFiles(FontsDir);
         if (files.Length == 0) return;
 
-        List<Attachment> attachments = [];
+        List<Attachment> attachments = new();
         foreach (string file in files)
         {
             attachments.Add(new()
@@ -70,7 +78,6 @@ public class ExtractFonts: ITaskContract
             });
         }
 
-        await File.WriteAllTextAsync(attachmentsFile, attachments.ToJson(), cts.Token);
+        await File.WriteAllTextAsync(FontsFile, attachments.ToJson(), cts.Token);
     }
-
 }

@@ -28,8 +28,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\NoMercy.Data\NoMercy.Data.csproj"/>
         <ProjectReference Include="..\..\src\NoMercy.EncoderV2\NoMercy.EncoderV2.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <Content Include="Assets\**\*.*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 
 </Project>
