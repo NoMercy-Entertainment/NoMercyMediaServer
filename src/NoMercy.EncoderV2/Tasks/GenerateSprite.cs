@@ -10,27 +10,23 @@ namespace NoMercy.EncoderV2.Tasks;
 
 public class GenerateSprite: ITaskContract
 {
-    private string Destination { get; set; }
-    private string BaseName { get; set; }
-    private int FrameRate { get; set; }
-    private int Width { get; set; }
-    private int Height { get; set; }
-    private string SpriteFilename { get; set; }
-    private string TimeFilename { get; set; }
-    private string SpriteFile { get; set; }
-    private string TimeFile { get; set; }
-    private string ThumbnailsFolder { get; set; }
-    private string[] ImageFiles { get; set; }
-    private int GridHeight { get; set; }
-    private int GridWidth { get; set; }
-    private string PathGrep { get; set; }
+    private string Destination { get; }
+    private string BaseName { get; }
+    private int FrameRate { get; }
+    private string SpriteFilename { get; }
+    private string TimeFilename { get; }
+    private string SpriteFile { get; }
+    private string TimeFile { get; }
+    private string ThumbnailsFolder { get; }
+    private string[] ImageFiles { get; }
+    private int GridHeight { get; }
+    private int GridWidth { get; }
+    private string PathGrep { get; }
         
     public GenerateSprite(string destination, int width, int height, int frameRate)
     {
         Destination = destination;
         FrameRate = frameRate;
-        Width = width;
-        Height = height;
         
         BaseName = $"thumbs_{width}x{height}";
         
