@@ -42,7 +42,7 @@ public class VideoHub : ConnectionHub
     
     public async Task SetTime(VideoProgressRequest request)
     {
-        Guid userId = Guid.Parse(Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty);
+        Guid userId = Context.User.UserId();
 
         User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 

@@ -89,14 +89,24 @@ public class TvShowsController(
         bool available = await tvShowRepository.GetTvAvailableAsync(userId, id);
 
         if (!available)
-            return NotFound(new AvailableResponseDto
+            return NotFound(new StatusResponseDto<AvailableResponseDto>
             {
-                Available = false
+                Data = new()
+                {
+                    Available = false
+                },
+                Status = "error",
+                Message = "Tv show not found"
             });
 
-        return Ok(new AvailableResponseDto
+        return Ok(new StatusResponseDto<AvailableResponseDto>
         {
-            Available = true
+            Data = new()
+            {
+                Available = true
+            },
+            Status = "ok",
+            Message = "Tv show is available"
         });
     }
 

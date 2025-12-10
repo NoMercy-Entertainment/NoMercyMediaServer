@@ -417,4 +417,12 @@
     <Key>Response status code does not indicate success: 502 (Bad Gateway).</Key>
     <Value lang="nl">Responsstatuscode geeft geen succes aan: 502 (Onjuiste gateway).</Value>
   </Entry>
+  <Entry>
+    <Key>Tv show is available</Key>
+    <Value lang="nl">Tv serie is beschikbaar</Value>
+  </Entry>
+  <Entry>
+    <Key>Collection is available</Key>
+    <Value lang="nl">Collectie is beschikbaar</Value>
+  </Entry>
 </I18N>

@@ -88,14 +88,24 @@ public class MoviesController(
         bool available = await movieRepository.GetMovieAvailableAsync(mediaContext, userId, id, language, country);
 
         if (!available)
-            return NotFound(new AvailableResponseDto
+            return NotFound(new StatusResponseDto<AvailableResponseDto>
             {
-                Available = false
+                Data = new()
+                {
+                    Available = false
+                },
+                Status = "error",
+                Message = "Movie not found"
             });
 
-        return Ok(new AvailableResponseDto
+        return Ok(new StatusResponseDto<AvailableResponseDto>
         {
-            Available = true
+            Data = new()
+            {
+                Available = true
+            },
+            Status = "ok",
+            Message = "Movie is available"
         });
     }
 

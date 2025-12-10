@@ -63,7 +63,7 @@ public class LibrariesController(
             List<Tv> shows =
                 libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
             
-            Uri moreLink = library.LibraryMovies.Count + library.LibraryTvs.Count > 300
+            Uri moreLink = library.LibraryMovies.Count + library.LibraryTvs.Count > 500
                 ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
                 : new($"/libraries/{library.Id}", UriKind.Relative);
 

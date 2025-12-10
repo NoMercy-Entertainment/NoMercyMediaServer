@@ -141,14 +141,24 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         );
 
         if (!hasFiles)
-            return NotFound(new AvailableResponseDto
+            return NotFound(new StatusResponseDto<AvailableResponseDto>
             {
-                Available = false
+                Data = new()
+                {
+                    Available = false
+                },
+                Status = "error",
+                Message = "Special not found"
             });
 
-        return Ok(new AvailableResponseDto
+        return Ok(new StatusResponseDto<AvailableResponseDto>
         {
-            Available = true
+            Data = new()
+            {
+                Available = true
+            },
+            Status = "ok",
+            Message = "Special is available"
         });
     }
 

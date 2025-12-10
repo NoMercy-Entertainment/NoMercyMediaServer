@@ -138,14 +138,24 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
             .Any();
 
         if (!available)
-            return NotFound(new AvailableResponseDto
+            return NotFound(new StatusResponseDto<AvailableResponseDto>
             {
-                Available = false
+                Data = new()
+                {
+                    Available = false
+                },
+                Status = "error",
+                Message = "Collection not found"
             });
 
-        return Ok(new AvailableResponseDto
+        return Ok(new StatusResponseDto<AvailableResponseDto>
         {
-            Available = true
+            Data = new()
+            {
+                Available = true
+            },
+            Status = "ok",
+            Message = "Collection is available"
         });
     }
 
