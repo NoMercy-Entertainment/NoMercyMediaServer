@@ -90,9 +90,32 @@ jobs:
           if [ -z "$found" ]; then
             echo "ffmpeg binary not found inside archive. Listing contents:"; ls -R "$TMPDIR/extract"; exit 1
           fi
+          # copy main ffmpeg binary
           cp "$found" "$DEST/ffmpeg"
           chmod +x "$DEST/ffmpeg"
+
+          # also try to locate and install ffprobe / ffplay if present in archive
+          ffprobe_found=$(find "$TMPDIR/extract" -type f -name "ffprobe" -print -quit || true)
+          if [ -n "$ffprobe_found" ]; then
+            cp "$ffprobe_found" "$DEST/ffprobe"
+            chmod +x "$DEST/ffprobe"
+            echo "Installed ffprobe to $DEST/ffprobe"
+          fi
+          ffplay_found=$(find "$TMPDIR/extract" -type f -name "ffplay" -print -quit || true)
+          if [ -n "$ffplay_found" ]; then
+            cp "$ffplay_found" "$DEST/ffplay"
+            chmod +x "$DEST/ffplay"
+            echo "Installed ffplay to $DEST/ffplay"
+          fi
+
           echo "Installed ffmpeg to $DEST/ffmpeg"
+
+          # verification: ensure binary is correct format and show version
+          if command -v file >/dev/null 2>&1; then
+            echo "file output:"; file "$DEST/ffmpeg" || true
+          fi
+          echo "ls -l $DEST:"; ls -l "$DEST" || true
+          echo "ffmpeg -version (from installed path):"; "$DEST/ffmpeg" -version || true
 
       - name: Install Tesseract language data (eng.traineddata)
         run: |
@@ -151,6 +174,9 @@ jobs:
             echo "eng.traineddata not found after extraction. Listing $TMPDIR/extract:"; ls -R "$TMPDIR/extract" || true; exit 1
           fi
           echo "Installed eng.traineddata to $DEST/eng.traineddata"
+          # verification
+          echo "ls -l $DEST:"; ls -l "$DEST" || true
+          echo "eng.traineddata size:"; wc -c "$DEST/eng.traineddata" || true
 
       - name: Restore solution
         run: |
