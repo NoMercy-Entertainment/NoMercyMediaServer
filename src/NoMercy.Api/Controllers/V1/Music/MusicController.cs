@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Api.Controllers.V1.Media;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
@@ -36,7 +37,7 @@ public class MusicController : BaseController
     [HttpGet]
     [Route("")]
     [Route("start")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -89,7 +90,7 @@ public class MusicController : BaseController
 
         List<ComponentDto<dynamic>> topResults = [];
 
-        if (favoriteArtist is not null)
+        if (favoriteArtist is not null && request.Version != "lolomo")
             topResults.Add(new ComponentBuilder<dynamic>()
                 .WithComponent("NMMusicHomeCard")
                 .WithProps((props, _) => props
@@ -98,7 +99,7 @@ public class MusicController : BaseController
                     .WithData(favoriteArtist))
                 .Build());
 
-        if (favoriteAlbum is not null)
+        if (favoriteAlbum is not null && request.Version != "lolomo")
             topResults.Add(new ComponentBuilder<dynamic>()
                 .WithComponent("NMMusicHomeCard")
                 .WithProps((props, _) => props
@@ -107,7 +108,7 @@ public class MusicController : BaseController
                     .WithData(favoriteAlbum))
                 .Build());
 
-        if (favoritePlaylist is not null)
+        if (favoritePlaylist is not null && request.Version != "lolomo")
             topResults.Add(new ComponentBuilder<dynamic>()
                 .WithComponent("NMMusicHomeCard")
                 .WithProps((props, _) => props
@@ -115,8 +116,7 @@ public class MusicController : BaseController
                     .WithTitle("Most listened artist".Localize())
                     .WithData(favoritePlaylist))
                 .Build());
-
-
+        
         return Ok(new Render
         {
             Data =
