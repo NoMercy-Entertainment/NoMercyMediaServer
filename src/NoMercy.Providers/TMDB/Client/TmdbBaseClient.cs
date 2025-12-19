@@ -75,6 +75,8 @@ public class TmdbBaseClient : IDisposable
             ? Language 
             : "";
 
+        query["include_adult"] = Config.AllowAdultContent;
+
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
         if (!skipCache && CacheController.Read(newUrl, out T? result)) return result;

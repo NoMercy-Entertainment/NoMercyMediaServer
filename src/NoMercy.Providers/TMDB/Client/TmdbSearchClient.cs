@@ -1,3 +1,4 @@
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Networks;
@@ -15,8 +16,7 @@ public class TmdbSearchClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
-            ["primary_release_year"] = year,
-            ["include_adult"] = "false"
+            ["primary_release_year"] = year
         };
 
         return Get<TmdbPaginatedResponse<TmdbMovie>>("search/movie", queryParams, priority);
@@ -27,8 +27,7 @@ public class TmdbSearchClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
-            ["first_air_date_year"] = year,
-            ["include_adult"] = "false"
+            ["first_air_date_year"] = year
         };
 
         return Get<TmdbPaginatedResponse<TmdbTvShow>>("search/tv", queryParams, priority);
@@ -39,8 +38,7 @@ public class TmdbSearchClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
-            ["primary_release_year"] = year,
-            ["include_adult"] = "false"
+            ["primary_release_year"] = year
         };
 
         return Get<TmdbPaginatedResponse<TmdbPerson>>("search/person", queryParams, priority);
@@ -51,8 +49,7 @@ public class TmdbSearchClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
-            ["primary_release_year"] = year,
-            ["include_adult"] = "false"
+            ["primary_release_year"] = year
         };
 
         return Get<TmdbPaginatedResponse<TmdbMultiSearch>>("search/multi", queryParams, priority);
@@ -64,8 +61,7 @@ public class TmdbSearchClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
-            ["primary_release_year"] = year,
-            ["include_adult"] = "false"
+            ["primary_release_year"] = year
         };
 
         return Get<TmdbPaginatedResponse<TmdbCollection>>("search/collection", queryParams, priority);
@@ -76,8 +72,7 @@ public class TmdbSearchClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
-            ["primary_release_year"] = year,
-            ["include_adult"] = "false"
+            ["primary_release_year"] = year
         };
 
         return Get<TmdbPaginatedResponse<TmdbNetwork>>("search/network", queryParams, priority);
@@ -88,8 +83,7 @@ public class TmdbSearchClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new()
         {
             ["query"] = query,
-            ["primary_release_year"] = year,
-            ["include_adult"] = "false"
+            ["primary_release_year"] = year
         };
 
         return Get<TmdbPaginatedResponse<TmdbKeyword>>("search/keyword", queryParams, priority);

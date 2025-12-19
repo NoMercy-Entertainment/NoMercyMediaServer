@@ -20,7 +20,7 @@ public static class Dev
             .Include(tv => tv.Episodes)
             .ThenInclude(episode => episode.VideoFiles)
             .ThenInclude(videoFile => videoFile.Metadata)
-            // .Where(tv => tv.Id == 67195)
+            .Where(tv => tv.Id == 218613)
             .ToListAsync();
             
         shows.Reverse();

@@ -51,7 +51,7 @@ public class GenresController : BaseController
                 new ComponentBuilder<NmGenreCardDto>()
                     .WithComponent("NMGrid")
                     .WithProps((props, _) => props
-                        .WithProperties(new(){})
+                        .WithProperties(new() { })
                         .WithItems(
                             genres
                                 .Select(item =>
@@ -114,24 +114,60 @@ public class GenresController : BaseController
             });
         }
 
-        return Ok(new LoloMoResponseDto<NmCardDto>
+        return Ok(new Render
         {
-            Data = Letters.Select(g => new LoloMoRowDto<NmCardDto>
-            {
-                Title = g,
-                Id = g,
-                Items = genre.GenreMovies.Take(request.Take)
-                    .Where(libraryMovie => g == "#"
-                        ? Numbers.Any(p => libraryMovie.Movie.Title.StartsWith(p))
-                        : libraryMovie.Movie.Title.StartsWith(g))
-                    .Select(genreMovie => new NmCardDto(genreMovie.Movie, country))
-                    .Concat(genre.GenreTvShows.Take(request.Take)
-                        .Where(libraryTv => g == "#"
-                            ? Numbers.Any(p => libraryTv.Tv.Title.StartsWith(p))
-                            : libraryTv.Tv.Title.StartsWith(g))
-                        .Select(genreTv => new NmCardDto(genreTv.Tv, country)))
-                    .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort)
-            })
+            Data = Letters
+                .Select((letter, index) => new ComponentBuilder<NmCardDto>()
+                .WithComponent("NMCarousel")
+                .WithProps((p, _) => p
+                    .WithId(letter)
+                    .WithTitle(letter)
+                    .WithPreviousId(index == 0
+                        ? ""
+                        : Letters.ElementAtOrDefault(index - 1) ?? "")
+                    .WithNextId(index == Letters.Length - 1
+                        ? ""
+                        : Letters.ElementAtOrDefault(index + 1) ?? "")
+                    .WithItems(
+                        genre.GenreMovies
+                            .Where(libraryMovie => letter == "#"
+                                ? Numbers.Any(p => libraryMovie.Movie.Title.StartsWith(p))
+                                : libraryMovie.Movie.Title.StartsWith(letter))
+                            .Select(genreMovie => new NmCardDto(genreMovie.Movie, country))
+                            .Concat(genre.GenreTvShows
+                                .Where(libraryTv => letter == "#"
+                                    ? Numbers.Any(p => libraryTv.Tv.Title.StartsWith(p))
+                                    : libraryTv.Tv.Title.StartsWith(letter))
+                                .Select(genreTv => new NmCardDto(genreTv.Tv, country)))
+                            .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort)
+                            .Select(item =>
+                                new ComponentBuilder<NmCardDto>()
+                                    .WithComponent("NMCard")
+                                    .WithProps((p1, _) => p1
+                                        .WithData(item))
+                                    .Build())
+                    )
+                )
+                .Build()
+            )
         });
     }
 }
+
+
+// Data = Letters.Select(g => new LoloMoRowDto<NmCardDto>
+// {
+//     Title = g,
+//     Id = g,
+//     Items = genre.GenreMovies.Take(request.Take)
+//         .Where(libraryMovie => g == "#"
+//             ? Numbers.Any(p => libraryMovie.Movie.Title.StartsWith(p))
+//             : libraryMovie.Movie.Title.StartsWith(g))
+//         .Select(genreMovie => new NmCardDto(genreMovie.Movie, country))
+//         .Concat(genre.GenreTvShows.Take(request.Take)
+//             .Where(libraryTv => g == "#"
+//                 ? Numbers.Any(p => libraryTv.Tv.Title.StartsWith(p))
+//                 : libraryTv.Tv.Title.StartsWith(g))
+//             .Select(genreTv => new NmCardDto(genreTv.Tv, country)))
+//         .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort)
+// })

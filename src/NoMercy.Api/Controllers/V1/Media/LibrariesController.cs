@@ -21,6 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class LibrariesController(
     LibraryRepository libraryRepository,
     CollectionRepository collectionRepository,
+    HomeRepository homeRepository,
     SpecialRepository specialRepository)
     : BaseController
 {
@@ -155,6 +156,12 @@ public class LibrariesController(
     [Route("tv")]
     public async Task<IActionResult> Tv()
     {
+        MediaContext context = new();
+        int maximumItemsPerPage = 500;
+        string tvMediaType = "tv";
+        string movieMediaType = "movie";
+        string animeMediaType = "anime";
+        
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view libraries");
@@ -165,18 +172,30 @@ public class LibrariesController(
         IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
 
         List<NmCarouselDto<NmCardDto>> list = [];
+        
+        int animeCount = await homeRepository.GetAnimeCountQuery(context, userId);
+        int movieCount = await homeRepository.GetMovieCountQuery(context, userId);
+        int tvCount = await homeRepository.GetTvCountQuery(context, userId);
+
 
         foreach (Library library in libraries)
         {
             List<Movie> movies =
-                libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
+                libraryRepository.GetLibraryMovies(userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc").ToList();
             List<Tv> shows =
-                libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
+                libraryRepository.GetLibraryShows(userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc").ToList();
 
+            bool shouldPaginate = (library.Type == movieMediaType && movieCount > maximumItemsPerPage)
+                                  || (library.Type == tvMediaType && tvCount > maximumItemsPerPage)
+                                  || (library.Type == animeMediaType && animeCount > maximumItemsPerPage);
             list.Add(new()
             {
+                Id = "library_" + library.Id,
                 Title = library.Title,
-                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+                MoreLink = shouldPaginate
+                    ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
+                    : new($"/libraries/{library.Id}", UriKind.Relative),
+                // MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
                 Items = movies.Select(movie => new NmCardDto(movie, country))
                     .Concat(shows.Select(tv => new NmCardDto(tv, country)))
                     .ToList()
@@ -184,12 +203,13 @@ public class LibrariesController(
         }
 
         IEnumerable<Collection> collections =
-            collectionRepository.GetCollectionItems(userId, language, 10, 0, m => m.CreatedAt, "desc");
+            collectionRepository.GetCollectionItems(userId, language, 6, 0, m => m.CreatedAt, "desc");
         IEnumerable<Special> specials =
-            specialRepository.GetSpecialItems(userId, language, 10, 0, m => m.CreatedAt, "desc");
+            specialRepository.GetSpecialItems(userId, language, 6, 0, m => m.CreatedAt, "desc");
 
         list.Add(new()
         {
+            Id = "library_collections",
             Title = "Collections",
             MoreLink = new("/collection", UriKind.Relative),
             Items = collections.Select(collection => new NmCardDto(collection, country))
@@ -198,6 +218,7 @@ public class LibrariesController(
 
         list.Add(new()
         {
+            Id = "library_specials",
             Title = "Specials",
             MoreLink = new("/specials", UriKind.Relative),
             Items = specials.Select(special => new NmCardDto(special, country))
@@ -228,27 +249,36 @@ public class LibrariesController(
                     .WithComponent("NMHomeCard")
                     .WithUpdate("pageLoad", "/home/card")
                     .WithProps((props, _) => props
-                        .WithNextId("continue")
+                        .WithId("home_card")
+                        .WithNextId(list.FirstOrDefault()?.Id)
                         .WithPreviousId("")
                         .WithData(homeCardItem))
                     .Build(),
 
-                ..list.Select(genre => new ComponentBuilder<NmCardDto>()
+                ..list.Select((library, index) => new ComponentBuilder<NmCardDto>()
                     .WithComponent("NMCarousel")
                     .WithProps((props, _) => props
-                        .WithId(genre.Id)
-                        .WithNextId(list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id ?? "continue")
-                        .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id ?? "continue")
-                        .WithTitle(genre.Title)
-                        .WithMoreLink(genre.MoreLink)
+                        .WithId(library.Id)
+                        .WithTitle(library.Title)
+                        .WithMoreLink(library.MoreLink)
+                        .WithPreviousId(index == 0
+                            ? "home_card"
+                            : list.ElementAtOrDefault(index - 1)?.Id)
+                        .WithNextId(index == list.Count - 1
+                            ? $"library_{libraries.FirstOrDefault()?.Id}"
+                            : list.ElementAtOrDefault(index + 1)?.Id)
+                        // .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(library) - 1)?.Id ?? "home_card")
+                        // .WithNextId(list.ElementAtOrDefault(list.IndexOf(library) + 1)?.Id ?? "home_card")
                         .WithItems(
-                            genre.Items.Select(item =>
-                                new ComponentBuilder<NmCardDto>()
-                                    .WithComponent("NMCard")
-                                    .WithProps((props, _) => props
-                                        .WithData(item)
-                                        .WithWatch())
-                                    .Build())))
+                            library.Items
+                                .Take(6)
+                                .Select(item =>
+                                    new ComponentBuilder<NmCardDto>()
+                                        .WithComponent("NMCard")
+                                        .WithProps((props, _) => props
+                                            .WithData(item)
+                                            .WithWatch())
+                                        .Build())))
                     .Build())
             ]
         });

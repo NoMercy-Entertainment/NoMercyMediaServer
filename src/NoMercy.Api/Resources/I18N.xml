@@ -425,4 +425,8 @@
     <Key>Collection is available</Key>
     <Value lang="nl">Collectie is beschikbaar</Value>
   </Entry>
+  <Entry>
+    <Key>Movie is available</Key>
+    <Value lang="nl">Movie is available</Value>
+  </Entry>
 </I18N>

@@ -39,16 +39,16 @@ public record ArtistResponseItemDto
 
         Image? thumb = artist.Images.OrderByDescending(i => i.VoteAverage).FirstOrDefault(i => i.Type == "thumb");
         Image? background = artist.Images.FirstOrDefault(image => image.Type == "background");
-        
+
         Backdrop = background?.FilePath is not null
             ? new Uri($"/images/music{background.FilePath}", UriKind.Relative).ToString()
             : null;
 
         IColorPalettes? palette = artist.ColorPalette ?? thumb?.ColorPalette;
-        
+
         Cover = artist.Cover ?? thumb?.FilePath;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
-        
+
         ColorPalette = palette;
         Disambiguation = artist.Disambiguation;
         Description = description;
@@ -72,7 +72,7 @@ public record ArtistResponseItemDto
             .OrderBy(artistTrack => artistTrack.Year);
 
         Featured = artist.ArtistTrack
-            .Select(artistTrack => artistTrack.Track.AlbumTrack.First().Album)
+            .Select(artistTrack => artistTrack.Track.AlbumTrack.FirstOrDefault().Album)
             .GroupBy(album => album.Name.RemoveNonAlphaNumericCharacters())
             .Select(album => album.First())
             .OrderBy(album => album.Year)

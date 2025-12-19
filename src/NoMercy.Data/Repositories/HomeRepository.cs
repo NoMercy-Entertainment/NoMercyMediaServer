@@ -43,7 +43,7 @@ public class HomeRepository
         );
 
     public readonly Func<MediaContext, Guid, string, string, HashSet<UserData>> GetContinueWatching =
-        (mediaContext, userId, _, country) =>
+        (mediaContext, userId, language, country) =>
             mediaContext.UserData.AsNoTracking()
                 .Where(user => user.UserId.Equals(userId))
                 .Where(user => user.MovieId != null || user.TvId != null || user.CollectionId != null ||
@@ -115,6 +115,14 @@ public class HomeRepository
                 .ThenInclude(tv => tv.CertificationTvs
                     .Where(certificationTv => certificationTv.Certification.Iso31661 == country))
                 .ThenInclude(certificationTv => certificationTv.Certification)
+                
+                .Include(userData => userData.Tv)
+                .ThenInclude(tv => tv.Images
+                    .Where(image => image.Type == "logo" && (image.Iso6391 == "en" || image.Iso6391 == language)))
+                
+                .Include(userData => userData.Movie)
+                .ThenInclude(movie => movie.Images
+                    .Where(image => image.Type == "logo" && (image.Iso6391 == "en" || image.Iso6391 == language)))
 
                 .Include(userData => userData.VideoFile)
                 .OrderByDescending(userData => userData.LastPlayedDate)

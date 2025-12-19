@@ -204,6 +204,7 @@ public class NmCardDto
             Title = item.Special.Title;
             TitleSort = item.Special.Title.TitleSort();
             Overview = item.Special.Overview;
+            Logo = item.Special.Logo;
             Duration = item.VideoFile.Duration?.ToSeconds();
             Type = "special";
 
@@ -249,6 +250,7 @@ public class NmCardDto
             Title = item.Collection.Title;
             TitleSort = item.Collection.Title.TitleSort();
             Overview = item.Collection.Overview;
+            Logo = item.Collection.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Year = item.Collection.CollectionMovies
                 .MinBy(movie => movie.Movie.ReleaseDate?.ParseYear())
@@ -283,6 +285,7 @@ public class NmCardDto
             Title = item.Movie.Title;
             TitleSort = item.Movie.Title.TitleSort(item.Movie.ReleaseDate);
             Overview = item.Movie.Overview;
+            Logo = item.Movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/movie/{Id}/watch", UriKind.Relative);
             Type = "movie";
@@ -311,6 +314,7 @@ public class NmCardDto
             TitleSort = item.Tv.Title.TitleSort(item.Tv.FirstAirDate);
             HaveItems = item.Tv.HaveEpisodes;
             Overview = item.Tv.Overview;
+            Logo = item.Tv.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/tv/{Id}/watch", UriKind.Relative);
             Type = "tv";
