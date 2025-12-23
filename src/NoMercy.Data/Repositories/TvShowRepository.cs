@@ -101,7 +101,7 @@ public class TvShowRepository(MediaContext context)
             .Include(tv => tv.Episodes)
                 .ThenInclude(tv => tv.VideoFiles)
             .AnyAsync(tv => tv.Episodes
-                .Any(episode => episode.VideoFiles.Count != 0));
+                .Any(episode => episode.VideoFiles.Any()));
     }
 
     public async Task<Tv?> GetTvPlaylistAsync(Guid userId, int id, string language, string country)

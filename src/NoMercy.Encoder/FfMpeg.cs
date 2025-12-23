@@ -3,9 +3,9 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using FFMpegCore;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -19,7 +19,7 @@ public class FfMpeg : Classes
 
     private static readonly Dictionary<int, Process> FfmpegProcess = new();
 
-    internal MediaAnalysis? MediaAnalysis;
+    internal FfProbeData? Ffprobe;
 
     public FfMpeg()
     {
@@ -63,16 +63,13 @@ public class FfMpeg : Classes
 
     public VideoAudioFile Open(string path)
     {
-        GlobalFFOptions.Configure(options => options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
+        FfProbeData ffprobe = FfProbe.Create(path);
 
-        // first ffprobe the file check for streams
-        MediaAnalysis = new(FFProbe.Analyse(path), path);
+        if (ffprobe.VideoStreams.Count(s => s.CodecName != "mjpeg") > 0)
+            return new VideoFile(ffprobe, FfmpegPath);
 
-        if (MediaAnalysis.VideoStreams.Count(s => s.CodecName != "mjpeg") > 0)
-            return new VideoFile(MediaAnalysis, FfmpegPath);
-
-        if (MediaAnalysis.AudioStreams.Count > 0)
-            return new AudioFile(MediaAnalysis, FfmpegPath);
+        if (ffprobe.AudioStreams.Count > 0)
+            return new AudioFile(ffprobe, FfmpegPath);
 
         throw new("No streams found");
     }

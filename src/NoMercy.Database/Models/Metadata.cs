@@ -166,9 +166,9 @@ public class IAudio : IHash
     [JsonProperty("language")] public string Language { get; set; } = null!;
     [JsonProperty("codec")] public string? Codec { get; set; }
     [JsonProperty("bit_rate")] public long? BitRate { get; set; }
-    [JsonProperty("channels")] public int? Channels { get; set; }
+    [JsonProperty("channels")] public long? Channels { get; set; }
     [JsonProperty("channel_layout")] public string? ChannelLayout { get; set; }
-    [JsonProperty("sample_rate")] public int? SampleRate { get; set; }
+    [JsonProperty("sample_rate")] public long? SampleRate { get; set; }
 }
 
 public class ISubtitle : IHash

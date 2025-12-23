@@ -2,11 +2,12 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using FFMpegCore;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.Encoder;
+using NoMercy.Encoder.Dto;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
@@ -247,7 +248,7 @@ public partial class FileManager(
 
             Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
 
-            Metadata metadata = MakeMetadata(item, fileName, baseFolder, hostFolder, tracks);
+            Metadata metadata = await MakeMetadata(item, fileName, baseFolder, hostFolder, tracks);
 
             Ulid metadataId = await fileRepository.StoreMetadata(metadata);
 
@@ -282,14 +283,14 @@ public partial class FileManager(
         }
     }
 
-    private Metadata MakeMetadata(MediaFile item, string fileName, string baseFolder, string hostFolder,
+    private async Task<Metadata> MakeMetadata(MediaFile item, string fileName, string baseFolder, string hostFolder,
         List<IVideoTrack> extraFiles)
     {
         string path = Path.Combine(hostFolder, fileName.Replace("\\", "").Replace("/", ""));
-        IMediaAnalysis ffprobe = FFProbe.Analyse(path);
+        Ffprobe ffprobeData = await new Ffprobe(fileName).GetStreamData();
         
-        List<IVideo> video = GetVideoHashList(hostFolder, ffprobe);
-        List<IAudio> audio = GetAudioHashList(hostFolder, ffprobe);
+        List<IVideo> video = GetVideoHashList(hostFolder, ffprobeData);
+        List<IAudio> audio = GetAudioHashList(hostFolder, ffprobeData);
         List<ISubtitle> subtitles = GetSubtitleHashList(hostFolder);
         List<IFont> fonts = GetFontHashList(hostFolder);
         List<IPreview> previews = GetPreviewHashList(hostFolder, extraFiles);
@@ -346,13 +347,12 @@ public partial class FileManager(
     {
         if (videoFile is null)
             throw new("Video stream is null");
-        if (videoFile.PixelFormat?.Contains("hdr") ?? false) return true;
         if (string.IsNullOrEmpty(videoFile.ColorSpace)) return false;
         if (videoFile.ColorSpace.Contains(ColorSpaces.Bt2020)) return true;
         return false;
     }
 
-    private static List<IVideo> GetVideoHashList(string hostFolder, IMediaAnalysis ffprobe)
+    private static List<IVideo> GetVideoHashList(string hostFolder, Ffprobe ffprobe)
     {
         List<IVideo> videos = [];
         
@@ -389,7 +389,7 @@ public partial class FileManager(
         return videos;
     }
 
-    private static List<IAudio> GetAudioHashList(string hostFolder, IMediaAnalysis ffprobe)
+    private static List<IAudio> GetAudioHashList(string hostFolder, Ffprobe ffprobe)
     {
         List<IAudio> audios = [];
         
@@ -424,7 +424,7 @@ public partial class FileManager(
                 Channels = audioFile.Channels,
                 BitRate = audioFile.BitRate,
                 ChannelLayout = audioFile.ChannelLayout,
-                SampleRate = audioFile.SampleRateHz
+                SampleRate = audioFile.SampleRate
             });
         }
         

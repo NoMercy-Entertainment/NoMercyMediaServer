@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using MovieFileLibrary;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.Encoder;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Networking.Dto;
@@ -145,9 +146,6 @@ public class FileRepository : IFileRepository
 
     public async Task<List<FileItem>> GetFilesInDirectory(string directoryPath, string libraryType)
     {
-        FFMpegCore.GlobalFFOptions.Configure(options =>
-            options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
-
         DirectoryInfo directoryInfo = new(directoryPath);
 
         FileInfo[] videoFiles = GetVideoFilesInDirectory(directoryPath);
@@ -222,7 +220,7 @@ public class FileRepository : IFileRepository
         // remove any text in square brackets that may cause year to match incorrectly
         title = Str.RemoveBracketedString().Replace(title, string.Empty);
 
-        FFMpegCore.IMediaAnalysis mediaAnalysis = await FFMpegCore.FFProbe.AnalyseAsync(file.FullName);
+        Ffprobe ffprobeData = await new Ffprobe(file.FullName).GetStreamData();
 
         MovieFile parsed = movieDetector.GetInfo(title);
 
@@ -330,7 +328,7 @@ public class FileRepository : IFileRepository
                     EpisodeNumber = episode.EpisodeNumber,
                     SeasonNumber = episode.SeasonNumber,
                     Still = episode.Still,
-                    Duration = mediaAnalysis.Duration,
+                    Duration = ffprobeData.Format.Duration,
                     Overview = episode.Overview
                 };
 
@@ -392,7 +390,7 @@ public class FileRepository : IFileRepository
                     Id = movieItem.Id,
                     Title = movieItem.Title,
                     Still = movieItem.Poster,
-                    Duration = mediaAnalysis.Duration,
+                    Duration = ffprobeData.Format.Duration,
                     Overview = movieItem.Overview
                 };
 
@@ -416,20 +414,20 @@ public class FileRepository : IFileRepository
             Path = file.FullName,
             Streams = new()
             {
-                Video = mediaAnalysis.VideoStreams
+                Video = ffprobeData.VideoStreams
                     .Select(video => new Video
                     {
                         Index = video.Index,
                         Width = video.Width,
                         Height = video.Height
                     }),
-                Audio = mediaAnalysis.AudioStreams
+                Audio = ffprobeData.AudioStreams
                     .Select(stream => new Audio
                     {
                         Index = stream.Index,
                         Language = stream.Language
                     }),
-                Subtitle = mediaAnalysis.SubtitleStreams
+                Subtitle = ffprobeData.SubtitleStreams
                     .Select(stream => new Subtitle
                     {
                         Index = stream.Index,

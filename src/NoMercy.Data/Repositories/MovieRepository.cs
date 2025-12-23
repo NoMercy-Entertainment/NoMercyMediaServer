@@ -66,7 +66,7 @@ public class MovieRepository(MediaContext context)
                     .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
                 .Where(movie => movie.Id == id)
                 .Include(movie => movie.VideoFiles)
-                .Any());
+                .Any(movie => movie.VideoFiles.Any()));
 
     public async Task<List<Movie>> GetMoviePlaylistAsync(Guid userId, int id, string language, string country)
     {

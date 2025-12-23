@@ -1,12 +1,12 @@
 // ReSharper disable MemberCanBeProtected.Global
 // ReSharper disable MemberCanBePrivate.Global
 
-using FFMpegCore;
-using NoMercy.Encoder.Format.Container;
+using NoMercy.Encoder.Dto;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
+using VideoStream = FFMpegCore.VideoStream;
 
 namespace NoMercy.Encoder.Format.Video;
 
@@ -16,7 +16,7 @@ public abstract class BaseVideo : Classes
 
     public virtual CodecDto VideoCodec { get; set; } = VideoCodecs.H264;
 
-    protected internal VideoStream? VideoStream;
+    protected internal FFMpegCore.VideoStream? VideoStream;
 
     internal List<VideoStream> VideoStreams { get; set; } = [];
 

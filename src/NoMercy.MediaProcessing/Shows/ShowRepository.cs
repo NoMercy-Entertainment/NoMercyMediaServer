@@ -10,9 +10,9 @@ namespace NoMercy.MediaProcessing.Shows;
 
 public class ShowRepository(MediaContext context) : IShowRepository
 {
-    public Task AddAsync(Tv tv)
+    public async Task AddAsync(Tv tv)
     {
-        return context.Tvs.Upsert(tv)
+        await context.Tvs.Upsert(tv)
             .On(v => new { v.Id })
             .WhenMatched((ts, ti) => new()
             {
@@ -44,9 +44,14 @@ public class ShowRepository(MediaContext context) : IShowRepository
                 VoteCount = ti.VoteCount,
                 Folder = ti.Folder,
                 LibraryId = ti.LibraryId,
-                MediaType = ti.MediaType
+                MediaType = ti.MediaType,
             })
             .RunAsync();
+        
+        await context.Tvs.Where(t => t.Id == tv.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.CreatedAt, t => tv.CreatedAt));
+
+        await context.SaveChangesAsync();
     }
 
     public Task LinkToLibrary(Library library, Tv tv)

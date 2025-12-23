@@ -241,9 +241,9 @@ public class BaseImage : Classes
             string hours = d.Hour.ToString("D2");
             string minute = d.Minute.ToString("D2");
             string second = d.Second.ToString("D2");
-            string miliSecond = d.Millisecond.ToString("D3");
+            string millisecond = d.Millisecond.ToString("D3");
 
-            timeArr.Add($"{hours}:{minute}:{second}.{miliSecond}");
+            timeArr.Add($"{hours}:{minute}:{second}.{millisecond}");
 
             d = d.AddSeconds(interval);
         }
@@ -257,7 +257,7 @@ public class BaseImage : Classes
 
         newStream.IsImage = true;
 
-        newStream.ImageStream = ImageStreams.First();
+        newStream.ImageStream = ImageStreams.FirstOrDefault();
 
         return newStream;
     }

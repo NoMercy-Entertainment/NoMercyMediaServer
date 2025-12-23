@@ -168,7 +168,7 @@ public class AudioTagModel
             MusicBrainz = mb,
             Tags = fileItem.TagFile?.Tag,
             FileItem = fileItem,
-            Duration = double.Parse(ffProbeData.Format.Duration ?? "0")
+            Duration = ffProbeData.Format.Duration?.TotalSeconds ?? 0
         };
         
         return metaData;

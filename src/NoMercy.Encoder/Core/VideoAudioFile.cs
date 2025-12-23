@@ -7,13 +7,14 @@ using NoMercy.Encoder.Format.Image;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.Encoder.Format.Subtitle;
 using NoMercy.Encoder.Format.Video;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
 namespace NoMercy.Encoder.Core;
 
-public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegPath) : Classes
+public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) : Classes
 {
     public string FfmpegPath => ffmpegPath;
 
@@ -21,20 +22,20 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
     public VideoAudioFile AddContainer(BaseContainer container)
     {
-        string cropValue = fMediaAnalysis.PrimaryVideoStream is { Width: not 0, Height: not 0 }
-            ? CropDetect(fMediaAnalysis.Path)
+        string cropValue = ffProbeData.PrimaryVideoStream is { Width: not 0, Height: not 0 }
+            ? CropDetect(ffProbeData.FilePath)
             : string.Empty;
 
         Container = container;
         Container.Title = Title;
-        Container.InputFile = fMediaAnalysis.Path;
+        Container.InputFile = ffProbeData.FilePath;
         Container.BasePath = BasePath;
         Container.FileName = FileName;
         Container.IsImage = IsImage;
         Container.IsAudio = IsAudio;
         Container.IsVideo = IsVideo;
         Container.IsSubtitle = IsSubtitle;
-        Container.MediaAnalysis = fMediaAnalysis;
+        Container.FfProbeData = ffProbeData;
         Container.ApplyFlags();
 
         foreach (KeyValuePair<int, dynamic> keyValuePair in Container.Streams)
@@ -46,17 +47,17 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             {
                 (keyValuePair.Value as BaseVideo)!.CropValue = cropValue;
 
-                (keyValuePair.Value as BaseVideo)!.VideoStreams = [fMediaAnalysis.PrimaryVideoStream!];
-                (keyValuePair.Value as BaseVideo)!.VideoStream = fMediaAnalysis.PrimaryVideoStream!;
-                (keyValuePair.Value as BaseVideo)!.Index = fMediaAnalysis.PrimaryVideoStream!.Index;
+                (keyValuePair.Value as BaseVideo)!.VideoStreams = ffProbeData.VideoStreams;
+                (keyValuePair.Value as BaseVideo)!.VideoStream = ffProbeData.PrimaryVideoStream;
+                (keyValuePair.Value as BaseVideo)!.Index = ffProbeData.PrimaryVideoStream!.Index;
                 (keyValuePair.Value as BaseVideo)!.Title = Title;
 
                 Container.VideoStreams.Add((keyValuePair.Value as BaseVideo)!.Build());
             }
             else if (keyValuePair.Value.IsAudio)
             {
-                (keyValuePair.Value as BaseAudio)!.AudioStreams = fMediaAnalysis.AudioStreams;
-                (keyValuePair.Value as BaseAudio)!.AudioStream = fMediaAnalysis.PrimaryAudioStream!;
+                (keyValuePair.Value as BaseAudio)!.AudioStreams = ffProbeData.AudioStreams;
+                (keyValuePair.Value as BaseAudio)!.AudioStream = ffProbeData.PrimaryAudioStream!;
 
                 List<BaseAudio> x = (keyValuePair.Value as BaseAudio)!.Build();
                 foreach (BaseAudio newStream in x)
@@ -66,8 +67,8 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             }
             else if (keyValuePair.Value.IsSubtitle)
             {
-                (keyValuePair.Value as BaseSubtitle)!.SubtitleStreams = fMediaAnalysis.SubtitleStreams;
-                (keyValuePair.Value as BaseSubtitle)!.SubtitleStream = fMediaAnalysis.PrimarySubtitleStream!;
+                (keyValuePair.Value as BaseSubtitle)!.SubtitleStreams = ffProbeData.SubtitleStreams;
+                (keyValuePair.Value as BaseSubtitle)!.SubtitleStream = ffProbeData.PrimarySubtitleStream!;
 
                 List<BaseSubtitle> x = (keyValuePair.Value as BaseSubtitle)!.Build();
                 foreach (BaseSubtitle newStream in x)
@@ -79,8 +80,8 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
             {
                 (keyValuePair.Value as BaseImage)!.CropValue = cropValue;
 
-                (keyValuePair.Value as BaseImage)!.ImageStreams = [fMediaAnalysis.PrimaryVideoStream!];
-                (keyValuePair.Value as BaseImage)!.ImageStream = fMediaAnalysis.PrimaryVideoStream!;
+                (keyValuePair.Value as BaseImage)!.ImageStreams = ffProbeData.ImageStreams;
+                (keyValuePair.Value as BaseImage)!.ImageStream = ffProbeData.PrimaryImageStream!;
 
                 Container.ImageStreams.Add((keyValuePair.Value as BaseImage)!.Build());
             }
@@ -130,7 +131,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
 
         const int sections = 10;
 
-        double duration = fMediaAnalysis.Duration.TotalSeconds;
+        double duration = ffProbeData.Duration.TotalSeconds;
         double max = Math.Floor(duration / 2);
         double step = Math.Floor(max / sections);
 
@@ -177,7 +178,7 @@ public partial class VideoAudioFile(MediaAnalysis fMediaAnalysis, string ffmpegP
     {
         FFmpegCommandBuilder commandBuilder = new(
             container: Container,
-            mediaAnalysis: fMediaAnalysis,
+            ffProbeData: ffProbeData,
             accelerators: Accelerators,
             priority: Priority
         );

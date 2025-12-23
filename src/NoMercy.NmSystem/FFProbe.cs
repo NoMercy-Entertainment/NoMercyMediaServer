@@ -9,6 +9,7 @@ public static class FfProbe
             FFMpegCore.IMediaAnalysis analysis = FFMpegCore.FFProbe.Analyse(file);
             return new()
             {
+                FilePath = file,
                 Duration = analysis.Duration,
                 Format = analysis.Format,
                 PrimaryAudioStream = analysis.PrimaryAudioStream,

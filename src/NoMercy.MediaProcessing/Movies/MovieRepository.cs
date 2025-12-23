@@ -8,9 +8,9 @@ namespace NoMercy.MediaProcessing.Movies;
 
 public class MovieRepository(MediaContext context) : IMovieRepository
 {
-    public Task Add(Movie movie)
+    public async Task Add(Movie movie)
     {
-        return context.Movies.Upsert(movie)
+        await context.Movies.Upsert(movie)
             .On(v => new { v.Id })
             .WhenMatched((ts, ti) => new()
             {
@@ -35,6 +35,11 @@ public class MovieRepository(MediaContext context) : IMovieRepository
                 LibraryId = ti.LibraryId,
             })
             .RunAsync();
+        
+        await context.Movies.Where(m => m.Id == movie.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.CreatedAt, t => movie.CreatedAt));
+
+        await context.SaveChangesAsync();
     }
 
     public Task LinkToLibrary(Library library, Movie movie)

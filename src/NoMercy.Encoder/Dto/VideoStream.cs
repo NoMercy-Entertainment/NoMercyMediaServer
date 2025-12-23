@@ -15,10 +15,10 @@ public class VideoStream
     [JsonProperty("duration")] public double Duration { get; set; }
     [JsonProperty("size")] public long Size { get; set; }
     
-    [JsonProperty("width")] public int? Width { get; set; }
-    [JsonProperty("height")] public int? Height { get; set; }
-    [JsonProperty("coded_width")] public int? CodedWidth { get; set; }
-    [JsonProperty("coded_height")] public int? CodedHeight { get; set; }
+    [JsonProperty("width")] public int Width { get; set; }
+    [JsonProperty("height")] public int Height { get; set; }
+    [JsonProperty("coded_width")] public int CodedWidth { get; set; }
+    [JsonProperty("coded_height")] public int CodedHeight { get; set; }
     [JsonProperty("closed_captions")] public bool? ClosedCaptions { get; set; }
     [JsonProperty("film_grain")] public bool? FilmGrain { get; set; }
     [JsonProperty("has_b_frames")] public bool? HasBFrames { get; set; }
@@ -41,7 +41,8 @@ public class VideoStream
     [JsonProperty("is_dub")] public bool IsDub  { get; set; }
     [JsonProperty("is_forced")] public bool IsForced  { get; set; }
     [JsonProperty("is_hdr")] public bool IsHdr  { get; set; }
-    
+    [JsonProperty("bitrate")] public long? BitRate { get; set; }
+
     public VideoStream(FfprobeSourceDataStream ffprobeSourceDataStream)
     {
         Index = ffprobeSourceDataStream.Index;
@@ -61,6 +62,7 @@ public class VideoStream
         FilmGrain = ffprobeSourceDataStream.FilmGrain;
         HasBFrames = ffprobeSourceDataStream.HasBFrames;
         PixFmt = ffprobeSourceDataStream.PixFmt;
+        BitRate = ffprobeSourceDataStream.BitRate;
         Level = ffprobeSourceDataStream.Level;
         ColorRange = ffprobeSourceDataStream.ColorRange;
         ColorSpace = ffprobeSourceDataStream.ColorSpace;
@@ -72,7 +74,7 @@ public class VideoStream
         IsHdr = DetectHdr(ffprobeSourceDataStream);
         AspectRatio = !string.IsNullOrEmpty(ffprobeSourceDataStream.DisplayAspectRatio) 
             ? ffprobeSourceDataStream.DisplayAspectRatio 
-            : NumberConverter.NormalizeAspectRatio(Width ?? 0, Height ?? 0);
+            : NumberConverter.NormalizeAspectRatio(Width, Height);
         
         IsDefault = ffprobeSourceDataStream.Disposition.TryGetValue("default", out int defaultValue) && defaultValue == 1;
         IsForced = ffprobeSourceDataStream.Disposition.TryGetValue("forced", out int forcedValue) && forcedValue == 1;

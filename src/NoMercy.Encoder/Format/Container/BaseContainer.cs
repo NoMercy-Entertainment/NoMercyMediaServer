@@ -4,6 +4,7 @@ using NoMercy.Encoder.Format.Image;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.Encoder.Format.Subtitle;
 using NoMercy.Encoder.Format.Video;
+using NoMercy.NmSystem;
 
 namespace NoMercy.Encoder.Format.Container;
 
@@ -13,7 +14,7 @@ public class BaseContainer : Classes
 
     public new virtual ContainerDto ContainerDto { get; protected set; } = AvailableContainers.First(c => c.IsDefault);
 
-    public MediaAnalysis? MediaAnalysis;
+    public FfProbeData FfProbeData;
     public readonly List<BaseVideo> VideoStreams = [];
     public readonly List<BaseAudio> AudioStreams = [];
     public readonly List<BaseSubtitle> SubtitleStreams = [];

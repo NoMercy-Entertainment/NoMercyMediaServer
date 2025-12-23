@@ -1,12 +1,13 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using FFMpegCore;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Jobs;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.Encoder;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Networking.Dto;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -34,8 +35,6 @@ public partial class MusicLogic : IAsyncDisposable
 
     public MusicLogic(Library library, MediaFolderExtend listPath)
     {
-        GlobalFFOptions.Configure(options => options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
-
         Library = library;
         ListPath = listPath;
 
@@ -71,10 +70,9 @@ public partial class MusicLogic : IAsyncDisposable
             try
             {
                 Logger.App($"Analyzing File: {file.Name}", LogEventLevel.Debug);
-                IMediaAnalysis mediaAnalysis =
-                    await FFProbe.AnalyseAsync(file.Path, cancellationToken: cancellationToken);
+                FfProbeData ffProbeData = FfProbe.Create(file.Path);
 
-                AcoustIdFingerprintRecording? fingerPrintRecording = await MatchTrack(file, mediaAnalysis);
+                AcoustIdFingerprintRecording? fingerPrintRecording = await MatchTrack(file, ffProbeData);
                 if (fingerPrintRecording is not null)
                 {
                     foreach (AcoustIdFingerprintReleaseGroups release in fingerPrintRecording.Releases ?? [])
@@ -99,7 +97,7 @@ public partial class MusicLogic : IAsyncDisposable
                     return;
                 }
 
-                AcoustIdFingerprintReleaseGroups? fallbackParsedResult = FallbackParser(file, mediaAnalysis);
+                AcoustIdFingerprintReleaseGroups? fallbackParsedResult = FallbackParser(file, ffProbeData);
                 if (fallbackParsedResult is null) return;
 
                 await ProcessRelease(fallbackParsedResult, file);
@@ -164,7 +162,7 @@ public partial class MusicLogic : IAsyncDisposable
         await Task.CompletedTask;
     }
 
-    private async Task<AcoustIdFingerprintRecording?> MatchTrack(MediaFile file, IMediaAnalysis mediaAnalysis)
+    private async Task<AcoustIdFingerprintRecording?> MatchTrack(MediaFile file, FfProbeData ffProbeData)
     {
         Logger.App($"Matching Track: {file.Name}", LogEventLevel.Verbose);
 
@@ -190,21 +188,21 @@ public partial class MusicLogic : IAsyncDisposable
             {
                 if (recording?.Releases is null) continue;
 
-                fingerPrintRecording = MatchRelease(file, recording, mediaAnalysis);
+                fingerPrintRecording = MatchRelease(file, recording, ffProbeData);
 
                 if (fingerPrintRecording is not null) break;
 
-                fingerPrintRecording = MatchRelease(file, recording, mediaAnalysis, false);
+                fingerPrintRecording = MatchRelease(file, recording, ffProbeData, false);
             }
         }
 
         return fingerPrintRecording;
     }
 
-    private AcoustIdFingerprintReleaseGroups? FallbackParser(MediaFile file, IMediaAnalysis mediaAnalysis)
+    private AcoustIdFingerprintReleaseGroups? FallbackParser(MediaFile file, FfProbeData ffProbeData)
     {
         Logger.App($"Fallback Parser: {file.Name}", LogEventLevel.Verbose);
-        string? albumId = mediaAnalysis.Format.Tags?.FirstOrDefault(t => t.Key == "MusicBrainz Album Id").Value;
+        string? albumId = ffProbeData.Format.Tags?.FirstOrDefault(t => t.Key == "MusicBrainz Album Id").Value;
 
         Logger.App($"AlbumId: {albumId}", LogEventLevel.Verbose);
 
@@ -217,7 +215,7 @@ public partial class MusicLogic : IAsyncDisposable
     }
 
     private AcoustIdFingerprintRecording? MatchRelease(MediaFile file, AcoustIdFingerprintRecording? recording,
-        IMediaAnalysis mediaAnalysis, bool strictMatch = true)
+        FfProbeData ffProbeData, bool strictMatch = true)
     {
         Logger.App($"Matching Release: {recording?.Title}", LogEventLevel.Verbose);
         if (recording is null) return null;
@@ -237,8 +235,8 @@ public partial class MusicLogic : IAsyncDisposable
                                && !recordNameSanitized.Equals(string.Empty)
                                && fileNameSanitized.Contains(recordNameSanitized);
 
-            // var mediaAnalysis = FFProbe.AnalyseAsync(file.Path).Result;
-            double fileDuration = mediaAnalysis.Format.Duration.TotalSeconds;
+            // var ffProbeData = FFProbe.AnalyseAsync(file.Path).Result;
+            double fileDuration = ffProbeData.Format.Duration.TotalSeconds;
             int recordDuration = recording.Duration;
             bool matchesDuration = fileDuration > 0
                                    && recordDuration > 0
@@ -500,14 +498,14 @@ public partial class MusicLogic : IAsyncDisposable
         if (file is not null)
         {
             Logger.App($"File Match: {file}", LogEventLevel.Verbose);
-            IMediaAnalysis mediaAnalysis = await FFProbe.AnalyseAsync(file);
+            FfProbeData ffProbeData = FfProbe.Create(file);
             string folder = mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "") ??
                             string.Empty;
 
             insert.Filename = "/" + Path.GetFileName(file);
-            insert.Quality = (int)Math.Floor(mediaAnalysis.Format.BitRate / 1000.0);
+            insert.Quality = (int)Math.Floor(ffProbeData.Format.BitRate / 1000.0);
             insert.Duration =
-                HmsRegex().Replace(mediaAnalysis.Duration.ToString("hh\\:mm\\:ss"), "");
+                HmsRegex().Replace(ffProbeData.Duration.ToString("hh\\:mm\\:ss"), "");
 
             insert.FolderId = Folder!.Id;
             insert.Folder = folder.Replace(Folder.Path, "").Replace("\\", "/");

@@ -13,6 +13,19 @@ public static class Dev
 {
     public static async Task Run()
     {
+        // string path = "M:\\Anime\\Anime";
+        // string[] showFolders = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly);
+        //
+        // foreach (string showFolder in showFolders)
+        // {
+        //     Logger.App($"Processing show folder: {showFolder}");
+        //     string[] episodeFolders = Directory.GetDirectories(showFolder, "*", SearchOption.TopDirectoryOnly);
+        //     foreach (string folder in episodeFolders)
+        //     {
+        //         await DeleteEmptyPlaylists(folder);
+        //     }
+        // }
+        
         await using MediaContext context = new();
 
         List<Tv> shows = await context.Tvs
@@ -20,10 +33,8 @@ public static class Dev
             .Include(tv => tv.Episodes)
             .ThenInclude(episode => episode.VideoFiles)
             .ThenInclude(videoFile => videoFile.Metadata)
-            .Where(tv => tv.Id == 218613)
+            // .Where(tv => tv.Id == 218613)
             .ToListAsync();
-            
-        shows.Reverse();
             
         foreach (Tv show in shows)
         foreach (Episode episode in show.Episodes)
@@ -70,6 +81,38 @@ public static class Dev
         }
 
         await Task.CompletedTask;
+    }
+    
+    
+    private static Task DeleteEmptyPlaylists(string episodeFolder)
+    {
+        if (!Directory.Exists(episodeFolder))
+            return Task.CompletedTask;
+
+        IEnumerable<string> m3U8Files = Directory.GetFiles(episodeFolder, "*.m3u8", SearchOption.TopDirectoryOnly);
+
+        foreach (string playlistPath in m3U8Files)
+        {
+            string[] lines;
+            try { lines = File.ReadAllLines(playlistPath); }
+            catch { continue; }
+
+            bool hasSegments = lines.Any(line => !line.Trim().StartsWith("#") && !string.IsNullOrWhiteSpace(line));
+            if (!hasSegments)
+            {
+                try
+                {
+                    File.Delete(playlistPath);
+                    Logger.App($"Deleted empty playlist: {playlistPath}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.App($"Failed to delete empty playlist {playlistPath}: {ex.Message}");
+                }
+            }
+        }
+
+        return Task.CompletedTask;
     }
 
     private static Dictionary<string, long> CalculateBitratesFromMaster(string episodeFolder)
