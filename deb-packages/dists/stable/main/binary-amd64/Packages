@@ -1,94 +1,94 @@
 Package: nomercyapp
-Version: 0.1.193
+Version: 0.1.194
 Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
 Recommends: systemd
-Filename: pool/main/n/nomercyapp/nomercyapp_latest_amd64.deb
-Size: 22177190
-MD5sum: b88e4672629ea5c488acc9881663a7d1
-SHA1: 00f10342350a265e48a34d08cdfed0bb4b01989d
-SHA256: a6c497679749f32b2b9c946c127f0615297648841d87bb8e3c3a631f5e06c4c6
+Filename: pool/main/n/nomercyapp/nomercyapp_0.1.194_amd64.deb
+Size: 22169912
+MD5sum: 2372ecb27f0bd64101911463832cde30
+SHA1: d1f5369b70db666149bd8f70a572e9687dd54eba
+SHA256: bde1d7aa6ee8727b01497f8f5afddf0707a82e5c58739f11570baa23b6429b45
 Section: multimedia
 Priority: optional
 Description: NoMercy-App
  Modern Media Server Solution
 
 Package: nomercyapp
-Version: 0.1.193
+Version: 0.1.194
 Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
 Recommends: systemd
-Filename: pool/main/n/nomercyapp/nomercyapp_0.1.193_amd64.deb
-Size: 22177190
-MD5sum: b88e4672629ea5c488acc9881663a7d1
-SHA1: 00f10342350a265e48a34d08cdfed0bb4b01989d
-SHA256: a6c497679749f32b2b9c946c127f0615297648841d87bb8e3c3a631f5e06c4c6
+Filename: pool/main/n/nomercyapp/nomercyapp_latest_amd64.deb
+Size: 22169912
+MD5sum: 2372ecb27f0bd64101911463832cde30
+SHA1: d1f5369b70db666149bd8f70a572e9687dd54eba
+SHA256: bde1d7aa6ee8727b01497f8f5afddf0707a82e5c58739f11570baa23b6429b45
 Section: multimedia
 Priority: optional
 Description: NoMercy-App
  Modern Media Server Solution
 
 Package: nomercymediaserver
-Version: 0.1.193
+Version: 0.1.194
 Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
 Recommends: systemd
-Filename: pool/main/n/nomercymediaserver/nomercymediaserver_0.1.193_amd64.deb
-Size: 78479602
-MD5sum: 6d408920fa7505567ba33bbedf014f2a
-SHA1: 9105b67830aa06b84327a73da80239729ac3762d
-SHA256: 2100825bdbeec7c30c32232cbcd44765baa1a0894e2a32fbcfdcba76e7696eee
+Filename: pool/main/n/nomercymediaserver/nomercymediaserver_latest_amd64.deb
+Size: 78481322
+MD5sum: 4d4ab27432034f7395821560f2583126
+SHA1: 10655e6a15bdc31e0336f062aed259e2d5e1be21
+SHA256: a7ffaa9eb1e1bc4c685a975d50910daa95c4fa0bf3c3ea254175b25723406d57
 Section: multimedia
 Priority: optional
 Description: NoMercy-MediaServer
  Modern Media Server Solution
 
 Package: nomercymediaserver
-Version: 0.1.193
+Version: 0.1.194
 Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
 Recommends: systemd
-Filename: pool/main/n/nomercymediaserver/nomercymediaserver_latest_amd64.deb
-Size: 78479602
-MD5sum: 6d408920fa7505567ba33bbedf014f2a
-SHA1: 9105b67830aa06b84327a73da80239729ac3762d
-SHA256: 2100825bdbeec7c30c32232cbcd44765baa1a0894e2a32fbcfdcba76e7696eee
+Filename: pool/main/n/nomercymediaserver/nomercymediaserver_0.1.194_amd64.deb
+Size: 78481322
+MD5sum: 4d4ab27432034f7395821560f2583126
+SHA1: 10655e6a15bdc31e0336f062aed259e2d5e1be21
+SHA256: a7ffaa9eb1e1bc4c685a975d50910daa95c4fa0bf3c3ea254175b25723406d57
 Section: multimedia
 Priority: optional
 Description: NoMercy-MediaServer
  Modern Media Server Solution
 
 Package: nomercyupdater
-Version: 0.1.193
+Version: 0.1.194
 Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
 Recommends: systemd
-Filename: pool/main/n/nomercyupdater/nomercyupdater_0.1.193_amd64.deb
-Size: 78538908
-MD5sum: d507cb5c4eb3e880d349d8db4782dac9
-SHA1: 48de5fe3eba81ce060f33d3490c75b9d07c96c01
-SHA256: 0d5632826acaf1bc5f2453970eec139f88a5bedd52e54694f5dd80ad7da94d63
+Filename: pool/main/n/nomercyupdater/nomercyupdater_latest_amd64.deb
+Size: 78535194
+MD5sum: e94fdf538d2012da647f9c83eeb929b6
+SHA1: eaa0e1d2da487be99522935bf729de09c9df10b8
+SHA256: 3fdc85124023f8c5eb1931d11df8e1a9defc88aa49f69e67356bd000796b6194
 Section: multimedia
 Priority: optional
 Description: NoMercy-Updater
  Modern Media Server Solution
 
 Package: nomercyupdater
-Version: 0.1.193
+Version: 0.1.194
 Architecture: amd64
 Maintainer: NoMercy Entertainment <support@nomercy.tv>
 Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
 Recommends: systemd
-Filename: pool/main/n/nomercyupdater/nomercyupdater_latest_amd64.deb
-Size: 78538908
-MD5sum: d507cb5c4eb3e880d349d8db4782dac9
-SHA1: 48de5fe3eba81ce060f33d3490c75b9d07c96c01
-SHA256: 0d5632826acaf1bc5f2453970eec139f88a5bedd52e54694f5dd80ad7da94d63
+Filename: pool/main/n/nomercyupdater/nomercyupdater_0.1.194_amd64.deb
+Size: 78535194
+MD5sum: e94fdf538d2012da647f9c83eeb929b6
+SHA1: eaa0e1d2da487be99522935bf729de09c9df10b8
+SHA256: 3fdc85124023f8c5eb1931d11df8e1a9defc88aa49f69e67356bd000796b6194
 Section: multimedia
 Priority: optional
 Description: NoMercy-Updater
