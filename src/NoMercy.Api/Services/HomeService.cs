@@ -39,8 +39,8 @@ public class HomeService
             .GetHome(_mediaContext, userId, language, request.Take, request.Page);
 
         List<GenreRowDto<GenreRowItemDto>> genres = FetchGenres(genreItems).ToList();
-        List<Tv> tvData = await FetchTvData(language, genres);
-        List<Movie> movieData = await FetchMovieData(language, genres);
+        List<Tv> tvData = await FetchTvData(language, country, genres);
+        List<Movie> movieData = await FetchMovieData(language, country, genres);
 
         foreach (GenreRowDto<GenreRowItemDto> genre in genres)
         {
@@ -70,32 +70,24 @@ public class HomeService
         };
     }
 
-    private async Task<List<Movie>> FetchMovieData(string language, IEnumerable<GenreRowDto<GenreRowItemDto>> genres)
+    private async Task<List<Movie>> FetchMovieData(string language, string country, IEnumerable<GenreRowDto<GenreRowItemDto>> genres)
     {
         List<int> movieIds = genres
             .SelectMany(s => s.Source
                 .Where(s => s.MediaType == MovieMediaType)
                 .Select(s => s.Id)).ToList();
 
-        List<Movie> movieData = [];
-        await foreach (Movie movie in _homeRepository.GetHomeMoviesQuery(_mediaContext, movieIds, language))
-            movieData.Add(movie);
-
-        return movieData;
+        return await _homeRepository.GetHomeMovies(_mediaContext, movieIds, language, country);
     }
 
-    private async Task<List<Tv>> FetchTvData(string language, IEnumerable<GenreRowDto<GenreRowItemDto>> genres)
+    private async Task<List<Tv>> FetchTvData(string language, string country, IEnumerable<GenreRowDto<GenreRowItemDto>> genres)
     {
         List<int> tvIds = genres
             .SelectMany(genre => genre.Source
                 .Where(source => source.MediaType == TvMediaType)
                 .Select(source => source.Id)).ToList();
 
-        List<Tv> tvData = [];
-        await foreach (Tv tv in _homeRepository.GetHomeTvsQuery(_mediaContext, tvIds, language))
-            tvData.Add(tv);
-
-        return tvData;
+        return await _homeRepository.GetHomeTvs(_mediaContext, tvIds, language, country);
     }
 
     private IEnumerable<GenreRowDto<GenreRowItemDto>> FetchGenres(List<Genre> genreItems)
@@ -116,17 +108,30 @@ public class HomeService
 
     public async Task<ComponentResponse> GetHomeData(Guid userId, string language, string country)
     {
-        List<UserData> continueWatching = _homeRepository
-            .GetContinueWatching(_mediaContext, userId, language, country)
-            .ToList();
+        // Run initial independent queries in parallel
+        Task<HashSet<UserData>> continueWatchingTask = _homeRepository
+            .GetContinueWatchingAsync(_mediaContext, userId, language, country);
+        Task<List<Genre>> genreItemsTask = _homeRepository
+            .GetHomeGenresAsync(_mediaContext, userId, language, MaximumItemsPerPage);
+        Task<List<Library>> librariesTask = _homeRepository
+            .GetLibrariesAsync(_mediaContext, userId);
+        Task<int> animeCountTask = _homeRepository.GetAnimeCountAsync(_mediaContext, userId);
+        Task<int> movieCountTask = _homeRepository.GetMovieCountAsync(_mediaContext, userId);
+        Task<int> tvCountTask = _homeRepository.GetTvCountAsync(_mediaContext, userId);
+
+        await Task.WhenAll(continueWatchingTask, genreItemsTask, librariesTask, animeCountTask, movieCountTask, tvCountTask);
+
+        HashSet<UserData> continueWatching = continueWatchingTask.Result;
+        List<Genre> genreItems = genreItemsTask.Result;
+        List<Library> libraries = librariesTask.Result;
+        int animeCount = animeCountTask.Result;
+        int movieCount = movieCountTask.Result;
+        int tvCount = tvCountTask.Result;
 
         // Collect genre source data
         List<GenreSourceData> genreSourceList = [];
         List<int> movieIds = [];
         List<int> tvIds = [];
-
-        HashSet<Genre> genreItems =
-            await _homeRepository.GetHomeGenres(_mediaContext, userId, language, MaximumItemsPerPage);
 
         foreach (Genre genre in genreItems)
         {
@@ -145,14 +150,14 @@ public class HomeService
                 new($"/genre/{genre.Id}", UriKind.Relative), source));
         }
 
-        // Fetch media data
-        List<Tv> tvData = [];
-        await foreach (Tv tv in _homeRepository.GetHomeTvsQuery(_mediaContext, tvIds, language))
-            tvData.Add(tv);
+        // Fetch media data in parallel
+        Task<List<Tv>> tvDataTask = _homeRepository.GetHomeTvs(_mediaContext, tvIds, language, country);
+        Task<List<Movie>> movieDataTask = _homeRepository.GetHomeMovies(_mediaContext, movieIds, language, country);
 
-        List<Movie> movieData = [];
-        await foreach (Movie movie in _homeRepository.GetHomeMoviesQuery(_mediaContext, movieIds, language))
-            movieData.Add(movie);
+        await Task.WhenAll(tvDataTask, movieDataTask);
+
+        List<Tv> tvData = tvDataTask.Result;
+        List<Movie> movieData = movieDataTask.Result;
 
         // Build genre carousels with resolved items
         List<GenreCarouselData> genreCarousels = genreSourceList
@@ -176,21 +181,35 @@ public class HomeService
             .Randomize()
             .FirstOrDefault();
 
-        // Build library carousels
-        List<Library> libraries = await _homeRepository.GetLibrariesQuery(_mediaContext, userId);
+        // Build library carousels - fetch all library data in parallel - each task needs its own MediaContext for thread safety
         List<GenreCarouselData> libraryCarousels = [];
 
-        int animeCount = await _homeRepository.GetAnimeCountQuery(_mediaContext, userId);
-        int movieCount = await _homeRepository.GetMovieCountQuery(_mediaContext, userId);
-        int tvCount = await _homeRepository.GetTvCountQuery(_mediaContext, userId);
+        List<Task<(Library library, List<Movie> movies, List<Tv> shows)>> libraryTasks = libraries
+            .Select(async library =>
+            {
+                MediaContext context = new();
+                List<Movie> libraryMovies = [];
+                await foreach (Movie movie in _libraryRepository
+                    .GetLibraryMovies(context, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
+                {
+                    libraryMovies.Add(movie);
+                }
 
-        foreach (Library library in libraries)
+                List<Tv> libraryShows = [];
+                await foreach (Tv tv in _libraryRepository
+                    .GetLibraryShows(context, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
+                {
+                    libraryShows.Add(tv);
+                }
+
+                return (library, libraryMovies, libraryShows);
+            })
+            .ToList();
+
+        (Library library, List<Movie> movies, List<Tv> shows)[] libraryResults = await Task.WhenAll(libraryTasks);
+
+        foreach ((Library library, List<Movie> libraryMovies, List<Tv> libraryShows) in libraryResults)
         {
-            List<Movie> libraryMovies = _libraryRepository
-                .GetLibraryMovies(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc").ToList();
-            List<Tv> libraryShows = _libraryRepository
-                .GetLibraryShows(userId, library.Id, language, 32, 0, m => m.CreatedAt, "desc").ToList();
-
             bool shouldPaginate = (library.Type == MovieMediaType && movieCount > MaximumItemsPerPage)
                                   || (library.Type == TvMediaType && tvCount > MaximumItemsPerPage)
                                   || (library.Type == AnimeMediaType && animeCount > MaximumItemsPerPage);
@@ -375,7 +394,7 @@ public class HomeService
 
     public async Task<ScreensaverDto> GetScreensaverContent(Guid userId)
     {
-        HashSet<Image> data = await _homeRepository.GetScreensaverImagesQuery(_mediaContext, userId);
+        HashSet<Image> data = await _homeRepository.GetScreensaverImagesAsync(_mediaContext, userId);
 
         IEnumerable<Image> logos = data.Where(image => image.Type == "logo");
 
@@ -400,17 +419,15 @@ public class HomeService
 
     public async Task<ComponentResponse> GetHomeTvContent(Guid userId, string language, string country)
     {
-        List<UserData> continueWatching = _homeRepository
-            .GetContinueWatching(_mediaContext, userId, language, country)
-            .ToList();
+        HashSet<UserData> continueWatching = await _homeRepository
+            .GetContinueWatchingAsync(_mediaContext, userId, language, country);
 
         // Collect genre source data
         List<GenreSourceData> genreSourceList = [];
         List<int> movieIds = [];
         List<int> tvIds = [];
 
-        HashSet<Genre> genreItems =
-            await _homeRepository.GetHomeGenres(_mediaContext, userId, language, MaximumItemsPerPage);
+        List<Genre> genreItems = await _homeRepository.GetHomeGenresAsync(_mediaContext, userId, language, MaximumItemsPerPage);
 
         foreach (Genre genre in genreItems)
         {
@@ -430,13 +447,8 @@ public class HomeService
         }
 
         // Fetch data
-        List<Tv> tvData = [];
-        await foreach (Tv tv in _homeRepository.GetHomeTvsQuery(_mediaContext, tvIds, language))
-            tvData.Add(tv);
-
-        List<Movie> movieData = [];
-        await foreach (Movie movie in _homeRepository.GetHomeMoviesQuery(_mediaContext, movieIds, language))
-            movieData.Add(movie);
+        List<Tv> tvData = await _homeRepository.GetHomeTvs(_mediaContext, tvIds, language, country);
+        List<Movie> movieData = await _homeRepository.GetHomeMovies(_mediaContext, movieIds, language, country);
 
         // Build genre carousels
         List<GenreCarouselData> genreCarousels = genreSourceList
@@ -453,19 +465,28 @@ public class HomeService
             .ToList();
 
         // Build library carousels
-        List<Library> libraries = await _homeRepository.GetLibrariesQuery(_mediaContext, userId);
+        List<Library> libraries = await _homeRepository.GetLibrariesAsync(_mediaContext, userId);
         List<GenreCarouselData> libraryCarousels = [];
 
-        int animeCount = await _homeRepository.GetAnimeCountQuery(_mediaContext, userId);
-        int movieCount = await _homeRepository.GetMovieCountQuery(_mediaContext, userId);
-        int tvCount = await _homeRepository.GetTvCountQuery(_mediaContext, userId);
+        int animeCount = await _homeRepository.GetAnimeCountAsync(_mediaContext, userId);
+        int movieCount = await _homeRepository.GetMovieCountAsync(_mediaContext, userId);
+        int tvCount = await _homeRepository.GetTvCountAsync(_mediaContext, userId);
 
         foreach (Library library in libraries)
         {
-            List<Movie> libraryMovies = _libraryRepository
-                .GetLibraryMovies(userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc").ToList();
-            List<Tv> libraryShows = _libraryRepository
-                .GetLibraryShows(userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc").ToList();
+            List<Movie> libraryMovies = new();
+            await foreach (Movie movie in _libraryRepository
+                               .GetLibraryMovies(_mediaContext, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
+            {
+                libraryMovies.Add(movie);
+            }
+            
+            List<Tv> libraryShows = new();
+            await foreach (Tv tv in _libraryRepository
+                               .GetLibraryShows(_mediaContext, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
+            {
+                libraryShows.Add(tv);
+            }
 
             bool shouldPaginate = (library.Type == MovieMediaType && movieCount > MaximumItemsPerPage)
                                   || (library.Type == TvMediaType && tvCount > MaximumItemsPerPage)
@@ -504,7 +525,7 @@ public class HomeService
         {
             GenreCarouselData lib = libraryCarousels[i];
 
-            string? prevId = i == 0 ? "continue" : $"library_{libraryCarousels[i - 1].Id}";
+            string prevId = i == 0 ? "continue" : $"library_{libraryCarousels[i - 1].Id}";
             string? nextId = i == libraryCarousels.Count - 1
                 ? (genreCarousels.Count > 0 ? $"genre_{genreCarousels[0].Id}" : null)
                 : $"library_{libraryCarousels[i + 1].Id}";
@@ -526,10 +547,10 @@ public class HomeService
         {
             GenreCarouselData genre = genreCarousels[i];
 
-            string? prevId = i == 0
+            string prevId = i == 0
                 ? (libraryCarousels.Count > 0 ? $"library_{libraryCarousels[^1].Id}" : "continue")
                 : $"genre_{genreCarousels[i - 1].Id}";
-            string? nextId = i == genreCarousels.Count - 1
+            string nextId = i == genreCarousels.Count - 1
                 ? (libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}" : "continue")
                 : $"genre_{genreCarousels[i + 1].Id}";
 
@@ -550,10 +571,12 @@ public class HomeService
 
     public async Task<ComponentResponse> GetHomeContinueContent(Guid userId, string language, string country, Ulid replaceId)
     {
-        IEnumerable<UserData> continueWatching = _homeRepository
-            .GetContinueWatching(_mediaContext, userId, language, country)
-            .Where(item => item.Tv?.Episodes.Last().VideoFiles.First().Id != item.VideoFileId ||
-                           item.Time < item.VideoFile.Duration.ToSeconds() * 0.8);
+        HashSet<UserData> continueWatching = await _homeRepository
+            .GetContinueWatchingAsync(_mediaContext, userId, language, country);
+
+        IEnumerable<UserData> filtered = continueWatching
+            .Where(item => item.Tv?.Episodes.LastOrDefault()?.VideoFiles.FirstOrDefault()?.Id != item.VideoFileId ||
+                           item.Time < (item.VideoFile?.Duration?.ToSeconds() ?? 0) * 0.8);
 
         return new()
         {
@@ -564,7 +587,7 @@ public class HomeService
                     .WithNavigation("continue", 28)
                     .WithTitle("Continue watching".Localize())
                     .WithUpdate("pageLoad", "/home/continue")
-                    .WithItems(BuildContinueWatchingCards(continueWatching, country))
+                    .WithItems(BuildContinueWatchingCards(filtered, country))
                     .Build()
             ]
         };

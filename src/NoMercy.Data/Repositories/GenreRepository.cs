@@ -4,50 +4,62 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.Data.Repositories;
 
+public class GenreWithCountsDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int TotalMovies { get; set; }
+    public int TotalTvShows { get; set; }
+    public int MoviesWithVideo { get; set; }
+    public int TvShowsWithVideo { get; set; }
+}
+
 public class GenreRepository(MediaContext context)
 {
-    public async Task<Genre> GetGenreAsync(Guid userId, int id, string language, int take, int page)
+    public async Task<Genre?> GetGenreAsync(Guid userId, int id, string language, string country, int take, int page)
     {
-        return await context.Genres.AsNoTracking()
+        return await context.Genres
+            .AsNoTracking()
             .Where(genre => genre.Id == id)
+            .Include(genre => genre.Translations.Where(t => t.Iso6391 == language))
             .Include(genre => genre.GenreMovies
-                .OrderBy(genreMovie => genreMovie.Movie.TitleSort)
-                .Where(genreMovie => genreMovie.Movie.Library.LibraryUsers
-                    .Any(libraryUser => libraryUser.UserId.Equals(userId)))
-                .Where(genreMovie => genreMovie.Movie.VideoFiles.Any(videoFile => videoFile.Folder != null))
-            )
-            .ThenInclude(genreMovie => genreMovie.Movie)
-            .ThenInclude(movie => movie.VideoFiles)
+                .Where(gm => gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+                .Where(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
+                .Take(take))
+                .ThenInclude(gm => gm.Movie)
+                .ThenInclude(m => m.Translations.Where(t => t.Iso6391 == language))
             .Include(genre => genre.GenreMovies)
-            .ThenInclude(genreMovie => genreMovie.Movie.Media)
+                .ThenInclude(gm => gm.Movie)
+                .ThenInclude(m => m.VideoFiles.Where(v => v.Folder != null))
             .Include(genre => genre.GenreMovies)
-            .ThenInclude(genreMovie => genreMovie.Movie.Images)
+                .ThenInclude(gm => gm.Movie)
+                .ThenInclude(m => m.Images.Where(i => i.Type == "logo").Take(1))
             .Include(genre => genre.GenreMovies)
-            .ThenInclude(genreMovie =>
-                genreMovie.Movie.Translations.Where(translation => translation.Iso6391 == language))
-            .Include(genre => genre.GenreMovies)
-            .ThenInclude(genreMovie => genreMovie.Movie.CertificationMovies)
-            .ThenInclude(certificationMovie => certificationMovie.Certification)
+                .ThenInclude(gm => gm.Movie)
+                .ThenInclude(m => m.CertificationMovies
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Take(1))
+                .ThenInclude(c => c.Certification)
             .Include(genre => genre.GenreTvShows
-                .OrderBy(genreTv => genreTv.Tv.TitleSort)
-                .Where(genreTv => genreTv.Tv.Library.LibraryUsers
-                    .Any(libraryUser => libraryUser.UserId.Equals(userId)))
-                .Where(genreTv => genreTv.Tv.Episodes
-                    .Any(episode => episode.VideoFiles.Any(videoFile => videoFile.Folder != null)))
-            )
-            .ThenInclude(genreTv => genreTv.Tv)
-            .ThenInclude(tv => tv.Episodes.Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
-            .ThenInclude(episode => episode.VideoFiles)
+                .Where(gt => gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+                .Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
+                .Take(take))
+                .ThenInclude(gt => gt.Tv)
+                .ThenInclude(tv => tv.Translations.Where(t => t.Iso6391 == language))
             .Include(genre => genre.GenreTvShows)
-            .ThenInclude(genreTv => genreTv.Tv.Media)
+                .ThenInclude(gt => gt.Tv)
+                .ThenInclude(tv => tv.Episodes.Where(e => e.SeasonNumber > 0 && e.VideoFiles.Any(v => v.Folder != null)))
+                .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
             .Include(genre => genre.GenreTvShows)
-            .ThenInclude(genreTv => genreTv.Tv.Images)
+                .ThenInclude(gt => gt.Tv)
+                .ThenInclude(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
             .Include(genre => genre.GenreTvShows)
-            .ThenInclude(genreTv => genreTv.Tv.Translations.Where(translation => translation.Iso6391 == language))
-            .Include(genre => genre.GenreTvShows)
-            .ThenInclude(genreTv => genreTv.Tv.CertificationTvs)
-            .ThenInclude(certificationTv => certificationTv.Certification)
-            .FirstAsync();
+                .ThenInclude(gt => gt.Tv)
+                .ThenInclude(tv => tv.CertificationTvs
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Take(1))
+                .ThenInclude(c => c.Certification)
+            .FirstOrDefaultAsync();
     }
 
     public IQueryable<Genre> GetGenresAsync(Guid userId, string language, int take, int page)
@@ -55,84 +67,55 @@ public class GenreRepository(MediaContext context)
         return context.Genres
             .AsNoTracking()
             .Where(genre =>
-                genre.GenreMovies.Any(g => g.Movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId))) ||
-                genre.GenreTvShows.Any(g => g.Tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId))))
-            .Select(genre => new Genre
-            {
-                Id = genre.Id,
-                Name = genre.Name,
-                GenreMovies = genre.GenreMovies
-                    .Where(gm => gm.Movie.VideoFiles.Any(vf => vf.Folder != null))
-                    .Select(gm => new GenreMovie
-                    {
-                        Movie = new()
-                        {
-                            Id = gm.Movie.Id,
-                            Title = gm.Movie.Title,
-                            TitleSort = gm.Movie.TitleSort,
-                            VideoFiles = gm.Movie.VideoFiles
-                                .Where(vf => vf.Folder != null)
-                                .Select(vf => new VideoFile
-                                {
-                                    Id = vf.Id,
-                                    Folder = vf.Folder
-                                }).ToList(),
-                            Translations = gm.Movie.Translations
-                                .Where(t => t.Iso6391 == language)
-                                .Select(t => new Translation
-                                {
-                                    Iso6391 = t.Iso6391,
-                                    Title = t.Title
-                                }).ToList()
-                        }
-                    }).ToList(),
-                GenreTvShows = genre.GenreTvShows
-                    .Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any(vf => vf.Folder != null)))
-                    .Select(gt => new GenreTv
-                    {
-                        Tv = new()
-                        {
-                            Id = gt.Tv.Id,
-                            Title = gt.Tv.Title,
-                            TitleSort = gt.Tv.TitleSort,
-                            Episodes = gt.Tv.Episodes
-                                .Where(e => e.SeasonNumber > 0 && e.VideoFiles.Any(vf => vf.Folder != null))
-                                .Select(e => new Episode
-                                {
-                                    Id = e.Id,
-                                    Title = e.Title,
-                                    SeasonNumber = e.SeasonNumber,
-                                    VideoFiles = e.VideoFiles
-                                        .Where(vf => vf.Folder != null)
-                                        .Select(vf => new VideoFile
-                                        {
-                                            Id = vf.Id,
-                                            Folder = vf.Folder
-                                        }).ToList()
-                                }).ToList(),
-                            Translations = gt.Tv.Translations
-                                .Where(t => t.Iso6391 == language)
-                                .Select(t => new Translation
-                                {
-                                    Iso6391 = t.Iso6391,
-                                    Title = t.Title
-                                }).ToList()
-                        }
-                    }).ToList()
-            })
+                genre.GenreMovies.Any(g => g.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
+                genre.GenreTvShows.Any(g => g.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)))
+            .Include(genre => genre.Translations.Where(t => t.Iso6391 == language))
+            .Include(genre => genre.GenreMovies
+                .Where(gm => gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)))
+            .Include(genre => genre.GenreTvShows
+                .Where(gt => gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .OrderBy(genre => genre.Name)
             .Skip(page * take)
             .Take(take);
     }
 
+    public async Task<List<GenreWithCountsDto>> GetGenresWithCountsAsync(Guid userId, string language, int take, int page)
+    {
+        return await context.Genres
+            .AsNoTracking()
+            .Where(genre =>
+                genre.GenreMovies.Any(g => g.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
+                genre.GenreTvShows.Any(g => g.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)))
+            .OrderBy(genre => genre.Name)
+            .Skip(page * take)
+            .Take(take)
+            .Select(genre => new GenreWithCountsDto
+            {
+                Id = genre.Id,
+                Name = genre.Translations.FirstOrDefault(t => t.Iso6391 == language) != null
+                    ? genre.Translations.First(t => t.Iso6391 == language).Name ?? genre.Name
+                    : genre.Name,
+                TotalMovies = genre.GenreMovies.Count(gm => gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)),
+                TotalTvShows = genre.GenreTvShows.Count(gt => gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)),
+                MoviesWithVideo = genre.GenreMovies.Count(gm =>
+                    gm.Movie.Library.LibraryUsers.Any(u => u.UserId == userId) &&
+                    gm.Movie.VideoFiles.Any(v => v.Folder != null)),
+                TvShowsWithVideo = genre.GenreTvShows.Count(gt =>
+                    gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId) &&
+                    gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
+            })
+            .ToListAsync();
+    }
+
     public Task<List<MusicGenre>> GetMusicGenresAsync(Guid userId)
     {
-        return context.MusicGenres.AsNoTracking()
+        return context.MusicGenres
+            .AsNoTracking()
             .Where(genre =>
-                genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId.Equals(userId))) ||
-                genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId.Equals(userId))))
-            .Where(genre => genre.AlbumMusicGenres.Any(musicGenre => musicGenre.Album.AlbumTrack.Count > 0) || 
-                            genre.ArtistMusicGenres.Any(musicGenre => musicGenre.Artist.ArtistTrack.Count > 0))
+                genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
+                genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
+            .Where(genre => genre.AlbumMusicGenres.Any(mg => mg.Album.AlbumTrack.Count > 0) ||
+                            genre.ArtistMusicGenres.Any(mg => mg.Artist.ArtistTrack.Count > 0))
             .ToListAsync();
     }
 }

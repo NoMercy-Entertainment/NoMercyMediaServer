@@ -98,17 +98,30 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
             .Select(episode => episode!.Tv)
             .Select(tv => tv.Id);
 
-        List<SpecialItemsDto> items = [];
+        // Fetch movies and TVs in parallel
+        Task<List<SpecialItemsDto>> moviesTask = Task.Run(async () =>
+        {
+            List<SpecialItemsDto> movieItems = [];
+            IAsyncEnumerable<Movie> specialMovies =
+                SpecialResponseDto.GetSpecialMovies(context, userId, movieIds, language, country);
+            await foreach (Movie movie in specialMovies)
+                movieItems.Add(new(movie));
+            return movieItems;
+        });
 
-        IAsyncEnumerable<Movie> specialMovies =
-            SpecialResponseDto.GetSpecialMovies(context, userId, movieIds, language, country);
-        await foreach (Movie movie in specialMovies)
-            items.Add(new(movie));
+        Task<List<SpecialItemsDto>> tvsTask = Task.Run(async () =>
+        {
+            List<SpecialItemsDto> tvItems = [];
+            IAsyncEnumerable<Tv> specialTvs =
+                SpecialResponseDto.GetSpecialTvs(context, userId, tvIds, language, country);
+            await foreach (Tv tv in specialTvs)
+                tvItems.Add(new(tv));
+            return tvItems;
+        });
 
-        IAsyncEnumerable<Tv> specialTvs =
-            SpecialResponseDto.GetSpecialTvs(context, userId, tvIds, language, country);
-        await foreach (Tv tv in specialTvs)
-            items.Add(new(tv));
+        await Task.WhenAll(moviesTask, tvsTask);
+
+        List<SpecialItemsDto> items = [..moviesTask.Result, ..tvsTask.Result];
 
         return Ok(new DataResponseDto<SpecialResponseItemDto>
         {
@@ -170,7 +183,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         string country = Country();
 
         Special? special = await specialRepository
-            .GetSpecialPlaylist(context, userId, id, language, country);
+            .GetSpecialPlaylistAsync(userId, id, language, country);
 
         if (special is null)
             return NotFoundResponse("Special not found");

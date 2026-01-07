@@ -23,6 +23,7 @@ public class LibrariesController(
     LibraryRepository libraryRepository,
     CollectionRepository collectionRepository,
     HomeRepository homeRepository,
+    MediaContext mediaContext,
     SpecialRepository specialRepository)
     : BaseController
 {
@@ -54,17 +55,51 @@ public class LibrariesController(
         string language = Language();
         string country = Country();
 
-        IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
+        // Start all independent queries in parallel
+        Task<List<Library>> librariesTask = libraryRepository.GetLibraries(userId);
+        Task<List<Collection>> collectionsTask = collectionRepository.GetCollectionItems(userId, language, country, 10, 0);
+        Task<List<Special>> specialsTask = specialRepository.GetSpecialItems(userId, language, country, 10, 0);
+        Task<Tv?> randomTvTask = libraryRepository.GetRandomTvShow(userId, language);
+        Task<Movie?> randomMovieTask = libraryRepository.GetRandomMovie(userId, language);
+
+        await Task.WhenAll(librariesTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask);
+
+        List<Library> libraries = librariesTask.Result;
+        List<Collection> collections = collectionsTask.Result;
+        List<Special> specials = specialsTask.Result;
+        Tv? tv = randomTvTask.Result;
+        Movie? movie = randomMovieTask.Result;
+
+        // Fetch library data in parallel for all non-music libraries
+        Library[] nonMusicLibraries = libraries.Where(lib => lib.Type != "music").ToArray();
+
+        // Each parallel task needs its own MediaContext for thread safety
+        Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = nonMusicLibraries
+            .Select(async library =>
+            {
+                MediaContext context = new();
+                List<Movie> libraryMovies = [];
+                await foreach (Movie item in libraryRepository.GetLibraryMovies(context, userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc"))
+                {
+                    libraryMovies.Add(item);
+                }
+
+                List<Tv> libraryShows = [];
+                await foreach (Tv item in libraryRepository.GetLibraryShows(context, userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc"))
+                {
+                    libraryShows.Add(item);
+                }
+
+                return (library, libraryMovies, libraryShows);
+            })
+            .ToArray();
+
+        (Library library, List<Movie> movies, List<Tv> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
 
         List<NmCarouselDto<NmCardDto>> list = [];
 
-        foreach (Library library in libraries.Where(lib => lib.Type != "music" ))
+        foreach ((Library library, List<Movie> libraryMovies, List<Tv> libraryShows) in libraryDataResults)
         {
-            List<Movie> movies =
-                libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
-            List<Tv> shows =
-                libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
-            
             Uri moreLink = library.LibraryMovies.Count + library.LibraryTvs.Count > 500
                 ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
                 : new($"/libraries/{library.Id}", UriKind.Relative);
@@ -73,16 +108,11 @@ public class LibrariesController(
             {
                 Title = library.Title,
                 MoreLink = moreLink,
-                Items = movies.Select(movie => new NmCardDto(movie, country))
-                    .Concat(shows.Select(tv => new NmCardDto(tv, country)))
+                Items = libraryMovies.Select(m => new NmCardDto(m, country))
+                    .Concat(libraryShows.Select(t => new NmCardDto(t, country)))
                     .ToList()
             });
         }
-
-        IEnumerable<Collection> collections =
-            collectionRepository.GetCollectionItems(userId, language, 10, 0, m => m.CreatedAt, "desc");
-        IEnumerable<Special> specials =
-            specialRepository.GetSpecialItems(userId, language, 10, 0, m => m.CreatedAt, "desc");
 
         list.Add(new()
         {
@@ -91,7 +121,7 @@ public class LibrariesController(
             Items = collections.Select(collection => new NmCardDto(collection, country))
                 .ToList()
         });
-        
+
         list.Add(new()
         {
             Title = "Specials",
@@ -100,10 +130,6 @@ public class LibrariesController(
                 .Select(special => new NmCardDto(special, country))
                 .ToList()
         });
-
-        Tv? tv = await libraryRepository.GetRandomTvShow(userId, language);
-
-        Movie? movie = await libraryRepository.GetRandomMovie(userId, language);
 
         List<NmCardDto> genres = [];
         if (tv != null)
@@ -143,9 +169,8 @@ public class LibrariesController(
                     index == 0 ? "home_card" : $"library_{list[index - 1].Id}",
                     index == list.Count - 1 ? null : $"library_{list[index + 1].Id}")
                 .WithItems(carouselData.Items.Select(item => Component.Card()
-                    .WithData(new(item))
-                    ))
-                ;
+                    .WithData(new(item))));
+            
             components.Add(carousel);
         }
         
@@ -168,33 +193,58 @@ public class LibrariesController(
         string language = Language();
         string country = Country();
 
-        IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
+        // Start all independent queries in parallel
+        Task<List<Library>> librariesTask = libraryRepository.GetLibraries(userId);
+        Task<List<Collection>> collectionsTask = collectionRepository.GetCollectionItems(userId, language, country, 6, 0);
+        Task<List<Special>> specialsTask = specialRepository.GetSpecialItems(userId, language, country, 6, 0);
+        Task<Tv?> randomTvTask = libraryRepository.GetRandomTvShow(userId, language);
+        Task<Movie?> randomMovieTask = libraryRepository.GetRandomMovie(userId, language);
+
+        await Task.WhenAll(librariesTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask);
+
+        List<Library> libraries = librariesTask.Result;
+        List<Collection> collections = collectionsTask.Result;
+        List<Special> specials = specialsTask.Result;
+        Tv? tv = randomTvTask.Result;
+        Movie? movie = randomMovieTask.Result;
+
+        // Fetch library data in parallel for all libraries - each task needs its own MediaContext for thread safety
+        Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = libraries
+            .Select(async library =>
+            {
+                MediaContext context = new();
+                List<Movie> libraryMovies = [];
+                await foreach (Movie item in libraryRepository.GetLibraryMovies(context, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
+                {
+                    libraryMovies.Add(item);
+                }
+
+                List<Tv> libraryShows = [];
+                await foreach (Tv item in libraryRepository.GetLibraryShows(context, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
+                {
+                    libraryShows.Add(item);
+                }
+
+                return (library, libraryMovies, libraryShows);
+            })
+            .ToArray();
+
+        (Library library, List<Movie> movies, List<Tv> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
 
         List<NmCarouselDto<NmCardDto>> list = [];
-        
-        foreach (Library library in libraries)
-        {
-            List<Movie> movies =
-                libraryRepository.GetLibraryMovies(userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc").ToList();
-            List<Tv> shows =
-                libraryRepository.GetLibraryShows(userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc").ToList();
 
+        foreach ((Library library, List<Movie> libraryMovies, List<Tv> libraryShows) in libraryDataResults)
+        {
             list.Add(new()
             {
                 Id = "library_" + library.Id,
                 Title = library.Title,
-                MoreLink =  new($"/libraries/{library.Id}", UriKind.Relative),
-                // MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
-                Items = movies.Select(movie => new NmCardDto(movie, country))
-                    .Concat(shows.Select(tv => new NmCardDto(tv, country)))
+                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+                Items = libraryMovies.Select(m => new NmCardDto(m, country))
+                    .Concat(libraryShows.Select(t => new NmCardDto(t, country)))
                     .ToList()
             });
         }
-
-        IEnumerable<Collection> collections =
-            collectionRepository.GetCollectionItems(userId, language, 6, 0, m => m.CreatedAt, "desc");
-        IEnumerable<Special> specials =
-            specialRepository.GetSpecialItems(userId, language, 6, 0, m => m.CreatedAt, "desc");
 
         list.Add(new()
         {
@@ -213,12 +263,6 @@ public class LibrariesController(
             Items = specials.Select(special => new NmCardDto(special, country))
                 .ToList()
         });
-
-        await using MediaContext mediaContext = new();
-
-        Tv? tv = await libraryRepository.GetRandomTvShow(userId, language);
-
-        Movie? movie = await libraryRepository.GetRandomMovie(userId, language);
 
         List<NmCardDto> genres = [];
         if (tv != null)
@@ -283,16 +327,41 @@ public class LibrariesController(
         string language = Language();
         string country = Country();
 
-        List<Movie> movies = libraryRepository
-            .GetLibraryMovies(userId, libraryId, language, request.Take, request.Page).ToList();
-        List<Tv> shows = libraryRepository
-            .GetLibraryShows(userId, libraryId, language, request.Take, request.Page).ToList();
+        // Fetch movies and shows in parallel - each task needs its own MediaContext for thread safety
+        Task<List<Movie>> moviesTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            List<Movie> movies = [];
+            await foreach (Movie movie in libraryRepository
+                               .GetLibraryMovies(context, userId, libraryId, language, request.Take, request.Page, m => m.CreatedAt, "desc"))
+            {
+                movies.Add(movie);
+            }
+            return movies;
+        });
+
+        Task<List<Tv>> showsTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            List<Tv> shows = [];
+            await foreach (Tv tv in libraryRepository
+                               .GetLibraryShows(context, userId, libraryId, language, request.Take, request.Page, m => m.CreatedAt, "desc"))
+            {
+                shows.Add(tv);
+            }
+            return shows;
+        });
+
+        await Task.WhenAll(moviesTask, showsTask);
+
+        List<Movie> libraryMovies = moviesTask.Result;
+        List<Tv> libraryShows = showsTask.Result;
 
         if (request.Version != "lolomo")
         {
-            List<CardData> cardItems = movies
+            List<CardData> cardItems = libraryMovies
                 .Select(movie => new CardData(movie, country))
-                .Concat(shows.Select(tv => new CardData(tv, country)))
+                .Concat(libraryShows.Select(tv => new CardData(tv, country)))
                 .OrderBy(item => item.TitleSort)
                 .ToList();
 
@@ -309,12 +378,12 @@ public class LibrariesController(
         List<ComponentEnvelope> carousels = Letters
             .Select((letter, index) =>
             {
-                List<CardData> carouselItems = movies
+                List<CardData> carouselItems = libraryMovies
                     .Select(movie => new CardData(movie, country))
                     .Where(collection => letter == "#"
                         ? Numbers.Any(p => collection.Title.StartsWith(p))
                         : collection.Title.StartsWith(letter))
-                    .Concat(shows.Select(tv => new CardData(tv, country))
+                    .Concat(libraryShows.Select(tv => new CardData(tv, country))
                         .Where(collection => letter == "#"
                             ? Numbers.Any(p => collection.Title.StartsWith(p))
                             : collection.Title.StartsWith(letter)))
@@ -359,11 +428,16 @@ public class LibrariesController(
         string language = Language();
         string country = Country();
 
-        IEnumerable<Movie> movies = await libraryRepository
-            .GetPaginatedLibraryMovies(userId, libraryId, letter, language, request.Take, request.Page);
+        // Fetch movies and shows in parallel
+        Task<List<Movie>> moviesTask = libraryRepository
+            .GetPaginatedLibraryMovies(userId, libraryId, letter, language, country, request.Take, request.Page);
+        Task<List<Tv>> showsTask = libraryRepository
+            .GetPaginatedLibraryShows(userId, libraryId, letter, language, country, request.Take, request.Page);
 
-        IEnumerable<Tv> shows = await libraryRepository
-            .GetPaginatedLibraryShows(userId, libraryId, letter, language, request.Take, request.Page);
+        await Task.WhenAll(moviesTask, showsTask);
+
+        List<Movie> movies = moviesTask.Result;
+        List<Tv> shows = showsTask.Result;
 
         List<CardData> concat = movies
             .Select(movie => new CardData(movie, country))

@@ -56,7 +56,7 @@ public class VideoPlaylistManager
     private async Task<(VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist)> GetSpecialItems(
         Guid userId, dynamic listId, int? itemId, string language, string country)
     {
-        Special? special = await _specialRepository.GetSpecialPlaylist(_mediaContext, userId, Ulid.Parse(listId), language, country);
+        Special? special = await _specialRepository.GetSpecialPlaylistAsync(userId, Ulid.Parse(listId), language, country);
 
         List<VideoPlaylistResponseDto> playlist = special?.Items
             .OrderBy(item => item.Order)

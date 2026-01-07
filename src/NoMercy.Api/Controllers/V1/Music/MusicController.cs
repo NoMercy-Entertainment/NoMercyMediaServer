@@ -27,12 +27,10 @@ namespace NoMercy.Api.Controllers.V1.Music;
 public class MusicController : BaseController
 {
     private readonly MusicRepository _musicRepository;
-    private readonly MediaContext _mediaContext;
 
-    public MusicController(MusicRepository musicService, MediaContext mediaContext)
+    public MusicController(MusicRepository musicService)
     {
         _musicRepository = musicService;
-        _mediaContext = mediaContext;
     }
 
     [HttpGet]
@@ -44,47 +42,47 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        TopMusicDto? favoriteArtist = _musicRepository.GetFavoriteArtist(_mediaContext, userId)
+        // Run queries sequentially - DbContext is not thread-safe so parallel execution causes errors
+        TopMusicDto? favoriteArtist = _musicRepository.GetFavoriteArtistAsync(userId)
             .AsEnumerable()
             .Select(artistTrack => new TopMusicDto(artistTrack))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        TopMusicDto? favoriteAlbum = _musicRepository.GetFavoriteAlbum(_mediaContext, userId)
+        TopMusicDto? favoriteAlbum = _musicRepository.GetFavoriteAlbumAsync(userId)
             .AsEnumerable()
             .Select(albumTrack => new TopMusicDto(albumTrack))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        TopMusicDto? favoritePlaylist = _musicRepository.GetFavoritePlaylist(_mediaContext, userId)
+        TopMusicDto? favoritePlaylist = _musicRepository.GetFavoritePlaylistAsync(userId)
             .AsEnumerable()
             .Select(musicPlay => new TopMusicDto(musicPlay))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtists(_mediaContext, userId)
+        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtistsAsync(userId)
             .Select(artistUser => new CarouselResponseItemDto(artistUser))
             .Take(36)
             .ToListAsync();
 
-        List<CarouselResponseItemDto> favoriteAlbums = _musicRepository.GetFavoriteAlbums(_mediaContext, userId)
+        List<CarouselResponseItemDto> favoriteAlbums = _musicRepository.GetFavoriteAlbumsAsync(userId)
             .AsEnumerable()
             .Select(artistUser => new CarouselResponseItemDto(artistUser))
             .Take(36)
             .ToList();
 
-        List<CarouselResponseItemDto> playlists = (await _musicRepository.GetPlaylists(_mediaContext, userId))
-            .ToList();
+        List<CarouselResponseItemDto> playlists = await _musicRepository.GetPlaylistsAsync(userId);
 
-        List<CarouselResponseItemDto> latestArtists = await _musicRepository.GetLatestArtists(_mediaContext)
+        List<CarouselResponseItemDto> latestArtists = await _musicRepository.GetLatestArtistsAsync()
             .Select(artist => new CarouselResponseItemDto(artist))
             .Take(36)
             .ToListAsync();
 
-        List<CarouselResponseItemDto> latestAlbums = await _musicRepository.GetLatestAlbums(_mediaContext)
+        List<CarouselResponseItemDto> latestAlbums = await _musicRepository.GetLatestAlbumsAsync()
             .Select(artist => new CarouselResponseItemDto(artist))
             .Take(36)
             .ToListAsync();
@@ -155,21 +153,21 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        TopMusicDto? favoriteArtist = _musicRepository.GetFavoriteArtist(_mediaContext, userId)
+        TopMusicDto? favoriteArtist = _musicRepository.GetFavoriteArtistAsync(userId)
             .AsEnumerable()
             .Select(artistTrack => new TopMusicDto(artistTrack))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        TopMusicDto? favoriteAlbum = _musicRepository.GetFavoriteAlbum(_mediaContext, userId)
+        TopMusicDto? favoriteAlbum = _musicRepository.GetFavoriteAlbumAsync(userId)
             .AsEnumerable()
             .Select(albumTrack => new TopMusicDto(albumTrack))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        TopMusicDto? favoritePlaylist = _musicRepository.GetFavoritePlaylist(_mediaContext, userId)
+        TopMusicDto? favoritePlaylist = _musicRepository.GetFavoritePlaylistAsync(userId)
             .AsEnumerable()
             .Select(musicPlay => new TopMusicDto(musicPlay))
             .GroupBy(a => a.Name)
@@ -203,7 +201,7 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtists(_mediaContext, userId)
+        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtistsAsync(userId)
             .Select(artistUser => new CarouselResponseItemDto(artistUser))
             .Take(36)
             .ToListAsync();
@@ -226,7 +224,7 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        List<CarouselResponseItemDto> favoriteAlbums = _musicRepository.GetFavoriteAlbums(_mediaContext, userId)
+        List<CarouselResponseItemDto> favoriteAlbums = _musicRepository.GetFavoriteAlbumsAsync(userId)
             .AsEnumerable()
             .Select(artistUser => new CarouselResponseItemDto(artistUser))
             .Take(36)
@@ -250,7 +248,7 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        List<CarouselResponseItemDto> playlists = (await _musicRepository.GetPlaylists(_mediaContext, userId))
+        List<CarouselResponseItemDto> playlists = (await _musicRepository.GetPlaylistsAsync(userId))
             .ToList();
 
         return Ok(ComponentResponse.From(
@@ -283,10 +281,10 @@ public class MusicController : BaseController
         string normalizedQuery = request.Query.NormalizeSearch();
 
         // Step 1: Get IDs using MusicRepository search methods
-        List<Guid> artistIds = _musicRepository.SearchArtistIds(_mediaContext, normalizedQuery);
-        List<Guid> albumIds = _musicRepository.SearchAlbumIds(_mediaContext, normalizedQuery);
-        List<Guid> playlistIds = _musicRepository.SearchPlaylistIds(_mediaContext, normalizedQuery);
-        List<Guid> trackIds = _musicRepository.SearchTrackIds(_mediaContext, normalizedQuery);
+        List<Guid> artistIds = _musicRepository.SearchArtistIds(normalizedQuery);
+        List<Guid> albumIds = _musicRepository.SearchAlbumIds(normalizedQuery);
+        List<Guid> playlistIds = _musicRepository.SearchPlaylistIds(normalizedQuery);
+        List<Guid> trackIds = _musicRepository.SearchTrackIds(normalizedQuery);
         // Step 2: Query full data using the IDs
         MediaContext mediaContext = new();
         List<Artist> artists = mediaContext.Artists

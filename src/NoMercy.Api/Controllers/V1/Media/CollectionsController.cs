@@ -30,13 +30,14 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
         string language = Language();
         string country = Country();
 
-        List<Collection> collections =
-            await collectionRepository.GetCollectionsAsync(userId, language, request.Take, request.Page);
+        // Use optimized query that projects only needed data
+        List<CollectionListDto> collectionDtos =
+            await collectionRepository.GetCollectionsListAsync(userId, language, country, request.Take, request.Page);
 
         if (request.Version != "lolomo")
         {
-            List<CardData> cardItems = collections
-                .Select(collection => new CardData(collection, country))
+            List<CardData> cardItems = collectionDtos
+                .Select(dto => new CardData(dto))
                 .ToList();
 
             ComponentEnvelope response = Component.Grid()
@@ -47,15 +48,15 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
             return Ok(ComponentResponse.From(response));
         }
-        
+
         List<ComponentEnvelope> carousels = Letters
             .Select((letter, index) =>
             {
-                List<CardData> letterItems = collections
-                    .Where(collection => letter == "#"
-                        ? Numbers.Any(p => collection.Title.StartsWith(p))
-                        : collection.Title.StartsWith(letter))
-                    .Select(collection => new CardData(new NmCardDto(collection, country)))
+                List<CardData> letterItems = collectionDtos
+                    .Where(dto => letter == "#"
+                        ? Numbers.Any(p => dto.Title.StartsWith(p))
+                        : dto.Title.StartsWith(letter))
+                    .Select(dto => new CardData(dto))
                     .OrderBy(item => item.TitleSort)
                     .ToList();
 

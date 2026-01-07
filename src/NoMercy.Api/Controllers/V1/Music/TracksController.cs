@@ -42,7 +42,7 @@ public class TracksController : BaseController
 
         string language = Language();
 
-        foreach (TrackUser track in _musicRepository.GetTracks(_mediaContext, userId))
+        foreach (TrackUser track in _musicRepository.GetTracksAsync(userId))
             tracks.Add(new(track.Track, language));
 
         if (tracks.Count == 0)
@@ -69,7 +69,7 @@ public class TracksController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like tracks");
 
-        Track? track = await _musicRepository.GetTrackWithIncludes(_mediaContext, id);
+        Track? track = await _musicRepository.GetTrackWithIncludesAsync(id);
 
         if (track is null)
             return NotFoundResponse("Track not found");
@@ -119,7 +119,7 @@ public class TracksController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view lyrics");
 
-        Track? track = await _musicRepository.GetTrackWithIncludes(_mediaContext, id);
+        Track? track = await _musicRepository.GetTrackWithIncludesAsync(id);
 
         if (track is null)
             return NotFoundResponse("Track not found");
@@ -154,7 +154,7 @@ public class TracksController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to record playback");
 
-        Track? track = await _musicRepository.GetTrack(_mediaContext, id);
+        Track? track = await _musicRepository.GetTrackAsync(id);
 
         if (track is null)
             return NotFoundResponse("Track not found");

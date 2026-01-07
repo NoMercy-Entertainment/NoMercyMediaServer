@@ -43,13 +43,12 @@ public class MusicPlaylistManager
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetPlaylistTracks(
         Guid listId, Guid trackId, string country)
     {
-        PlaylistTrack? playlistTrack = await _musicRepository.GetPlaylistTrack(_mediaContext, listId, trackId);
+        PlaylistTrack? playlistTrack = await _musicRepository.GetPlaylistTrackAsync(listId, trackId);
 
         if (playlistTrack is null)
             throw new("Playlist track not found");
 
-        List<PlaylistTrackDto> playlist = playlistTrack.Track.PlaylistTrack
-            .SelectMany(x => x.Track.PlaylistTrack)
+        List<PlaylistTrackDto> playlist = playlistTrack.Playlist.Tracks
             .Select(x => new PlaylistTrackDto(x, country))
             .ToList();
 
@@ -65,13 +64,12 @@ public class MusicPlaylistManager
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetAlbumTracks(
         Guid listId, Guid trackId, string country)
     {
-        AlbumTrack? albumTrack = await _musicRepository.GetAlbumTrack(_mediaContext, listId, trackId);
+        AlbumTrack? albumTrack = await _musicRepository.GetAlbumTrackAsync(listId, trackId);
 
         if (albumTrack is null)
             throw new("Album track not found");
 
-        List<PlaylistTrackDto> playlist = albumTrack.Track.AlbumTrack
-            .SelectMany(x => x.Album.AlbumTrack)
+        List<PlaylistTrackDto> playlist = albumTrack.Album.AlbumTrack
             .Select(x => new PlaylistTrackDto(x, country))
             .OrderBy(x => x.Disc)
             .ThenBy(x => x.Track)
@@ -89,13 +87,12 @@ public class MusicPlaylistManager
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetArtistTracks(
         Guid listId, Guid trackId, string country)
     {
-        ArtistTrack? artistTrack = await _musicRepository.GetArtistTrack(_mediaContext, listId, trackId);
+        ArtistTrack? artistTrack = await _musicRepository.GetArtistTrackAsync(listId, trackId);
 
         if (artistTrack is null)
             throw new("Artist track not found");
 
-        List<PlaylistTrackDto> playlist = artistTrack.Track.ArtistTrack
-            .SelectMany(x => x.Artist.ArtistTrack)
+        List<PlaylistTrackDto> playlist = artistTrack.Artist.ArtistTrack
             .Select(x => new PlaylistTrackDto(x, country))
             .DistinctBy(x => x.Id)
             .OrderBy(x => x.AlbumName)

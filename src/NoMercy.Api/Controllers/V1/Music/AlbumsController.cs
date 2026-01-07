@@ -41,13 +41,13 @@ public class AlbumsController : BaseController
 
         string language = Language();
 
-        foreach (Album album in _musicRepository.GetAlbums(_mediaContext, userId, letter))
+        foreach (Album album in _musicRepository.GetAlbumsAsync(userId, letter))
         {
             albums.Add(new(album, language));
         }
 
-        List<AlbumTrack> tracks = await _musicRepository.GetAlbumTracksForIds(_mediaContext, albums.Select(a => a.Id)
-            .ToList());
+        List<AlbumTrack> tracks = await _musicRepository.GetAlbumTracksForIdsAsync(
+            albums.Select(a => a.Id).ToList());
 
         if (tracks.Count == 0)
             return NotFoundResponse("Albums not found");
@@ -86,7 +86,7 @@ public class AlbumsController : BaseController
 
         string language = Language();
 
-        Album? album = await _musicRepository.GetAlbum(_mediaContext, userId, id);
+        Album? album = await _musicRepository.GetAlbumAsync(userId, id);
 
         if (album is null)
             return NotFoundResponse("Albums not found");
@@ -105,12 +105,12 @@ public class AlbumsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like albums");
 
-        Album? album = await _musicRepository.GetAlbum(_mediaContext, userId, id);
+        Album? album = await _musicRepository.GetAlbumAsync(userId, id);
 
         if (album is null)
             return UnprocessableEntityResponse("Albums not found");
 
-        await _musicRepository.LikeAlbum(userId, album, request.Value);
+        await _musicRepository.LikeAlbumAsync(userId, album, request.Value);
 
         Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {

@@ -2,7 +2,6 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Data.Repositories;
@@ -34,15 +33,14 @@ public class GenresController : BaseController
 
         string language = Language();
 
-        // First get the raw Genre entities from the database
-        List<Genre> genreEntities = await _genreRepository
-            .GetGenresAsync(userId, language, request.Take, request.Page)
-            .ToListAsync();
+        // Use optimized query that computes counts in database
+        List<GenreWithCountsDto> genreDtos = await _genreRepository
+            .GetGenresWithCountsAsync(userId, language, request.Take, request.Page);
 
         // Create cards for each genre
-        List<GenreCardData> genreCards = genreEntities
-            .Where(g => g.GenreTvShows.Count > 0 || g.GenreMovies.Count > 0)
-            .Select(genre => new GenreCardData(genre))
+        List<GenreCardData> genreCards = genreDtos
+            .Where(g => g.TotalTvShows > 0 || g.TotalMovies > 0)
+            .Select(dto => new GenreCardData(dto))
             .ToList();
 
         ComponentEnvelope response = Component.Grid()
@@ -67,9 +65,9 @@ public class GenresController : BaseController
         string language = Language();
         string country = Country();
 
-        Genre genre = await _genreRepository.GetGenreAsync(userId, genreId, language, request.Take, request.Page);
+        Genre? genre = await _genreRepository.GetGenreAsync(userId, genreId, language, country, request.Take, request.Page);
 
-        if (genre.GenreTvShows.Count == 0 && genre.GenreMovies.Count == 0)
+        if (genre is null || (genre.GenreTvShows.Count == 0 && genre.GenreMovies.Count == 0))
             return NotFoundResponse("Genre not found");
 
         if (request.Version != "lolomo")

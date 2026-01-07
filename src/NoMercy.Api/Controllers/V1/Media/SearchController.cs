@@ -44,49 +44,79 @@ public class SearchController : BaseController
 
         string normalizedQuery = request.Query.NormalizeSearch();
 
-        // Step 1: Get IDs using MusicRepository search methods
-        List<Guid> artistIds = _musicRepository.SearchArtistIds(_mediaContext, normalizedQuery);
-        List<Guid> albumIds = _musicRepository.SearchAlbumIds(_mediaContext, normalizedQuery);
-        List<Guid> playlistIds = _musicRepository.SearchPlaylistIds(_mediaContext, normalizedQuery);
-        List<Guid> trackIds = _musicRepository.SearchTrackIds(_mediaContext, normalizedQuery);
-        // Step 2: Query full data using the IDs
-        MediaContext mediaContext = new();
-        List<Artist> artists = mediaContext.Artists
-            .Where(artist => artistIds.Contains(artist.Id))
-            .Include(artist => artist.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Track)
-            .Include(artist => artist.AlbumArtist)
-            .ThenInclude(albumArtist => albumArtist.Album)
-            .ToList();
+        // Step 1: Get IDs using MusicRepository search methods in parallel
+        Task<List<Guid>> artistIdsTask = Task.Run(() => _musicRepository.SearchArtistIds(normalizedQuery));
+        Task<List<Guid>> albumIdsTask = Task.Run(() => _musicRepository.SearchAlbumIds(normalizedQuery));
+        Task<List<Guid>> playlistIdsTask = Task.Run(() => _musicRepository.SearchPlaylistIds(normalizedQuery));
+        Task<List<Guid>> trackIdsTask = Task.Run(() => _musicRepository.SearchTrackIds(normalizedQuery));
 
-        List<Album> albums = mediaContext.Albums
-            .Where(album => albumIds.Contains(album.Id))
-            .Include(album => album.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Track)
-            .ThenInclude(track => track.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(album => album.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Track)
-            .ThenInclude(song => song.TrackUser)
-            .ToList();
+        await Task.WhenAll(artistIdsTask, albumIdsTask, playlistIdsTask, trackIdsTask);
 
-        List<Playlist> playlists = mediaContext.Playlists
-            .Where(playlist => playlistIds.Contains(playlist.Id))
-            .Include(playlist => playlist.Tracks)
-            .ThenInclude(playlistTrack => playlistTrack.Track)
-            .ThenInclude(song => song.TrackUser)
-            .ToList();
+        List<Guid> artistIds = artistIdsTask.Result;
+        List<Guid> albumIds = albumIdsTask.Result;
+        List<Guid> playlistIds = playlistIdsTask.Result;
+        List<Guid> trackIds = trackIdsTask.Result;
 
-        List<Track> songs = mediaContext.Tracks
-            .Where(track => trackIds.Contains(track.Id))
-            .Include(track => track.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(track => track.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Album)
-            .Include(track => track.PlaylistTrack)
-            .ThenInclude(playlistTrack => playlistTrack.Playlist)
-            .Include(track => track.TrackUser)
-            .ToList();
+        // Step 2: Query full data using the IDs in parallel - each task needs its own MediaContext for thread safety
+        Task<List<Artist>> artistsTask = Task.Run(() =>
+        {
+            MediaContext context = new();
+            return context.Artists
+                .Where(artist => artistIds.Contains(artist.Id))
+                .Include(artist => artist.ArtistTrack)
+                .ThenInclude(artistTrack => artistTrack.Track)
+                .Include(artist => artist.AlbumArtist)
+                .ThenInclude(albumArtist => albumArtist.Album)
+                .ToList();
+        });
+
+        Task<List<Album>> albumsTask = Task.Run(() =>
+        {
+            MediaContext context = new();
+            return context.Albums
+                .Where(album => albumIds.Contains(album.Id))
+                .Include(album => album.AlbumTrack)
+                .ThenInclude(albumTrack => albumTrack.Track)
+                .ThenInclude(track => track.ArtistTrack)
+                .ThenInclude(artistTrack => artistTrack.Artist)
+                .Include(album => album.AlbumTrack)
+                .ThenInclude(albumTrack => albumTrack.Track)
+                .ThenInclude(song => song.TrackUser)
+                .ToList();
+        });
+
+        Task<List<Playlist>> playlistsTask = Task.Run(() =>
+        {
+            MediaContext context = new();
+            return context.Playlists
+                .Where(playlist => playlistIds.Contains(playlist.Id))
+                .Include(playlist => playlist.Tracks)
+                .ThenInclude(playlistTrack => playlistTrack.Track)
+                .ThenInclude(song => song.TrackUser)
+                .ToList();
+        });
+
+        Task<List<Track>> songsTask = Task.Run(() =>
+        {
+            MediaContext context = new();
+            return context.Tracks
+                .Where(track => trackIds.Contains(track.Id))
+                .Include(track => track.ArtistTrack)
+                .ThenInclude(artistTrack => artistTrack.Artist)
+                .Include(track => track.AlbumTrack)
+                .ThenInclude(albumTrack => albumTrack.Album)
+                .Include(track => track.PlaylistTrack)
+                .ThenInclude(playlistTrack => playlistTrack.Playlist)
+                .Include(track => track.TrackUser)
+                .ToList();
+        });
+
+        await Task.WhenAll(artistsTask, albumsTask, playlistsTask, songsTask);
+
+        List<Artist> artists = artistsTask.Result;
+        List<Album> albums = albumsTask.Result;
+        List<Playlist> playlists = playlistsTask.Result;
+        List<Track> songs = songsTask.Result;
 
         if (artists.Count == 0 && albums.Count == 0 && playlists.Count == 0 && songs.Count == 0)
             return NotFoundResponse("No results found");
@@ -183,49 +213,79 @@ public class SearchController : BaseController
         string country = Country();
         Guid userId = User.UserId();
 
-        // Step 1: Get IDs using MusicRepository search methods
-        List<Guid> artistIds = _musicRepository.SearchArtistIds(_mediaContext, normalizedQuery);
-        List<Guid> albumIds = _musicRepository.SearchAlbumIds(_mediaContext, normalizedQuery);
-        List<Guid> playlistIds = _musicRepository.SearchPlaylistIds(_mediaContext, normalizedQuery);
-        List<Guid> trackIds = _musicRepository.SearchTrackIds(_mediaContext, normalizedQuery);
-        // Step 2: Query full data using the IDs
-        MediaContext mediaContext = new();
-        List<Artist> artists = await mediaContext.Artists
-            .Where(artist => artistIds.Contains(artist.Id))
-            .Include(artist => artist.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Track)
-            .Include(artist => artist.AlbumArtist)
-            .ThenInclude(albumArtist => albumArtist.Album)
-            .ToListAsync();
+        // Step 1: Get IDs using MusicRepository search methods in parallel
+        Task<List<Guid>> artistIdsTask = Task.Run(() => _musicRepository.SearchArtistIds(normalizedQuery));
+        Task<List<Guid>> albumIdsTask = Task.Run(() => _musicRepository.SearchAlbumIds(normalizedQuery));
+        Task<List<Guid>> playlistIdsTask = Task.Run(() => _musicRepository.SearchPlaylistIds(normalizedQuery));
+        Task<List<Guid>> trackIdsTask = Task.Run(() => _musicRepository.SearchTrackIds(normalizedQuery));
 
-        List<Album> albums = await mediaContext.Albums
-            .Where(album => albumIds.Contains(album.Id))
-            .Include(album => album.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Track)
-            .ThenInclude(track => track.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(album => album.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Track)
-            .ThenInclude(song => song.TrackUser)
-            .ToListAsync();
+        await Task.WhenAll(artistIdsTask, albumIdsTask, playlistIdsTask, trackIdsTask);
 
-        List<Playlist> playlists = await mediaContext.Playlists
-            .Where(playlist => playlistIds.Contains(playlist.Id))
-            .Include(playlist => playlist.Tracks)
-            .ThenInclude(playlistTrack => playlistTrack.Track)
-            .ThenInclude(song => song.TrackUser)
-            .ToListAsync();
+        List<Guid> artistIds = artistIdsTask.Result;
+        List<Guid> albumIds = albumIdsTask.Result;
+        List<Guid> playlistIds = playlistIdsTask.Result;
+        List<Guid> trackIds = trackIdsTask.Result;
 
-        List<Track> songs = await mediaContext.Tracks
-            .Where(track => trackIds.Contains(track.Id))
-            .Include(track => track.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(track => track.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Album)
-            .Include(track => track.PlaylistTrack)
-            .ThenInclude(playlistTrack => playlistTrack.Playlist)
-            .Include(track => track.TrackUser)
-            .ToListAsync();
+        // Step 2: Query full data using the IDs in parallel - each task needs its own MediaContext for thread safety
+        Task<List<Artist>> artistsTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            return await context.Artists
+                .Where(artist => artistIds.Contains(artist.Id))
+                .Include(artist => artist.ArtistTrack)
+                .ThenInclude(artistTrack => artistTrack.Track)
+                .Include(artist => artist.AlbumArtist)
+                .ThenInclude(albumArtist => albumArtist.Album)
+                .ToListAsync();
+        });
+
+        Task<List<Album>> albumsTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            return await context.Albums
+                .Where(album => albumIds.Contains(album.Id))
+                .Include(album => album.AlbumTrack)
+                .ThenInclude(albumTrack => albumTrack.Track)
+                .ThenInclude(track => track.ArtistTrack)
+                .ThenInclude(artistTrack => artistTrack.Artist)
+                .Include(album => album.AlbumTrack)
+                .ThenInclude(albumTrack => albumTrack.Track)
+                .ThenInclude(song => song.TrackUser)
+                .ToListAsync();
+        });
+
+        Task<List<Playlist>> playlistsTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            return await context.Playlists
+                .Where(playlist => playlistIds.Contains(playlist.Id))
+                .Include(playlist => playlist.Tracks)
+                .ThenInclude(playlistTrack => playlistTrack.Track)
+                .ThenInclude(song => song.TrackUser)
+                .ToListAsync();
+        });
+
+        Task<List<Track>> songsTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            return await context.Tracks
+                .Where(track => trackIds.Contains(track.Id))
+                .Include(track => track.ArtistTrack)
+                .ThenInclude(artistTrack => artistTrack.Artist)
+                .Include(track => track.AlbumTrack)
+                .ThenInclude(albumTrack => albumTrack.Album)
+                .Include(track => track.PlaylistTrack)
+                .ThenInclude(playlistTrack => playlistTrack.Playlist)
+                .Include(track => track.TrackUser)
+                .ToListAsync();
+        });
+
+        await Task.WhenAll(artistsTask, albumsTask, playlistsTask, songsTask);
+
+        List<Artist> artists = artistsTask.Result;
+        List<Album> albums = albumsTask.Result;
+        List<Playlist> playlists = playlistsTask.Result;
+        List<Track> songs = songsTask.Result;
 
         if (artists.Count == 0 && albums.Count == 0 && playlists.Count == 0 && songs.Count == 0)
             return NotFoundResponse("No results found");
@@ -293,17 +353,29 @@ public class SearchController : BaseController
         string country = Country();
 
         string normalizedQuery = request.Query.NormalizeSearch();
-        
-        MediaContext mediaContext = new();
-        
-        List<Tv> tvs = await mediaContext.Tvs
-            .Where(tv => tv.Title.ToLower().Contains(normalizedQuery))
-            .ToListAsync();
-        
-        List<Movie> movies = await mediaContext.Movies
-            .Where(movie => movie.Title.ToLower().Contains(normalizedQuery))
-            .ToListAsync();
-        
+
+        // Run TV and movie queries in parallel
+        Task<List<Tv>> tvsTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            return await context.Tvs
+                .Where(tv => tv.Title.ToLower().Contains(normalizedQuery))
+                .ToListAsync();
+        });
+
+        Task<List<Movie>> moviesTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            return await context.Movies
+                .Where(movie => movie.Title.ToLower().Contains(normalizedQuery))
+                .ToListAsync();
+        });
+
+        await Task.WhenAll(tvsTask, moviesTask);
+
+        List<Tv> tvs = tvsTask.Result;
+        List<Movie> movies = moviesTask.Result;
+
         List<CardData> cardItems = tvs.Concat<dynamic>(movies)
             .Cast<dynamic>()
             .OrderBy(item => item is Tv tv ? tv.Title : ((Movie)item).Title)
@@ -322,24 +394,36 @@ public class SearchController : BaseController
     [HttpGet("video/tv")]
     public async Task<IActionResult> SearchTvVideo([FromQuery] SearchQueryRequest request)
     {
-        
+
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to perform searches");
-        
+
         string country = Country();
 
         string normalizedQuery = request.Query.NormalizeSearch();
-        
-        MediaContext mediaContext = new();
-        
-        List<Tv> tvs = await mediaContext.Tvs
-            .Where(tv => tv.Title.ToLower().Contains(normalizedQuery))
-            .ToListAsync();
-        
-        List<Movie> movies = await mediaContext.Movies
-            .Where(movie => movie.Title.ToLower().Contains(normalizedQuery))
-            .ToListAsync();
-        
+
+        // Run TV and movie queries in parallel
+        Task<List<Tv>> tvsTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            return await context.Tvs
+                .Where(tv => tv.Title.ToLower().Contains(normalizedQuery))
+                .ToListAsync();
+        });
+
+        Task<List<Movie>> moviesTask = Task.Run(async () =>
+        {
+            MediaContext context = new();
+            return await context.Movies
+                .Where(movie => movie.Title.ToLower().Contains(normalizedQuery))
+                .ToListAsync();
+        });
+
+        await Task.WhenAll(tvsTask, moviesTask);
+
+        List<Tv> tvs = tvsTask.Result;
+        List<Movie> movies = moviesTask.Result;
+
         List<CardData> cardItems = tvs.Concat<dynamic>(movies)
             .OrderBy(item => item is Tv tv ? tv.Title : ((Movie)item).Title)
             .Select(item => new CardData(item, country))

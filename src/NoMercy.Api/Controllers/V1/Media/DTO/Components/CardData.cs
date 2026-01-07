@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
@@ -330,6 +331,33 @@ public record CardData
         ColorPalette = dto.ColorPalette;
         HaveItems = dto.HaveItems;
         NumberOfItems = dto.NumberOfItems;
+    }
+
+    public CardData(CollectionListDto dto)
+    {
+        Id = dto.Id;
+        Title = !string.IsNullOrEmpty(dto.TranslatedTitle) ? dto.TranslatedTitle : dto.Title;
+        Overview = !string.IsNullOrEmpty(dto.TranslatedOverview) ? dto.TranslatedOverview : dto.Overview;
+        Poster = dto.Poster;
+        Backdrop = dto.Backdrop;
+        Logo = dto.Logo;
+        TitleSort = dto.TitleSort;
+        Year = dto.FirstMovieYear;
+        Type = "collection";
+        Link = new($"/collection/{dto.Id}", UriKind.Relative);
+        NumberOfItems = dto.TotalMovies;
+        HaveItems = dto.MoviesWithVideo;
+        CreatedAt = dto.CreatedAt;
+
+        if (!string.IsNullOrEmpty(dto.CertificationRating) && !string.IsNullOrEmpty(dto.CertificationCountry))
+        {
+            Rating = new RatingClass
+            {
+                Rating = dto.CertificationRating,
+                Iso31661 = dto.CertificationCountry,
+                Image = $"/{dto.CertificationCountry}/{dto.CertificationCountry}_{dto.CertificationRating}.svg"
+            };
+        }
     }
 }
 

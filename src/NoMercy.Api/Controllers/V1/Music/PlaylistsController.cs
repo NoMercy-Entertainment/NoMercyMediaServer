@@ -38,7 +38,7 @@ public class PlaylistsController : BaseController
 
         List<CarouselResponseItemDto> playlists = [];
 
-        foreach (CarouselResponseItemDto playlist in await _musicRepository.GetPlaylists(_mediaContext, userId))
+        foreach (CarouselResponseItemDto playlist in await _musicRepository.GetPlaylistsAsync(userId))
             playlists.Add(playlist);
 
         List<MusicCardData> musicCards = playlists
@@ -61,7 +61,7 @@ public class PlaylistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view playlists");
 
-        Playlist? playlist = await _musicRepository.GetPlaylist(_mediaContext, userId, id);
+        Playlist? playlist = await _musicRepository.GetPlaylistAsync(userId, id);
 
         if (playlist == null)
             return NotFoundResponse("Playlist not found");

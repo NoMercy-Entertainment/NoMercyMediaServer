@@ -44,12 +44,11 @@ public class ArtistsController : BaseController
 
         List<ArtistsResponseItemDto> artists = [];
 
-        foreach (Artist artist in _musicRepository.GetArtists(_mediaContext, userId, letter))
+        foreach (Artist artist in _musicRepository.GetArtistsAsync(userId, letter))
             artists.Add(new(artist));
 
-        List<ArtistTrack> tracks = await _musicRepository.GetArtistTracksForCollection(_mediaContext,
-            artists.Select(a => a.Id)
-                .ToList());
+        List<ArtistTrack> tracks = await _musicRepository.GetArtistTracksForCollectionAsync(
+            artists.Select(a => a.Id).ToList());
 
         foreach (ArtistsResponseItemDto artist in artists)
             artist.Tracks = tracks.Count(track => track.ArtistId == artist.Id);
@@ -85,7 +84,7 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
 
-        Artist? artist = await _musicRepository.GetArtist(_mediaContext, userId, id);
+        Artist? artist = await _musicRepository.GetArtistAsync(userId, id);
 
         string country = Country();
 

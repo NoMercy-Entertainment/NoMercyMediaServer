@@ -39,7 +39,7 @@ public class MoviesController(
         string language = Language();
         string country = Country();
 
-        Movie? movie = await movieRepository.GetMovieAsync(mediaContext, userId, id, language, country);
+        Movie? movie = await movieRepository.GetMovieDetailAsync(userId, id, language, country);
 
         if (movie is not null)
             return Ok(new InfoResponseDto
@@ -85,7 +85,7 @@ public class MoviesController(
         string language = Language();
         string country = Country();
 
-        bool available = await movieRepository.GetMovieAvailableAsync(mediaContext, userId, id, language, country);
+        bool available = await movieRepository.GetMovieAvailableAsync(userId, id);
 
         if (!available)
             return NotFound(new StatusResponseDto<AvailableResponseDto>

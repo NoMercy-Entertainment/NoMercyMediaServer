@@ -27,10 +27,12 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class HomeController : BaseController
 {
     private readonly HomeService _homeService;
+    private readonly MediaContext _mediaContext;
 
-    public HomeController(HomeService homeService)
+    public HomeController(HomeService homeService, MediaContext mediaContext)
     {
         _homeService = homeService;
+        _mediaContext = mediaContext;
     }
 
     [HttpGet]
@@ -58,23 +60,43 @@ public class HomeController : BaseController
         };
 
         if (request.Page != 0) return Ok(response);
-        
+
         LibraryRepository libraryRepository = new(new());
-        IEnumerable<Library> libraries = await libraryRepository.GetLibraries(userId);
+        List<Library> libraries = await libraryRepository.GetLibraries(userId);
 
-        foreach (Library library in libraries.OrderByDescending(library => library.Order))
+        // Fetch all library data in parallel - each task needs its own MediaContext for thread safety
+        Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = libraries
+            .Select(async library =>
+            {
+                MediaContext context = new();
+                List<Movie> libraryMovies = [];
+                await foreach (Movie movie in libraryRepository
+                                   .GetLibraryMovies(context, userId, library.Id, language, request.Take, request.Page, m => m.CreatedAt, "desc"))
+                {
+                    libraryMovies.Add(movie);
+                }
+
+                List<Tv> libraryShows = [];
+                await foreach (Tv tv in libraryRepository
+                                   .GetLibraryShows(context, userId, library.Id, language, request.Take, request.Page, m => m.CreatedAt, "desc"))
+                {
+                    libraryShows.Add(tv);
+                }
+
+                return (library, libraryMovies, libraryShows);
+            })
+            .ToArray();
+
+        (Library library, List<Movie> movies, List<Tv> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
+
+        foreach ((Library library, List<Movie> libraryMovies, List<Tv> libraryShows) in libraryDataResults.OrderByDescending(r => r.library.Order))
         {
-            List<Movie> movies =
-                libraryRepository.GetLibraryMovies(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
-            List<Tv> shows =
-                libraryRepository.GetLibraryShows(userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc").ToList();
-
             response.Data = response.Data.Prepend(new()
             {
                 Title = "Latest in " + library.Title,
                 MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
-                Items = movies.Select(movie => new GenreRowItemDto(movie, country))
-                    .Concat(shows.Select(tv => new GenreRowItemDto(tv, country)))
+                Items = libraryMovies.Select(movie => new GenreRowItemDto(movie, country))
+                    .Concat(libraryShows.Select(tv => new GenreRowItemDto(tv, country)))
             });
         }
 

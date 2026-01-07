@@ -51,9 +51,8 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
         string language = Language();
         string country = Country();
 
-        List<UserData> continueWatching = homeRepository
-            .GetContinueWatching(mediaContext, userId, language, country)
-            .ToList();
+        HashSet<UserData> continueWatching = await homeRepository
+            .GetContinueWatchingAsync(mediaContext, userId, language, country);
 
         return Ok(new CarouselResponseDto<NmCardDto>
         {
