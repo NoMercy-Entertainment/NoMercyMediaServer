@@ -429,4 +429,8 @@
     <Key>Movie is available</Key>
     <Value lang="nl">Movie is available</Value>
   </Entry>
+  <Entry>
+    <Key>Special is available</Key>
+    <Value lang="nl">Special is available</Value>
+  </Entry>
 </I18N>

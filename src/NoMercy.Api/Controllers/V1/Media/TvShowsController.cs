@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -305,78 +306,44 @@ public class TvShowsController(
 
         if (concat.Count == 0)
         {
-            Episode noItems = new()
+            SeasonCardData noItems = new()
             {
                 Id = 0,
                 Title = "No missing episodes",
                 SeasonNumber = 0,
                 EpisodeNumber = 0,
-                Overview = "There are no missing episodes in this season."
+                Overview = "There are no missing episodes in this season.",
+                Available = false
             };
-            
-            return Ok(new Render
-            {
-                Data =
-                [
-                    new ComponentBuilder<EpisodeDto>()
-                        .WithComponent("NMGrid")
-                        .WithProps((props, id) => props
-                            .WithProperties(new(){})
-                            .WithItems<object>([
-                                new ComponentBuilder<EpisodeDto>()
-                                    .WithComponent("NMSeasonCard")
-                                    .WithProps((props, _) => props
-                                        .WithData(new(noItems))
-                                        .WithWatch())
-                                    .Build()
-                            ]))
-                        .Build()
-                ]
-            });
+
+            return Ok(ComponentResponse.From(
+                Component.Grid()
+                    .WithId("missing-episodes-empty")
+                    .WithItems(
+                        Component.SeasonCard(noItems)
+                            .WithWatch().Build()
+                        )
+                    ));
         }
 
-        return Ok(new Render
-        {
-            Data =
-            [
-                new ComponentBuilder<object>()
-                    .WithComponent("NMList")
-                    .WithProps((props, id) => props
-                        .WithItems(
-                            concat.SelectMany(seasonGroup => new object[]
-                            {
-                                // Season title component
-                                new ComponentBuilder<object>()
-                                    .WithComponent("NMSeasonTitle")
-                                    .WithProps((titleProps, id) => titleProps
-                                        .WithData(new
-                                        {
-                                            seasonNumber = seasonGroup.Key,
-                                            title = $"Season {seasonGroup.Key}",
-                                            episodeCount = seasonGroup.Count()
-                                        }))
-                                    .Build(),
+        return Ok(ComponentResponse.From(
+            Component.List()
+                .WithId("missing-episodes")
+                .WithItems(concat.SelectMany(seasonGroup => new ComponentEnvelope[]
+                {
+                    // Season title component
+                    Component.SeasonTitle(new((int)seasonGroup.Key, seasonGroup.Count()))
+                        .WithId($"season-{seasonGroup.Key}-title")
+                        ,
 
-                                // Episodes grid for this season
-                                new ComponentBuilder<object>()
-                                    .WithComponent("NMGrid")
-                                    .WithProps((gridProps, _) => gridProps
-                                        .WithProperties(new()
-                                        {
-                                            { "paddingTop", 16 },
-                                        })
-                                        .WithItems(
-                                            seasonGroup.Select(episode =>
-                                                new ComponentBuilder<object>()
-                                                    .WithComponent("NMSeasonCard")
-                                                    .WithProps((props, _) => props
-                                                        .WithData(episode)
-                                                        .WithWatch())
-                                                    .Build())))
-                                    .Build()
-                            })))
-                    .Build()
-            ]
-        });
+                    // Episodes grid for this season
+                    Component.Grid()
+                        .WithId($"season-{seasonGroup.Key}-episodes")
+                        .WithProperties(new() { { "paddingTop", 16 } })
+                        .WithItems(seasonGroup.Select(episode =>
+                            Component.SeasonCard(new(episode))
+                                .WithWatch()))
+                        
+                }))));
     }
 }

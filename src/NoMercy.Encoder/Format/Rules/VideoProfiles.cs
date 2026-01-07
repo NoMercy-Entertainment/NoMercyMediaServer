@@ -5,6 +5,7 @@ public static class VideoProfiles
     // H.264 Profiles
     public const string Baseline = "baseline";
     public const string Main = "main";
+    public const string Main10 = "main10";
     public const string High = "high";
     public const string High10 = "high10";
     public const string High444P = "high444p";

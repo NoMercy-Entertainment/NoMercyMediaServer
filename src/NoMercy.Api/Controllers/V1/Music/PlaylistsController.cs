@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -40,10 +41,16 @@ public class PlaylistsController : BaseController
         foreach (CarouselResponseItemDto playlist in await _musicRepository.GetPlaylists(_mediaContext, userId))
             playlists.Add(playlist);
 
-        return Ok(new Render
-        {
-            Data = playlists
-        });
+        List<MusicCardData> musicCards = playlists
+            .Select(p => new MusicCardData(p))
+            .ToList();
+
+        ComponentEnvelope response = Component.Grid()
+            .WithItems(musicCards.Select(item => Component.MusicCard(item)
+                ))
+            ;
+
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]

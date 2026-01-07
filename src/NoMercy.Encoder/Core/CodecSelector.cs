@@ -25,14 +25,14 @@ public static class CodecSelector
         if (FFmpegHardwareConfig.HasAccelerator("dxva2") || FFmpegHardwareConfig.HasAccelerator("d3d11va"))
         {
             // Check if it's AMD (DXVA2) or Intel (QSV preferred)
-            var amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
+            GpuAccelerator? amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
             if (amdAccelerator != null)
             {
                 Logger.Encoder("H.264: Selected h264_amf (AMD GPU)", LogEventLevel.Information);
                 return VideoCodecs.H264Amf;
             }
 
-            var intelAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
+            GpuAccelerator? intelAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
             if (intelAccelerator != null)
             {
                 Logger.Encoder("H.264: Selected h264_qsv (Intel GPU)", LogEventLevel.Information);
@@ -42,7 +42,7 @@ public static class CodecSelector
 
         if (FFmpegHardwareConfig.HasAccelerator("vaapi"))
         {
-            var vendor = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Accelerator == "vaapi")?.Vendor;
+            GpuVendor? vendor = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Accelerator == "vaapi")?.Vendor;
             if (vendor == GpuVendor.Amd)
             {
                 Logger.Encoder("H.264: Selected h264_amf (AMD VAAPI)", LogEventLevel.Information);
@@ -79,14 +79,14 @@ public static class CodecSelector
 
         if (FFmpegHardwareConfig.HasAccelerator("dxva2") || FFmpegHardwareConfig.HasAccelerator("d3d11va"))
         {
-            var amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
+            GpuAccelerator? amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
             if (amdAccelerator != null)
             {
                 Logger.Encoder("H.265: Selected hevc_amf (AMD GPU)", LogEventLevel.Information);
                 return VideoCodecs.H265Amf;
             }
 
-            var intelAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
+            GpuAccelerator? intelAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
             if (intelAccelerator != null)
             {
                 Logger.Encoder("H.265: Selected hevc_qsv (Intel GPU)", LogEventLevel.Information);
@@ -96,7 +96,7 @@ public static class CodecSelector
 
         if (FFmpegHardwareConfig.HasAccelerator("vaapi"))
         {
-            var vendor = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Accelerator == "vaapi")?.Vendor;
+            GpuVendor? vendor = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Accelerator == "vaapi")?.Vendor;
             if (vendor == GpuVendor.Amd)
             {
                 Logger.Encoder("H.265: Selected hevc_amf (AMD VAAPI)", LogEventLevel.Information);
@@ -133,7 +133,7 @@ public static class CodecSelector
 
         if (FFmpegHardwareConfig.HasAccelerator("dxva2"))
         {
-            var amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
+            GpuAccelerator? amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
             if (amdAccelerator != null)
             {
                 Logger.Encoder("VP9: Selected vp9_amf (AMD GPU)", LogEventLevel.Information);
@@ -165,14 +165,14 @@ public static class CodecSelector
 
         if (FFmpegHardwareConfig.HasAccelerator("dxva2"))
         {
-            var amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
+            GpuAccelerator? amdAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Amd);
             if (amdAccelerator != null)
             {
                 Logger.Encoder("AV1: Selected av1_amf (AMD GPU)", LogEventLevel.Information);
                 return VideoCodecs.Av1Amf;
             }
 
-            var intelAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
+            GpuAccelerator? intelAccelerator = FFmpegHardwareConfig.Accelerators.FirstOrDefault(a => a.Vendor == GpuVendor.Intel);
             if (intelAccelerator != null)
             {
                 Logger.Encoder("AV1: Selected av1_qsv (Intel GPU)", LogEventLevel.Information);

@@ -37,7 +37,7 @@ public record ArtistTrackDto
         Link = new($"/music/tracks/{artistTrack.Track.Id}", UriKind.Relative);
         Path = new Uri($"/{artistTrack.Track.FolderId}{artistTrack.Track.Folder}{artistTrack.Track.Filename}",
             UriKind.Relative).ToString();
-        Type = "tracks";
+        Type = "track";
         ColorPalette = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
         Date = artistTrack.Track.Date;
         Disc = artistTrack.Track.DiscNumber;
@@ -66,7 +66,7 @@ public record ArtistTrackDto
         Cover = track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? track.ArtistTrack.FirstOrDefault()?.Artist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
         Path = new Uri($"/{track.FolderId}{track.Folder}{track.Filename}", UriKind.Relative).ToString();
-        Type = "tracks";
+        Type = "track";
         Date = track.UpdatedAt;
         Disc = track.DiscNumber;
         Track = track.TrackNumber;

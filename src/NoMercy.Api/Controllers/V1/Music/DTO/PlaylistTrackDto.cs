@@ -52,7 +52,7 @@ public record PlaylistTrackDto
         Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
         Lyrics = artistTrack.Track.Lyrics;
-        Type = "tracks";
+        Type = "track";
         AlbumName = artistTrack.Track.AlbumTrack?.FirstOrDefault()?.Album.Name;
 
         Album = artistTrack.Track.AlbumTrack!
@@ -89,7 +89,7 @@ public record PlaylistTrackDto
         Favorite = trackTrack.Track.TrackUser.Count != 0;
         Quality = trackTrack.Track.Quality;
         Lyrics = trackTrack.Track.Lyrics;
-        Type = "tracks";
+        Type = "track";
         AlbumName = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
 
         Album = trackTrack.Track.AlbumTrack
@@ -126,7 +126,7 @@ public record PlaylistTrackDto
         Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
         Lyrics = artistTrack.Track.Lyrics;
-        Type = "tracks";
+        Type = "track";
         AlbumName = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
 
         Album = artistTrack.Track.AlbumTrack

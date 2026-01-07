@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
@@ -38,32 +39,21 @@ public class GenresController : BaseController
             .GetGenresAsync(userId, language, request.Take, request.Page)
             .ToListAsync();
 
-        // Then apply DTO transformation and filtering on the client side
-        List<NmGenreCardDto> genres = genreEntities
-            .Select(genre => new NmGenreCardDto(genre))
-            .Where(g => g.HaveItems > 0)
+        // Create cards for each genre
+        List<GenreCardData> genreCards = genreEntities
+            .Where(g => g.GenreTvShows.Count > 0 || g.GenreMovies.Count > 0)
+            .Select(genre => new GenreCardData(genre))
             .ToList();
 
-        return Ok(new Render
-        {
-            Data =
-            [
-                new ComponentBuilder<NmGenreCardDto>()
-                    .WithComponent("NMGrid")
-                    .WithProps((props, _) => props
-                        .WithProperties(new() { })
-                        .WithItems(
-                            genres
-                                .Select(item =>
-                                    new ComponentBuilder<NmGenreCardDto>()
-                                        .WithComponent("NMGenreCard")
-                                        .WithProps((props, _) => props
-                                            .WithData(item)
-                                            .WithWatch())
-                                        .Build())))
-                    .Build()
-            ]
-        });
+        ComponentEnvelope response = Component.Grid()
+            .WithId("genres")
+            .WithItems(genreCards
+                .Select(card => Component.GenreCard()
+                    .WithData(card)
+                    ))
+            ;
+
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]
@@ -84,73 +74,60 @@ public class GenresController : BaseController
 
         if (request.Version != "lolomo")
         {
-            IOrderedEnumerable<NmCardDto> concat = genre.GenreMovies
-                .Select(genreMovie => new NmCardDto(genreMovie.Movie, country))
+            // Simple grid view
+            IOrderedEnumerable<CardData> concat = genre.GenreMovies
+                .Select(genreMovie => new CardData(genreMovie.Movie, country))
                 .Concat(genre.GenreTvShows
-                    .Select(genteTv => new NmCardDto(genteTv.Tv, country)))
-                .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort);
+                    .Select(genteTv => new CardData(genteTv.Tv, country)))
+                .OrderBy(card => card.TitleSort);
 
-            return Ok(new Render
-            {
-                Data =
-                [
-                    new ComponentBuilder<NmCardDto>()
-                        .WithComponent("NMGrid")
-                        .WithProps((props, _) => props
-                            .WithProperties(new()
-                            {
-                                { "paddingTop", 16 },
-                            })
-                            .WithItems(
-                                concat.Select(item =>
-                                    new ComponentBuilder<NmCardDto>()
-                                        .WithComponent("NMCard")
-                                        .WithProps((props, _) => props
-                                            .WithData(item)
-                                            .WithWatch())
-                                        .Build())))
-                        .Build()
-                ]
-            });
+            ComponentEnvelope response = Component.Grid()
+                .WithId("genre-items")
+                .WithItems(concat.Select(card => Component.Card().WithData(card)))
+                ;
+
+            return Ok(response);
         }
 
-        return Ok(new Render
-        {
-            Data = Letters
-                .Select((letter, index) => new ComponentBuilder<NmCardDto>()
-                .WithComponent("NMCarousel")
-                .WithProps((p, _) => p
+        // Carousel view organized by first letter
+        List<ComponentEnvelope> carousels = Letters
+            .Select((letter, index) =>
+            {
+                List<CardData> carouselItems = genre.GenreMovies
+                    .Where(libraryMovie => letter == "#"
+                        ? Numbers.Any(p => libraryMovie.Movie.Title.StartsWith(p))
+                        : libraryMovie.Movie.Title.StartsWith(letter))
+                    .Select(genreMovie => new CardData(genreMovie.Movie, country))
+                    .Concat(genre.GenreTvShows
+                        .Where(libraryTv => letter == "#"
+                            ? Numbers.Any(p => libraryTv.Tv.Title.StartsWith(p))
+                            : libraryTv.Tv.Title.StartsWith(letter))
+                        .Select(genreTv => new CardData(genreTv.Tv, country)))
+                    .OrderBy(card => card.TitleSort)
+                    .ToList();
+
+                if (carouselItems.Count == 0)
+                    return null;
+
+                return Component.Carousel()
                     .WithId(letter)
                     .WithTitle(letter)
-                    .WithPreviousId(index == 0
-                        ? ""
-                        : Letters.ElementAtOrDefault(index - 1) ?? "")
-                    .WithNextId(index == Letters.Length - 1
-                        ? ""
-                        : Letters.ElementAtOrDefault(index + 1) ?? "")
-                    .WithItems(
-                        genre.GenreMovies
-                            .Where(libraryMovie => letter == "#"
-                                ? Numbers.Any(p => libraryMovie.Movie.Title.StartsWith(p))
-                                : libraryMovie.Movie.Title.StartsWith(letter))
-                            .Select(genreMovie => new NmCardDto(genreMovie.Movie, country))
-                            .Concat(genre.GenreTvShows
-                                .Where(libraryTv => letter == "#"
-                                    ? Numbers.Any(p => libraryTv.Tv.Title.StartsWith(p))
-                                    : libraryTv.Tv.Title.StartsWith(letter))
-                                .Select(genreTv => new NmCardDto(genreTv.Tv, country)))
-                            .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort)
-                            .Select(item =>
-                                new ComponentBuilder<NmCardDto>()
-                                    .WithComponent("NMCard")
-                                    .WithProps((p1, _) => p1
-                                        .WithData(item))
-                                    .Build())
-                    )
-                )
-                .Build()
-            )
-        });
+                    .WithNavigation(
+                        index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
+                        index == Letters.Length - 1 ? null : Letters.ElementAtOrDefault(index + 1) ?? null)
+                    .WithItems(carouselItems.Select(card => Component.Card().WithData(card)))
+                    ;
+            })
+            .Where(c => c != null)
+            .Cast<ComponentEnvelope>()
+            .ToList();
+
+        ComponentEnvelope containerResponse = Component.Container()
+            .WithId("genre-carousels")
+            .WithItems(carousels)
+            ;
+
+        return Ok(ComponentResponse.From(containerResponse));
     }
 }
 

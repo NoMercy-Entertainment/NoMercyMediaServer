@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.V1.Dashboard.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -114,54 +115,52 @@ public class LibrariesController(
         NmCardDto? homeCardItem = genres.Where(g => !string.IsNullOrWhiteSpace(g.Title))
             .Randomize().FirstOrDefault();
 
-        return Ok(new Render
+        List<ComponentEnvelope> components = new();
+        
+        // Add home card
+        if (homeCardItem != null)
         {
-            Data =
-            [
-                new ComponentBuilder<NmCardDto?>()
-                    .WithComponent("NMHomeCard")
-                    .WithUpdate("pageLoad", "/home/card")
-                    .WithProps((props, _) => props
-                        .WithNextId("continue")
-                        .WithPreviousId("")
-                        .WithData(homeCardItem))
-                    .Build(),
+            HomeCardData homeCardData = new(homeCardItem);
+            dynamic? homeCard = Component.HomeCard()
+                .WithId("home_card")
+                .WithTitle(homeCardData.Title)
+                .WithData(homeCardData)
+                .WithNavigation(null, list.FirstOrDefault()?.Id)
+                .WithUpdate("pageLoad", "/home/card")
+                ;
+            components.Add(homeCard);
+        }
+        
+        // Add carousels for each library
+        for (int index = 0; index < list.Count; index++)
+        {
+            NmCarouselDto<NmCardDto> carouselData = list[index];
+            ComponentEnvelope carousel = Component.Carousel()
+                .WithId($"library_{carouselData.Id}")
+                .WithTitle(carouselData.Title)
+                .WithMoreLink(carouselData.MoreLink)
+                .WithNavigation(
+                    index == 0 ? "home_card" : $"library_{list[index - 1].Id}",
+                    index == list.Count - 1 ? null : $"library_{list[index + 1].Id}")
+                .WithItems(carouselData.Items.Select(item => Component.Card()
+                    .WithData(new(item))
+                    ))
+                ;
+            components.Add(carousel);
+        }
+        
+        ComponentEnvelope response = Component.Container()
+            .WithId("mobile-libraries")
+            .WithItems(components)
+            ;
 
-                ..list.Select((genre, index) => new ComponentBuilder<NmCardDto>()
-                    .WithComponent("NMCarousel")
-                    .WithProps((props, _) => props
-                        .WithId($"library_{genre.Id}")
-                        .WithPreviousId(index == 0
-                            ? "continue"
-                            : $"library_{list.ElementAtOrDefault(list.IndexOf(genre) - 1)?.Id}")
-                        .WithNextId(index == list.Count - 1
-                            ? $"library_{genres.FirstOrDefault()?.Id}"
-                            : $"library_{list.ElementAtOrDefault(list.IndexOf(genre) + 1)?.Id}")
-                        .WithTitle(genre.Title)
-                        .WithMoreLink(genre.MoreLink)
-                        .WithItems(
-                            genre.Items.Select(item =>
-                                new ComponentBuilder<NmCardDto>()
-                                    .WithComponent("NMCard")
-                                    .WithProps((p, _) => p
-                                        .WithData(item)
-                                        .WithWatch())
-                                    .Build())))
-                    .Build())
-            ]
-        });
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]
     [Route("tv")]
     public async Task<IActionResult> Tv()
     {
-        MediaContext context = new();
-        int maximumItemsPerPage = 500;
-        string tvMediaType = "tv";
-        string movieMediaType = "movie";
-        string animeMediaType = "anime";
-        
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view libraries");
@@ -173,11 +172,6 @@ public class LibrariesController(
 
         List<NmCarouselDto<NmCardDto>> list = [];
         
-        int animeCount = await homeRepository.GetAnimeCountQuery(context, userId);
-        int movieCount = await homeRepository.GetMovieCountQuery(context, userId);
-        int tvCount = await homeRepository.GetTvCountQuery(context, userId);
-
-
         foreach (Library library in libraries)
         {
             List<Movie> movies =
@@ -185,16 +179,11 @@ public class LibrariesController(
             List<Tv> shows =
                 libraryRepository.GetLibraryShows(userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc").ToList();
 
-            bool shouldPaginate = (library.Type == movieMediaType && movieCount > maximumItemsPerPage)
-                                  || (library.Type == tvMediaType && tvCount > maximumItemsPerPage)
-                                  || (library.Type == animeMediaType && animeCount > maximumItemsPerPage);
             list.Add(new()
             {
                 Id = "library_" + library.Id,
                 Title = library.Title,
-                MoreLink = shouldPaginate
-                    ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
-                    : new($"/libraries/{library.Id}", UriKind.Relative),
+                MoreLink =  new($"/libraries/{library.Id}", UriKind.Relative),
                 // MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
                 Items = movies.Select(movie => new NmCardDto(movie, country))
                     .Concat(shows.Select(tv => new NmCardDto(tv, country)))
@@ -241,47 +230,46 @@ public class LibrariesController(
         NmCardDto? homeCardItem = genres.Where(g => !string.IsNullOrWhiteSpace(g.Title))
             .Randomize().FirstOrDefault();
 
-        return Ok(new Render
+        List<ComponentEnvelope> components = new();
+        
+        // Add home card
+        if (homeCardItem != null)
         {
-            Data =
-            [
-                new ComponentBuilder<NmCardDto?>()
-                    .WithComponent("NMHomeCard")
-                    .WithUpdate("pageLoad", "/home/card")
-                    .WithProps((props, _) => props
-                        .WithId("home_card")
-                        .WithNextId(list.FirstOrDefault()?.Id)
-                        .WithPreviousId("")
-                        .WithData(homeCardItem))
-                    .Build(),
+            HomeCardData homeCardData = new(homeCardItem);
+            dynamic? homeCard = Component.HomeCard()
+                .WithId("home_card")
+                .WithTitle(homeCardData.Title)
+                .WithData(homeCardData)
+                .WithNavigation(null, list.FirstOrDefault()?.Id)
+                .WithUpdate("pageLoad", "/home/card")
+                ;
+            components.Add(homeCard);
+        }
+        
+        // Add carousels for each library
+        for (int index = 0; index < list.Count; index++)
+        {
+            NmCarouselDto<NmCardDto> carouselData = list[index];
+            dynamic? carousel = Component.Carousel()
+                .WithId(carouselData.Id)
+                .WithTitle(carouselData.Title)
+                .WithMoreLink(carouselData.MoreLink)
+                .WithNavigation(
+                    index == 0 ? "home_card" : list[index - 1].Id,
+                    index == list.Count - 1 ? null : list[index + 1].Id)
+                .WithItems(carouselData.Items.Take(6).Select(item => Component.Card()
+                    .WithData(new(item))
+                    ))
+                ;
+            components.Add(carousel);
+        }
+        
+        ComponentEnvelope response = Component.Container()
+            .WithId("tv-libraries")
+            .WithItems(components)
+            ;
 
-                ..list.Select((library, index) => new ComponentBuilder<NmCardDto>()
-                    .WithComponent("NMCarousel")
-                    .WithProps((props, _) => props
-                        .WithId(library.Id)
-                        .WithTitle(library.Title)
-                        .WithMoreLink(library.MoreLink)
-                        .WithPreviousId(index == 0
-                            ? "home_card"
-                            : list.ElementAtOrDefault(index - 1)?.Id)
-                        .WithNextId(index == list.Count - 1
-                            ? $"library_{libraries.FirstOrDefault()?.Id}"
-                            : list.ElementAtOrDefault(index + 1)?.Id)
-                        // .WithPreviousId(list.ElementAtOrDefault(list.IndexOf(library) - 1)?.Id ?? "home_card")
-                        // .WithNextId(list.ElementAtOrDefault(list.IndexOf(library) + 1)?.Id ?? "home_card")
-                        .WithItems(
-                            library.Items
-                                .Take(6)
-                                .Select(item =>
-                                    new ComponentBuilder<NmCardDto>()
-                                        .WithComponent("NMCard")
-                                        .WithProps((props, _) => props
-                                            .WithData(item)
-                                            .WithWatch())
-                                        .Build())))
-                    .Build())
-            ]
-        });
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]
@@ -293,6 +281,7 @@ public class LibrariesController(
             return UnauthorizedResponse("You do not have permission to view library");
 
         string language = Language();
+        string country = Country();
 
         List<Movie> movies = libraryRepository
             .GetLibraryMovies(userId, libraryId, language, request.Take, request.Page).ToList();
@@ -301,58 +290,62 @@ public class LibrariesController(
 
         if (request.Version != "lolomo")
         {
-            IOrderedEnumerable<LibraryResponseItemDto> concat = movies
-                .Select(movie => new LibraryResponseItemDto(movie))
-                .Concat(shows.Select(tv => new LibraryResponseItemDto(tv)))
-                .OrderBy(item => item.TitleSort);
+            List<CardData> cardItems = movies
+                .Select(movie => new CardData(movie, country))
+                .Concat(shows.Select(tv => new CardData(tv, country)))
+                .OrderBy(item => item.TitleSort)
+                .ToList();
 
-            return Ok(new Render
-            {
-                Data =
-                [
-                    new ComponentBuilder<LibraryResponseItemDto>()
-                        .WithComponent("NMGrid")
-                        .WithProps((props, _) => props
-                            .WithProperties(new(){})
-                            .WithItems(
-                                concat.Select(item =>
-                                    new ComponentBuilder<LibraryResponseItemDto>()
-                                        .WithComponent("NMCard")
-                                        .WithProps((props, _) => props
-                                            .WithData(item)
-                                            .WithWatch())
-                                        .Build())))
-                        .Build()
-                ]
-            });
+            ComponentEnvelope response = Component.Grid()
+                .WithId($"library-{libraryId}")
+                .WithItems(cardItems.Select(item => Component.Card()
+                    .WithData(item)
+                    ))
+                ;
+
+            return Ok(ComponentResponse.From(response));
         }
 
-        return Ok(new Render
-        {
-            Data = Letters.Select(genre => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
-                .WithComponent("NMCarousel")
-                .WithProps((props, _) => props
-                    .WithId(genre)
-                    .WithTitle(genre)
-                    .WithItems(
-                        movies.Select(movie => new LibraryResponseItemDto(movie))
-                            .Where(item =>
-                                genre == "#"
-                                    ? Numbers.Any(p => item.Title.StartsWith(p))
-                                    : item.Title.StartsWith(genre))
-                            .Concat(shows.Select(tv => new LibraryResponseItemDto(tv))
-                                .Where(item =>
-                                    genre == "#"
-                                        ? Numbers.Any(p => item.Title.StartsWith(p))
-                                        : item.Title.StartsWith(genre)))
-                            .Select(item => new ComponentBuilder<LibraryResponseItemDto>()
-                                .WithComponent("NMCard")
-                                .WithProps((props, _) => props
-                                    .WithData(item)
-                                    .WithWatch())
-                                .Build())))
-                .Build())
-        });
+        List<ComponentEnvelope> carousels = Letters
+            .Select((letter, index) =>
+            {
+                List<CardData> carouselItems = movies
+                    .Select(movie => new CardData(movie, country))
+                    .Where(collection => letter == "#"
+                        ? Numbers.Any(p => collection.Title.StartsWith(p))
+                        : collection.Title.StartsWith(letter))
+                    .Concat(shows.Select(tv => new CardData(tv, country))
+                        .Where(collection => letter == "#"
+                            ? Numbers.Any(p => collection.Title.StartsWith(p))
+                            : collection.Title.StartsWith(letter)))
+                    .OrderBy(item => item.TitleSort)
+                    .ToList();
+
+                if (carouselItems.Count == 0)
+                    return null;
+
+                return Component.Carousel()
+                    .WithId(letter)
+                    .WithTitle(letter)
+                    .WithMoreLink($"/libraries/{libraryId}/letter/{letter}")
+                    .WithNavigation(
+                        index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
+                        index == Letters.Length - 1 ? null : Letters.ElementAtOrDefault(index + 1) ?? null)
+                    .WithItems(carouselItems.Select(item => Component.Card()
+                        .WithData(item)
+                        ))
+                    ;
+            })
+            .Where(c => c != null)
+            .Cast<ComponentEnvelope>()
+            .ToList();
+
+        ComponentEnvelope containerResponse = Component.Container()
+            .WithId($"library-{libraryId}-letters")
+            .WithItems(carousels)
+            ;
+
+        return Ok(containerResponse);
     }
 
     [HttpGet]
@@ -364,6 +357,7 @@ public class LibrariesController(
             return UnauthorizedResponse("You do not have permission to view library");
 
         string language = Language();
+        string country = Country();
 
         IEnumerable<Movie> movies = await libraryRepository
             .GetPaginatedLibraryMovies(userId, libraryId, letter, language, request.Take, request.Page);
@@ -371,33 +365,20 @@ public class LibrariesController(
         IEnumerable<Tv> shows = await libraryRepository
             .GetPaginatedLibraryShows(userId, libraryId, letter, language, request.Take, request.Page);
 
-        List<LibraryResponseItemDto> concat = movies
-            .Select(movie => new LibraryResponseItemDto(movie))
-            .Concat(shows.Select(tv => new LibraryResponseItemDto(tv)))
+        List<CardData> concat = movies
+            .Select(movie => new CardData(movie, country))
+            .Concat(shows.Select(tv => new CardData(tv, country)))
             .OrderBy(item => item.TitleSort)
             .ToList();
 
-        return Ok(new Render
-        {
-            Data =
-            [
-                new ComponentBuilder<LibraryResponseItemDto>()
-                    .WithComponent("NMGrid")
-                    .WithProps((props, _) => props
-                        .WithProperties(new()
-                        {
-                            { "paddingTop", 16 },
-                        })
-                        .WithItems(
-                            concat.Select(item =>
-                                new ComponentBuilder<LibraryResponseItemDto>()
-                                    .WithComponent("NMCard")
-                                    .WithProps((props, _) => props
-                                        .WithData(item)
-                                        .WithWatch())
-                                    .Build())))
-                    .Build()
-            ]
-        });
+        ComponentEnvelope response = Component.Grid()
+            .WithId($"library-{libraryId}-{letter}")
+            .WithTitle(letter)
+            .WithItems(concat.Select(item => Component.Card()
+                .WithData(item)
+                ))
+            ;
+
+        return Ok(ComponentResponse.From(response));
     }
 }

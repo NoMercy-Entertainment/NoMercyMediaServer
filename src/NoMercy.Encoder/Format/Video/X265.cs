@@ -82,7 +82,7 @@ public class X265 : BaseVideo
             {
                 return
                 [
-                    VideoProfiles.Baseline, VideoProfiles.Main, VideoProfiles.High,
+                    VideoProfiles.Baseline, VideoProfiles.Main, VideoProfiles.Main10, VideoProfiles.High,
                     VideoProfiles.High10, VideoProfiles.High422, VideoProfiles.High444
                 ];
             }

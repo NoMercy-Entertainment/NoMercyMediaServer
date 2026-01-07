@@ -30,7 +30,7 @@ public class FavoriteTrackDto
             ? new Uri($"/images/music{artistTrack.Track.Cover}", UriKind.Relative).ToString()
             : null;
         Link = new($"/music/tracks/{Id}", UriKind.Relative);
-        Type = "tracks";
+        Type = "track";
         ColorPalette = artistTrack.Track.ColorPalette;
         Year = artistTrack.Track.Date.ParseYear();
 

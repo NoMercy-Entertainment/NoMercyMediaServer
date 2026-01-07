@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
@@ -34,62 +35,48 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
         if (request.Version != "lolomo")
         {
-            IEnumerable<NmCardDto> concat = collections
-                .Select(collection => new NmCardDto(collection, country));
+            List<CardData> cardItems = collections
+                .Select(collection => new CardData(collection, country))
+                .ToList();
 
-            return Ok(new Render
-            {
-                Data =
-                [
-                    new ComponentBuilder<NmCardDto>()
-                        .WithComponent("NMGrid")
-                        .WithProps((props, _) => props
-                            .WithProperties(new(){})
-                            .WithItems(
-                                concat.Select(item =>
-                                    new ComponentBuilder<NmCardDto>()
-                                        .WithComponent("NMCard")
-                                        .WithProps((props, _) => props
-                                            .WithData(item)
-                                            .WithWatch())
-                                        .Build())))
-                        .Build()
-                ]
-            });
+            ComponentEnvelope response = Component.Grid()
+                .WithItems(cardItems.Select(item => Component.Card()
+                    .WithData(item)
+                    ))
+                ;
+
+            return Ok(ComponentResponse.From(response));
         }
         
-        return Ok(new Render
-        {
-            Data = Letters
-                .Select((letter, index) => new ComponentBuilder<NmCardDto>()
-                    .WithComponent("NMCarousel")
-                    .WithProps((p, _) => p
-                        .WithId(letter)
-                        .WithTitle(letter)
-                        .WithPreviousId(index == 0
-                            ? ""
-                            : Letters.ElementAtOrDefault(index - 1) ?? "")
-                        .WithNextId(index == Letters.Length - 1
-                            ? ""
-                            : Letters.ElementAtOrDefault(index + 1) ?? "")
-                        .WithItems(
-                            collections
-                                .Where(collection => letter == "#"
-                                    ? Numbers.Any(p => collection.Title.StartsWith(p))
-                                    : collection.Title.StartsWith(letter))
-                                .Select(collectionMovie => new NmCardDto(collectionMovie, country))
-                                .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort)
-                                .Select(item =>
-                                    new ComponentBuilder<NmCardDto>()
-                                        .WithComponent("NMCard")
-                                        .WithProps((p1, _) => p1
-                                            .WithData(item))
-                                        .Build())
-                        )
-                    )
-                    .Build()
-                )
-        });
+        List<ComponentEnvelope> carousels = Letters
+            .Select((letter, index) =>
+            {
+                List<CardData> letterItems = collections
+                    .Where(collection => letter == "#"
+                        ? Numbers.Any(p => collection.Title.StartsWith(p))
+                        : collection.Title.StartsWith(letter))
+                    .Select(collection => new CardData(new NmCardDto(collection, country)))
+                    .OrderBy(item => item.TitleSort)
+                    .ToList();
+
+                return Component.Carousel()
+                    .WithId(letter)
+                    .WithTitle(letter)
+                    .WithNavigation(
+                        index == 0 ? null : Letters[index - 1],
+                        index == Letters.Length - 1 ? null : Letters[index + 1])
+                    .WithItems(letterItems.Select(item => Component.Card()
+                        .WithData(item)
+                        ))
+                    .Build();
+            })
+            .ToList();
+
+        ComponentEnvelope containerResponse = Component.Container()
+            .WithItems(carousels)
+            ;
+
+        return Ok(containerResponse);
     }
 
     [HttpGet]

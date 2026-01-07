@@ -1,0 +1,335 @@
+using Newtonsoft.Json;
+using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Database;
+using NoMercy.Database.Models;
+using NoMercy.NmSystem.Extensions;
+
+namespace NoMercy.Api.Controllers.V1.Media.DTO.Components;
+
+/// <summary>
+/// Data for NMCard component - standard media card showing movies, TV shows, collections, etc.
+/// </summary>
+public record CardData
+{
+    [JsonProperty("id")] public dynamic? Id { get; set; }
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
+    [JsonProperty("titleSort")] public string TitleSort { get; set; } = string.Empty;
+    [JsonProperty("overview")] public string? Overview { get; set; }
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
+    [JsonProperty("rating", NullValueHandling = NullValueHandling.Ignore)] public RatingClass? Rating { get; set; }
+    [JsonProperty("year")] public int? Year { get; set; }
+    [JsonProperty("duration")] public int? Duration { get; set; }
+    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
+    [JsonProperty("created_at")] public DateTime CreatedAt { get; set; }
+    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
+    [JsonProperty("poster")] public string? Poster { get; set; }
+    [JsonProperty("logo")] public string? Logo { get; set; }
+    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
+    [JsonProperty("have_items")] public int? HaveItems { get; set; }
+    [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
+
+    public CardData()
+    {
+    }
+
+    public CardData(Movie movie, string country)
+    {
+        string? title = movie.Translations.FirstOrDefault()?.Title;
+        string? overview = movie.Translations.FirstOrDefault()?.Overview;
+
+        Id = movie.Id;
+        Title = !string.IsNullOrEmpty(title) ? title : movie.Title;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : movie.Overview;
+        Poster = movie.Poster;
+        Backdrop = movie.Backdrop;
+        Logo = movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+        TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
+        Year = movie.ReleaseDate.ParseYear();
+        Type = "movie";
+        Link = new($"/movie/{Id}", UriKind.Relative);
+        NumberOfItems = 1;
+        HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
+        ColorPalette = movie.ColorPalette;
+        CreatedAt = movie.CreatedAt;
+
+        Rating = movie.CertificationMovies
+            .Where(cm => cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country)
+            .Select(cm => new RatingClass
+            {
+                Rating = cm.Certification.Rating,
+                Iso31661 = cm.Certification.Iso31661,
+                Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+            })
+            .FirstOrDefault();
+    }
+
+    public CardData(Tv tv, string country)
+    {
+        string? title = tv.Translations.FirstOrDefault()?.Title;
+        string? overview = tv.Translations.FirstOrDefault()?.Overview;
+
+        Id = tv.Id;
+        Title = !string.IsNullOrEmpty(title) ? title : tv.Title;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : tv.Overview;
+        Poster = tv.Poster;
+        Backdrop = tv.Backdrop;
+        Logo = tv.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+        TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
+        Year = tv.FirstAirDate.ParseYear();
+        Type = "tv";
+        CreatedAt = tv.CreatedAt;
+        Link = new($"/tv/{Id}", UriKind.Relative);
+        NumberOfItems = tv.NumberOfEpisodes;
+        HaveItems = tv.Episodes.Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
+        ColorPalette = tv.ColorPalette;
+
+        Rating = tv.CertificationTvs
+            .Where(ct => ct.Certification.Iso31661 == "US" || ct.Certification.Iso31661 == country)
+            .Select(ct => new RatingClass
+            {
+                Rating = ct.Certification.Rating,
+                Iso31661 = ct.Certification.Iso31661,
+                Image = $"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg"
+            })
+            .FirstOrDefault();
+    }
+
+    public CardData(Collection collection, string country)
+    {
+        string? title = collection.Translations.FirstOrDefault()?.Title;
+        string? overview = collection.Translations.FirstOrDefault()?.Overview;
+
+        Id = collection.Id;
+        Title = !string.IsNullOrEmpty(title) ? title : collection.Title;
+        Overview = !string.IsNullOrEmpty(overview) ? overview : collection.Overview;
+        Poster = collection.Poster;
+        Backdrop = collection.Backdrop;
+        Logo = collection.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+        TitleSort = collection.Title.TitleSort(collection.CollectionMovies.MinBy(m => m.Movie.ReleaseDate)?.Movie.ReleaseDate);
+        Year = collection.CollectionMovies.MinBy(m => m.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();
+        Type = "collection";
+        Link = new($"/collection/{Id}", UriKind.Relative);
+        NumberOfItems = collection.CollectionMovies.Count;
+        HaveItems = collection.CollectionMovies.Count(m => m.Movie.VideoFiles.Any(v => v.Folder != null));
+        ColorPalette = collection.ColorPalette;
+        CreatedAt = collection.CreatedAt;
+
+        Rating = collection.CollectionMovies
+            .SelectMany(cm => cm.Movie.CertificationMovies)
+            .Where(cm => cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country)
+            .Select(cm => new RatingClass
+            {
+                Rating = cm.Certification.Rating,
+                Iso31661 = cm.Certification.Iso31661,
+                Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+            })
+            .FirstOrDefault();
+    }
+
+    public CardData(Special special, string country)
+    {
+        Id = special.Id;
+        Title = special.Title;
+        Overview = special.Overview;
+        Poster = special.Poster;
+        Backdrop = special.Backdrop;
+        Logo = special.Logo;
+        TitleSort = special.Title.TitleSort();
+        Year = special.Items.MinBy(m => m.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
+               ?? special.Items.Select(t => t.Episode?.Tv).FirstOrDefault()?.FirstAirDate.ParseYear();
+        Type = "special";
+        Link = new($"/specials/{Id}", UriKind.Relative);
+        NumberOfItems = special.Items.Count;
+        CreatedAt = special.CreatedAt;
+
+        int haveMovies = special.Items.Select(i => i.Movie).Count(m => m is not null && m.VideoFiles.Count != 0);
+        int haveEpisodes = special.Items.Select(i => i.Episode).Count(e => e is not null && e.VideoFiles.Count != 0);
+        HaveItems = haveMovies + haveEpisodes;
+        ColorPalette = special.ColorPalette;
+
+        Rating = special.Items
+            .SelectMany(i => i.Movie?.CertificationMovies ?? [])
+            .Where(cm => cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country)
+            .Select(cm => new RatingClass
+            {
+                Rating = cm.Certification.Rating,
+                Iso31661 = cm.Certification.Iso31661,
+                Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+            })
+            .FirstOrDefault();
+    }
+
+    public CardData(UserData item, string country)
+    {
+        Id = item.SpecialId?.ToString()
+             ?? item.CollectionId?.ToString()
+             ?? item.MovieId?.ToString()
+             ?? item.TvId?.ToString()
+             ?? string.Empty;
+
+        if (item.Special is not null)
+        {
+            ColorPalette = item.Special.ColorPalette;
+            Poster = item.Special.Poster;
+            Backdrop = item.Special.Backdrop;
+            Title = item.Special.Title;
+            TitleSort = item.Special.Title.TitleSort();
+            Overview = item.Special.Overview;
+            Logo = item.Special.Logo;
+            Duration = item.VideoFile.Duration?.ToSeconds();
+            Type = "special";
+            Link = new($"/specials/{Id}/watch", UriKind.Relative);
+            NumberOfItems = item.Special.Items.Count;
+            CreatedAt = item.Special.CreatedAt;
+
+            int availableMovies = item.Special.Items
+                .Count(specialItem => specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count != 0);
+            int availableEpisodes = item.Special.Items
+                .Count(specialItem => specialItem.Episode != null && specialItem.Episode?.VideoFiles.Count != 0);
+            HaveItems = availableMovies + availableEpisodes;
+
+            Rating = item.Special.Items
+                .SelectMany(specialItem => specialItem.Episode?.Tv.CertificationTvs
+                    .Where(ct => ct.Certification.Iso31661 == "US" || ct.Certification.Iso31661 == country)
+                    .Select(ct => new RatingClass
+                    {
+                        Rating = ct.Certification.Rating,
+                        Iso31661 = ct.Certification.Iso31661,
+                        Image = $"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg"
+                    }) ?? [])
+                .Concat(item.Special.Items
+                    .Where(specialItem => specialItem.MovieId != null)
+                    .SelectMany(specialItem => specialItem.Movie?.CertificationMovies
+                        .Where(cm => cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country)
+                        .Select(cm => new RatingClass
+                        {
+                            Rating = cm.Certification.Rating,
+                            Iso31661 = cm.Certification.Iso31661,
+                            Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                        }) ?? []))
+                .OrderByDescending(cert => cert.Order)
+                .FirstOrDefault();
+        }
+        else if (item.Collection is not null)
+        {
+            ColorPalette = item.Collection.ColorPalette;
+            Poster = item.Collection.Poster;
+            Backdrop = item.Collection.Backdrop;
+            Title = item.Collection.Title;
+            TitleSort = item.Collection.Title.TitleSort();
+            Overview = item.Collection.Overview;
+            Logo = item.Collection.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+            Duration = item.VideoFile?.Duration?.ToSeconds();
+            Year = item.Collection.CollectionMovies
+                .MinBy(movie => movie.Movie.ReleaseDate?.ParseYear())
+                ?.Movie.ReleaseDate.ParseYear() ?? 0;
+            Type = "collection";
+            Link = new($"/collection/{Id}/watch", UriKind.Relative);
+            CreatedAt = item.Collection.CreatedAt;
+            NumberOfItems = item.Collection.CollectionMovies.Count;
+            HaveItems = item.Collection.CollectionMovies
+                .SelectMany(cm => cm.Movie.VideoFiles)
+                .Count(vf => vf.Folder != null);
+
+            Rating = item.Collection.CollectionMovies
+                .SelectMany(cm => cm.Movie.CertificationMovies)
+                .Where(cm => cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country)
+                .Select(cm => new RatingClass
+                {
+                    Rating = cm.Certification.Rating,
+                    Iso31661 = cm.Certification.Iso31661,
+                    Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                })
+                .FirstOrDefault();
+        }
+        else if (item.Movie is not null)
+        {
+            ColorPalette = item.Movie.ColorPalette;
+            Year = item.Movie.ReleaseDate.ParseYear();
+            Poster = item.Movie.Poster;
+            Backdrop = item.Movie.Backdrop;
+            Title = item.Movie.Title;
+            TitleSort = item.Movie.Title.TitleSort(item.Movie.ReleaseDate);
+            Overview = item.Movie.Overview;
+            Logo = item.Movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+            Duration = item.VideoFile?.Duration?.ToSeconds();
+            Link = new($"/movie/{Id}/watch", UriKind.Relative);
+            Type = "movie";
+            CreatedAt = item.Movie.CreatedAt;
+            NumberOfItems = 1;
+            HaveItems = item.Movie.VideoFiles.Count(v => v.Folder != null);
+
+            Rating = item.Movie.CertificationMovies
+                .Where(cm => cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country)
+                .Select(cm => new RatingClass
+                {
+                    Rating = cm.Certification.Rating,
+                    Iso31661 = cm.Certification.Iso31661,
+                    Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                })
+                .FirstOrDefault();
+        }
+        else if (item.Tv is not null)
+        {
+            ColorPalette = item.Tv.ColorPalette;
+            Year = item.Tv.FirstAirDate.ParseYear();
+            Poster = item.Tv.Poster;
+            Backdrop = item.Tv.Backdrop;
+            Title = item.Tv.Title;
+            TitleSort = item.Tv.Title.TitleSort(item.Tv.FirstAirDate);
+            Overview = item.Tv.Overview;
+            Logo = item.Tv.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+            Duration = item.VideoFile?.Duration?.ToSeconds();
+            Link = new($"/tv/{Id}/watch", UriKind.Relative);
+            Type = "tv";
+            CreatedAt = item.Tv.CreatedAt;
+            NumberOfItems = item.Tv.NumberOfEpisodes;
+            HaveItems = item.Tv.Episodes
+                .Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
+
+            Rating = item.Tv.CertificationTvs
+                .Where(ct => ct.Certification.Iso31661 == "US" || ct.Certification.Iso31661 == country)
+                .Select(ct => new RatingClass
+                {
+                    Rating = ct.Certification.Rating,
+                    Iso31661 = ct.Certification.Iso31661,
+                    Image = $"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg"
+                })
+                .FirstOrDefault();
+        }
+    }
+
+    public CardData(Genre genre)
+    {
+        Id = genre.Id;
+        Title = genre.Name;
+        TitleSort = genre.Name;
+        Type = "genre";
+        Link = new($"/genre/{genre.Id}", UriKind.Relative);
+        NumberOfItems = genre.GenreMovies.Count + genre.GenreTvShows.Count;
+        HaveItems = genre.GenreMovies.Count(genreMovie => genreMovie.Movie.VideoFiles
+                        .Any(v => v.Folder != null))
+                    + genre.GenreTvShows.Count(genreTv => genreTv.Tv.Episodes
+                        .Any(episode => episode.VideoFiles.Any(v => v.Folder != null)));
+    }
+
+    public CardData(NmCardDto dto)
+    {
+        Id = dto.Id;
+        Title = dto.Title ?? string.Empty;
+        TitleSort = dto.TitleSort ?? string.Empty;
+        Overview = dto.Overview;
+        Link = dto.Link;
+        Rating = dto.Rating;
+        Year = dto.Year;
+        Duration = dto.Duration;
+        Type = dto.Type ?? string.Empty;
+        Backdrop = dto.Backdrop;
+        Poster = dto.Poster;
+        Logo = dto.Logo;
+        ColorPalette = dto.ColorPalette;
+        HaveItems = dto.HaveItems;
+        NumberOfItems = dto.NumberOfItems;
+    }
+}
+

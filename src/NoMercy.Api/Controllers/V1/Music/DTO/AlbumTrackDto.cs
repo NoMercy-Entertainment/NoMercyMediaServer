@@ -32,7 +32,7 @@ public record AlbumTrackDto
             : null;
         Path = new Uri($"/{albumTrack.Track.FolderId}{albumTrack.Track.Folder}{albumTrack.Track.Filename}",
             UriKind.Relative).ToString();
-        Type = "tracks";
+        Type = "track";
         ColorPalette = albumTrack.Album.ColorPalette;
         Date = albumTrack.Track.Date;
         Disc = albumTrack.Track.DiscNumber;

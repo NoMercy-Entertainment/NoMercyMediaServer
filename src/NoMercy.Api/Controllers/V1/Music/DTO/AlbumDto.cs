@@ -42,7 +42,7 @@ public record AlbumDto
         Description = !string.IsNullOrEmpty(description)
             ? description
             : albumArtist.Album.Description;
-        Type = "albums";
+        Type = "album";
         ColorPalette = albumArtist.Album.ColorPalette;
         // Tracks = albumArtist.Albums.AlbumTrack.Select(a => a.Track);
         Year = albumArtist.Album.Year;
@@ -72,7 +72,7 @@ public record AlbumDto
         Description = !string.IsNullOrEmpty(description)
             ? description
             : albumTrack.Album.Description;
-        Type = "albums";
+        Type = "album";
         ColorPalette = albumTrack.Album.ColorPalette;
         Year = albumTrack.Album.Year;
 
@@ -101,7 +101,7 @@ public record AlbumDto
         Description = !string.IsNullOrEmpty(description)
             ? description
             : album.Description;
-        Type = "albums";
+        Type = "album";
         ColorPalette = album.ColorPalette;
         Disambiguation = album.Disambiguation;
         // Tracks = album.AlbumTrack.Select(a => a.Track);

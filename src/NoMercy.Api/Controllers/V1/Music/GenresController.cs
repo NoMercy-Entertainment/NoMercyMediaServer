@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Data.Repositories;
+using NoMercy.Database.Models;
 using NoMercy.Helpers;
 
 namespace NoMercy.Api.Controllers.V1.Music;
@@ -36,26 +38,16 @@ public class GenresController : BaseController
             .DistinctBy(genre => genre.Title)
             .ToList();
 
-        return Ok(new Render
-        {
-            Data =
-            [
-                new ComponentBuilder<NmGenreCardDto>()
-                    .WithComponent("NMGrid")
-                    .WithProps((props, _) => props
-                        .WithProperties(new(){})
-                        .WithItems(
-                            genres
-                                .Select(item =>
-                                    new ComponentBuilder<NmGenreCardDto>()
-                                        .WithComponent("NMGenreCard")
-                                        .WithProps((p, _) => p
-                                            .WithData(item)
-                                            .WithWatch())
-                                        .Build())))
-                    .Build()
-            ]
-        });
+        List<GenreCardData> genreCards = genres
+            .Select(item => new GenreCardData(new MusicGenre { Id = item.Id, Name = item.Title }))
+            .ToList();
+
+        ComponentEnvelope response = Component.Grid()
+            .WithItems(genreCards.Select(item => Component.GenreCard(item)
+                ))
+            ;
+
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]

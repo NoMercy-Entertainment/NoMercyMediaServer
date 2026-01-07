@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -56,31 +57,23 @@ public class AlbumsController : BaseController
             album.Tracks = tracks.Count(track => track.AlbumId == album.Id);
         }
         
-        return Ok(new Render
-        {
-            Data =
-            [
-                new ComponentBuilder<AlbumsResponseItemDto>()
-                    .WithComponent("NMGrid")
-                    .WithProps((props, _) => props
-                        .WithProperties(new()
-                        {
-                            { "paddingTop", 16 },
-                        })
-                        .WithItems(
-                            albums
-                                .Where(response => response.Tracks > 0)
-                                .OrderBy(album => album.Name)                            
-                                .Select(item =>
-                                    new ComponentBuilder<AlbumsResponseItemDto>()
-                                        .WithComponent("NMMusicCard")
-                                        .WithProps((p, _) => p
-                                            .WithData(item)
-                                            .WithWatch())
-                                        .Build())))
-                    .Build()
-            ]
-        });
+        List<MusicCardData> musicCards = albums
+            .Where(response => response.Tracks > 0)
+            .OrderBy(album => album.Name)
+            .Select(item => new MusicCardData(new Album
+            {
+                Id = item.Id,
+                Name = item.Name,
+                Cover = item.Cover,
+                ColorPalette = item.ColorPalette,
+                AlbumTrack = []
+            }))
+            .ToList();
+
+        ComponentEnvelope response = Component.Grid()
+            .WithItems(musicCards.Select(Component.MusicCard));
+
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]

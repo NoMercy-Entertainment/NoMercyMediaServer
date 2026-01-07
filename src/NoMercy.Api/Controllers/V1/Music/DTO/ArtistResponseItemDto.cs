@@ -57,7 +57,7 @@ public record ArtistResponseItemDto
         Id = artist.Id;
         LibraryId = artist.LibraryId;
         Name = artist.Name;
-        Type = "artists";
+        Type = "artist";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Genres = artist.ArtistMusicGenre

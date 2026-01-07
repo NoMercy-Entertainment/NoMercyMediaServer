@@ -30,7 +30,7 @@ public record ArtistsResponseItemDto
         Description = artist.Description;
         Id = artist.Id;
         Name = artist.Name;
-        Type = "artists";
+        Type = "artist";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack

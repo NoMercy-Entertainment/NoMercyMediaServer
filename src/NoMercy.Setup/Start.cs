@@ -37,28 +37,28 @@ public class Start
         List<TaskDelegate> startupTasks =
         [
             // new (ApiInfo.RequestInfo),
-            new(AppFiles.CreateAppFolders),
-            new(Auth.Init),
-            new(Networking.Networking.Discover),
+            AppFiles.CreateAppFolders,
+            Auth.Init,
+            Networking.Networking.Discover,
             ..tasks,
-            new(Register.Init),
-            new(Binaries.DownloadAll),
-            new(ChromeCast.Init),
-            new(UpdateChecker.StartPeriodicUpdateCheck),
+            Register.Init,
+            Binaries.DownloadAll,
+            ChromeCast.Init,
+            UpdateChecker.StartPeriodicUpdateCheck,
 
-            new(delegate
+            delegate
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                     && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
                     return TrayIcon.Make();
                 return Task.CompletedTask;
-            }),
-            new(delegate
+            },
+            delegate
             {
                 DesktopIconCreator.CreateDesktopIcon(AppFiles.ApplicationName, AppFiles.ServerExePath,
                     AppFiles.AppIcon);
                 return Task.CompletedTask;
-            })
+            }
         ];
 
         await RunStartup(startupTasks);

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -53,31 +54,27 @@ public class ArtistsController : BaseController
         foreach (ArtistsResponseItemDto artist in artists)
             artist.Tracks = tracks.Count(track => track.ArtistId == artist.Id);
         
-        return Ok(new Render
-        {
-            Data =
-            [
-                new ComponentBuilder<ArtistsResponseItemDto>()
-                    .WithComponent("NMGrid")
-                    .WithProps((props, _) => props
-                        .WithProperties(new()
-                        {
-                            { "paddingTop", 16 },
-                        })
-                        .WithItems(
-                            artists
-                                .Where(response => response.Tracks > 0)
-                                .OrderBy(artist => artist.Name)
-                                .Select(item =>
-                                    new ComponentBuilder<ArtistsResponseItemDto>()
-                                        .WithComponent("NMMusicCard")
-                                        .WithProps((p, _) => p
-                                            .WithData(item)
-                                            .WithWatch())
-                                        .Build())))
-                    .Build()
-            ]
-        });
+        List<MusicCardData> musicCards = artists
+            .Where(response => response.Tracks > 0)
+            .OrderBy(artist => artist.Name)
+            .Select(item => new MusicCardData(new Artist
+            {
+                Id = item.Id,
+                Name = item.Name,
+                Cover = item.Cover,
+                ColorPalette = null,
+                Disambiguation = item.Disambiguation,
+                Description = item.Description,
+                ArtistTrack = []
+            }))
+            .ToList();
+
+        ComponentEnvelope response = Component.Grid()
+            .WithItems(musicCards.Select(item => Component.MusicCard(item)
+                ))
+            ;
+
+        return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]

@@ -37,7 +37,7 @@ public record ArtistDto
             ? new Uri($"/images/music{img.FilePath}", UriKind.Relative).ToString()
             : null;
         Link = new($"/music/artist/{Id}", UriKind.Relative);
-        Type = "artists";
+        Type = "artist";
         Description = !string.IsNullOrEmpty(description)
             ? description
             : albumArtist.Album.Description;
@@ -66,7 +66,7 @@ public record ArtistDto
             : null;
         Link = new($"/music/artist/{Id}", UriKind.Relative);
         Description = artistTrack.Artist.Description;
-        Type = "artists";
+        Type = "artist";
         Disambiguation = artistTrack.Artist.Disambiguation;
         ColorPalette = artistTrack.Artist.ColorPalette;
     }

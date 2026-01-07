@@ -38,7 +38,7 @@ public record AlbumResponseItemDto
         LibraryId = album.LibraryId;
         Name = album.Name;
         Link = new($"/music/album/{Id}", UriKind.Relative);
-        Type = "albums";
+        Type = "album";
         // using MediaContext mediaContext = new();
         // List<AlbumTrack> artists = mediaContext.AlbumTrack
         //     .AsNoTracking()

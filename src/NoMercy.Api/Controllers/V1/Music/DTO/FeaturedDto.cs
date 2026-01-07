@@ -34,7 +34,7 @@ public class FeaturedDto
         Description = !string.IsNullOrEmpty(description)
             ? description
             : albumArtist.Album.Description;
-        Type = "albums";
+        Type = "album";
         ColorPalette = albumArtist.Album.ColorPalette;
         Tracks = albumArtist.Album.AlbumTrack.Count;
         Year = albumArtist.Album.Year;
@@ -53,7 +53,7 @@ public class FeaturedDto
         Disambiguation = album.Disambiguation;
         Cover = album.Cover is not null ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString() : null;
         Link = new($"/music/artist/{Id}", UriKind.Relative);
-        Type = "artists";
+        Type = "artist";
         Description = !string.IsNullOrEmpty(description)
             ? description
             : album.Description;

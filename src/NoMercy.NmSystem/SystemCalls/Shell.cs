@@ -236,7 +236,7 @@ public static class Shell
 
                 JOBOBJECT_EXTENDED_LIMIT_INFORMATION info = new()
                 {
-                    BasicLimitInformation = new JOBOBJECT_BASIC_LIMIT_INFORMATION
+                    BasicLimitInformation = new()
                     {
                         LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
                     }

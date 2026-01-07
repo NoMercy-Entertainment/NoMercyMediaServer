@@ -20,16 +20,32 @@ public static class EncoderProfileSeedData
                     // HDR 4K profile
                     new()
                     {
-                        Codec = VideoCodecs.H265.Value,
+                        Codec = VideoCodecs.H264.Value,
                         Bitrate = 24000,
                         Width = FrameSizes._4k.Width,
                         SegmentName = ":type:_:framesize:/:type:_:framesize:",
                         PlaylistName = ":type:_:framesize:/:type:_:framesize:",
-                        ColorSpace = ColorSpaces.Yuv420P10Le,
+                        ColorSpace = ColorSpaces.Yuv420P,
                         Preset = VideoPresets.Fast,
                         Tune = VideoTunes.Hq,
-                        Profile = VideoProfiles.High444,
+                        Profile = VideoProfiles.Main10,
                         Level = "5.1",
+                        KeyInt = -1,
+                        ConvertHdrToSdr = false
+                    },
+                    // HDR 1080p profile
+                    new()
+                    {
+                        Codec = VideoCodecs.H264.Value,
+                        Bitrate = 10656,
+                        Width = FrameSizes._1080p.Width,
+                        SegmentName = ":type:_:framesize:/:type:_:framesize:",
+                        PlaylistName = ":type:_:framesize:/:type:_:framesize:",
+                        ColorSpace = ColorSpaces.Yuv420P,
+                        Preset = VideoPresets.Fast,
+                        Tune = VideoTunes.Hq,
+                        Profile = VideoProfiles.Main10,
+                        Level = "4.0",
                         KeyInt = -1,
                         ConvertHdrToSdr = false
                     },
@@ -48,22 +64,6 @@ public static class EncoderProfileSeedData
                         Level = "5.1",
                         KeyInt = -1,
                         ConvertHdrToSdr = true
-                    },
-                    // HDR 1080p profile
-                    new()
-                    {
-                        Codec = VideoCodecs.H265.Value,
-                        Bitrate = 10656,
-                        Width = FrameSizes._1080p.Width,
-                        SegmentName = ":type:_:framesize:/:type:_:framesize:",
-                        PlaylistName = ":type:_:framesize:/:type:_:framesize:",
-                        ColorSpace = ColorSpaces.Yuv420P10Le,
-                        Preset = VideoPresets.Fast,
-                        Tune = VideoTunes.Hq,
-                        Profile = VideoProfiles.High444,
-                        Level = "4.0",
-                        KeyInt = -1,
-                        ConvertHdrToSdr = false
                     },
                     // SDR 1080p profile
                     new()

@@ -30,7 +30,7 @@ public record MusicSearchResponseItemDto
         Description = artist.Description;
         Id = artist.Id;
         Name = artist.Name;
-        Type = "artists";
+        Type = "artist";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack
@@ -50,7 +50,7 @@ public record MusicSearchResponseItemDto
         Description = album.Description;
         Id = album.Id;
         Name = album.Name;
-        Type = "albums";
+        Type = "album";
         Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack

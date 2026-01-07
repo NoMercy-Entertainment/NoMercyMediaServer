@@ -43,7 +43,7 @@ public record AlbumsResponseItemDto
         Folder = album.Folder;
         Id = album.Id;
         Name = album.Name;
-        Type = "albums";
+        Type = "album";
         Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack

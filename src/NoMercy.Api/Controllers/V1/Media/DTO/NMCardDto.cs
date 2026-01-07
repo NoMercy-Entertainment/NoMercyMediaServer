@@ -9,7 +9,7 @@ namespace NoMercy.Api.Controllers.V1.Media.DTO;
 public class NmCardDto
 {
     [JsonProperty("id")] public dynamic? Id { get; set; }
-    [JsonProperty("title")] public string Title { get; set; } = null!;
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }
     [JsonProperty("overview")] public string? Overview { get; set; }
     [JsonProperty("link")] public Uri Link { get; set; } = null!;
@@ -17,6 +17,7 @@ public class NmCardDto
     [JsonProperty("year")] public int? Year { get; set; }
     [JsonProperty("duration")] public int? Duration { get; set; }
     [JsonProperty("type")] public string? Type { get; set; }
+    [JsonProperty("created_at")] public DateTime CreatedAt { get; set; }
     
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
@@ -55,6 +56,7 @@ public class NmCardDto
         HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
 
         ColorPalette = movie.ColorPalette;
+        CreatedAt = movie.CreatedAt;
 
         Rating = movie.CertificationMovies
             .Where(certificationMovie => certificationMovie.Certification.Iso31661 == "US"
@@ -86,6 +88,7 @@ public class NmCardDto
         TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
         Year = tv.FirstAirDate.ParseYear();
         Type = "tv";
+        CreatedAt = tv.CreatedAt;
 
         Link = new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
@@ -132,6 +135,7 @@ public class NmCardDto
             .Count(movie => movie.Movie.VideoFiles.Any(v => v.Folder != null));
 
         ColorPalette = collection.ColorPalette;
+        CreatedAt = collection.CreatedAt;
 
         Rating = collection.CollectionMovies
             .SelectMany(collectionMovie => collectionMovie.Movie.CertificationMovies)
@@ -162,6 +166,7 @@ public class NmCardDto
         Link = new($"/specials/{Id}", UriKind.Relative);
 
         NumberOfItems = special.Items.Count;
+        CreatedAt = special.CreatedAt;
 
         int haveMovies = special.Items
             .Select(item => item.Movie)
@@ -211,6 +216,7 @@ public class NmCardDto
             Link = new($"/specials/{Id}/watch", UriKind.Relative);
 
             NumberOfItems = item.Special.Items.Count;
+            CreatedAt = item.Special.CreatedAt;
             
             int availableMovies = item.Special.Items
                 .Count(specialItem => specialItem.MovieId != null && specialItem.Movie?.VideoFiles.Count != 0);
@@ -258,6 +264,7 @@ public class NmCardDto
             Type = "collection";
 
             Link = new($"/collection/{Id}/watch", UriKind.Relative);
+            CreatedAt = item.Collection.CreatedAt;
 
             NumberOfItems = item.Collection.CollectionMovies.Count;
             HaveItems = item.Collection.CollectionMovies
@@ -289,6 +296,7 @@ public class NmCardDto
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/movie/{Id}/watch", UriKind.Relative);
             Type = "movie";
+            CreatedAt = item.Movie.CreatedAt;
 
             NumberOfItems = 1;
             HaveItems = item.Movie.VideoFiles.Count(v => v.Folder != null);
@@ -318,6 +326,7 @@ public class NmCardDto
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/tv/{Id}/watch", UriKind.Relative);
             Type = "tv";
+            CreatedAt = item.Tv.CreatedAt;
 
             NumberOfItems = item.Tv.NumberOfEpisodes;
             HaveItems = item.Tv.Episodes

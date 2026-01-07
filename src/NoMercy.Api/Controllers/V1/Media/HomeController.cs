@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -86,7 +87,7 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view continue watching");
 
-        Render result = await _homeService.GetHomeData(User.UserId(), Language(), Country());
+        ComponentResponse result = await _homeService.GetHomeData(User.UserId(), Language(), Country());
 
         return Ok(result);
     }
@@ -97,7 +98,7 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view home card");
 
-        Render result = await _homeService.GetHomeCard(User.UserId(), Language(), request.ReplaceId);
+        ComponentResponse result = await _homeService.GetHomeCard(User.UserId(), Language(), request.ReplaceId);
 
         return Ok(result);
     }
@@ -108,7 +109,7 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view home tv");
 
-        Render result = await _homeService.GetHomeTvContent(User.UserId(), Language(), Country());
+        ComponentResponse result = await _homeService.GetHomeTvContent(User.UserId(), Language(), Country());
 
         return Ok(result);
     }
@@ -119,7 +120,7 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view continue watching");
 
-        Render result =
+        ComponentResponse result =
             await _homeService.GetHomeContinueContent(User.UserId(), Language(), Country(), request.ReplaceId);
 
         return Ok(result);

@@ -14,7 +14,7 @@ public class Collection : ColorPaletteTimeStamps
     [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty("title")] public string Title { get; set; } = null!;
+    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("title_sort")] public string? TitleSort { get; set; }
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }

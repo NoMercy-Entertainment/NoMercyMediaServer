@@ -33,7 +33,7 @@ public record CarouselResponseItemDto
         Id = artist.Id.ToString();
         LibraryId = artist.LibraryId;
         Name = artist.Name;
-        Type = "artists";
+        Type = "artist";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack
@@ -54,7 +54,7 @@ public record CarouselResponseItemDto
         Id = album.Id.ToString();
         LibraryId = album.LibraryId;
         Name = album.Name;
-        Type = "albums";
+        Type = "album";
         Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack
@@ -77,7 +77,7 @@ public record CarouselResponseItemDto
         Id = artistUser.Artist.Id.ToString();
         LibraryId = artistUser.Artist.LibraryId;
         Name = artistUser.Artist.Name;
-        Type = "artists";
+        Type = "artist";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artistUser.Artist.ArtistTrack
@@ -98,7 +98,7 @@ public record CarouselResponseItemDto
         Id = playlist.Album.Id.ToString();
         LibraryId = playlist.Album.LibraryId;
         Name = playlist.Album.Name;
-        Type = "albums";
+        Type = "album";
         Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = playlist.Album.AlbumTrack
@@ -134,7 +134,7 @@ public record CarouselResponseItemDto
         Folder = track.Folder ?? "";
         Id = track.Id.ToString();
         Name = track.Name;
-        Type = "tracks";
+        Type = "track";
         Link = new($"/music/tracks/{Id}", UriKind.Relative);
     }
 }

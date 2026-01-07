@@ -245,7 +245,7 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailablePresets.Contains(value))
-            throw new($"Wrong preset value for {value}, available formats are {string.Join(", ", AvailablePresets)}");
+            throw new($"Wrong preset value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailablePresets)}");
         Preset = value;
         return this;
     }
@@ -255,7 +255,7 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableProfiles.Contains(value))
-            throw new($"Wrong profile value for {value}, available formats are {string.Join(", ", AvailableProfiles)}");
+            throw new($"Wrong profile value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailableProfiles)}");
         Profile = value;
         return this;
     }
@@ -265,7 +265,7 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableTune.Contains(value))
-            throw new($"Wrong tune value for {value}, available formats are {string.Join(", ", AvailableTune)}");
+            throw new($"Wrong tune value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailableTune)}");
         Tune = value;
         return this;
     }
@@ -275,7 +275,7 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableLevels.Contains(value))
-            throw new($"Wrong level value for {value}, available formats are {string.Join(", ", AvailableLevels)}");
+            throw new($"Wrong level value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailableLevels)}");
         Level = value;
         return this;
     }
@@ -456,52 +456,60 @@ public abstract class BaseVideo : Classes
         commandDictionary["-map"] = $"[v{index}_hls_0]";
         commandDictionary["-c:v"] = VideoCodec.Value;
 
-        // Bitstream filter for HLS (convert AVCC to Annex B format for mpegts)
+        // Bitstream filter for HLS
         if (Container?.ContainerDto.Name == VideoContainers.Hls)
         {
-            commandDictionary["-bsf:v"] = "h264_mp4toannexb";
+            commandDictionary["-bsf:v"] = VideoCodec.Value.ToLower() switch
+            {
+                "libx264" or "h264_nvenc" or "h264_qsv" or "h264_amf" or "h264_videotoolbox" => "h264_mp4toannexb",
+                "libx265" or "hevc_nvenc" or "hevc_qsv" or "hevc_amf" or "hevc_videotoolbox" => "hevc_mp4toannexb",
+                _ => ""
+            };
+            
+            if (commandDictionary["-bsf:v"] == "")
+                commandDictionary.Remove("-bsf:v");
         }
 
         commandDictionary["-metadata"] = $"title=\"{Title.EscapeQuotes()}\"";
 
-        // Apply -movflags faststart only for MP4 output (helps stream header first for progressive download)
-        // For HLS, this flag adds overhead without benefit since segments are independent
         if (Container?.ContainerDto.Type == "mp4")
         {
             commandDictionary["-movflags"] = "faststart";
         }
-
-        // Add colorspace metadata for proper HDR/SDR display and compliance
-        bool isHdr = PixelFormat == VideoPixelFormats.Yuv444P10Le || PixelFormat == VideoPixelFormats.Yuv420P10Le;
         
-        commandDictionary["-color_primaries"] = isHdr
-            ? "bt2020"  // HDR uses BT.2020 primaries
-            : "bt709";  // SDR uses BT.709 primaries
+        bool isUhd = (VideoStream?.Width ?? 0) >= 3840 || (VideoStream?.Height ?? 0) >= 2160;
+        bool isHdr = PixelFormat is VideoPixelFormats.Yuv444P10Le or VideoPixelFormats.Yuv420P10Le;
+        
+        if (isUhd)
+        {
+            commandDictionary["-color_primaries"] = "bt2020";
+            commandDictionary["-colorspace"] = "bt2020nc";
+            commandDictionary["-color_trc"] = isHdr ? "smpte2084" : "bt709";
+        }
+        else
+        {
+            commandDictionary["-color_primaries"] = "bt709";
+            commandDictionary["-color_trc"] = "bt709";
+            commandDictionary["-colorspace"] = "bt709";
+        }
 
-        commandDictionary["-color_trc"] = isHdr
-            ? "smpte2084"  // HDR uses SMPTE 2084 (PQ) transfer function
-            : "bt709";     // SDR uses BT.709 transfer function
-
-        commandDictionary["-colorspace"] = isHdr
-            ? "bt2020nc"  // HDR uses BT.2020 NCL matrix
-            : "bt709";    // SDR uses BT.709 matrix
-
-        // Set luminosity/brightness range (TV range: 16-235, Full range: 0-255)
-        // Use TV range for broadcast/streaming compatibility
         commandDictionary["-color_range"] = "tv";
 
-        // Add HDR luminosity metadata (required for HDR10 compliance)
         if (isHdr)
         {
-            // Master Display Metadata for HDR10
-            // Format: G(x,y)B(x,y)R(x,y)WP(x,y)L(max,min)
-            // Standard DCI-P3 with 10000 nits peak, 0.0001 nits minimum
-            commandDictionary["-smpte2086"] = "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)";
+            const string masterDisplay = "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)";
+            const string contentLight = "10000,4000";
 
-            // Content Light Level metadata
-            // MaxCLL: 10000 nits (typical for HDR10)
-            // MaxFALL: 4000 nits (typical average frame-to-frame light level)
-            commandDictionary["-content_light_level"] = "M=10000:m=4000";
+            switch (VideoCodec.Value.ToLower())
+            {
+                case "libx265":
+                    commandDictionary["-x265-params"] = $"master-display={masterDisplay}:max-cll={contentLight}:hdr-opt=1:repeat-headers=1";
+                    break;
+
+                case "libsvtav1":
+                    commandDictionary["-svtav1-params"] = $"master-display={masterDisplay}:content-light={contentLight}";
+                    break;
+            }
         }
 
         foreach (KeyValuePair<string, dynamic> extraParameter in _extraParameters)

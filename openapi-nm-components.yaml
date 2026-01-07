@@ -1,0 +1,1277 @@
+openapi: 3.0.3
+info:
+  title: NoMercy NM Components API
+  description: |
+    OpenAPI specification for NoMercy NM Components system.
+
+    The Component system uses a polymorphic structure where the `component` field
+    determines how the `props` object should be interpreted. This is handled by
+    the `ComponentSerializer` in Kotlin.
+  version: 1.0.0
+
+components:
+  schemas:
+    # ===========================================
+    # Root Component Wrapper
+    # ===========================================
+    Component:
+      type: object
+      description: |
+        The root component wrapper. The `component` field acts as a discriminator
+        that determines the schema of `props`.
+      required:
+        - id
+        - component
+        - props
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this component instance
+        component:
+          type: string
+          description: Component type discriminator
+          enum:
+            - NMGrid
+            - NMList
+            - NMContainer
+            - NMCarousel
+            - NMMusicHomeCard
+            - NMCard
+            - NMTrackRow
+            - NMHomeCard
+            - NMGenreCard
+            - NMMusicCard
+            - NMTopResultCard
+        props:
+          oneOf:
+            - $ref: '#/components/schemas/NMGridWrapper'
+            - $ref: '#/components/schemas/NMListWrapper'
+            - $ref: '#/components/schemas/NMContainerWrapper'
+            - $ref: '#/components/schemas/NMCarouselWrapper'
+            - $ref: '#/components/schemas/NMMusicHomeCardWrapper'
+            - $ref: '#/components/schemas/NMCardWrapper'
+            - $ref: '#/components/schemas/NMTrackRowWrapper'
+            - $ref: '#/components/schemas/NMHomeCardWrapper'
+            - $ref: '#/components/schemas/NMMusicCardWrapper'
+            - $ref: '#/components/schemas/NMTopResultCardWrapper'
+          discriminator:
+            propertyName: component
+            mapping:
+              NMGrid: '#/components/schemas/NMGridWrapper'
+              NMList: '#/components/schemas/NMListWrapper'
+              NMContainer: '#/components/schemas/NMContainerWrapper'
+              NMCarousel: '#/components/schemas/NMCarouselWrapper'
+              NMMusicHomeCard: '#/components/schemas/NMMusicHomeCardWrapper'
+              NMCard: '#/components/schemas/NMCardWrapper'
+              NMTrackRow: '#/components/schemas/NMTrackRowWrapper'
+              NMHomeCard: '#/components/schemas/NMHomeCardWrapper'
+              NMGenreCard: '#/components/schemas/NMCardWrapper'
+              NMMusicCard: '#/components/schemas/NMMusicCardWrapper'
+              NMTopResultCard: '#/components/schemas/NMTopResultCardWrapper'
+        update:
+          $ref: '#/components/schemas/Update'
+
+    # ===========================================
+    # Container Components (with nested items)
+    # ===========================================
+    NMGridWrapper:
+      type: object
+      description: Grid layout component containing nested Component items
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Component'
+          default: []
+        next_id:
+          type: string
+          nullable: true
+          description: ID of the next focusable element
+        previous_id:
+          type: string
+          nullable: true
+          description: ID of the previous focusable element
+        more_link:
+          type: string
+          nullable: true
+          description: Navigation link to see more items
+        more_link_text:
+          type: string
+          nullable: true
+          description: Text label for the more link
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+          description: URL for fetching/updating this component's data
+        properties:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Additional arbitrary JSON properties
+
+    NMListWrapper:
+      type: object
+      description: List layout component containing nested Component items
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Component'
+          default: []
+        next_id:
+          type: string
+          nullable: true
+        previous_id:
+          type: string
+          nullable: true
+        more_link:
+          type: string
+          nullable: true
+        more_link_text:
+          type: string
+          nullable: true
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    NMContainerWrapper:
+      type: object
+      description: Generic container component for nested Component items
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Component'
+          default: []
+        next_id:
+          type: string
+          nullable: true
+        previous_id:
+          type: string
+          nullable: true
+        more_link:
+          type: string
+          nullable: true
+        more_link_text:
+          type: string
+          nullable: true
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    NMCarouselWrapper:
+      type: object
+      description: Carousel/slider component containing nested Component items
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Component'
+          default: []
+        next_id:
+          type: string
+          nullable: true
+        previous_id:
+          type: string
+          nullable: true
+        more_link:
+          type: string
+          nullable: true
+        more_link_text:
+          type: string
+          nullable: true
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    # ===========================================
+    # Card Components (with data objects)
+    # ===========================================
+    NMCardWrapper:
+      type: object
+      description: |
+        Standard media card component. Also used for NMGenreCard.
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        data:
+          $ref: '#/components/schemas/NMCardProps'
+        next_id:
+          type: string
+          nullable: true
+        previous_id:
+          type: string
+          nullable: true
+        more_link:
+          type: string
+          nullable: true
+        more_link_text:
+          type: string
+          nullable: true
+        watch:
+          type: boolean
+          default: false
+          description: Whether this item can be watched/played
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    NMCardProps:
+      type: object
+      description: Properties for NMCard and NMGenreCard components
+      required:
+        - id
+        - title
+        - titleSort
+        - link
+        - type
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        titleSort:
+          type: string
+          description: Sortable version of the title
+        overview:
+          type: string
+          nullable: true
+          description: Description/synopsis of the content
+        link:
+          type: string
+          description: Navigation link for this item
+        rating:
+          $ref: '#/components/schemas/Rating'
+        year:
+          type: integer
+          nullable: true
+        duration:
+          type: integer
+          nullable: true
+          description: Duration in minutes
+        type:
+          type: string
+          description: Content type (movie, tv, album, etc.)
+        backdrop:
+          type: string
+          nullable: true
+          description: URL to backdrop image
+        poster:
+          type: string
+          nullable: true
+          description: URL to poster image
+        logo:
+          type: string
+          nullable: true
+          description: URL to logo image
+        color_palette:
+          $ref: '#/components/schemas/ColorPalettes'
+        have_items:
+          type: integer
+          nullable: true
+          description: Number of items user has (for collections)
+        number_of_items:
+          type: integer
+          nullable: true
+          description: Total number of items in collection
+
+    NMHomeCardWrapper:
+      type: object
+      description: Featured home screen card with rich media data
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          nullable: true
+        data:
+          $ref: '#/components/schemas/NMHomeCardProps'
+        next_id:
+          type: string
+          nullable: true
+        previous_id:
+          type: string
+          nullable: true
+        more_link:
+          type: string
+          nullable: true
+        more_link_text:
+          type: string
+          nullable: true
+        watch:
+          type: boolean
+          default: false
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    NMHomeCardProps:
+      type: object
+      description: Properties for NMHomeCard - featured content with video support
+      required:
+        - id
+        - link
+      properties:
+        id:
+          oneOf:
+            - type: integer
+            - type: string
+          description: Flexible ID that can be either int or string
+        title:
+          type: string
+          nullable: true
+        overview:
+          type: string
+          nullable: true
+        link:
+          type: string
+        rating:
+          $ref: '#/components/schemas/Rating'
+        year:
+          type: integer
+          nullable: true
+        duration:
+          type: integer
+          nullable: true
+        backdrop:
+          type: string
+          nullable: true
+        poster:
+          type: string
+          nullable: true
+        logo:
+          type: string
+          nullable: true
+        color_palette:
+          $ref: '#/components/schemas/ColorPalettes'
+        have_items:
+          type: integer
+          nullable: true
+        number_of_items:
+          type: integer
+          nullable: true
+        media_type:
+          type: string
+          nullable: true
+          description: Type of media (movie, tv, etc.)
+        videos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtendedVideo'
+          default: []
+          description: Related video content (trailers, clips, etc.)
+        videoID:
+          type: string
+          nullable: true
+          description: ID of the primary video to display
+
+    NMMusicHomeCardWrapper:
+      type: object
+      description: Music home screen card for albums/artists/playlists
+      required:
+        - id
+        - data
+      properties:
+        id:
+          type: string
+        next_id:
+          type: string
+          nullable: true
+        previous_id:
+          type: string
+          nullable: true
+        more_link:
+          type: string
+          nullable: true
+        more_link_text:
+          type: string
+          nullable: true
+        watch:
+          type: boolean
+          default: false
+        data:
+          $ref: '#/components/schemas/NMMusicHomeCardProps'
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    NMMusicHomeCardProps:
+      type: object
+      description: Properties for NMMusicHomeCard
+      required:
+        - id
+        - name
+        - link
+      properties:
+        color_palette:
+          $ref: '#/components/schemas/ColorPalettes'
+        cover:
+          type: string
+          nullable: true
+          description: URL to cover/album art image
+        disambiguation:
+          type: string
+          nullable: true
+          description: Additional context to distinguish similar items
+        description:
+          type: string
+          nullable: true
+        favorite:
+          type: boolean
+          nullable: true
+        folder:
+          type: string
+          nullable: true
+          description: File system folder path
+        id:
+          type: string
+        libraryID:
+          type: string
+          nullable: true
+        name:
+          type: string
+        trackID:
+          type: string
+          nullable: true
+        type:
+          type: string
+          nullable: true
+          description: Content type (album, artist, playlist, etc.)
+        link:
+          type: string
+        tracks:
+          type: integer
+          format: int64
+          nullable: true
+          description: Number of tracks
+        year:
+          type: integer
+          nullable: true
+
+    NMMusicCardWrapper:
+      type: object
+      description: Music card component for albums/artists in lists
+      required:
+        - id
+        - data
+      properties:
+        id:
+          type: string
+        next_id:
+          type: string
+          nullable: true
+        previous_id:
+          type: string
+          nullable: true
+        more_link:
+          type: string
+          nullable: true
+        more_link_text:
+          type: string
+          nullable: true
+        watch:
+          type: boolean
+          default: false
+        data:
+          $ref: '#/components/schemas/NMMusicCardProps'
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    NMMusicCardProps:
+      type: object
+      description: Properties for NMMusicCard
+      required:
+        - id
+        - name
+        - link
+      properties:
+        color_palette:
+          $ref: '#/components/schemas/ColorPalettes'
+        cover:
+          type: string
+          nullable: true
+        logo:
+          type: string
+          nullable: true
+        disambiguation:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        favorite:
+          type: boolean
+          nullable: true
+        folder:
+          type: string
+          nullable: true
+        id:
+          type: string
+        libraryID:
+          type: string
+          nullable: true
+        name:
+          type: string
+        trackID:
+          type: string
+          nullable: true
+        type:
+          type: string
+          nullable: true
+        link:
+          type: string
+        tracks:
+          type: integer
+          format: int64
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+
+    NMTrackRowWrapper:
+      type: object
+      description: Track row component for displaying music tracks
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        data:
+          $ref: '#/components/schemas/NMTrackRowProps'
+        next_id:
+          type: string
+          nullable: true
+        previous_id:
+          type: string
+          nullable: true
+        more_link:
+          type: string
+          nullable: true
+        more_link_text:
+          type: string
+          nullable: true
+        watch:
+          type: boolean
+          default: false
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+        displayList:
+          type: array
+          items:
+            $ref: '#/components/schemas/NMTrackRowProps'
+          default: []
+          description: List of tracks to display
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    NMTrackRowProps:
+      type: object
+      description: Properties for a single music track
+      required:
+        - id
+        - name
+        - path
+        - link
+        - favorite
+        - type
+        - album_id
+        - album_name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          description: Track title
+        cover:
+          type: string
+          nullable: true
+          description: URL to album/track cover art
+        path:
+          type: string
+          description: Path to the audio file
+        link:
+          type: string
+          description: Navigation link
+        color_palette:
+          $ref: '#/components/schemas/ColorPalettes'
+        date:
+          type: string
+          nullable: true
+          description: Release date
+        disc:
+          type: integer
+          nullable: true
+          description: Disc number
+        duration:
+          type: string
+          nullable: true
+          description: Track duration (formatted string)
+        favorite:
+          type: boolean
+          description: Whether user has favorited this track
+        quality:
+          type: integer
+          nullable: true
+          description: Audio quality (bitrate)
+        track:
+          type: integer
+          nullable: true
+          description: Track number on disc
+        type:
+          type: string
+          description: Content type (track)
+        lyrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/Lyric'
+          nullable: true
+          description: Synchronized lyrics
+        album_id:
+          type: string
+          description: ID of the album this track belongs to
+        album_name:
+          type: string
+          description: Name of the album
+        artist_track:
+          type: array
+          items:
+            $ref: '#/components/schemas/Album'
+          default: []
+          description: Associated albums
+        artist_artist:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artist'
+          default: []
+          description: Associated artists
+
+    NMTopResultCardWrapper:
+      type: object
+      description: Top search result card component
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        data:
+          $ref: '#/components/schemas/NMTopResultCardProps'
+        next_id:
+          type: string
+          nullable: true
+        previous_id:
+          type: string
+          nullable: true
+        more_link:
+          type: string
+          nullable: true
+        more_link_text:
+          type: string
+          nullable: true
+        watch:
+          type: boolean
+          default: false
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    NMTopResultCardProps:
+      type: object
+      description: Properties for top search result
+      required:
+        - id
+        - title
+        - type
+        - link
+      properties:
+        color_palette:
+          $ref: '#/components/schemas/ColorPalettes'
+        cover:
+          type: string
+          nullable: true
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+          description: Result type (album, artist, track, movie, tv, etc.)
+        link:
+          type: string
+        artists:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artist'
+          default: []
+        albums:
+          type: array
+          items:
+            $ref: '#/components/schemas/Album'
+          default: []
+        track:
+          $ref: '#/components/schemas/PlaylistItem'
+
+    # ===========================================
+    # Supporting Types
+    # ===========================================
+    ContextMenuItem:
+      type: object
+      description: Item in a context menu
+      properties:
+        id:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+          description: Display text for the menu item
+        action:
+          type: string
+          nullable: true
+          description: Action identifier to execute
+        icon:
+          type: string
+          nullable: true
+          description: Icon name/identifier
+        destructive:
+          type: boolean
+          default: false
+          description: Whether this is a destructive action (shown in red)
+
+    Update:
+      type: object
+      description: Component update configuration
+      properties:
+        when:
+          type: string
+          nullable: true
+          description: Condition or interval for updates
+        link:
+          type: string
+          nullable: true
+          description: URL to fetch updates from
+        body:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          description: Request body parameters for update
+
+    Rating:
+      type: object
+      description: Content rating information
+      required:
+        - iso_3166_1
+        - rating
+      properties:
+        id:
+          type: integer
+          nullable: true
+        iso_3166_1:
+          type: string
+          description: Country code (ISO 3166-1)
+        rating:
+          type: string
+          description: Rating value (e.g., "PG-13", "R")
+        meaning:
+          type: string
+          nullable: true
+          description: Description of what the rating means
+        image:
+          type: string
+          nullable: true
+          description: URL to rating logo image
+        order:
+          type: integer
+          nullable: true
+          description: Sort order
+
+    ColorPalettes:
+      type: object
+      description: Color palette extracted from various image types
+      properties:
+        poster:
+          $ref: '#/components/schemas/PaletteColors'
+        backdrop:
+          $ref: '#/components/schemas/PaletteColors'
+        logo:
+          $ref: '#/components/schemas/PaletteColors'
+        image:
+          $ref: '#/components/schemas/PaletteColors'
+        cover:
+          $ref: '#/components/schemas/PaletteColors'
+        still:
+          $ref: '#/components/schemas/PaletteColors'
+        profile:
+          $ref: '#/components/schemas/PaletteColors'
+
+    PaletteColors:
+      type: object
+      description: Individual color palette values
+      properties:
+        dominant:
+          type: string
+          nullable: true
+          description: Hex color code for dominant color
+        primary:
+          type: string
+          nullable: true
+          description: Hex color code for primary color
+        lightVibrant:
+          type: string
+          nullable: true
+          description: Hex color code for light vibrant color
+        darkVibrant:
+          type: string
+          nullable: true
+          description: Hex color code for dark vibrant color
+        lightMuted:
+          type: string
+          nullable: true
+          description: Hex color code for light muted color
+        darkMuted:
+          type: string
+          nullable: true
+          description: Hex color code for dark muted color
+
+    ExtendedVideo:
+      type: object
+      description: Video content metadata (trailers, clips, etc.)
+      required:
+        - name
+        - src
+        - site
+        - size
+        - type
+      properties:
+        name:
+          type: string
+          description: Video title
+        key:
+          type: string
+          nullable: true
+          description: Video key/ID on the hosting site
+        src:
+          type: string
+          description: Source URL for the video
+        site:
+          type: string
+          description: Hosting site (YouTube, Vimeo, etc.)
+        size:
+          type: integer
+          description: Video quality (e.g., 1080, 720)
+        type:
+          type: string
+          description: Video type (Trailer, Teaser, Clip, etc.)
+        official:
+          type: boolean
+          default: false
+          description: Whether this is an official video
+        id:
+          type: string
+          nullable: true
+        iso_639_1:
+          type: string
+          nullable: true
+          description: Language code
+        iso_3166_1:
+          type: string
+          nullable: true
+          description: Country code
+        published_at:
+          type: string
+          nullable: true
+          description: Publication date (ISO 8601)
+
+    Artist:
+      type: object
+      description: Music artist information
+      required:
+        - id
+        - name
+        - link
+        - type
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        disambiguation:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        backdrop:
+          type: string
+          nullable: true
+        cover:
+          type: string
+          nullable: true
+        color_palette:
+          $ref: '#/components/schemas/ColorPalettes'
+        link:
+          type: string
+        type:
+          type: string
+          description: Always "artist"
+
+    Album:
+      type: object
+      description: Music album information
+      required:
+        - id
+        - name
+        - link
+        - type
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        backdrop:
+          type: string
+          nullable: true
+        cover:
+          type: string
+          nullable: true
+        disambiguation:
+          type: string
+          nullable: true
+        link:
+          type: string
+        color_palette:
+          $ref: '#/components/schemas/ColorPalettes'
+        description:
+          type: string
+          nullable: true
+        year:
+          type: integer
+          format: int64
+          nullable: true
+        album_artist:
+          type: string
+          nullable: true
+          description: Primary artist name
+        type:
+          type: string
+          description: Always "album"
+
+    PlaylistItem:
+      type: object
+      description: Track in a playlist
+      required:
+        - id
+        - name
+        - path
+        - link
+        - disc
+        - duration
+        - quality
+        - track
+        - type
+        - artist_track
+        - album_track
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        cover:
+          type: string
+          nullable: true
+        path:
+          type: string
+          description: File path to audio
+        link:
+          type: string
+        color_palette:
+          $ref: '#/components/schemas/ColorPalettes'
+        date:
+          type: string
+          nullable: true
+        disc:
+          type: integer
+        duration:
+          type: string
+          description: Duration as formatted string
+        favorite:
+          type: boolean
+          nullable: true
+        quality:
+          type: integer
+          description: Audio bitrate
+        track:
+          type: integer
+          description: Track number
+        lyrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/Lyric'
+          nullable: true
+        type:
+          type: string
+        artist_track:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artist'
+        album_track:
+          type: array
+          items:
+            $ref: '#/components/schemas/Album'
+        show:
+          type: string
+          nullable: true
+          description: Associated show (for soundtrack)
+
+    Lyric:
+      type: object
+      description: Synchronized lyric line
+      required:
+        - text
+        - rtl
+        - time
+      properties:
+        text:
+          type: string
+          description: Lyric text content
+        rtl:
+          type: boolean
+          description: Whether text is right-to-left
+        time:
+          $ref: '#/components/schemas/Time'
+
+    Time:
+      type: object
+      description: Time position for synchronized lyrics
+      required:
+        - total
+        - minutes
+        - seconds
+        - hundredths
+      properties:
+        total:
+          type: number
+          format: double
+          description: Total time in seconds
+        minutes:
+          type: integer
+          format: int64
+        seconds:
+          type: integer
+          format: int64
+        hundredths:
+          type: integer
+          format: int64
+
+    # ===========================================
+    # Response Wrapper
+    # ===========================================
+    ComponentsResponse:
+      type: object
+      description: Standard API response containing components
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Component'
+          description: Array of components to render
+
+paths:
+  /components:
+    get:
+      summary: Get components
+      description: |
+        Example endpoint showing how components would be returned.
+        The actual paths depend on your server implementation.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComponentsResponse'
+              examples:
+                gridWithCards:
+                  summary: Grid containing cards
+                  value:
+                    data:
+                      - id: "grid-1"
+                        component: "NMGrid"
+                        props:
+                          id: "grid-1"
+                          title: "Popular Movies"
+                          items:
+                            - id: "card-1"
+                              component: "NMCard"
+                              props:
+                                id: "card-props-1"
+                                title: "Example Movie"
+                                data:
+                                  id: "movie-123"
+                                  title: "Example Movie"
+                                  titleSort: "example movie"
+                                  link: "/movie/123"
+                                  type: "movie"
+                                  year: 2024
+                                  poster: "https://example.com/poster.jpg"
+                          more_link: "/movies"
+                          more_link_text: "See All"
+                homeCard:
+                  summary: Featured home card
+                  value:
+                    data:
+                      - id: "home-featured"
+                        component: "NMHomeCard"
+                        props:
+                          id: "home-featured"
+                          data:
+                            id: 456
+                            title: "Featured Show"
+                            overview: "An amazing show description"
+                            link: "/tv/456"
+                            media_type: "tv"
+                            backdrop: "https://example.com/backdrop.jpg"
+                            logo: "https://example.com/logo.png"
+                            videos:
+                              - name: "Official Trailer"
+                                src: "https://youtube.com/watch?v=abc"
+                                site: "YouTube"
+                                size: 1080
+                                type: "Trailer"
+                                official: true

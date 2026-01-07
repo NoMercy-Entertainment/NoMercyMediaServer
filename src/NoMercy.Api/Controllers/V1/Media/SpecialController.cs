@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -32,48 +33,43 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         List<Special> specials = await specialRepository.GetSpecialsAsync(userId, language, request.Take, request.Page);
 
         if (request.Version != "lolomo")
-            return Ok(new Render
-            {
-                Data =
-                [
-                    new ComponentBuilder<SpecialsResponseItemDto>()
-                        .WithComponent("NMGrid")
-                        .WithProps((props, _) => props
-                            .WithProperties(new(){})
-                            .WithItems(
-                                specials
-                                    .Select(special => new SpecialsResponseItemDto(special))
-                                    .Select(item =>
-                                        new ComponentBuilder<SpecialsResponseItemDto>()
-                                            .WithComponent("NMCard")
-                                            .WithProps((props, _) => props
-                                                .WithData(item)
-                                                .WithWatch())
-                                            .Build())))
-                        .Build()
-                ]
-            });
-
-        return Ok(new Render
         {
-            Data = Letters.Select(genre => new ComponentBuilder<NmCarouselDto<NmCardDto>>()
-                .WithComponent("NMCarousel")
-                .WithProps((props, _) => props
-                    .WithId(genre)
-                    .WithTitle(genre)
-                    .WithItems(
-                        specials.Select(movie => new NmCardDto(movie, country))
-                            .Where(item => genre == "#"
-                                ? Numbers.Any(p => item.Title.StartsWith(p))
-                                : item.Title.StartsWith(genre))
-                            .Select(item => new ComponentBuilder<NmCardDto>()
-                                .WithComponent("NMCard")
-                                .WithProps((props, _) => props
-                                    .WithData(item)
-                                    .WithWatch())
-                                .Build())))
-                .Build())
-        });
+            List<CardData> cardItems = specials
+                .Select(special => new CardData(special, country))
+                .ToList();
+
+            ComponentEnvelope response = Component.Grid()
+                .WithItems(cardItems.Select(item => Component.Card()
+                    .WithData(item)
+                    ))
+                ;
+
+            return Ok(ComponentResponse.From(response));
+        }
+
+        List<ComponentEnvelope> carousels = Letters
+            .Select(letter =>
+            {
+                List<CardData> letterItems = specials
+                    .Select(movie => new CardData(new NmCardDto(movie, country)))
+                    .Where(item => letter == "#"
+                        ? Numbers.Any(p => item.Title.StartsWith(p))
+                        : item.Title.StartsWith(letter))
+                    .ToList();
+
+                return Component.Carousel()
+                    .WithId(letter)
+                    .WithTitle(letter)
+                    .WithItems(letterItems.Select(item => Component.Card()
+                        .WithData(item)
+                        )).Build();
+            })
+            .ToList();
+
+        ComponentEnvelope containerResponse = Component.Container()
+            .WithItems(carousels);
+
+        return Ok(containerResponse);
     }
 
     [HttpGet]

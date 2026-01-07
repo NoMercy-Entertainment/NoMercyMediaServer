@@ -29,6 +29,6 @@ public record MusicPlaylistResponseItemDto
         CreatedAt = playlist.CreatedAt;
         Tracks = playlist.Tracks;
         Type = "playlists";
-        Link = new($"/music/playlists/{Id}", UriKind.Relative);
+        Link = new($"/music/playlist/{Id}", UriKind.Relative);
     }
 }

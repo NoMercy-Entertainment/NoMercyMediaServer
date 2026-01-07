@@ -34,7 +34,7 @@ public record TopMusicDto
         Id = albumTrack.Album.Id.ToString();
         Name = albumTrack.Album.Name;
         ColorPalette = albumTrack.Album.ColorPalette;
-        Type = "albums";
+        Type = "album";
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Cover = albumTrack.Album.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
@@ -45,7 +45,7 @@ public record TopMusicDto
         Id = artistTrack.Artist.Id.ToString();
         Name = artistTrack.Artist.Name;
         ColorPalette = artistTrack.Artist.ColorPalette;
-        Type = "artists";
+        Type = "artist";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
         Cover = artistTrack.Artist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
