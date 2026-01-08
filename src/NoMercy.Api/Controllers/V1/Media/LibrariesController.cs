@@ -8,7 +8,6 @@ using NoMercy.Api.Controllers.V1.Dashboard.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
 
@@ -22,8 +21,6 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class LibrariesController(
     LibraryRepository libraryRepository,
     CollectionRepository collectionRepository,
-    HomeRepository homeRepository,
-    MediaContext mediaContext,
     SpecialRepository specialRepository)
     : BaseController
 {
@@ -70,35 +67,24 @@ public class LibrariesController(
         Tv? tv = randomTvTask.Result;
         Movie? movie = randomMovieTask.Result;
 
-        // Fetch library data in parallel for all non-music libraries
+        // Fetch library data in parallel for all non-music libraries using optimized projection queries
         Library[] nonMusicLibraries = libraries.Where(lib => lib.Type != "music").ToArray();
 
-        // Each parallel task needs its own MediaContext for thread safety
-        Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = nonMusicLibraries
+        Task<(Library library, List<MovieCardDto> movies, List<TvCardDto> shows)>[] libraryDataTasks = nonMusicLibraries
             .Select(async library =>
             {
-                MediaContext context = new();
-                List<Movie> libraryMovies = [];
-                await foreach (Movie item in libraryRepository.GetLibraryMovies(context, userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc"))
-                {
-                    libraryMovies.Add(item);
-                }
-
-                List<Tv> libraryShows = [];
-                await foreach (Tv item in libraryRepository.GetLibraryShows(context, userId, library.Id, language, 10, 0, m => m.CreatedAt, "desc"))
-                {
-                    libraryShows.Add(item);
-                }
-
-                return (library, libraryMovies, libraryShows);
+                Task<List<MovieCardDto>> moviesTask = libraryRepository.GetLibraryMovieCardsAsync(userId, library.Id, country, 10, 0);
+                Task<List<TvCardDto>> showsTask = libraryRepository.GetLibraryTvCardsAsync(userId, library.Id, country, 10, 0);
+                await Task.WhenAll(moviesTask, showsTask);
+                return (library, moviesTask.Result, showsTask.Result);
             })
             .ToArray();
 
-        (Library library, List<Movie> movies, List<Tv> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
+        (Library library, List<MovieCardDto> movies, List<TvCardDto> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
 
         List<NmCarouselDto<NmCardDto>> list = [];
 
-        foreach ((Library library, List<Movie> libraryMovies, List<Tv> libraryShows) in libraryDataResults)
+        foreach ((Library library, List<MovieCardDto> libraryMovies, List<TvCardDto> libraryShows) in libraryDataResults)
         {
             Uri moreLink = library.LibraryMovies.Count + library.LibraryTvs.Count > 500
                 ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
@@ -208,32 +194,22 @@ public class LibrariesController(
         Tv? tv = randomTvTask.Result;
         Movie? movie = randomMovieTask.Result;
 
-        // Fetch library data in parallel for all libraries - each task needs its own MediaContext for thread safety
-        Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = libraries
+        // Fetch library data in parallel for all libraries using optimized projection queries
+        Task<(Library library, List<MovieCardDto> movies, List<TvCardDto> shows)>[] libraryDataTasks = libraries
             .Select(async library =>
             {
-                MediaContext context = new();
-                List<Movie> libraryMovies = [];
-                await foreach (Movie item in libraryRepository.GetLibraryMovies(context, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
-                {
-                    libraryMovies.Add(item);
-                }
-
-                List<Tv> libraryShows = [];
-                await foreach (Tv item in libraryRepository.GetLibraryShows(context, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
-                {
-                    libraryShows.Add(item);
-                }
-
-                return (library, libraryMovies, libraryShows);
+                Task<List<MovieCardDto>> moviesTask = libraryRepository.GetLibraryMovieCardsAsync(userId, library.Id, country, 6, 0);
+                Task<List<TvCardDto>> showsTask = libraryRepository.GetLibraryTvCardsAsync(userId, library.Id, country, 6, 0);
+                await Task.WhenAll(moviesTask, showsTask);
+                return (library, moviesTask.Result, showsTask.Result);
             })
             .ToArray();
 
-        (Library library, List<Movie> movies, List<Tv> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
+        (Library library, List<MovieCardDto> movies, List<TvCardDto> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
 
         List<NmCarouselDto<NmCardDto>> list = [];
 
-        foreach ((Library library, List<Movie> libraryMovies, List<Tv> libraryShows) in libraryDataResults)
+        foreach ((Library library, List<MovieCardDto> libraryMovies, List<TvCardDto> libraryShows) in libraryDataResults)
         {
             list.Add(new()
             {
@@ -327,35 +303,14 @@ public class LibrariesController(
         string language = Language();
         string country = Country();
 
-        // Fetch movies and shows in parallel - each task needs its own MediaContext for thread safety
-        Task<List<Movie>> moviesTask = Task.Run(async () =>
-        {
-            MediaContext context = new();
-            List<Movie> movies = [];
-            await foreach (Movie movie in libraryRepository
-                               .GetLibraryMovies(context, userId, libraryId, language, request.Take, request.Page, m => m.CreatedAt, "desc"))
-            {
-                movies.Add(movie);
-            }
-            return movies;
-        });
-
-        Task<List<Tv>> showsTask = Task.Run(async () =>
-        {
-            MediaContext context = new();
-            List<Tv> shows = [];
-            await foreach (Tv tv in libraryRepository
-                               .GetLibraryShows(context, userId, libraryId, language, request.Take, request.Page, m => m.CreatedAt, "desc"))
-            {
-                shows.Add(tv);
-            }
-            return shows;
-        });
+        // Fetch movies and shows in parallel using optimized projection queries
+        Task<List<MovieCardDto>> moviesTask = libraryRepository.GetLibraryMovieCardsAsync(userId, libraryId, country, request.Take, request.Page * request.Take);
+        Task<List<TvCardDto>> showsTask = libraryRepository.GetLibraryTvCardsAsync(userId, libraryId, country, request.Take, request.Page * request.Take);
 
         await Task.WhenAll(moviesTask, showsTask);
 
-        List<Movie> libraryMovies = moviesTask.Result;
-        List<Tv> libraryShows = showsTask.Result;
+        List<MovieCardDto> libraryMovies = moviesTask.Result;
+        List<TvCardDto> libraryShows = showsTask.Result;
 
         if (request.Version != "lolomo")
         {
@@ -402,8 +357,7 @@ public class LibrariesController(
                         index == Letters.Length - 1 ? null : Letters.ElementAtOrDefault(index + 1) ?? null)
                     .WithItems(carouselItems.Select(item => Component.Card()
                         .WithData(item)
-                        ))
-                    ;
+                        ));
             })
             .Where(c => c != null)
             .Cast<ComponentEnvelope>()
@@ -411,8 +365,7 @@ public class LibrariesController(
 
         ComponentEnvelope containerResponse = Component.Container()
             .WithId($"library-{libraryId}-letters")
-            .WithItems(carousels)
-            ;
+            .WithItems(carousels);
 
         return Ok(containerResponse);
     }

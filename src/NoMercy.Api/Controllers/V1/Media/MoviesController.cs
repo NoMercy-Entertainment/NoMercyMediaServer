@@ -39,7 +39,7 @@ public class MoviesController(
         string language = Language();
         string country = Country();
 
-        Movie? movie = await movieRepository.GetMovieDetailAsync(userId, id, language, country);
+        Movie? movie = await movieRepository.GetMovieDetailAsync(mediaContext, userId, id, language, country);
 
         if (movie is not null)
             return Ok(new InfoResponseDto

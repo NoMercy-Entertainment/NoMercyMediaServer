@@ -317,7 +317,7 @@ public record CardData
     public CardData(NmCardDto dto)
     {
         Id = dto.Id;
-        Title = dto.Title ?? string.Empty;
+        Title = dto.Title;
         TitleSort = dto.TitleSort ?? string.Empty;
         Overview = dto.Overview;
         Link = dto.Link;
@@ -342,6 +342,7 @@ public record CardData
         Backdrop = dto.Backdrop;
         Logo = dto.Logo;
         TitleSort = dto.TitleSort;
+        ColorPalette = dto.ColorPalette;
         Year = dto.FirstMovieYear;
         Type = "collection";
         Link = new($"/collection/{dto.Id}", UriKind.Relative);
@@ -351,11 +352,75 @@ public record CardData
 
         if (!string.IsNullOrEmpty(dto.CertificationRating) && !string.IsNullOrEmpty(dto.CertificationCountry))
         {
-            Rating = new RatingClass
+            Rating = new()
             {
                 Rating = dto.CertificationRating,
                 Iso31661 = dto.CertificationCountry,
                 Image = $"/{dto.CertificationCountry}/{dto.CertificationCountry}_{dto.CertificationRating}.svg"
+            };
+        }
+    }
+
+    public CardData(MovieCardDto movie, string country)
+    {
+        Id = movie.Id;
+        Title = movie.Title;
+        TitleSort = movie.TitleSort;
+        Overview = movie.Overview;
+        Poster = movie.Poster;
+        Backdrop = movie.Backdrop;
+        Logo = movie.Logo;
+        Year = movie.ReleaseDate.ParseYear();
+        Type = "movie";
+        CreatedAt = movie.CreatedAt;
+
+        Link = new($"/movie/{Id}", UriKind.Relative);
+        NumberOfItems = 1;
+        HaveItems = movie.VideoFileCount;
+
+        ColorPalette = !string.IsNullOrEmpty(movie.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(movie.ColorPalette)
+            : null;
+
+        if (movie.CertificationRating != null)
+        {
+            Rating = new()
+            {
+                Rating = movie.CertificationRating,
+                Iso31661 = movie.CertificationCountry,
+                Image = $"/{movie.CertificationCountry}/{movie.CertificationCountry}_{movie.CertificationRating}.svg"
+            };
+        }
+    }
+
+    public CardData(TvCardDto tv, string country)
+    {
+        Id = tv.Id;
+        Title = tv.Title;
+        TitleSort = tv.TitleSort;
+        Overview = tv.Overview;
+        Poster = tv.Poster;
+        Backdrop = tv.Backdrop;
+        Logo = tv.Logo;
+        Year = tv.FirstAirDate.ParseYear();
+        Type = "tv";
+        CreatedAt = tv.CreatedAt;
+
+        Link = new($"/tv/{Id}", UriKind.Relative);
+        NumberOfItems = tv.NumberOfEpisodes;
+        HaveItems = tv.EpisodesWithVideo;
+
+        ColorPalette = !string.IsNullOrEmpty(tv.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(tv.ColorPalette)
+            : null;
+
+        if (tv.CertificationRating != null)
+        {
+            Rating = new()
+            {
+                Rating = tv.CertificationRating,
+                Iso31661 = tv.CertificationCountry,
+                Image = $"/{tv.CertificationCountry}/{tv.CertificationCountry}_{tv.CertificationRating}.svg"
             };
         }
     }

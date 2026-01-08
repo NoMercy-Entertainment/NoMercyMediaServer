@@ -51,6 +51,8 @@ public class VideoPlaylistResponseDto
         VideoFile? videoFile = episode.VideoFiles.FirstOrDefault();
         if (videoFile is null) return;
 
+        if (episode.Tv is null) return;
+
         UserData? userData = videoFile.UserData.FirstOrDefault();
         string baseFolder = $"/{videoFile.Share}{videoFile.Folder}";
 
@@ -126,7 +128,7 @@ public class VideoPlaylistResponseDto
 
         Season = index is not null ? 0 : episode.SeasonNumber;
         Episode = index ?? episode.EpisodeNumber;
-        SeasonName = episode.Season.Title;
+        SeasonName = episode.Season?.Title;
         EpisodeId = episode.Id;
         Chapters = videoFile.Metadata?.Chapters ?? [];
         Fonts = videoFile.Metadata?.Fonts?.Select(font => new IFont

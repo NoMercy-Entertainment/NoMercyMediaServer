@@ -147,7 +147,7 @@ public record SpecialItemsDto
 
         Duration = tv.Duration * have * 60 ?? 0;
 
-        TotalDuration = tv.Episodes.Sum(item => item.Tv.Duration * 60 ?? 0);
+        TotalDuration = tv.Episodes.Sum(item => item.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds() ?? 0);
 
         // Watched = tv.Episodes
         //     .SelectMany(episode => episode!.VideoFiles

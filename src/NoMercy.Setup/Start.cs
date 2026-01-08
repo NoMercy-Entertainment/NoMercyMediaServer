@@ -63,17 +63,22 @@ public class Start
 
         await RunStartup(startupTasks);
 
-        Thread queues = new(new Task(() => QueueRunner.Initialize().Wait()).Start)
+        // Delay heavy initialization tasks to run in the background after server is ready
+        _ = Task.Run(async () =>
         {
-            Name = "Queue workers",
-            Priority = ThreadPriority.Lowest,
-            IsBackground = true
-        };
-        queues.Start();
+            // Wait a bit for the server to fully start and be responsive
+            await Task.Delay(TimeSpan.FromSeconds(3));
 
-        foreach (GpuAccelerator accelerator in FFmpegHardwareConfig.Accelerators)
-            Logger.Encoder(
-                $"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}");
+            // Initialize hardware acceleration detection in background
+            await FFmpegHardwareConfig.InitializeAsync();
+            foreach (GpuAccelerator accelerator in FFmpegHardwareConfig.Accelerators)
+                Logger.Encoder(
+                    $"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}");
+
+            // Start queue workers after a short delay
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            await QueueRunner.Initialize();
+        });
     }
 
     private static async Task RunStartup(List<TaskDelegate> startupTasks)

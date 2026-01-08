@@ -28,6 +28,10 @@ namespace NoMercy.Database.Models;
 [Index(nameof(ArtistId))]
 [Index(nameof(AlbumId))]
 [Index(nameof(TrackId))]
+[Index(nameof(Type), nameof(Iso6391))]
+[Index(nameof(MovieId), nameof(Type))]
+[Index(nameof(TvId), nameof(Type))]
+[Index(nameof(CollectionId), nameof(Type))]
 public class Image : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

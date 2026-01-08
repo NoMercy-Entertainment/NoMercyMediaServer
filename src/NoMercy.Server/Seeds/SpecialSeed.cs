@@ -222,5 +222,7 @@ public static class SpecialSeed
             {
                 Console.WriteLine(e);
             }
+
+        Logger.Setup("SpecialItems Upset complete");
     }
 }

@@ -5,6 +5,42 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.Data.Repositories;
 
+// Lightweight DTOs for library card display - only what's needed for NmCardDto
+public class MovieCardDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string TitleSort { get; set; } = string.Empty;
+    public string? Overview { get; set; }
+    public string? Poster { get; set; }
+    public string? Backdrop { get; set; }
+    public string? Logo { get; set; }
+    public DateTime? ReleaseDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string? ColorPalette { get; set; }
+    public int VideoFileCount { get; set; }
+    public string? CertificationRating { get; set; }
+    public string? CertificationCountry { get; set; }
+}
+
+public class TvCardDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string TitleSort { get; set; } = string.Empty;
+    public string? Overview { get; set; }
+    public string? Poster { get; set; }
+    public string? Backdrop { get; set; }
+    public string? Logo { get; set; }
+    public DateTime? FirstAirDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string? ColorPalette { get; set; }
+    public int NumberOfEpisodes { get; set; }
+    public int EpisodesWithVideo { get; set; }
+    public string? CertificationRating { get; set; }
+    public string? CertificationCountry { get; set; }
+}
+
 public class LibraryRepository(MediaContext context)
 {
     private static readonly string[] Letters = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
@@ -184,6 +220,79 @@ public class LibraryRepository(MediaContext context)
     //             .ThenInclude(c => c.Certification)
     //         .ToListAsync();
     // }
+
+    // Optimized query using projection - only fetches what NmCardDto needs
+    public Task<List<MovieCardDto>> GetLibraryMovieCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip)
+    {
+        return context.Movies
+            .AsNoTracking()
+            .Where(movie => movie.Library.Id == libraryId)
+            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(movie => movie.VideoFiles.Any(v => v.Folder != null))
+            .OrderByDescending(movie => movie.CreatedAt)
+            .Skip(skip)
+            .Take(take)
+            .Select(movie => new MovieCardDto
+            {
+                Id = movie.Id,
+                Title = movie.Title,
+                TitleSort = movie.TitleSort,
+                Overview = movie.Overview,
+                Poster = movie.Poster,
+                Backdrop = movie.Backdrop,
+                Logo = movie.Images.Where(i => i.Type == "logo").Select(i => i.FilePath).FirstOrDefault(),
+                ReleaseDate = movie.ReleaseDate,
+                CreatedAt = movie.CreatedAt,
+                ColorPalette = movie._colorPalette,
+                VideoFileCount = movie.VideoFiles.Count(v => v.Folder != null),
+                CertificationRating = movie.CertificationMovies
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Rating)
+                    .FirstOrDefault(),
+                CertificationCountry = movie.CertificationMovies
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Iso31661)
+                    .FirstOrDefault()
+            })
+            .ToListAsync();
+    }
+
+    // Optimized query using projection - only fetches what NmCardDto needs
+    public Task<List<TvCardDto>> GetLibraryTvCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip)
+    {
+        return context.Tvs
+            .AsNoTracking()
+            .Where(tv => tv.Library.Id == libraryId)
+            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
+            .OrderByDescending(tv => tv.CreatedAt)
+            .Skip(skip)
+            .Take(take)
+            .Select(tv => new TvCardDto
+            {
+                Id = tv.Id,
+                Title = tv.Title,
+                TitleSort = tv.TitleSort,
+                Overview = tv.Overview,
+                Poster = tv.Poster,
+                Backdrop = tv.Backdrop,
+                Logo = tv.Images.Where(i => i.Type == "logo").Select(i => i.FilePath).FirstOrDefault(),
+                FirstAirDate = tv.FirstAirDate,
+                CreatedAt = tv.CreatedAt,
+                ColorPalette = tv._colorPalette,
+                NumberOfEpisodes = tv.NumberOfEpisodes,
+                EpisodesWithVideo = tv.Episodes.Count(e => e.VideoFiles.Any(v => v.Folder != null)),
+                CertificationRating = tv.CertificationTvs
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Rating)
+                    .FirstOrDefault(),
+                CertificationCountry = tv.CertificationTvs
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Iso31661)
+                    .FirstOrDefault()
+            })
+            .ToListAsync();
+    }
 
     public Task<List<Movie>> GetPaginatedLibraryMovies(Guid userId, Ulid libraryId, string letter, string language,
         string country, int take, int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)

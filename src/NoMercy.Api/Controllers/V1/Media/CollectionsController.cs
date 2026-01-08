@@ -67,15 +67,13 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
                         index == 0 ? null : Letters[index - 1],
                         index == Letters.Length - 1 ? null : Letters[index + 1])
                     .WithItems(letterItems.Select(item => Component.Card()
-                        .WithData(item)
-                        ))
+                        .WithData(item)))
                     .Build();
             })
             .ToList();
 
         ComponentEnvelope containerResponse = Component.Container()
-            .WithItems(carousels)
-            ;
+            .WithItems(carousels);
 
         return Ok(containerResponse);
     }

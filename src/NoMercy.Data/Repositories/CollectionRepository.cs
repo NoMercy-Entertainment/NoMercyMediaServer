@@ -1,3 +1,4 @@
+using System.Drawing.Imaging;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -14,6 +15,7 @@ public class CollectionListDto
     public string? Overview { get; set; }
     public string? Poster { get; set; }
     public string? Backdrop { get; set; }
+    public IColorPalettes ColorPalette { get; set; }
     public string? Logo { get; set; }
     public DateTime CreatedAt { get; set; }
     public int? FirstMovieYear { get; set; }
@@ -69,6 +71,7 @@ public class CollectionRepository(MediaContext context)
                     ? collection.Translations.First(t => t.Iso6391 == language).Overview
                     : null,
                 Overview = collection.Overview,
+                ColorPalette = collection.ColorPalette,
                 Poster = collection.Poster,
                 Backdrop = collection.Backdrop,
                 Logo = collection.Images.FirstOrDefault(i => i.Type == "logo") != null

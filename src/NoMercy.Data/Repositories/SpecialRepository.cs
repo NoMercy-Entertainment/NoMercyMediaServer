@@ -27,26 +27,32 @@ public class SpecialRepository(MediaContext context)
 
         return specials;
     }
-
+    
     public Task<Special?> GetSpecialAsync(Guid userId, Ulid id)
     {
-        return context.Specials
+        return Task.FromResult(context.Specials
             .AsNoTracking()
             .Where(special => special.Id == id)
-            .Include(special => special.SpecialUser.Where(su => su.UserId == userId))
-            .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
-                .ThenInclude(v => v.UserData.Where(ud => ud.UserId == userId))
-            .Include(special => special.Items)
-                .ThenInclude(item => item.Episode)
-                .ThenInclude(e => e!.VideoFiles.Where(v => v.Folder != null))
-                .ThenInclude(v => v.UserData.Where(ud => ud.UserId == userId))
-            .Include(special => special.Items)
-                .ThenInclude(item => item.Movie)
-                .ThenInclude(m => m!.CertificationMovies.Where(c => c.Certification.Iso31661 == "US").Take(1))
-                .ThenInclude(c => c.Certification)
-            .FirstOrDefaultAsync();
+            .Include(special => special.Items
+                .OrderBy(specialItem => specialItem.Order)
+            )
+            .ThenInclude(specialItem => specialItem.Movie)
+            .ThenInclude(movie => movie!.VideoFiles)
+            .ThenInclude(file => file.UserData
+                .Where(userData => userData.UserId.Equals(userId))
+            )
+            .Include(special => special.Items
+                .OrderBy(specialItem => specialItem.Order)
+            )
+            .ThenInclude(specialItem => specialItem.Episode)
+            .ThenInclude(movie => movie!.VideoFiles)
+            .ThenInclude(file => file.UserData
+                .Where(userData => userData.UserId.Equals(userId))
+            )
+            .Include(special => special.SpecialUser
+                .Where(specialUser => specialUser.UserId.Equals(userId))
+            )
+            .FirstOrDefault());
     }
 
     public Task<List<Special>> GetSpecialItems(Guid userId, string? language, string country, int take = 1, int page = 0)

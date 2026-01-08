@@ -42,7 +42,7 @@ public class TvShowsController(
         string language = Language();
         string country = Country();
 
-        Tv? tv = await tvShowRepository.GetTvDetailAsync(userId, id, language, country);
+        Tv? tv = await tvShowRepository.GetTvAsync(mediaContext, userId, id, language, country);
 
         if (tv is not null)
             return Ok(new InfoResponseDto

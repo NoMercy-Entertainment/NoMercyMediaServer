@@ -15,6 +15,7 @@ namespace NoMercy.Database.Models;
 [Index(nameof(CollectionId))]
 [Index(nameof(SpecialId))]
 [Index(nameof(VideoFileId))]
+[Index(nameof(UserId), nameof(LastPlayedDate))]
 public class UserData : Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]

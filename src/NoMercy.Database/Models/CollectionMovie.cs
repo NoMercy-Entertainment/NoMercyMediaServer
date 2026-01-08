@@ -6,6 +6,7 @@ namespace NoMercy.Database.Models;
 [PrimaryKey(nameof(CollectionId), nameof(MovieId))]
 [Index(nameof(CollectionId))]
 [Index(nameof(MovieId))]
+[Index(nameof(MovieId), nameof(CollectionId))]
 public class CollectionMovie
 {
     [JsonProperty("collection_id")] public int CollectionId { get; set; }

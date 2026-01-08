@@ -17,16 +17,40 @@ public enum GpuVendor
 
 public static class FFmpegHardwareConfig
 {
-    public static List<GpuAccelerator> Accelerators { get; private set; } = [];
+    private static List<GpuAccelerator>? _accelerators;
+    private static bool _isInitialized;
+    private static readonly object InitLock = new();
 
-    static FFmpegHardwareConfig()
+    public static List<GpuAccelerator> Accelerators
     {
-        SetHardwareAccelerationFlags(Info.GpuVendors);
+        get
+        {
+            EnsureInitialized();
+            return _accelerators!;
+        }
+    }
+
+    private static void EnsureInitialized()
+    {
+        if (_isInitialized) return;
+        lock (InitLock)
+        {
+            if (_isInitialized) return;
+            _accelerators = [];
+            SetHardwareAccelerationFlags(Info.GpuVendors);
+            _isInitialized = true;
+        }
+    }
+
+    public static Task InitializeAsync()
+    {
+        return Task.Run(EnsureInitialized);
     }
 
     public static bool HasAccelerator(string accelerator)
     {
-        return Accelerators.Any(a => a.Accelerator == accelerator);
+        EnsureInitialized();
+        return _accelerators!.Any(a => a.Accelerator == accelerator);
     }
 
     private static bool CheckAccel(string arg)
@@ -51,7 +75,7 @@ public static class FFmpegHardwareConfig
         string arg = "-extra_hw_frames 3 -init_hw_device opencl=ocl";
         bool supported = CheckAccel(arg);
         if (supported)
-            Accelerators.Add(new(
+            _accelerators!.Add(new(
                 GpuVendor.Unknown,
                 arg,
                 "none"
@@ -83,7 +107,7 @@ public static class FFmpegHardwareConfig
                     $" -init_hw_device cuda=cu:{index} -filter_hw_device cu -extra_hw_frames 8 -hwaccel_output_format cuda";
                 bool supported = CheckAccel(arg);
                 if (supported)
-                    Accelerators.Add(new(
+                    _accelerators!.Add(new(
                         GpuVendor.Nvidia,
                         arg,
                         "cuda"
@@ -101,7 +125,7 @@ public static class FFmpegHardwareConfig
 
                 bool supported = CheckAccel(arg);
                 if (supported)
-                    Accelerators.Add(new(
+                    _accelerators!.Add(new(
                         GpuVendor.Amd,
                         arg,
                         filter: OperatingSystem.IsLinux() ? "hwupload" : "",
@@ -120,7 +144,7 @@ public static class FFmpegHardwareConfig
 
                 bool supported = CheckAccel(arg);
                 if (supported)
-                    Accelerators.Add(new(
+                    _accelerators!.Add(new(
                         GpuVendor.Intel,
                         arg,
                         filter: OperatingSystem.IsLinux() ? "hwupload" : "",
@@ -137,7 +161,7 @@ public static class FFmpegHardwareConfig
                     $" -init_hw_device videotoolbox=hw{index} -filter_hw_device hw -extra_hw_frames 8 -hwaccel_output_format videotoolbox";
                 bool supported = CheckAccel(arg);
                 if (supported)
-                    Accelerators.Add(new(
+                    _accelerators!.Add(new(
                         GpuVendor.Apple,
                         arg,
                         "videotoolbox"

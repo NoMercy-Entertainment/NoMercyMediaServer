@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
@@ -361,5 +362,69 @@ public class NmCardDto
         Year = tmdbMovie.ReleaseDate.ParseYear();
         NumberOfItems = 1;
         HaveItems = 0;
+    }
+
+    public NmCardDto(MovieCardDto movie, string country)
+    {
+        Id = movie.Id;
+        Title = movie.Title;
+        TitleSort = movie.TitleSort;
+        Overview = movie.Overview;
+        Poster = movie.Poster;
+        Backdrop = movie.Backdrop;
+        Logo = movie.Logo;
+        Year = movie.ReleaseDate.ParseYear();
+        Type = "movie";
+        CreatedAt = movie.CreatedAt;
+
+        Link = new($"/movie/{Id}", UriKind.Relative);
+        NumberOfItems = 1;
+        HaveItems = movie.VideoFileCount;
+
+        ColorPalette = !string.IsNullOrEmpty(movie.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(movie.ColorPalette)
+            : null;
+
+        if (movie.CertificationRating != null)
+        {
+            Rating = new()
+            {
+                Rating = movie.CertificationRating,
+                Iso31661 = movie.CertificationCountry,
+                Image = new($"/{movie.CertificationCountry}/{movie.CertificationCountry}_{movie.CertificationRating}.svg")
+            };
+        }
+    }
+
+    public NmCardDto(TvCardDto tv, string country)
+    {
+        Id = tv.Id;
+        Title = tv.Title;
+        TitleSort = tv.TitleSort;
+        Overview = tv.Overview;
+        Poster = tv.Poster;
+        Backdrop = tv.Backdrop;
+        Logo = tv.Logo;
+        Year = tv.FirstAirDate.ParseYear();
+        Type = "tv";
+        CreatedAt = tv.CreatedAt;
+
+        Link = new($"/tv/{Id}", UriKind.Relative);
+        NumberOfItems = tv.NumberOfEpisodes;
+        HaveItems = tv.EpisodesWithVideo;
+
+        ColorPalette = !string.IsNullOrEmpty(tv.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(tv.ColorPalette)
+            : null;
+
+        if (tv.CertificationRating != null)
+        {
+            Rating = new()
+            {
+                Rating = tv.CertificationRating,
+                Iso31661 = tv.CertificationCountry,
+                Image = new($"/{tv.CertificationCountry}/{tv.CertificationCountry}_{tv.CertificationRating}.svg")
+            };
+        }
     }
 }

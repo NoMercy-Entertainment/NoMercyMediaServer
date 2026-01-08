@@ -101,9 +101,10 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         // Fetch movies and TVs in parallel
         Task<List<SpecialItemsDto>> moviesTask = Task.Run(async () =>
         {
+            MediaContext mediaContext = new();
             List<SpecialItemsDto> movieItems = [];
             IAsyncEnumerable<Movie> specialMovies =
-                SpecialResponseDto.GetSpecialMovies(context, userId, movieIds, language, country);
+                SpecialResponseDto.GetSpecialMovies(mediaContext, userId, movieIds, language, country);
             await foreach (Movie movie in specialMovies)
                 movieItems.Add(new(movie));
             return movieItems;
@@ -111,9 +112,10 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
         Task<List<SpecialItemsDto>> tvsTask = Task.Run(async () =>
         {
+            MediaContext mediaContext = new();
             List<SpecialItemsDto> tvItems = [];
             IAsyncEnumerable<Tv> specialTvs =
-                SpecialResponseDto.GetSpecialTvs(context, userId, tvIds, language, country);
+                SpecialResponseDto.GetSpecialTvs(mediaContext, userId, tvIds, language, country);
             await foreach (Tv tv in specialTvs)
                 tvItems.Add(new(tv));
             return tvItems;

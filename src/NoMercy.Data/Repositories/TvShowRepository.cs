@@ -12,75 +12,86 @@ namespace NoMercy.Data.Repositories;
 
 public class TvShowRepository(MediaContext context)
 {
-    public Task<Tv?> GetTvAsync(Guid userId, int id, string language, string country)
-    {
-        return context.Tvs
-            .AsNoTracking()
-            .Where(tv => tv.Id == id)
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Include(tv => tv.TvUser.Where(tu => tu.UserId == userId))
-            .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
-            .Include(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
-            .Include(tv => tv.CertificationTvs
-                .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
-                .Take(1))
-                .ThenInclude(c => c.Certification)
-            .Include(tv => tv.Episodes.Where(e => e.SeasonNumber > 0 && e.VideoFiles.Any(v => v.Folder != null)))
-                .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
-                .ThenInclude(v => v.UserData.Where(ud => ud.UserId == userId))
-            .FirstOrDefaultAsync();
-    }
-
-    public Task<Tv?> GetTvDetailAsync(Guid userId, int id, string language, string country)
-    {
-        return context.Tvs
-            .AsNoTracking()
-            .Where(tv => tv.Id == id)
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Include(tv => tv.TvUser.Where(tu => tu.UserId == userId))
-            .Include(tv => tv.Library)
+    
+    public readonly Func<MediaContext, Guid, int, string, string, Task<Tv?>> GetTvAsync =
+        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, int id, string language, string country) =>
+            mediaContext.Tvs.AsNoTracking()
+                .Where(tv => tv.Id == id)
+                .Where(tv => tv.Library.LibraryUsers
+                    .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+                .Include(tv => tv.TvUser)
+                .Include(tv => tv.Library)
                 .ThenInclude(library => library.LibraryUsers)
-            .Include(tv => tv.Media.Where(m => m.Type == "Trailer").Take(5))
-            .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
-            .Include(tv => tv.Images
-                .Where(i => (i.Type == "logo" && i.Iso6391 == "en") ||
-                            ((i.Type == "backdrop" || i.Type == "poster") && (i.Iso6391 == "en" || i.Iso6391 == null))))
-            .Include(tv => tv.CertificationTvs
-                .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country))
-                .ThenInclude(c => c.Certification)
-            .Include(tv => tv.Creators)
-                .ThenInclude(c => c.Person)
-            .Include(tv => tv.GenreTvs)
-                .ThenInclude(g => g.Genre)
-            .Include(tv => tv.KeywordTvs)
-                .ThenInclude(k => k.Keyword)
-            .Include(tv => tv.Cast.Take(20))
-                .ThenInclude(c => c.Person)
-            .Include(tv => tv.Cast)
-                .ThenInclude(c => c.Role)
-            .Include(tv => tv.Crew.Take(20))
-                .ThenInclude(c => c.Person)
-            .Include(tv => tv.Crew)
-                .ThenInclude(c => c.Job)
-            .Include(tv => tv.Seasons)
-                .ThenInclude(s => s.Translations.Where(t => t.Iso6391 == language))
-            .Include(tv => tv.Seasons)
-                .ThenInclude(s => s.Episodes)
-                .ThenInclude(e => e.Translations.Where(t => t.Iso6391 == language))
-            .Include(tv => tv.Seasons)
-                .ThenInclude(s => s.Episodes)
-                .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
-                .ThenInclude(v => v.UserData.Where(ud => ud.UserId == userId))
-            .Include(tv => tv.RecommendationFrom)
-            .Include(tv => tv.SimilarFrom)
-            .Include(tv => tv.WatchProviderMedia.Where(w => w.CountryCode == country))
-                .ThenInclude(w => w.WatchProvider)
-            .Include(tv => tv.NetworkTvs)
-                .ThenInclude(n => n.Network)
-            .Include(tv => tv.CompaniesTvs)
-                .ThenInclude(c => c.Company)
-            .FirstOrDefaultAsync();
-    }
+                .Include(tv => tv.Media
+                    .Where(media => media.Type == "Trailer"))
+                .Include(tv => tv.AlternativeTitles)
+                .Include(tv => tv.Translations
+                    .Where(translation => translation.Iso6391 == language))
+                .Include(tv => tv.Images
+                    .Where(image =>
+                        (image.Type == "logo" && image.Iso6391 == "en")
+                        || ((image.Type == "backdrop" || image.Type == "poster") &&
+                            (image.Iso6391 == "en" || image.Iso6391 == null))
+                    )
+                    .OrderByDescending(image => image.VoteAverage)
+                )
+                .Include(tv => tv.CertificationTvs
+                    .Where(certification => certification.Certification.Iso31661 == country ||
+                                            certification.Certification.Iso31661 == "US"))
+                .ThenInclude(certificationTv => certificationTv.Certification)
+                .Include(tv => tv.Creators)
+                    .ThenInclude(genreTv => genreTv.Person)
+                .Include(tv => tv.GenreTvs)
+                    .ThenInclude(genreTv => genreTv.Genre)
+                .Include(tv => tv.KeywordTvs)
+                    .ThenInclude(keywordTv => keywordTv.Keyword)
+                .Include(tv => tv.Cast)
+                    .ThenInclude(castTv => castTv.Person)
+                .Include(tv => tv.Cast)
+                    .ThenInclude(castTv => castTv.Role)
+                .Include(tv => tv.Crew)
+                    .ThenInclude(crewTv => crewTv.Person)
+                .Include(tv => tv.Crew)
+                    .ThenInclude(crewTv => crewTv.Job)
+                .Include(tv => tv.Seasons)
+                .ThenInclude(season => season.Translations
+                    .Where(translation => translation.Iso6391 == language)
+                )
+                .Include(tv => tv.Seasons)
+                    .ThenInclude(season => season.Episodes)
+                    .ThenInclude(episode => episode.Translations
+                        .Where(translation => translation.Iso6391 == language)
+                    )
+                .Include(tv => tv.Seasons)
+                    .ThenInclude(season => season.Episodes)
+                    .ThenInclude(episode => episode.VideoFiles)
+                    .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId))
+                    )
+                .Include(tv => tv.Episodes)
+                    .ThenInclude(episode => episode.VideoFiles)
+                    .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
+                .Include(tv => tv.RecommendationFrom)
+                .Include(tv => tv.SimilarFrom)
+                .Include(tv => tv.Episodes)
+                    .ThenInclude(episode => episode.Cast)
+                    .ThenInclude(castTv => castTv.Person)
+                .Include(tv => tv.Episodes)
+                    .ThenInclude(episode => episode.Cast)
+                    .ThenInclude(castTv => castTv.Role)
+                .Include(tv => tv.Episodes)
+                    .ThenInclude(episode => episode.Crew)
+                    .ThenInclude(crewTv => crewTv.Person)
+                .Include(tv => tv.Episodes)
+                    .ThenInclude(episode => episode.Crew)
+                    .ThenInclude(crewTv => crewTv.Job)
+                .Include(tv => tv.WatchProviderMedia
+                    .Where(wpm => wpm.CountryCode == country))
+                    .ThenInclude(wpm => wpm.WatchProvider)
+                .Include(tv => tv.NetworkTvs)
+                    .ThenInclude(ntv => ntv.Network)
+                .Include(tv => tv.CompaniesTvs)
+                    .ThenInclude(ctv => ctv.Company)
+                .FirstOrDefault());
 
     public Task<bool> GetTvAvailableAsync(Guid userId, int id)
     {
@@ -91,32 +102,56 @@ public class TvShowRepository(MediaContext context)
             .AnyAsync(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)));
     }
 
-    public Task<Tv?> GetTvPlaylistAsync(Guid userId, int id, string language, string country)
+    public async Task<Tv?> GetTvPlaylistAsync(Guid userId, int id, string language, string country)
     {
-        return context.Tvs
-            .AsNoTracking()
+        return await context.Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
-            .Include(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
-            .Include(tv => tv.Media.Where(m => m.Type == "video").Take(3))
-            .Include(tv => tv.CertificationTvs
-                .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
-                .Take(1))
-                .ThenInclude(c => c.Certification)
+            .Where(tv => tv.Library.LibraryUsers
+                .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+            .Include(tv => tv.Seasons.OrderBy(season => season.SeasonNumber))
+                .ThenInclude(season => season.Episodes.OrderBy(episode => episode.EpisodeNumber))
+            .Include(tv => tv.Translations
+                .Where(translation => translation.Iso6391 == language))
             .Include(tv => tv.Seasons)
-                .ThenInclude(s => s.Translations.Where(t => t.Iso6391 == language))
+                .ThenInclude(season => season.Episodes)
+                .ThenInclude(tv => tv.Tv)
+                .ThenInclude(tv => tv.Translations
+                    .Where(translation => translation.Iso6391 == language))
             .Include(tv => tv.Seasons)
-                .ThenInclude(s => s.Episodes)
-                .ThenInclude(e => e.Translations.Where(t => t.Iso6391 == language))
+                .ThenInclude(season => season.Episodes)
+                .ThenInclude(tv => tv.Tv)
+                .ThenInclude(tv => tv.Media
+                    .Where(media => media.Type == "video"))
             .Include(tv => tv.Seasons)
-                .ThenInclude(s => s.Episodes)
-                .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
-                .ThenInclude(v => v.Metadata)
+                .ThenInclude(season => season.Episodes)
+                .ThenInclude(tv => tv.Tv)
+                .ThenInclude(tv => tv.Images
+                    .Where(image => image.Type == "logo" && image.Iso6391 == "en" && image.Width > image.Height))
             .Include(tv => tv.Seasons)
-                .ThenInclude(s => s.Episodes)
-                .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
-                .ThenInclude(v => v.UserData.Where(ud => ud.UserId == userId && ud.Type == "tv"))
+                .ThenInclude(season => season.Episodes)
+                .ThenInclude(tv => tv.VideoFiles)
+                .ThenInclude(videoFile => videoFile.Metadata)
+            .Include(tv => tv.Seasons)
+                .ThenInclude(season => season.Episodes)
+                .ThenInclude(tv => tv.VideoFiles)
+                .ThenInclude(file => file.UserData
+                    .Where(userData => userData.UserId.Equals(userId) && userData.Type == "tv"))
+            .Include(tv => tv.Seasons)
+                .ThenInclude(season => season.Translations
+                    .Where(translation => translation.Iso6391 == language))
+            .Include(tv => tv.Seasons)
+                .ThenInclude(season => season.Episodes)
+                .ThenInclude(episode => episode.Translations
+                    .Where(translation => translation.Iso6391 == language)
+                )
+            
+            .Include(tv => tv.Seasons)
+            .ThenInclude(season => season.Episodes)
+            .ThenInclude(tv => tv.Tv)
+            .ThenInclude(tv => tv.CertificationTvs
+                .Where(certification => certification.Certification.Iso31661 == country ||
+                                        certification.Certification.Iso31661 == "US"))
+            .ThenInclude(certificationTv => certificationTv.Certification)
             .FirstOrDefaultAsync();
     }
 

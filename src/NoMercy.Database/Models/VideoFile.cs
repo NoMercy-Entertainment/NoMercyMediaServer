@@ -11,6 +11,8 @@ namespace NoMercy.Database.Models;
 [Index(nameof(Folder))]
 [Index(nameof(Quality))]
 [Index(nameof(Duration))]
+[Index(nameof(MovieId), nameof(Folder))]
+[Index(nameof(EpisodeId), nameof(Folder))]
 public class VideoFile : VideoTracks
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
