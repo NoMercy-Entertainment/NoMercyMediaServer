@@ -31,6 +31,8 @@ public record TopResultCardData
         Link = $"/music/artist/{artist.Id}";
         Cover = artist.Cover;
         ColorPalette = artist.ColorPalette;
+        Link = $"/music/album/{artist.Id}";
+        Type = "album";
     }
 
     public TopResultCardData(Album album)
@@ -44,7 +46,9 @@ public record TopResultCardData
         Artists = album.AlbumArtist.Select(aa => new TopResultArtist
         {
             Id = aa.ArtistId.ToString(),
-            Name = aa.Artist.Name
+            Name = aa.Artist.Name,
+            Link = new($"/music/artist/{aa.ArtistId}", UriKind.Relative),
+            Type = "artist"
         });
     }
 
@@ -59,19 +63,42 @@ public record TopResultCardData
         Artists = track.ArtistTrack.Select(at => new TopResultArtist
         {
             Id = at.ArtistId.ToString(),
-            Name = at.Artist.Name
+            Name = at.Artist.Name,
+            Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+            Type = "artist"
         });
         Albums = track.AlbumTrack.Select(at => new TopResultAlbum
         {
             Id = at.AlbumId.ToString(),
-            Name = at.Album.Name
+            Name = at.Album.Name,
+            Link = new($"/music/album/{at.AlbumId}", UriKind.Relative),
+            Type = "album"
         });
         Track = new()
         {
             Id = track.Id.ToString(),
             Name = track.Name,
             Duration = track.Duration,
-            Path = track.Filename
+            Path = track.Filename,
+            Link = new($"/music/tracks/{track.Id}", UriKind.Relative),
+            Type = "track",
+            Disc = track.DiscNumber,
+            Track = track.TrackNumber,
+            Quality = track.Quality,
+            Artists = track.ArtistTrack.Select(at => new TopResultArtist 
+            {
+                Id = at.ArtistId.ToString(),
+                Name = at.Artist.Name,
+                Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+                Type = "artist"
+            }),
+            Albums = track.AlbumTrack.Select(at => new TopResultAlbum 
+            {
+                Id = at.AlbumId.ToString(),
+                Name = at.Album.Name,
+                Link = new($"/music/album/{at.AlbumId}", UriKind.Relative),
+                Type = "album"
+            })
         };
     }
 }
@@ -80,12 +107,16 @@ public record TopResultArtist
 {
     [JsonProperty("id")] public string Id { get; set; } = null!;
     [JsonProperty("name")] public string Name { get; set; } = null!;
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
+    [JsonProperty("type")] public string Type { get; set; } = null!;
 }
 
 public record TopResultAlbum
 {
     [JsonProperty("id")] public string Id { get; set; } = null!;
     [JsonProperty("name")] public string Name { get; set; } = null!;
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
+    [JsonProperty("type")] public string Type { get; set; } = null!;
 }
 
 public record TopResultTrack
@@ -94,4 +125,11 @@ public record TopResultTrack
     [JsonProperty("name")] public string Name { get; set; } = null!;
     [JsonProperty("duration")] public string? Duration { get; set; }
     [JsonProperty("path")] public string? Path { get; set; }
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
+    [JsonProperty("type")] public string Type { get; set; } = null!;
+    [JsonProperty("disc")] public int Disc { get; set; }
+    [JsonProperty("track")] public int Track { get; set; }
+    [JsonProperty("quality")] public int? Quality { get; set; }
+    [JsonProperty("artist_track")] public IEnumerable<TopResultArtist> Artists { get; set; } = [];
+    [JsonProperty("album_track")] public IEnumerable<TopResultAlbum> Albums { get; set; } = [];
 }

@@ -26,8 +26,8 @@ public record TrackRowData
     [JsonProperty("lyrics")] public IEnumerable<LyricLine>? Lyrics { get; set; }
     [JsonProperty("album_id")] public string AlbumId { get; set; } = null!;
     [JsonProperty("album_name")] public string AlbumName { get; set; } = null!;
-    [JsonProperty("artist_track")] public IEnumerable<TrackArtist> AlbumTrack { get; set; } = [];
-    [JsonProperty("artist_artist")] public IEnumerable<TrackArtist> ArtistTrack { get; set; } = [];
+    [JsonProperty("album_track")] public IEnumerable<TrackArtist> AlbumTrack { get; set; } = [];
+    [JsonProperty("artist_track")] public IEnumerable<TrackArtist> ArtistTrack { get; set; } = [];
 
     public TrackRowData()
     {
@@ -53,7 +53,9 @@ public record TrackRowData
         ArtistTrack = track.ArtistTrack.Select(at => new TrackArtist
         {
             Id = at.ArtistId.ToString(),
-            Name = at.Artist.Name
+            Name = at.Artist.Name,
+            Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+            Type = "artist"
         });
     }
 
@@ -80,14 +82,18 @@ public record TrackRowData
             .Select(at => new TrackArtist
             {
                 Id = at.ArtistId.ToString(),
-                Name = at.Artist.Name
+                Name = at.Artist.Name,
+                Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
+                Type = "artist"
             });
         AlbumTrack = track.AlbumTrack
             .DistinctBy(at => at.AlbumId)
             .Select(at => new TrackArtist
             {
                 Id = at.AlbumId.ToString(),
-                Name = at.Album.Name
+                Name = at.Album.Name,
+                Link = new($"/music/album/{at.AlbumId}", UriKind.Relative),
+                Type = "album"
             });
     }
 }
@@ -96,10 +102,14 @@ public record LyricLine
 {
     [JsonProperty("time")] public double Time { get; set; }
     [JsonProperty("text")] public string Text { get; set; } = null!;
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
+    [JsonProperty("type")] public string Type { get; set; } = null!;
 }
 
 public record TrackArtist
 {
     [JsonProperty("id")] public string Id { get; set; } = null!;
     [JsonProperty("name")] public string Name { get; set; } = null!;
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
+    [JsonProperty("type")] public string Type { get; set; } = null!;
 }

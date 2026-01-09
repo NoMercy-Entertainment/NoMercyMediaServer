@@ -163,36 +163,52 @@ public class SearchController : BaseController
         return Ok(ComponentResponse.From(
             Component.Container()
                 .WithId("search-results")
+                .WithProperties(new()
+                {
+                    { "horizontalPadding", 0 },
+                })
                 .WithItems(
                     Component.TopResultCard(topResultData!)
                         .WithId("top-result")
                         .WithTitle("Top Result".Localize())
                         .Build(),
+                    
                     Component.List()
                         .WithId("tracks")
+                        .WithProperties(new()
+                        {
+                            { "paddingTop", 0 },
+                            { "paddingBottom", 0 },
+                            { "paddingStart", 0 },
+                            { "paddingEnd", 0 }
+                        })
                         .WithTitle("Tracks".Localize())
-                        .WithItems(songResults.Select(track =>
-                            Component.TrackRow(track)
-                                .WithDisplayList(songResults)
-                                ))
-                        )
-                ,
+                        .WithItems(songResults
+                            .Select(track => Component
+                                .TrackRow(track)
+                                .WithProperties(new()
+                                {
+                                    { "paddingTop", 0 },
+                                    { "paddingBottom", 0 },
+                                    { "paddingStart", 0 },
+                                    { "paddingEnd", 0 }
+                                })
+                                .WithDisplayList(songResults)))),
+            
             Component.Carousel()
                 .WithId("artists")
                 .WithTitle("Artist".Localize())
                 .WithItems(artists
                     .GroupBy(artist => artist.Id)
                     .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new(item))))
-                ,
+                    .Select(item => Component.MusicCard(new(item)))),
             Component.Carousel()
                 .WithId("albums")
                 .WithTitle("Albums".Localize())
                 .WithItems(albums
                     .GroupBy(album => album.Id)
                     .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new(item))))
-                ,
+                    .Select(item => Component.MusicCard(new(item)))),
             Component.Carousel()
                 .WithId("playlists")
                 .WithTitle("Playlists".Localize())
@@ -200,7 +216,7 @@ public class SearchController : BaseController
                     .GroupBy(playlist => playlist.Id)
                     .Select(group => group.First())
                     .Select(item => Component.MusicCard(new(item))))
-                ));
+            ));
     }
 
     [HttpGet("music/tv")]

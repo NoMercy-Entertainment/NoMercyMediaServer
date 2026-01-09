@@ -432,4 +432,10 @@ public class TrackRowComponentBuilder : IComponentBuilder
     }
 
     public static implicit operator ComponentEnvelope(TrackRowComponentBuilder builder) => builder;
+
+    public TrackRowComponentBuilder WithProperties(Dictionary<string, dynamic>? properties)
+    {
+        _props.Properties = properties;
+        return this;
+    }
 }
