@@ -35,7 +35,7 @@ public record MusicCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
-        Cover = album.Cover;
+        Cover = $"/images/music{album.Cover}";
         Type = "album";
         Link = $"/music/album/{album.Id}";
         ColorPalette = album.ColorPalette;
@@ -48,7 +48,7 @@ public record MusicCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
-        Cover = artist.Cover;
+        Cover = $"/images/music{artist.Cover}";
         Type = "artist";
         Link = $"/music/artist/{artist.Id}";
         ColorPalette = artist.ColorPalette;
@@ -62,7 +62,7 @@ public record MusicCardData
     {
         Id = playlist.Id.ToString();
         Name = playlist.Name;
-        Cover = playlist.Cover;
+        Cover = $"/images/music{playlist.Cover}";
         Type = "playlist";
         Link = $"/music/playlist/{playlist.Id}";
         Tracks = playlist.Tracks.Count;
@@ -129,7 +129,7 @@ public record MusicHomeCardData
     {
         Id = album.Id.ToString();
         Name = album.Name;
-        Cover = album.Cover;
+        Cover = $"/images/music{album.Cover}";
         Type = "album";
         Link = $"/music/album/{album.Id}";
         ColorPalette = album.ColorPalette;
@@ -142,7 +142,7 @@ public record MusicHomeCardData
     {
         Id = artist.Id.ToString();
         Name = artist.Name;
-        Cover = artist.Cover;
+        Cover = $"/images/music{artist.Cover}";
         Type = "artist";
         Link = $"/music/artist/{artist.Id}";
         ColorPalette = artist.ColorPalette;

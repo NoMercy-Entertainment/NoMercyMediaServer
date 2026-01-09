@@ -33,7 +33,7 @@ public record CardData
     {
     }
 
-    public CardData(Movie movie, string country)
+    public CardData(Movie movie, string country, bool watch = false)
     {
         string? title = movie.Translations.FirstOrDefault()?.Title;
         string? overview = movie.Translations.FirstOrDefault()?.Overview;
@@ -47,7 +47,7 @@ public record CardData
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
         Type = "movie";
-        Link = new($"/movie/{Id}", UriKind.Relative);
+        Link = watch ? new($"/movie/{Id}/watch", UriKind.Relative) : new($"/movie/{Id}", UriKind.Relative);
         NumberOfItems = 1;
         HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
         ColorPalette = movie.ColorPalette;
@@ -64,7 +64,7 @@ public record CardData
             .FirstOrDefault();
     }
 
-    public CardData(Tv tv, string country)
+    public CardData(Tv tv, string country, bool watch = false)
     {
         string? title = tv.Translations.FirstOrDefault()?.Title;
         string? overview = tv.Translations.FirstOrDefault()?.Overview;
@@ -79,7 +79,7 @@ public record CardData
         Year = tv.FirstAirDate.ParseYear();
         Type = "tv";
         CreatedAt = tv.CreatedAt;
-        Link = new($"/tv/{Id}", UriKind.Relative);
+        Link = watch ? new($"/tv/{Id}/watch", UriKind.Relative) : new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.Episodes.Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
         ColorPalette = tv.ColorPalette;
@@ -95,7 +95,7 @@ public record CardData
             .FirstOrDefault();
     }
 
-    public CardData(Collection collection, string country)
+    public CardData(Collection collection, string country, bool watch = false)
     {
         string? title = collection.Translations.FirstOrDefault()?.Title;
         string? overview = collection.Translations.FirstOrDefault()?.Overview;
@@ -109,7 +109,8 @@ public record CardData
         TitleSort = collection.Title.TitleSort(collection.CollectionMovies.MinBy(m => m.Movie.ReleaseDate)?.Movie.ReleaseDate);
         Year = collection.CollectionMovies.MinBy(m => m.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();
         Type = "collection";
-        Link = new($"/collection/{Id}", UriKind.Relative);
+        
+        Link = watch ? new($"/collection/{Id}/watch", UriKind.Relative) : new($"/collection/{Id}", UriKind.Relative);
         NumberOfItems = collection.CollectionMovies.Count;
         HaveItems = collection.CollectionMovies.Count(m => m.Movie.VideoFiles.Any(v => v.Folder != null));
         ColorPalette = collection.ColorPalette;
@@ -127,7 +128,7 @@ public record CardData
             .FirstOrDefault();
     }
 
-    public CardData(Special special, string country)
+    public CardData(Special special, string country, bool watch = false)
     {
         Id = special.Id;
         Title = special.Title;
@@ -139,7 +140,7 @@ public record CardData
         Year = special.Items.MinBy(m => m.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
                ?? special.Items.Select(t => t.Episode?.Tv).FirstOrDefault()?.FirstAirDate.ParseYear();
         Type = "special";
-        Link = new($"/specials/{Id}", UriKind.Relative);
+        Link = watch ? new($"/specials/{Id}/watch", UriKind.Relative) : new($"/specials/{Id}", UriKind.Relative);
         NumberOfItems = special.Items.Count;
         CreatedAt = special.CreatedAt;
 
@@ -333,7 +334,7 @@ public record CardData
         NumberOfItems = dto.NumberOfItems;
     }
 
-    public CardData(CollectionListDto dto)
+    public CardData(CollectionListDto dto, bool watch = false)
     {
         Id = dto.Id;
         Title = !string.IsNullOrEmpty(dto.TranslatedTitle) ? dto.TranslatedTitle : dto.Title;
@@ -345,7 +346,7 @@ public record CardData
         ColorPalette = dto.ColorPalette;
         Year = dto.FirstMovieYear;
         Type = "collection";
-        Link = new($"/collection/{dto.Id}", UriKind.Relative);
+        Link = watch ? new($"/collection/{dto.Id}/watch", UriKind.Relative) : new($"/collection/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.TotalMovies;
         HaveItems = dto.MoviesWithVideo;
         CreatedAt = dto.CreatedAt;
@@ -361,7 +362,7 @@ public record CardData
         }
     }
 
-    public CardData(MovieCardDto movie, string country)
+    public CardData(MovieCardDto movie, string country, bool watch = false)
     {
         Id = movie.Id;
         Title = movie.Title;
@@ -374,7 +375,7 @@ public record CardData
         Type = "movie";
         CreatedAt = movie.CreatedAt;
 
-        Link = new($"/movie/{Id}", UriKind.Relative);
+        Link = watch ? new($"/movie/{Id}/watch", UriKind.Relative) : new($"/movie/{Id}", UriKind.Relative);
         NumberOfItems = 1;
         HaveItems = movie.VideoFileCount;
 
@@ -393,7 +394,7 @@ public record CardData
         }
     }
 
-    public CardData(TvCardDto tv, string country)
+    public CardData(TvCardDto tv, string country, bool watch = false)
     {
         Id = tv.Id;
         Title = tv.Title;
@@ -406,7 +407,7 @@ public record CardData
         Type = "tv";
         CreatedAt = tv.CreatedAt;
 
-        Link = new($"/tv/{Id}", UriKind.Relative);
+        Link = watch ? new($"/tv/{Id}/watch", UriKind.Relative) : new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.EpisodesWithVideo;
 

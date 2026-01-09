@@ -320,16 +320,12 @@ public class SearchController : BaseController
                 .GroupBy(artist => artist.Id)
                 .Select(group => group.First())
                 .OrderBy(artist => artist.Name)
-                .Select(item => Component.MusicCard(new(item))
-                    .WithWatch()
-                    ),
+                .Select(item => Component.MusicCard(new(item))),
             ..albums
                 .GroupBy(album => album.Id)
                 .Select(group => group.First())
                 .OrderBy(album => album.Name)
-                .Select(item => Component.MusicCard(new(item))
-                    .WithWatch()
-                    .Build())
+                .Select(item => Component.MusicCard(new(item)).Build())
         ];
 
         return Ok(ComponentResponse.From(

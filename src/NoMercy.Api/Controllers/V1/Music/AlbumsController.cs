@@ -57,21 +57,22 @@ public class AlbumsController : BaseController
             album.Tracks = tracks.Count(track => track.AlbumId == album.Id);
         }
         
-        List<MusicCardData> musicCards = albums
-            .Where(response => response.Tracks > 0)
-            .OrderBy(album => album.Name)
-            .Select(item => new MusicCardData(new Album
-            {
-                Id = item.Id,
-                Name = item.Name,
-                Cover = item.Cover,
-                ColorPalette = item.ColorPalette,
-                AlbumTrack = []
-            }))
-            .ToList();
-
         ComponentEnvelope response = Component.Grid()
-            .WithItems(musicCards.Select(Component.MusicCard));
+            .WithItems(albums
+                .Where(response => response.Tracks > 0)
+                .OrderBy(album => album.Name)
+                .Select(item => Component.MusicCard(new()
+                {
+                    Id = item.Id.ToString(),
+                    Name = item.Name,
+                    Cover = item.Cover,
+                    Type = "artist",
+                    Link = $"/music/album/{item.Id}",
+                    ColorPalette = null,
+                    Disambiguation = item.Disambiguation,
+                    Description = item.Description,
+                    Tracks = item.Tracks
+                })));
 
         return Ok(ComponentResponse.From(response));
     }

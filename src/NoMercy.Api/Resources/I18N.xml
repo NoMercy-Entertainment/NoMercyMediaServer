@@ -433,4 +433,16 @@
     <Key>Special is available</Key>
     <Value lang="nl">Special is available</Value>
   </Entry>
+  <Entry>
+    <Key>Top Result</Key>
+    <Value lang="nl">Top Result</Value>
+  </Entry>
+  <Entry>
+    <Key>Tracks</Key>
+    <Value lang="nl">Tracks</Value>
+  </Entry>
+  <Entry>
+    <Key>Artist</Key>
+    <Value lang="nl">Artist</Value>
+  </Entry>
 </I18N>

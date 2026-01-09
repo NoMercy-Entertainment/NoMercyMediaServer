@@ -53,25 +53,22 @@ public class ArtistsController : BaseController
         foreach (ArtistsResponseItemDto artist in artists)
             artist.Tracks = tracks.Count(track => track.ArtistId == artist.Id);
         
-        List<MusicCardData> musicCards = artists
-            .Where(response => response.Tracks > 0)
-            .OrderBy(artist => artist.Name)
-            .Select(item => new MusicCardData(new Artist
-            {
-                Id = item.Id,
-                Name = item.Name,
-                Cover = item.Cover,
-                ColorPalette = null,
-                Disambiguation = item.Disambiguation,
-                Description = item.Description,
-                ArtistTrack = []
-            }))
-            .ToList();
-
         ComponentEnvelope response = Component.Grid()
-            .WithItems(musicCards.Select(item => Component.MusicCard(item)
-                ))
-            ;
+            .WithItems(artists
+                .Where(response => response.Tracks > 0)
+                .OrderBy(artist => artist.Name)
+                .Select(item => Component.MusicCard(new()
+                {
+                    Id = item.Id.ToString(),
+                    Name = item.Name,
+                    Cover = item.Cover,
+                    Type = "artist",
+                    Link = $"/music/artist/{item.Id}",
+                    ColorPalette = null,
+                    Disambiguation = item.Disambiguation,
+                    Description = item.Description,
+                    Tracks = item.Tracks
+                })));
 
         return Ok(ComponentResponse.From(response));
     }

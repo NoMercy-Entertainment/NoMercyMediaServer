@@ -314,15 +314,15 @@ public class HomeService
         return new() { Data = components };
     }
 
-    private static CardData? ResolveCardData(HomeSourceDto source, List<Tv> tvData, List<Movie> movieData, string country)
+    private static CardData? ResolveCardData(HomeSourceDto source, List<Tv> tvData, List<Movie> movieData, string country, bool watch = false)
     {
         return source.MediaType switch
         {
             TvMediaType => tvData.FirstOrDefault(tv => tv.Id == source.Id) is { } tv
-                ? new CardData(tv, country)
+                ? new CardData(tv, country, watch)
                 : null,
             MovieMediaType => movieData.FirstOrDefault(m => m.Id == source.Id) is { } movie
-                ? new CardData(movie, country)
+                ? new CardData(movie, country, watch)
                 : null,
             _ => null
         };
@@ -456,7 +456,7 @@ public class HomeService
                 g.Id,
                 g.Title,
                 g.MoreLink,
-                g.Source.Select(source => ResolveCardData(source, tvData, movieData, country))
+                g.Source.Select(source => ResolveCardData(source, tvData, movieData, country, watch: true))
                     .Where(c => c != null)
                     .Cast<CardData>()
                     .ToList()
@@ -492,8 +492,8 @@ public class HomeService
                                   || (library.Type == TvMediaType && tvCount > MaximumItemsPerPage)
                                   || (library.Type == AnimeMediaType && animeCount > MaximumItemsPerPage);
 
-            List<CardData> items = libraryMovies.Select(m => new CardData(m, country))
-                .Concat(libraryShows.Select(t => new CardData(t, country)))
+            List<CardData> items = libraryMovies.Select(m => new CardData(m, country, watch: true))
+                .Concat(libraryShows.Select(t => new CardData(t, country, watch: true)))
                 .ToList();
 
             if (items.Count > 0)
@@ -536,8 +536,12 @@ public class HomeService
                     .WithNavigation(prevId, nextId)
                     .WithTitle($"Latest in {lib.Title}")
                     .WithMoreLink(lib.MoreLink)
-                    .WithItems(lib.Items.Select(item =>
-                        Component.Card(item).WithWatch().Build()))
+                    .WithItems(lib.Items
+                        .Select(item => Component
+                            .Card(item)
+                            .WithWatch()
+                            .Build()
+                        ))
                     .Build()
             );
         }
@@ -560,8 +564,13 @@ public class HomeService
                     .WithNavigation(prevId, nextId)
                     .WithTitle(genre.Title)
                     .WithMoreLink(genre.MoreLink)
-                    .WithItems(genre.Items.Take(6).Select(item =>
-                        Component.Card(item).WithWatch().Build()))
+                    .WithItems(genre.Items
+                        .Take(6)
+                        .Select(item => Component
+                            .Card(item)
+                            .WithWatch()
+                            .Build()
+                        ))
                     .Build()
             );
         }
