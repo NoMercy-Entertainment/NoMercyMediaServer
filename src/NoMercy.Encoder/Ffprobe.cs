@@ -15,6 +15,16 @@ public class Ffprobe
     private FfprobeSourceData SourceData { get; set; } = new();
     private string Error { get; set; } = string.Empty;
     
+    /// <summary>
+    /// Timeout for ffprobe execution in milliseconds. Default is 30 seconds.
+    /// </summary>
+    private const int ExecutionTimeoutMs = 30000;
+    
+    /// <summary>
+    /// Maximum number of retry attempts if ffprobe times out or fails.
+    /// </summary>
+    private const int MaxRetries = 3;
+    
     public List<VideoStream> VideoStreams = [];
     public List<ImageStream> ImageStreams = [];
     public List<AudioStream> AudioStreams = [];
@@ -85,7 +95,7 @@ public class Ffprobe
     
     public async Task<(FfprobeSourceData?, string)> GetJson(CancellationToken ct = default)
     {
-        (string stdOut, string stdErr) = await ExecStdErrOut(ct);
+        (string stdOut, string stdErr) = await ExecStdErrOutWithRetry(ct);
         
         // Logger.Encoder(stdOut, LogEventLevel.Debug);
         if (!string.IsNullOrEmpty(stdErr))
@@ -94,29 +104,92 @@ public class Ffprobe
         return (stdOut.FromJson<FfprobeSourceData>(), stdErr);
     }
 
+    private async Task<(string, string)> ExecStdErrOutWithRetry(CancellationToken ct = default)
+    {
+        for (int attempt = 1; attempt <= MaxRetries; attempt++)
+        {
+            try
+            {
+                (string stdOut, string stdErr) = await ExecStdErrOut(ct);
+                return (stdOut, stdErr);
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.Encoder($"ffprobe execution timed out for {_filename} (attempt {attempt}/{MaxRetries})", 
+                    LogEventLevel.Warning);
+                
+                if (attempt < MaxRetries)
+                {
+                    // Wait briefly before retrying to avoid immediate consecutive failures
+                    await Task.Delay(500, ct);
+                    continue;
+                }
+                
+                Logger.Encoder($"ffprobe failed after {MaxRetries} attempts for {_filename}", LogEventLevel.Error);
+                return (string.Empty, $"ffprobe timed out after {MaxRetries} attempts");
+            }
+            catch (Exception ex)
+            {
+                Logger.Encoder($"ffprobe execution failed for {_filename}: {ex.Message} (attempt {attempt}/{MaxRetries})", 
+                    LogEventLevel.Warning);
+                
+                if (attempt < MaxRetries)
+                {
+                    await Task.Delay(500, ct);
+                    continue;
+                }
+                
+                Logger.Encoder($"ffprobe failed after {MaxRetries} attempts for {_filename}: {ex.Message}", 
+                    LogEventLevel.Error);
+                return (string.Empty, ex.Message);
+            }
+        }
+        
+        return (string.Empty, "ffprobe failed after maximum retries");
+    }
+
     private async Task<(string, string)> ExecStdErrOut(CancellationToken ct = default)
     {
-        Process ffprobe = new();
-
-        ffprobe.StartInfo = new()
+        Process? ffprobe = null;
+        
+        try
         {
-            WindowStyle = ProcessWindowStyle.Hidden,
-            FileName = AppFiles.FfProbePath,
-            Arguments = $"-hide_banner -v quiet -show_format -show_streams -show_chapters -print_format json \"{_filename}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardInput = true
-        };
+            // Create a timeout token that will cancel after ExecutionTimeoutMs
+            using CancellationTokenSource timeoutCts = new(ExecutionTimeoutMs);
+            using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+            
+            ffprobe = new();
 
-        ffprobe.Start();
+            ffprobe.StartInfo = new()
+            {
+                WindowStyle = ProcessWindowStyle.Hidden,
+                FileName = AppFiles.FfProbePath,
+                Arguments = $"-hide_banner -v quiet -show_format -show_streams -show_chapters -print_format json \"{_filename}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardInput = true
+            };
 
-        string stdOut = await ffprobe.StandardOutput.ReadToEndAsync(ct);
-        string error = await ffprobe.StandardError.ReadToEndAsync(ct);
+            ffprobe.Start();
 
-        ffprobe.Close();
+            string stdOut = await ffprobe.StandardOutput.ReadToEndAsync(linkedCts.Token);
+            string error = await ffprobe.StandardError.ReadToEndAsync(linkedCts.Token);
 
-        return (stdOut, error);
+            // Wait for process to complete with timeout
+            bool exited = ffprobe.WaitForExit(ExecutionTimeoutMs);
+            if (!exited)
+            {
+                ffprobe.Kill(entireProcessTree: true);
+                throw new OperationCanceledException("ffprobe process did not exit within timeout period");
+            }
+
+            return (stdOut, error);
+        }
+        finally
+        {
+            ffprobe?.Dispose();
+        }
     }
 }

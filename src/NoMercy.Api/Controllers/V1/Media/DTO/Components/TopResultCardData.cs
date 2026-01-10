@@ -79,7 +79,7 @@ public record TopResultCardData
             Id = track.Id.ToString(),
             Name = track.Name,
             Duration = track.Duration,
-            Path = track.Filename,
+            Path = $"/{track.FolderId}{track.Folder}{track.Filename}",
             Link = new($"/music/tracks/{track.Id}", UriKind.Relative),
             Type = "track",
             Disc = track.DiscNumber,

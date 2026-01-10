@@ -163,10 +163,6 @@ public class SearchController : BaseController
         return Ok(ComponentResponse.From(
             Component.Container()
                 .WithId("search-results")
-                .WithProperties(new()
-                {
-                    { "horizontalPadding", 0 },
-                })
                 .WithItems(
                     Component.TopResultCard(topResultData!)
                         .WithId("top-result")
