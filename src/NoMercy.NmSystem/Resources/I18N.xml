@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<I18N>
+    <Entry>
+        <Key>The Effortless Encoder</Key>
+        <Value lang="nl">De Moeiteloze Encoder</Value>
+    </Entry>
+    <Entry>
+        <Key>NoMercy is running!</Key>
+        <Value lang="nl">NoMercy draait!</Value>
+    </Entry>
+    <Entry>
+        <Key>Continue watching</Key>
+        <Value lang="nl">Doorgaan met kijken</Value>
+    </Entry>
+    <Entry>
+        <Key>Remove from watchlist</Key>
+        <Value lang="nl">Verwijderen uit kijklijst</Value>
+    </Entry>
+    <Entry>
+        <Key>Are you sure you want to remove this from continue watching?</Key>
+        <Value lang="nl">Weet je zeker dat je dit wilt verwijderen?</Value>
+    </Entry>
+    <Entry>
+        <Key>You do not have permission to view continue watching</Key>
+        <Value lang="nl">Je hebt geen toestemming om door te gaan met kijken te bekijken</Value>
+    </Entry>
+    <Entry>
+        <Key>Rescanning all libraries.</Key>
+        <Value lang="nl">Rescanning all libraries.</Value>
+    </Entry>
+    <Entry>
+        <Key>Continue Watching</Key>
+        <Value lang="nl">Continue Watching</Value>
+    </Entry>
+</I18N>

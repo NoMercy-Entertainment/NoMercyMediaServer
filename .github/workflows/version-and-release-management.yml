@@ -1,0 +1,177 @@
+name: 'Version and Release Management'
+
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: 'Version that was created'
+        value: ${{ jobs.version_management.outputs.version }}
+      should_deploy:
+        description: 'Whether deployment should proceed'
+        value: ${{ jobs.version_management.outputs.should_deploy }}
+
+jobs:
+  version_management:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      should_deploy: ${{ steps.check-deploy.outputs.should_deploy }}
+    
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Check Available Space
+        run: |
+          echo "🔍 Checking available disk space..."
+          df -h
+          free -h
+          echo "Available space in /tmp: $(df -h /tmp | tail -1 | awk '{print $4}')"
+
+        
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET Environment  
+        uses: ./.github/actions/setup-dotnet
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Get latest tag
+        id: get-tag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+        with:
+          fallback: v0.1.188
+
+      - name: Check for source changes
+        id: check-changes
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          # Always build for releases and manual triggers
+          if [[ "${{ github.event_name }}" == "release" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "has_source_changes=true" >> $GITHUB_OUTPUT
+            echo "needs_merge=true" >> $GITHUB_OUTPUT
+            echo "Release or manual trigger - proceeding with full pipeline"
+          else
+            # Check for actual source code changes
+            if git diff --quiet HEAD~1 HEAD -- src/ 2>/dev/null; then
+              echo "has_source_changes=false" >> $GITHUB_OUTPUT
+              echo "needs_merge=true" >> $GITHUB_OUTPUT
+              echo "No source code changes detected - will only merge and update repository"
+            else
+              echo "has_source_changes=true" >> $GITHUB_OUTPUT
+              echo "needs_merge=true" >> $GITHUB_OUTPUT
+              echo "Source code changes detected - proceeding with version bump and full pipeline"
+            fi
+          fi
+
+      - name: Bump version
+        id: bump-version
+        if: success() && github.ref == 'refs/heads/dev' && steps.check-changes.outputs.has_source_changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git config --global --add safe.directory ${{ github.workspace }}
+          
+          # Get the latest version tag from previous step
+          LATEST_TAG="${{ steps.get-tag.outputs.tag }}"
+          
+          echo "LATEST_TAG=$LATEST_TAG"
+
+          # Extract components (handle v prefix)
+          VERSION_NO_V=${LATEST_TAG#v}
+          MAJOR=$(echo "$VERSION_NO_V" | cut -d. -f1)
+          MINOR=$(echo "$VERSION_NO_V" | cut -d. -f2)
+          PATCH=$(echo "$VERSION_NO_V" | cut -d. -f3)
+
+          # Validate components
+          echo "MAJOR=$MAJOR, MINOR=$MINOR, PATCH=$PATCH"
+
+          # Increment patch version
+          NEW_PATCH=$(($PATCH + 1))
+          NEW_VERSION=$MAJOR.$MINOR.$NEW_PATCH 
+          
+          echo "NEW_VERSION=$NEW_VERSION"
+          
+          # Check current version in project file
+          CURRENT_VERSION=$(grep -oP '<Version>\K[^<]+' src/NoMercy.Server/NoMercy.Server.csproj || echo "")
+          echo "CURRENT_VERSION=$CURRENT_VERSION"
+          
+          if [ "$CURRENT_VERSION" = "$NEW_VERSION" ]; then
+            echo "Version is already up-to-date ($NEW_VERSION), skipping version bump"
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Updating version from $CURRENT_VERSION to $NEW_VERSION"
+            # Update project file with new version
+            sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" src/NoMercy.Server/NoMercy.Server.csproj
+            
+            # Check if there are changes to commit
+            if git diff --quiet src/NoMercy.Server/NoMercy.Server.csproj; then
+              echo "No changes to commit after version update"
+              echo "version_changed=false" >> $GITHUB_OUTPUT
+            else
+              # Commit and push the updated version
+              git add src/NoMercy.Server/NoMercy.Server.csproj
+              git commit -m "Update version to ${NEW_VERSION}"
+              git push origin dev
+              echo "version_changed=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Get Version
+        id: get-version
+        uses: kzrnm/get-net-sdk-project-versions-action@v2
+        with:
+          proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
+
+      - name: Merge Dev into Master
+        if: success() && github.ref == 'refs/heads/dev' && steps.check-changes.outputs.needs_merge == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # Wait a moment to ensure version bump is fully pushed
+          sleep 5
+
+          git fetch origin
+          git checkout master
+          git pull --rebase origin master
+          git merge origin/dev --no-edit --allow-unrelated-histories -X theirs
+          git push origin master
+          git checkout dev
+          git rebase master
+          git push --force-with-lease origin dev
+
+          # Verify the merge completed
+          echo "✅ Successfully merged dev into master with updated version"
+
+      - name: Check deployment conditions
+        id: check-deploy
+        run: |
+          # Always deploy for releases and manual triggers
+          if [[ "${{ github.event_name }}" == "release" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          # For dev branch, deploy if there were source changes (need executables)
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]] && [[ "${{ steps.check-changes.outputs.has_source_changes }}" == "true" ]]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          # For non-source changes (docs, workflows), still update repository but skip executable builds
+          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]] && [[ "${{ steps.check-changes.outputs.needs_merge }}" == "true" ]]; then
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "Non-source changes detected - will merge to master but skip builds"
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+          fi

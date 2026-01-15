@@ -1,0 +1,69 @@
+name: 'Create Release Workflow'
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        type: string
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: ./artifacts
+
+      - name: Combine artifacts
+        run: |
+          mkdir -p ./output
+          
+          # Copy all artifacts to output directory
+          find ./artifacts -name "*.tar.gz" -exec cp {} ./output/ \;
+          find ./artifacts -name "*.dmg" -exec cp {} ./output/ \;
+          find ./artifacts -name "*-linux-x64" -exec cp {} ./output/ \;
+          find ./artifacts -name "*-windows-x64.exe" -exec cp {} ./output/ \;
+          find ./artifacts -name "*-macos-x64" -exec cp {} ./output/ \;
+          
+          # List final output
+          ls -la ./output/
+
+      - name: Get Short SHA
+        id: get_short_sha
+        run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+        
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: NoMercy MediaServer v${{ inputs.version }}
+          body: |            
+            ## What's New
+            This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
+            
+            ## Downloads
+            Binary executables are available for:
+            - Windows (x64)
+            - macOS (x64)
+            - Linux (x64)
+            
+            Each platform includes the MediaServer, and App components.
+            
+            ## Installation
+            Download the appropriate files for your platform and follow the installation instructions in our documentation.
+            
+            ## Feedback
+            If you encounter any issues, please report them on our GitHub repository.
+
+            Build: ${{ steps.get_short_sha.outputs.short_sha }}
+          draft: false
+          prerelease: false
+          files: |
+            ./output/NoMercyMediaServer-*
+            ./output/NoMercyApp-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

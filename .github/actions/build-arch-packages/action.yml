@@ -1,0 +1,159 @@
+name: 'Build Arch Packages'
+description: 'Build Arch Linux packages'
+inputs:
+  version:
+    description: 'Package version'
+    required: true
+  artifacts-path:
+    description: 'Path to build artifacts'
+    required: true
+    default: './output'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Arch build dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libarchive-tools zstd fakeroot
+
+    - name: Build Arch packages
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
+
+        # Function to create proper Arch package using PKGBUILD
+        create_arch_package() {
+          local name=$1
+          local friendly_name=$2
+          local bin_file=$3
+          local desktop_file=$4
+
+          # Create package directory
+          local pkg_dir="arch-${name}"
+          mkdir -p "${pkg_dir}"
+          cd "${pkg_dir}"
+
+          # Create proper PKGBUILD file
+          cat > PKGBUILD << EOF
+        # Maintainer: NoMercy Entertainment <support@nomercy.tv>
+        pkgname=${name}
+        pkgver=${VERSION}
+        pkgrel=1
+        pkgdesc="${friendly_name}"
+        arch=('x86_64')
+        url="https://nomercy.tv"
+        license=('custom')
+        depends=('glibc')
+
+        package() {
+          # Create directory structure
+          install -dm755 "\$pkgdir/usr/bin"
+          install -dm755 "\$pkgdir/usr/share/applications"
+          install -dm755 "\$pkgdir/usr/share/icons/hicolor/scalable/apps"
+          install -dm755 "\$pkgdir/usr/share/licenses/\$pkgname"
+
+          # Install binary
+          install -Dm755 "../$ARTIFACTS_PATH/$bin_file" "\$pkgdir/usr/bin/${name}"
+          
+          # Install desktop file
+          install -Dm644 "../assets/linux/${desktop_file}" "\$pkgdir/usr/share/applications/"
+          
+          # Install icon
+          install -Dm644 "../assets/icons/icon.png" "\$pkgdir/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
+          
+          # Install license (create a simple custom license)
+          echo "Proprietary software. All rights reserved." > "\$pkgdir/usr/share/licenses/\$pkgname/LICENSE"
+        }
+        EOF
+
+          # Build using makepkg (simulate it since we don't have a full Arch environment)
+          # We'll create the package manually following the same structure
+          
+          # Create fake root directory
+          local pkgdir="pkg"
+          mkdir -p "${pkgdir}/usr/bin"
+          mkdir -p "${pkgdir}/usr/share/applications"
+          mkdir -p "${pkgdir}/usr/share/icons/hicolor/scalable/apps"
+          mkdir -p "${pkgdir}/usr/share/licenses/${name}"
+
+          # Install files as per PKGBUILD
+          cp "../$ARTIFACTS_PATH/$bin_file" "${pkgdir}/usr/bin/${name}"
+          chmod 755 "${pkgdir}/usr/bin/${name}"
+          cp "../assets/linux/${desktop_file}" "${pkgdir}/usr/share/applications/"
+          cp "../assets/icons/icon.png" "${pkgdir}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
+          echo "Proprietary software. All rights reserved." > "${pkgdir}/usr/share/licenses/${name}/LICENSE"
+
+          # Create .PKGINFO file (required for Arch packages)
+          cat > "${pkgdir}/.PKGINFO" << EOF
+        pkgname = ${name}
+        pkgbase = ${name}
+        pkgver = ${VERSION}-1
+        pkgdesc = ${friendly_name}
+        url = https://nomercy.tv
+        builddate = $(date +%s)
+        packager = NoMercy Entertainment <support@nomercy.tv>
+        size = $(du -sb ${pkgdir} | cut -f1)
+        arch = x86_64
+        license = custom
+        depend = glibc
+        EOF
+
+          # Create .MTREE file (required for Arch packages)
+          cd "${pkgdir}"
+          find . -type f -exec stat -c '%n %Y %s' {} \; | sort > .MTREE
+          cd ..
+
+          # Create package file using standard Arch naming
+          mkdir -p "../packages/arch/pool/x86_64"
+          cd "${pkgdir}"
+          tar --use-compress-program=zstd -cf "../../packages/arch/pool/x86_64/${name}-${VERSION}-1-x86_64.pkg.tar.zst" .
+          
+          # Go back and clean up
+          cd ../..
+          rm -rf "${pkg_dir}"
+        }
+
+        # Create packages directory
+        mkdir -p packages/arch/pool/x86_64
+
+        # Build packages
+        create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
+        create_arch_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
+
+        # Create a simple database (since we can't use repo-add in Ubuntu)
+        cd packages/arch/pool/x86_64
+        if ls *.pkg.tar.zst >/dev/null 2>&1; then
+          # Create a basic database that Arch users can work with
+          echo "# NoMercy Arch Repository Database" > nomercy.db
+          echo "# Generated on $(date)" >> nomercy.db
+          echo "" >> nomercy.db
+          
+          for pkg in *.pkg.tar.zst; do
+            echo "[Package]" >> nomercy.db
+            echo "Name: ${pkg%%-*}" >> nomercy.db
+            echo "Version: $(echo "$pkg" | cut -d'-' -f2-3)" >> nomercy.db
+            echo "Filename: $pkg" >> nomercy.db
+            echo "Size: $(stat -c%s "$pkg")" >> nomercy.db
+            echo "" >> nomercy.db
+          done
+          
+          # Create simple compressed database
+          gzip -c nomercy.db > nomercy.db.tar.gz
+          
+          # List what we created
+          echo "Created Arch packages:"
+          ls -la *.pkg.tar.zst
+          echo "Created database: nomercy.db.tar.gz"
+        else
+          echo "ERROR: No package files found"
+          exit 1
+        fi
+
+    - name: Upload Arch artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: arch-packages
+        path: packages/arch/

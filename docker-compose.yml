@@ -1,0 +1,6 @@
+﻿services:
+  nomercy.service:
+    image: nomercy.service
+    build:
+      context: .
+      dockerfile: NoMercy.Service/Dockerfile

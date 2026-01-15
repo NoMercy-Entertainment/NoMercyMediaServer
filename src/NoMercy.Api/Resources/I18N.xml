@@ -1,0 +1,464 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<I18N>
+  <Entry>
+    <Key>The Effortless Encoder</Key>
+    <Value lang="nl">De Moeiteloze Encoder</Value>
+  </Entry>
+  <Entry>
+    <Key>NoMercy is running!</Key>
+    <Value lang="nl">NoMercy draait!</Value>
+  </Entry>
+  <Entry>
+    <Key>Continue watching</Key>
+    <Value lang="nl">Doorgaan met kijken</Value>
+  </Entry>
+  <Entry>
+    <Key>Remove from watchlist</Key>
+    <Value lang="nl">Verwijderen uit kijklijst</Value>
+  </Entry>
+  <Entry>
+    <Key>Are you sure you want to remove this from continue watching?</Key>
+    <Value lang="nl">Weet je zeker dat je dit wilt verwijderen?</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view continue watching</Key>
+    <Value lang="nl">Je hebt geen toestemming om door te gaan met kijken te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>Rescanning all libraries.</Key>
+    <Value lang="nl">Alle bibliotheken opnieuw scannen.</Value>
+  </Entry>
+  <Entry>
+    <Key>Continue Watching</Key>
+    <Value lang="nl">Blijven Kijken</Value>
+  </Entry>
+  <Entry>
+    <Key>See all</Key>
+    <Value lang="nl">Alles bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>Tv show not found</Key>
+    <Value lang="nl">Tv-show niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Configuration updated successfully</Key>
+    <Value lang="nl">Configuratie succesvol bijgewerkt</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums not found</Key>
+    <Value lang="nl">Albums niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Subtitle not found</Key>
+    <Value lang="nl">Ondertitel niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>{0} {1}</Key>
+    <Value lang="nl">{0} {1}</Value>
+  </Entry>
+  <Entry>
+    <Key>Specials not found</Key>
+    <Value lang="nl">Specials niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>People not found</Key>
+    <Value lang="nl">Personen niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Playback recorded</Key>
+    <Value lang="nl">Afspelen opgenomen</Value>
+  </Entry>
+  <Entry>
+    <Key>Genre not found</Key>
+    <Value lang="nl">Genre niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>An error occurred while saving the entity changes. See the inner exception for details.</Key>
+    <Value lang="nl">Er is een fout opgetreden bij het opslaan van de entiteitswijzigingen. Zie de
+      binnenste uitzondering voor details.</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums not found</Key>
+    <Value lang="nl">Albums niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Artist not found</Key>
+    <Value lang="nl">Artiest niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Tracks not found</Key>
+    <Value lang="nl">Nummers niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Playlist not found</Key>
+    <Value lang="nl">Afspeellijst niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to access the dashboard</Key>
+    <Value lang="nl">Je hebt geen toestemming om het dashboard te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view configuration</Key>
+    <Value lang="nl">Je hebt geen toestemming om de configuratie te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view task workers</Key>
+    <Value lang="nl">Je hebt geen toestemming om taakwerkers te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view server information</Key>
+    <Value lang="nl">Je hebt geen toestemming om serverinformatie te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view server paths</Key>
+    <Value lang="nl">Je hebt geen toestemming om serverpaden te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view activity</Key>
+    <Value lang="nl">Je hebt geen toestemming om activiteit te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view devices</Key>
+    <Value lang="nl">Je hebt geen toestemming om apparaten te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view encoder profiles</Key>
+    <Value lang="nl">Je hebt geen toestemming om encoderprofielen te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully created a new library.</Key>
+    <Value lang="nl">Nieuwe bibliotheek succesvol aangemaakt.</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view encoder queue</Key>
+    <Value lang="nl">Je hebt geen toestemming om de encoder wachtrij te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>Something went wrong deleting the library: {0}</Key>
+    <Value lang="nl">Er ging iets mis bij het verwijderen van de bibliotheek: {0}</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully deleted {0} library.</Key>
+    <Value lang="nl">Bibliotheek {0} succesvol verwijderd.</Value>
+  </Entry>
+  <Entry>
+    <Key>No results found</Key>
+    <Value lang="nl">Geen resultaten gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>User already exists</Key>
+    <Value lang="nl">Gebruiker bestaat al</Value>
+  </Entry>
+  <Entry>
+    <Key>User updated</Key>
+    <Value lang="nl">Gebruiker bijgewerkt</Value>
+  </Entry>
+  <Entry>
+    <Key>Rescanning all specials.</Key>
+    <Value lang="nl">Alle specials opnieuw scannen.</Value>
+  </Entry>
+  <Entry>
+    <Key>Rescanning {0} for files</Key>
+    <Value lang="nl">{0} scannen voor bestanden</Value>
+  </Entry>
+  <Entry>
+    <Key>Item removed</Key>
+    <Value lang="nl">Item verwijderd</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully updated {0} special.</Key>
+    <Value lang="nl">Special {0} succesvol bijgewerkt.</Value>
+  </Entry>
+  <Entry>
+    <Key>Unknown property Audio</Key>
+    <Value lang="nl">Onbekende eigenschap Audio</Value>
+  </Entry>
+  <Entry>
+    <Key>Unknown property AudioTrack</Key>
+    <Value lang="nl">Onbekende eigenschap AudioTrack</Value>
+  </Entry>
+  <Entry>
+    <Key>Unknown property Chapters</Key>
+    <Value lang="nl">Onbekende eigenschap Hoofdstukken</Value>
+  </Entry>
+  <Entry>
+    <Key>Unknown property Fonts</Key>
+    <Value lang="nl">Onbekende eigenschap Lettertypen</Value>
+  </Entry>
+  <Entry>
+    <Key>Unknown property FontsFile</Key>
+    <Value lang="nl">Onbekende eigenschap LettertypenBestand</Value>
+  </Entry>
+  <Entry>
+    <Key>Unknown property Previews</Key>
+    <Value lang="nl">Onbekende eigenschap Voorvertoningen</Value>
+  </Entry>
+  <Entry>
+    <Key>Unknown property Subtitles</Key>
+    <Value lang="nl">Onbekende eigenschap Ondertitels</Value>
+  </Entry>
+  <Entry>
+    <Key>Unknown property Video</Key>
+    <Value lang="nl">Onbekende eigenschap Video</Value>
+  </Entry>
+  <Entry>
+    <Key>Rescanning {0} library.</Key>
+    <Value lang="nl">Bibliotheek {0} opnieuw scannen.</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully moved item {0}.</Key>
+    <Value lang="nl">Item {0} succesvol verplaatst.</Value>
+  </Entry>
+  <Entry>
+    <Key>Something went wrong moving the item: {0}</Key>
+    <Value lang="nl">Er ging iets mis bij het verplaatsen van het item: {0}</Value>
+  </Entry>
+  <Entry>
+    <Key>Added to library</Key>
+    <Value lang="nl">Toegevoegd aan bibliotheek</Value>
+  </Entry>
+  <Entry>
+    <Key>Wallpaper set successfully</Key>
+    <Value lang="nl">Achtergrond succesvol ingesteld</Value>
+  </Entry>
+  <Entry>
+    <Key>{1}</Key>
+    <Value lang="nl">{1}</Value>
+  </Entry>
+  <Entry>
+    <Key>Wallpaper not found</Key>
+    <Value lang="nl">Achtergrond niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Job not found</Key>
+    <Value lang="nl">Taak niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Priority updated</Key>
+    <Value lang="nl">Prioriteit bijgewerkt</Value>
+  </Entry>
+  <Entry>
+    <Key>User {0} created successfully</Key>
+    <Value lang="nl">Gebruiker {0} succesvol aangemaakt</Value>
+  </Entry>
+  <Entry>
+    <Key>Movie not found</Key>
+    <Value lang="nl">Film niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>{0}: {1}</Key>
+    <Value lang="nl">{0}: {1}</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view optical drives</Key>
+    <Value lang="nl">Je hebt geen toestemming om optische drives te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>Favorite Artists</Key>
+    <Value lang="nl">Favoriete Artiesten</Value>
+  </Entry>
+  <Entry>
+    <Key>Favorite Albums</Key>
+    <Value lang="nl">Favoriete Albums</Value>
+  </Entry>
+  <Entry>
+    <Key>Playlists</Key>
+    <Value lang="nl">Afspeellijsten</Value>
+  </Entry>
+  <Entry>
+    <Key>Artists</Key>
+    <Value lang="nl">Artiesten</Value>
+  </Entry>
+  <Entry>
+    <Key>Albums</Key>
+    <Value lang="nl">Albums</Value>
+  </Entry>
+  <Entry>
+    <Key>Most listened artist</Key>
+    <Value lang="nl">Meest beluisterde artiest</Value>
+  </Entry>
+  <Entry>
+    <Key>Most listened album</Key>
+    <Value lang="nl">Meest beluisterd album</Value>
+  </Entry>
+  <Entry>
+    <Key>Trailer found</Key>
+    <Value lang="nl">Trailer gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Trailer not found</Key>
+    <Value lang="nl">Trailer niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Show deleted</Key>
+    <Value lang="nl">Show verwijderd</Value>
+  </Entry>
+  <Entry>
+    <Key>Item not found</Key>
+    <Value lang="nl">Item niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to update server information</Key>
+    <Value lang="nl">Je hebt geen toestemming om serverinformatie bij te werken</Value>
+  </Entry>
+  <Entry>
+    <Key>Library {0} does not exist.</Key>
+    <Value lang="nl">Bibliotheek {0} bestaat niet.</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully added folder to {0} library.</Key>
+    <Value lang="nl">Map succesvol toegevoegd aan bibliotheek {0}.</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully deleted folder {0}.</Key>
+    <Value lang="nl">Map {0} succesvol verwijderd.</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully updated {0} library.</Key>
+    <Value lang="nl">Bibliotheek {0} succesvol bijgewerkt.</Value>
+  </Entry>
+  <Entry>
+    <Key>Successfully sorted libraries.</Key>
+    <Value lang="nl">Bibliotheken succesvol gesorteerd.</Value>
+  </Entry>
+  <Entry>
+    <Key>No libraries exist.</Key>
+    <Value lang="nl">Er bestaan geen bibliotheken.</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to create a new library</Key>
+    <Value lang="nl">Je hebt geen toestemming om een nieuwe bibliotheek aan te maken</Value>
+  </Entry>
+  <Entry>
+    <Key>Something went wrong creating a new library: {0}</Key>
+    <Value lang="nl">Er ging iets mis bij het aanmaken van een nieuwe bibliotheek: {0}</Value>
+  </Entry>
+  <Entry>
+    <Key>Something went wrong adding the folder: {0}</Key>
+    <Value lang="nl">Er ging iets mis bij het toevoegen van de map: {0}</Value>
+  </Entry>
+  <Entry>
+    <Key>The route v1/server/server/name could not be found.</Key>
+    <Value lang="nl">De route v1/server/server/name kon niet gevonden worden.</Value>
+  </Entry>
+  <Entry>
+    <Key>The server name field is required.</Key>
+    <Value lang="nl">Het servernaamveld is verplicht.</Value>
+  </Entry>
+  <Entry>
+    <Key>Attempt to read property "server_name" on array</Key>
+    <Value lang="nl">Poging om eigenschap "server_name" te lezen van array</Value>
+  </Entry>
+  <Entry>
+    <Key>Server name changed</Key>
+    <Value lang="nl">Servernaam gewijzigd</Value>
+  </Entry>
+  <Entry>
+    <Key>Something went wrong updating the library encoder profiles: {0}</Key>
+    <Value lang="nl">Er ging iets mis bij het bijwerken van de bibliotheek encoder profielen: {0}</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to update the library</Key>
+    <Value lang="nl">Je hebt geen toestemming om de bibliotheek bij te werken</Value>
+  </Entry>
+  <Entry>
+    <Key>You do not have permission to view folders</Key>
+    <Value lang="nl">Je hebt geen toestemming om mappen te bekijken</Value>
+  </Entry>
+  <Entry>
+    <Key>Refreshing {0}</Key>
+    <Value lang="nl">{0} vernieuwen</Value>
+  </Entry>
+  <Entry>
+    <Key>Refreshing {0} data in background</Key>
+    <Value lang="nl">{0} gegevens op de achtergrond vernieuwen</Value>
+  </Entry>
+  <Entry>
+    <Key>Adding {0} in the background</Key>
+    <Value lang="nl">{0} op de achtergrond toevoegen</Value>
+  </Entry>
+  <Entry>
+    <Key>Favorite Tracks</Key>
+    <Value lang="nl">Favoriete Nummers</Value>
+  </Entry>
+  <Entry>
+    <Key>Rescanning {0} for files in the background</Key>
+    <Value lang="nl">{0} op de achtergrond scannen voor bestanden</Value>
+  </Entry>
+  <Entry>
+    <Key>User deleted</Key>
+    <Value lang="nl">Gebruiker verwijderd</Value>
+  </Entry>
+  <Entry>
+    <Key>User not found</Key>
+    <Value lang="nl">Gebruiker niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Container</Key>
+    <Value lang="nl">Container</Value>
+  </Entry>
+  <Entry>
+    <Key>Track not found</Key>
+    <Value lang="nl">Track niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Response status code does not indicate success: 404 (Not Found).</Key>
+    <Value lang="nl">Responsstatuscode geeft geen succes aan: 404 (Niet gevonden).</Value>
+  </Entry>
+  <Entry>
+    <Key>Job removed</Key>
+    <Value lang="nl">Taak verwijderd</Value>
+  </Entry>
+  <Entry>
+    <Key>Person not found</Key>
+    <Value lang="nl">Persoon niet gevonden</Value>
+  </Entry>
+  <Entry>
+    <Key>Response status code does not indicate success: 502 (Bad Gateway).</Key>
+    <Value lang="nl">Responsstatuscode geeft geen succes aan: 502 (Onjuiste gateway).</Value>
+  </Entry>
+  <Entry>
+    <Key>Tv show is available</Key>
+    <Value lang="nl">Tv serie is beschikbaar</Value>
+  </Entry>
+  <Entry>
+    <Key>Collection is available</Key>
+    <Value lang="nl">Collectie is beschikbaar</Value>
+  </Entry>
+  <Entry>
+    <Key>Movie is available</Key>
+    <Value lang="nl">Movie is available</Value>
+  </Entry>
+  <Entry>
+    <Key>Special is available</Key>
+    <Value lang="nl">Special is available</Value>
+  </Entry>
+  <Entry>
+    <Key>Top Result</Key>
+    <Value lang="nl">Top Result</Value>
+  </Entry>
+  <Entry>
+    <Key>Tracks</Key>
+    <Value lang="nl">Tracks</Value>
+  </Entry>
+  <Entry>
+    <Key>Artist</Key>
+    <Value lang="nl">Artist</Value>
+  </Entry>
+  <Entry>
+    <Key>Movie deleted</Key>
+    <Value lang="nl">Movie verwijderd</Value>
+  </Entry>
+  <Entry>
+    <Key>Movie is available</Key>
+    <Value lang="nl">Movie is beschikbaar</Value>
+  </Entry>
+  <Entry>
+    <Key>Movie added to watch list</Key>
+    <Value lang="nl">Movie added to watch list</Value>
+  </Entry>
+  <Entry>
+    <Key>Movie removed from watch list</Key>
+    <Value lang="nl">Movie removed from watch list</Value>
+  </Entry>
+</I18N>

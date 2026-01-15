@@ -1,0 +1,96 @@
+name: 'Test Workflow'
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: '.NET version to use'
+        required: false
+        type: string
+        default: '9.0.x'
+
+jobs:
+  # Fast tests that run on every push/PR
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Setup .NET Environment
+        uses: ./.github/actions/setup-dotnet
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Run fast tests (Unit + ErrorHandling)
+        run: >
+          dotnet test NoMercy.Server.sln 
+          --configuration Debug
+          --no-restore
+          --verbosity minimal
+          --logger trx
+          --blame-hang-timeout 5m
+          --filter "Category=Unit|Category=ErrorHandling"
+
+  # Optional coverage job - only runs on master or when manually triggered
+  coverage:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Setup .NET Environment
+        uses: ./.github/actions/setup-dotnet
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Run tests with coverage
+        run: >
+          dotnet test NoMercy.Server.sln 
+          --configuration Release
+          --collect:"XPlat Code Coverage"
+          --settings tests/coverletArgs.runsettings
+          --verbosity minimal
+
+  # Integration tests - only runs on master, releases, or manually
+  integration_tests:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Setup .NET Environment
+        uses: ./.github/actions/setup-dotnet
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Run integration tests
+        run: >
+          dotnet test NoMercy.Server.sln 
+          --configuration Debug
+          --no-restore
+          --verbosity minimal
+          --logger trx
+          --blame-hang-timeout 10m
+          --filter "Category=Integration"
+
+      - name: Run performance tests
+        run: >
+          dotnet test NoMercy.Server.sln 
+          --configuration Release
+          --no-restore
+          --verbosity minimal
+          --logger trx
+          --blame-hang-timeout 15m
+          --filter "Category=Performance"

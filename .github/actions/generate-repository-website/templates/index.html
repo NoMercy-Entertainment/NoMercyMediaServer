@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoMercy Entertainment Repository</title>
+  <meta name="description" content="Official package repository for NoMercy MediaServer - Modern media streaming and management solution">
+  <meta name="keywords" content="media server, streaming, plex alternative, jellyfin alternative, linux packages">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/apt/pool/main/n/nomercymediaserver/icon.png">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="./assets/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>NoMercy Repository</h1>
+      <p>Official package repository for NoMercy MediaServer</p>
+      <div class="version-badge">Latest Version: v{{VERSION}}</div>
+    </div>
+    
+    <div class="content">
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('ubuntu')">🐧 Ubuntu/Debian</button>
+        <button class="nav-tab" onclick="switchTab('fedora')">🎩 RHEL/CentOS/Fedora</button>
+        <button class="nav-tab" onclick="switchTab('arch')">⚡ Arch Linux</button>
+      </div>
+      
+      <div id="ubuntu" class="tab-content active">
+        <div class="distro-header">
+          <div class="distro-icon">🐧</div>
+          <div class="distro-info">
+            <h2>Ubuntu & Debian</h2>
+            <p>APT repository for Ubuntu 20.04+, Debian 11+</p>
+          </div>
+        </div>
+        
+        <div class="alert alert-info">
+          <strong>Note:</strong> Root privileges required for system-wide installation. Use sudo for the commands below.
+        </div>
+        
+        <div class="install-steps">
+          <div class="step">
+            <h3>1. Add Repository Key</h3>
+            <p>Import the NoMercy repository signing key to verify package authenticity:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>wget -O - https://repo.nomercy.tv/nomercy_repo.gpg.pub | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg</code>
+            </div>
+          </div>
+          
+          <div class="step">
+            <h3>2. Add Repository</h3>
+            <p>Add the NoMercy repository to your system's package sources:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list</code>
+            </div>
+          </div>
+          
+          <div class="step">
+            <h3>3. Update Package List</h3>
+            <p>Refresh your package database to include NoMercy packages:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>sudo apt update</code>
+            </div>
+          </div>
+          
+          <div class="step">
+            <h3>4. Install Packages</h3>
+            <p>Install the NoMercy MediaServer components:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>sudo apt install nomercymediaserver nomercyapp</code>
+            </div>
+          </div>
+        </div>
+        
+        <div class="package-grid">
+          <div class="package-card">
+            <h3>MediaServer</h3>
+            <p>Core media streaming server</p>
+            <div class="package-size">nomercymediaserver</div>
+          </div>
+          <div class="package-card">
+            <h3>Desktop App</h3>
+            <p>Desktop management interface</p>
+            <div class="package-size">nomercyapp</div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="fedora" class="tab-content">
+        <div class="distro-header">
+          <div class="distro-icon">🎩</div>
+          <div class="distro-info">
+            <h2>RHEL, CentOS & Fedora</h2>
+            <p>RPM repository for RHEL 8+, CentOS 8+, Fedora 35+</p>
+          </div>
+        </div>
+        
+        <div class="alert alert-info">
+          <strong>Note:</strong> SELinux may require additional configuration. Check your security policies if you encounter issues.
+        </div>
+        
+        <div class="install-steps">
+          <div class="step">
+            <h3>1. Add Repository</h3>
+            <p>Add the NoMercy RPM repository configuration:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo</code>
+            </div>
+          </div>
+          
+          <div class="step">
+            <h3>2. Import GPG Key</h3>
+            <p>Import the repository signing key (optional but recommended):</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>sudo rpm --import https://repo.nomercy.tv/nomercy_repo.gpg.pub</code>
+            </div>
+          </div>
+          
+          <div class="step">
+            <h3>3. Install Packages</h3>
+            <p>Install the NoMercy MediaServer components:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>sudo dnf install nomercymediaserver nomercyapp</code>
+            </div>
+          </div>
+        </div>
+        
+        <div class="alert">
+          <strong>Alternative for older systems:</strong> Replace <code>dnf</code> with <code>yum</code> on RHEL/CentOS 7 and older systems.
+        </div>
+      </div>
+      
+      <div id="arch" class="tab-content">
+        <div class="distro-header">
+          <div class="distro-icon">⚡</div>
+          <div class="distro-info">
+            <h2>Arch Linux</h2>
+            <p>Custom repository for Arch Linux and derivatives</p>
+          </div>
+        </div>
+        
+        <div class="alert">
+          <strong>Warning:</strong> This is a custom repository. Use at your own discretion and ensure you trust the packages.
+        </div>
+        
+        <div class="install-steps">
+          <div class="step">
+            <h3>1. Add Repository</h3>
+            <p>Add the NoMercy repository to your pacman configuration:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>echo "Server = https://repo.nomercy.tv/arch-packages/pool/x86_64" | sudo tee /etc/pacman.d/nomercy-mirrorlist && echo -e "\n[nomercy]\nInclude = /etc/pacman.d/nomercy-mirrorlist" | sudo tee -a /etc/pacman.conf </code>
+            </div>
+          </div>
+          
+          <div class="step">
+            <h3>2. Add GPG Key</h3>
+            <p>Import and trust the repository signing key:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub && sudo pacman-key --add nomercy.gpg.pub && sudo pacman-key --lsign-key 23F1B8BDEE7408FBB2401B66EBBAD4C5328D9E9B
+              </code>
+            </div>
+          </div>
+          
+          <div class="step">
+            <h3>3. Update Database</h3>
+            <p>Synchronize the package database:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>sudo pacman -Sy</code>
+            </div>
+          </div>
+          
+          <div class="step">
+            <h3>4. Install Packages</h3>
+            <p>Install the NoMercy MediaServer components:</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+              <code>sudo pacman -S nomercymediaserver nomercyapp</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>
+        NoMercy Entertainment &copy; <span id="year">2025</span> | 
+        <a href="https://nomercy.tv">Website</a> | 
+        <a href="https://github.com/NoMercy-Entertainment/NoMercyMediaServer">GitHub</a> | 
+        <a href="https://discord.gg/dHHvnvFsXR">Discord</a>
+      </p>
+    </div>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="./assets/script.js"></script>
+</body>
+</html>

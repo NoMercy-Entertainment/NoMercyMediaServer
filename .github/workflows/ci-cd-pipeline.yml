@@ -1,0 +1,122 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'package.json'
+    branches:
+      - dev
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'README.md'
+      - 'docs/**'
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'package.json'
+    branches:
+      - dev
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  actions: read
+  pull-requests: write
+
+jobs:
+  # Step 1: Run Tests
+  test:
+    uses: ./.github/workflows/test.yml
+    with:
+      dotnet-version: "9.0.x"
+
+  # Step 2: Version Management (only if tests pass and on dev branch)
+  version_management:
+    needs: test
+    if: github.ref == 'refs/heads/dev' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/version-and-release-management.yml
+    secrets: inherit
+
+  # Step 3: Build Executables (only if deployment should proceed)
+  build_executables:
+    needs: version_management
+    if: needs.version_management.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/build-executables.yml
+    with:
+      dotnet-version: "9.0.x"
+
+  # Step 4: Create Release (only after executables are built)
+  create_release:
+    needs: [version_management, build_executables]
+    if: needs.version_management.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/create-release.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.version_management.outputs.version }}
+
+  # Step 5: Build Packages (only if deployment should proceed)
+  build_packages:
+    needs: [version_management, build_executables]
+    if: needs.version_management.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/build-packages.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.version_management.outputs.version }}
+
+  # Step 6: Finalize Repository (only if deployment should proceed)
+  finalize_repository:
+    needs: [version_management, build_packages]
+    if: needs.version_management.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/finalize-repository.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.version_management.outputs.version }}
+      GPG_PUBLIC_KEY: ${{ vars.GPG_PUBLIC_KEY }}
+
+  # Step 7: Update Repository for non-source changes (docs, workflows, etc.)
+  update_repository_only:
+    needs: version_management
+    if: |
+      needs.version_management.outputs.should_deploy == 'false' && 
+      github.ref == 'refs/heads/dev' &&
+      github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Setup .NET Environment
+        uses: ./.github/actions/setup-dotnet
+        with:
+          fetch-depth: 0
+
+      - name: Update Repository Website (docs/workflows changes)
+        uses: ./.github/actions/generate-repository-website
+        with:
+          version: ${{ needs.version_management.outputs.version }}
+          output-path: './packages'
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./packages
+          cname: repo.nomercy.tv
+          keep_files: true

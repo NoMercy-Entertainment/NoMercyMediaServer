@@ -1,0 +1,42 @@
+name: "Run TODO to Issue"
+on:
+  workflow_dispatch:
+    inputs:
+      MANUAL_COMMIT_REF:
+        description: "c62684fa3377a565d789796314397d42bc25b5b1"
+        required: true
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: "TODO to Issue"
+        uses: alstr/todo-to-issue-action@v5
+        with:
+          INSERT_ISSUE_URLS: "true"
+          CLOSE_ISSUES: "true"
+          AUTO_ASSIGN: "true"
+          PROJECT: "organization/NoMercy-Entertainment/NoMercyMediaServer"
+          PROJECTS_SECRET: "${{ secrets.TODO_PROJECTS_SECRET }}"
+          ISSUE_TEMPLATE: |
+            ### 📝 Todo Task
+            **Description:**  
+            {{ title }}
+
+            **Details:**  
+            {{ body }}
+
+            **File:**  
+            {{ url }}
+
+            **Code Snippet:**
+            ```  
+            {{ snippet }}
+            ```
+
+          IDENTIFIERS: '[{"name": "TODO", "labels": ["todo"]}]'

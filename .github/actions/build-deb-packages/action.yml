@@ -1,0 +1,203 @@
+name: 'Build DEB Packages'
+description: 'Build Debian/Ubuntu packages'
+inputs:
+  version:
+    description: 'Package version'
+    required: true
+  artifacts-path:
+    description: 'Path to build artifacts'
+    required: true
+    default: './output'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install DEB build dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y dpkg-dev devscripts fakeroot build-essential
+
+    - name: Build DEB packages
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
+        
+        # Function to create DEB package
+        create_deb_package() {
+          local name=$1
+          local friendly_name=$2
+          local bin_file=$3
+          local desktop_file=$4
+          local bin_path="$ARTIFACTS_PATH/$bin_file"
+          local PACKAGE_ROOT="./packages/debian-${name}"
+
+          # Validate source files exist
+          if [ ! -f "$bin_path" ]; then
+            echo "ERROR: Binary file not found: $bin_path"
+            return 1
+          fi
+          
+          if [ ! -f "./assets/linux/$desktop_file" ]; then
+            echo "ERROR: Desktop file not found: ./assets/linux/$desktop_file"
+            return 1
+          fi
+
+          # Clean up any existing package directory
+          rm -rf "${PACKAGE_ROOT}"
+        
+          # Create directory structure
+          mkdir -p "${PACKAGE_ROOT}/DEBIAN"
+          mkdir -p "${PACKAGE_ROOT}/usr/bin"
+          mkdir -p "${PACKAGE_ROOT}/usr/share/applications"
+          mkdir -p "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps"
+          mkdir -p "${PACKAGE_ROOT}/usr/lib/systemd/user"
+          mkdir -p "${PACKAGE_ROOT}/usr/share/doc/${name}"
+    
+          # Copy binary with proper installation method
+          install -Dm755 "${bin_path}" "${PACKAGE_ROOT}/usr/bin/${name}"
+    
+          # Copy desktop file
+          install -Dm644 "./assets/linux/${desktop_file}" "${PACKAGE_ROOT}/usr/share/applications/"
+    
+          # Copy icon
+          install -Dm644 "./assets/icons/icon.png" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
+    
+          # Create systemd service file (use /usr/lib not /lib)
+          cat > "${PACKAGE_ROOT}/usr/lib/systemd/user/${name}.service" << EOF
+        [Unit]
+        Description=${friendly_name} Service
+        After=network.target
+  
+        [Service]
+        Type=simple
+        ExecStart=/usr/bin/${name}
+        Restart=on-failure
+        RestartSec=5
+  
+        [Install]
+        WantedBy=default.target
+        EOF
+        
+          chmod 644 "${PACKAGE_ROOT}/usr/lib/systemd/user/${name}.service"
+
+          # Create copyright file (Debian requirement)
+          cat > "${PACKAGE_ROOT}/usr/share/doc/${name}/copyright" << EOF
+        Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+        Upstream-Name: ${friendly_name}
+        Source: https://nomercy.tv
+
+        Files: *
+        Copyright: $(date +%Y) NoMercy Entertainment
+        License: Proprietary
+         This is proprietary software.
+         .
+         All rights reserved.
+        EOF
+        
+          # Create control file with better dependencies
+          cat > "${PACKAGE_ROOT}/DEBIAN/control" << EOF
+        Package: ${name}
+        Version: ${VERSION}
+        Architecture: amd64
+        Maintainer: NoMercy Entertainment <support@nomercy.tv>
+        Description: ${friendly_name}
+         Modern Media Server Solution
+        Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
+        Recommends: systemd
+        Priority: optional
+        Section: multimedia
+        EOF
+    
+          # Create postinst script
+          cat > "${PACKAGE_ROOT}/DEBIAN/postinst" << EOF
+        #!/bin/sh
+        set -e
+        
+        # Update icon cache if available
+        if command -v update-icon-caches >/dev/null 2>&1; then
+            update-icon-caches /usr/share/icons/hicolor >/dev/null 2>&1 || true
+        fi
+        
+        # Update desktop database if available
+        if command -v update-desktop-database >/dev/null 2>&1; then
+            update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+        fi
+        
+        # Reload systemd user daemon if systemd is available
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl --user daemon-reload >/dev/null 2>&1 || true
+        fi
+        
+        exit 0
+        EOF
+          chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst"
+          
+          # Create prerm script (fix variable substitution)
+          cat > "${PACKAGE_ROOT}/DEBIAN/prerm" << EOF
+        #!/bin/sh
+        set -e
+        
+        # Stop and disable service if systemd is available
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl --user stop ${name}.service >/dev/null 2>&1 || true
+            systemctl --user disable ${name}.service >/dev/null 2>&1 || true
+        fi
+        
+        exit 0
+        EOF
+          chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm"
+
+          # Create postrm script for cleanup
+          cat > "${PACKAGE_ROOT}/DEBIAN/postrm" << EOF
+        #!/bin/sh
+        set -e
+        
+        if [ "\$1" = "purge" ]; then
+            # Update icon cache if available
+            if command -v update-icon-caches >/dev/null 2>&1; then
+                update-icon-caches /usr/share/icons/hicolor >/dev/null 2>&1 || true
+            fi
+            
+            # Update desktop database if available
+            if command -v update-desktop-database >/dev/null 2>&1; then
+                update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+            fi
+        fi
+        
+        exit 0
+        EOF
+          chmod 755 "${PACKAGE_ROOT}/DEBIAN/postrm"
+
+          # Build package
+          dpkg-deb --build "${PACKAGE_ROOT}"
+    
+          # Create package directory and move package
+          mkdir -p "./packages/apt/pool/main/n/${name}"
+          mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
+          
+          # Create symlink
+          cd "./packages/apt/pool/main/n/${name}"
+          ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
+          cd ../../../../../..
+          
+          echo "Successfully created DEB package for ${name}"
+        }
+  
+        # Build packages
+        create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
+        create_deb_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
+    
+        # Update package index
+        mkdir -p packages/apt/dists/stable/main/binary-amd64
+        cd packages/apt
+        rm -f dists/stable/main/binary-amd64/Packages*
+        dpkg-scanpackages --multiversion pool/ > dists/stable/main/binary-amd64/Packages
+        gzip -k -f dists/stable/main/binary-amd64/Packages
+
+    - name: Upload DEB artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: deb-packages
+        path: packages/apt/

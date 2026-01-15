@@ -1,0 +1,94 @@
+name: 'Repository Finalization Workflow'
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Package version'
+        required: true
+        type: string
+      GPG_PUBLIC_KEY:
+        description: 'GPG public key'
+        required: true
+        type: string
+    secrets:
+      GPG_PRIVATE_KEY:
+        description: 'GPG private key for signing'
+        required: true
+
+jobs:
+  finalize_packages:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          fetch-tags: false
+
+      - name: Download all package artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: ./packages
+
+      - name: Create Public Key File
+        run: |
+          echo "${{ inputs.GPG_PUBLIC_KEY }}" > packages/nomercy_repo.gpg.pub
+          chmod 644 packages/nomercy_repo.gpg.pub
+
+      - name: Generate APT Repository Metadata and Sign
+        run: |
+          # Move DEB packages to correct location
+          if [ -d "./packages/deb-packages" ]; then
+            mkdir -p packages/apt
+            cp -r ./packages/deb-packages/* packages/apt/
+            
+            cd packages/apt
+            
+            # Import GPG key and sign
+            echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+            
+            # Create Release file
+            cd dists/stable
+            cat > Release << EOF
+          Origin: NoMercy Entertainment
+          Label: NoMercy
+          Suite: stable
+          Codename: stable
+          Version: 1.0
+          Architectures: amd64
+          Components: main
+          Description: NoMercy Entertainment Repository
+          Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')
+          SHA256:
+          EOF
+
+            # Calculate hashes
+            cd .. # Move to dists directory
+            for file in $(find stable/main -type f); do
+              sha256=$(sha256sum "${file}" | cut -d' ' -f1)
+              size=$(stat -c%s "${file}")
+              echo " $sha256 $size ${file#stable/}" >> stable/Release
+            done
+
+            # Sign Release file
+            cd stable
+            gpg --batch --yes --clear-sign -o InRelease Release
+            gpg --batch --yes --detach-sign --armor -o Release.gpg Release
+            
+            cd ../../../..
+          fi
+      
+      - name: Generate Repository Website
+        uses: ./.github/actions/generate-repository-website
+        with:
+          version: ${{ inputs.version }}
+          output-path: './packages'
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./packages
+          cname: repo.nomercy.tv
+          keep_files: true

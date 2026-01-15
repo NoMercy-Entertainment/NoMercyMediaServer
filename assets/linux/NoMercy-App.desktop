@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=NoMercy
+GenericName=NoMercy App
+Comment=NoMercy Media Center Interface
+Categories=AudioVideo;Video;Player;TV;
+Exec=NoMercyApp
+Icon=NoMercy-App
+Terminal=false
+StartupNotify=true
+StartupWMClass=NoMercyApp
+X-GNOME-UsesNotifications=true
+Keywords=media;player;streaming;

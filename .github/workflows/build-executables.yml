@@ -1,0 +1,42 @@
+name: 'Build Executables Workflow'
+
+on:
+  workflow_call:
+    inputs:
+      dotnet-version:
+        description: '.NET version to use'
+        required: false
+        type: string
+        default: '9.0.x'
+    outputs:
+      artifact-names:
+        description: 'Names of uploaded artifacts'
+        value: ${{ jobs.build_executables.outputs.artifact-names }}
+
+jobs:
+  build_executables:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        project: [Server, App]
+    outputs:
+      artifact-names: ${{ steps.set-names.outputs.names }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: master
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Build ${{ matrix.project }}
+        uses: ./.github/actions/build-dotnet-project
+        with:
+          project: ${{ matrix.project }}
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Set artifact names
+        id: set-names
+        run: |
+          names="${{ matrix.project }}-executables"
+          echo "names=$names" >> $GITHUB_OUTPUT

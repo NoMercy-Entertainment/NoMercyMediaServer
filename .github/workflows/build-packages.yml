@@ -1,0 +1,70 @@
+name: 'Package Building Workflow'
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Package version'
+        required: true
+        type: string
+    secrets:
+      GPG_PRIVATE_KEY:
+        description: 'GPG private key for signing'
+        required: true
+
+jobs:
+  build_packages:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package-type: [deb, rpm, arch]
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: master
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: ./artifacts
+
+      - name: Prepare executables
+        run: |
+          mkdir -p ./output
+          
+          # Copy all artifacts to output directory
+          find ./artifacts -name "*.tar.gz" -exec cp {} ./output/ \;
+          find ./artifacts -name "*.dmg" -exec cp {} ./output/ \;
+          find ./artifacts -name "*-linux-x64" -exec cp {} ./output/ \;
+          find ./artifacts -name "*-windows-x64.exe" -exec cp {} ./output/ \;
+          find ./artifacts -name "*-macos-x64" -exec cp {} ./output/ \;
+
+      - name: Make Linux executables executable
+        run: |
+          chmod +x ./output/NoMercyMediaServer-linux-x64 2>/dev/null || true
+          chmod +x ./output/NoMercyApp-linux-x64 2>/dev/null || true
+
+      - name: Build DEB packages
+        if: matrix.package-type == 'deb'
+        uses: ./.github/actions/build-deb-packages
+        with:
+          version: ${{ inputs.version }}
+          artifacts-path: './output'
+
+      - name: Build RPM packages
+        if: matrix.package-type == 'rpm'
+        uses: ./.github/actions/build-rpm-packages
+        with:
+          version: ${{ inputs.version }}
+          artifacts-path: './output'
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Build Arch packages
+        if: matrix.package-type == 'arch'
+        uses: ./.github/actions/build-arch-packages
+        with:
+          version: ${{ inputs.version }}
+          artifacts-path: './output'
