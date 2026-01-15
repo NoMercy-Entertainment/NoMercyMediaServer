@@ -1,0 +1,69 @@
+# NoMercy MediaServer - Docker Compose (NVIDIA GPU)
+# 
+# Complete standalone configuration with NVIDIA GPU hardware acceleration.
+# Requires: NVIDIA drivers + NVIDIA Container Toolkit on host.
+#
+# Usage:
+#   docker compose -f docker-compose.nvidia.yml up -d
+#   docker compose -f docker-compose.nvidia.yml logs -f nomercy
+#   docker compose -f docker-compose.nvidia.yml down
+#
+# Prerequisites:
+#   1. NVIDIA drivers installed on host
+#   2. NVIDIA Container Toolkit: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+#
+# Verify GPU:
+#   docker run --rm --gpus all nvidia/cuda:12.3.1-base-ubuntu22.04 nvidia-smi
+
+services:
+  nomercy:
+    container_name: nomercy-mediaserver
+    build:
+      context: .
+      dockerfile: Dockerfile.nvidia
+    image: nomercy/mediaserver:nvidia
+    restart: unless-stopped
+    ports:
+      - "7626:7626"
+    volumes:
+      # Configuration and data persistence
+      - nomercy-config:/data/config
+      - nomercy-cache:/data/cache
+      - nomercy-log:/data/log
+      # Mount your media libraries (adjust paths as needed)
+      # rw = read-write for metadata, thumbnails, and transcoding
+      - /path/to/your/movies:/media/movies:rw
+      - /path/to/your/tv:/media/tv:rw
+      - /path/to/your/music:/media/music:rw
+    environment:
+      - TZ=UTC
+      - PUID=1000
+      - PGID=1000
+      # NVIDIA environment
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    # NVIDIA GPU passthrough
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, video, compute]
+          memory: 1G
+        limits:
+          memory: 8G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7626/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  nomercy-config:
+    name: nomercy-config
+  nomercy-cache:
+    name: nomercy-cache
+  nomercy-log:
+    name: nomercy-log

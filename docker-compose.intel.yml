@@ -1,0 +1,71 @@
+# NoMercy MediaServer - Docker Compose (Intel Quick Sync)
+# 
+# Complete standalone configuration with Intel QSV hardware acceleration.
+# Requires: Intel CPU with integrated graphics (6th gen+) or Intel Arc GPU.
+#
+# Usage:
+#   docker compose -f docker-compose.intel.yml up -d
+#   docker compose -f docker-compose.intel.yml logs -f nomercy
+#   docker compose -f docker-compose.intel.yml down
+#
+# Prerequisites:
+#   1. Intel CPU with iGPU or Intel Arc discrete GPU
+#   2. Intel media drivers on host (usually included in kernel)
+#
+# Verify GPU:
+#   ls -la /dev/dri/
+#   vainfo (install vainfo package)
+
+services:
+  nomercy:
+    container_name: nomercy-mediaserver
+    build:
+      context: .
+      dockerfile: Dockerfile.intel
+    image: nomercy/mediaserver:intel
+    restart: unless-stopped
+    ports:
+      - "7626:7626"
+    # Intel GPU device passthrough
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/dri/card0:/dev/dri/card0
+    group_add:
+      - video
+      - render
+    volumes:
+      # Configuration and data persistence
+      - nomercy-config:/data/config
+      - nomercy-cache:/data/cache
+      - nomercy-log:/data/log
+      # Mount your media libraries (adjust paths as needed)
+      # rw = read-write for metadata, thumbnails, and transcoding
+      - /path/to/your/movies:/media/movies:rw
+      - /path/to/your/tv:/media/tv:rw
+      - /path/to/your/music:/media/music:rw
+    environment:
+      - TZ=UTC
+      - PUID=1000
+      - PGID=1000
+      # Intel QSV environment
+      - LIBVA_DRIVER_NAME=iHD
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7626/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  nomercy-config:
+    name: nomercy-config
+  nomercy-cache:
+    name: nomercy-cache
+  nomercy-log:
+    name: nomercy-log

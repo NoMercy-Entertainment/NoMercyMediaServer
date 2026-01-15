@@ -1,6 +1,83 @@
-﻿services:
-  nomercy.service:
-    image: nomercy.service
+﻿# NoMercy MediaServer - Docker Compose (CPU Only)
+# 
+# Basic configuration without GPU hardware acceleration.
+# For GPU support, use the appropriate compose file instead.
+#
+# Usage:
+#   docker compose up -d              # Start in background
+#   docker compose logs -f nomercy    # View logs
+#   docker compose down               # Stop and remove containers
+#
+# GPU Alternatives:
+#   docker compose -f docker-compose.nvidia.yml up -d   # NVIDIA GPU
+#   docker compose -f docker-compose.intel.yml up -d    # Intel Quick Sync
+#   docker compose -f docker-compose.amd.yml up -d      # AMD GPU
+
+services:
+  nomercy:
+    container_name: nomercy-mediaserver
     build:
       context: .
-      dockerfile: NoMercy.Service/Dockerfile
+      dockerfile: Dockerfile
+    image: nomercy/mediaserver:latest
+    restart: unless-stopped
+    ports:
+      - "7626:7626"
+    volumes:
+      # Configuration and data persistence
+      - nomercy-config:/data/config
+      - nomercy-cache:/data/cache
+      - nomercy-log:/data/log
+      # Mount your media libraries (adjust paths as needed)
+      # rw = read-write for metadata, thumbnails, and transcoding
+      - /path/to/your/movies:/media/movies:rw
+      - /path/to/your/tv:/media/tv:rw
+      - /path/to/your/music:/media/music:rw
+    environment:
+      - TZ=UTC
+      - PUID=1000
+      - PGID=1000
+      # Uncomment for development mode
+      # - ASPNETCORE_ENVIRONMENT=Development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7626/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Resource limits (optional, adjust as needed)
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 512M
+
+volumes:
+  nomercy-config:
+    name: nomercy-config
+  nomercy-cache:
+    name: nomercy-cache
+  nomercy-log:
+    name: nomercy-log
+
+# =============================================================================
+# Example configurations:
+# =============================================================================
+#
+# 1. With Traefik reverse proxy:
+#    Add labels to the nomercy service:
+#
+#    labels:
+#      - "traefik.enable=true"
+#      - "traefik.http.routers.nomercy.rule=Host(`media.yourdomain.com`)"
+#      - "traefik.http.services.nomercy.loadbalancer.server.port=7626"
+#
+# 2. With external network:
+#
+#    networks:
+#      - proxy
+#
+#    networks:
+#      proxy:
+#        external: true

@@ -44,34 +44,122 @@ We have many more exciting features planned for the future, enhancing your exper
 
 ## Installation
 
+### Option 1: Download Pre-built Release (Recommended)
+
+Download the latest release for your platform from the [Releases page](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/releases).
+
+| Platform | File |
+|----------|------|
+| Windows | `NoMercyMediaServer-windows-x64.exe` |
+| Linux | `NoMercyMediaServer-linux-x64` |
+| macOS | `NoMercyMediaServer-macos-x64.tar.gz` |
+
+> [!NOTE]
+> Pre-built releases are **self-contained** and do not require .NET to be installed.
+
+**Linux/macOS**: Make the binary executable before running:
+```bash
+chmod +x NoMercyMediaServer-linux-x64
+./NoMercyMediaServer-linux-x64
+```
+
+### Option 2: Linux Package Repository
+
+Linux users can install directly from our package repository at [repo.nomercy.tv](https://repo.nomercy.tv).
+
+<details>
+<summary><strong>Debian / Ubuntu</strong></summary>
+
+```bash
+# Add repository key
+wget -O - https://repo.nomercy.tv/nomercy_repo.gpg.pub | sudo gpg --dearmor -o /etc/apt/keyrings/nomercy-archive-keyring.gpg
+
+# Add repository
+echo "deb [signed-by=/etc/apt/keyrings/nomercy-archive-keyring.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
+
+# Install
+sudo apt update && sudo apt install nomercymediaserver
+```
+</details>
+
+<details>
+<summary><strong>Fedora / RHEL / CentOS</strong></summary>
+
+```bash
+# Add repository
+sudo dnf config-manager --add-repo https://repo.nomercy.tv/rpm/nomercy.repo
+
+# Import GPG key
+sudo rpm --import https://repo.nomercy.tv/nomercy_repo.gpg.pub
+
+# Install
+sudo dnf install nomercymediaserver
+```
+</details>
+
+<details>
+<summary><strong>Arch Linux</strong></summary>
+
+```bash
+# Add repository
+echo -e "Server = https://repo.nomercy.tv/arch-packages/pool/x86_64" | sudo tee /etc/pacman.d/nomercy-mirrorlist
+echo -e "\n[nomercy]\nInclude = /etc/pacman.d/nomercy-mirrorlist" | sudo tee -a /etc/pacman.conf
+
+# Add GPG key
+curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub
+sudo pacman-key --add nomercy.gpg.pub
+sudo pacman-key --lsign-key 23F1B8BDEE7408FBB2401B66EBBAD4C5328D9E9B
+
+# Install
+sudo pacman -Sy nomercymediaserver
+```
+</details>
+
+### Option 3: Docker
+
+Run NoMercy MediaServer in a container:
+
+```bash
+# CPU only
+docker compose up -d
+
+# With NVIDIA GPU
+docker compose -f docker-compose.nvidia.yml up -d
+
+# With Intel Quick Sync
+docker compose -f docker-compose.intel.yml up -d
+
+# With AMD GPU
+docker compose -f docker-compose.amd.yml up -d
+```
+
+> [!IMPORTANT]
+> Edit the compose file to update the media volume paths before running.
+
+### Option 4: Build from Source
+
 > [!TIP]
-> You may need to install the .NET Core SDK, which can be found here: [Download .NET (Linux, macOS and Windows)](https://dotnet.microsoft.com/en-us/download)
+> Building from source requires the [.NET 9.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
 
-To set up NoMercy MediaServer on your local machine:
+```bash
+# Clone the repository
+git clone https://github.com/NoMercy-Entertainment/NoMercyMediaServer.git
+cd NoMercyMediaServer
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/NoMercy-Entertainment/NoMercyMediaServer.git
-   ```
-2. Navigate into the project directory:
-   ```bash
-   cd NoMercyMediaServer
-   ```
-3. Restore the necessary dependencies and build the project:
-   ```bash
-   dotnet restore
-   dotnet build
-   ```
+# Restore dependencies and build
+dotnet restore
+dotnet build
+
+# Run the server
+dotnet run --project src/NoMercy.Server
+```
 
 ## Usage
 
-1. Start the server:
-   ```bash
-   dotnet run --project **src/NoMercy.Server
-   ```
-2. If you are on a desktop, it will authenticate the server by logging in from the browser. If you are on a server, it will ask you for your credentials.
-3. Open your browser and go to [https://app.nomercy.tv](https://app.nomercy.tv) to access the web interface.
-4. Begin adding your media files and enjoy seamless access and management!
+1. **Start the server** using one of the installation methods above.
+2. **Authenticate**: On desktop, a browser window opens for login. On headless servers, enter credentials in the terminal.
+3. **Access the web interface** at [https://app.nomercy.tv](https://app.nomercy.tv)
+4. **Add your media** and start streaming!
 
 ### External Access & Port Forwarding
 
