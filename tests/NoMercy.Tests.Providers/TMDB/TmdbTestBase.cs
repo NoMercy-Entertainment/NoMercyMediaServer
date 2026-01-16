@@ -33,12 +33,12 @@ public abstract class TmdbTestBase : IDisposable
     /// <summary>
     /// Creates a valid TV show ID for testing
     /// </summary>
-    protected const int ValidTvShowId = 11890; // Goede Tijden, Slechte Tijden (GTST) - Active Dutch soap
-    
+    protected const int ValidTvShowId = 1396; // Breaking Bad - Complete and well-documented series
+
     /// <summary>
     /// Creates a valid season number for testing
     /// </summary>
-    protected const int ValidSeasonNumber = 54; // Current season (September 2025)
+    protected const int ValidSeasonNumber = 1; // Season 1 with complete cast/crew data
     
     /// <summary>
     /// Creates a valid episode number for testing
