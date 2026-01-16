@@ -50,7 +50,7 @@ public class ImagePaletteCronJob : ICronJobExecutor
                 {
                     image._colorPalette = await MovieDbImageManager.ColorPalette("image", image.FilePath);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     image._colorPalette = "{}";
                 }

@@ -502,7 +502,7 @@ public class FileRepository : IFileRepository
             }
             else
             {
-                prevMusicBrainzReleaseId = await FromFingerprint(musicBrainzReleaseClient, mediaFile, lockObject, releases);
+                prevMusicBrainzReleaseId = await FromFingerprint(musicBrainzReleaseClient, mediaFile, lockObject, releases) ?? prevMusicBrainzReleaseId;
             }
         });
         releases = releases
@@ -512,7 +512,7 @@ public class FileRepository : IFileRepository
         return (releases, year);
     }
 
-    private static async Task<string> FromFingerprint(MusicBrainzReleaseClient musicBrainzReleaseClient, MediaFile mediaFile,
+    private static async Task<string?> FromFingerprint(MusicBrainzReleaseClient musicBrainzReleaseClient, MediaFile mediaFile,
         object lockObject, List<MusicBrainzReleaseAppends> releases)
     {
         string prevMusicBrainzReleaseId;
@@ -545,14 +545,14 @@ public class FileRepository : IFileRepository
     private static async Task<(string prevMusicBrainzReleaseId, string year)> FromMusicBrainzRelease(MusicBrainzReleaseClient musicBrainzReleaseClient,
         AudioTagModel audioTagModel, object lockObject, List<MusicBrainzReleaseAppends> releases, string prevMusicBrainzReleaseId, string year)
     {
-        if (prevMusicBrainzReleaseId == audioTagModel.Tags.MusicBrainzReleaseId)
+        if (prevMusicBrainzReleaseId == audioTagModel.Tags?.MusicBrainzReleaseId)
         {
             if (year == "0")
-                year = audioTagModel.Tags.Year.ToString();
+                year = audioTagModel.Tags?.Year.ToString() ?? "0";
             return (prevMusicBrainzReleaseId, year);
         }
 
-        Guid musicBrainzReleaseId = Guid.Parse(audioTagModel.Tags.MusicBrainzReleaseId ?? "");
+        Guid musicBrainzReleaseId = Guid.Parse(audioTagModel.Tags?.MusicBrainzReleaseId ?? "");
         if (musicBrainzReleaseId == Guid.Empty) return (prevMusicBrainzReleaseId, year);
         MusicBrainzReleaseAppends? release =
             await musicBrainzReleaseClient.WithAllAppends(musicBrainzReleaseId);

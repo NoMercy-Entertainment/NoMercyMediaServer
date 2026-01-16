@@ -14,7 +14,7 @@ public class BaseContainer : Classes
 
     public new virtual ContainerDto ContainerDto { get; protected set; } = AvailableContainers.First(c => c.IsDefault);
 
-    public FfProbeData FfProbeData;
+    public FfProbeData FfProbeData = null!;
     public readonly List<BaseVideo> VideoStreams = [];
     public readonly List<BaseAudio> AudioStreams = [];
     public readonly List<BaseSubtitle> SubtitleStreams = [];

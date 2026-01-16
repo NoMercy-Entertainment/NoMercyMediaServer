@@ -19,8 +19,6 @@ public class FfMpeg : Classes
 
     private static readonly Dictionary<int, Process> FfmpegProcess = new();
 
-    internal FfProbeData? Ffprobe;
-
     public FfMpeg()
     {
     }

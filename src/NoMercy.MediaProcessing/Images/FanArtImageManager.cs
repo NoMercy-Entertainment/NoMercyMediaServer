@@ -10,8 +10,7 @@ using Image = NoMercy.Database.Models.Image;
 namespace NoMercy.MediaProcessing.Images;
 
 public class FanArtImageManager(
-    ImageRepository imageRepository, 
-    MediaContext context
+    ImageRepository imageRepository
 ) : IFanArtImageManager
 {
     public static async Task<string> ColorPalette(string type, Uri url, bool? download = true)

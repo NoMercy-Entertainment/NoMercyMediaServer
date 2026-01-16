@@ -15,8 +15,7 @@ namespace NoMercy.MediaProcessing.Releases;
 
 public class ReleaseManager(
     IReleaseRepository releaseRepository,
-    IMusicGenreRepository musicGenreRepository,
-    JobDispatcher jobDispatcher
+    IMusicGenreRepository musicGenreRepository
 ) : BaseManager, IReleaseManager
 {
     public async

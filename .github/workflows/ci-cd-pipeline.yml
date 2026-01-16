@@ -104,8 +104,6 @@ jobs:
 
       - name: Setup .NET Environment
         uses: ./.github/actions/setup-dotnet
-        with:
-          fetch-depth: 0
 
       - name: Update Repository Website (docs/workflows changes)
         uses: ./.github/actions/generate-repository-website

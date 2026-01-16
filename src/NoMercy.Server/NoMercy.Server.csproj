@@ -3,7 +3,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+        <ApplicationIcon>..\..\Assets\icons\icon.ico</ApplicationIcon>
         <Authors>NoMercy Entertainment</Authors>
         <Description>The Effortless Encoder</Description>
         <Copyright>2025 NoMercy Entertainment</Copyright>

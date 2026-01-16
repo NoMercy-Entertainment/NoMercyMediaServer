@@ -326,12 +326,12 @@ public partial class RecordingManager(
             Id = trackAppends.Id,
             Name = trackAppends.Title,
             Date = trackAppends.Recording.FirstReleaseDate,
-            DiscNumber = mediaFile.Parsed.DiscNumber,
-            TrackNumber = mediaFile.Parsed.TrackNumber,
+            DiscNumber = mediaFile.Parsed?.DiscNumber ?? 0,
+            TrackNumber = mediaFile.Parsed?.TrackNumber ?? 0,
 
             Filename = "/" + Path.GetFileName(mediaFile.Path),
             Quality = (int)Math.Floor(
-                (mediaFile.FFprobe?.Format.BitRate ?? mediaFile.TagFile!.Properties!.AudioBitrate * 1000) / 1000.0),
+                (mediaFile.FFprobe?.Format.BitRate ?? mediaFile.TagFile?.Properties?.AudioBitrate * 1000 ?? 0) / 1000.0),
             Duration = HmsRegex()
                 .Replace((mediaFile.FFprobe?.Duration ?? mediaFile.TagFile!.Properties!.Duration).ToString("hh\\:mm\\:ss"),
                     ""),

@@ -107,7 +107,7 @@ public class LibraryRepository(MediaContext context)
     }
 
     public readonly Func<MediaContext, Guid, Ulid, string, int, int, Expression<Func<Movie, object>>?, string?, IAsyncEnumerable<Movie>> GetLibraryMovies =
-        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int take, int skip, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null) =>
+        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int take, int skip, Expression<Func<Movie, object>>? orderByExpression, string? direction) =>
             context.Movies.AsNoTracking()
                 .Where(movie => movie.Library.Id == libraryId)
                 .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
@@ -162,7 +162,7 @@ public class LibraryRepository(MediaContext context)
     // }
 
     public readonly Func<MediaContext, Guid, Ulid, string, int, int, Expression<Func<Tv, object>>?, string?, IAsyncEnumerable<Tv>> GetLibraryShows =
-        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int take, int skip, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null) 
+        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int take, int skip, Expression<Func<Tv, object>>? orderByExpression, string? direction) 
             => mediaContext.Tvs.AsNoTracking()
                 .Where(tv => tv.Library.Id == libraryId)
                 .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))

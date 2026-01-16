@@ -218,6 +218,8 @@ public static partial class Str
 
     public static bool ContainsSanitized(this string str, string? value)
     {
+        if (value == null) return false;
+
         str = str.Sanitize().ToLower();
         value = value.Sanitize().ToLower();
         return str.Contains(value) || value.Contains(str);

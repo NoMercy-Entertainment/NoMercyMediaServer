@@ -43,7 +43,7 @@ public class PersonPaletteCronJob : ICronJobExecutor
                 {
                     person._colorPalette = await MovieDbImageManager.ColorPalette("profile", person.Profile);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     person._colorPalette = "{}";
                 }

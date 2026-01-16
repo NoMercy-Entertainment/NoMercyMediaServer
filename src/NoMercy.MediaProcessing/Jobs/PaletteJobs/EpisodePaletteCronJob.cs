@@ -43,7 +43,7 @@ public class EpisodePaletteCronJob : ICronJobExecutor
                 {
                     episode._colorPalette = await MovieDbImageManager.ColorPalette("still", episode.Still);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     episode._colorPalette = "{}";
                 }

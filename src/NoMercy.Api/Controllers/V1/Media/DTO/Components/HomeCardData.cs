@@ -67,7 +67,7 @@ public record HomeCardData
             {
                 Rating = cm.Certification.Rating,
                 Iso31661 = cm.Certification.Iso31661,
-                Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                Image = new($"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg")
             })
             .FirstOrDefault();
     }
@@ -107,7 +107,7 @@ public record HomeCardData
             {
                 Rating = ct.Certification.Rating,
                 Iso31661 = ct.Certification.Iso31661,
-                Image = $"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg"
+                Image = new($"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg")
             })
             .FirstOrDefault();
     }

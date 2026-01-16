@@ -19,18 +19,18 @@ public record ArtistResponseItemDto
     [JsonProperty("folder")] public string? Folder { get; set; }
     [JsonProperty("id")] public Guid Id { get; set; }
     [JsonProperty("library_id")] public Ulid? LibraryId { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
+    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
     [JsonProperty("year")] public int? Year { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("link")] public Uri Link { get; set; } = null!;
 
-    [JsonProperty("playlists")] public IEnumerable<AlbumDto> Playlists { get; set; }
-    [JsonProperty("tracks")] public IEnumerable<ArtistTrackDto> Tracks { get; set; }
-    [JsonProperty("favorite_tracks")] public List<FavoriteTrackDto> FavoriteTracks { get; set; }
-    [JsonProperty("images")] public IEnumerable<ImageDto> Images { get; set; }
-    [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; }
-    [JsonProperty("albums")] public IEnumerable<AlbumDto> Albums { get; set; }
-    [JsonProperty("featured")] public List<AlbumDto> Featured { get; set; }
+    [JsonProperty("playlists")] public IEnumerable<AlbumDto> Playlists { get; set; } = [];
+    [JsonProperty("tracks")] public IEnumerable<ArtistTrackDto> Tracks { get; set; } = [];
+    [JsonProperty("favorite_tracks")] public List<FavoriteTrackDto> FavoriteTracks { get; set; } = [];
+    [JsonProperty("images")] public IEnumerable<ImageDto> Images { get; set; } = [];
+    [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; } = [];
+    [JsonProperty("albums")] public IEnumerable<AlbumDto> Albums { get; set; } = [];
+    [JsonProperty("featured")] public List<AlbumDto> Featured { get; set; } = [];
 
     public ArtistResponseItemDto(Artist artist, Guid userId, string? country = "US")
     {
@@ -72,7 +72,8 @@ public record ArtistResponseItemDto
             .OrderBy(artistTrack => artistTrack.Year);
 
         Featured = artist.ArtistTrack
-            .Select(artistTrack => artistTrack.Track.AlbumTrack.FirstOrDefault().Album)
+            .Select(artistTrack => artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album)
+            .Where(album => album != null)
             .GroupBy(album => album.Name.RemoveNonAlphaNumericCharacters())
             .Select(album => album.First())
             .OrderBy(album => album.Year)

@@ -66,7 +66,7 @@ public class NmCardDto
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
-                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                Image = $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
             })
             .FirstOrDefault();
     }
@@ -105,7 +105,7 @@ public class NmCardDto
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
-                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                Image = $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
             })
             .FirstOrDefault();
     }
@@ -146,7 +146,7 @@ public class NmCardDto
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
-                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                Image = $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
             })
             .FirstOrDefault();
     }
@@ -189,7 +189,7 @@ public class NmCardDto
             {
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661,
-                Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                Image = $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
             })
             .FirstOrDefault();
     }
@@ -233,7 +233,7 @@ public class NmCardDto
                     {
                         Rating = certificationTv.Certification.Rating,
                         Iso31661 = certificationTv.Certification.Iso31661,
-                        Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                        Image = $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
                     }) ?? [])
                 .Concat(item.Special.Items
                     .Where(specialItem => specialItem.MovieId != null)
@@ -244,7 +244,7 @@ public class NmCardDto
                         {
                             Rating = certificationTv.Certification.Rating,
                             Iso31661 = certificationTv.Certification.Iso31661,
-                            Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                            Image = $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
                         })?? []))
                 .OrderByDescending(cert => cert.Order)
                 .FirstOrDefault();
@@ -280,7 +280,7 @@ public class NmCardDto
                 {
                     Rating = certificationTv.Certification.Rating,
                     Iso31661 = certificationTv.Certification.Iso31661,
-                    Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                    Image = $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
                 })
                 .FirstOrDefault();
         }
@@ -309,7 +309,7 @@ public class NmCardDto
                 {
                     Rating = certificationTv.Certification.Rating,
                     Iso31661 = certificationTv.Certification.Iso31661,
-                    Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                    Image = $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
                 })
                 .FirstOrDefault();
         }
@@ -340,7 +340,7 @@ public class NmCardDto
                 {
                     Rating = certificationTv.Certification.Rating,
                     Iso31661 = certificationTv.Certification.Iso31661,
-                    Image = new($"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg")
+                    Image = $"/{certificationTv.Certification.Iso31661}/{certificationTv.Certification.Iso31661}_{certificationTv.Certification.Rating}.svg"
                 })
                 .FirstOrDefault();
         }
@@ -390,8 +390,8 @@ public class NmCardDto
             Rating = new()
             {
                 Rating = movie.CertificationRating,
-                Iso31661 = movie.CertificationCountry,
-                Image = new($"/{movie.CertificationCountry}/{movie.CertificationCountry}_{movie.CertificationRating}.svg")
+                Iso31661 = movie.CertificationCountry!,
+                Image = $"/{movie.CertificationCountry}/{movie.CertificationCountry}_{movie.CertificationRating}.svg"
             };
         }
     }
@@ -422,8 +422,8 @@ public class NmCardDto
             Rating = new()
             {
                 Rating = tv.CertificationRating,
-                Iso31661 = tv.CertificationCountry,
-                Image = new($"/{tv.CertificationCountry}/{tv.CertificationCountry}_{tv.CertificationRating}.svg")
+                Iso31661 = tv.CertificationCountry!,
+                Image = $"/{tv.CertificationCountry}/{tv.CertificationCountry}_{tv.CertificationRating}.svg"
             };
         }
     }

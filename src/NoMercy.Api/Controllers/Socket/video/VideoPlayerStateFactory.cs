@@ -124,7 +124,7 @@ public class VideoPlayerStateFactory
 
     private static PlaybackPreference CreateDefaultPlaybackPreference(VideoPlaylistResponseDto item)
     {
-        int width = item.Qualities.Select(q => q.Width).FirstOrDefault();
+        int? width = item.Qualities.Select(q => q.Width).FirstOrDefault();
         string? audioLanguage = item.Audio.Select(a => a.Language).FirstOrDefault();
         string? subtitleLanguage = item.Captions.FirstOrDefault()?.Language;
         string? subtitleType = item.Captions.FirstOrDefault()?.Type;
@@ -132,10 +132,12 @@ public class VideoPlayerStateFactory
 
         return new()
         {
-            Video = new()
-            {
-                Width = width
-            },
+            Video = width.HasValue
+                ? new()
+                {
+                    Width = width.Value
+                }
+                : null,
             Audio = audioLanguage is not null
                 ? new() { Language = audioLanguage }
                 : null,

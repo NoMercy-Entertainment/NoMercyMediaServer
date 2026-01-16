@@ -56,32 +56,36 @@ public class ConnectionHub : Hub
         if (query is not null && query.Count > 1)
         {
             if (query.TryGetValue("client_id", out StringValues value))
-                client.DeviceId = value;
-            
+                client.DeviceId = value.ToString();
+
             if (query.TryGetValue("custom_name", out StringValues customName))
-                client.CustomName = customName;
-            
-            if (query.TryGetValue("client_volume", out StringValues volumePercent))  
-                client.VolumePercent = int.Parse(volumePercent);
-    
+                client.CustomName = customName.ToString();
+
+            if (query.TryGetValue("client_volume", out StringValues volumePercent))
+            {
+                string volumeString = volumePercent.ToString();
+                if (!string.IsNullOrEmpty(volumeString))
+                    client.VolumePercent = int.Parse(volumeString);
+            }
+
             if (query.TryGetValue("client_name", out StringValues name))
-                client.Name = name;
-            
+                client.Name = name.ToString();
+
             if (query.TryGetValue("client_type", out StringValues type))
-                client.Type = type;
+                client.Type = type.ToString();
 
             if (query.TryGetValue("client_version", out StringValues version))
-                client.Version = version;
-            
+                client.Version = version.ToString();
+
             if (query.TryGetValue("client_os", out StringValues os))
-                client.Os = os;
-            
+                client.Os = os.ToString();
+
             if (query.TryGetValue("client_browser", out StringValues browser))
-                client.Browser = browser;
-            
+                client.Browser = browser.ToString();
+
             if (query.TryGetValue("client_device", out StringValues model))
-                client.Model = model;
-            
+                client.Model = model.ToString();
+
         }
 
         await using MediaContext mediaContext = new();

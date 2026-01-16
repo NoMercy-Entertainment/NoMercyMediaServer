@@ -47,7 +47,7 @@ public class CollectionPaletteCronJob : ICronJobExecutor
                             new("backdrop", collection.Backdrop)
                         ]);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     collection._colorPalette = "{}";
                 }

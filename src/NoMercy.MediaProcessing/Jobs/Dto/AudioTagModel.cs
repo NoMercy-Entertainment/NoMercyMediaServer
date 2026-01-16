@@ -25,8 +25,8 @@ public class AudioTagModel
     public Tag? Tags { get; set; }
         
     public double Duration { get; set; }
-    
-    public MediaFile FileItem { get; set; }
+
+    public MediaFile FileItem { get; set; } = null!;
     
     public static async Task<AudioTagModel> Create(MediaFile fileItem)
     {

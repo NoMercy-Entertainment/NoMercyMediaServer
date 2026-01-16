@@ -26,7 +26,7 @@ public record NMHomeCardWrapper
     public NMHomeCardWrapper(HomeCardData homeCardData)
     {
         Id = homeCardData.Id?.ToString() ?? string.Empty;
-        Title = homeCardData.Title;
+        Title = homeCardData.Title ?? string.Empty;
         Data = homeCardData;
     }
 }

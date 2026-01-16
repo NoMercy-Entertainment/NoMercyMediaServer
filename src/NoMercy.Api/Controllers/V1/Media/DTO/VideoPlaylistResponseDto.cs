@@ -30,7 +30,7 @@ public class VideoPlaylistResponseDto
     [JsonProperty("fonts")] public List<IFont> Fonts { get; set; } = [];
     [JsonProperty("chapters")] public List<IChapter> Chapters { get; set; } = [];
     [JsonProperty("tracks")] public List<IVideoTrack> Tracks { get; set; } = [];
-    [JsonProperty("rating")] public RatingClass ContentRating { get; set; }
+    [JsonProperty("rating")] public RatingClass? ContentRating { get; set; }
     
     [JsonProperty("audio")] public List<IAudio> Audio { get; set; } = [];
     [JsonProperty("captions")] public List<ISubtitle> Captions { get; set; } = [];
@@ -106,7 +106,7 @@ public class VideoPlaylistResponseDto
                     ? "video/mp4"
                     : "application/x-mpegURL",
                 Languages = JsonConvert.DeserializeObject<string?[]>(videoFile.Languages)
-                    ?.Where(lang => lang != null).ToArray()
+                    ?.Where(lang => lang != null).ToArray() ?? []
             }
         ];
 
@@ -202,7 +202,7 @@ public class VideoPlaylistResponseDto
                     ? "video/mp4"
                     : "application/x-mpegURL",
                 Languages = JsonConvert.DeserializeObject<string?[]>(videoFile.Languages)
-                    ?.Where(lang => lang != null).ToArray()
+                    ?.Where(lang => lang != null).ToArray() ?? []
             }
         ];
 
@@ -287,7 +287,7 @@ public class VideoPlaylistResponseDto
             textTracks.Add(new()
             {
                 Label = type,
-                File = $"{baseFolder}/subtitles{videoFile?.Filename
+                File = $"{baseFolder}/subtitles{(videoFile?.Filename ?? string.Empty)
                     .Replace(".mp4", "")
                     .Replace(".m3u8", "")}.{language}.{type}.{ext}",
                 Language = language,
@@ -298,7 +298,7 @@ public class VideoPlaylistResponseDto
         List<FontDto?>? fonts = [];
         string fontsFile = "";
 
-        if (!search || !System.IO.File.Exists($"{videoFile?.HostFolder}fonts.json"))
+        if (!search || videoFile?.HostFolder == null || !System.IO.File.Exists($"{videoFile.HostFolder}fonts.json"))
             return new()
             {
                 TextTracks = textTracks,
@@ -306,9 +306,9 @@ public class VideoPlaylistResponseDto
                 FontsFile = fontsFile
             };
 
-        fontsFile = $"/{videoFile?.Share}/{videoFile?.Folder}fonts.json";
+        fontsFile = $"/{videoFile.Share}/{videoFile.Folder}fonts.json";
         fonts = JsonConvert.DeserializeObject<List<FontDto?>?>(
-            System.IO.File.ReadAllText($"{videoFile?.HostFolder}fonts.json"));
+            System.IO.File.ReadAllText($"{videoFile.HostFolder}fonts.json"));
 
         return new()
         {

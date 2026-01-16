@@ -59,7 +59,7 @@ public record CardData
             {
                 Rating = cm.Certification.Rating,
                 Iso31661 = cm.Certification.Iso31661,
-                Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                Image = new($"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg")
             })
             .FirstOrDefault();
     }
@@ -90,7 +90,7 @@ public record CardData
             {
                 Rating = ct.Certification.Rating,
                 Iso31661 = ct.Certification.Iso31661,
-                Image = $"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg"
+                Image = new($"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg")
             })
             .FirstOrDefault();
     }
@@ -123,7 +123,7 @@ public record CardData
             {
                 Rating = cm.Certification.Rating,
                 Iso31661 = cm.Certification.Iso31661,
-                Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                Image = new($"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg")
             })
             .FirstOrDefault();
     }
@@ -156,7 +156,7 @@ public record CardData
             {
                 Rating = cm.Certification.Rating,
                 Iso31661 = cm.Certification.Iso31661,
-                Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                Image = new($"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg")
             })
             .FirstOrDefault();
     }
@@ -197,7 +197,7 @@ public record CardData
                     {
                         Rating = ct.Certification.Rating,
                         Iso31661 = ct.Certification.Iso31661,
-                        Image = $"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg"
+                        Image = new($"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg")
                     }) ?? [])
                 .Concat(item.Special.Items
                     .Where(specialItem => specialItem.MovieId != null)
@@ -207,7 +207,7 @@ public record CardData
                         {
                             Rating = cm.Certification.Rating,
                             Iso31661 = cm.Certification.Iso31661,
-                            Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                            Image = new($"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg")
                         }) ?? []))
                 .OrderByDescending(cert => cert.Order)
                 .FirstOrDefault();
@@ -240,7 +240,7 @@ public record CardData
                 {
                     Rating = cm.Certification.Rating,
                     Iso31661 = cm.Certification.Iso31661,
-                    Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                    Image = new($"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg")
                 })
                 .FirstOrDefault();
         }
@@ -267,7 +267,7 @@ public record CardData
                 {
                     Rating = cm.Certification.Rating,
                     Iso31661 = cm.Certification.Iso31661,
-                    Image = $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                    Image = new($"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg")
                 })
                 .FirstOrDefault();
         }
@@ -295,7 +295,7 @@ public record CardData
                 {
                     Rating = ct.Certification.Rating,
                     Iso31661 = ct.Certification.Iso31661,
-                    Image = $"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg"
+                    Image = new($"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg")
                 })
                 .FirstOrDefault();
         }
@@ -357,7 +357,7 @@ public record CardData
             {
                 Rating = dto.CertificationRating,
                 Iso31661 = dto.CertificationCountry,
-                Image = $"/{dto.CertificationCountry}/{dto.CertificationCountry}_{dto.CertificationRating}.svg"
+                Image = new($"/{dto.CertificationCountry}/{dto.CertificationCountry}_{dto.CertificationRating}.svg")
             };
         }
     }
@@ -388,8 +388,8 @@ public record CardData
             Rating = new()
             {
                 Rating = movie.CertificationRating,
-                Iso31661 = movie.CertificationCountry,
-                Image = $"/{movie.CertificationCountry}/{movie.CertificationCountry}_{movie.CertificationRating}.svg"
+                Iso31661 = movie.CertificationCountry!,
+                Image = new($"/{movie.CertificationCountry}/{movie.CertificationCountry}_{movie.CertificationRating}.svg")
             };
         }
     }
@@ -420,8 +420,8 @@ public record CardData
             Rating = new()
             {
                 Rating = tv.CertificationRating,
-                Iso31661 = tv.CertificationCountry,
-                Image = $"/{tv.CertificationCountry}/{tv.CertificationCountry}_{tv.CertificationRating}.svg"
+                Iso31661 = tv.CertificationCountry!,
+                Image = new($"/{tv.CertificationCountry}/{tv.CertificationCountry}_{tv.CertificationRating}.svg")
             };
         }
     }

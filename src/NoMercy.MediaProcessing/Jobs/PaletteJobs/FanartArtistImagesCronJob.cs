@@ -48,7 +48,7 @@ public class FanartArtistImagesCronJob : ICronJobExecutor
                 {
                     image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     image._colorPalette = "{}";
                 }
@@ -99,7 +99,7 @@ public class FanartArtistImagesCronJob : ICronJobExecutor
     private async Task ProcessImages(MediaContext context, Artist artist, CancellationToken cancellationToken)
     {
         ImageRepository imageRepository = new(context);
-        FanArtImageManager imageManager = new(imageRepository, context);
+        FanArtImageManager imageManager = new(imageRepository);
         using FanArtMusicClient fanArtMusicClient = new();
         
         try 
@@ -145,7 +145,7 @@ public class FanartArtistImagesCronJob : ICronJobExecutor
                 {
                     image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     image._colorPalette = "{}";
                 }

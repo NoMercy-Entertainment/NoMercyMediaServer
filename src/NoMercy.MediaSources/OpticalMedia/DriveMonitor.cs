@@ -188,14 +188,14 @@ public partial class DriveMonitor
             TmdbSeasonClient seasonClient = new(tvShow.Id, 1);
             episodes.AddRange((await seasonClient.Details())?.Episodes ?? []);
         }
-        else if ((bool)tvDetails?.Seasons.Any(season => season.SeasonNumber == 0))
+        else if (tvDetails?.Seasons.Any(season => season.SeasonNumber == 0) == true)
         {
             try
             {
                 TmdbSeasonClient seasonClient = new(tvShow.Id, 0);
                 episodes.AddRange((await seasonClient.Details())?.Episodes ?? []);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //
             }
@@ -329,7 +329,7 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        Task.Run(FfMpeg.Run(command, encodePath, new()
+        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = title,
@@ -361,7 +361,7 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        Task.Run(FfMpeg.Run(command, encodePath, new()
+        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = title,
@@ -560,7 +560,7 @@ public partial class DriveMonitor
 
         Logger.Encoder(command);
 
-        Task.Run(FfMpeg.Run(command, encodePath, new()
+        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = title,
@@ -591,7 +591,7 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        Task.Run(FfMpeg.Run(command, encodePath, new()
+        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = "DVD",
@@ -615,7 +615,7 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        Task.Run(FfMpeg.Run(command, encodePath, new()
+        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = "CD",

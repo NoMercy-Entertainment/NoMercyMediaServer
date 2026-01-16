@@ -43,7 +43,7 @@ public static class Auth
             {
                 await TokenByRefreshGrand();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //
             }
@@ -62,7 +62,7 @@ public static class Auth
             {
                 await TokenByRefreshGrand();
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 await TokenByBrowserOrPassword();
             }

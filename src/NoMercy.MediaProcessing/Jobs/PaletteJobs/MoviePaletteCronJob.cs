@@ -47,7 +47,7 @@ public class MoviePaletteCronJob : ICronJobExecutor
                             new("backdrop", movie.Backdrop)
                         ]);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     movie._colorPalette = "{}";
                 }

@@ -22,7 +22,7 @@ public class EncoderProfileDto
     {
         Id = argEncoderProfile.Id;
         Name = argEncoderProfile.Name;
-        Container = argEncoderProfile.Container;
+        Container = argEncoderProfile.Container ?? string.Empty;
         Params = new(argEncoderProfile);
         EncoderProfileFolder = argEncoderProfile.EncoderProfileFolder
             .Select(ef => new EncoderProfileFolderDto(ef))
