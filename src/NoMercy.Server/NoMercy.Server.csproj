@@ -3,12 +3,12 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <ApplicationIcon>..\..\assets\icons\icon.ico</ApplicationIcon>
+        <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
         <Authors>NoMercy Entertainment</Authors>
         <Description>The Effortless Encoder</Description>
         <Copyright>2025 NoMercy Entertainment</Copyright>
         <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
-        <PackageIcon>..\..\assets\icons\icon.png</PackageIcon>
+        <PackageIcon>Assets\icon.png</PackageIcon>
         <Company>NoMercy Entertainment</Company>
         <Product>NoMercy MediaServer</Product>
         <LangVersion>12</LangVersion>
@@ -35,7 +35,7 @@
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
 
-        <Version>0.1.189</Version>
+        <Version>0.1.201</Version>
         <AssemblyVersion>$(Version).0</AssemblyVersion>
         <FileVersion>$(Version).0</FileVersion>
     </PropertyGroup>

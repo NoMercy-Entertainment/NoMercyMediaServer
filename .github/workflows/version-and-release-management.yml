@@ -18,23 +18,23 @@ jobs:
       should_deploy: ${{ steps.check-deploy.outputs.should_deploy }}
     
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+      # - name: Free Disk Space (Ubuntu)
+      #   uses: jlumbroso/free-disk-space@main
+      #   with:
+      #     tool-cache: false
+      #     android: true
+      #     dotnet: true
+      #     haskell: true
+      #     large-packages: true
+      #     docker-images: true
+      #     swap-storage: true
 
-      - name: Check Available Space
-        run: |
-          echo "🔍 Checking available disk space..."
-          df -h
-          free -h
-          echo "Available space in /tmp: $(df -h /tmp | tail -1 | awk '{print $4}')"
+      # - name: Check Available Space
+      #   run: |
+      #     echo "🔍 Checking available disk space..."
+      #     df -h
+      #     free -h
+      #     echo "Available space in /tmp: $(df -h /tmp | tail -1 | awk '{print $4}')"
 
         
       - uses: actions/checkout@v5
@@ -51,7 +51,7 @@ jobs:
         id: get-tag
         uses: WyriHaximus/github-action-get-previous-tag@v1
         with:
-          fallback: v0.1.188
+          fallback: v0.1.201
 
       - name: Check for source changes
         id: check-changes
