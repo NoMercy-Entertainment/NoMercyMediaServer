@@ -48,7 +48,13 @@ runs:
       if: inputs.project == 'App'
       shell: bash
       run: |
-        mv ./src/NoMercy.App/Resources/wwwroot/* ./src/NoMercy.App/Resources
+        # InfiniFrame uses wwwroot directory for static files
+        mkdir -p ./src/NoMercy.App/wwwroot
+        # Remove the checkout's wwwroot if it exists (the gh-pages content)
+        rm -rf ./src/NoMercy.App/Resources/wwwroot/.git
+        # Move files from Resources/wwwroot to wwwroot
+        mv ./src/NoMercy.App/Resources/wwwroot/* ./src/NoMercy.App/wwwroot/ || true
+        # Clean up
         rm -rf ./src/NoMercy.App/Resources/wwwroot
 
     - name: Build Project for All Platforms
@@ -65,11 +71,8 @@ runs:
           PROJECT_NAME="NoMercy${{ inputs.project }}"
         fi
         
-        # Determine if we need PublishTrimmed
+        # Note: PublishTrimmed is disabled for App to avoid issues with InfiniFrame native dependencies
         TRIMMED_FLAG=""
-        if [ "${{ inputs.project }}" == "App" ]; then
-          TRIMMED_FLAG="/p:PublishTrimmed=true"
-        fi
         
         echo "Building $PROJECT_NAME for all platforms..."
         
