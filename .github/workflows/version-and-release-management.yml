@@ -122,11 +122,12 @@ jobs:
               echo "No changes to commit after version update"
               echo "version_changed=false" >> $GITHUB_OUTPUT
             else
-              # Commit and push the updated version
+              # Amend the previous commit with the version bump instead of creating a new commit
               git add src/NoMercy.Server/NoMercy.Server.csproj
-              git commit -m "Update version to ${NEW_VERSION}"
-              git push origin dev
+              git commit --amend --no-edit
+              git push --force-with-lease origin dev
               echo "version_changed=true" >> $GITHUB_OUTPUT
+              echo "✅ Version bump included in previous commit"
             fi
           fi
 
