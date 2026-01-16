@@ -43,7 +43,7 @@ jobs:
   test:
     uses: ./.github/workflows/test.yml
     with:
-      dotnet-version: "9.0.x"
+      dotnet-version: "10.0.x"
 
   # Step 2: Version Management (only if tests pass and on dev branch)
   version_management:
@@ -58,7 +58,7 @@ jobs:
     if: needs.version_management.outputs.should_deploy == 'true'
     uses: ./.github/workflows/build-executables.yml
     with:
-      dotnet-version: "9.0.x"
+      dotnet-version: "10.0.x"
 
   # Step 4: Create Release (only after executables are built)
   create_release:

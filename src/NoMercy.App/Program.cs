@@ -1,14 +1,12 @@
 using System.Diagnostics;
-using Photino.NET;
-using Photino.NET.Server;
-using Monitor = Photino.NET.Monitor;
-using PlatformNotSupportedException = System.PlatformNotSupportedException;
+using InfiniFrame;
+using InfiniFrame.Js.MessageHandlers;
+using InfiniFrame.WebServer;
 
 namespace NoMercy.App;
 
 internal class Program
 {
-    private static PhotinoWindow Window { get; set; } = null!;
     private static int WindowWidth { get; set; } = 1280;
     private static int WindowHeight { get; set; } = 720;
     private static int WindowRestoreWidth { get; set; } = 1280;
@@ -19,127 +17,119 @@ internal class Program
     [STAThread]
     private static void Main(string[] args)
     {
-        PhotinoServer
-            .CreateStaticFileServer(args, 7625, 100, "", out string baseUrl)
-            .RunAsync();
-
-        string appUrl = Debugger.IsAttached ? "https://app-dev.nomercy.tv" : baseUrl;
-
         string windowTitle = "NoMercy TV";
+        string iconPath = GetIconPath();
 
-        string iconPath;
-        if (PhotinoWindow.IsWindowsPlatform)
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.ico");
-        else if (PhotinoWindow.IsLinuxPlatform)
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.png");
-        else if (PhotinoWindow.IsMacOsPlatform)
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.icns");
-        else
-            throw new PlatformNotSupportedException("Unsupported OS platform");
+        // Set environment variable for URL before creating builder
+        if (!Debugger.IsAttached)
+        {
+            Environment.SetEnvironmentVariable("ASPNETCORE_URLS", "http://localhost:7625");
+        }
 
-        if (!File.Exists(iconPath)) throw new FileNotFoundException("Tray icon file not found", iconPath);
+        InfiniFrameWebApplicationBuilder builder = InfiniFrameWebApplication.CreateBuilder(args);
 
-        Window = new PhotinoWindow
-            {
-                Centered = true,
-                Title = windowTitle,
-                MinHeight = 540 + 39,
-                MinWidth = 960 + 16,
-                Resizable = true,
-                IconFile = iconPath,
-                UseOsDefaultSize = false,
-                SmoothScrollingEnabled = true,
-                MediaAutoplayEnabled = true,
-                MediaStreamEnabled = true
-            }
+        IInfiniFrameWindowBuilder window = builder.Window
+            .Center()
+            .SetTitle(windowTitle)
+            .SetMinSize(960 + 16, 540 + 39)
+            .SetResizable(true)
+            .SetIconFile(iconPath)
+            .SetUseOsDefaultSize(false)
+            .SetSmoothScrollingEnabled(true)
+            .SetMediaAutoplayEnabled(true)
+            .SetMediaStreamEnabled(true);
+
+        // In debug mode, load from dev server; otherwise use local server
+        window.SetStartUrl(Debugger.IsAttached ? "https://app-dev.nomercy.tv" : "https://app.nomercy.tv");
+
+        window.RegisterFullScreenWebMessageHandler()
+            .RegisterWindowManagementWebMessageHandler()
             .RegisterCustomSchemeHandler("nomercy",
-                (object sender, string scheme, string url, out string contentType) =>
+                (object sender, string scheme, string url, out string? contentType) =>
                 {
                     contentType = "text/javascript";
                     return new MemoryStream("""
                         (() =>{
                             window.setTimeout(() => {
-                                alert(`🎉 Dynamically inserted JavaScript.`);
+                                alert(`NoMercy custom scheme handler loaded.`);
                             }, 1000);
                         })();
                     """u8.ToArray());
                 })
             .RegisterWebMessageReceivedHandler((object? sender, string message) =>
             {
-                PhotinoWindow window = (PhotinoWindow)sender!;
+                if (sender is not IInfiniFrameWindow window) return;
 
                 switch (message)
                 {
                     case "enterFullscreen":
-                        EnterFullScreen(window);
+                        window.SetFullScreen(true);
                         return;
                     case "exitFullscreen":
-                        ExitFullScreen(window);
+                        window.SetFullScreen(false);
                         return;
                 }
             })
-            .Load(appUrl);
-
-        Window.WindowCreated += (_, _) =>
-        {
-            Monitor? primaryMonitor = Window.Monitors.FirstOrDefault();
-
-            if (primaryMonitor != null)
+            .RegisterWindowCreatedHandler((sender, _) =>
             {
-                WindowWidth = primaryMonitor.Value.WorkArea.Width / 2;
-                WindowHeight = (int)(primaryMonitor.Value.WorkArea.Width / 2 / 16 * 9.3);
-                Top = Window.Top;
-                Left = Window.Left;
-                Window.SetSize(WindowWidth, WindowHeight);
-                Window.Center();
-            }
+                if (sender is not IInfiniFrameWindow window) return;
 
-            Window.WindowMaximizedHandler += (_, _) =>
+                InfiniMonitor primaryMonitor = window.MainMonitor;
+
+                WindowWidth = primaryMonitor.WorkArea.Width / 2;
+                WindowHeight = (int)(primaryMonitor.WorkArea.Width / 2 / 16 * 9.3);
+                Top = window.Top;
+                Left = window.Left;
+                window.SetSize(WindowWidth, WindowHeight);
+                window.Center();
+            })
+            .RegisterMaximizedHandler((sender, _) =>
             {
+                if (sender is not IInfiniFrameWindow window) return;
+
                 WindowRestoreWidth = WindowWidth;
                 WindowRestoreHeight = WindowHeight;
 
-                if (primaryMonitor == null) return;
-                WindowWidth = primaryMonitor.Value.WorkArea.Width;
-                WindowHeight = primaryMonitor.Value.WorkArea.Width;
-            };
-
-            Window.WindowRestoredHandler += (_, _) =>
+                InfiniMonitor primaryMonitor = window.MainMonitor;
+                WindowWidth = primaryMonitor.WorkArea.Width;
+                WindowHeight = primaryMonitor.WorkArea.Height;
+            })
+            .RegisterRestoredHandler((sender, _) =>
             {
-                if (primaryMonitor == null) return;
                 WindowWidth = WindowRestoreWidth;
                 WindowHeight = WindowRestoreHeight;
-            };
-
-            Window.WindowLocationChanged += (_, e) =>
+            })
+            .RegisterLocationChangedHandler((sender, e) =>
             {
                 if (e.IsEmpty || e.X == 0) return;
                 Top = e.Y;
                 Left = e.X;
-            };
-        };
+            });
 
-        Window.WaitForClose();
+        InfiniFrameWebApplication application = builder.Build();
+
+        application.UseAutoServerClose();
+
+        application.WebApp.UseStaticFiles();
+        application.WebApp.MapStaticAssets();
+
+        application.Run();
     }
 
-    private static void EnterFullScreen(PhotinoWindow window)
+    private static string GetIconPath()
     {
-        Monitor? primaryMonitor = window.MainMonitor;
+        string iconPath;
+        if (OperatingSystem.IsWindows())
+            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.ico");
+        else if (OperatingSystem.IsLinux())
+            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.png");
+        else if (OperatingSystem.IsMacOS())
+            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.icns");
+        else
+            throw new PlatformNotSupportedException("Unsupported OS platform");
 
-        window.SetFullScreen(true);
-        window.SetSize(primaryMonitor.Value.MonitorArea.Width - 1, primaryMonitor.Value.MonitorArea.Height - 1);
-        window.SetTop(0);
-        window.SetLeft(0);
-        window.SetSize(primaryMonitor.Value.MonitorArea.Width, primaryMonitor.Value.MonitorArea.Height);
-        window.SetTopMost(true);
-    }
+        if (!File.Exists(iconPath)) throw new FileNotFoundException("Tray icon file not found", iconPath);
 
-    private static void ExitFullScreen(PhotinoWindow window)
-    {
-        window.SetFullScreen(false);
-        window.SetTopMost(false);
-        window.SetSize(WindowWidth, WindowHeight);
-        window.SetTop(Top);
-        window.SetLeft(Left);
+        return iconPath;
     }
 }
