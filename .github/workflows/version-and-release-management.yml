@@ -136,7 +136,7 @@ jobs:
         with:
           proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
 
-      - name: Merge Dev into Master
+      - name: Merge Dev into Main
         if: success() && github.ref == 'refs/heads/dev' && steps.check-changes.outputs.needs_merge == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -148,16 +148,16 @@ jobs:
           sleep 5
 
           git fetch origin
-          git checkout master
-          git pull --rebase origin master
+          git checkout main
+          git pull --rebase origin main
           git merge origin/dev --no-edit --allow-unrelated-histories -X theirs
-          git push origin master
+          git push origin main
           git checkout dev
-          git rebase master
+          git rebase main
           git push --force-with-lease origin dev
 
           # Verify the merge completed
-          echo "✅ Successfully merged dev into master with updated version"
+          echo "✅ Successfully merged dev into main with updated version"
 
       - name: Check deployment conditions
         id: check-deploy
@@ -171,7 +171,7 @@ jobs:
           # For non-source changes (docs, workflows), still update repository but skip executable builds
           elif [[ "${{ github.ref }}" == "refs/heads/dev" ]] && [[ "${{ steps.check-changes.outputs.needs_merge }}" == "true" ]]; then
             echo "should_deploy=false" >> $GITHUB_OUTPUT
-            echo "Non-source changes detected - will merge to master but skip builds"
+            echo "Non-source changes detected - will merge to main but skip builds"
           else
             echo "should_deploy=false" >> $GITHUB_OUTPUT
           fi
