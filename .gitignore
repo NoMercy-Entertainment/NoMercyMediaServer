@@ -614,3 +614,8 @@ desktop.ini
 openapi-*.yaml
 openapi-*.json
 !openapi-nm-components.yaml
+
+# GPG keys (security sensitive)
+.gpg-keys/
+*.gpg
+*.asc

@@ -108,7 +108,7 @@ echo -e "\n[nomercy]\nInclude = /etc/pacman.d/nomercy-mirrorlist" | sudo tee -a 
 # Add GPG key
 curl -o nomercy.gpg.pub https://repo.nomercy.tv/nomercy_repo.gpg.pub
 sudo pacman-key --add nomercy.gpg.pub
-sudo pacman-key --lsign-key 23F1B8BDEE7408FBB2401B66EBBAD4C5328D9E9B
+sudo pacman-key --lsign-key B8CE23865511524D442F7DCF9A4B71002C09D6B8
 
 # Install
 sudo pacman -Sy nomercymediaserver
