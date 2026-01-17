@@ -564,6 +564,13 @@ src/NoMercy.App/Resources
 *.pkg
 *.deb
 *.rpm
+*.exe
+*.pkg.tar.zst
+
+# Build artifacts and executables (use GitHub Releases instead)
+App-executables/
+Server-executables/
+arch-packages/
 
 # Large media libraries and cache
 /media/
@@ -610,6 +617,7 @@ build.log
 # Windows specific
 Thumbs.db
 desktop.ini
+nul
 
 # Architecture and design files (large, generated)
 openapi-*.yaml

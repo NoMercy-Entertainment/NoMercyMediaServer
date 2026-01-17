@@ -47,16 +47,7 @@ jobs:
     with:
       dotnet-version: "10.0.x"
 
-  # Step 4: Create Release
-  create_release:
-    needs: [version_management, build_executables]
-    if: needs.version_management.outputs.should_deploy == 'true'
-    uses: ./.github/workflows/create-release.yml
-    secrets: inherit
-    with:
-      version: ${{ needs.version_management.outputs.version }}
-
-  # Step 5: Build Linux Packages
+  # Step 4: Build Linux Packages (before release so packages are included)
   build_packages:
     needs: [version_management, build_executables]
     if: needs.version_management.outputs.should_deploy == 'true'
@@ -65,9 +56,18 @@ jobs:
     with:
       version: ${{ needs.version_management.outputs.version }}
 
-  # Step 6: Finalize Repository
+  # Step 5: Create Release (includes executables AND Linux packages)
+  create_release:
+    needs: [version_management, build_executables, build_packages]
+    if: needs.version_management.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/create-release.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.version_management.outputs.version }}
+
+  # Step 6: Finalize Repository (website + metadata only, no binaries)
   finalize_repository:
-    needs: [version_management, build_packages]
+    needs: [version_management, build_packages, create_release]
     if: needs.version_management.outputs.should_deploy == 'true'
     uses: ./.github/workflows/finalize-repository.yml
     secrets: inherit
