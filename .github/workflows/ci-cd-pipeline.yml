@@ -57,6 +57,7 @@ jobs:
       version: ${{ needs.version_management.outputs.version }}
 
   # Step 5: Create Release (includes executables AND Linux packages)
+  # The nomercy-packages repo will automatically detect new releases and deploy
   create_release:
     needs: [version_management, build_executables, build_packages]
     if: needs.version_management.outputs.should_deploy == 'true'
@@ -64,13 +65,3 @@ jobs:
     secrets: inherit
     with:
       version: ${{ needs.version_management.outputs.version }}
-
-  # Step 6: Finalize Repository (website + metadata only, no binaries)
-  finalize_repository:
-    needs: [version_management, build_packages, create_release]
-    if: needs.version_management.outputs.should_deploy == 'true'
-    uses: ./.github/workflows/finalize-repository.yml
-    secrets: inherit
-    with:
-      version: ${{ needs.version_management.outputs.version }}
-      GPG_PUBLIC_KEY: ${{ vars.GPG_PUBLIC_KEY }}
