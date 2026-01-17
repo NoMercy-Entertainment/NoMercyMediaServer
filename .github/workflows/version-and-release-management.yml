@@ -16,27 +16,8 @@ jobs:
     outputs:
       version: ${{ steps.get-version.outputs.version }}
       should_deploy: ${{ steps.check-deploy.outputs.should_deploy }}
-    
+
     steps:
-      # - name: Free Disk Space (Ubuntu)
-      #   uses: jlumbroso/free-disk-space@main
-      #   with:
-      #     tool-cache: false
-      #     android: true
-      #     dotnet: true
-      #     haskell: true
-      #     large-packages: true
-      #     docker-images: true
-      #     swap-storage: true
-
-      # - name: Check Available Space
-      #   run: |
-      #     echo "🔍 Checking available disk space..."
-      #     df -h
-      #     free -h
-      #     echo "Available space in /tmp: $(df -h /tmp | tail -1 | awk '{print $4}')"
-
-        
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -57,79 +38,41 @@ jobs:
         id: check-changes
         if: github.ref == 'refs/heads/dev'
         run: |
-          # Always build for releases and manual triggers
           if [[ "${{ github.event_name }}" == "release" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "has_source_changes=true" >> $GITHUB_OUTPUT
-            echo "needs_merge=true" >> $GITHUB_OUTPUT
             echo "Release or manual trigger - proceeding with full pipeline"
           else
-            # Check for actual source code changes
-            if git diff --quiet HEAD~1 HEAD -- src/ 2>/dev/null; then
+            # Check for actual source code changes since last tag
+            LATEST_TAG="${{ steps.get-tag.outputs.tag }}"
+            if git diff --quiet "$LATEST_TAG" HEAD -- src/ 2>/dev/null; then
               echo "has_source_changes=false" >> $GITHUB_OUTPUT
-              echo "needs_merge=true" >> $GITHUB_OUTPUT
-              echo "No source code changes detected - will only merge and update repository"
+              echo "No source code changes detected since $LATEST_TAG"
             else
               echo "has_source_changes=true" >> $GITHUB_OUTPUT
-              echo "needs_merge=true" >> $GITHUB_OUTPUT
               echo "Source code changes detected - proceeding with version bump and full pipeline"
             fi
           fi
 
-      - name: Bump version
-        id: bump-version
-        if: success() && github.ref == 'refs/heads/dev' && steps.check-changes.outputs.has_source_changes == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Calculate new version
+        id: calc-version
+        if: steps.check-changes.outputs.has_source_changes == 'true'
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git config --global --add safe.directory ${{ github.workspace }}
-          
-          # Get the latest version tag from previous step
           LATEST_TAG="${{ steps.get-tag.outputs.tag }}"
-          
-          echo "LATEST_TAG=$LATEST_TAG"
-
-          # Extract components (handle v prefix)
           VERSION_NO_V=${LATEST_TAG#v}
           MAJOR=$(echo "$VERSION_NO_V" | cut -d. -f1)
           MINOR=$(echo "$VERSION_NO_V" | cut -d. -f2)
           PATCH=$(echo "$VERSION_NO_V" | cut -d. -f3)
-
-          # Validate components
-          echo "MAJOR=$MAJOR, MINOR=$MINOR, PATCH=$PATCH"
-
-          # Increment patch version
           NEW_PATCH=$(($PATCH + 1))
-          NEW_VERSION=$MAJOR.$MINOR.$NEW_PATCH 
-          
-          echo "NEW_VERSION=$NEW_VERSION"
-          
-          # Check current version in project file
-          CURRENT_VERSION=$(grep -oP '<Version>\K[^<]+' src/NoMercy.Server/NoMercy.Server.csproj || echo "")
-          echo "CURRENT_VERSION=$CURRENT_VERSION"
-          
-          if [ "$CURRENT_VERSION" = "$NEW_VERSION" ]; then
-            echo "Version is already up-to-date ($NEW_VERSION), skipping version bump"
-            echo "version_changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "Updating version from $CURRENT_VERSION to $NEW_VERSION"
-            # Update project file with new version
-            sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" src/NoMercy.Server/NoMercy.Server.csproj
-            
-            # Check if there are changes to commit
-            if git diff --quiet src/NoMercy.Server/NoMercy.Server.csproj; then
-              echo "No changes to commit after version update"
-              echo "version_changed=false" >> $GITHUB_OUTPUT
-            else
-              # Amend the previous commit with the version bump instead of creating a new commit
-              git add src/NoMercy.Server/NoMercy.Server.csproj
-              git commit --amend --no-edit
-              git push --force-with-lease origin dev
-              echo "version_changed=true" >> $GITHUB_OUTPUT
-              echo "✅ Version bump included in previous commit"
-            fi
-          fi
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Calculated new version: $NEW_VERSION"
+
+      - name: Update version in csproj
+        if: steps.check-changes.outputs.has_source_changes == 'true'
+        run: |
+          NEW_VERSION="${{ steps.calc-version.outputs.new_version }}"
+          sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" src/NoMercy.Server/NoMercy.Server.csproj
+          echo "Updated NoMercy.Server.csproj to version $NEW_VERSION"
 
       - name: Get Version
         id: get-version
@@ -137,42 +80,100 @@ jobs:
         with:
           proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
 
-      - name: Merge Dev into Main
-        if: success() && github.ref == 'refs/heads/dev' && steps.check-changes.outputs.needs_merge == 'true'
+      - name: Generate changelog
+        id: changelog
+        if: github.ref == 'refs/heads/dev' && steps.check-changes.outputs.has_source_changes == 'true'
+        run: |
+          LATEST_TAG="${{ steps.get-tag.outputs.tag }}"
+
+          # Get commits since last tag, excluding version bump commits
+          COMMITS=$(git log "$LATEST_TAG"..HEAD --pretty=format:"%s" -- src/ | grep -v "^chore: bump version" || true)
+
+          # Initialize changelog sections
+          FEATURES=""
+          FIXES=""
+          REFACTOR=""
+          OTHER=""
+
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+
+            # Extract message without scope for cleaner output
+            MSG=$(echo "$line" | sed -E 's/^[a-z]+(\([^)]+\))?:\s*//')
+
+            if [[ "$line" =~ ^feat ]]; then
+              FEATURES="${FEATURES}- ${MSG}"$'\n'
+            elif [[ "$line" =~ ^fix ]]; then
+              FIXES="${FIXES}- ${MSG}"$'\n'
+            elif [[ "$line" =~ ^refactor ]]; then
+              REFACTOR="${REFACTOR}- ${MSG}"$'\n'
+            elif [[ ! "$line" =~ ^(chore|docs|style|test|ci) ]]; then
+              OTHER="${OTHER}- ${MSG}"$'\n'
+            fi
+          done <<< "$COMMITS"
+
+          # Build changelog body
+          CHANGELOG=""
+          [[ -n "$FEATURES" ]] && CHANGELOG="${CHANGELOG}### Features"$'\n'"${FEATURES}"$'\n'
+          [[ -n "$FIXES" ]] && CHANGELOG="${CHANGELOG}### Fixes"$'\n'"${FIXES}"$'\n'
+          [[ -n "$REFACTOR" ]] && CHANGELOG="${CHANGELOG}### Refactoring"$'\n'"${REFACTOR}"$'\n'
+          [[ -n "$OTHER" ]] && CHANGELOG="${CHANGELOG}### Other"$'\n'"${OTHER}"$'\n'
+
+          # Fallback if no categorized commits
+          if [[ -z "$CHANGELOG" ]]; then
+            CHANGELOG="Maintenance release with various improvements."
+          fi
+
+          # Save to file for multi-line support
+          echo "$CHANGELOG" > /tmp/changelog.txt
+          echo "Generated changelog:"
+          cat /tmp/changelog.txt
+
+      - name: Squash merge to main
+        if: github.ref == 'refs/heads/dev' && steps.check-changes.outputs.has_source_changes == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
-          # Wait a moment to ensure version bump is fully pushed
-          sleep 5
+          NEW_VERSION="${{ steps.get-version.outputs.version }}"
 
-          git fetch origin
+          # Stage the version change
+          git add src/NoMercy.Server/NoMercy.Server.csproj
+
+          # Commit with version bump on dev
+          git commit -m "chore: bump version to $NEW_VERSION" || true
+
+          # Push the version update to dev first
+          git push origin dev
+
+          # Checkout main and pull latest
+          git fetch origin main
           git checkout main
-          git pull --rebase origin main
-          git merge origin/dev --no-edit --allow-unrelated-histories -X theirs
-          git push origin main
-          git checkout dev
-          git rebase main
-          git push --force-with-lease origin dev
+          git reset --hard origin/main
 
-          # Verify the merge completed
-          echo "✅ Successfully merged dev into main with updated version"
+          # Squash merge dev into main
+          git merge --squash origin/dev
+
+          # Read changelog from file
+          CHANGELOG=$(cat /tmp/changelog.txt)
+
+          # Create the squash commit with version and changelog
+          git commit -m "release: v$NEW_VERSION" -m "$CHANGELOG"
+
+          # Push to main
+          git push origin main
+
+          echo "Squash merged dev into main as v$NEW_VERSION"
 
       - name: Check deployment conditions
         id: check-deploy
         run: |
-          # Always deploy for releases and manual triggers
           if [[ "${{ github.event_name }}" == "release" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "should_deploy=true" >> $GITHUB_OUTPUT
-          # For dev branch, deploy if there were source changes (need executables)
           elif [[ "${{ github.ref }}" == "refs/heads/dev" ]] && [[ "${{ steps.check-changes.outputs.has_source_changes }}" == "true" ]]; then
             echo "should_deploy=true" >> $GITHUB_OUTPUT
-          # For non-source changes (docs, workflows), still update repository but skip executable builds
-          elif [[ "${{ github.ref }}" == "refs/heads/dev" ]] && [[ "${{ steps.check-changes.outputs.needs_merge }}" == "true" ]]; then
-            echo "should_deploy=false" >> $GITHUB_OUTPUT
-            echo "Non-source changes detected - will merge to main but skip builds"
           else
             echo "should_deploy=false" >> $GITHUB_OUTPUT
           fi
