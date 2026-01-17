@@ -21,15 +21,20 @@ jobs:
       - name: Combine artifacts
         run: |
           mkdir -p ./output
-          
-          # Copy all artifacts to output directory
-          find ./artifacts -name "*.tar.gz" -exec cp {} ./output/ \;
+
+          # Copy executable artifacts (exclude package archives)
+          find ./artifacts -name "*.tar.gz" -not -path "*/arch-packages/*" -not -path "*/rpm-packages/*" -exec cp {} ./output/ \;
           find ./artifacts -name "*.dmg" -exec cp {} ./output/ \;
           find ./artifacts -name "*-linux-x64" -exec cp {} ./output/ \;
           find ./artifacts -name "*-windows-x64.exe" -exec cp {} ./output/ \;
           find ./artifacts -name "*-macos-x64" -exec cp {} ./output/ \;
-          
-          # List final output
+
+          # Copy Linux packages to release
+          find ./artifacts -path "*/deb-packages/*" -name "*.deb" -exec cp {} ./output/ \;
+          find ./artifacts -path "*/rpm-packages/*" -name "*.rpm" -exec cp {} ./output/ \;
+          find ./artifacts -path "*/arch-packages/*" -name "*.pkg.tar.zst" -exec cp {} ./output/ \;
+
+          echo "=== Release artifacts ==="
           ls -la ./output/
 
       - name: Get Short SHA
@@ -41,21 +46,28 @@ jobs:
         with:
           tag_name: v${{ inputs.version }}
           name: NoMercy MediaServer v${{ inputs.version }}
-          body: |            
+          body: |
             ## What's New
             This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
-            
+
             ## Downloads
-            Binary executables are available for:
-            - Windows (x64)
-            - macOS (x64)
-            - Linux (x64)
-            
-            Each platform includes the MediaServer, and App components.
-            
+
+            ### Binary Executables
+            - **Windows** (x64): `.exe` files
+            - **macOS** (x64): `.tar.gz` and `.dmg` files
+            - **Linux** (x64): Binary executables
+
+            ### Linux Packages
+            - **Debian/Ubuntu**: `.deb` packages
+            - **Fedora/RHEL/CentOS**: `.rpm` packages
+            - **Arch Linux**: `.pkg.tar.zst` packages
+
+            ### Package Repositories
+            For automatic updates, add our repository: https://repo.nomercy.tv
+
             ## Installation
             Download the appropriate files for your platform and follow the installation instructions in our documentation.
-            
+
             ## Feedback
             If you encounter any issues, please report them on our GitHub repository.
 
@@ -65,5 +77,8 @@ jobs:
           files: |
             ./output/NoMercyMediaServer-*
             ./output/NoMercyApp-*
+            ./output/*.deb
+            ./output/*.rpm
+            ./output/*.pkg.tar.zst
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

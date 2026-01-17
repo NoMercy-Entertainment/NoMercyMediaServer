@@ -256,6 +256,53 @@ code {
   color: #0c5460;
 }
 
+/* Direct Downloads Section */
+.direct-downloads {
+  background: var(--background-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-heavy);
+  padding: 40px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.direct-downloads h2 {
+  color: var(--text-primary);
+  margin-bottom: 15px;
+  font-size: 1.8rem;
+}
+
+.direct-downloads p {
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.download-links {
+  margin: 25px 0;
+}
+
+.download-btn {
+  display: inline-block;
+  background: var(--primary-gradient);
+  color: white;
+  padding: 15px 30px;
+  border-radius: var(--radius-xl);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+.download-note {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
 /* Footer */
 .footer {
   text-align: center;
