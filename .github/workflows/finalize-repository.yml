@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 1
           fetch-tags: false
 
-      - name: Download package artifacts (for metadata only)
+      - name: Download package artifacts
         uses: actions/download-artifact@v5
         with:
           path: ./artifacts
@@ -39,75 +39,57 @@ jobs:
           echo "${{ inputs.GPG_PUBLIC_KEY }}" > website/nomercy_repo.gpg.pub
           chmod 644 website/nomercy_repo.gpg.pub
 
-      - name: Generate APT Repository Metadata
+      - name: Setup APT Repository with actual packages
         run: |
           VERSION="${{ inputs.version }}"
-          RELEASE_URL="https://github.com/NoMercy-Entertainment/NoMercyMediaServer/releases/download/v${VERSION}"
 
-          # Create APT repository structure (metadata only, no binaries)
+          # Create APT repository structure
+          mkdir -p website/apt/pool/main/n/nomercymediaserver
+          mkdir -p website/apt/pool/main/n/nomercyapp
           mkdir -p website/apt/dists/stable/main/binary-amd64
 
-          # Find the actual DEB files to calculate real sizes and hashes
+          # Find and copy the actual DEB files (only latest version, not all versions)
           MEDIASERVER_DEB=$(find ./artifacts -name "nomercymediaserver_${VERSION}_amd64.deb" -type f | head -1)
           APP_DEB=$(find ./artifacts -name "nomercyapp_${VERSION}_amd64.deb" -type f | head -1)
 
-          # Calculate real metadata from the actual packages
           if [ -n "$MEDIASERVER_DEB" ] && [ -f "$MEDIASERVER_DEB" ]; then
-            MEDIASERVER_SIZE=$(stat -c%s "$MEDIASERVER_DEB")
-            MEDIASERVER_SHA256=$(sha256sum "$MEDIASERVER_DEB" | cut -d' ' -f1)
-            echo "Found MediaServer DEB: $MEDIASERVER_DEB (${MEDIASERVER_SIZE} bytes)"
+            cp "$MEDIASERVER_DEB" "website/apt/pool/main/n/nomercymediaserver/"
+            # Create latest symlink
+            cd website/apt/pool/main/n/nomercymediaserver
+            ln -sf "nomercymediaserver_${VERSION}_amd64.deb" "nomercymediaserver_latest_amd64.deb"
+            cd -
+            echo "Copied MediaServer DEB"
           else
-            echo "Warning: MediaServer DEB not found"
-            MEDIASERVER_SIZE=0
-            MEDIASERVER_SHA256="0000000000000000000000000000000000000000000000000000000000000000"
+            echo "ERROR: MediaServer DEB not found!"
+            exit 1
           fi
 
           if [ -n "$APP_DEB" ] && [ -f "$APP_DEB" ]; then
-            APP_SIZE=$(stat -c%s "$APP_DEB")
-            APP_SHA256=$(sha256sum "$APP_DEB" | cut -d' ' -f1)
-            echo "Found App DEB: $APP_DEB (${APP_SIZE} bytes)"
+            cp "$APP_DEB" "website/apt/pool/main/n/nomercyapp/"
+            # Create latest symlink
+            cd website/apt/pool/main/n/nomercyapp
+            ln -sf "nomercyapp_${VERSION}_amd64.deb" "nomercyapp_latest_amd64.deb"
+            cd -
+            echo "Copied App DEB"
           else
-            echo "Warning: App DEB not found"
-            APP_SIZE=0
-            APP_SHA256="0000000000000000000000000000000000000000000000000000000000000000"
+            echo "ERROR: App DEB not found!"
+            exit 1
           fi
 
-          # Create Packages file pointing to GitHub Release URLs
-          cat > website/apt/dists/stable/main/binary-amd64/Packages << EOF
-          Package: nomercymediaserver
-          Version: ${VERSION}
-          Architecture: amd64
-          Maintainer: NoMercy Entertainment <support@nomercy.tv>
-          Installed-Size: $((MEDIASERVER_SIZE / 1024))
-          Filename: ${RELEASE_URL}/nomercymediaserver_${VERSION}_amd64.deb
-          Size: ${MEDIASERVER_SIZE}
-          SHA256: ${MEDIASERVER_SHA256}
-          Section: multimedia
-          Priority: optional
-          Description: NoMercy MediaServer
-           Modern Media Server Solution for streaming your media collection.
+          # Generate Packages index
+          cd website/apt
+          dpkg-scanpackages --multiversion pool/ > dists/stable/main/binary-amd64/Packages
+          gzip -k -f dists/stable/main/binary-amd64/Packages
+          cd -
 
-          Package: nomercyapp
-          Version: ${VERSION}
-          Architecture: amd64
-          Maintainer: NoMercy Entertainment <support@nomercy.tv>
-          Installed-Size: $((APP_SIZE / 1024))
-          Filename: ${RELEASE_URL}/nomercyapp_${VERSION}_amd64.deb
-          Size: ${APP_SIZE}
-          SHA256: ${APP_SHA256}
-          Section: multimedia
-          Priority: optional
-          Description: NoMercy App
-           NoMercy companion desktop application.
-          EOF
-
-          gzip -k -f website/apt/dists/stable/main/binary-amd64/Packages
-
+      - name: Sign APT Repository
+        run: |
           # Import GPG key
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
-          # Create and sign Release file
           cd website/apt/dists/stable
+
+          # Create Release file
           cat > Release << EOF
           Origin: NoMercy Entertainment
           Label: NoMercy
@@ -147,3 +129,4 @@ jobs:
           publish_dir: ./website
           cname: repo.nomercy.tv
           keep_files: false
+          force_orphan: true
