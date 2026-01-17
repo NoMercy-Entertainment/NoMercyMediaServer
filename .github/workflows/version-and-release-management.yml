@@ -129,7 +129,7 @@ jobs:
           echo "Generated changelog:"
           cat /tmp/changelog.txt
 
-      - name: Squash merge to main
+      - name: Squash merge to main and sync dev
         if: github.ref == 'refs/heads/dev' && steps.check-changes.outputs.has_source_changes == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -139,14 +139,12 @@ jobs:
 
           NEW_VERSION="${{ steps.get-version.outputs.version }}"
 
-          # Stage the version change
+          # Stage the version change locally (don't push to dev yet)
           git add src/NoMercy.Server/NoMercy.Server.csproj
-
-          # Commit with version bump on dev
           git commit -m "chore: bump version to $NEW_VERSION" || true
 
-          # Push the version update to dev first
-          git push origin dev
+          # Store the current dev state
+          DEV_HEAD=$(git rev-parse HEAD)
 
           # Checkout main and pull latest
           git fetch origin main
@@ -155,6 +153,10 @@ jobs:
 
           # Squash merge dev into main
           git merge --squash origin/dev
+
+          # Also include the version bump we made locally
+          git checkout $DEV_HEAD -- src/NoMercy.Server/NoMercy.Server.csproj
+          git add src/NoMercy.Server/NoMercy.Server.csproj
 
           # Read changelog from file
           CHANGELOG=$(cat /tmp/changelog.txt)
@@ -165,7 +167,12 @@ jobs:
           # Push to main
           git push origin main
 
-          echo "Squash merged dev into main as v$NEW_VERSION"
+          # Now reset dev to match main (clean linear history)
+          git checkout dev
+          git reset --hard main
+          git push --force-with-lease origin dev
+
+          echo "Squash merged dev into main as v$NEW_VERSION and synced dev"
 
       - name: Check deployment conditions
         id: check-deploy
