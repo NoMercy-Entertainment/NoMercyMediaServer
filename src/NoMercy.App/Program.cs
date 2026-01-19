@@ -58,39 +58,39 @@ internal class Program
                 })
             .RegisterWebMessageReceivedHandler((object? sender, string message) =>
             {
-                if (sender is not IInfiniFrameWindow window) return;
+                if (sender is not IInfiniFrameWindow infiniFrameWindow) return;
 
                 switch (message)
                 {
                     case "enterFullscreen":
-                        window.SetFullScreen(true);
+                        infiniFrameWindow.SetFullScreen(true);
                         return;
                     case "exitFullscreen":
-                        window.SetFullScreen(false);
+                        infiniFrameWindow.SetFullScreen(false);
                         return;
                 }
             })
             .RegisterWindowCreatedHandler((sender, _) =>
             {
-                if (sender is not IInfiniFrameWindow window) return;
+                if (sender is not IInfiniFrameWindow infiniFrameWindow) return;
 
-                InfiniMonitor primaryMonitor = window.MainMonitor;
+                InfiniMonitor primaryMonitor = infiniFrameWindow.MainMonitor;
 
                 WindowWidth = primaryMonitor.WorkArea.Width / 2;
                 WindowHeight = (int)(primaryMonitor.WorkArea.Width / 2 / 16 * 9.3);
-                Top = window.Top;
-                Left = window.Left;
-                window.SetSize(WindowWidth, WindowHeight);
-                window.Center();
+                Top = infiniFrameWindow.Top;
+                Left = infiniFrameWindow.Left;
+                infiniFrameWindow.SetSize(WindowWidth, WindowHeight);
+                infiniFrameWindow.Center();
             })
             .RegisterMaximizedHandler((sender, _) =>
             {
-                if (sender is not IInfiniFrameWindow window) return;
+                if (sender is not IInfiniFrameWindow infiniFrameWindow) return;
 
                 WindowRestoreWidth = WindowWidth;
                 WindowRestoreHeight = WindowHeight;
 
-                InfiniMonitor primaryMonitor = window.MainMonitor;
+                InfiniMonitor primaryMonitor = infiniFrameWindow.MainMonitor;
                 WindowWidth = primaryMonitor.WorkArea.Width;
                 WindowHeight = primaryMonitor.WorkArea.Height;
             })
