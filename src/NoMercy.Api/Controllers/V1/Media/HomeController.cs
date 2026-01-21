@@ -146,46 +146,6 @@ public class HomeController : BaseController
         return Ok(result);
     }
 
-    [HttpGet]
-    [Route("screensaver")]
-    public async Task<IActionResult> Screensaver()
-    {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view screensaver");
-
-        ScreensaverDto result = await _homeService.GetSetupScreensaverContent(User.UserId());
-
-        return Ok(result);
-    }
-
-    [HttpGet]
-    [AllowAnonymous]
-    [Route("/status")]
-    public IActionResult Status()
-    {
-        return Ok(new
-        {
-            Status = "ok",
-            Version = "1.0",
-            Message = "NoMercy MediaServer API is running",
-            Timestamp = DateTime.UtcNow
-        });
-    }
-
-    [HttpGet]
-    [Route("permissions")]
-    public IActionResult Permissions()
-    {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have access to this server");
-
-        return Ok(new
-        {
-            owner = User.IsOwner(),
-            manager = User.IsModerator(),
-            allowed = User.IsAllowed()
-        });
-    }
     
     
     [HttpHead]

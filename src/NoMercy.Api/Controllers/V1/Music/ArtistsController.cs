@@ -166,7 +166,8 @@ public class ArtistsController : BaseController
 
     [HttpPost]
     [Route("{id:guid}/cover")]
-    public async Task<IActionResult> Cover(Guid id, [FromForm] IFormFile image)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to upload artist covers");
