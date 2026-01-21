@@ -180,12 +180,14 @@ public class ArtistsController : BaseController
         if (artist is null)
             return NotFoundResponse("Artist not found");
 
+        string slug = artist.Name.ToSlug();
+
         string libraryRootFolder = artist.LibraryFolder.Path;
         if (string.IsNullOrEmpty(libraryRootFolder))
             return UnprocessableEntityResponse("Artist library folder not found");
 
         // save to artist folder
-        string filePath = Path.Combine(libraryRootFolder, artist.HostFolder.TrimStart('\\'), artist.Name.ToSlug() + ".jpg");
+        string filePath = Path.Combine(libraryRootFolder, artist.HostFolder.TrimStart('\\'), slug + ".jpg");
         Logger.App(filePath);
         await using (FileStream stream = new(filePath, FileMode.Create))
         {
@@ -193,18 +195,23 @@ public class ArtistsController : BaseController
         }
 
         // save to app images folder
-        string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", artist.Name.ToSlug() + ".jpg");
+        string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
         Logger.App(filePath2);
         await using (FileStream stream = new(filePath2, FileMode.Create))
         {
             await image.CopyToAsync(stream);
         }
         
-        artist.Cover = $"/{artist.Name.ToSlug()}.jpg";
+        artist.Cover = $"/{slug}.jpg";
         artist._colorPalette = await CoverArtImageManagerManager
             .ColorPalette("cover", new(filePath2));
         
         await mediaContext.SaveChangesAsync();
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["music", "artist", artist.Id]
+        });
         
         return Ok(new StatusResponseDto<ImageUploadResponseDto>
         {

@@ -27,12 +27,10 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class HomeController : BaseController
 {
     private readonly HomeService _homeService;
-    private readonly MediaContext _mediaContext;
 
-    public HomeController(HomeService homeService, MediaContext mediaContext)
+    public HomeController(HomeService homeService)
     {
         _homeService = homeService;
-        _mediaContext = mediaContext;
     }
 
     [HttpGet]
@@ -155,7 +153,7 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view screensaver");
 
-        ScreensaverDto result = await _homeService.GetScreensaverContent(User.UserId());
+        ScreensaverDto result = await _homeService.GetSetupScreensaverContent(User.UserId());
 
         return Ok(result);
     }

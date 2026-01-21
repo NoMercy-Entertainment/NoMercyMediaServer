@@ -81,9 +81,9 @@ public class VideoPlaylistResponseDto
         Uuid = episode.Tv.Id + episode.Id;
         Duration = videoFile.Duration ?? "0";
         TmdbId = episode.Tv.Id;
-        VideoType = "tv";
+        VideoType = Config.TvMediaType;
         VideoId = videoFile.Id;
-        LibraryType = episode.Tv.MediaType ?? "tv";
+        LibraryType = episode.Tv.MediaType ?? Config.TvMediaType;
         PlaylistType = playlistType;
         PlaylistId = playlistId;
         Year = episode.Tv.FirstAirDate.ParseYear();
@@ -177,9 +177,9 @@ public class VideoPlaylistResponseDto
         Uuid = movie.Id;
         Duration = videoFile.Duration ?? "0";
         TmdbId = collection?.Id ?? movie.Id;
-        VideoType = "movie";
+        VideoType = Config.MovieMediaType;
         VideoId = videoFile.Id;
-        LibraryType = "movie";
+        LibraryType = Config.MovieMediaType;
         PlaylistType = playlistType;
         PlaylistId = playlistId;
         Year = movie.ReleaseDate.ParseYear();

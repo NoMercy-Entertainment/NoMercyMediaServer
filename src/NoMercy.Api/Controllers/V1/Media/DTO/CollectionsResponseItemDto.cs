@@ -3,6 +3,7 @@ using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 
@@ -91,8 +92,8 @@ public record CollectionsResponseItemDto
                 .MinBy(collectionMovie => collectionMovie.Movie.ReleaseDate)
                 ?.Movie.ReleaseDate.ParseYear());
 
-        MediaType = "collection";
-        Type = "collection";
+        MediaType = Config.CollectionMediaType;
+        Type = Config.CollectionMediaType;
 
         NumberOfItems = collection.Parts;
         HaveItems = collection.CollectionMovies

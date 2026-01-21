@@ -3,6 +3,7 @@ using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 public record GenreRowItemDto
@@ -46,8 +47,8 @@ public record GenreRowItemDto
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
 
-        MediaType = "movie";
-        Type = "movie";
+        MediaType = Config.MovieMediaType;
+        Type = Config.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         NumberOfItems = 1;
         HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
@@ -90,8 +91,8 @@ public record GenreRowItemDto
 
         Tags = tv.KeywordTvs.Select(tag => tag.Keyword.Name);
 
-        MediaType = "tv";
-        Type = "tv";
+        MediaType = Config.TvMediaType;
+        Type = Config.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
         NumberOfItems = tv.NumberOfEpisodes;
         HaveItems = tv.Episodes
@@ -133,11 +134,11 @@ public record GenreRowItemDto
         Backdrop = collection.Backdrop;
         Logo = collection.Images.FirstOrDefault(image => image is { Type: "logo", Iso6391: "en" } && image.Width >= image.Height)?.FilePath;
         TitleSort = collection.Title.TitleSort(collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate);
-        Type = "collection";
+        Type = Config.CollectionMediaType;
         Year = collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();
 
-        MediaType = "tv";
-        Type = "tv";
+        MediaType = Config.TvMediaType;
+        Type = Config.TvMediaType;
         Link = new($"/collection/{Id}", UriKind.Relative);
         NumberOfItems = collection.CollectionMovies.Count;
         HaveItems = collection.CollectionMovies
@@ -168,12 +169,12 @@ public record GenreRowItemDto
         Backdrop = special.Backdrop;
         Logo = special.Logo;
         TitleSort = special.Title.TitleSort();
-        Type = "collection";
+        Type = Config.CollectionMediaType;
         Year = special.Items.MinBy(movie => movie.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
                ?? special.Items.Select(tv => tv.Episode?.Tv).FirstOrDefault()?.FirstAirDate.ParseYear();
 
-        MediaType = "tv";
-        Type = "tv";
+        MediaType = Config.TvMediaType;
+        Type = Config.TvMediaType;
         Link = new($"/specials/{Id}", UriKind.Relative);
 
         NumberOfItems = special.Items.Count;

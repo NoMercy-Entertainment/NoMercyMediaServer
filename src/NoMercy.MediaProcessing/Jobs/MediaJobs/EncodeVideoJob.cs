@@ -12,6 +12,7 @@ using NoMercy.Encoder.Format.Subtitle;
 using NoMercy.Encoder.Format.Video;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -269,12 +270,12 @@ public class EncodeVideoJob : AbstractEncoderJob
 
     private async Task<FileMetadata> GetFileMetaData(Folder folder, MediaContext context)
     {
-        Movie? movie = folder.FolderLibraries.Any(x => x.Library.Type == "movie")
+        Movie? movie = folder.FolderLibraries.Any(x => x.Library.Type == Config.MovieMediaType)
             ? await context.Movies
                 .FirstOrDefaultAsync(x => x.Id == Id.ToInt())
             : null;
 
-        Episode? episode = folder.FolderLibraries.Any(x => x.Library.Type == "tv" || x.Library.Type == "anime")
+        Episode? episode = folder.FolderLibraries.Any(x => x.Library.Type == Config.TvMediaType || x.Library.Type == Config.AnimeMediaType)
             ? await context.Episodes
                 .Include(x => x.Tv)
                 .FirstOrDefaultAsync(x => x.Id == Id.ToInt())

@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.People;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
@@ -46,7 +47,7 @@ public record KnownForDto
     {
         Character = cast.Role.Character;
         Title = cast.Movie?.Title ?? cast.Tv?.Title;
-        MediaType = cast.Movie is not null ? "movie" : "tv";
+        MediaType = cast.Movie is not null ? Config.MovieMediaType : Config.TvMediaType;
         Year = cast.Movie?.ReleaseDate.ParseYear() ?? cast.Tv?.FirstAirDate.ParseYear();
         Id = cast.Movie?.Id ?? cast.Tv?.Id;
         Adult = cast.Movie?.Adult ?? false;
@@ -68,7 +69,7 @@ public record KnownForDto
     public KnownForDto(Crew crew)
     {
         Title = crew.Movie?.Title ?? crew.Tv!.Title;
-        MediaType = crew.Movie is not null ? "movie" : "tv";
+        MediaType = crew.Movie is not null ? Config.MovieMediaType : Config.TvMediaType;
         Year = crew.Movie?.ReleaseDate.ParseYear() ?? crew.Tv!.FirstAirDate.ParseYear();
         Id = crew.Movie?.Id ?? crew.Tv!.Id;
         Adult = crew.Movie?.Adult ?? false;

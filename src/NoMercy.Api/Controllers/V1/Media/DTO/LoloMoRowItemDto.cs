@@ -3,6 +3,7 @@ using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 
@@ -34,7 +35,7 @@ public record LoloMoRowItemDto
         Backdrop = genreMovie.Movie.Backdrop;
         TitleSort = genreMovie.Movie.Title.TitleSort(genreMovie.Movie.ReleaseDate);
         Year = genreMovie.Movie.ReleaseDate.ParseYear();
-        MediaType = "movie";
+        MediaType = Config.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         ColorPalette = genreMovie.Movie.ColorPalette;
     }
@@ -49,7 +50,7 @@ public record LoloMoRowItemDto
         TitleSort = genreTv.Tv.Title.TitleSort(genreTv.Tv.FirstAirDate);
         Type = genreTv.Tv.Type;
         Year = genreTv.Tv.FirstAirDate.ParseYear();
-        MediaType = "tv";
+        MediaType = Config.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
         ColorPalette = genreTv.Tv.ColorPalette;
     }

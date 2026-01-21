@@ -23,8 +23,8 @@ public record TopMusicDto
         Id = musicPlay.Playlist.Id.ToString();
         Name = musicPlay.Playlist.Name;
         ColorPalette = musicPlay.Playlist.ColorPalette;
-        Type = "playlists";
-        Link = new($"/music/playlist/{Id}", UriKind.Relative);
+        Type = "playlist";
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
         Cover = musicPlay.Playlist.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
     }

@@ -110,8 +110,8 @@ public record CarouselResponseItemDto
         Description = playlist.Description;
         Id = playlist.Id.ToString();
         Name = playlist.Name;
-        Type = "playlists";
-        Link = new($"/music/playlist/{Id}", UriKind.Relative);
+        Type = "playlist";
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
 
         Tracks = playlist.Tracks
             .Where(playlistTrack => playlistTrack.Track.Duration != null)

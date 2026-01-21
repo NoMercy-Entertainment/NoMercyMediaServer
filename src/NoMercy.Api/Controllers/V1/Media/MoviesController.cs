@@ -11,6 +11,7 @@ using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -122,7 +123,7 @@ public class MoviesController(
 
         IEnumerable<VideoPlaylistResponseDto> playlist =
             (await movieRepository.GetMoviePlaylistAsync(userId, id, language, country))
-            .Select(movie => new VideoPlaylistResponseDto(movie, "movie", id, country));
+            .Select(movie => new VideoPlaylistResponseDto(movie, Config.MovieMediaType, id, country));
 
         if (!playlist.Any())
             return NotFoundResponse("Movie not found");
@@ -250,7 +251,7 @@ public class MoviesController(
             return UnauthorizedResponse("You do not have permission to add tv shows");
         
         Library? library = await mediaContext.Libraries
-            .Where(f => f.Type == "movie")
+            .Where(f => f.Type == Config.MovieMediaType)
             .FirstOrDefaultAsync();
         
         if (library is null)

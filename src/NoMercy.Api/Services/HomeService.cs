@@ -7,17 +7,12 @@ using NoMercy.Helpers;
 using NoMercy.NmSystem;
 using NoMercy.Data.Repositories;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Services;
 
 public class HomeService
 {
-    private const int MaximumCardsInCarousel = 36;
-    private const int MaximumItemsPerPage = 500;
-    private const string TvMediaType = "tv";
-    private const string MovieMediaType = "movie";
-    private const string AnimeMediaType = "anime";
-
     private readonly MediaContext _mediaContext;
     private readonly LibraryRepository _libraryRepository;
     private readonly HomeRepository _homeRepository;
@@ -60,10 +55,10 @@ public class HomeService
     {
         return source.MediaType switch
         {
-            TvMediaType => tvData.FirstOrDefault(t => t.Id == source.Id) is { } tv
+            Config.TvMediaType => tvData.FirstOrDefault(t => t.Id == source.Id) is { } tv
                 ? new GenreRowItemDto(tv, language)
                 : null,
-            MovieMediaType => movieData.FirstOrDefault(m => m.Id == source.Id) is { } movie
+            Config.MovieMediaType => movieData.FirstOrDefault(m => m.Id == source.Id) is { } movie
                 ? new GenreRowItemDto(movie, language)
                 : null,
             _ => null
@@ -74,7 +69,7 @@ public class HomeService
     {
         List<int> movieIds = genres
             .SelectMany(genreRow => genreRow.Source
-                .Where(homeSource => homeSource.MediaType == MovieMediaType)
+                .Where(homeSource => homeSource.MediaType == Config.MovieMediaType)
                 .Select(h => h.Id)).ToList();
 
         return await _homeRepository.GetHomeMovies(_mediaContext, movieIds, language, country);
@@ -84,7 +79,7 @@ public class HomeService
     {
         List<int> tvIds = genres
             .SelectMany(genre => genre.Source
-                .Where(source => source.MediaType == TvMediaType)
+                .Where(source => source.MediaType == Config.TvMediaType)
                 .Select(source => source.Id)).ToList();
 
         return await _homeRepository.GetHomeTvs(_mediaContext, tvIds, language, country);
@@ -99,10 +94,10 @@ public class HomeService
                 Title = name,
                 MoreLink = new($"/genre/{genre.Id}", UriKind.Relative),
                 Id = genre.Id.ToString(),
-                Source = genre.GenreMovies.Select(movie => new HomeSourceDto(movie.MovieId, MovieMediaType))
-                    .Concat(genre.GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, TvMediaType)))
+                Source = genre.GenreMovies.Select(movie => new HomeSourceDto(movie.MovieId, Config.MovieMediaType))
+                    .Concat(genre.GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, Config.TvMediaType)))
                     .Randomize()
-                    .Take(MaximumCardsInCarousel)
+                    .Take(Config.MaximumCardsInCarousel)
             };
     }
 
@@ -112,7 +107,7 @@ public class HomeService
         Task<HashSet<UserData>> continueWatchingTask = _homeRepository
             .GetContinueWatchingAsync(_mediaContext, userId, language, country);
         Task<List<Genre>> genreItemsTask = _homeRepository
-            .GetHomeGenresAsync(_mediaContext, userId, language, MaximumItemsPerPage);
+            .GetHomeGenresAsync(_mediaContext, userId, language, Config.MaximumItemsPerPage);
         Task<List<Library>> librariesTask = _homeRepository
             .GetLibrariesAsync(_mediaContext, userId);
         Task<int> animeCountTask = _homeRepository.GetAnimeCountAsync(_mediaContext, userId);
@@ -136,15 +131,15 @@ public class HomeService
         foreach (Genre genre in genreItems)
         {
             IEnumerable<HomeSourceDto> movies = genre.GenreMovies
-                .Select(movie => new HomeSourceDto(movie.MovieId, MovieMediaType));
+                .Select(movie => new HomeSourceDto(movie.MovieId, Config.MovieMediaType));
             IEnumerable<HomeSourceDto> tvs = genre.GenreTvShows
-                .Select(tv => new HomeSourceDto(tv.TvId, TvMediaType));
+                .Select(tv => new HomeSourceDto(tv.TvId, Config.TvMediaType));
 
             string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
-            List<HomeSourceDto> source = movies.Concat(tvs).Randomize().Take(MaximumCardsInCarousel).ToList();
+            List<HomeSourceDto> source = movies.Concat(tvs).Randomize().Take(Config.MaximumCardsInCarousel).ToList();
 
-            tvIds.AddRange(source.Where(s => s.MediaType == TvMediaType).Select(s => s.Id));
-            movieIds.AddRange(source.Where(s => s.MediaType == MovieMediaType).Select(s => s.Id));
+            tvIds.AddRange(source.Where(s => s.MediaType == Config.TvMediaType).Select(s => s.Id));
+            movieIds.AddRange(source.Where(s => s.MediaType == Config.MovieMediaType).Select(s => s.Id));
 
             genreSourceList.Add(new(genre.Id.ToString(), name,
                 new($"/genre/{genre.Id}", UriKind.Relative), source));
@@ -210,9 +205,9 @@ public class HomeService
 
         foreach ((Library library, List<Movie> libraryMovies, List<Tv> libraryShows) in libraryResults)
         {
-            bool shouldPaginate = (library.Type == MovieMediaType && movieCount > MaximumItemsPerPage)
-                                  || (library.Type == TvMediaType && tvCount > MaximumItemsPerPage)
-                                  || (library.Type == AnimeMediaType && animeCount > MaximumItemsPerPage);
+            bool shouldPaginate = (library.Type == Config.MovieMediaType && movieCount > Config.MaximumItemsPerPage)
+                                  || (library.Type == Config.TvMediaType && tvCount > Config.MaximumItemsPerPage)
+                                  || (library.Type == Config.AnimeMediaType && animeCount > Config.MaximumItemsPerPage);
 
             List<CardData> items = libraryMovies.Select(m => new CardData(m, country))
                 .Concat(libraryShows.Select(t => new CardData(t, country)))
@@ -318,10 +313,10 @@ public class HomeService
     {
         return source.MediaType switch
         {
-            TvMediaType => tvData.FirstOrDefault(t => t.Id == source.Id) is { } tv
+            Config.TvMediaType => tvData.FirstOrDefault(t => t.Id == source.Id) is { } tv
                 ? new CardData(tv, country, watch)
                 : null,
-            MovieMediaType => movieData.FirstOrDefault(m => m.Id == source.Id) is { } movie
+            Config.MovieMediaType => movieData.FirstOrDefault(m => m.Id == source.Id) is { } movie
                 ? new CardData(movie, country, watch)
                 : null,
             _ => null
@@ -392,7 +387,7 @@ public class HomeService
         };
     }
 
-    public async Task<ScreensaverDto> GetScreensaverContent(Guid userId)
+    public async Task<ScreensaverDto> GetSetupScreensaverContent(Guid userId)
     {
         HashSet<Image> data = await _homeRepository.GetScreensaverImagesAsync(_mediaContext, userId);
 
@@ -401,12 +396,12 @@ public class HomeService
         IEnumerable<ScreensaverDataDto> tvCollection = data
             .Where(image => image is { TvId: not null, Type: "backdrop" })
             .DistinctBy(image => image.TvId)
-            .Select(image => new ScreensaverDataDto(image, logos, TvMediaType));
+            .Select(image => new ScreensaverDataDto(image, logos, Config.TvMediaType));
 
         IEnumerable<ScreensaverDataDto> movieCollection = data
             .Where(image => image is { MovieId: not null, Type: "backdrop" })
             .DistinctBy(image => image.MovieId)
-            .Select(image => new ScreensaverDataDto(image, logos, MovieMediaType));
+            .Select(image => new ScreensaverDataDto(image, logos, Config.MovieMediaType));
 
         return new()
         {
@@ -427,20 +422,20 @@ public class HomeService
         List<int> movieIds = [];
         List<int> tvIds = [];
 
-        List<Genre> genreItems = await _homeRepository.GetHomeGenresAsync(_mediaContext, userId, language, MaximumItemsPerPage);
+        List<Genre> genreItems = await _homeRepository.GetHomeGenresAsync(_mediaContext, userId, language, Config.MaximumItemsPerPage);
 
         foreach (Genre genre in genreItems)
         {
             IEnumerable<HomeSourceDto> movies = genre.GenreMovies
-                .Select(movie => new HomeSourceDto(movie.MovieId, MovieMediaType));
+                .Select(movie => new HomeSourceDto(movie.MovieId, Config.MovieMediaType));
             IEnumerable<HomeSourceDto> tvs = genre.GenreTvShows
-                .Select(tv => new HomeSourceDto(tv.TvId, TvMediaType));
+                .Select(tv => new HomeSourceDto(tv.TvId, Config.TvMediaType));
 
             string name = genre.Translations.FirstOrDefault()?.Name ?? genre.Name;
-            List<HomeSourceDto> source = movies.Concat(tvs).Randomize().Take(MaximumCardsInCarousel).ToList();
+            List<HomeSourceDto> source = movies.Concat(tvs).Randomize().Take(Config.MaximumCardsInCarousel).ToList();
 
-            tvIds.AddRange(source.Where(s => s.MediaType == TvMediaType).Select(s => s.Id));
-            movieIds.AddRange(source.Where(s => s.MediaType == MovieMediaType).Select(s => s.Id));
+            tvIds.AddRange(source.Where(s => s.MediaType == Config.TvMediaType).Select(s => s.Id));
+            movieIds.AddRange(source.Where(s => s.MediaType == Config.MovieMediaType).Select(s => s.Id));
 
             genreSourceList.Add(new(genre.Id.ToString(), name,
                 new($"/genre/{genre.Id}", UriKind.Relative), source));

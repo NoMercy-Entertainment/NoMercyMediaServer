@@ -19,6 +19,17 @@ public class CronWorker : BackgroundService
     private readonly Dictionary<string, CancellationTokenSource> _jobCancellationTokens = new();
     private readonly Dictionary<string, Task> _jobTasks = new();
 
+    private static readonly TaskCompletionSource<bool> QueueWorkersReadyTcs = new();
+
+    /// <summary>
+    /// Signal that queue workers have started and cron jobs can begin execution.
+    /// Call this from QueueRunner.Initialize() after workers are spawned.
+    /// </summary>
+    public static void SignalQueueWorkersReady()
+    {
+        QueueWorkersReadyTcs.TrySetResult(true);
+    }
+
     public CronWorker(IServiceProvider serviceProvider, ILogger<CronWorker> logger)
     {
         _serviceProvider = serviceProvider;
@@ -90,7 +101,19 @@ public class CronWorker : BackgroundService
 
     private async Task JobWorkerLoop(CronJob job, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Job worker started for: {JobName}", job.Name);
+        _logger.LogDebug("Job worker started for: {JobName}, waiting for queue workers...", job.Name);
+
+        // Wait for queue workers to be ready before starting cron job execution
+        try
+        {
+            await QueueWorkersReadyTcs.Task.WaitAsync(cancellationToken);
+            _logger.LogDebug("Queue workers ready, cron job {JobName} can now execute", job.Name);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Job worker cancelled while waiting for queue workers: {JobName}", job.Name);
+            return;
+        }
 
         while (!cancellationToken.IsCancellationRequested)
         {

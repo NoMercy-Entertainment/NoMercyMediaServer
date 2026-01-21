@@ -510,6 +510,9 @@ public static partial class Str
 
         //Replace double occurences of - or _
         value = Regex.Replace(value, @"([-_]){2,}", "$1", RegexOptions.Compiled);
+        
+        // random id
+        value += "-" + Guid.NewGuid().ToString("n").Substring(0, 8);
 
         return value ;
     }

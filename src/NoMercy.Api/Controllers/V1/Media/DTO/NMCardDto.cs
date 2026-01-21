@@ -3,6 +3,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Movies;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
@@ -50,7 +51,7 @@ public class NmCardDto
         Logo = movie.Images.FirstOrDefault()?.FilePath;
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
-        Type = "movie";
+        Type = Config.MovieMediaType;
 
         Link = new($"/movie/{Id}", UriKind.Relative);
         NumberOfItems = 1;
@@ -88,7 +89,7 @@ public class NmCardDto
         Logo = tv.Images.FirstOrDefault()?.FilePath;
         TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
         Year = tv.FirstAirDate.ParseYear();
-        Type = "tv";
+        Type = Config.TvMediaType;
         CreatedAt = tv.CreatedAt;
 
         Link = new($"/tv/{Id}", UriKind.Relative);
@@ -128,7 +129,7 @@ public class NmCardDto
         TitleSort = collection.Title.TitleSort(collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)
             ?.Movie.ReleaseDate);
         Year = collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();
-        Type = "collection";
+        Type = Config.CollectionMediaType;
 
         Link = new($"/collection/{Id}", UriKind.Relative);
         NumberOfItems = collection.CollectionMovies.Count;
@@ -162,7 +163,7 @@ public class NmCardDto
         TitleSort = special.Title.TitleSort();
         Year = special.Items.MinBy(movie => movie.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
                ?? special.Items.Select(tv => tv.Episode?.Tv).FirstOrDefault()?.FirstAirDate.ParseYear();
-        Type = "special";
+        Type = Config.SpecialMediaType;
 
         Link = new($"/specials/{Id}", UriKind.Relative);
 
@@ -212,7 +213,7 @@ public class NmCardDto
             Overview = item.Special.Overview;
             Logo = item.Special.Logo;
             Duration = item.VideoFile.Duration?.ToSeconds();
-            Type = "special";
+            Type = Config.SpecialMediaType;
 
             Link = new($"/specials/{Id}/watch", UriKind.Relative);
 
@@ -262,7 +263,7 @@ public class NmCardDto
             Year = item.Collection.CollectionMovies
                 .MinBy(movie => movie.Movie.ReleaseDate?.ParseYear())
                 ?.Movie.ReleaseDate.ParseYear() ?? 0;
-            Type = "collection";
+            Type = Config.CollectionMediaType;
 
             Link = new($"/collection/{Id}/watch", UriKind.Relative);
             CreatedAt = item.Collection.CreatedAt;
@@ -296,7 +297,7 @@ public class NmCardDto
             Logo = item.Movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/movie/{Id}/watch", UriKind.Relative);
-            Type = "movie";
+            Type = Config.MovieMediaType;
             CreatedAt = item.Movie.CreatedAt;
 
             NumberOfItems = 1;
@@ -326,7 +327,7 @@ public class NmCardDto
             Logo = item.Tv.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/tv/{Id}/watch", UriKind.Relative);
-            Type = "tv";
+            Type = Config.TvMediaType;
             CreatedAt = item.Tv.CreatedAt;
 
             NumberOfItems = item.Tv.NumberOfEpisodes;
@@ -356,7 +357,7 @@ public class NmCardDto
         Overview = tmdbMovie.Overview;
         Backdrop = tmdbMovie.BackdropPath;
         Link = new($"/movie/{Id}", UriKind.Relative);
-        Type = "movie";
+        Type = Config.MovieMediaType;
         ColorPalette = new();
         Poster = tmdbMovie.PosterPath;
         Year = tmdbMovie.ReleaseDate.ParseYear();
@@ -374,7 +375,7 @@ public class NmCardDto
         Backdrop = movie.Backdrop;
         Logo = movie.Logo;
         Year = movie.ReleaseDate.ParseYear();
-        Type = "movie";
+        Type = Config.MovieMediaType;
         CreatedAt = movie.CreatedAt;
 
         Link = new($"/movie/{Id}", UriKind.Relative);
@@ -406,7 +407,7 @@ public class NmCardDto
         Backdrop = tv.Backdrop;
         Logo = tv.Logo;
         Year = tv.FirstAirDate.ParseYear();
-        Type = "tv";
+        Type = Config.TvMediaType;
         CreatedAt = tv.CreatedAt;
 
         Link = new($"/tv/{Id}", UriKind.Relative);

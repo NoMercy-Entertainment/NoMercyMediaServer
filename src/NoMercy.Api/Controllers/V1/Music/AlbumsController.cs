@@ -132,6 +132,11 @@ public class AlbumsController : BaseController
         };
 
         OnLikeEvent?.Invoke(this, musicLikeEventDto);
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["music", "album", album.Id]
+        });
 
         return Ok(new StatusResponseDto<string>
         {
@@ -176,6 +181,8 @@ public class AlbumsController : BaseController
         if (album is null)
             return NotFoundResponse("Album not found");
 
+        string slug = album.Name.ToSlug();
+
         string libraryRootFolder = album.LibraryFolder.Path;
         if (string.IsNullOrEmpty(libraryRootFolder))
             return UnprocessableEntityResponse("Album library folder not found");
@@ -189,14 +196,14 @@ public class AlbumsController : BaseController
         }
 
         // save to app images folder
-        string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", album.Name.ToSlug() + ".jpg");
+        string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
         Logger.App(filePath2);
         await using (FileStream stream = new(filePath2, FileMode.Create))
         {
             await image.CopyToAsync(stream);
         }
         
-        album.Cover = $"/{album.Name.ToSlug()}.jpg";
+        album.Cover = $"/{slug}.jpg";
         album._colorPalette = await CoverArtImageManagerManager
             .ColorPalette("cover", new(filePath2));
         
@@ -208,7 +215,7 @@ public class AlbumsController : BaseController
             Message = "Album cover updated",
             Data = new()
             {
-                Url = new($"/images/music/{album.Name.ToSlug()}.jpg", UriKind.Relative),
+                Url = new($"/images/music/{slug}.jpg", UriKind.Relative),
                 ColorPalette = album.ColorPalette
             }
         });

@@ -3,6 +3,7 @@ using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Collections;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
@@ -54,8 +55,8 @@ public record CollectionResponseItemDto
         Poster = collection.Poster;
         TitleSort = collection.TitleSort;
 
-        Type = "collection";
-        MediaType = "collection";
+        Type = Config.CollectionMediaType;
+        MediaType = Config.CollectionMediaType;
         Link = new($"/collection/{Id}", UriKind.Relative);
 
         ColorPalette = collection.ColorPalette;
@@ -151,8 +152,8 @@ public record CollectionResponseItemDto
         Backdrop = tmdbCollectionAppends.BackdropPath;
         Poster = tmdbCollectionAppends.PosterPath;
         TitleSort = tmdbCollectionAppends.Name.TitleSort();
-        Type = "collection";
-        MediaType = "collection";
+        Type = Config.CollectionMediaType;
+        MediaType = Config.CollectionMediaType;
         ColorPalette = new();
         NumberOfItems = tmdbCollectionAppends.Parts.Length;
         HaveItems = 0;

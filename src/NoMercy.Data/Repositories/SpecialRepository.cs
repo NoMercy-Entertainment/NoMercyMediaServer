@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
@@ -183,7 +184,7 @@ public class SpecialRepository(MediaContext context)
                             SpecialId = specialId,
                             Time = 0,
                             LastPlayedDate = DateTime.UtcNow.ToString("o"),
-                            Type = "special"
+                            Type = Config.SpecialMediaType
                         });
                     }
                 }

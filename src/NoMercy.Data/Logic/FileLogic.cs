@@ -6,6 +6,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Information;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -38,14 +39,14 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
 
         switch (Library.Type)
         {
-            case "movie":
+            case Config.MovieMediaType:
                 await StoreMovie();
                 break;
-            case "tv":
-            case "anime":
+            case Config.TvMediaType:
+            case Config.AnimeMediaType:
                 await StoreTvShow();
                 break;
-            case "music":
+            case Config.MusicMediaType:
                 await StoreMusic();
                 break;
             default:
@@ -198,23 +199,23 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
     {
         switch (Library.Type)
         {
-            case "movie":
+            case Config.MovieMediaType:
                 Movie = await _mediaContext.Movies
                     .Where(m => m.Id == Id)
                     .FirstOrDefaultAsync();
-                Type = "movie";
+                Type = Config.MovieMediaType;
                 break;
-            case "tv":
+            case Config.TvMediaType:
                 Show = await _mediaContext.Tvs
                     .Where(t => t.Id == Id)
                     .FirstOrDefaultAsync();
-                Type = "tv";
+                Type = Config.TvMediaType;
                 break;
-            case "anime":
+            case Config.AnimeMediaType:
                 Show = await _mediaContext.Tvs
                     .Where(t => t.Id == Id)
                     .FirstOrDefaultAsync();
-                Type = "anime";
+                Type = Config.AnimeMediaType;
                 break;
         }
     }
@@ -225,9 +226,9 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
 
         int depth = Library.Type switch
         {
-            "movie" => 1,
-            "tv" => 2,
-            "anime" => 2,
+            Config.MovieMediaType => 1,
+            Config.TvMediaType => 2,
+            Config.AnimeMediaType => 2,
             _ => 1
         };
 
@@ -245,9 +246,9 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
     {
         string? folder = Library.Type switch
         {
-            "movie" => Movie?.Folder?.Replace("/", ""),
-            "tv" => Show?.Folder?.Replace("/", ""),
-            "anime" => Show?.Folder?.Replace("/", ""),
+            Config.MovieMediaType => Movie?.Folder?.Replace("/", ""),
+            Config.TvMediaType => Show?.Folder?.Replace("/", ""),
+            Config.AnimeMediaType => Show?.Folder?.Replace("/", ""),
             _ => ""
         };
 

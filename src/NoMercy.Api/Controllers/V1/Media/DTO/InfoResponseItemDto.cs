@@ -4,6 +4,7 @@ using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
@@ -65,8 +66,8 @@ public record InfoResponseItemDto
         Overview = !string.IsNullOrEmpty(overview)
             ? overview
             : movie.Overview;
-        Type = "movie";
-        MediaType = "movie";
+        Type = Config.MovieMediaType;
+        MediaType = Config.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         Watched = movie.VideoFiles
             .Any(videoFile => videoFile.UserData.Count != 0);
@@ -141,11 +142,11 @@ public record InfoResponseItemDto
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
         Similar = movie.SimilarFrom
-            .Select(similar => new RelatedDto(similar, "movie"))
+            .Select(similar => new RelatedDto(similar, Config.MovieMediaType))
             .Where(item => item.Poster != null);
 
         Recommendations = movie.RecommendationFrom
-            .Select(recommendation => new RelatedDto(recommendation, "movie"))
+            .Select(recommendation => new RelatedDto(recommendation, Config.MovieMediaType))
             .Where(item => item.Poster != null);
 
         GroupedWatchProviders = movie.WatchProviderMedia
@@ -171,8 +172,8 @@ public record InfoResponseItemDto
         Overview = !string.IsNullOrEmpty(overview)
             ? overview
             : tmdbMovie.Overview;
-        Type = "movie";
-        MediaType = "movie";
+        Type = Config.MovieMediaType;
+        MediaType = Config.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         Watched = false;
 
@@ -233,11 +234,11 @@ public record InfoResponseItemDto
         Writer = crew.FirstOrDefault(people => people.Job == "Writer");
 
         Similar = tmdbMovie.Similar.Results
-            .Select(similar => new RelatedDto(similar, "movie"))
+            .Select(similar => new RelatedDto(similar, Config.MovieMediaType))
             .Where(item => item.Poster != null);
 
         Recommendations = tmdbMovie.Recommendations.Results
-            .Select(recommendation => new RelatedDto(recommendation, "movie"))
+            .Select(recommendation => new RelatedDto(recommendation, Config.MovieMediaType))
             .Where(item => item.Poster != null);
 
         GroupedWatchProviders = TmdbWatchProviders.ExtractProviders(tmdbMovie.WatchProviders.TmdbWatchProviderResults)
@@ -266,8 +267,8 @@ public record InfoResponseItemDto
         Overview = !string.IsNullOrEmpty(overview)
             ? overview
             : tv.Overview;
-        Type = tv.Type ?? "tv";
-        MediaType = "tv";
+        Type = tv.Type ?? Config.TvMediaType;
+        MediaType = Config.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
         Watched = tv.Episodes
             .Any(episode => episode.VideoFiles
@@ -375,7 +376,7 @@ public record InfoResponseItemDto
             .ThenInclude(episode => episode.VideoFiles)
             .ToArray();
         Similar = tv.SimilarFrom
-            .Select(similar => new RelatedDto(similar, "tv", similars))
+            .Select(similar => new RelatedDto(similar, Config.TvMediaType, similars))
             .Where(item => item.Poster != null);
 
         IEnumerable<int> recommendationIds = tv.RecommendationFrom
@@ -387,7 +388,7 @@ public record InfoResponseItemDto
             .ToArray();
 
         Recommendations = tv.RecommendationFrom
-            .Select(recommendation => new RelatedDto(recommendation, "tv", recommendations))
+            .Select(recommendation => new RelatedDto(recommendation, Config.TvMediaType, recommendations))
             .Where(item => item.Poster != null);
 
         Seasons = tv.Seasons
@@ -426,8 +427,8 @@ public record InfoResponseItemDto
         Overview = !string.IsNullOrEmpty(overview)
             ? overview
             : tmdbTv.Overview;
-        Type = tmdbTv.Type ?? "tv";
-        MediaType = "tv";
+        Type = tmdbTv.Type ?? Config.TvMediaType;
+        MediaType = Config.TvMediaType;
         Link = new($"/tv/{Id}", UriKind.Relative);
         Watched = false;
         Favorite = false;
@@ -507,11 +508,11 @@ public record InfoResponseItemDto
             .Select(people => new PeopleDto(people)).FirstOrDefault();
 
         Similar = tmdbTv.Similar.Results
-            .Select(similar => new RelatedDto(similar, "tv"))
+            .Select(similar => new RelatedDto(similar, Config.TvMediaType))
             .Where(item => item.Poster != null);
 
         Recommendations = tmdbTv.Recommendations.Results
-            .Select(recommendation => new RelatedDto(recommendation, "tv"))
+            .Select(recommendation => new RelatedDto(recommendation, Config.TvMediaType))
             .Where(item => item.Poster != null);
 
         Seasons = [];
@@ -548,8 +549,8 @@ public record InfoResponseItemDto
         Overview = !string.IsNullOrEmpty(overview)
             ? overview
             : collection.Overview;
-        Type = "collection";
-        MediaType = "collection";
+        Type = Config.CollectionMediaType;
+        MediaType = Config.CollectionMediaType;
         Link = new($"/collection/{Id}", UriKind.Relative);
         // Watched = tv.Watched;
         // Favorite = tv.Favorite;

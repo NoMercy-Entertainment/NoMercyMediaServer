@@ -5,6 +5,7 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -140,11 +141,11 @@ public class LibraryFileWatcher
         
         switch (library.Type)
         {
-            case "movie":
-            case "tv":
+            case Config.MovieMediaType:
+            case Config.TvMediaType:
                 string[] videoExtensions = [".mp4", ".mkv", ".avi", ".webm", ".mov", ".m3u8"];
                 return videoExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
-            case "music":
+            case Config.MusicMediaType:
                 string[] audioExtensions = [".mp3", ".flac", ".opus", ".wav", ".m4a"];
                 return audioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
             default:
@@ -176,20 +177,20 @@ public class LibraryFileWatcher
         MediaScan mediaScan = new();
         MediaScan scan = mediaScan.EnableFileListing();
 
-        if (library.Type == "music")
+        if (library.Type == Config.MusicMediaType)
             scan.DisableRegexFilter();
 
         IEnumerable<MediaFolderExtend> mediaFolder = await scan.Process(path);
 
         switch (library.Type)
         {
-            case "movie":
+            case Config.MovieMediaType:
                 await HandleMovieFolder(library, mediaFolder.First());
                 break;
-            case "tv":
+            case Config.TvMediaType:
                 await HandleTvFolder(library, mediaFolder.First());
                 break;
-            case "music":
+            case Config.MusicMediaType:
                 HandleMusicFolder(library, mediaFolder.First());
                 break;
         }

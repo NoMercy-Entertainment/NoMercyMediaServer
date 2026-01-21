@@ -127,13 +127,13 @@ public class StorageJob : IShouldQueue
 
             switch (library)
             {
-                case "movie":
+                case Config.MovieMediaType:
                     storage.Data.Movies += size;
                     break;
-                case "tv":
+                case Config.TvMediaType:
                     storage.Data.Shows += size;
                     break;
-                case "music":
+                case Config.MusicMediaType:
                     storage.Data.Music += size;
                     break;
             }

@@ -469,4 +469,20 @@
     <Key>Album cover updated</Key>
     <Value lang="nl">Album cover updated</Value>
   </Entry>
+  <Entry>
+    <Key>Playlist cover updated</Key>
+    <Value lang="nl">Playlist cover updated</Value>
+  </Entry>
+  <Entry>
+    <Key>Playlist updated successfully</Key>
+    <Value lang="nl">Playlist updated successfully</Value>
+  </Entry>
+  <Entry>
+    <Key>Most listened playlist</Key>
+    <Value lang="nl">Most listened playlist</Value>
+  </Entry>
+  <Entry>
+    <Key>Track not found in playlist</Key>
+    <Value lang="nl">Track not found in playlist</Value>
+  </Entry>
 </I18N>

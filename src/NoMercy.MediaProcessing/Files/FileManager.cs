@@ -51,22 +51,22 @@ public partial class FileManager(
 
         switch (library.Type)
         {
-            case "movie":
+            case Config.MovieMediaType:
                 await StoreMovie();
                 Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
                 {
                     QueryKey = ["libraries", library.Id.ToString()]
                 });
                 break;
-            case "tv":
-            case "anime":
+            case Config.TvMediaType:
+            case Config.AnimeMediaType:
                 await StoreTvShow();
                 Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
                 {
                     QueryKey = ["libraries", library.Id.ToString()]
                 });
                 break;
-            case "music":
+            case Config.MusicMediaType:
                 await StoreMusic();
                 Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
                 {
@@ -738,8 +738,8 @@ public partial class FileManager(
 
         int depth = library.Type switch
         {
-            "movie" => 1,
-            "tv" or "anime" => 2,
+            Config.MovieMediaType => 1,
+            Config.TvMediaType or Config.AnimeMediaType => 2,
             _ => 0
         };
 
@@ -760,8 +760,8 @@ public partial class FileManager(
         List<Folder> folders = [];
         string? folder = library.Type switch
         {
-            "movie" => movie?.Folder?.Replace("/", ""),
-            "tv" or "anime" => show?.Folder?.Replace("/", ""),
+            Config.MovieMediaType => movie?.Folder?.Replace("/", ""),
+            Config.TvMediaType or Config.AnimeMediaType => show?.Folder?.Replace("/", ""),
             _ => ""
         };
 
