@@ -12,7 +12,7 @@ public class HomeRepository
             .AsNoTracking()
             .Where(tv => tvIds.Contains(tv.Id))
             .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
-            .Include(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
+            .Include(tv => tv.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1))
             .Include(tv => tv.Media.Where(m => m.Site == "YouTube").Take(3))
             .Include(tv => tv.Episodes.Where(e => e.SeasonNumber > 0 && e.VideoFiles.Any(v => v.Folder != null)))
                 .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
@@ -29,7 +29,7 @@ public class HomeRepository
             .AsNoTracking()
             .Where(movie => movieIds.Contains(movie.Id))
             .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
-            .Include(movie => movie.Images.Where(i => i.Type == "logo").Take(1))
+            .Include(movie => movie.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1))
             .Include(movie => movie.Media.Where(m => m.Site == "YouTube").Take(3))
             .Include(movie => movie.VideoFiles.Where(v => v.Folder != null))
             .Include(movie => movie.CertificationMovies
@@ -48,7 +48,7 @@ public class HomeRepository
             .Include(ud => ud.VideoFile)
             // Movie includes - only what CardData needs
             .Include(ud => ud.Movie)
-                .ThenInclude(m => m!.Images.Where(i => i.Type == "logo").Take(1))
+                .ThenInclude(m => m!.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1))
             .Include(ud => ud.Movie)
                 .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
             .Include(ud => ud.Movie)
@@ -58,7 +58,7 @@ public class HomeRepository
                 .ThenInclude(c => c.Certification)
             // Tv includes - only what CardData needs
             .Include(ud => ud.Tv)
-                .ThenInclude(tv => tv!.Images.Where(i => i.Type == "logo").Take(1))
+                .ThenInclude(tv => tv!.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1))
             .Include(ud => ud.Tv)
                 .ThenInclude(tv => tv!.Episodes.Where(e => e.SeasonNumber > 0 && e.VideoFiles.Any(v => v.Folder != null)))
                 .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
@@ -69,7 +69,7 @@ public class HomeRepository
                 .ThenInclude(c => c.Certification)
             // Collection includes - only what CardData needs
             .Include(ud => ud.Collection)
-                .ThenInclude(c => c!.Images.Where(i => i.Type == "logo").Take(1))
+                .ThenInclude(c => c!.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1))
             .Include(ud => ud.Collection)
                 .ThenInclude(c => c!.CollectionMovies)
                 .ThenInclude(cm => cm.Movie)
@@ -122,7 +122,7 @@ public class HomeRepository
             .Where(image => image._colorPalette != "")
             .Where(image =>
                 (image.Type == "backdrop" && (image.Iso6391 == null || image.Iso6391 == "") && image.Height >= 1080) ||
-                (image.Type == "logo" && image.Iso6391 == "en" && image.Width >= image.Height))
+                (image.Type == "logo" && image.Iso6391 == "en"))
             .OrderByDescending(image => image.Width)
             .ToHashSetAsync();
     }

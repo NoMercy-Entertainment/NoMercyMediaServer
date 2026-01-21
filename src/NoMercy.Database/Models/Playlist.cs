@@ -9,7 +9,7 @@ public class Playlist : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
-    public required Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("description")] public string? Description { get; set; }
@@ -17,8 +17,8 @@ public class Playlist : ColorPaletteTimeStamps
     [JsonProperty("filename")] public string? Filename { get; set; }
     [JsonProperty("duration")] public string? Duration { get; set; }
 
-    [JsonProperty("user_id")] public required Guid UserId { get; set; }
-    public required User User { get; set; }
+    [JsonProperty("user_id")] public Guid UserId { get; set; }
+    [JsonProperty("user")] public User User { get; set; } = null!;
 
     [JsonProperty("playlist_track")] public ICollection<PlaylistTrack> Tracks { get; set; } = [];
 }

@@ -1,6 +1,8 @@
+using System.Drawing.Imaging;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.Socket.music;
@@ -12,7 +14,12 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
+using NoMercy.MediaProcessing.Images;
 using NoMercy.Networking.Dto;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -154,6 +161,60 @@ public class ArtistsController : BaseController
             Status = "ok",
             Message = "Rescan started",
             Args = []
+        });
+    }
+
+    [HttpPost]
+    [Route("{id:guid}/cover")]
+    public async Task<IActionResult> Cover(Guid id, [FromForm] IFormFile image)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to upload artist covers");
+
+        await using MediaContext mediaContext = new();
+
+        Artist? artist = await mediaContext.Artists
+            .Include(artist => artist.LibraryFolder)
+            .FirstOrDefaultAsync(artist => artist.Id == id);
+
+        if (artist is null)
+            return NotFoundResponse("Artist not found");
+
+        string libraryRootFolder = artist.LibraryFolder.Path;
+        if (string.IsNullOrEmpty(libraryRootFolder))
+            return UnprocessableEntityResponse("Artist library folder not found");
+
+        // save to artist folder
+        string filePath = Path.Combine(libraryRootFolder, artist.HostFolder.TrimStart('\\'), artist.Name.ToSlug() + ".jpg");
+        Logger.App(filePath);
+        await using (FileStream stream = new(filePath, FileMode.Create))
+        {
+            await image.CopyToAsync(stream);
+        }
+
+        // save to app images folder
+        string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", artist.Name.ToSlug() + ".jpg");
+        Logger.App(filePath2);
+        await using (FileStream stream = new(filePath2, FileMode.Create))
+        {
+            await image.CopyToAsync(stream);
+        }
+        
+        artist.Cover = $"/{artist.Name.ToSlug()}.jpg";
+        artist._colorPalette = await CoverArtImageManagerManager
+            .ColorPalette("cover", new(filePath2));
+        
+        await mediaContext.SaveChangesAsync();
+        
+        return Ok(new StatusResponseDto<ImageUploadResponseDto>
+        {
+            Status = "ok",
+            Message = "Artist cover updated",
+            Data = new()
+            {
+                Url = new($"/images/music/{artist.Name.ToSlug()}.jpg", UriKind.Relative),
+                ColorPalette = artist.ColorPalette
+            }
         });
     }
 }

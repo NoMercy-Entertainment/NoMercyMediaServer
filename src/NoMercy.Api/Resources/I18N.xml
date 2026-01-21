@@ -461,4 +461,12 @@
     <Key>Movie removed from watch list</Key>
     <Value lang="nl">Movie removed from watch list</Value>
   </Entry>
+  <Entry>
+    <Key>Artist cover updated</Key>
+    <Value lang="nl">Artist cover updated</Value>
+  </Entry>
+  <Entry>
+    <Key>Album cover updated</Key>
+    <Value lang="nl">Album cover updated</Value>
+  </Entry>
 </I18N>

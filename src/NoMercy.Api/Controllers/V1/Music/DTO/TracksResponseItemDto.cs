@@ -8,7 +8,7 @@ public record TracksResponseItemDto
 {
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
     [JsonProperty("country")] public string? Country { get; set; }
-    [JsonProperty("cover")] public string? Cover { get; set; }
+    [JsonProperty("cover")] public Uri? Cover { get; set; }
     [JsonProperty("description")] public string? Description { get; set; }
     [JsonProperty("favorite")] public bool Favorite { get; set; }
     [JsonProperty("folder")] public string? Folder { get; set; }
@@ -32,7 +32,7 @@ public record TracksResponseItemDto
     {
         Id = track.Id;
         Name = track.Name;
-        Cover = track.Cover is not null ? new Uri($"/images/music{track.Cover}", UriKind.Relative).ToString() : null;
+        Cover = track.Cover is not null ? new Uri($"/images/music{track.Cover}", UriKind.Relative) : null;
         Link = new($"/music/tracks/{track.Id}", UriKind.Relative);
 
         ColorPalette = track.ColorPalette;
