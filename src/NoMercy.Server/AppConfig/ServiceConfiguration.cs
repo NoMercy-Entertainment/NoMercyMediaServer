@@ -147,7 +147,7 @@ public static class ServiceConfiguration
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();
         services.AddScoped<HomeService>();
-        services.AddScoped<HomeController>();
+        services.AddScoped<SetupService>();
 
         services.AddSingleton<JobQueue>();
         services.AddSingleton<JobDispatcher>();
