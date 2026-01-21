@@ -42,7 +42,7 @@ public record HomeCardData
         Overview = !string.IsNullOrEmpty(overview) ? overview : movie.Overview;
         Poster = movie.Poster;
         Backdrop = movie.Backdrop;
-        Logo = movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+        Logo = movie.Images.FirstOrDefault()?.FilePath;
         Year = movie.ReleaseDate.ParseYear();
         MediaType = "movie";
         Link = new($"/movie/{Id}", UriKind.Relative);
@@ -82,7 +82,7 @@ public record HomeCardData
         Overview = !string.IsNullOrEmpty(overview) ? overview : tv.Overview;
         Poster = tv.Poster;
         Backdrop = tv.Backdrop;
-        Logo = tv.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+        Logo = tv.Images.FirstOrDefault()?.FilePath;
         Year = tv.FirstAirDate.ParseYear();
         MediaType = "tv";
         Link = new($"/tv/{Id}", UriKind.Relative);

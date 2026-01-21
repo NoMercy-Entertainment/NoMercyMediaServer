@@ -42,7 +42,7 @@ public record GenreRowItemDto
             : movie.Overview;
         Poster = movie.Poster;
         Backdrop = movie.Backdrop;
-        Logo = movie.Images.FirstOrDefault(image => image.Type == "logo")?.FilePath;
+        Logo = movie.Images.FirstOrDefault(image => image is { Type: "logo", Iso6391: "en" } && image.Width >= image.Height)?.FilePath;
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
 
@@ -83,7 +83,7 @@ public record GenreRowItemDto
             : tv.Overview;
         Poster = tv.Poster;
         Backdrop = tv.Backdrop;
-        Logo = tv.Images.FirstOrDefault(image => image.Type == "logo")?.FilePath;
+        Logo = tv.Images.FirstOrDefault(image => image is { Type: "logo", Iso6391: "en" } && image.Width >= image.Height)?.FilePath;
         TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
         Type = tv.Type;
         Year = tv.FirstAirDate.ParseYear();
@@ -131,7 +131,7 @@ public record GenreRowItemDto
             : collection.Overview;
         Poster = collection.Poster;
         Backdrop = collection.Backdrop;
-        Logo = collection.Images.FirstOrDefault(image => image.Type == "logo")?.FilePath;
+        Logo = collection.Images.FirstOrDefault(image => image is { Type: "logo", Iso6391: "en" } && image.Width >= image.Height)?.FilePath;
         TitleSort = collection.Title.TitleSort(collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate);
         Type = "collection";
         Year = collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();

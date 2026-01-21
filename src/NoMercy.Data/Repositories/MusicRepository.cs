@@ -271,7 +271,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     #region Playlist Queries
 
-    public Task<List<CarouselResponseItemDto>> GetPlaylistsAsync(Guid userId)
+    public Task<List<CarouselResponseItemDto>> GetCarouselPlaylistsAsync(Guid userId)
     {
         MediaContext context = new();
         return context.Playlists
@@ -298,6 +298,15 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(track => track.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Artist)
             .FirstOrDefaultAsync();
+    }
+
+    public Task<List<Playlist>> GetPlaylistsAsync(Guid userId)
+    {
+        MediaContext context = new();
+        return context.Playlists
+            .AsNoTracking()
+            .Where(playlist => playlist.UserId == userId)
+            .ToListAsync();
     }
 
     #endregion

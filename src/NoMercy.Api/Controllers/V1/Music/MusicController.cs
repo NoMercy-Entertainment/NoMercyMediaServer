@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
@@ -75,7 +76,7 @@ public class MusicController : BaseController
             .Take(36)
             .ToList();
 
-        List<CarouselResponseItemDto> playlists = await _musicRepository.GetPlaylistsAsync(userId);
+        List<CarouselResponseItemDto> playlists = await _musicRepository.GetCarouselPlaylistsAsync(userId);
 
         List<CarouselResponseItemDto> latestArtists = await _musicRepository.GetLatestArtistsAsync()
             .Select(artist => new CarouselResponseItemDto(artist))
@@ -248,9 +249,8 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        List<CarouselResponseItemDto> playlists = (await _musicRepository.GetPlaylistsAsync(userId))
-            .ToList();
-
+        List<CarouselResponseItemDto> playlists = await _musicRepository.GetCarouselPlaylistsAsync(userId);
+        
         return Ok(ComponentResponse.From(
             Component.Carousel()
                 .WithId("playlists")
@@ -421,29 +421,4 @@ public class MusicController : BaseController
         });
     }
 
-    [HttpPost]
-    [Route("coverimage")]
-    public IActionResult CoverImage()
-    {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view cover images");
-
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
-    }
-
-    [HttpPost]
-    [Route("images")]
-    public IActionResult Images()
-    {
-        if (!User.IsAllowed())
-            return UnauthorizedResponse("You do not have permission to view images");
-
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
-    }
 }

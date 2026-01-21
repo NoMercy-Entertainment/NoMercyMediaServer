@@ -43,7 +43,7 @@ public record CardData
         Overview = !string.IsNullOrEmpty(overview) ? overview : movie.Overview;
         Poster = movie.Poster;
         Backdrop = movie.Backdrop;
-        Logo = movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+        Logo = movie.Images.FirstOrDefault()?.FilePath;
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
         Type = "movie";
@@ -74,7 +74,7 @@ public record CardData
         Overview = !string.IsNullOrEmpty(overview) ? overview : tv.Overview;
         Poster = tv.Poster;
         Backdrop = tv.Backdrop;
-        Logo = tv.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+        Logo = tv.Images.FirstOrDefault()?.FilePath;
         TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
         Year = tv.FirstAirDate.ParseYear();
         Type = "tv";
@@ -220,7 +220,7 @@ public record CardData
             Title = item.Collection.Title;
             TitleSort = item.Collection.Title.TitleSort();
             Overview = item.Collection.Overview;
-            Logo = item.Collection.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+            Logo = item.Collection.Images.FirstOrDefault()?.FilePath;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Year = item.Collection.CollectionMovies
                 .MinBy(movie => movie.Movie.ReleaseDate?.ParseYear())
@@ -253,7 +253,7 @@ public record CardData
             Title = item.Movie.Title;
             TitleSort = item.Movie.Title.TitleSort(item.Movie.ReleaseDate);
             Overview = item.Movie.Overview;
-            Logo = item.Movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
+            Logo = item.Movie.Images.FirstOrDefault()?.FilePath;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/movie/{Id}/watch", UriKind.Relative);
             Type = "movie";
