@@ -9,6 +9,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -78,22 +79,22 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
 
         List<UserData>? userData = body.Type switch
         {
-            "movie" => await mediaContext.UserData
+            Config.MovieMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.MovieId == int.Parse(body.Id))
                 .ToListAsync(),
-            "tv" => await mediaContext.UserData
+            Config.TvMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.TvId == int.Parse(body.Id))
                 .ToListAsync(),
-            "special" => await mediaContext.UserData
+            Config.SpecialMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.SpecialId == Ulid.Parse(body.Id))
                 .ToListAsync(),
-            "collection" => await mediaContext.UserData
+            Config.CollectionMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.CollectionId == int.Parse(body.Id))
@@ -136,22 +137,22 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
 
         UserData? userData = body.Type switch
         {
-            "movie" => await mediaContext.UserData
+            Config.MovieMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.MovieId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "tv" => await mediaContext.UserData
+            Config.TvMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.TvId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "special" => await mediaContext.UserData
+            Config.SpecialMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.SpecialId == Ulid.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "collection" => await mediaContext.UserData
+            Config.CollectionMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.CollectionId == int.Parse(body.Id))
@@ -191,22 +192,22 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
 
         UserData? userData = body.Type switch
         {
-            "movie" => await mediaContext.UserData
+            Config.MovieMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.MovieId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "tv" => await mediaContext.UserData
+            Config.TvMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.TvId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "special" => await mediaContext.UserData
+            Config.SpecialMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.SpecialId == Ulid.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "collection" => await mediaContext.UserData
+            Config.CollectionMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.CollectionId == int.Parse(body.Id))

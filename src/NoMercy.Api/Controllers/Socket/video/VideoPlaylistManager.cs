@@ -3,6 +3,7 @@ using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.Socket.video;
 
@@ -33,10 +34,10 @@ public class VideoPlaylistManager
     {
         return type switch
         {
-            "specials" => await GetSpecialItems(userId, listId, itemId, language, country),
-            "collection" => await GetCollectionItems(userId, listId, itemId, language, country),
-            "tv" => await GetTvItems(userId, listId, itemId, language, country),
-            "movie" => await GetMovieItems(userId, listId, itemId, language, country),
+            Config.SpecialMediaType => await GetSpecialItems(userId, listId, itemId, language, country),
+            Config.CollectionMediaType => await GetCollectionItems(userId, listId, itemId, language, country),
+            Config.TvMediaType => await GetTvItems(userId, listId, itemId, language, country),
+            Config.MovieMediaType => await GetMovieItems(userId, listId, itemId, language, country),
             _ => throw new ArgumentException("Invalid playlist type", nameof(type))
         };
     }
@@ -61,8 +62,8 @@ public class VideoPlaylistManager
         List<VideoPlaylistResponseDto> playlist = special?.Items
             .OrderBy(item => item.Order)
             .Select((item, index) => item.EpisodeId is not null
-                ? new(item.Episode ?? new Episode(), "specials",  listId, country, index)
-                : new VideoPlaylistResponseDto(item.Movie ?? new Movie(), "specials", listId, country, index))
+                ? new(item.Episode ?? new Episode(), Config.SpecialMediaType,  listId, country, index)
+                : new VideoPlaylistResponseDto(item.Movie ?? new Movie(), Config.SpecialMediaType, listId, country, index))
             .ToList() ?? [];
         
         VideoPlaylistResponseDto? item = playlist.FirstOrDefault(p => p.Id == itemId);
@@ -87,7 +88,7 @@ public class VideoPlaylistManager
         Collection? collection = await _collectionRepository.GetCollectionPlaylistAsync(userId, int.Parse(listId), language, country);
 
         List<VideoPlaylistResponseDto> playlist = collection?.CollectionMovies
-            .Select((movie, index) => new VideoPlaylistResponseDto(movie.Movie,"collection", listId, country, index + 1, collection))
+            .Select((movie, index) => new VideoPlaylistResponseDto(movie.Movie,Config.CollectionMediaType, listId, country, index + 1, collection))
             .ToList() ?? [];
         
         VideoPlaylistResponseDto? item = playlist.FirstOrDefault(p => p.Id == itemId);
@@ -114,13 +115,13 @@ public class VideoPlaylistManager
         VideoPlaylistResponseDto[] episodes = tv?.Seasons
             .Where(season => season.SeasonNumber > 0)
             .SelectMany(season => season.Episodes)
-            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", listId, country))
+            .Select(episode => new VideoPlaylistResponseDto(episode, Config.TvMediaType, listId, country))
             .ToArray() ?? [];
 
         VideoPlaylistResponseDto[] extras = tv?.Seasons
             .Where(season => season.SeasonNumber == 0)
             .SelectMany(season => season.Episodes)
-            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", listId, country))
+            .Select(episode => new VideoPlaylistResponseDto(episode, Config.TvMediaType, listId, country))
             .ToArray() ?? [];
         
         List<VideoPlaylistResponseDto> playlist = episodes.Concat(extras).ToList();
@@ -146,7 +147,7 @@ public class VideoPlaylistManager
     {
         List<Movie> movies = await _movieRepository.GetMoviePlaylistAsync(userId, int.Parse(listId), language, country);
         List<VideoPlaylistResponseDto> playlist = movies
-            .Select(movie => new VideoPlaylistResponseDto(movie, "movie", int.Parse(listId), country))
+            .Select(movie => new VideoPlaylistResponseDto(movie, Config.MovieMediaType, int.Parse(listId), country))
             .ToList();
         
         VideoPlaylistResponseDto? item = playlist.FirstOrDefault(p => p.Id == itemId) 

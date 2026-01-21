@@ -5,6 +5,7 @@ using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Networking;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Api.Controllers.Socket.video;
@@ -210,7 +211,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
         if (episodeData is null || episodeData.Season == 0 || episodeData.Episode == 0) return;
 
         VideoPlaylistResponseDto? item = state.Playlist.FirstOrDefault(p => 
-            p.PlaylistType == "tv" && p.Season == episodeData.Season && p.Episode == episodeData.Episode);
+            p.PlaylistType == Config.TvMediaType && p.Season == episodeData.Season && p.Episode == episodeData.Episode);
         
         if (item is null) return;
 
@@ -480,16 +481,16 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
         PlaybackPreference playbackPreference = new()
         {
             UserId = user.Id,
-            MovieId = state.CurrentItem.PlaylistType == "movie"
+            MovieId = state.CurrentItem.PlaylistType == Config.MovieMediaType
                 ? state.CurrentItem.TmdbId
                 : null,
-            TvId = state.CurrentItem.PlaylistType == "tv"
+            TvId = state.CurrentItem.PlaylistType == Config.TvMediaType
                 ? state.CurrentItem.TmdbId
                 : null,
-            CollectionId = state.CurrentItem.PlaylistType == "collection"
+            CollectionId = state.CurrentItem.PlaylistType == Config.CollectionMediaType
                 ? int.Parse(state.CurrentItem.PlaylistId) 
                 : null,
-            SpecialId = state.CurrentItem.PlaylistType == "specials"
+            SpecialId = state.CurrentItem.PlaylistType == Config.SpecialMediaType
                 ? Ulid.Parse(state.CurrentItem.PlaylistId) 
                 : null,
             Video = video?.Width is not null
@@ -526,16 +527,16 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
 
         switch (state.CurrentItem.PlaylistType)
         {
-            case "movie":
+            case Config.MovieMediaType:
                 query.On(p => new { p.UserId, p.MovieId });
                 break;
-            case "tv":
+            case Config.TvMediaType:
                 query.On(p => new { p.UserId, p.TvId });
                 break;
-            case "collection":
+            case Config.CollectionMediaType:
                 query.On(p => new { p.UserId, p.CollectionId });
                 break;
-            case "specials":
+            case Config.SpecialMediaType:
                 query.On(p => new { p.UserId, p.SpecialId });
                 break;
         }

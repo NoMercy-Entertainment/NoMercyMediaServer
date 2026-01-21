@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -23,13 +24,13 @@ public static class SpecialSeed
         try
         {
             Library movieLibrary = await context.Libraries
-                .Where(f => f.Type == "movie")
+                .Where(f => f.Type == Config.MovieMediaType)
                 .Include(l => l.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
                 .FirstAsync();
 
             Library tvLibrary = await context.Libraries
-                .Where(f => f.Type == "tv")
+                .Where(f => f.Type == Config.TvMediaType)
                 .Include(l => l.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
                 .FirstAsync();
@@ -76,10 +77,10 @@ public static class SpecialSeed
                 Logger.Setup($"Searching for {item.Title} ({item.Year})");
                 switch (item.Type)
                 {
-                    case "movie":
+                    case Config.MovieMediaType:
                         await AddMovieItem(context, client, movieLibrary, item, movieIds, specialItems);
                         break;
-                    case "tv":
+                    case Config.TvMediaType:
                         await AddTvItem(context, client, tvLibrary, item, tvIds, specialItems);
                         break;
                 }

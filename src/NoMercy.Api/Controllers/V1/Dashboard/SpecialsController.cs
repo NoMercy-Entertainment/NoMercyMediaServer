@@ -13,6 +13,12 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Images;
+using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem;
+using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -289,7 +295,7 @@ public class SpecialsController : BaseController
         //
         //         switch (special.Type)
         //         {
-        //             case "movie":
+        //             case Config.MovieMediaType:
         //             {
         //                 SearchClient searchClient = new();
         //
@@ -307,7 +313,7 @@ public class SpecialsController : BaseController
         //                 JobDispatcher.Dispatch(addMovieJob, "queue", 5);
         //                 break;
         //             }
-        //             case "tv":
+        //             case Config.TvMediaType:
         //             {
         //                 SearchClient searchClient = new();
         //

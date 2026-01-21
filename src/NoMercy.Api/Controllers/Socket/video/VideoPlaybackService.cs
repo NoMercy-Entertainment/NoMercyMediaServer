@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.Socket.video;
 
@@ -159,16 +160,16 @@ public class VideoPlaybackService
             Type = state.CurrentItem.PlaylistType,
             Time = state.Time / 1000,
             VideoFileId = state.CurrentItem.VideoId,
-            MovieId = state.CurrentItem.PlaylistType == "movie" 
+            MovieId = state.CurrentItem.PlaylistType == Config.MovieMediaType 
                 ? state.CurrentItem.TmdbId
                 : null,
-            TvId = state.CurrentItem.PlaylistType == "tv" 
+            TvId = state.CurrentItem.PlaylistType == Config.TvMediaType 
                 ? state.CurrentItem.TmdbId
                 : null,
-            CollectionId = state.CurrentItem.PlaylistType == "collection"
+            CollectionId = state.CurrentItem.PlaylistType == Config.CollectionMediaType
                 ? int.Parse(state.CurrentItem.PlaylistId) 
                 : null,
-            SpecialId = state.CurrentItem.PlaylistType == "specials"
+            SpecialId = state.CurrentItem.PlaylistType == Config.SpecialMediaType
                 ? Ulid.Parse(state.CurrentItem.PlaylistId) 
                 : null
         };
@@ -178,10 +179,10 @@ public class VideoPlaybackService
         
         query = state.CurrentItem.PlaylistType switch
         {
-            "movie" => query.On(x => new { x.VideoFileId, x.UserId, x.MovieId }),
-            "tv" => query.On(x => new { x.VideoFileId, x.UserId, x.TvId }),
-            "collection" => query.On(x => new { x.VideoFileId, x.UserId, x.CollectionId }),
-            "specials" => query.On(x => new { x.VideoFileId, x.UserId, x.SpecialId }),
+            Config.MovieMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.MovieId }),
+            Config.TvMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.TvId }),
+            Config.CollectionMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.CollectionId }),
+            Config.SpecialMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.SpecialId }),
             _ => throw new ArgumentException("Invalid playlist type", state.CurrentItem.PlaylistType)
         };
         

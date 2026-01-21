@@ -44,6 +44,9 @@ public static class QueueRunner
                 taskList.Add(Task.Run(() => new Thread(() => SpawnWorker(keyValuePair.Key)).Start()));
 
         await Task.WhenAll(taskList);
+
+        // Signal that queue workers are ready, allowing cron jobs to start execution
+        CronWorker.SignalQueueWorkersReady();
     }
 
     private static Task SpawnWorker(string name)

@@ -3,6 +3,7 @@ using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 
@@ -64,10 +65,10 @@ public record SpecialItemsDto
             .Take(2)
             .Select(media => new ImageDto(media));
 
-        MediaType = "movie";
+        MediaType = Config.MovieMediaType;
         ColorPalette = movie.ColorPalette;
         Poster = movie.Poster;
-        Type = "movie";
+        Type = Config.MovieMediaType;
         Link = new($"/movie/{Id}", UriKind.Relative);
         Year = movie.ReleaseDate.ParseYear();
         Duration = movie.Runtime * 60 ?? 0;

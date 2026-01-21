@@ -10,6 +10,7 @@ using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.Socket;
@@ -57,16 +58,16 @@ public class VideoHub : ConnectionHub
             Type = request.PlaylistType,
             Time = request.Time,
             VideoFileId = request.VideoId,
-            MovieId = request.PlaylistType == "movie" 
+            MovieId = request.PlaylistType == Config.MovieMediaType 
                 ? request.TmdbId
                 : null,
-            TvId = request.PlaylistType == "tv" 
+            TvId = request.PlaylistType == Config.TvMediaType
                 ? request.TmdbId
                 : null,
-            CollectionId = request.PlaylistType == "collection"
+            CollectionId = request.PlaylistType == Config.CollectionMediaType
                 ? int.Parse(request.PlaylistId) 
                 : null,
-            SpecialId = request.PlaylistType == "specials"
+            SpecialId = request.PlaylistType == Config.SpecialMediaType
                 ? Ulid.Parse(request.PlaylistId) 
                 : null
         };
@@ -77,10 +78,10 @@ public class VideoHub : ConnectionHub
         
         query = request.PlaylistType switch
         {
-            "movie" => query.On(x => new { x.VideoFileId, x.UserId, x.MovieId }),
-            "tv" => query.On(x => new { x.VideoFileId, x.UserId, x.TvId }),
-            "collection" => query.On(x => new { x.VideoFileId, x.UserId, x.CollectionId }),
-            "specials" => query.On(x => new { x.VideoFileId, x.UserId, x.SpecialId }),
+            Config.MovieMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.MovieId }),
+            Config.TvMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.TvId }),
+            Config.CollectionMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.CollectionId }),
+            Config.SpecialMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.SpecialId }),
             _ => throw new ArgumentException("Invalid playlist type", request.PlaylistType)
         };
         

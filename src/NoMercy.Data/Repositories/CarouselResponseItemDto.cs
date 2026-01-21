@@ -37,7 +37,6 @@ public record CarouselResponseItemDto
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack
-            .Where(artistTrack => artistTrack.Track.Duration != null)
             .DistinctBy(artistTrack => artistTrack.Track.Name.ToLower())
             .Count();
     }
@@ -58,7 +57,6 @@ public record CarouselResponseItemDto
         Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack
-            .Where(albumTrack => albumTrack.Track.Duration != null)
             .DistinctBy(albumTrack => albumTrack.Track.Name.ToLower())
             .Count();
     }
@@ -81,7 +79,6 @@ public record CarouselResponseItemDto
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artistUser.Artist.ArtistTrack
-            .Where(artistTrack => artistTrack.Track.Duration != null)
             .DistinctBy(artistTrack => artistTrack.Track.Name.ToLower())
             .Count();
     }
@@ -102,7 +99,6 @@ public record CarouselResponseItemDto
         Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = playlist.Album.AlbumTrack
-            .Where(albumTrack => albumTrack.Track.Duration != null)
             .DistinctBy(albumTrack => albumTrack.Track.Name.ToLower())
             .Count();
     }
@@ -116,11 +112,10 @@ public record CarouselResponseItemDto
         Description = playlist.Description;
         Id = playlist.Id.ToString();
         Name = playlist.Name;
-        Type = "playlists";
-        Link = new($"/music/playlist/{Id}", UriKind.Relative);
+        Type = "playlist";
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
 
         Tracks = playlist.Tracks
-            .Where(playlistTrack => playlistTrack.Track.Duration != null)
             .DistinctBy(playlistTrack => playlistTrack.Track.Name.ToLower())
             .Count();
     }

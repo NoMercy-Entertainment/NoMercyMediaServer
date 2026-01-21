@@ -3,6 +3,7 @@ using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 
@@ -53,10 +54,10 @@ public record CollectionMovieDto
             .FirstOrDefault(media => media.Type == "logo")
             ?.FilePath;
 
-        MediaType = "movie";
+        MediaType = Config.MovieMediaType;
         ColorPalette = movie.ColorPalette;
         Poster = movie.Poster;
-        Type = "movie";
+        Type = Config.MovieMediaType;
         Year = movie.ReleaseDate.ParseYear();
         Link = new($"/movie/{Id}", UriKind.Relative);
         Genres = movie.GenreMovies
@@ -88,10 +89,10 @@ public record CollectionMovieDto
         // Logo = movie.Logo;
         Genres = [];
         Link = new($"/movie/{Id}", UriKind.Relative);
-        MediaType = "movie";
+        MediaType = Config.MovieMediaType;
         ColorPalette = new();
         Poster = tmdbMovie.PosterPath;
-        Type = "movie";
+        Type = Config.MovieMediaType;
         Year = tmdbMovie.ReleaseDate.ParseYear();
 
         NumberOfItems = 1;

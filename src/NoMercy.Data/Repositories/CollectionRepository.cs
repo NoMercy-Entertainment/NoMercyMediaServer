@@ -2,6 +2,7 @@ using System.Drawing.Imaging;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
@@ -360,7 +361,7 @@ public class CollectionRepository(MediaContext context)
                         CollectionId = collectionId,
                         Time = 0,
                         LastPlayedDate = DateTime.UtcNow.ToString("o"),
-                        Type = "collection"
+                        Type = Config.CollectionMediaType
                     });
                 }
             }

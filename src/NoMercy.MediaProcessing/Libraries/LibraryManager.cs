@@ -41,12 +41,12 @@ public class LibraryManager(
             Logger.App("Scanning " + path);
             switch (_library.Type)
             {
-                case "music":
+                case Config.MusicMediaType:
                     await ScanAudioFolder(path, depth);
                     break;
-                case "anime":
-                case "tv":
-                case "movie":
+                case Config.AnimeMediaType:
+                case Config.TvMediaType:
+                case Config.MovieMediaType:
                     await ScanVideoFolder(path, depth);
                     break;
             }
@@ -91,13 +91,13 @@ public class LibraryManager(
         if (_library is null) return;
         switch (_library.Type)
         {
-            case "movie":
+            case Config.MovieMediaType:
             {
                 await ProcessMovieFolder(path);
                 break;
             }
-            case "anime":
-            case "tv":
+            case Config.AnimeMediaType:
+            case Config.TvMediaType:
             {
                 await ProcessTvFolder(path);
                 break;
@@ -156,8 +156,8 @@ public class LibraryManager(
 
         return _library.Type switch
         {
-            "movie" or "tv" or "anime" => 1,
-            "music" => 2,
+            Config.MovieMediaType or Config.TvMediaType or Config.AnimeMediaType => 1,
+            Config.MusicMediaType => 2,
             _ => 1
         };
     }

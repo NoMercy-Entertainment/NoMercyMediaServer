@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
@@ -149,7 +150,7 @@ public class HomeRepository
         return mediaContext.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .CountAsync(tv => tv.Library.Type == "anime");
+            .CountAsync(tv => tv.Library.Type == Config.AnimeMediaType);
     }
 
     public Task<int> GetMovieCountAsync(MediaContext mediaContext, Guid userId)
@@ -157,7 +158,7 @@ public class HomeRepository
         return mediaContext.Movies
             .AsNoTracking()
             .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .CountAsync(movie => movie.Library.Type == "movie");
+            .CountAsync(movie => movie.Library.Type == Config.MovieMediaType);
     }
 
     public Task<int> GetTvCountAsync(MediaContext mediaContext, Guid userId)
@@ -165,7 +166,7 @@ public class HomeRepository
         return mediaContext.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .CountAsync(tv => tv.Library.Type == "tv");
+            .CountAsync(tv => tv.Library.Type == Config.TvMediaType);
     }
 
     public async Task<List<Genre>> GetHomeGenresAsync(MediaContext mediaContext, Guid userId, string? language, int take, int page = 0)

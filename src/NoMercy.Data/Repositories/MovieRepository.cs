@@ -3,6 +3,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
@@ -104,7 +105,7 @@ public class MovieRepository(MediaContext context)
             
             .Include(movie => movie.VideoFiles)
             .ThenInclude(file => file.UserData
-                .Where(userData => userData.UserId.Equals(userId) && userData.Type == "movie"))
+                .Where(userData => userData.UserId.Equals(userId) && userData.Type == Config.MovieMediaType))
             .Include(movie => movie.CertificationMovies
                 .Where(certification => certification.Certification.Iso31661 == country ||
                                         certification.Certification.Iso31661 == "US"))
@@ -148,7 +149,7 @@ public class MovieRepository(MediaContext context)
     public async Task AddMovieAsync(int id)
     {
         Library? movieLibrary = await context.Libraries
-            .Where(f => f.Type == "movie")
+            .Where(f => f.Type == Config.MovieMediaType)
             .FirstOrDefaultAsync();
 
         if (movieLibrary == null) return;
@@ -195,7 +196,7 @@ public class MovieRepository(MediaContext context)
                         MovieId = movieId,
                         Time = 0,
                         LastPlayedDate = DateTime.UtcNow.ToString("o"),
-                        Type = "movie"
+                        Type = Config.MovieMediaType
                     });
                 }
             }

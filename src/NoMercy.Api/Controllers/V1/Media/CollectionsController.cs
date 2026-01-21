@@ -106,15 +106,6 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
                 Data = null
             });
 
-        // Library? library = await mediaContext.Libraries
-        //     .Where(predicate: f => f.Type == "movie")
-        //     .Include(navigationPropertyPath: l => l.FolderLibraries)
-        //     .ThenInclude(navigationPropertyPath: fl => fl.Folder)
-        //     .FirstOrDefaultAsync();
-
-        // TmdbCollectionJob tmdbJob = new(collectionAppends.Id, library);
-        // jobDispatcher.Dispatch(tmdbJob, "queue", 10);
-
         return Ok(new CollectionResponseDto
         {
             Data = new(collectionAppends)

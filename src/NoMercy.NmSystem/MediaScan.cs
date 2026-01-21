@@ -49,7 +49,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
     {
         _extensionFilter = mediaType switch
         {
-            "anime" or "tv" or "movie" or "video" => [".mp4", ".avi", ".mkv", ".m3u8"],
+            "anime" or Config.TvMediaType or Config.MovieMediaType or "video" => [".mp4", ".avi", ".mkv", ".m3u8"],
             "music" => [".mp3", ".flac", ".wav", ".m4a"],
             "subtitle" => [".srt", ".vtt", ".ass"],
             _ => throw new ArgumentOutOfRangeException(nameof(mediaType), mediaType, null)

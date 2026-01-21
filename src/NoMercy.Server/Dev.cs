@@ -5,6 +5,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Encoder.Core;
+using NoMercy.NmSystem.Information;
 using VideoFile = NoMercy.Database.Models.VideoFile;
 
 namespace NoMercy.Server;
@@ -57,7 +58,7 @@ public static class Dev
         }
         
         List<Movie> movies = await context.Movies
-            .Where(tv => tv.Library.Type == "movie")
+            .Where(tv => tv.Library.Type == Config.MovieMediaType)
             .Include(episode => episode.VideoFiles)
             .ThenInclude(videoFile => videoFile.Metadata)
             // .Where(tv => tv.Id == 60808)

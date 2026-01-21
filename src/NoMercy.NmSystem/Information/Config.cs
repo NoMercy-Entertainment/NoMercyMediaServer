@@ -60,4 +60,14 @@ public static class Config
     };
 
     public static string? AllowAdultContent { get; set; } = "false";
+    
+    public const int MaximumCardsInCarousel = 36;
+    public const int MaximumItemsPerPage = 500;
+    
+    public const string TvMediaType = "tv";
+    public const string MovieMediaType = "movie";
+    public const string AnimeMediaType = "anime";
+    public const string MusicMediaType = "music";
+    public const string CollectionMediaType = "collection";
+    public const string SpecialMediaType = "special";
 }

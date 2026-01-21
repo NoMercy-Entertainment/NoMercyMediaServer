@@ -4,6 +4,7 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO.Components;
 
@@ -46,7 +47,7 @@ public record CardData
         Logo = movie.Images.FirstOrDefault()?.FilePath;
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
-        Type = "movie";
+        Type = Config.MovieMediaType;
         Link = watch ? new($"/movie/{Id}/watch", UriKind.Relative) : new($"/movie/{Id}", UriKind.Relative);
         NumberOfItems = 1;
         HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
@@ -108,7 +109,7 @@ public record CardData
         Logo = collection.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
         TitleSort = collection.Title.TitleSort(collection.CollectionMovies.MinBy(m => m.Movie.ReleaseDate)?.Movie.ReleaseDate);
         Year = collection.CollectionMovies.MinBy(m => m.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();
-        Type = "collection";
+        Type = Config.CollectionMediaType;
         
         Link = watch ? new($"/collection/{Id}/watch", UriKind.Relative) : new($"/collection/{Id}", UriKind.Relative);
         NumberOfItems = collection.CollectionMovies.Count;
@@ -139,7 +140,7 @@ public record CardData
         TitleSort = special.Title.TitleSort();
         Year = special.Items.MinBy(m => m.Movie?.ReleaseDate)?.Movie?.ReleaseDate.ParseYear()
                ?? special.Items.Select(t => t.Episode?.Tv).FirstOrDefault()?.FirstAirDate.ParseYear();
-        Type = "special";
+        Type = Config.SpecialMediaType;
         Link = watch ? new($"/specials/{Id}/watch", UriKind.Relative) : new($"/specials/{Id}", UriKind.Relative);
         NumberOfItems = special.Items.Count;
         CreatedAt = special.CreatedAt;
@@ -179,7 +180,7 @@ public record CardData
             Overview = item.Special.Overview;
             Logo = item.Special.Logo;
             Duration = item.VideoFile.Duration?.ToSeconds();
-            Type = "special";
+            Type = Config.SpecialMediaType;
             Link = new($"/specials/{Id}/watch", UriKind.Relative);
             NumberOfItems = item.Special.Items.Count;
             CreatedAt = item.Special.CreatedAt;
@@ -225,7 +226,7 @@ public record CardData
             Year = item.Collection.CollectionMovies
                 .MinBy(movie => movie.Movie.ReleaseDate?.ParseYear())
                 ?.Movie.ReleaseDate.ParseYear() ?? 0;
-            Type = "collection";
+            Type = Config.CollectionMediaType;
             Link = new($"/collection/{Id}/watch", UriKind.Relative);
             CreatedAt = item.Collection.CreatedAt;
             NumberOfItems = item.Collection.CollectionMovies.Count;
@@ -256,7 +257,7 @@ public record CardData
             Logo = item.Movie.Images.FirstOrDefault()?.FilePath;
             Duration = item.VideoFile?.Duration?.ToSeconds();
             Link = new($"/movie/{Id}/watch", UriKind.Relative);
-            Type = "movie";
+            Type = Config.MovieMediaType;
             CreatedAt = item.Movie.CreatedAt;
             NumberOfItems = 1;
             HaveItems = item.Movie.VideoFiles.Count(v => v.Folder != null);
@@ -345,7 +346,7 @@ public record CardData
         TitleSort = dto.TitleSort;
         ColorPalette = dto.ColorPalette;
         Year = dto.FirstMovieYear;
-        Type = "collection";
+        Type = Config.CollectionMediaType;
         Link = watch ? new($"/collection/{dto.Id}/watch", UriKind.Relative) : new($"/collection/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.TotalMovies;
         HaveItems = dto.MoviesWithVideo;
@@ -372,7 +373,7 @@ public record CardData
         Backdrop = movie.Backdrop;
         Logo = movie.Logo;
         Year = movie.ReleaseDate.ParseYear();
-        Type = "movie";
+        Type = Config.MovieMediaType;
         CreatedAt = movie.CreatedAt;
 
         Link = watch ? new($"/movie/{Id}/watch", UriKind.Relative) : new($"/movie/{Id}", UriKind.Relative);

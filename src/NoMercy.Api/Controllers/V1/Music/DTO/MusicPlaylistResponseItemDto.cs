@@ -28,7 +28,7 @@ public record MusicPlaylistResponseItemDto
         ColorPalette = playlist.ColorPalette;
         CreatedAt = playlist.CreatedAt;
         Tracks = playlist.Tracks;
-        Type = "playlists";
-        Link = new($"/music/playlist/{Id}", UriKind.Relative);
+        Type = "playlist";
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
     }
 }

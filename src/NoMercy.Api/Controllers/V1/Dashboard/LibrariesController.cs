@@ -13,6 +13,7 @@ using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
 using FolderLibraryDto = NoMercy.Data.Repositories.FolderLibraryDto;
@@ -72,7 +73,7 @@ public class LibrariesController(
                 PerfectSubtitleMatch = true,
                 Realtime = true,
                 SpecialSeasonName = "Specials",
-                Type = "movie",
+                Type = Config.MovieMediaType,
                 Order = 99
             };
             

@@ -3,6 +3,7 @@ using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using static System.Int32;
 
 namespace NoMercy.Api.Controllers.Socket.video;
@@ -108,18 +109,18 @@ public class VideoPlayerStateFactory
     {
         PlaybackPreference? byIds = userPreference.PlaybackPreferences
             .FirstOrDefault(p =>
-                (p.MovieId is not null && p.MovieId.ToString() == id && "movie" == type) ||
-                (p.TvId is not null && p.TvId.ToString() == id && "tv" == type) ||
-                (p.CollectionId is not null && p.CollectionId.ToString() == id && "collection" == type) ||
-                (p.SpecialId is not null && p.SpecialId.ToString() == id && "special" == type));
+                (p.MovieId is not null && p.MovieId.ToString() == id && Config.MovieMediaType == type) ||
+                (p.TvId is not null && p.TvId.ToString() == id && Config.TvMediaType == type) ||
+                (p.CollectionId is not null && p.CollectionId.ToString() == id && Config.CollectionMediaType == type) ||
+                (p.SpecialId is not null && p.SpecialId.ToString() == id && Config.SpecialMediaType == type));
 
         if (byIds is not null)
             return byIds;
 
         return userPreference.PlaybackPreferences
             .FirstOrDefault(p => p.Library != null && (p.Library.Type == type ||
-                                                      (type == "tv" && p.Library.LibraryTvs.Any(t => t.TvId == parsedId)) ||
-                                                      (type == "movie" && p.Library.LibraryMovies.Any(m => m.MovieId == parsedId))));
+                                                      (type == Config.TvMediaType && p.Library.LibraryTvs.Any(t => t.TvId == parsedId)) ||
+                                                      (type == Config.MovieMediaType && p.Library.LibraryMovies.Any(m => m.MovieId == parsedId))));
     }
 
     private static PlaybackPreference CreateDefaultPlaybackPreference(VideoPlaylistResponseDto item)

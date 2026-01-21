@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO;
 
@@ -17,8 +18,8 @@ public record ScreensaverDataDto
     public ScreensaverDataDto(Image image, IEnumerable<Image> logos, string type)
     {
         Image? logo = logos.FirstOrDefault(x =>
-            (type == "tv" && x.TvId == image.TvId)
-            || (type == "movie" && x.MovieId == image.MovieId));
+            (type == Config.TvMediaType && x.TvId == image.TvId)
+            || (type == Config.MovieMediaType && x.MovieId == image.MovieId));
 
         AspectRatio = image.AspectRatio;
         Src = image.FilePath;

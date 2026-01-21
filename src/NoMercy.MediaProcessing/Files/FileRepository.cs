@@ -107,17 +107,17 @@ public class FileRepository : IFileRepository
 
         switch (library.Type)
         {
-            case "movie":
+            case Config.MovieMediaType:
                 movie = await context.Movies
                     .Where(m => m.Id == id)
                     .FirstOrDefaultAsync();
-                type = "movie";
+                type = Config.MovieMediaType;
                 break;
-            case "tv":
+            case Config.TvMediaType:
                 show = await context.Tvs
                     .Where(t => t.Id == id)
                     .FirstOrDefaultAsync();
-                type = "tv";
+                type = Config.TvMediaType;
                 break;
             case "anime":
                 show = await context.Tvs
@@ -243,7 +243,7 @@ public class FileRepository : IFileRepository
 
         switch (libraryType)
         {
-            case "anime" or "tv":
+            case "anime" or Config.TvMediaType:
             {
                 TmdbPaginatedResponse<TmdbTvShow>? shows =
                     await searchClient.TvShow(parsed.Title ?? "", parsed.Year ?? "", true);
@@ -337,7 +337,7 @@ public class FileRepository : IFileRepository
                 parsed.ImdbId = episode.ImdbId;
                 break;
             }
-            case "movie":
+            case Config.MovieMediaType:
             {
                 TmdbPaginatedResponse<TmdbMovie>? movies =
                     await searchClient.Movie(parsed.Title ?? "", parsed.Year ?? "", true);

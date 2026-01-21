@@ -3,6 +3,7 @@ using NoMercy.Data.Logic;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Networking.Dto;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue;
 
@@ -83,7 +84,7 @@ public class FindMediaFilesJob : IShouldQueue
 
         Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {
-            QueryKey = [library.Type == "movie" ? "movie" : "tv", Id]
+            QueryKey = [library.Type == Config.MovieMediaType ? Config.MovieMediaType : Config.TvMediaType, Id]
         });
     }
 }
