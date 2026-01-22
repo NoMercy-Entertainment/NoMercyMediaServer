@@ -535,7 +535,6 @@ public class MusicRepository(MediaContext mediaContext)
     {
         MediaContext context = new();
         return context.PlaylistTrack
-            .AsNoTracking()
             .Where(pt => pt.PlaylistId == playlistId && pt.TrackId == trackId)
             .Include(pt => pt.Track)
             .ThenInclude(track => track.Images)
@@ -556,15 +555,15 @@ public class MusicRepository(MediaContext mediaContext)
     {
         MediaContext context = new();
         return context.AlbumTrack
-            .AsNoTracking()
             .Where(at => at.AlbumId == albumId && at.TrackId == trackId)
             .Include(at => at.Track)
             .Include(at => at.Album)
-            .ThenInclude(album => album.AlbumTrack)
+            .ThenInclude(album => album.AlbumTrack
+                .OrderBy(albumTrack => albumTrack.Track.DiscNumber)
+                .ThenBy(albumTrack => albumTrack.Track.TrackNumber))
             .ThenInclude(albumTrack => albumTrack.Track)
             .ThenInclude(track => track.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Artist)
-            .ThenInclude(artist => artist.Images)
             .FirstOrDefaultAsync();
     }
 
@@ -572,7 +571,6 @@ public class MusicRepository(MediaContext mediaContext)
     {
         MediaContext context = new();
         return context.ArtistTrack
-            .AsNoTracking()
             .Where(at => at.ArtistId == artistId && at.TrackId == trackId)
             .Include(at => at.Track)
             .Include(at => at.Artist)
