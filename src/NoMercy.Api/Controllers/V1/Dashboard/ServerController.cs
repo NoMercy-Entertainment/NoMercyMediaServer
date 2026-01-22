@@ -210,23 +210,26 @@ public class ServerController(
             if (library.Type == "music")
             {
                 Logger.App("Adding music files to library", LogEventLevel.Verbose);
+                string directoryPath = Path.GetFullPath(request.Files[0].Path);
                 jobDispatcher.DispatchJob<ProcessReleaseFolderJob>(
                     library.Id,
                     request.FolderId,
                     request.Files[0].Id.ToGuid(),
-                    request.Files[0].Path);
+                    directoryPath);
 
                 return Ok(request);
             }
 
             foreach (AddFile file in request.Files)
+            {
+                string filePath = Path.GetFullPath(file.Path);
                 jobDispatcher.DispatchJob<EncodeVideoJob>(
                     library.Id,
                     request.FolderId,
                     file.Id,
-                    file.Path
+                    filePath
                 );
-
+            }
             return Ok(request);
         }
         catch (Exception e)

@@ -200,7 +200,14 @@ public class LibraryFileWatcher
     {
         Logger.System($"Music {path.Path}: Processing");
 
-        JobDispatcher.DispatchJob<ProcessReleaseFolderJob>(path.Path, library.Id);
+        // JobDispatcher.DispatchJob<ProcessReleaseFolderJob>(path.Path, library.Id);
+        string directoryPath = Path.GetFullPath(path.Path);
+        FolderLibrary? folderLibrary =
+            library.FolderLibraries.FirstOrDefault(f => directoryPath.Contains(f.Folder.Path));
+        if (folderLibrary is null) return;
+        
+        JobDispatcher jobDispatcher = new();
+        jobDispatcher.DispatchJob<AudioImportJob>(library.Id, folderLibrary.FolderId, directoryPath);
     }
 
     private async Task HandleTvFolder(Library library, MediaFolderExtend path)
