@@ -1,3 +1,5 @@
+using NoMercy.Api.Controllers.V1.Music.DTO;
+
 namespace NoMercy.Api.Controllers.V1.Media.DTO.Components;
 
 /// <summary>
@@ -68,17 +70,12 @@ public static class Component
     /// <summary>
     /// Creates an NMGenreCard component with data.
     /// </summary>
-    public static LeafComponentBuilder<GenreCardData> GenreCard(GenreCardData data) => new LeafComponentBuilder<GenreCardData>(ComponentTypes.GenreCard).WithData(data);
+    public static LeafComponentBuilder<NmGenreCardDto> GenreCard(NmGenreCardDto data) => new LeafComponentBuilder<NmGenreCardDto>(ComponentTypes.GenreCard).WithData(data);
 
     /// <summary>
     /// Creates an NMMusicCard component - music album/artist card.
     /// </summary>
     public static LeafComponentBuilder<MusicCardData> MusicCard() => new(ComponentTypes.MusicCard);
-
-    /// <summary>
-    /// Creates an NMMusicCard component with data.
-    /// </summary>
-    public static LeafComponentBuilder<MusicCardData> MusicCard(MusicCardData data) => new LeafComponentBuilder<MusicCardData>(ComponentTypes.MusicCard).WithData(data);
 
     /// <summary>
     /// Creates an NMMusicHomeCard component - music home featured card.
@@ -131,6 +128,19 @@ public static class Component
     public static LeafComponentBuilder<SeasonTitleData> SeasonTitle(SeasonTitleData data) => new LeafComponentBuilder<SeasonTitleData>(ComponentTypes.SeasonTitle).WithData(data);
 
     #endregion
+
+    public static ComponentEnvelope MusicCard(ArtistsResponseItemDto data) => new LeafComponentBuilder<ArtistsResponseItemDto>(ComponentTypes.MusicCard).WithData(data);
+
+    public static ComponentEnvelope MusicCard(AlbumsResponseItemDto data) => new LeafComponentBuilder<AlbumsResponseItemDto>(ComponentTypes.MusicCard).WithData(data);
+
+    public static ComponentEnvelope MusicCard(PlaylistResponseItemDto data) => new LeafComponentBuilder<PlaylistResponseItemDto>(ComponentTypes.MusicCard).WithData(data);
+
+    /// <summary>
+    /// Creates an NMMusicCard component with data.
+    /// </summary>
+    // public static LeafComponentBuilder<MusicCardData> MusicCard(MusicCardData data) => new LeafComponentBuilder<MusicCardData>(ComponentTypes.MusicCard).WithData(data);
+    
+    public static ComponentEnvelope MusicCard(MusicCardData data) => new LeafComponentBuilder<MusicCardData>(ComponentTypes.MusicCard).WithData(data);
 }
 
 /// <summary>

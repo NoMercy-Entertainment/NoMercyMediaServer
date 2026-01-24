@@ -5,11 +5,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
-using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -83,6 +81,11 @@ public class MusicController : BaseController
             .Take(36)
             .ToListAsync();
 
+        List<CarouselResponseItemDto> latestGenres = await _musicRepository.GetLatestGenresAsync()
+            .Select(genre => new CarouselResponseItemDto(genre))
+            .Take(36)
+            .ToListAsync();
+
         List<CarouselResponseItemDto> latestAlbums = await _musicRepository.GetLatestAlbumsAsync()
             .Select(artist => new CarouselResponseItemDto(artist))
             .Take(36)
@@ -114,41 +117,48 @@ public class MusicController : BaseController
             .WithId("favorite-artists")
             .WithTitle("Favorite Artists".Localize())
             .WithNavigation("", "favorite-albums")
-            .WithItems(favoriteArtists.Select(item => Component.MusicCard(new(item)))));
+            .WithItems(favoriteArtists.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         items.Add(Component.Carousel()
             .WithId("favorite-albums")
             .WithTitle("Favorite Albums".Localize())
             .WithNavigation("favorite-artists", "playlists")
-            .WithItems(favoriteAlbums.Select(item => Component.MusicCard(new(item)))));
+            .WithItems(favoriteAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         items.Add(Component.Carousel()
             .WithId("playlists")
             .WithTitle("Playlists".Localize())
             .WithMoreLink("/music/playlists")
             .WithNavigation("favorite-albums", "artists")
-            .WithItems(playlists.Select(item => Component.MusicCard(new(item)))));
+            .WithItems(playlists.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         items.Add(Component.Carousel()
             .WithId("artists")
             .WithTitle("Artists".Localize())
             .WithMoreLink("/music/artists/_")
             .WithNavigation("playlists", "albums")
-            .WithItems(latestArtists.Select(item => Component.MusicCard(new(item)))));
+            .WithItems(latestArtists.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         items.Add(Component.Carousel()
             .WithId("albums")
             .WithTitle("Albums".Localize())
             .WithMoreLink("/music/albums/_")
-            .WithNavigation("artists", null)
-            .WithItems(latestAlbums.Select(item => Component.MusicCard(new(item)))));
+            .WithNavigation("artists", "genres")
+            .WithItems(latestAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))));
+
+        items.Add(Component.Carousel()
+            .WithId("genres")
+            .WithTitle("Genres".Localize())
+            .WithMoreLink("/music/genres/letter/_")
+            .WithNavigation("albums")
+            .WithItems(latestGenres.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         return Ok(ComponentResponse.From(items));
     }
     
     [HttpPost]
     [Route("start/favorites")]
-    public async Task<IActionResult> Favorites()
+    public IActionResult Favorites()
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -214,12 +224,12 @@ public class MusicController : BaseController
                 .WithTitle("Favorite Artists".Localize())
                 .WithUpdate("pageLoad", "/music/start/favorite-artists")
                 .WithReplacing(request.ReplaceId)
-                .WithItems(favoriteArtists.Select(item => Component.MusicCard(new(item))))));
+                .WithItems(favoriteArtists.Select(item => Component.MusicCard(new MusicCardData(item))))));
     }
 
     [HttpPost]
     [Route("start/favorite-albums")]
-    public async Task<IActionResult> FavoriteAlbums([FromBody] CardRequestDto request)
+    public IActionResult FavoriteAlbums([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -238,7 +248,7 @@ public class MusicController : BaseController
                 .WithTitle("Favorite Albums".Localize())
                 .WithUpdate("pageLoad", "/music/start/favorite-albums")
                 .WithReplacing(request.ReplaceId)
-                .WithItems(favoriteAlbums.Select(item => Component.MusicCard(new(item))))));
+                .WithItems(favoriteAlbums.Select(item => Component.MusicCard(new MusicCardData(item))))));
     }
 
     [HttpPost]
@@ -259,7 +269,7 @@ public class MusicController : BaseController
                 .WithMoreLink(new Uri("/music/start/playlists", UriKind.Relative))
                 .WithUpdate("pageLoad", "/music/start/playlists")
                 .WithReplacing(request.ReplaceId)
-                .WithItems(playlists.Select(item => Component.MusicCard(new(item))))));
+                .WithItems(playlists.Select(item => Component.MusicCard(new MusicCardData(item))))));
     }
 
     [NotMapped]
@@ -388,7 +398,7 @@ public class MusicController : BaseController
                 .WithItems(artists
                     .GroupBy(artist => artist.Id)
                     .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new(item))))
+                    .Select(item => Component.MusicCard(new MusicCardData(item))))
                 .Build(),
             Component.Carousel()
                 .WithId("albums")
@@ -396,7 +406,7 @@ public class MusicController : BaseController
                 .WithItems(albums
                     .GroupBy(album => album.Id)
                     .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new(item))))
+                    .Select(item => Component.MusicCard(new MusicCardData(item))))
                 .Build(),
             Component.Carousel()
                 .WithId("playlists")
@@ -404,7 +414,7 @@ public class MusicController : BaseController
                 .WithItems(playlists
                     .GroupBy(playlist => playlist.Id)
                     .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new(item)))))
+                    .Select(item => Component.MusicCard(new MusicCardData(item)))))
         );
     }
 

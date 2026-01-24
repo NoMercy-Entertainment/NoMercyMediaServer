@@ -16,6 +16,8 @@ public class GenreWithCountsDto
 
 public class GenreRepository(MediaContext context)
 {
+    private static readonly string[] Letters = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+    
     public async Task<Genre?> GetGenreAsync(Guid userId, int id, string language, string country, int take, int page)
     {
         return await context.Genres
@@ -114,8 +116,66 @@ public class GenreRepository(MediaContext context)
             .Where(genre =>
                 genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
                 genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
-            .Where(genre => genre.AlbumMusicGenres.Any(mg => mg.Album.AlbumTrack.Count > 0) ||
-                            genre.ArtistMusicGenres.Any(mg => mg.Artist.ArtistTrack.Count > 0))
+            .Where(genre => genre.MusicGenreTracks.Count > 0)
+            .Include(genre => genre.MusicGenreTracks)
+            .OrderBy(genre => genre.Name)
             .ToListAsync();
+    }
+
+
+    public Task<List<MusicGenre>> GetPaginatedMusicGenresAsync(Guid userId, string letter, int take, int page)
+    {
+        return context.MusicGenres
+            .AsNoTracking()
+            .Where(genre =>
+                genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
+                genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
+            .Where(genre => genre.MusicGenreTracks.Count > 0)
+            .Where(genre => (letter == "_" || letter == "#")
+                ? Letters.Any(p => genre.Name.StartsWith(p.ToLower()))
+                : genre.Name.StartsWith(letter.ToLower()))
+            .Include(genre => genre.MusicGenreTracks)
+            .OrderBy(genre => genre.Name)
+            .Skip(page * take)
+            .Take(take)
+            .ToListAsync();
+    }
+
+    public Task<MusicGenre?> GetMusicGenreAsync(Guid userId, Guid genreId)
+    {
+        return context.MusicGenres
+            .AsNoTracking()
+            .Where(genre =>
+                genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
+                genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
+            .Where(genre => genre.Id == genreId)
+            .Where(genre => genre.MusicGenreTracks.Count > 0)
+            .Include(genre => genre.MusicGenreTracks)
+                .ThenInclude(mgt => mgt.Track)
+                .ThenInclude(track => track.TrackUser.Where(tu => tu.UserId == userId))
+            .Include(genre => genre.MusicGenreTracks)
+                .ThenInclude(mgt => mgt.Track)
+                .ThenInclude(track => track.ArtistTrack)
+                .ThenInclude(at => at.Artist)
+                .ThenInclude(artist => artist.Translations)
+            .Include(genre => genre.MusicGenreTracks)
+                .ThenInclude(mgt => mgt.Track)
+                .ThenInclude(track => track.ArtistTrack)
+                .ThenInclude(at => at.Artist)
+                .ThenInclude(artist => artist.Images)
+            
+            .Include(genre => genre.MusicGenreTracks)
+                .ThenInclude(mgt => mgt.Track)
+                .ThenInclude(track => track.AlbumTrack)
+                .ThenInclude(at => at.Album)
+                .ThenInclude(album => album.Translations)
+            .Include(genre => genre.MusicGenreTracks)
+                .ThenInclude(mgt => mgt.Track)
+                .ThenInclude(track => track.AlbumTrack)
+                .ThenInclude(at => at.Album)
+                .ThenInclude(album => album.AlbumArtist)
+                .ThenInclude(aa => aa.Artist)
+                .ThenInclude(artist => artist.Images)
+            .FirstOrDefaultAsync();
     }
 }

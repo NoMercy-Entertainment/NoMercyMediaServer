@@ -47,7 +47,7 @@ public record GenreCardData
     public GenreCardData(MusicGenre musicGenre)
     {
         Id = musicGenre.Id;
-        Title = musicGenre.Name;
+        Title = musicGenre.Name.ToTitleCase();
         TitleSort = musicGenre.Name.TitleSort();
         Type = "genre";
         Link = new($"/music/genres/{musicGenre.Id}", UriKind.Relative);
@@ -59,8 +59,8 @@ public record GenreCardData
     public GenreCardData(GenreWithCountsDto dto)
     {
         Id = dto.Id;
-        Title = dto.Name;
-        TitleSort = dto.Name;
+        Title = dto.Name.ToTitleCase();
+        TitleSort = dto.Name.ToTitleCase();
         Type = "genre";
         Link = new($"/genre/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.TotalMovies + dto.TotalTvShows;

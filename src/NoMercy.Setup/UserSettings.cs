@@ -24,21 +24,21 @@ public static class UserSettings
                 {
                     case "internalPort" when Config.InternalServerPort != int.Parse(config.Value):
                         config.Value = Config.InternalServerPort.ToString();
-                        mediaContext.Configuration.Upsert(new Configuration
-                        {
+                        mediaContext.Configuration.Upsert(new()
+                            {
                             Key = config.Key,
                             Value = config.Value
                         }).On(c => c.Key)
-                        .RunAsync().Wait();
+                        .Run();
                         break;
                     case "externalPort" when Config.ExternalServerPort != int.Parse(config.Value):
                         config.Value = Config.ExternalServerPort.ToString();
-                        mediaContext.Configuration.Upsert(new Configuration
-                        {
+                        mediaContext.Configuration.Upsert(new()
+                            {
                             Key = config.Key,
                             Value = config.Value
                         }).On(c => c.Key)
-                        .RunAsync().Wait();
+                        .Run();
                         break;
                 }
                 settings[config.Key] = config.Value;
@@ -65,23 +65,23 @@ public static class UserSettings
                     Config.InternalServerPort = int.Parse(setting.Value);
                     break;
                 case "internalPort" when Config.InternalServerPort != int.Parse(setting.Value):
-                    mediaContext.Configuration.Upsert(new Configuration
-                    {
+                    mediaContext.Configuration.Upsert(new()
+                        {
                         Key = setting.Key,
                         Value = Config.InternalServerPort.ToString()
                     }).On(c => c.Key)
-                    .RunAsync().Wait();
+                    .Run();
                 break;
                 case "externalPort" when Config.ExternalServerPort == int.Parse(setting.Value):
                     Config.ExternalServerPort = int.Parse(setting.Value);
                     break;
                 case "externalPort" when Config.InternalServerPort != int.Parse(setting.Value):
-                    mediaContext.Configuration.Upsert(new Configuration
+                    mediaContext.Configuration.Upsert(new()
                         {
                             Key = setting.Key,
                             Value = Config.InternalServerPort.ToString()
                         }).On(c => c.Key)
-                        .RunAsync().Wait();
+                        .Run();
                     break;
                 case "queueRunners":
                     Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.ToInt());

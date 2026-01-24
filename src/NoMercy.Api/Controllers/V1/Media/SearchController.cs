@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
-using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -14,7 +13,6 @@ using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
-using CarouselResponseItemDto = NoMercy.Api.Controllers.V1.Media.DTO.CarouselResponseItemDto;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -197,21 +195,21 @@ public class SearchController : BaseController
                 .WithItems(artists
                     .GroupBy(artist => artist.Id)
                     .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new(item)))),
+                    .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))),
             Component.Carousel()
                 .WithId("albums")
                 .WithTitle("Albums".Localize())
                 .WithItems(albums
                     .GroupBy(album => album.Id)
                     .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new(item)))),
+                    .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))),
             Component.Carousel()
                 .WithId("playlists")
                 .WithTitle("Playlists".Localize())
                 .WithItems(playlists
                     .GroupBy(playlist => playlist.Id)
                     .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new(item))))
+                    .Select(item => Component.MusicCard(new PlaylistResponseItemDto(item))))
             ));
     }
 
@@ -332,12 +330,12 @@ public class SearchController : BaseController
                 .GroupBy(artist => artist.Id)
                 .Select(group => group.First())
                 .OrderBy(artist => artist.Name)
-                .Select(item => Component.MusicCard(new(item))),
+                .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item))),
             ..albums
                 .GroupBy(album => album.Id)
                 .Select(group => group.First())
                 .OrderBy(album => album.Name)
-                .Select(item => Component.MusicCard(new(item)).Build())
+                .Select(item => Component.MusicCard(new AlbumsResponseItemDto(item)))
         ];
 
         return Ok(ComponentResponse.From(

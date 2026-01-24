@@ -2,7 +2,6 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models;
@@ -47,9 +46,7 @@ public class GenresController : BaseController
             .WithId("genres")
             .WithItems(genreCards
                 .Select(card => Component.GenreCard()
-                    .WithData(card)
-                    ))
-            ;
+                    .WithData(card)));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -128,21 +125,3 @@ public class GenresController : BaseController
         return Ok(ComponentResponse.From(containerResponse));
     }
 }
-
-
-// Data = Letters.Select(g => new LoloMoRowDto<NmCardDto>
-// {
-//     Title = g,
-//     Id = g,
-//     Items = genre.GenreMovies.Take(request.Take)
-//         .Where(libraryMovie => g == "#"
-//             ? Numbers.Any(p => libraryMovie.Movie.Title.StartsWith(p))
-//             : libraryMovie.Movie.Title.StartsWith(g))
-//         .Select(genreMovie => new NmCardDto(genreMovie.Movie, country))
-//         .Concat(genre.GenreTvShows.Take(request.Take)
-//             .Where(libraryTv => g == "#"
-//                 ? Numbers.Any(p => libraryTv.Tv.Title.StartsWith(p))
-//                 : libraryTv.Tv.Title.StartsWith(g))
-//             .Select(genreTv => new NmCardDto(genreTv.Tv, country)))
-//         .OrderBy(libraryResponseDto => libraryResponseDto.TitleSort)
-// })

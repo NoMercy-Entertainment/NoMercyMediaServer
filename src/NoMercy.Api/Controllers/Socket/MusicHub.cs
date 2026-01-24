@@ -51,7 +51,7 @@ public class MusicHub : ConnectionHub
         try
         {
             (PlaylistTrackDto item, List<PlaylistTrackDto> playlist) =
-                await _musicPlaylistManager.GetPlaylist(type, listId, trackId, country);
+                await _musicPlaylistManager.GetPlaylist(user.Id, type, listId, trackId, country);
             await HandlePlaybackState(user, type, listId, item, playlist);
         }
         catch (ArgumentException ex)
@@ -90,11 +90,9 @@ public class MusicHub : ConnectionHub
 
     private Device GetCurrentDevice(User user)
     {
-        if (CurrentDevice.TryGetValue(user.Id, out Device? device))
-            return device;
-
-        device = Networking.Networking.SocketClients
-            .FirstOrDefault(d => d.Key == Context.ConnectionId).Value;
+        Client device = Networking.Networking.SocketClients
+            .First(d => d.Key == Context.ConnectionId).Value;
+    
         CurrentDevice[user.Id] = device;
 
         return device;
@@ -305,8 +303,13 @@ public class MusicHub : ConnectionHub
 
         await Task.Delay(3000);
 
+        // Send updated device list to all connected devices for this user
+        List<Device> connectedDevices = Devices();
+        await Networking.Networking.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
+
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
+            playerState?.Actions.Disallows.Resuming = false;
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
         else
@@ -328,6 +331,7 @@ public class MusicHub : ConnectionHub
         if (user == null) return;
 
         bool stopPlayback = false;
+        bool wasCurrentDevice = false;
 
         if (Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
             if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
@@ -338,6 +342,7 @@ public class MusicHub : ConnectionHub
                     _musicDeviceManager.RemoveUserDevice(user.Id);
 
                     stopPlayback = true;
+                    wasCurrentDevice = true;
                 }
 
         await base.OnDisconnectedAsync(exception);
@@ -346,8 +351,13 @@ public class MusicHub : ConnectionHub
         {
             List<Device> connectedDevices = Devices();
 
+            // Send updated device list to all remaining connected devices
+            await Networking.Networking.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
+
             if (connectedDevices.Count == 0)
             {
+                CurrentDevice.TryRemove(user.Id, out _);
+                
                 // Unsubscribe from the OnLikeEvent
                 AlbumsController.OnLikeEvent -= OnLikeEvent;
                 ArtistsController.OnLikeEvent -= OnLikeEvent;
@@ -367,6 +377,12 @@ public class MusicHub : ConnectionHub
             }
             else if (stopPlayback)
             {
+                // Remove current device if it was the disconnecting device
+                if (wasCurrentDevice)
+                {
+                    CurrentDevice.TryRemove(user.Id, out _);
+                }
+                
                 playerState.PlayState = false;
                 playerState.Actions = new()
                 {

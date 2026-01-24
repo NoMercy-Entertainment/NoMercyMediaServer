@@ -1,4 +1,3 @@
-using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;

@@ -329,6 +329,16 @@ public class MusicRepository(MediaContext mediaContext)
             .OrderByDescending(artist => artist.CreatedAt);
     }
 
+    public IQueryable<MusicGenre> GetLatestGenresAsync()
+    {
+        MediaContext context = new();
+        return context.MusicGenres
+            .AsNoTracking()
+            .Where(genre => genre.MusicGenreTracks.Count > 0)
+            .Include(genre => genre.MusicGenreTracks)
+            .OrderByDescending(genre => genre.MusicGenreTracks.Count);
+    }
+
     public IQueryable<ArtistTrack> GetFavoriteArtistAsync(Guid userId)
     {
         MediaContext context = new();
@@ -359,7 +369,7 @@ public class MusicRepository(MediaContext mediaContext)
         MediaContext context = new();
         return context.MusicPlays
             .AsNoTracking()
-            .Where(musicPlay => musicPlay.UserId == userId)
+            .Where(musicPlay => musicPlay.Track.PlaylistTrack.All(pt => pt.Playlist.UserId == userId))
             .Include(musicPlay => musicPlay.Track)
             .ThenInclude(track => track.PlaylistTrack)
             .ThenInclude(playlistTrack => playlistTrack.Playlist)
@@ -531,10 +541,11 @@ public class MusicRepository(MediaContext mediaContext)
 
     #region Playlist Management
 
-    public Task<PlaylistTrack?> GetPlaylistTrackAsync(Guid playlistId, Guid trackId)
+    public Task<PlaylistTrack?> GetPlaylistTrackAsync(Guid userId, Guid playlistId, Guid trackId)
     {
         MediaContext context = new();
         return context.PlaylistTrack
+            .Where(at => at.Playlist.UserId == userId)
             .Where(pt => pt.PlaylistId == playlistId && pt.TrackId == trackId)
             .Include(pt => pt.Track)
             .ThenInclude(track => track.Images)
@@ -551,10 +562,12 @@ public class MusicRepository(MediaContext mediaContext)
             .FirstOrDefaultAsync();
     }
 
-    public Task<AlbumTrack?> GetAlbumTrackAsync(Guid albumId, Guid trackId)
+    public Task<AlbumTrack?> GetAlbumTrackAsync(Guid userId, Guid albumId, Guid trackId)
     {
         MediaContext context = new();
         return context.AlbumTrack
+            .Where(at => at.Track.LibraryFolder.FolderLibraries
+                .All(fl => fl.Library.LibraryUsers.All(lu => lu.UserId == userId)))
             .Where(at => at.AlbumId == albumId && at.TrackId == trackId)
             .Include(at => at.Track)
             .Include(at => at.Album)
@@ -567,10 +580,12 @@ public class MusicRepository(MediaContext mediaContext)
             .FirstOrDefaultAsync();
     }
 
-    public Task<ArtistTrack?> GetArtistTrackAsync(Guid artistId, Guid trackId)
+    public Task<ArtistTrack?> GetArtistTrackAsync(Guid userId, Guid artistId, Guid trackId)
     {
         MediaContext context = new();
         return context.ArtistTrack
+            .Where(at => at.Track.LibraryFolder.FolderLibraries
+                .All(fl => fl.Library.LibraryUsers.All(lu => lu.UserId == userId)))
             .Where(at => at.ArtistId == artistId && at.TrackId == trackId)
             .Include(at => at.Track)
             .Include(at => at.Artist)
@@ -581,6 +596,36 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(album => album.Translations)
             .Include(at => at.Artist)
             .ThenInclude(artist => artist.Images)
+            .FirstOrDefaultAsync();
+    }
+
+    public Task<MusicGenreTrack?> GetGenreTrackAsync(Guid userId, Guid genreId, Guid trackId)
+    {
+        MediaContext context = new();
+        return context.MusicGenreTrack
+            .Where(genre =>
+                genre.Genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
+                genre.Genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
+            .Where(mgt => mgt.GenreId == genreId && mgt.TrackId == trackId)
+            .Include(mgt => mgt.Track)
+            .Include(mgt => mgt.Genre)
+            .ThenInclude(genre => genre.MusicGenreTracks)
+            .ThenInclude(genreTrack => genreTrack.Track)
+            .ThenInclude(track => track.ArtistTrack)
+            .ThenInclude(artistTrack => artistTrack.Artist)
+            .ThenInclude(artist => artist.Images)
+            .Include(mgt => mgt.Genre)
+            .ThenInclude(genre => genre.MusicGenreTracks)
+            .ThenInclude(genreTrack => genreTrack.Track)
+            .ThenInclude(track => track.AlbumTrack)
+            .ThenInclude(albumTrack => albumTrack.Album)
+            .ThenInclude(album => album.AlbumArtist)
+            .ThenInclude(albumArtist => albumArtist.Artist)
+            .ThenInclude(artist => artist.Images)
+            .Include(mgt => mgt.Genre)
+            .ThenInclude(genre => genre.MusicGenreTracks)
+            .ThenInclude(genreTrack => genreTrack.Track)
+            .ThenInclude(track => track.TrackUser)
             .FirstOrDefaultAsync();
     }
 

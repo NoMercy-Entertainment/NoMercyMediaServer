@@ -13,12 +13,6 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.MediaProcessing.Jobs;
-using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.NmSystem;
-using NoMercy.NmSystem.Dto;
-using NoMercy.NmSystem.Information;
-using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 

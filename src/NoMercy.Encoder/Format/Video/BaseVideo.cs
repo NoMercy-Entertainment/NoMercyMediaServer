@@ -1,7 +1,6 @@
 // ReSharper disable MemberCanBeProtected.Global
 // ReSharper disable MemberCanBePrivate.Global
 
-using NoMercy.Encoder.Dto;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;

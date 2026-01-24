@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Data.Repositories;
 
@@ -123,13 +124,23 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(Track track)
     {
         ColorPalette = track.ColorPalette;
-        Cover = track.Cover is not null 
-            ? new Uri($"/images/music{track.Cover}", UriKind.Relative).ToString() 
+        Cover = track.Cover is not null
+            ? new Uri($"/images/music{track.Cover}", UriKind.Relative).ToString()
             : null;
         Folder = track.Folder ?? "";
         Id = track.Id.ToString();
         Name = track.Name;
         Type = "track";
         Link = new($"/music/tracks/{Id}", UriKind.Relative);
+    }
+
+    public CarouselResponseItemDto(MusicGenre genre)
+    {
+        Id = genre.Id.ToString();
+        Name = genre.Name.ToTitleCase();
+        Type = "genre";
+        Link = new($"/music/genres/{Id}", UriKind.Relative);
+
+        Tracks = genre.MusicGenreTracks.Count;
     }
 }

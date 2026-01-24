@@ -297,7 +297,7 @@ public class LibraryRepository(MediaContext context)
     }
 
     public Task<List<Movie>> GetPaginatedLibraryMovies(Guid userId, Ulid libraryId, string letter, string language,
-        string country, int take, int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)
+        string country, int take, int page)
     {
         return context.Movies
             .AsNoTracking()

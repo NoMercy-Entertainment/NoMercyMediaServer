@@ -29,7 +29,7 @@ public record ArtistResponseItemDto
     [JsonProperty("favorite_tracks")] public List<FavoriteTrackDto> FavoriteTracks { get; set; } = [];
     [JsonProperty("images")] public IEnumerable<ImageDto> Images { get; set; } = [];
     [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; } = [];
-    [JsonProperty("albums")] public IEnumerable<AlbumDto> Albums { get; set; } = [];
+    [JsonProperty("album_track")] public IEnumerable<AlbumDto> Albums { get; set; } = [];
     [JsonProperty("featured")] public List<AlbumDto> Featured { get; set; } = [];
 
     public ArtistResponseItemDto(Artist artist, Guid userId, string? country = "US")
