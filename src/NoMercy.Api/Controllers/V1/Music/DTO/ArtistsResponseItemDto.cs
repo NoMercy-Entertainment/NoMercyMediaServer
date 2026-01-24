@@ -37,4 +37,24 @@ public record ArtistsResponseItemDto
             .Select(artistTrack => artistTrack.Track)
             .Count();
     }
+
+    public ArtistsResponseItemDto(Album album)
+    {
+        ColorPalette = album.ColorPalette;
+        Cover = album.Cover ?? album.Images
+            .FirstOrDefault()?.FilePath;
+        Cover = !string.IsNullOrEmpty(Cover) 
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() 
+            : null;
+        Disambiguation = album.Disambiguation;
+        Description = album.Description;
+        Id = album.Id;
+        Name = album.Name;
+        Type = "artist";
+        Link = new($"/music/artist/{Id}", UriKind.Relative);
+
+        Tracks = album.AlbumTrack
+            .Select(albumTrack => albumTrack.Track)
+            .Count();
+    }
 }

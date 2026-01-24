@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
 
@@ -136,6 +137,42 @@ public record PlaylistTrackDto
 
         Artist = artistTrack.Track.ArtistTrack
             .Select(albumTrack => new ArtistDto(albumTrack, country))
+            .ToList();
+    }
+
+    public PlaylistTrackDto(MusicGenreTrack genreTrack, string country)
+    {
+        Image? img = genreTrack.Track.AlbumTrack.FirstOrDefault()?.Album.AlbumArtist.FirstOrDefault()?.Artist.Images
+            .FirstOrDefault(image => image.Type == "background");
+        Id = genreTrack.Track.Id;
+        Name = genreTrack.Track.Name.ToTitleCase();
+        Backdrop = img?.FilePath is not null
+            ? new Uri($"/images/music{img?.FilePath}", UriKind.Relative).ToString()
+            : null;
+        Cover = genreTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? genreTrack.Track.Cover;
+        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Path = new Uri($"/{genreTrack.Track.FolderId}{genreTrack.Track.Folder}{genreTrack.Track.Filename}",
+            UriKind.Relative).ToString();
+        Link = new($"/music/tracks/{genreTrack.Track.Id}", UriKind.Relative);
+        ColorPalette = genreTrack.Track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
+        if (ColorPalette is not null) ColorPalette.Backdrop = img?.ColorPalette?.Image;
+        Date = genreTrack.Track.Date;
+        Disc = genreTrack.Track.DiscNumber;
+        Track = genreTrack.Track.TrackNumber;
+        Duration = genreTrack.Track.Duration;
+        Favorite = genreTrack.Track.TrackUser.Count != 0;
+        Quality = genreTrack.Track.Quality;
+        Lyrics = genreTrack.Track.Lyrics;
+        Type = "track";
+        AlbumName = genreTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
+
+        Album = genreTrack.Track.AlbumTrack
+            .DistinctBy(trackAlbum => trackAlbum.AlbumId)
+            .Select(albumTrack => new AlbumDto(albumTrack, country))
+            .ToList();
+
+        Artist = genreTrack.Track.ArtistTrack
+            .Select(artistTrack => new ArtistDto(artistTrack, country))
             .ToList();
     }
 }

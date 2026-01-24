@@ -4,12 +4,13 @@ using I18N.DotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using NoMercy.Api.Constraints;
-using NoMercy.Api.Controllers.V1.Media;
+using NoMercy.Api.Middleware;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -275,6 +276,9 @@ public static class ServiceConfiguration
 
                 o.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
                 o.KeepAliveInterval = TimeSpan.FromSeconds(15);
+                
+                // Add error logging filter for invalid method calls and wrong arguments
+                o.AddFilter<HubErrorLoggingFilter>();
             })
             .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings = JsonHelper.Settings; });
 

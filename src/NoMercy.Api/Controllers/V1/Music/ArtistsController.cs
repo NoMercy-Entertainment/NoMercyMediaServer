@@ -1,13 +1,10 @@
-using System.Drawing.Imaging;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
@@ -19,7 +16,6 @@ using NoMercy.Networking.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -64,18 +60,18 @@ public class ArtistsController : BaseController
             .WithItems(artists
                 .Where(response => response.Tracks > 0)
                 .OrderBy(artist => artist.Name)
-                .Select(item => Component.MusicCard(new()
-                {
-                    Id = item.Id.ToString(),
-                    Name = item.Name,
-                    Cover = item.Cover,
-                    Type = "artist",
-                    Link = $"/music/artist/{item.Id}",
-                    ColorPalette = null,
-                    Disambiguation = item.Disambiguation,
-                    Description = item.Description,
-                    Tracks = item.Tracks
-                })));
+                .Select(item => Component.MusicCard(item)));
+                // {
+                //     Id = item.Id.ToString(),
+                //     Name = item.Name,
+                //     Cover = item.Cover,
+                //     Type = "artist",
+                //     Link = $"/music/artist/{item.Id}",
+                //     ColorPalette = null,
+                //     Disambiguation = item.Disambiguation,
+                //     Description = item.Description,
+                //     Tracks = item.Tracks
+                // })));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -220,7 +216,7 @@ public class ArtistsController : BaseController
             Message = "Artist cover updated",
             Data = new()
             {
-                Url = new($"/images/music/{artist.Name.ToSlug()}.jpg", UriKind.Relative),
+                Url = new($"/images/music/{slug}.jpg", UriKind.Relative),
                 ColorPalette = artist.ColorPalette
             }
         });

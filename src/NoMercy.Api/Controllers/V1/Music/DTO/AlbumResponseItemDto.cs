@@ -39,19 +39,6 @@ public record AlbumResponseItemDto
         Name = album.Name;
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Type = "album";
-        // using MediaContext mediaContext = new();
-        // List<AlbumTrack> artists = mediaContext.AlbumTrack
-        //     .AsNoTracking()
-        //     .Where(at => at.TrackId == album.Id)
-        //     .Include(at => at.Track)
-        //     .ThenInclude(track => track.ArtistTrack)
-        //     .ThenInclude(artistTrack => artistTrack.Artist)
-        //     .ThenInclude(artist => artist.Translations)
-        //     .ToList() ?? [];
-
-        // Artists = artists
-        //     .SelectMany(albumTrack => albumTrack.Track.ArtistTrack)
-        //     .Select(albumTrack => new ArtistDto(albumTrack, country!));
 
         Artists = album.AlbumArtist
             .DistinctBy(trackArtist => trackArtist.ArtistId)

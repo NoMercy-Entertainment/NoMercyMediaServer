@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 

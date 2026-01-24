@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
+        <LangVersion>14</LangVersion>
     </PropertyGroup>
     <PropertyGroup>
         <IsTestProject>false</IsTestProject>

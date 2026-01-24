@@ -54,7 +54,7 @@ public class TracksController : BaseController
             {
                 Name = "Favorite Tracks".Localize(),
                 Link = new("music/tracks", UriKind.Relative),
-                Type = "playlist",
+                Type = "track",
                 ColorPalette = new(),
                 Tracks = tracks
             }

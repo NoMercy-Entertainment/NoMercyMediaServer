@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Jobs;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.Encoder;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;

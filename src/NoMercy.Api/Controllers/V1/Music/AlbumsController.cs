@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.Socket.music;
 using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
@@ -66,18 +65,7 @@ public class AlbumsController : BaseController
             .WithItems(albums
                 .Where(response => response.Tracks > 0)
                 .OrderBy(album => album.Name)
-                .Select(item => Component.MusicCard(new()
-                {
-                    Id = item.Id.ToString(),
-                    Name = item.Name,
-                    Cover = item.Cover,
-                    Type = "artist",
-                    Link = $"/music/album/{item.Id}",
-                    ColorPalette = null,
-                    Disambiguation = item.Disambiguation,
-                    Description = item.Description,
-                    Tracks = item.Tracks
-                })));
+                .Select(Component.MusicCard));
 
         return Ok(ComponentResponse.From(response));
     }

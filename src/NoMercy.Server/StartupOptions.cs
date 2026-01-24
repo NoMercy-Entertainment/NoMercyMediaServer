@@ -111,6 +111,6 @@ public class StartupOptions
             Logger.App("Sentry is enabled.");
         }
 
-        // UserSettings.ApplySettings(options);
+        UserSettings.ApplySettings(options);
     }
 }

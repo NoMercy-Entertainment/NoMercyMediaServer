@@ -184,7 +184,7 @@ public class NmGenreCardDto
     public NmGenreCardDto(Genre genre)
     {
         Id = genre.Id;
-        Title = genre.Name;
+        Title = genre.Name.ToTitleCase();
         TitleSort = genre.Name;
 
         Type = "genre";
@@ -196,16 +196,15 @@ public class NmGenreCardDto
                         .Any(episode => episode.VideoFiles.Any(v => v.Folder != null)));
     }
 
-    public NmGenreCardDto(MusicGenre collection)
+    public NmGenreCardDto(MusicGenre genre)
     {
-        Id = collection.Id;
-        Title = collection.Name;
-        TitleSort = collection.Name.TitleSort();
+        Id = genre.Id;
+        Title = genre.Name.ToTitleCase();
+        TitleSort = genre.Name.TitleSort();
 
         Type = "genre";
-        Link = new($"/music/genres/{collection.Id}", UriKind.Relative);
-        NumberOfItems = collection.AlbumMusicGenres.Count + collection.ArtistMusicGenres.Count;
-        HaveItems = collection.AlbumMusicGenres.Count(genreAlbum => genreAlbum.Album.AlbumTrack.Count != 0)
-                    + collection.ArtistMusicGenres.Count(genreArtist => genreArtist.Artist.ArtistTrack.Count != 0);
+        Link = new($"/music/genres/{genre.Id}", UriKind.Relative);
+        NumberOfItems = genre.MusicGenreTracks.Count;
+        HaveItems = genre.MusicGenreTracks.Count;
     }
 }

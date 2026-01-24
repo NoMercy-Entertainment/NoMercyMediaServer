@@ -15,8 +15,7 @@ public static class ComponentExtensions
     public static ComponentEnvelope ToCard(this Movie movie, string country, bool watch = false)
     {
         return Component.Card(new(movie, country))
-            .WithWatch(watch)
-            ;
+            .WithWatch(watch);
     }
 
     /// <summary>
@@ -24,8 +23,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToHomeCard(this Movie movie, string country)
     {
-        return Component.HomeCard(new(movie, country))
-            ;
+        return Component.HomeCard(new(movie, country));
     }
 
     /// <summary>
@@ -46,8 +44,7 @@ public static class ComponentExtensions
     public static ComponentEnvelope ToCard(this Tv tv, string country, bool watch = false)
     {
         return Component.Card(new(tv, country))
-            .WithWatch(watch)
-            ;
+            .WithWatch(watch);
     }
 
     /// <summary>
@@ -55,8 +52,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToHomeCard(this Tv tv, string country)
     {
-        return Component.HomeCard(new(tv, country))
-            ;
+        return Component.HomeCard(new(tv, country));
     }
 
     /// <summary>
@@ -77,8 +73,7 @@ public static class ComponentExtensions
     public static ComponentEnvelope ToCard(this Collection collection, string country, bool watch = false)
     {
         return Component.Card(new(collection, country))
-            .WithWatch(watch)
-            ;
+            .WithWatch(watch);
     }
 
     /// <summary>
@@ -99,8 +94,7 @@ public static class ComponentExtensions
     public static ComponentEnvelope ToCard(this Special special, string country, bool watch = false)
     {
         return Component.Card(new(special, country))
-            .WithWatch(watch)
-            ;
+            .WithWatch(watch);
     }
 
     #endregion
@@ -112,8 +106,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToGenreCard(this Genre genre)
     {
-        return Component.GenreCard(new(genre))
-            ;
+        return Component.GenreCard(new(genre));
     }
 
     /// <summary>
@@ -121,8 +114,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToGenreCard(this MusicGenre musicGenre)
     {
-        return Component.GenreCard(new(musicGenre))
-            ;
+        return Component.GenreCard(new(musicGenre));
     }
 
     #endregion
@@ -134,8 +126,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToMusicCard(this Album album)
     {
-        return Component.MusicCard(new(album))
-            ;
+        return Component.MusicCard(new MusicCardData(album));
     }
 
     /// <summary>
@@ -143,8 +134,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToMusicCard(this Artist artist)
     {
-        return Component.MusicCard(new(artist))
-            ;
+        return Component.MusicCard(new MusicCardData(artist));
     }
 
     /// <summary>
@@ -152,8 +142,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToTrackRow(this Track track, bool isFavorite = false)
     {
-        return Component.TrackRow(new(track, isFavorite))
-            ;
+        return Component.TrackRow(new(track, isFavorite));
     }
 
     /// <summary>

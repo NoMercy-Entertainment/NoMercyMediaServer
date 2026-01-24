@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Extensions;
 using CarouselResponseItemDtoRepository = NoMercy.Data.Repositories.CarouselResponseItemDto;
 
 namespace NoMercy.Api.Controllers.V1.Media.DTO.Components;
@@ -92,7 +92,7 @@ public record MusicCardData
     public MusicCardData(CarouselResponseItemDtoRepository carousel)
     {
         Id = carousel.Id;
-        Name = carousel.Name;
+        Name = carousel.Name.ToTitleCase();
         Cover = carousel.Cover;
         Type = carousel.Type;
         Link = carousel.Link.ToString();

@@ -485,4 +485,8 @@
     <Key>Track not found in playlist</Key>
     <Value lang="nl">Track not found in playlist</Value>
   </Entry>
+  <Entry>
+    <Key>Genres</Key>
+    <Value lang="nl">Genres</Value>
+  </Entry>
 </I18N>

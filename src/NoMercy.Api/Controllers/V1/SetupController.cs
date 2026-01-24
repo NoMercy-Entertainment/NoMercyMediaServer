@@ -103,10 +103,10 @@ public class SetupController(
 
         List<Playlist> playlistItems = await setupService.GetSetupPlaylistsAsync(userId);
 
-        return Ok(new StatusResponseDto<List<Playlist>>
+        return Ok(new StatusResponseDto<List<PlaylistDto>>
         {
             Status = "ok",
-            Data = playlistItems,
+            Data = playlistItems.Select(p => new PlaylistDto(p)).ToList(),
         });
     }
     
