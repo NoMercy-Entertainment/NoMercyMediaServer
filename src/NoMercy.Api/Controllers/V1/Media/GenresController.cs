@@ -81,7 +81,7 @@ public class GenresController : BaseController
                 .WithItems(concat.Select(card => Component.Card().WithData(card)))
                 ;
 
-            return Ok(response);
+            return Ok(ComponentResponse.From(response));
         }
 
         // Carousel view organized by first letter
