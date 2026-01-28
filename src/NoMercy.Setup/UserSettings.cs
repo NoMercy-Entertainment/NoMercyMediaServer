@@ -65,6 +65,7 @@ public static class UserSettings
                     Config.InternalServerPort = int.Parse(setting.Value);
                     break;
                 case "internalPort" when Config.InternalServerPort != int.Parse(setting.Value):
+                    Config.InternalServerPort = int.Parse(setting.Value);
                     mediaContext.Configuration.Upsert(new()
                         {
                         Key = setting.Key,
@@ -75,11 +76,12 @@ public static class UserSettings
                 case "externalPort" when Config.ExternalServerPort == int.Parse(setting.Value):
                     Config.ExternalServerPort = int.Parse(setting.Value);
                     break;
-                case "externalPort" when Config.InternalServerPort != int.Parse(setting.Value):
+                case "externalPort" when Config.ExternalServerPort != int.Parse(setting.Value):
+                    Config.ExternalServerPort = int.Parse(setting.Value);
                     mediaContext.Configuration.Upsert(new()
                         {
                             Key = setting.Key,
-                            Value = Config.InternalServerPort.ToString()
+                            Value = Config.ExternalServerPort.ToString()
                         }).On(c => c.Key)
                         .Run();
                     break;

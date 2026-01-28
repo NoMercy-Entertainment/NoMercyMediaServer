@@ -389,7 +389,7 @@ public static class Binaries
     {
         string destinationPath = Path.Combine(AppFiles.FfmpegFolder, modelName + ".bin");
 
-        await using FileStream destinationStream = new(destinationPath, FileMode.Create, FileAccess.Write);
+        await using FileStream destinationStream = new(destinationPath, FileMode.OpenOrCreate, FileAccess.Write);
     
         foreach (Uri partUrl in partUrls)
         {

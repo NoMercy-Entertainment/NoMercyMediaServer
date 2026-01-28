@@ -12,6 +12,21 @@ public class MusicPlayerState
     [JsonProperty("item")] public PlaylistTrackDto? CurrentItem { get; set; }
     [JsonProperty("playlist")] public List<PlaylistTrackDto> Playlist { get; set; } = [];
     [JsonProperty("backlog")] public List<PlaylistTrackDto> Backlog { get; set; } = [];
+    
+    // [JsonProperty("playlist")]
+    // public List<PlaylistTrackDto> Playlist
+    // {
+    //     get => field.Take(20).ToList();
+    //     set;
+    // } = [];
+    //
+    // [JsonProperty("backlog")]
+    // public List<PlaylistTrackDto> Backlog
+    // {
+    //     get => field.Take(20).ToList();
+    //     set;
+    // } = [];
+
     [JsonProperty("current_list")] public Uri CurrentList { get; set; } = null!;
     [JsonProperty("progress_ms")] public int Time { get; set; }
     [JsonProperty("duration_ms")] public int Duration { get; set; }

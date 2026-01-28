@@ -23,7 +23,7 @@ public record PlaylistTrackDto
     [JsonProperty("type")] public string Type { get; set; }
 
     [JsonProperty("album_name")] public string? AlbumName { get; set; }
-    [JsonProperty("lyrics")] public Lyric[]? Lyrics { get; set; }
+    // [JsonProperty("lyrics")] public Lyric[]? Lyrics { get; set; }
 
     [JsonProperty("album_track")] public List<AlbumDto> Album { get; set; }
     [JsonProperty("artist_track")] public List<ArtistDto> Artist { get; set; }
@@ -52,7 +52,7 @@ public record PlaylistTrackDto
         Duration = artistTrack.Track.Duration;
         Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
-        Lyrics = artistTrack.Track.Lyrics;
+        // Lyrics = artistTrack.Track.Lyrics;
         Type = "track";
         AlbumName = artistTrack.Track.AlbumTrack?.FirstOrDefault()?.Album.Name;
 
@@ -89,7 +89,7 @@ public record PlaylistTrackDto
         Duration = trackTrack.Track.Duration;
         Favorite = trackTrack.Track.TrackUser.Count != 0;
         Quality = trackTrack.Track.Quality;
-        Lyrics = trackTrack.Track.Lyrics;
+        // Lyrics = trackTrack.Track.Lyrics;
         Type = "track";
         AlbumName = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
 
@@ -126,7 +126,7 @@ public record PlaylistTrackDto
         Duration = artistTrack.Track.Duration;
         Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
-        Lyrics = artistTrack.Track.Lyrics;
+        // Lyrics = artistTrack.Track.Lyrics;
         Type = "track";
         AlbumName = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
 
@@ -162,7 +162,7 @@ public record PlaylistTrackDto
         Duration = genreTrack.Track.Duration;
         Favorite = genreTrack.Track.TrackUser.Count != 0;
         Quality = genreTrack.Track.Quality;
-        Lyrics = genreTrack.Track.Lyrics;
+        // Lyrics = genreTrack.Track.Lyrics;
         Type = "track";
         AlbumName = genreTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
 

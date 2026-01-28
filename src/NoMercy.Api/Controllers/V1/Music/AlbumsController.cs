@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,7 @@ using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.Networking.Dto;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -152,14 +154,66 @@ public class AlbumsController : BaseController
             Args = []
         });
     }
+    
+    
+    [HttpPatch]
+    [Route("{id:guid}")]
+    public async Task<IActionResult> Edit(Guid id, [FromBody] CreatePlaylistRequestDto request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to edit an album");
+        
+        Album? album = await _mediaContext.Albums
+            .FirstOrDefaultAsync(a => a.Id == id);
+        
+        if (album is null)
+            return NotFoundResponse("Album not found");
+        
+        string slug = album.Name.ToSlug();
+        string colorPalette = album._colorPalette;
+        string cover = album.Cover ?? "";
+        
+        if (request.Cover is not null)
+        {
+            cover = $"/{slug}.jpg";
+            string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+            
+            await using (FileStream stream = new(filePath, FileMode.Create))
+            {
+                string base64Data = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)").Groups["data"].Value;
+                byte[] binData = Convert.FromBase64String(base64Data);
+                await stream.WriteAsync(binData);
+            }
+            
+            colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
+        }
+        
+        album.Name = request.Name;
+        album.Description = request.Description;
+        album.Cover = cover;
+        album._colorPalette = colorPalette;
 
+        int result = await _mediaContext.SaveChangesAsync();
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["music", "album", id]
+        });
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Data = (result > 0 ? "Album updated successfully" : "No changes made").Localize(),
+            Status = "ok",
+        });
+    }
+    
     [HttpPost]
     [Route("{id:guid}/cover")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Cover(Guid id, IFormFile image)
     {
         if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to upload artist covers");
+            return UnauthorizedResponse("You do not have permission to upload album covers");
 
         await using MediaContext mediaContext = new();
 

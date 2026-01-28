@@ -14,7 +14,7 @@ public record NMMusicCardWrapper
     [JsonProperty("more_link_text")] public string? MoreLinkText { get; set; }
     [JsonProperty("watch")] public bool Watch { get; set; }
     [JsonProperty("data")] public MusicCardData Data { get; set; } = null!;
-    [JsonProperty("context_menu_items")] public IEnumerable<ContextMenuItem> ContextMenuItems { get; set; } = [];
+    [JsonProperty("contextMenuItems")] public IEnumerable<ContextMenuItem> ContextMenuItems { get; set; } = [];
     [JsonProperty("url")] public string? Url { get; set; }
     [JsonProperty("properties")] public Dictionary<string, string>? Properties { get; set; }
 

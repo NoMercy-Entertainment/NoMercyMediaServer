@@ -111,19 +111,29 @@ public class FileRepository : IFileRepository
                 movie = await context.Movies
                     .Where(m => m.Id == id)
                     .FirstOrDefaultAsync();
-                type = Config.MovieMediaType;
+                type = library.Type;
                 break;
             case Config.TvMediaType:
+            case Config.AnimeMediaType:
                 show = await context.Tvs
                     .Where(t => t.Id == id)
                     .FirstOrDefaultAsync();
-                type = Config.TvMediaType;
-                break;
-            case "anime":
-                show = await context.Tvs
-                    .Where(t => t.Id == id)
-                    .FirstOrDefaultAsync();
-                type = "anime";
+
+                if (show == null)
+                {
+                    Episode? episode = await context.Episodes
+                        .Where(e => e.Id == id)
+                        .FirstOrDefaultAsync();
+
+                    if (episode != null)
+                    {
+                        show = await context.Tvs
+                            .Where(t => t.Id == episode.TvId)
+                            .FirstOrDefaultAsync();
+                    }
+                }
+                
+                type = library.Type;
                 break;
         }
 
@@ -243,7 +253,7 @@ public class FileRepository : IFileRepository
 
         switch (libraryType)
         {
-            case "anime" or Config.TvMediaType:
+            case Config.AnimeMediaType or Config.TvMediaType:
             {
                 TmdbPaginatedResponse<TmdbTvShow>? shows =
                     await searchClient.TvShow(parsed.Title ?? "", parsed.Year ?? "", true);

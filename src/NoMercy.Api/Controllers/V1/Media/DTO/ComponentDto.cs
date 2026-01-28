@@ -54,7 +54,7 @@ public record RenderProps<T>
     [JsonProperty("items")] public IEnumerable<ComponentDto<T>>? Items { get; set; } = [];
     [JsonProperty("data")] public T? Data { get; set; }
     [JsonProperty("watch")] public bool Watch { get; set; }
-    [JsonProperty("context_menu_items")] public Dictionary<string, object>[]? ContextMenuItems { get; set; } = [];
+    [JsonProperty("contextMenuItems")] public Dictionary<string, object>[]? ContextMenuItems { get; set; } = [];
     [JsonProperty("url")] public Uri? Url { get; set; }
     [JsonProperty("displayList")] public IEnumerable<ArtistTrackDto>? DisplayList { get; set; } = [];
     [JsonProperty("properties")] public Dictionary<string, dynamic> Properties { get; set; } = new();

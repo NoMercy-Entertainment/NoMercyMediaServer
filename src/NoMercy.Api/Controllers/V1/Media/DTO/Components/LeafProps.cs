@@ -15,7 +15,7 @@ public record LeafProps<TData> : ILeafProps<TData>
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("data")] public TData? Data { get; set; }
     [JsonProperty("watch")] public bool Watch { get; set; }
-    [JsonProperty("context_menu_items", NullValueHandling = NullValueHandling.Ignore)] public IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
+    [JsonProperty("contextMenuItems", NullValueHandling = NullValueHandling.Ignore)] public IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
     [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)] public Uri? Url { get; set; }
     [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, dynamic>? Properties { get; set; }
 }

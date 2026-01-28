@@ -4,7 +4,7 @@ using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Controllers.V1.Music.DTO;
 
-public record ArtistDto
+public class ArtistDto
 {
     [JsonProperty("id")] public Guid Id { get; set; }
     [JsonProperty("name")] public string Name { get; set; }

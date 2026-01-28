@@ -102,7 +102,7 @@ public class HomeController : BaseController
     }
     
     [HttpGet("home")]
-    public async Task<IActionResult> ContinueWatching()
+    public async Task<IActionResult> Home()
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view continue watching");
