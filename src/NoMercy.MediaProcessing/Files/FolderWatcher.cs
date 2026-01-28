@@ -186,7 +186,6 @@ public class FolderWatcher : IDisposable
             _root = root;
             _parent = parent;
             _interval = interval;
-            ScanAllFiles();
             _thread = Task.Run(PollLoop);
         }
 
@@ -196,40 +195,58 @@ public class FolderWatcher : IDisposable
             {
                 while (!_cts.IsCancellationRequested)
                 {
-                    ScanAllFiles();
+                    await ScanAllFiles();
                     await Task.Delay(_interval);
                 }
             }
             catch (Exception ex)
             {
-                FileWatcherEventArgs args = new (null, new FileSystemEventArgs(WatcherChangeTypes.All, _root, ""))
+                FileWatcherEventArgs args = new (null, new (WatcherChangeTypes.All, _root, ""))
                 {
-                    ErrorEventArgs = new ErrorEventArgs(ex)
+                    ErrorEventArgs = new (ex)
                 };
                 _parent.OnError?.Invoke(args);
             }
         }
 
-        private void ScanAllFiles()
+        private async Task ScanAllFiles()
         {
             ConcurrentDictionary<string, FileMetadata> currentFiles = new (StringComparer.OrdinalIgnoreCase);
             try
             {
-                foreach (string file in Directory.EnumerateFiles(_root, "*", SearchOption.AllDirectories))
+                IEnumerable<string> files = Directory.EnumerateFiles(_root, "*", SearchOption.AllDirectories)
+                    .Where(file => !(file.EndsWith(".ts") || file.EndsWith(".part")));
+                await Parallel.ForEachAsync(files, new ParallelOptions
                 {
-                    if (file.EndsWith(".ts") || file.EndsWith(".part"))
-                        continue; // Skip temporary files
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    CancellationToken = _cts.Token
+                }, async (file, ct) =>
+                {
                     try
                     {
                         FileInfo info = new (file);
                         currentFiles[file] = new (info.LastWriteTimeUtc, info.Length);
+                        if (info.LastWriteTimeUtc >= DateTime.UtcNow - _interval)
+                        {
+                            return;
+                        }
+                        if (!_knownFiles.TryGetValue(file, out FileMetadata? oldMeta))
+                        {
+                            // Created
+                            _parent.OnCreated?.Invoke(new (null, new (WatcherChangeTypes.Created, Path.GetDirectoryName(file)!, Path.GetFileName(file))));
+                        }
+                        else if (!oldMeta.Equals(new (info.LastWriteTimeUtc, info.Length)))
+                        {
+                            // Changed
+                            _parent.OnChanged?.Invoke(new (null, new (WatcherChangeTypes.Changed, Path.GetDirectoryName(file)!, Path.GetFileName(file))));
+                        }
                     }
                     catch (Exception ex)
                     {
                         Logger.Error(ex, LogEventLevel.Error);
                     }
-                    
-                }
+                    await Task.Delay(0, ct);
+                });
             }
             catch (Exception ex)
             {
@@ -240,32 +257,28 @@ public class FolderWatcher : IDisposable
                 _parent.OnError?.Invoke(args);
                 return;
             }
-            
-            foreach (KeyValuePair<string, FileMetadata> kvp in currentFiles)
+            await Parallel.ForEachAsync(_knownFiles, new ParallelOptions
             {
-                if (!_knownFiles.TryGetValue(kvp.Key, out FileMetadata? oldMeta))
-                {
-                    // Created
-                    _parent.OnCreated?.Invoke(new (null, new (WatcherChangeTypes.Created, Path.GetDirectoryName(kvp.Key)!, Path.GetFileName(kvp.Key))));
-                }
-                else if (!oldMeta.Equals(kvp.Value))
-                {
-                    // Changed
-                    _parent.OnChanged?.Invoke(new (null, new (WatcherChangeTypes.Changed, Path.GetDirectoryName(kvp.Key)!, Path.GetFileName(kvp.Key))));
-                }
-            }
-            
-            foreach (KeyValuePair<string, FileMetadata> kvp in _knownFiles)
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = _cts.Token
+            }, async (kvp, ct) =>
             {
                 if (!currentFiles.ContainsKey(kvp.Key))
                 {
                     _parent.OnDeleted?.Invoke(new (null, new (WatcherChangeTypes.Deleted, Path.GetDirectoryName(kvp.Key)!, Path.GetFileName(kvp.Key))));
                 }
-            }
-            // TODO: Renames are not directly detectable via polling
+                await Task.Delay(0, ct);
+            });
             _knownFiles.Clear();
-            foreach (KeyValuePair<string, FileMetadata> kvp in currentFiles)
+            await Parallel.ForEachAsync(_knownFiles, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = _cts.Token
+            }, async (kvp, ct) =>
+            {
                 _knownFiles[kvp.Key] = kvp.Value;
+                await Task.Delay(0, ct);
+            });
         }
 
         public void Dispose()
