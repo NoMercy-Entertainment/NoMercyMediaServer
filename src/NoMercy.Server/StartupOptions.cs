@@ -1,4 +1,6 @@
 using CommandLine;
+using NoMercy.Database;
+using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -72,12 +74,42 @@ public class StartupOptions
             Config.InternalServerPort = InternalPort;
             options.Add("internalPort", InternalPort.ToString());
         }
+        else
+        {
+            InternalPort = 7626;
+            MediaContext mediaContext = new();
+            Configuration? internalPortConfig = mediaContext.Configuration
+                .FirstOrDefault(c => c.Key == "internalPort");
+            if (internalPortConfig != null)
+            {
+                InternalPort = int.Parse(internalPortConfig.Value);
+                Logger.App("Loaded internal port from database: " + InternalPort);
+            }
+            Config.InternalServerPort = InternalPort;
+            options.Add("internalPort", InternalPort.ToString());
+            mediaContext.Dispose();
+        }
 
         if (ExternalPort != 0)
         {
             Logger.App("Setting external port to " + ExternalPort);
             Config.ExternalServerPort = ExternalPort;
             options.Add("externalPort", ExternalPort.ToString());
+        }
+        else
+        {
+            ExternalPort = 7626;
+            MediaContext mediaContext = new();
+            Configuration? externalPortConfig = mediaContext.Configuration
+                .FirstOrDefault(c => c.Key == "externalPort");
+            if (externalPortConfig != null)
+            {
+                ExternalPort = int.Parse(externalPortConfig.Value);
+                Logger.App("Loaded external port from database: " + ExternalPort);
+            }
+            Config.ExternalServerPort = ExternalPort;
+            options.Add("externalPort", ExternalPort.ToString());
+            mediaContext.Dispose();
         }
 
         if (!string.IsNullOrEmpty(InternalIp))
