@@ -97,7 +97,7 @@ public static class Program
 
                 await Dev.Run();
                 // await DriveMonitor.Start();
-                _ = LibraryFileWatcher.Instance;
+                LibraryFileWatcher.Start();
                 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                     OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
