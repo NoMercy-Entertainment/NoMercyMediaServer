@@ -73,6 +73,10 @@ public class MediaScan : IDisposable, IAsyncDisposable
         ConcurrentBag<MediaFolderExtend> folders = [];
 
         if (depth < 0) return folders;
+        
+        // Ensure the path is a directory before proceeding
+        if (!Directory.Exists(folderPath))
+            return folders;
 
         ConcurrentBag<MediaFile> files = Files(folderPath);
 
