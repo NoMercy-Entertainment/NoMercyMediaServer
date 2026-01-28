@@ -47,8 +47,8 @@ public class LibraryFileWatcher
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .ToList();
-
-        foreach (Library library in libraries) AddLibraryWatcher(library);
+        Parallel.ForEach(libraries, library => AddLibraryWatcher(library));
+        // foreach (Library library in libraries) AddLibraryWatcher(library);
     }
 
     // ReSharper disable once MemberCanBePrivate.Global
@@ -248,5 +248,10 @@ public class LibraryFileWatcher
         await FileManager.FindFiles(res.First().Id, library);
 
         JobDispatcher.DispatchJob<AddMovieJob>(res.First().Id, library);
+    }
+
+    public static void Start()
+    {
+        _ = Instance;
     }
 }
