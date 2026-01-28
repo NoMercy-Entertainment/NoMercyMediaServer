@@ -185,14 +185,14 @@ public class HomeService
                 MediaContext context = new();
                 List<Movie> libraryMovies = [];
                 await foreach (Movie movie in _libraryRepository
-                    .GetLibraryMovies(context, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
+                    .GetLibraryMovies(context, userId, library.Id, language, 36, 0, m => m.CreatedAt, "desc"))
                 {
                     libraryMovies.Add(movie);
                 }
 
                 List<Tv> libraryShows = [];
                 await foreach (Tv tv in _libraryRepository
-                    .GetLibraryShows(context, userId, library.Id, language, 6, 0, m => m.CreatedAt, "desc"))
+                    .GetLibraryShows(context, userId, library.Id, language, 36, 0, m => m.CreatedAt, "desc"))
                 {
                     libraryShows.Add(tv);
                 }

@@ -16,7 +16,7 @@ public record ContainerProps : IContainerProps
     [JsonProperty("more_link", NullValueHandling = NullValueHandling.Ignore)] public Uri? MoreLink { get; set; }
     [JsonProperty("more_link_text", NullValueHandling = NullValueHandling.Ignore)] public string? MoreLinkText => MoreLink is not null ? "See all".Localize() : null;
     [JsonProperty("items")] public IEnumerable<ComponentEnvelope> Items { get; set; } = [];
-    [JsonProperty("context_menu_items", NullValueHandling = NullValueHandling.Ignore)] public IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
+    [JsonProperty("contextMenuItems", NullValueHandling = NullValueHandling.Ignore)] public IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
     [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)] public Uri? Url { get; set; }
     [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, dynamic>? Properties { get; set; }
 }

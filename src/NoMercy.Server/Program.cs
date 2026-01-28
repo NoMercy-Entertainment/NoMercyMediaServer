@@ -6,6 +6,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
+using NoMercy.MediaProcessing.Files;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -96,7 +97,7 @@ public static class Program
 
                 await Dev.Run();
                 // await DriveMonitor.Start();
-                // _ = LibraryFileWatcher.Instance;
+                _ = LibraryFileWatcher.Instance;
                 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                     OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))

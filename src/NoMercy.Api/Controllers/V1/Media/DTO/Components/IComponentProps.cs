@@ -22,7 +22,7 @@ public interface IContainerProps : IComponentProps
     [JsonProperty("more_link")] Uri? MoreLink { get; set; }
     [JsonProperty("more_link_text")] string? MoreLinkText { get; }
     [JsonProperty("items")] IEnumerable<ComponentEnvelope> Items { get; set; }
-    [JsonProperty("context_menu_items")] IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
+    [JsonProperty("contextMenuItems")] IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
     [JsonProperty("url")] Uri? Url { get; set; }
     [JsonProperty("properties")] Dictionary<string, dynamic>? Properties { get; set; }
 }
@@ -36,7 +36,7 @@ public interface ILeafProps<TData> : IComponentProps
     [JsonProperty("title")] string Title { get; set; }
     [JsonProperty("data")] TData? Data { get; set; }
     [JsonProperty("watch")] bool Watch { get; set; }
-    [JsonProperty("context_menu_items")] IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
+    [JsonProperty("contextMenuItems")] IEnumerable<ContextMenuItemDto>? ContextMenuItems { get; set; }
     [JsonProperty("url")] Uri? Url { get; set; }
     [JsonProperty("properties")] Dictionary<string, dynamic>? Properties { get; set; }
 }

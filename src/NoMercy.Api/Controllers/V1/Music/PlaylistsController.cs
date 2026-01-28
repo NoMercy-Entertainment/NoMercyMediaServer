@@ -154,11 +154,37 @@ public class PlaylistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to edit a playlist");
         
-        int result = await _mediaContext.Playlists
-            .Where(p => p.Id == id && p.UserId == User.UserId())
-            .ExecuteUpdateAsync(p => p
-                .SetProperty(pl => pl.Name, request.Name)
-                .SetProperty(pl => pl.Description, request.Description));
+        Playlist? playlist = await _mediaContext.Playlists
+            .FirstOrDefaultAsync(a => a.Id == id);
+        
+        if (playlist is null)
+            return NotFoundResponse("Playlist not found");
+
+        string slug = playlist.Name.ToSlug();
+        string colorPalette = playlist._colorPalette;
+        string cover = playlist.Cover ?? "";
+        
+        if (request.Cover is not null)
+        {
+            cover = $"/{slug}.jpg";
+            string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+
+            await using (FileStream stream = new(filePath, FileMode.Create))
+            {
+                string base64Data = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)").Groups["data"].Value;
+                byte[] binData = Convert.FromBase64String(base64Data);
+                await stream.WriteAsync(binData);
+            }
+            
+            colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
+        }
+        
+        playlist.Name = request.Name;
+        playlist.Description = request.Description;
+        playlist.Cover = cover;
+        playlist._colorPalette = colorPalette;
+
+        int result = await _mediaContext.SaveChangesAsync();
         
         Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {

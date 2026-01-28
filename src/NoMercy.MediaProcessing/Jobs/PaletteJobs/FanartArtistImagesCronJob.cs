@@ -15,7 +15,7 @@ public class FanartArtistImagesCronJob : ICronJobExecutor
 {
     private readonly ILogger<FanartArtistImagesCronJob> _logger;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryMinute();
     public string JobName => "Fanart ColorPalette Job";
 
     public FanartArtistImagesCronJob(ILogger<FanartArtistImagesCronJob> logger)

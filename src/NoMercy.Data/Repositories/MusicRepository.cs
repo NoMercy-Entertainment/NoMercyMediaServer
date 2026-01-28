@@ -545,8 +545,6 @@ public class MusicRepository(MediaContext mediaContext)
     {
         MediaContext context = new();
         return context.PlaylistTrack
-            .Where(at => at.Playlist.UserId == userId)
-            .Where(pt => pt.PlaylistId == playlistId && pt.TrackId == trackId)
             .Include(pt => pt.Track)
             .ThenInclude(track => track.Images)
             .Include(pt => pt.Playlist)
@@ -566,8 +564,6 @@ public class MusicRepository(MediaContext mediaContext)
     {
         MediaContext context = new();
         return context.AlbumTrack
-            .Where(at => at.Track.LibraryFolder.FolderLibraries
-                .All(fl => fl.Library.LibraryUsers.All(lu => lu.UserId == userId)))
             .Where(at => at.AlbumId == albumId && at.TrackId == trackId)
             .Include(at => at.Track)
             .Include(at => at.Album)
@@ -584,8 +580,6 @@ public class MusicRepository(MediaContext mediaContext)
     {
         MediaContext context = new();
         return context.ArtistTrack
-            .Where(at => at.Track.LibraryFolder.FolderLibraries
-                .All(fl => fl.Library.LibraryUsers.All(lu => lu.UserId == userId)))
             .Where(at => at.ArtistId == artistId && at.TrackId == trackId)
             .Include(at => at.Track)
             .Include(at => at.Artist)
@@ -607,27 +601,29 @@ public class MusicRepository(MediaContext mediaContext)
                 genre.Genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
                 genre.Genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Where(mgt => mgt.GenreId == genreId && mgt.TrackId == trackId)
+            
             .Include(mgt => mgt.Track)
+            
             .Include(mgt => mgt.Genre)
             .ThenInclude(genre => genre.MusicGenreTracks)
             .ThenInclude(genreTrack => genreTrack.Track)
             .ThenInclude(track => track.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Artist)
-            .ThenInclude(artist => artist.Images)
+            
             .Include(mgt => mgt.Genre)
             .ThenInclude(genre => genre.MusicGenreTracks)
             .ThenInclude(genreTrack => genreTrack.Track)
             .ThenInclude(track => track.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Album)
-            .ThenInclude(album => album.AlbumArtist)
-            .ThenInclude(albumArtist => albumArtist.Artist)
-            .ThenInclude(artist => artist.Images)
+            
             .Include(mgt => mgt.Genre)
             .ThenInclude(genre => genre.MusicGenreTracks)
             .ThenInclude(genreTrack => genreTrack.Track)
             .ThenInclude(track => track.TrackUser)
+            
             .FirstOrDefaultAsync();
     }
 
     #endregion
+
 }

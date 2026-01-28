@@ -489,4 +489,20 @@
     <Key>Genres</Key>
     <Value lang="nl">Genres</Value>
   </Entry>
+  <Entry>
+    <Key>Album metadata updated</Key>
+    <Value lang="nl">Album metadata updated</Value>
+  </Entry>
+  <Entry>
+    <Key>Playlist deleted successfully</Key>
+    <Value lang="nl">Playlist deleted successfully</Value>
+  </Entry>
+  <Entry>
+    <Key>You already have a playlist with that name</Key>
+    <Value lang="nl">You already have a playlist with that name</Value>
+  </Entry>
+  <Entry>
+    <Key>Artist updated successfully</Key>
+    <Value lang="nl">Artist updated successfully</Value>
+  </Entry>
 </I18N>

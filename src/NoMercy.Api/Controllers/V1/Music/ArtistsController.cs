@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -13,6 +14,7 @@ using NoMercy.Database.Models;
 using NoMercy.Helpers;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.Networking.Dto;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -157,6 +159,80 @@ public class ArtistsController : BaseController
             Status = "ok",
             Message = "Rescan started",
             Args = []
+        });
+    }
+    
+    [HttpDelete]
+    [Route("{id:guid}")]
+    public async Task<IActionResult> Destroy(Guid id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to delete an artist");
+        
+        int result = await _mediaContext.Artists
+            .Where(p => p.Id == id)
+            .ExecuteDeleteAsync();
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["music", "artist"]
+        });
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Data = (result > 0 ? "Artist deleted successfully" : "Artist not found").Localize(),
+            Status = "ok",
+        });
+    }
+
+    [HttpPatch]
+    [Route("{id:guid}")]
+    public async Task<IActionResult> Edit(Guid id, [FromBody] UpdateMusicMetadataRequestDto request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to edit an artist");
+        
+        Artist? artist = await _mediaContext.Artists
+            .FirstOrDefaultAsync(a => a.Id == id);
+        
+        if (artist is null)
+            return NotFoundResponse("Artist not found");
+        
+        string slug = artist.Name.ToSlug();
+        string colorPalette = artist._colorPalette;
+        string cover = artist.Cover ?? "";
+        
+        if (request.Cover is not null)
+        {
+            cover = $"/{slug}.jpg";
+            string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+
+            await using (FileStream stream = new(filePath, FileMode.Create))
+            {
+                string base64Data = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)").Groups["data"].Value;
+                byte[] binData = Convert.FromBase64String(base64Data);
+                await stream.WriteAsync(binData);
+            }
+            
+            colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
+        }
+        
+        artist.Name = request.Name ?? artist.Name;
+        artist.Description = request.Description;
+        artist.Cover = cover;
+        artist._colorPalette = colorPalette;
+
+        int result = await _mediaContext.SaveChangesAsync();
+        
+        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        {
+            QueryKey = ["music", "artist", id]
+        });
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Data = (result > 0 ? "Artist updated successfully" : "No changes made").Localize(),
+            Status = "ok",
         });
     }
 
