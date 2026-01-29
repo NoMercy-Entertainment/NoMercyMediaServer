@@ -59,6 +59,8 @@ internal class StowageWatcher : IDisposable
         _path = path;
     }
 
+    public string RootPath { get; set; }
+
     public void Start(TimeSpan interval)
     {
         if (_runTask != null) return;
@@ -96,7 +98,7 @@ internal class StowageWatcher : IDisposable
                 if (initial) return;
                 Created?.Invoke(new ()
                 {
-                    FullPath = entry.Path,
+                    FullPath =  Path.Combine(RootPath, entry.Path.ToString()),
                     ChangeType = StowageChangeType.Created,
                     Entry = entry
                 });
@@ -108,7 +110,7 @@ internal class StowageWatcher : IDisposable
                 if (initial) return;
                 Changed?.Invoke(new ()
                 {
-                    FullPath = entry.Path,
+                    FullPath = Path.Combine(RootPath, entry.Path.ToString()),
                     ChangeType = StowageChangeType.Changed,
                     Entry = entry
                 });
@@ -125,12 +127,13 @@ internal class StowageWatcher : IDisposable
             if (initial) return;
             Deleted?.Invoke(new()
             {
-                FullPath = path,
+                FullPath = Path.Combine(RootPath, path),
                 ChangeType = StowageChangeType.Deleted,
                 Entry = null
             });
         });
     }
+    
     public void Dispose()
     {
         _cts?.Cancel();
