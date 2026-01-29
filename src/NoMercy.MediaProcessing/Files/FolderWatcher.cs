@@ -35,10 +35,38 @@ public class FolderWatcher : IDisposable
         return !IsNetworkPath(folder) ? StartFileSystemWatcher(folder) : StartNetworkFileWatcher(folder);
     }
 
+    private static bool IsNetworkPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        if (path.StartsWith(@"\\")) return true; // UNC path
+        string? drive = Path.GetPathRoot(path);
+        if (string.IsNullOrEmpty(drive)) return false;
+        try
+        {
+            DriveInfo driveInfo = new (drive);
+            return driveInfo.DriveType == DriveType.Network;
+        }
+        catch { return false; }
+    }
+
     private static Action StartNetworkFileWatcher(string folder)
     {
-        IFileStorage storage = Stowage.Files.Of.LocalDisk(folder);
-        StowageWatcher stowageWatcher = new (storage);
+        IFileStorage storage;
+        if (folder.StartsWith("s3://", StringComparison.OrdinalIgnoreCase) ||
+            folder.StartsWith("gs://", StringComparison.OrdinalIgnoreCase) ||
+            folder.StartsWith("az://", StringComparison.OrdinalIgnoreCase))
+        {
+            storage = Stowage.Files.Of.ConnectionString(folder);
+        }
+        else
+        {
+            storage = Stowage.Files.Of.ConnectionString("disk://path="+folder);
+        }
+
+        StowageWatcher stowageWatcher = new (storage)
+        {
+            RootPath = folder
+        };
         stowageWatcher.Changed += (e) =>
         {
             _onFileChanged(_instance!, e.ToFileSystemEventArgsEventArgs());
@@ -97,20 +125,6 @@ public class FolderWatcher : IDisposable
         Logger.System($"Watching folder: {folder}");
 
         return () => { fileSystemWatcher.Dispose(); };
-    }
-
-    private static bool IsNetworkPath(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path)) return false;
-        if (path.StartsWith(@"\\")) return true; // UNC path
-        string? drive = Path.GetPathRoot(path);
-        if (string.IsNullOrEmpty(drive)) return false;
-        try
-        {
-            DriveInfo driveInfo = new (drive);
-            return driveInfo.DriveType == DriveType.Network;
-        }
-        catch { return false; }
     }
 
     private static string _prevChanged = "";
