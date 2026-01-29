@@ -1,5 +1,8 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog.Core;
+using Serilog.Events;
+using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.NmSystem.NewtonSoftConverters;
 
@@ -14,7 +17,18 @@ public class GuidKeyDictionaryConverter<TValue> : JsonConverter where TValue : c
         JsonSerializer serializer)
     {
         Dictionary<Guid, TValue?> dictionary = new();
-        JObject jObject = JObject.Load(reader);
+        if (reader.TokenType == JsonToken.Null)
+            return dictionary;
+        JObject jObject;
+        try
+        {
+            jObject = JObject.Load(reader);
+        }
+        catch (JsonReaderException exception)
+        {
+            Logger.Error(exception, LogEventLevel.Error);
+            return dictionary;
+        }
 
         foreach (JProperty property in jObject.Properties())
             if (Guid.TryParse((ReadOnlySpan<char>)property.Name, out Guid key))

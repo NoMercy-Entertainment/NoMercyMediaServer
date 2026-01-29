@@ -60,7 +60,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     public Task<ConcurrentBag<MediaFolderExtend>> Process(string rootFolder, int depth = 0)
     {
-        rootFolder = Path.GetFullPath(rootFolder.ToUtf8());
+        rootFolder = Path.GetFullPath(rootFolder);
         return !_fileListingEnabled
             ? Task.Run(() => ScanFoldersOnly(rootFolder, depth))
             : Task.Run(() => ScanFolder(rootFolder, depth));
@@ -68,7 +68,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     private ConcurrentBag<MediaFolderExtend> ScanFolder(string folderPath, int depth)
     {
-        folderPath = Path.GetFullPath(folderPath.ToUtf8());
+        folderPath = Path.GetFullPath(folderPath);
 
         ConcurrentBag<MediaFolderExtend> folders = [];
 
@@ -103,7 +103,16 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
         try
         {
-            IOrderedEnumerable<string> directories = Directory.GetDirectories(folderPath).OrderBy(f => f);
+            IOrderedEnumerable<string>? directories = null;
+            try
+            {
+                directories = Directory.GetDirectories(folderPath).OrderBy(f => f);
+            }
+            catch
+            {
+                // ignored
+            }
+            if (directories is null) return folders;
 
             Parallel.ForEach(directories, Config.ParallelOptions, (directory, _) =>
             {
