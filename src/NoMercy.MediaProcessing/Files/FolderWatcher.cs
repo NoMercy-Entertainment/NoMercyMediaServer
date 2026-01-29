@@ -1,13 +1,12 @@
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
-using Storage.Net;
-using Storage.Net.Blobs;
+using Stowage;
 
 namespace NoMercy.MediaProcessing.Files;
 
 public class FolderWatcher : IDisposable
 {
-    private static readonly List<FileSystemWatcher> Watchers = [];
+    private static readonly List<IDisposable> Watchers = [];
     private static FolderWatcher? _instance;
 
     public event Action<FileWatcherEventArgs>? OnChanged;
@@ -33,73 +32,71 @@ public class FolderWatcher : IDisposable
     private static Action CreateWatcher(string folder)
     {
         folder = Path.GetFullPath(folder);
-        if (IsNetworkPath(folder))
+        return !IsNetworkPath(folder) ? StartFileSystemWatcher(folder) : StartNetworkFileWatcher(folder);
+    }
+
+    private static Action StartNetworkFileWatcher(string folder)
+    {
+        IFileStorage storage = Stowage.Files.Of.LocalDisk(folder);
+        StowageWatcher stowageWatcher = new (storage);
+        stowageWatcher.Changed += (e) =>
         {
-            IBlobStorage? storage = StorageFactory.Blobs.DirectoryFiles(folder);
-            if (storage == null)
-            {
-                Logger.System($"Failed to create Storage for network folder: {folder}", LogEventLevel.Error);
-                return () => { };
-            }
-            StorageWatcher watcher = new (storage);
-            watcher.Changed += (e) =>
-            {
-                if (_instance == null) return;
-                _onFileChanged(_instance, e.ToFileSystemEventArgsEventArgs());
-            };
-            watcher.Created += (e) =>
-            {
-                if (_instance == null) return;
-                _onFileCreated(_instance, e.ToFileSystemEventArgsEventArgs());
-            };
-            watcher.Deleted += (e) =>
-            {
-                if (_instance == null) return;
-                _onFileDeleted(_instance, e.ToFileSystemEventArgsEventArgs());
-            };
-            Logger.System($"Polling network folder: {folder}");
-            watcher.Start(TimeSpan.FromSeconds(10));
-            return () => { watcher.Dispose(); };
-        }
-        else
+            _onFileChanged(_instance!, e.ToFileSystemEventArgsEventArgs());
+        };
+        stowageWatcher.Created += (e) =>
         {
-            FileSystemWatcher watcher = new();
-            watcher.Path = folder;
-            watcher.EnableRaisingEvents = true;
-            watcher.IncludeSubdirectories = true;
-            watcher.NotifyFilter =
-                // NotifyFilters.Attributes |
-                // NotifyFilters.CreationTime |
-                NotifyFilters.DirectoryName |
-                NotifyFilters.FileName |
-                // NotifyFilters.LastAccess |
-                NotifyFilters.LastWrite
-                // NotifyFilters.Security |
-                // NotifyFilters.Size
-                ;
-            watcher.InternalBufferSize = 64 * 1024;
+            _onFileCreated(_instance!, e.ToFileSystemEventArgsEventArgs());
+        };
+        stowageWatcher.Deleted += (e) =>
+        {
+            _onFileDeleted(_instance!, e.ToFileSystemEventArgsEventArgs());
+        };
+        Logger.System($"Polling network folder: {folder}");
+        stowageWatcher.Start(TimeSpan.FromSeconds(10));
+        
+        Watchers.Add(stowageWatcher);
+        
+        return () => { stowageWatcher.Dispose(); };
+    }
 
-            watcher.Filter = "*.*";
-            watcher.Changed -= _onFileChanged;
-            watcher.Created -= _onFileCreated;
-            watcher.Deleted -= _onFileDeleted;
-            watcher.Renamed -= _onFileRenamed;
-            watcher.Error -= _onError;
+    private static Action StartFileSystemWatcher(string folder)
+    {
+        FileSystemWatcher fileSystemWatcher = new();
+        fileSystemWatcher.Path = folder;
+        fileSystemWatcher.EnableRaisingEvents = true;
+        fileSystemWatcher.IncludeSubdirectories = true;
+        fileSystemWatcher.NotifyFilter =
+            // NotifyFilters.Attributes |
+            // NotifyFilters.CreationTime |
+            NotifyFilters.DirectoryName |
+            NotifyFilters.FileName |
+            // NotifyFilters.LastAccess |
+            NotifyFilters.LastWrite
+            // NotifyFilters.Security |
+            // NotifyFilters.Size
+            ;
+        fileSystemWatcher.InternalBufferSize = 64 * 1024;
 
-            watcher.Changed += _onFileChanged;
-            watcher.Created += _onFileCreated;
-            watcher.Deleted += _onFileDeleted;
-            watcher.Renamed += _onFileRenamed;
-            watcher.Error += _onError;
+        fileSystemWatcher.Filter = "*.*";
+        fileSystemWatcher.Changed -= _onFileChanged;
+        fileSystemWatcher.Created -= _onFileCreated;
+        fileSystemWatcher.Deleted -= _onFileDeleted;
+        fileSystemWatcher.Renamed -= _onFileRenamed;
+        fileSystemWatcher.Error -= _onError;
 
-            watcher.EnableRaisingEvents = true;
+        fileSystemWatcher.Changed += _onFileChanged;
+        fileSystemWatcher.Created += _onFileCreated;
+        fileSystemWatcher.Deleted += _onFileDeleted;
+        fileSystemWatcher.Renamed += _onFileRenamed;
+        fileSystemWatcher.Error += _onError;
 
-            Watchers.Add(watcher);
+        fileSystemWatcher.EnableRaisingEvents = true;
 
-            Logger.System($"Watching folder: {folder}");
+        Watchers.Add(fileSystemWatcher);
 
-            return () => { watcher.Dispose(); };
-        }
+        Logger.System($"Watching folder: {folder}");
+
+        return () => { fileSystemWatcher.Dispose(); };
     }
 
     private static bool IsNetworkPath(string path)
@@ -186,6 +183,6 @@ public class FolderWatcher : IDisposable
 
     public void Dispose()
     {
-        foreach (FileSystemWatcher watcher in Watchers) watcher.Dispose();
+        foreach (IDisposable watcher in Watchers) watcher.Dispose();
     }
 }
