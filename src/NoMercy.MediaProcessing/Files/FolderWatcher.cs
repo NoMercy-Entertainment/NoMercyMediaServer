@@ -63,26 +63,24 @@ public class FolderWatcher : IDisposable
             storage = Stowage.Files.Of.ConnectionString("disk://path="+folder);
         }
 
-        StowageWatcher stowageWatcher = new (storage)
-        {
-            RootPath = folder
-        };
+        StowageWatcher stowageWatcher = new (storage);
         stowageWatcher.Changed += (e) =>
         {
-            _onFileChanged(_instance!, e.ToFileSystemEventArgsEventArgs());
+            _onFileChanged(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };
         stowageWatcher.Created += (e) =>
         {
-            _onFileCreated(_instance!, e.ToFileSystemEventArgsEventArgs());
+            _onFileCreated(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };
         stowageWatcher.Deleted += (e) =>
         {
-            _onFileDeleted(_instance!, e.ToFileSystemEventArgsEventArgs());
+            _onFileDeleted(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };
-        Logger.System($"Polling network folder: {folder}");
-        stowageWatcher.Start(TimeSpan.FromSeconds(10));
+        stowageWatcher.Watch(TimeSpan.FromMinutes(1));
         
         Watchers.Add(stowageWatcher);
+        
+        Logger.System($"Watching folder: {folder}");
         
         return () => { stowageWatcher.Dispose(); };
     }
