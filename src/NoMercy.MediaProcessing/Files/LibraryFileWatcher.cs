@@ -115,12 +115,13 @@ public class LibraryFileWatcher
         if (library is null) return;
 
         if (!IsAllowedExtensionForLibrary(library, e.FullPath)) return;
-
+        
+        if (!Path.Exists(e.FullPath)) return;
+        
         string folderPath = Path.GetDirectoryName(e.FullPath) ?? string.Empty;
         
-        if (Directory.Exists(folderPath))
-            folderPath = e.FullPath;
-
+        if (string.IsNullOrEmpty(folderPath)) return;
+        
         lock (LockObject)
         {
             if (!FileChangeGroups.TryGetValue(folderPath, out FileChangeGroup? fileChangeGroup))
@@ -155,7 +156,8 @@ public class LibraryFileWatcher
 
     private void ProcessFileChanges(object? state)
     {
-        if (state is not FileChangeGroup group) return;
+        if (state is not FileChangeGroup group)
+            return;
 
         lock (LockObject)
         {
@@ -166,6 +168,9 @@ public class LibraryFileWatcher
                 case WatcherChangeTypes.Changed:
                 case WatcherChangeTypes.Renamed:
                     _ = HandleFolder(group.Library, group.FolderPath);
+                    break;
+                case WatcherChangeTypes.All:
+                default:
                     break;
             }
             FileChangeGroups.Remove(group.FolderPath);

@@ -7,14 +7,14 @@ public enum StowageChangeType { Created, Changed, Deleted }
 
 public class StowageWatcherEventArgs : EventArgs
 {
-    public string FullPath { get; init; } = string.Empty;
+    public string Path { get; init; } = string.Empty;
     public StowageChangeType ChangeType { get; init; }
     public IOEntry? Entry { get; init; }
     public DateTime EventTimestamp { get; init; } = DateTime.UtcNow;
-    
+
     public FileWatcherEventArgs ToFileWatcherEventArgs()
     {
-        return new (null, new (
+        return new(null, new(
             changeType: ChangeType switch
             {
                 StowageChangeType.Created => WatcherChangeTypes.Created,
@@ -22,13 +22,14 @@ public class StowageWatcherEventArgs : EventArgs
                 StowageChangeType.Deleted => WatcherChangeTypes.Deleted,
                 _ => throw new ArgumentOutOfRangeException()
             },
-            directory: Path.GetDirectoryName(FullPath) ?? string.Empty,
-            name: Path.GetFileName(FullPath)
+            directory: System.IO.Path.GetDirectoryName(Path) ?? string.Empty,
+            name: System.IO.Path.GetFileName(Path)
         ));
     }
-    public FileSystemEventArgs ToFileSystemEventArgsEventArgs()
+
+    public FileSystemEventArgs ToFileSystemEventArgsEventArgs(string folder = "")
     {
-        return new (
+        return new(
             ChangeType switch
             {
                 StowageChangeType.Created => WatcherChangeTypes.Created,
@@ -36,8 +37,8 @@ public class StowageWatcherEventArgs : EventArgs
                 StowageChangeType.Deleted => WatcherChangeTypes.Deleted,
                 _ => throw new ArgumentOutOfRangeException()
             },
-            Path.GetDirectoryName(FullPath) ?? string.Empty,
-            Path.GetFileName(FullPath));
+            System.IO.Path.GetDirectoryName(folder + Path) ?? string.Empty,
+            System.IO.Path.GetFileName(folder + Path));
     }
 }
 
@@ -59,9 +60,7 @@ internal class StowageWatcher : IDisposable
         _path = path;
     }
 
-    public string RootPath { get; set; }
-
-    public void Start(TimeSpan interval)
+    public void Watch(TimeSpan interval)
     {
         if (_runTask != null) return;
         _cts = new CancellationTokenSource();
@@ -85,9 +84,9 @@ internal class StowageWatcher : IDisposable
     {
         IReadOnlyCollection<IOEntry> entries = await _storage.Ls(_path, recurse: true);
         List<IOEntry> files = entries.Where(e => !e.Path.IsFolder).ToList();
-        
+
         ConcurrentBag<string> foundPaths = [];
-        
+
         Parallel.ForEach(files, entry =>
         {
             foundPaths.Add(entry.Path);
@@ -96,11 +95,12 @@ internal class StowageWatcher : IDisposable
             {
                 _snapshot[entry.Path] = entry;
                 if (initial) return;
-                Created?.Invoke(new ()
+                Created?.Invoke(new()
                 {
-                    FullPath =  Path.Combine(RootPath, entry.Path.ToString()),
+                    Path = entry.Path.ToString(),
                     ChangeType = StowageChangeType.Created,
-                    Entry = entry
+                    Entry = entry,
+                    EventTimestamp = DateTime.UtcNow
                 });
             }
             // Check op LastModification of Size (Stowage entries hebben deze eigenschappen ook)
@@ -108,17 +108,18 @@ internal class StowageWatcher : IDisposable
             {
                 _snapshot[entry.Path] = entry;
                 if (initial) return;
-                Changed?.Invoke(new ()
+                Changed?.Invoke(new()
                 {
-                    FullPath = Path.Combine(RootPath, entry.Path.ToString()),
+                    Path = entry.Path.ToString(),
                     ChangeType = StowageChangeType.Changed,
-                    Entry = entry
+                    Entry = entry,
+                    EventTimestamp = DateTime.UtcNow
                 });
             }
         });
-        
+
         ICollection<string> snapshotKeys = _snapshot.Keys;
-        HashSet<string> currentPathsSet = new (foundPaths);
+        HashSet<string> currentPathsSet = new(foundPaths);
 
         Parallel.ForEach(snapshotKeys, path =>
         {
@@ -127,13 +128,14 @@ internal class StowageWatcher : IDisposable
             if (initial) return;
             Deleted?.Invoke(new()
             {
-                FullPath = Path.Combine(RootPath, path),
+                Path = path,
                 ChangeType = StowageChangeType.Deleted,
-                Entry = null
+                Entry = null,
+                EventTimestamp = DateTime.UtcNow
             });
         });
     }
-    
+
     public void Dispose()
     {
         _cts?.Cancel();
