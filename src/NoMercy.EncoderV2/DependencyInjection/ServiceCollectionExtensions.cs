@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NoMercy.EncoderV2.Abstractions;
 using NoMercy.EncoderV2.Factories;
 using NoMercy.EncoderV2.PostProcessing;
+using NoMercy.EncoderV2.Processing;
 using NoMercy.EncoderV2.Profiles;
 using NoMercy.EncoderV2.Services;
 
@@ -49,6 +50,9 @@ public static class ServiceCollectionExtensions
         // Post-processing services
         services.AddScoped<IChapterProcessor, ChapterProcessor>();
         services.AddScoped<ISpriteGenerator, SpriteGenerator>();
+
+        // HDR processing
+        services.AddScoped<IHdrProcessor, HdrProcessor>();
 
         // Profiles
         services.AddSingleton<IProfileRegistry>(sp =>

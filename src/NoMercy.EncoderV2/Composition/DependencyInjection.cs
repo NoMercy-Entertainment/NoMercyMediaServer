@@ -3,6 +3,7 @@ using NoMercy.EncoderV2.Execution;
 using NoMercy.EncoderV2.FFmpeg;
 using NoMercy.EncoderV2.Hardware;
 using NoMercy.EncoderV2.PostProcessing;
+using NoMercy.EncoderV2.Processing;
 using NoMercy.EncoderV2.Profiles;
 using NoMercy.EncoderV2.Progress;
 using NoMercy.EncoderV2.Repositories;
@@ -50,6 +51,9 @@ public static class DependencyInjection
         // Post-Processing (Scoped)
         services.AddScoped<IFontExtractor, FontExtractor>();
         services.AddScoped<ISpriteGenerator, SpriteGenerator>();
+
+        // HDR Processing (Scoped)
+        services.AddScoped<IHdrProcessor, HdrProcessor>();
 
         // FFmpeg Services (Scoped)
         services.AddScoped<IFFmpegService, FFmpegService>();
