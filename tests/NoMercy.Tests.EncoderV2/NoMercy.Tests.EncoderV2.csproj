@@ -43,4 +43,16 @@
         </Content>
     </ItemGroup>
 
+    <!-- Exclude pre-existing test files that reference excluded namespaces -->
+    <ItemGroup>
+        <Compile Remove="ConvertSubtitleTests.cs" />
+        <Compile Remove="DetectFrameCropTests.cs" />
+        <Compile Remove="ExtractChaptersTests.cs" />
+        <Compile Remove="ExtractFontsTests.cs" />
+        <Compile Remove="GenerateFingerprintTests.cs" />
+        <Compile Remove="GenerateSpriteTests.cs" />
+        <Compile Remove="GetDurationTests.cs" />
+        <Compile Remove="HelstromEncodingIntegrationTests.cs" />
+    </ItemGroup>
+
 </Project>

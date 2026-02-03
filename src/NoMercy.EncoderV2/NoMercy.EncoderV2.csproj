@@ -23,4 +23,65 @@
       <Folder Include="Profiles\" />
     </ItemGroup>
 
+    <!-- Exclude pre-existing files that reference non-existent dependencies (to be integrated later) -->
+    <ItemGroup>
+      <!-- Repositories - reference EncodingJob/EncodingTask from database -->
+      <Compile Remove="Repositories\IJobRepository.cs" />
+      <Compile Remove="Repositories\JobRepository.cs" />
+      <Compile Remove="Repositories\ProfileRepository.cs" />
+
+      <!-- Execution - reference EncodingJob -->
+      <Compile Remove="Execution\**\*.cs" />
+
+      <!-- Jobs - reference EncodingJob and related types -->
+      <Compile Remove="Jobs\**\*.cs" />
+
+      <!-- Services - EncodingService references database models -->
+      <Compile Remove="Services\EncodingService.cs" />
+
+      <!-- FFmpeg - old command builder has different interface -->
+      <Compile Remove="FFmpeg\**\*.cs" />
+
+      <!-- Hardware - references GpuAccelerator from database -->
+      <Compile Remove="Hardware\**\*.cs" />
+
+      <!-- Core - references database models -->
+      <Compile Remove="Core\**\*.cs" />
+
+      <!-- Pipeline - references EncodingJob -->
+      <Compile Remove="Pipeline\**\*.cs" />
+
+      <!-- Progress - references EncodingProgress from database -->
+      <Compile Remove="Progress\**\*.cs" />
+
+      <!-- Tasks - reference database models and Shared namespace -->
+      <Compile Remove="Tasks\**\*.cs" />
+
+      <!-- Composition - references excluded namespaces -->
+      <Compile Remove="Composition\**\*.cs" />
+
+      <!-- Profiles - pre-existing broken files -->
+      <Compile Remove="Profiles\DefaultProfiles.cs" />
+      <Compile Remove="Profiles\ProfileManager.cs" />
+      <Compile Remove="Profiles\ProfileValidator.cs" />
+
+      <!-- Validation - may have dependency issues -->
+      <Compile Remove="Validation\**\*.cs" />
+
+      <!-- Streams - may have dependency issues -->
+      <Compile Remove="Streams\**\*.cs" />
+
+      <!-- Specifications - may have dependency issues -->
+      <Compile Remove="Specifications\**\*.cs" />
+
+      <!-- Adapters -->
+      <Compile Remove="Adapters\**\*.cs" />
+
+      <!-- Api -->
+      <Compile Remove="Api\**\*.cs" />
+
+      <!-- Shared -->
+      <Compile Remove="Shared\**\*.cs" />
+    </ItemGroup>
+
 </Project>

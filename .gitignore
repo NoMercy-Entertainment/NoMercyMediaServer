@@ -602,6 +602,7 @@ build.log
 # IDE and Editor specific
 .run/
 .claude/
+.devcontainer/config/claude-credentials.json
 .vscode-test/
 
 # macOS specific
