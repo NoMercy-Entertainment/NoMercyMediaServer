@@ -5,6 +5,8 @@ using NoMercy.EncoderV2.PostProcessing;
 using NoMercy.EncoderV2.Processing;
 using NoMercy.EncoderV2.Profiles;
 using NoMercy.EncoderV2.Services;
+using NoMercy.EncoderV2.Specifications.HLS;
+using NoMercy.EncoderV2.Validation;
 
 namespace NoMercy.EncoderV2.DependencyInjection;
 
@@ -47,9 +49,17 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICodecFactory, CodecFactory>();
         services.AddSingleton<IContainerFactory, ContainerFactory>();
 
+        // Validation services
+        services.AddScoped<IOutputValidator, OutputValidator>();
+
+        // HLS services
+        services.AddScoped<IHLSPlaylistGenerator, HLSPlaylistGenerator>();
+
         // Post-processing services
+        services.AddScoped<IFontExtractor, FontExtractor>();
         services.AddScoped<IChapterProcessor, ChapterProcessor>();
         services.AddScoped<ISpriteGenerator, SpriteGenerator>();
+        services.AddScoped<IPostProcessor, PostProcessor>();
 
         // HDR processing
         services.AddScoped<IHdrProcessor, HdrProcessor>();

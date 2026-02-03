@@ -65,14 +65,6 @@
       <Compile Remove="Profiles\ProfileManager.cs" />
       <Compile Remove="Profiles\ProfileValidator.cs" />
 
-      <!-- Validation - may have dependency issues -->
-      <Compile Remove="Validation\**\*.cs" />
-
-      <!-- Streams - may have dependency issues -->
-      <Compile Remove="Streams\**\*.cs" />
-
-      <!-- Specifications - may have dependency issues -->
-      <Compile Remove="Specifications\**\*.cs" />
 
       <!-- Adapters -->
       <Compile Remove="Adapters\**\*.cs" />
@@ -82,6 +74,11 @@
 
       <!-- Shared -->
       <Compile Remove="Shared\**\*.cs" />
+
+      <!-- Validation files with broken dependencies -->
+      <Compile Remove="Validation\CodecValidator.cs" />
+      <Compile Remove="Validation\ProfileValidator.cs" />
+      <Compile Remove="Validation\Rules\**\*.cs" />
     </ItemGroup>
 
 </Project>

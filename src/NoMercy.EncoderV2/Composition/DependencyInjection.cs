@@ -50,7 +50,9 @@ public static class DependencyInjection
 
         // Post-Processing (Scoped)
         services.AddScoped<IFontExtractor, FontExtractor>();
+        services.AddScoped<IChapterProcessor, ChapterProcessor>();
         services.AddScoped<ISpriteGenerator, SpriteGenerator>();
+        services.AddScoped<IPostProcessor, PostProcessor>();
 
         // HDR Processing (Scoped)
         services.AddScoped<IHdrProcessor, HdrProcessor>();
