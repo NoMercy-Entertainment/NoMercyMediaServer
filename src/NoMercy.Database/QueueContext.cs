@@ -46,4 +46,10 @@ public class QueueContext : DbContext
     public virtual DbSet<QueueJob> QueueJobs { get; set; }
     public virtual DbSet<FailedJob> FailedJobs { get; set; }
     public virtual DbSet<CronJob> CronJobs { get; set; }
+
+    // EncoderV2 entities
+    public virtual DbSet<EncodingJob> EncodingJobs { get; set; }
+    public virtual DbSet<EncodingTask> EncodingTasks { get; set; }
+    public virtual DbSet<EncoderNode> EncoderNodes { get; set; }
+    public virtual DbSet<EncodingProgress> EncodingProgress { get; set; }
 }
