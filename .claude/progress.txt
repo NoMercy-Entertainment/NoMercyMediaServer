@@ -468,7 +468,7 @@
 - ❌ NodeHealthMonitor (30-second health checks)
 
 **Next Steps:**
-- Implement NodeHealthMonitor for 30-second health checks
+- ~~Implement JobDispatcher for queue integration~~ ✓
 
 ---
 
@@ -529,7 +529,73 @@
 - ✅ TaskSplitter (Job → Task decomposition)
 - ✅ NodeSelector (capability matching)
 - ✅ JobDispatcher (queue integration)
-- ❌ NodeHealthMonitor (30-second health checks)
+- ✅ NodeHealthMonitor (30-second health checks)
 
 **Next Steps:**
-- Implement NodeHealthMonitor for 30-second health checks
+- ~~Implement NodeHealthMonitor for 30-second health checks~~ ✓
+
+---
+
+### 2026-02-03: NodeHealthMonitor Implementation (Phase 5 Complete)
+
+**Task Completed:** Implement NodeHealthMonitor for 30-second health checks
+
+**Changes Made:**
+
+1. Created `INodeHealthMonitor.cs` in `src/NoMercy.EncoderV2/Tasks/`
+   - Interface for node health monitoring with comprehensive API
+   - DTOs: `HealthCheckResult`, `NodeHealthStatus`, `HealthMonitorOptions`, `HeartbeatResult`
+   - Operations: start/stop monitoring, health checks, heartbeat recording
+   - Node management: enable, disable, mark healthy/unhealthy
+   - Status queries: all nodes, single node, summary statistics
+
+2. Implemented `NodeHealthMonitor.cs` as BackgroundService:
+   - Inherits from `BackgroundService` for ASP.NET Core hosted service integration
+   - 30-second periodic health checks (configurable via `HealthMonitorOptions`)
+   - Heartbeat-based health detection with 60-second timeout (configurable)
+   - Automatic task reassignment from unhealthy nodes
+
+3. Key Features:
+   - `PerformHealthCheckAsync()`: Check all nodes, update IsHealthy, reassign tasks
+   - `RecordHeartbeatAsync()`: Record heartbeat from node, mark as healthy
+   - `MarkNodeUnhealthyAsync()`: Manually mark node unhealthy with task reassignment
+   - `MarkNodeHealthyAsync()`: Manually mark node healthy
+   - `EnableNodeAsync()`: Enable node for task assignment
+   - `DisableNodeAsync()`: Disable node with task reassignment
+   - `GetAllNodeStatusesAsync()`: Get detailed status of all nodes
+   - `GetNodeStatusAsync()`: Get status of specific node
+   - `GetNodeSummaryAsync()`: Quick statistics (total, healthy, enabled, running tasks)
+
+4. Health Detection Logic:
+   - Nodes with heartbeat older than timeout are marked unhealthy
+   - Hysteresis via `_consecutiveFailedChecks` prevents flapping
+   - Configurable `FailedChecksBeforeUnhealthy` (default: 2)
+   - New nodes without heartbeat get grace period (2x timeout)
+
+5. Updated DI Configuration:
+   - `ServiceCollectionExtensions.cs`: Added `HealthMonitorOptions` from `EncoderV2Options`
+   - `ServiceCollectionExtensions.cs`: Registered `NodeHealthMonitor` as singleton and hosted service
+   - `Composition/DependencyInjection.cs`: Added same registrations
+   - Added health monitoring options to `EncoderV2Options`
+
+6. EncoderV2Options Extended:
+   - `HealthCheckIntervalSeconds` (default: 30)
+   - `HeartbeatTimeoutSeconds` (default: 60)
+   - `AutoReassignTasksOnNodeFailure` (default: true)
+   - `VerboseHealthLogging` (default: false)
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+- Full Solution: BUILD SUCCEEDED
+
+**Phase 5 Progress (Task Distribution) - COMPLETE:**
+- ✅ TaskSplitter (Job → Task decomposition)
+- ✅ NodeSelector (capability matching)
+- ✅ JobDispatcher (queue integration)
+- ✅ NodeHealthMonitor (30-second health checks)
+
+**Next Steps (Phase 6: Node Implementation):**
+- Create EncoderNode project
+- Implement NodeRegistration (phone-home + mDNS)
+- Implement node-side ProgressEmitter
+- Implement NodeCapabilities (GPU/CPU detection)
