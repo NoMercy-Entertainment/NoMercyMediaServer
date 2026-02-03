@@ -1,0 +1,50 @@
+// For format details, see https://aka.ms/devcontainer.json
+{
+	"name": "NoMercy MediaServer",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"workspaceFolder": "/workspaces/NoMercyMediaServer",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/NoMercyMediaServer,type=bind,consistency=cached",
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [5000, 5001, 5173, 7626, 443],
+	"portsAttributes": {
+		"5001": {
+			"protocol": "https"
+		},
+		"7626": {
+			"label": "NoMercy Internal",
+			"onAutoForward": "notify"
+		},
+		"443": {
+			"label": "NoMercy External (HTTPS)",
+			"onAutoForward": "notify"
+		}
+	},
+
+	// Install additional tools via features
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "20"
+		}
+	},
+
+	// Set up shell configuration and restore dependencies
+	"postCreateCommand": "bash .devcontainer/setup-environment.sh && dotnet restore",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-dotnettools.csharp",
+				"ms-dotnettools.vscode-dotnet-runtime",
+				"formulahendry.code-runner",
+				"GitHub.copilot"
+			]
+		}
+	},
+
+	// Run as vscode user (default non-root user in devcontainer)
+	"remoteUser": "vscode"
+}
