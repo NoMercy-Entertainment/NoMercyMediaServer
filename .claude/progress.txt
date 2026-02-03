@@ -756,9 +756,89 @@ All endpoints return `StatusResponseDto<T>` with:
 **Phase 7 Progress (API & Integration):**
 - ✅ ProfileController (CRUD endpoints)
 - ✅ EncodingController (job submission)
-- ❌ ProgressHub (SignalR real-time updates)
+- ✅ ProgressHub (SignalR real-time updates)
 - ❌ Integrate with existing Queue system
 - ❌ Add API documentation (Swagger)
 
 **Next Steps:**
-- Implement ProgressHub for SignalR real-time updates
+- Integrate with existing Queue system
+
+---
+
+### 2026-02-03: EncodingProgressHub Implementation (Phase 7)
+
+**Task Completed:** Create ProgressHub for SignalR real-time encoding updates
+
+**Changes Made:**
+
+1. Created `EncodingProgressHub.cs` in `src/NoMercy.Api/Controllers/Socket/`
+   - SignalR hub for real-time encoding progress updates
+   - Inherits from `ConnectionHub` for authenticated WebSocket connections
+   - Group-based subscription model for targeted updates
+
+2. Client Subscription Methods:
+   - `SubscribeToJob(jobId)` / `UnsubscribeFromJob(jobId)` - Track specific job
+   - `SubscribeToAllJobs()` / `UnsubscribeFromAllJobs()` - Monitor all encoding activity
+   - `SubscribeToNodes()` / `UnsubscribeFromNodes()` - Track encoder node status
+
+3. Query Methods:
+   - `GetJobStatus(jobId)` - Get current status of specific job
+   - `GetActiveJobs()` - Get all jobs in queued/encoding state
+   - `GetNodeStatuses()` - Get status of all encoder nodes
+
+4. Created `EncodingProgressHubService.cs` for server-side broadcasting:
+   - `IEncodingProgressHubService` interface for DI
+   - Uses `IHubContext<EncodingProgressHub>` for external message broadcasting
+   - Broadcast methods:
+     - `SendTaskProgressAsync()` - Progress metrics (FPS, speed, bitrate, ETA)
+     - `SendJobStateChangeAsync()` - Job state transitions
+     - `SendTaskStateChangeAsync()` - Task state transitions
+     - `SendNodeStatusChangeAsync()` - Node health changes
+     - `SendJobCreatedAsync()` - New job notifications
+     - `SendJobRemovedAsync()` - Job deletion/cancellation
+
+5. DTOs for SignalR Messages:
+   - `TaskProgressUpdate`: Progress percentage, FPS, speed, bitrate, current time, ETA
+   - `JobStateChange`: Previous state, new state, error message, timestamp
+   - `TaskStateChange`: Task type, states, assigned node, error message
+   - `NodeStatusChange`: Node health, enabled status, last heartbeat
+   - `EncodingJobStatusDto`: Full job status with task breakdown
+   - `EncodingTaskStatusDto`: Individual task status
+   - `EncoderNodeStatusDto`: Node capabilities and current load
+
+6. Created `EncodingProgressHubServiceExtensions.cs` in Server project:
+   - `AddEncodingProgressHubServices()` extension method for DI registration
+   - Registers `EncodingProgressHub` as scoped
+   - Registers `IEncodingProgressHubService` as singleton
+
+7. Updated `ApplicationConfiguration.cs`:
+   - Mapped hub endpoint at `/encodingProgressHub`
+   - WebSocket transport with 40-second timeout
+   - Authentication expiration handling
+
+8. Updated `ServiceConfiguration.cs`:
+   - Added `AddEncodingProgressHubServices()` call
+
+**SignalR Events (Client-Side):**
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `TaskProgress` | Progress update | `TaskProgressUpdate` |
+| `JobStateChanged` | Job state transition | `JobStateChange` |
+| `TaskStateChanged` | Task state transition | `TaskStateChange` |
+| `NodeStatusChanged` | Node health change | `NodeStatusChange` |
+| `JobCreated` | New job created | `EncodingJobStatusDto` |
+| `JobRemoved` | Job deleted/cancelled | `{ jobId, reason }` |
+
+**Build Status:**
+- NoMercy.Server: BUILD SUCCEEDED
+- Full Solution: BUILD SUCCEEDED
+
+**Phase 7 Progress (API & Integration):**
+- ✅ ProfileController (CRUD endpoints)
+- ✅ EncodingController (job submission)
+- ✅ ProgressHub (SignalR real-time updates)
+- ❌ Integrate with existing Queue system
+- ❌ Add API documentation (Swagger)
+
+**Next Steps:**
+- Integrate with existing Queue system

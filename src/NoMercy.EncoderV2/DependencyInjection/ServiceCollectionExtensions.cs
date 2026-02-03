@@ -11,6 +11,7 @@ using NoMercy.EncoderV2.Specifications.HLS;
 using NoMercy.EncoderV2.Streams;
 using NoMercy.EncoderV2.Tasks;
 using NoMercy.EncoderV2.Validation;
+using NoMercy.EncoderV2.Workers;
 
 namespace NoMercy.EncoderV2.DependencyInjection;
 
@@ -111,6 +112,35 @@ public static class ServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Adds the EncoderV2 task worker background service.
+    /// Call this separately if you want the worker to process tasks automatically.
+    /// </summary>
+    public static IServiceCollection AddEncoderV2TaskWorker(this IServiceCollection services)
+    {
+        return services.AddEncoderV2TaskWorker(new EncoderV2WorkerOptions());
+    }
+
+    /// <summary>
+    /// Adds the EncoderV2 task worker with custom options
+    /// </summary>
+    public static IServiceCollection AddEncoderV2TaskWorker(this IServiceCollection services, EncoderV2WorkerOptions options)
+    {
+        services.AddSingleton(options);
+        services.AddHostedService<EncoderV2TaskWorker>();
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the EncoderV2 task worker with configuration action
+    /// </summary>
+    public static IServiceCollection AddEncoderV2TaskWorker(this IServiceCollection services, Action<EncoderV2WorkerOptions> configure)
+    {
+        EncoderV2WorkerOptions options = new();
+        configure(options);
+        return services.AddEncoderV2TaskWorker(options);
     }
 
     /// <summary>

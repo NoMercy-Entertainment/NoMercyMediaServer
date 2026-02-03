@@ -78,6 +78,7 @@
         <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
         <ProjectReference Include="..\NoMercy.Data\NoMercy.Data.csproj" />
         <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
+        <ProjectReference Include="..\NoMercy.EncoderV2\NoMercy.EncoderV2.csproj" />
         <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
         <ProjectReference Include="..\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj" />
         <ProjectReference Include="..\NoMercy.MediaSources\NoMercy.MediaSources.csproj" />
