@@ -25,6 +25,11 @@ public class QueueContext : DbContext
 
         configurationBuilder.Properties<string>()
             .HaveMaxLength(256);
+
+        // Configure Ulid to string conversion for EncoderV2 entities
+        configurationBuilder
+            .Properties<Ulid>()
+            .HaveConversion<UlidToStringConverter>();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -16,12 +16,12 @@ public class EncodingJob : Timestamps
     [JsonProperty("id")]
     public Ulid Id { get; set; }
 
+    /// <summary>
+    /// Reference to the EncoderProfile in MediaContext.
+    /// Note: This is a cross-database reference; the relationship is managed at the application level.
+    /// </summary>
     [JsonProperty("profile_id")]
     public Ulid? ProfileId { get; set; }
-
-    [ForeignKey(nameof(ProfileId))]
-    [JsonProperty("profile")]
-    public EncoderProfile? Profile { get; set; }
 
     /// <summary>
     /// Immutable snapshot of the profile at job creation time.
