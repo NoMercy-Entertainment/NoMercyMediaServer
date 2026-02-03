@@ -595,7 +595,68 @@
 - ✅ NodeHealthMonitor (30-second health checks)
 
 **Next Steps (Phase 6: Node Implementation):**
-- Create EncoderNode project
-- Implement NodeRegistration (phone-home + mDNS)
-- Implement node-side ProgressEmitter
-- Implement NodeCapabilities (GPU/CPU detection)
+- ~~Create EncoderNode project~~ ✓ (already existed)
+- ~~Implement NodeRegistration (phone-home + mDNS)~~ ✓ (already existed)
+- ~~Implement node-side ProgressEmitter~~ ✓
+- ~~Implement NodeCapabilities (GPU/CPU detection)~~ ✓ (already existed)
+
+---
+
+### 2026-02-03: ProgressEmitter Implementation (Phase 6)
+
+**Task Completed:** Implement node-side ProgressEmitter for FFmpeg progress reporting
+
+**Changes Made:**
+
+1. Created `ProgressEmitter.cs` in `src/NoMercy.EncoderNode/Services/`
+   - Implements `IProgressEmitter` interface for dependency injection
+   - Parses FFmpeg progress output (frame, fps, time, bitrate, speed)
+   - Supports both standard stderr output and -progress pipe:1 format
+   - Throttles progress reports (default 1 second interval)
+   - Reports task started/completed events to primary server
+   - Calculates estimated time remaining based on encoding speed
+   - HTTP-based progress reporting with Bearer token authentication
+
+2. Key Features:
+   - `ParseAndEmitAsync()`: Parse FFmpeg output and emit progress
+   - `EmitProgressAsync()`: Send progress data to server with throttling
+   - `CreateProgressCallback()`: Create callback for FFmpeg process integration
+   - `ParseProgressLine()`: Extract metrics from FFmpeg stderr lines
+   - `ReportTaskStartedAsync()`: Notify server when task begins
+   - `ReportTaskCompletedAsync()`: Notify server when task ends
+   - Throttling prevents overwhelming server with updates
+   - Supports both user tokens and Keycloak service tokens
+
+3. Created supporting NmSystem utilities:
+   - `FFmpegAccelerationDetector.cs`: Detect available hardware acceleration
+   - `GpuDeviceDetector.cs`: Detect GPU devices and capabilities
+   - `Memory.cs`: System memory information (total/available)
+   - Made `Cpu.Names()` public for cross-project access
+   - Added `ServerHardwareCapabilities` DTO to EncoderNodeDtos.cs
+
+4. Updated `EncoderNodeOptions.cs`:
+   - Added `ProgressReportIntervalMs` (default: 1000ms)
+   - Added `LogProgress` flag for console logging
+
+5. Updated `Program.cs` DI configuration:
+   - Registered `IProgressEmitter` as singleton
+   - Registered `IKeycloakAuthService`, `IServerDiscoveryService`
+   - Registered `NodeRegistrationService` as hosted service
+   - Added `HttpClient` factory
+
+**Build Status:**
+- NoMercy.EncoderNode: BUILD SUCCEEDED
+- NoMercy.NmSystem: BUILD SUCCEEDED
+
+**Phase 6 Progress (Node Implementation) - COMPLETE:**
+- ✅ EncoderNode project (pre-existing)
+- ✅ NodeRegistration (pre-existing)
+- ✅ ProgressEmitter
+- ✅ NodeCapabilities (pre-existing via CapabilityDetector)
+
+**Next Steps (Phase 7: API & Integration):**
+- Create ProfileController (CRUD endpoints)
+- Create EncodingController (job submission)
+- Create ProgressHub (SignalR real-time updates)
+- Integrate with existing Queue system
+- Add API documentation (Swagger)
