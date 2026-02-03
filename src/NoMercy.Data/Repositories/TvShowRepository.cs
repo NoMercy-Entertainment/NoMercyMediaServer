@@ -217,10 +217,7 @@ public class TvShowRepository(MediaContext context)
                 .ThenInclude(e => e.Translations.Where(t => t.Iso6391 == language))
             .FirstOrDefaultAsync();
 
-        if (tv == null)
-            return [];
-
-        return tv.Episodes.Where(e => e.Translations.Any());
+        return tv?.Episodes ?? [];
     }
     
     public async Task<bool> AddToWatchListAsync(int tvId, Guid userId, bool add = true)

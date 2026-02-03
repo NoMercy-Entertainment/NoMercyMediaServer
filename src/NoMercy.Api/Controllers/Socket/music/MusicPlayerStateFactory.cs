@@ -30,8 +30,21 @@ public class MusicPlayerStateFactory
             {
                 Disallows = new()
                 {
-                    Previous = false,
-                    Resuming = false
+                    // Can't pause when starting (we're playing)
+                    Pausing = false,
+                    // Can't resume when already playing
+                    Resuming = true,
+                    // Can't go to previous if backlog only has current item
+                    Previous = true,
+                    // Can't go to next if playlist is empty after current
+                    Next = playlist.Count <= 0,
+                    // Basic actions that are always allowed
+                    Seeking = false,
+                    Stopping = false,
+                    Muting = false,
+                    TogglingShuffle = false,
+                    TogglingRepeatContext = false,
+                    TogglingRepeatTrack = false
                 }
             }
         };

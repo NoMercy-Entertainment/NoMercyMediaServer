@@ -277,16 +277,20 @@ public class CronWorker : BackgroundService
             await cts.CancelAsync();
         }
 
-        // Wait for all workers to complete
+        // Wait for all workers to complete with a reduced timeout
         if (_jobTasks.Values.Count != 0)
         {
             try
             {
-                await Task.WhenAll(_jobTasks.Values).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                await Task.WhenAll(_jobTasks.Values).WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
             }
             catch (TimeoutException)
             {
                 _logger.LogWarning("Some job workers did not stop within the timeout period");
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Shutdown cancelled, forcing job worker termination");
             }
         }
 

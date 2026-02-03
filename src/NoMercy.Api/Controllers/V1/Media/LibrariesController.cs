@@ -327,7 +327,6 @@ public class LibrariesController(
             components.Add(Component.Carousel()
                 .WithId(letter)
                 .WithTitle(letter)
-                .WithMoreLink($"/libraries/{libraryId}/letter/{letter}")
                 .WithNavigation(
                     index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
                     index == Letters.Length - 1 ? null : Letters.ElementAtOrDefault(index + 1) ?? null)

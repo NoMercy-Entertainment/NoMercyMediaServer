@@ -194,7 +194,7 @@ public class EncodeVideoJob : AbstractEncoderJob
 
                 await container.ExtractFonts();
 
-                if (ffmpeg.ConvertSubtitle)
+                if (ffmpeg.Container.SubtitleStreams.Any(x => x.ConvertSubtitle))
                 {
                     Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
                     {

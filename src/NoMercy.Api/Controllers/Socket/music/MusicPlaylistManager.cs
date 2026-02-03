@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -19,13 +20,16 @@ public class MusicPlaylistManager
     public async Task<(PlaylistTrackDto item, List<PlaylistTrackDto> playlist)> GetPlaylist(Guid userId,
         string type, Guid listId, Guid trackId, string country)
     {
-        return type switch
+        return type.ToLower().Trim() switch
         {
+            // For type="track", the track ID is in the listId parameter (second param)
+            // Call format: StartPlaybackCommand("track", trackId, null/empty)
+            "track" => await GetSingleTrack(userId, listId, country),
             "playlist" => await GetPlaylistTracks(userId, listId, trackId, country),
             "album" => await GetAlbumTracks(userId, listId, trackId, country),
             "artist" => await GetArtistTracks(userId, listId, trackId, country),
             "genre" => await GetGenreTracks(userId, listId, trackId, country),
-            _ => throw new ArgumentException("Invalid playlist type", nameof(type))
+            _ => throw new ArgumentException($"Invalid playlist type: '{type}'", nameof(type))
         };
     }
 
@@ -39,6 +43,28 @@ public class MusicPlaylistManager
         List<PlaylistTrackDto> after = playlist.GetRange(index + 1, playlist.Count - index - 1);
 
         return (before, after);
+    }
+
+    private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetSingleTrack(Guid userId, Guid trackId, string country)
+    {
+        Track? track = await _musicRepository.GetTrackAsync(trackId);
+
+        if (track is null)
+            throw new("Track not found");
+
+        // Load TrackUser data for favorite status
+        bool isFavorite = await _mediaContext.TrackUser
+            .AnyAsync(tu => tu.TrackId == trackId && tu.UserId == userId);
+        
+        if (isFavorite && !track.TrackUser.Any(tu => tu.UserId == userId))
+        {
+            track.TrackUser.Add(new TrackUser { TrackId = trackId, UserId = userId });
+        }
+
+        PlaylistTrackDto trackDto = new(track, country);
+        
+        // Return the track with an empty playlist (no other tracks to play)
+        return (trackDto, []);
     }
 
     private async Task<(PlaylistTrackDto, List<PlaylistTrackDto>)> GetPlaylistTracks(Guid userId,

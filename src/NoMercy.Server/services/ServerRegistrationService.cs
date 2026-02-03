@@ -89,7 +89,7 @@ public class ServerRegistrationService : IHostedService, IDisposable
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_executingTask == null || _tunnelService == null) return;
+        if (_executingTask == null) return;
 
         try
         {
@@ -97,10 +97,14 @@ public class ServerRegistrationService : IHostedService, IDisposable
         }
         finally
         {
-            await Task.WhenAny(_executingTask, Task.Delay(Timeout.Infinite, cancellationToken));
+            // Wait for the executing task to complete with a timeout
+            await Task.WhenAny(_executingTask, Task.Delay(TimeSpan.FromSeconds(3), cancellationToken));
         }
 
-        await _tunnelService.StopAsync(cancellationToken);
+        if (_tunnelService != null)
+        {
+            await _tunnelService.StopAsync(cancellationToken);
+        }
     }
 
     public void Dispose()

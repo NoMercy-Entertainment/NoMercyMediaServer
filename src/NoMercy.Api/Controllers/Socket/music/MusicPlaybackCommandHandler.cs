@@ -88,6 +88,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             return;
         }
 
+        state.PlayState = true;
         musicPlaybackService.StartPlaybackTimer(user);
     }
 
@@ -134,7 +135,16 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
     {
         if (state.CurrentItem == null) return;
 
-        if (state.Time >= 3000)
+        // If we're more than 3 seconds into the song, restart it
+        if (state.Time > 3000)
+        {
+            state.Time = 0;
+            return;
+        }
+
+        // If within 3 seconds (or at start), go to previous track from backlog
+        // If backlog is empty, just restart the current track
+        if (state.Backlog.Count == 0)
         {
             state.Time = 0;
             return;
@@ -142,25 +152,14 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
 
         musicPlaybackService.RemoveTimer(user.Id);
 
-        // Move current item to playlist
+        // Move current item back to the start of playlist
         state.Playlist.Insert(0, state.CurrentItem);
 
         // Move last backlog item to current
-        if (state.Backlog.Count > 0)
-        {
-            state.CurrentItem = state.Backlog.Last();
-            state.Backlog.RemoveAt(state.Backlog.Count - 1);
-            state.Time = 0;
-        }
-        else
-        {
-            // If backlog is empty, stop or go to the start of the playlist
-            state.Playlist.RemoveAt(0);
-            state.PlayState = false;
-            state.Time = 0;
-            state.CurrentItem = null;
-        }
-
+        state.CurrentItem = state.Backlog.Last();
+        state.Backlog.RemoveAt(state.Backlog.Count - 1);
+        state.Time = 0;
+        state.PlayState = true;
         musicPlaybackService.StartPlaybackTimer(user);
     }
 
@@ -184,12 +183,15 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             Disallows = new()
             {
                 Previous = true,
+                Next = true,
                 Resuming = true,
                 Pausing = true,
-                Muting = true,
-                Next = true,
                 Seeking = true,
-                Stopping = true
+                Stopping = true,
+                Muting = true,
+                TogglingShuffle = true,
+                TogglingRepeatContext = true,
+                TogglingRepeatTrack = true
             }
         };
     }

@@ -17,6 +17,10 @@ namespace NoMercy.Server;
 
 public static class Program
 {
+    private static int _shutdownAttempts;
+    private static readonly object ShutdownLock = new();
+    private static CancellationTokenSource? _applicationShutdownCts;
+
     public static async Task Main(string[] args)
     {
         AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
@@ -25,10 +29,25 @@ public static class Program
             Logger.App("UnhandledException " + exception);
         };
 
-        Console.CancelKeyPress += (_, _) =>
+        Console.CancelKeyPress += (_, e) =>
         {
-            Shutdown().Wait();
-            Environment.Exit(0);
+            lock (ShutdownLock)
+            {
+                _shutdownAttempts++;
+                
+                if (_shutdownAttempts == 1)
+                {
+                    e.Cancel = true; // Prevent immediate termination
+                    Logger.App("Graceful shutdown initiated... (Press Ctrl+C again to force shutdown)");
+                    _applicationShutdownCts?.Cancel();
+                }
+                else if (_shutdownAttempts >= 2)
+                {
+                    e.Cancel = false; // Allow immediate termination
+                    Logger.App("Force shutdown requested!");
+                    Environment.Exit(1);
+                }
+            }
         };
 
         await Parser.Default.ParseArguments<StartupOptions>(args)
@@ -77,6 +96,7 @@ public static class Program
 
         await Setup.Start.Init(startupTasks);
 
+        _applicationShutdownCts = new CancellationTokenSource();
         IWebHost app = CreateWebHostBuilder(options).Build();
 
         app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStarted.Register(() =>
@@ -97,7 +117,7 @@ public static class Program
 
                 await Dev.Run();
                 // await DriveMonitor.Start();
-                LibraryFileWatcher.Start();
+                // LibraryFileWatcher.Start();
                 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                     OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
@@ -111,7 +131,19 @@ public static class Program
             });
         });
 
-        await app.RunAsync();
+        app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStopping.Register(() =>
+        {
+            Logger.App("Application is shutting down...");
+        });
+
+        try
+        {
+            await app.RunAsync(_applicationShutdownCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            Logger.App("Shutdown completed");
+        }
     }
 
     private static async Task Shutdown()
@@ -153,6 +185,12 @@ public static class Program
                 services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
                 services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
                 services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
+                
+                // Configure host options with reduced shutdown timeout
+                services.Configure<HostOptions>(hostOptions =>
+                {
+                    hostOptions.ShutdownTimeout = TimeSpan.FromSeconds(10);
+                });
             })
             .ConfigureLogging(logging =>
             {

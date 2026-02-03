@@ -283,7 +283,10 @@ public class LibraryRepository(MediaContext context)
                 CreatedAt = tv.CreatedAt,
                 ColorPalette = tv._colorPalette,
                 NumberOfEpisodes = tv.NumberOfEpisodes,
-                EpisodesWithVideo = tv.Episodes.Count(e => e.VideoFiles.Any(v => v.Folder != null)),
+                EpisodesWithVideo = tv.Episodes
+                    .Where(e=> e.SeasonNumber > 0)
+                    .Count(e => e.VideoFiles
+                        .Any(v => v.Folder != null)),
                 CertificationRating = tv.CertificationTvs
                     .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                     .Select(c => c.Certification.Rating)
