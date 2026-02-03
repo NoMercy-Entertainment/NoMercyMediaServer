@@ -181,7 +181,7 @@ public record InfoResponseItemDto
 
         TitleSort = tmdbMovie.Title.TitleSort(tmdbMovie.ReleaseDate);
 
-        Duration = tmdbMovie.Runtime;
+        Duration = tmdbMovie.Runtime * 60;
 
         Year = tmdbMovie.ReleaseDate.ParseYear();
         VoteAverage = tmdbMovie.VoteAverage;
@@ -439,7 +439,7 @@ public record InfoResponseItemDto
             .Select(translation => new TranslationDto(translation));
 
         Duration = tmdbTv.EpisodeRunTime?.Length > 0
-            ? (tmdbTv.EpisodeRunTime.Average() * tmdbTv.NumberOfEpisodes).ToInt()
+            ? (tmdbTv.EpisodeRunTime.Average() * tmdbTv.NumberOfEpisodes).ToInt() * 60
             : 0;
 
         NumberOfItems = tmdbTv.NumberOfEpisodes;

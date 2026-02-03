@@ -69,7 +69,21 @@ public class MusicHub : ConnectionHub
     {
         MusicPlayerState? playerState = _musicPlayerStateManager.GetState(user.Id);
 
-        if (playerState is null || playerState.CurrentItem is null || playerState.Playlist.Count == 0)
+        // Special handling for type="track" - only works with existing player state
+        if (type.ToLower().Trim() == "track")
+        {
+            if (playerState?.CurrentItem is null)
+            {
+                // No active player state, cannot reorder - log and return
+                Logger.App("Cannot play track: No active playlist");
+                return;
+            }
+            await HandleTrackReorder(user, playerState, item);
+            return;
+        }
+
+        // Normal playlist handling
+        if (playerState?.CurrentItem is null || playerState.Playlist.Count == 0)
             await HandleNewPlayerState(user, type, listId, item, playlist);
         else if (IsCurrentPlaylist(playerState, type, listId, item.Id))
             await HandleExistingPlaylistState(user, playerState);
@@ -107,6 +121,85 @@ public class MusicHub : ConnectionHub
     private async Task HandleExistingPlaylistState(User user, MusicPlayerState state)
     {
         state.PlayState = !state.PlayState;
+        UpdateActionsDisallows(state);
+        _musicPlaybackService.StartPlaybackTimer(user);
+        await _musicPlaybackService.UpdatePlaybackState(user, state);
+    }
+
+    private async Task HandleTrackReorder(User user, MusicPlayerState state, PlaylistTrackDto item)
+    {
+        // Check if it's the current item
+        if (state.CurrentItem?.Id == item.Id)
+        {
+            // Already playing this track, just restart it
+            state.Time = 0;
+            state.PlayState = true;
+            UpdateActionsDisallows(state);
+            _musicPlaybackService.StartPlaybackTimer(user);
+            await _musicPlaybackService.UpdatePlaybackState(user, state);
+            return;
+        }
+        
+        // Find the track in the current playlist
+        int playlistIndex = state.Playlist.FindIndex(t => t.Id == item.Id);
+        
+        if (playlistIndex != -1)
+        {
+            // Track is in the upcoming playlist
+            // Add current item to backlog
+            if (state.CurrentItem != null)
+            {
+                state.Backlog.Add(state.CurrentItem);
+            }
+            
+            // Add all tracks BEFORE the selected one to backlog (they're being skipped over)
+            for (int i = 0; i < playlistIndex; i++)
+            {
+                state.Backlog.Add(state.Playlist[i]);
+            }
+            
+            // Remove everything up to and including the selected track
+            state.Playlist.RemoveRange(0, playlistIndex + 1);
+            
+            // Set the selected track as current
+            // The remaining playlist continues naturally from here
+            state.CurrentItem = item;
+            state.Time = 0;
+            state.PlayState = true;
+            state.Duration = item.Duration.ToMilliSeconds();
+        }
+        else
+        {
+            // Check if track is in backlog (going backwards)
+            int backlogIndex = state.Backlog.FindIndex(t => t.Id == item.Id);
+            
+            if (backlogIndex != -1)
+            {
+                // Track is in backlog - going backwards
+                // Remove it from backlog
+                state.Backlog.RemoveAt(backlogIndex);
+                
+                // Add current item to backlog
+                if (state.CurrentItem != null)
+                {
+                    state.Backlog.Add(state.CurrentItem);
+                }
+                
+                // Set the selected track as current
+                state.CurrentItem = item;
+                state.Time = 0;
+                state.PlayState = true;
+                state.Duration = item.Duration.ToMilliSeconds();
+            }
+            else
+            {
+                // Track not found in current queue at all
+                Logger.App($"Track {item.Id} not found in current queue");
+                return;
+            }
+        }
+        
+        UpdateActionsDisallows(state);
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, state);
     }
@@ -116,6 +209,7 @@ public class MusicHub : ConnectionHub
     {
         UpdateDeviceInfo(state);
         UpdatePlaylistInfo(state, type, listId, item, playlist);
+        UpdateActionsDisallows(state);
 
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, state);
@@ -144,12 +238,29 @@ public class MusicHub : ConnectionHub
         state.Backlog.Add(item);
         state.Time = 0;
         state.Duration = item.Duration.ToMilliSeconds();
+    }
+
+    private void UpdateActionsDisallows(MusicPlayerState state)
+    {
         state.Actions = new()
         {
             Disallows = new()
             {
-                Previous = true,
-                Resuming = false
+                // Can't pause if already paused
+                Pausing = !state.PlayState,
+                // Can't resume if already playing
+                Resuming = state.PlayState,
+                // Can't go to previous if backlog is empty (no tracks to go back to)
+                Previous = state.Backlog.Count <= 0,
+                // Can't go to next if playlist is empty and repeat is off
+                Next = state.Playlist.Count <= 0 && state.Repeat == "off",
+                // Basic actions that are always allowed during playback
+                Seeking = false,
+                Stopping = false,
+                Muting = false,
+                TogglingShuffle = false,
+                TogglingRepeatContext = false,
+                TogglingRepeatTrack = false
             }
         };
     }
@@ -185,6 +296,7 @@ public class MusicHub : ConnectionHub
                 state.VolumePercentage = device.VolumePercent;
             }
 
+        UpdateActionsDisallows(state);
         await _musicPlaybackService.UpdatePlaybackState(user, state);
     }
 
@@ -309,7 +421,7 @@ public class MusicHub : ConnectionHub
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            playerState?.Actions.Disallows.Resuming = false;
+            UpdateActionsDisallows(playerState);
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);
         }
         else
@@ -370,8 +482,15 @@ public class MusicHub : ConnectionHub
                     Disallows = new()
                     {
                         Previous = true,
+                        Next = true,
                         Resuming = true,
-                        Pausing = true
+                        Pausing = true,
+                        Seeking = true,
+                        Stopping = true,
+                        Muting = true,
+                        TogglingShuffle = true,
+                        TogglingRepeatContext = true,
+                        TogglingRepeatTrack = true
                     }
                 };
             }
@@ -388,9 +507,18 @@ public class MusicHub : ConnectionHub
                 {
                     Disallows = new()
                     {
-                        Previous = true,
-                        Resuming = true,
-                        Pausing = true
+                        Pausing = true,
+                        Resuming = false,
+                        Previous = playerState.CurrentItem == null || playerState.Backlog.Count <= 1,
+                        Next = playerState.CurrentItem == null || 
+                               (playerState.Playlist.IndexOf(playerState.CurrentItem) >= playerState.Playlist.Count - 1 && 
+                                playerState.Repeat == "off"),
+                        Seeking = false,
+                        Stopping = false,
+                        Muting = false,
+                        TogglingShuffle = false,
+                        TogglingRepeatContext = false,
+                        TogglingRepeatTrack = false
                     }
                 };
             }

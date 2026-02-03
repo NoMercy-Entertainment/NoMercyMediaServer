@@ -143,8 +143,9 @@ public class TasksController : BaseController
             .ToImmutableList();
 
         List<EncodeVideoJob> encoderJobs = jobs
-            .Select(job => job.Payload.FromJson<EncodeVideoJob>()!)
-            .ToList();
+            .Select(job => job.Payload.FromJson<EncodeVideoJob>())
+            .Where(job => job is not null)
+            .ToList()!;
 
         List<Ulid> folderIds = encoderJobs.Select(j => j.FolderId).ToList();
 

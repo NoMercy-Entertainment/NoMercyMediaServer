@@ -23,10 +23,46 @@ public record PlaylistTrackDto
     [JsonProperty("type")] public string Type { get; set; }
 
     [JsonProperty("album_name")] public string? AlbumName { get; set; }
-    // [JsonProperty("lyrics")] public Lyric[]? Lyrics { get; set; }
+    [JsonProperty("lyrics")] public Lyric[]? Lyrics { get; set; }
 
     [JsonProperty("album_track")] public List<AlbumDto> Album { get; set; }
     [JsonProperty("artist_track")] public List<ArtistDto> Artist { get; set; }
+
+    public PlaylistTrackDto(Track track, string country)
+    {
+        Image? img = track.AlbumTrack.FirstOrDefault()?.Album.AlbumArtist.FirstOrDefault()?.Artist.Images
+            .FirstOrDefault(image => image.Type == "background");
+        Id = track.Id;
+        Name = track.Name;
+        Backdrop = img?.FilePath is not null
+            ? new Uri($"/images/music{img?.FilePath}", UriKind.Relative).ToString()
+            : null;
+        Cover = track.AlbumTrack.FirstOrDefault()?.Album.Cover ?? track.Cover;
+        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Path = new Uri($"/{track.FolderId}{track.Folder}{track.Filename}",
+            UriKind.Relative).ToString();
+        Link = new($"/music/tracks/{track.Id}", UriKind.Relative);
+        ColorPalette = track.AlbumTrack.FirstOrDefault()?.Album.ColorPalette;
+        if (ColorPalette is not null) ColorPalette.Backdrop = img?.ColorPalette?.Image;
+        Date = track.Date;
+        Disc = track.DiscNumber;
+        Track = track.TrackNumber;
+        Duration = track.Duration;
+        Favorite = track.TrackUser.Count != 0;
+        Quality = track.Quality;
+        Lyrics = track.Lyrics;
+        Type = "track";
+        AlbumName = track.AlbumTrack.FirstOrDefault()?.Album.Name;
+
+        Album = track.AlbumTrack
+            .DistinctBy(trackAlbum => trackAlbum.AlbumId)
+            .Select(albumTrack => new AlbumDto(albumTrack, country))
+            .ToList();
+
+        Artist = track.ArtistTrack
+            .Select(artistTrack => new ArtistDto(artistTrack, country))
+            .ToList();
+    }
 
     public PlaylistTrackDto(ArtistTrack artistTrack, string country)
     {
@@ -52,7 +88,7 @@ public record PlaylistTrackDto
         Duration = artistTrack.Track.Duration;
         Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
-        // Lyrics = artistTrack.Track.Lyrics;
+        Lyrics = artistTrack.Track.Lyrics;
         Type = "track";
         AlbumName = artistTrack.Track.AlbumTrack?.FirstOrDefault()?.Album.Name;
 
@@ -89,7 +125,7 @@ public record PlaylistTrackDto
         Duration = trackTrack.Track.Duration;
         Favorite = trackTrack.Track.TrackUser.Count != 0;
         Quality = trackTrack.Track.Quality;
-        // Lyrics = trackTrack.Track.Lyrics;
+        Lyrics = trackTrack.Track.Lyrics;
         Type = "track";
         AlbumName = trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
 
@@ -126,7 +162,7 @@ public record PlaylistTrackDto
         Duration = artistTrack.Track.Duration;
         Favorite = artistTrack.Track.TrackUser.Count != 0;
         Quality = artistTrack.Track.Quality;
-        // Lyrics = artistTrack.Track.Lyrics;
+        Lyrics = artistTrack.Track.Lyrics;
         Type = "track";
         AlbumName = artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
 
@@ -162,7 +198,7 @@ public record PlaylistTrackDto
         Duration = genreTrack.Track.Duration;
         Favorite = genreTrack.Track.TrackUser.Count != 0;
         Quality = genreTrack.Track.Quality;
-        // Lyrics = genreTrack.Track.Lyrics;
+        Lyrics = genreTrack.Track.Lyrics;
         Type = "track";
         AlbumName = genreTrack.Track.AlbumTrack.FirstOrDefault()?.Album.Name;
 

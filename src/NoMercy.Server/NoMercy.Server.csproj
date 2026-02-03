@@ -35,7 +35,7 @@
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
 
-        <Version>0.1.227</Version>
+        <Version>0.1.228</Version>
         <AssemblyVersion>$(Version).0</AssemblyVersion>
         <FileVersion>$(Version).0</FileVersion>
     </PropertyGroup>
@@ -105,4 +105,9 @@
     <ItemGroup>
         <Folder Include="wwwroot\" />
     </ItemGroup>
+
+    <PropertyGroup>
+        <ServerGarbageCollection>true</ServerGarbageCollection>
+    </PropertyGroup>
+
 </Project>
