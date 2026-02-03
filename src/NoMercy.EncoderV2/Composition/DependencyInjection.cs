@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NoMercy.EncoderV2.Execution;
 using NoMercy.EncoderV2.FFmpeg;
 using NoMercy.EncoderV2.Hardware;
+using NoMercy.EncoderV2.PostProcessing;
 using NoMercy.EncoderV2.Profiles;
 using NoMercy.EncoderV2.Progress;
 using NoMercy.EncoderV2.Repositories;
@@ -45,6 +46,9 @@ public static class DependencyInjection
         services.AddScoped<IAudioStreamProcessor, AudioStreamProcessor>();
         services.AddScoped<IVideoStreamProcessor, VideoStreamProcessor>();
         services.AddScoped<ISubtitleStreamProcessor, SubtitleStreamProcessor>();
+
+        // Post-Processing (Scoped)
+        services.AddScoped<IFontExtractor, FontExtractor>();
 
         // FFmpeg Services (Scoped)
         services.AddScoped<IFFmpegService, FFmpegService>();
