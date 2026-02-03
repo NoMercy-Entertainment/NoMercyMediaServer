@@ -52,7 +52,7 @@ public static class Cpu
     }
 
 
-    internal static List<string> Names()
+    public static List<string> Names()
     {
         if (Software.IsWindows) return GetCpuNamesWindows();
 
