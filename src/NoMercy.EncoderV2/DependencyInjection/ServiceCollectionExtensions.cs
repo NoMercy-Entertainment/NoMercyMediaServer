@@ -67,6 +67,7 @@ public static class ServiceCollectionExtensions
 
         // Task distribution
         services.AddScoped<ITaskSplitter, TaskSplitter>();
+        services.AddScoped<INodeSelector, NodeSelector>();
 
         // Profiles
         services.AddSingleton<IProfileRegistry>(sp =>

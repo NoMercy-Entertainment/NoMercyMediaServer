@@ -65,6 +65,7 @@ public static class DependencyInjection
 
         // Task Distribution (Scoped)
         services.AddScoped<ITaskSplitter, TaskSplitter>();
+        services.AddScoped<INodeSelector, NodeSelector>();
 
         // Hardware Acceleration (Singleton - GPU detection is expensive)
         services.AddSingleton<IHardwareAccelerationService, HardwareAccelerationService>();
