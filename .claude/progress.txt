@@ -339,7 +339,69 @@
 - ✅ PostProcessor
 
 **Next Steps (Phase 5: Task Distribution):**
-- Implement TaskSplitter (Job → Task decomposition)
+- ~~Implement TaskSplitter (Job → Task decomposition)~~ ✓
 - Implement NodeSelector (capability matching)
 - Implement JobDispatcher (queue integration)
 - Implement NodeHealthMonitor (30-second health checks)
+
+---
+
+### 2026-02-03: TaskSplitter Implementation (Phase 5)
+
+**Task Completed:** Implement TaskSplitter for job-to-task decomposition
+
+**Changes Made:**
+
+1. Enhanced `ITaskSplitter.cs` in `src/NoMercy.EncoderV2/Tasks/`
+   - Added `TaskSplittingOptions` for configurable splitting behavior
+   - Added `TaskSplitResult` with metadata (parallelism, critical path, HDR sharing)
+   - Added `Optimal` strategy that auto-selects best approach
+   - Extended `EncodingTaskDefinition` with Id, Description, OutputPath, RequiresGpu, EstimatedMemoryMb
+   - Added `DetermineOptimalStrategy()` method
+   - Added `ToEncodingTasks()` for database entity conversion
+
+2. Implemented `TaskSplitter.cs` with full job decomposition:
+   - **SingleTask Strategy**: Full encode as one task (simple jobs)
+   - **ByResolution Strategy**: Separate task per quality level (multi-quality encoding)
+   - **ByStreamType Strategy**: Split video/audio/subtitle processing
+   - **BySegment Strategy**: Time-based splitting for long HLS content
+   - **Optimal Strategy**: Auto-selects based on source characteristics
+
+3. Key Features:
+   - Shared HDR conversion task (PRD G8: HDR→SDR executed once, shared across qualities)
+   - Post-processing tasks: fonts, chapters, sprites, validation, playlist generation
+   - Task dependency tracking with DAG support
+   - Weight calculation using `TaskWeighting` utilities
+   - Hardware requirements tracking (GPU, memory estimates)
+   - Uses proper `EncodingTaskType` constants from database models
+   - Language-based audio task splitting option
+
+4. Updated Project Configuration (`NoMercy.EncoderV2.csproj`):
+   - Enabled `Tasks/ITaskSplitter.cs` and `Tasks/TaskSplitter.cs`
+   - Enabled `Core/TaskWeighting.cs`
+   - Excluded other Tasks/*.cs files with broken dependencies
+
+5. Updated DI Configuration:
+   - Added `using NoMercy.EncoderV2.Tasks;` to ServiceCollectionExtensions.cs
+   - Registered `ITaskSplitter` as scoped service
+
+**Task Distribution Strategies:**
+| Strategy | Best For | Example |
+|----------|----------|---------|
+| SingleTask | Simple 1-quality jobs | Single 1080p output |
+| ByResolution | Multi-quality encoding | 4K + 1080p + 720p outputs |
+| ByStreamType | Parallel video/audio | When tasks can run independently |
+| BySegment | Very long HLS content | >2 hour movies |
+| Optimal | Any job | Auto-selects based on analysis |
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+
+**Phase 5 Progress (Task Distribution):**
+- ✅ TaskSplitter (Job → Task decomposition)
+- ❌ NodeSelector (capability matching)
+- ❌ JobDispatcher (queue integration)
+- ❌ NodeHealthMonitor (30-second health checks)
+
+**Next Steps:**
+- Implement NodeSelector for capability-based node matching
