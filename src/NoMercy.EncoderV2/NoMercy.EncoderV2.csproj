@@ -45,8 +45,11 @@
       <!-- Hardware - references GpuAccelerator from database -->
       <Compile Remove="Hardware\**\*.cs" />
 
-      <!-- Core - references database models -->
-      <Compile Remove="Core\**\*.cs" />
+      <!-- Core - exclude files with broken dependencies, keep TaskWeighting -->
+      <Compile Remove="Core\Contracts\IChapterWriter.cs" />
+      <Compile Remove="Core\Contracts\TaskContract.cs" />
+      <Compile Remove="Core\Dictionaries\IsoLanguageDictionary.cs" />
+      <Compile Remove="Core\TesseractLanguageDownloader.cs" />
 
       <!-- Pipeline - references EncodingJob -->
       <Compile Remove="Pipeline\**\*.cs" />
@@ -54,8 +57,15 @@
       <!-- Progress - references EncodingProgress from database -->
       <Compile Remove="Progress\**\*.cs" />
 
-      <!-- Tasks - reference database models and Shared namespace -->
-      <Compile Remove="Tasks\**\*.cs" />
+      <!-- Tasks - exclude files with broken dependencies, keep TaskSplitter -->
+      <Compile Remove="Tasks\ConvertSubtitle.cs" />
+      <Compile Remove="Tasks\DetectFrameCrop.cs" />
+      <Compile Remove="Tasks\ExtractChapters.cs" />
+      <Compile Remove="Tasks\ExtractFonts.cs" />
+      <Compile Remove="Tasks\GenerateFingerprint.cs" />
+      <Compile Remove="Tasks\GenerateSprite.cs" />
+      <Compile Remove="Tasks\GetDuration.cs" />
+      <Compile Remove="Tasks\TemplateTask.cs" />
 
       <!-- Composition - references excluded namespaces -->
       <Compile Remove="Composition\**\*.cs" />

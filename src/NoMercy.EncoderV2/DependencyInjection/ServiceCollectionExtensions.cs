@@ -6,6 +6,7 @@ using NoMercy.EncoderV2.Processing;
 using NoMercy.EncoderV2.Profiles;
 using NoMercy.EncoderV2.Services;
 using NoMercy.EncoderV2.Specifications.HLS;
+using NoMercy.EncoderV2.Tasks;
 using NoMercy.EncoderV2.Validation;
 
 namespace NoMercy.EncoderV2.DependencyInjection;
@@ -63,6 +64,9 @@ public static class ServiceCollectionExtensions
 
         // HDR processing
         services.AddScoped<IHdrProcessor, HdrProcessor>();
+
+        // Task distribution
+        services.AddScoped<ITaskSplitter, TaskSplitter>();
 
         // Profiles
         services.AddSingleton<IProfileRegistry>(sp =>
