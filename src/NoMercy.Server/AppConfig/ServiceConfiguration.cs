@@ -156,6 +156,7 @@ public static class ServiceConfiguration
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();
+        services.AddEncodingProgressHubServices();
 
         services.AddHostedService<ServerRegistrationService>(_ =>
         {
