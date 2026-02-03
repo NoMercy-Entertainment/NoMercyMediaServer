@@ -49,6 +49,7 @@ public static class DependencyInjection
 
         // Post-Processing (Scoped)
         services.AddScoped<IFontExtractor, FontExtractor>();
+        services.AddScoped<ISpriteGenerator, SpriteGenerator>();
 
         // FFmpeg Services (Scoped)
         services.AddScoped<IFFmpegService, FFmpegService>();

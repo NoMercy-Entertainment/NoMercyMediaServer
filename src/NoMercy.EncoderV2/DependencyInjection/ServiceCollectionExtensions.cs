@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
 
         // Post-processing services
         services.AddScoped<IChapterProcessor, ChapterProcessor>();
+        services.AddScoped<ISpriteGenerator, SpriteGenerator>();
 
         // Profiles
         services.AddSingleton<IProfileRegistry>(sp =>
