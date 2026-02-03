@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.EncoderV2.Abstractions;
 using NoMercy.EncoderV2.Factories;
+using NoMercy.EncoderV2.PostProcessing;
 using NoMercy.EncoderV2.Profiles;
 using NoMercy.EncoderV2.Services;
 
@@ -44,6 +45,9 @@ public static class ServiceCollectionExtensions
         // Factories
         services.AddSingleton<ICodecFactory, CodecFactory>();
         services.AddSingleton<IContainerFactory, ContainerFactory>();
+
+        // Post-processing services
+        services.AddScoped<IChapterProcessor, ChapterProcessor>();
 
         // Profiles
         services.AddSingleton<IProfileRegistry>(sp =>
