@@ -706,12 +706,12 @@ All endpoints return `StatusResponseDto<T>` with:
 **Phase 7 Progress (API & Integration):**
 - ✅ ProfileController (CRUD endpoints)
 - ✅ EncodingController (job submission)
-- ❌ ProgressHub (SignalR real-time updates)
-- ❌ Integrate with existing Queue system
+- ✅ ProgressHub (SignalR real-time updates)
+- ✅ Integrate with existing Queue system
 - ❌ Add API documentation (Swagger)
 
 **Next Steps:**
-- Implement ProgressHub for SignalR real-time updates
+- Add API documentation (Swagger)
 
 ---
 
@@ -757,11 +757,11 @@ All endpoints return `StatusResponseDto<T>` with:
 - ✅ ProfileController (CRUD endpoints)
 - ✅ EncodingController (job submission)
 - ✅ ProgressHub (SignalR real-time updates)
-- ❌ Integrate with existing Queue system
+- ✅ Integrate with existing Queue system
 - ❌ Add API documentation (Swagger)
 
 **Next Steps:**
-- Integrate with existing Queue system
+- Add API documentation (Swagger)
 
 ---
 
@@ -837,8 +837,97 @@ All endpoints return `StatusResponseDto<T>` with:
 - ✅ ProfileController (CRUD endpoints)
 - ✅ EncodingController (job submission)
 - ✅ ProgressHub (SignalR real-time updates)
-- ❌ Integrate with existing Queue system
+- ✅ Integrate with existing Queue system
 - ❌ Add API documentation (Swagger)
 
 **Next Steps:**
-- Integrate with existing Queue system
+- Add API documentation (Swagger)
+
+---
+
+### 2026-02-03: Queue System Integration (Phase 7)
+
+**Task Completed:** Integrate EncoderV2 with existing Queue system
+
+**Changes Made:**
+
+1. Created `EncoderV2TaskWorker.cs` in `src/NoMercy.EncoderV2/Workers/`
+   - BackgroundService that polls QueueContext for pending EncodingTask records
+   - Configurable concurrent task execution via `EncoderV2WorkerOptions`
+   - Task-specific execution handlers for all EncodingTaskType variants:
+     - VideoEncoding, AudioEncoding, SubtitleExtraction
+     - FontExtraction, ChapterExtraction, SpriteGeneration
+     - HdrConversion, PlaylistGeneration, Validation
+   - Progress broadcasting to SignalR clients during task execution
+   - Graceful shutdown with running task completion
+
+2. Created `IEncodingProgressBroadcaster.cs` interface:
+   - Defines contract for broadcasting progress updates
+   - Methods: SendTaskProgressAsync, SendTaskStateChangeAsync,
+     SendJobStateChangeAsync, SendNodeStatusChangeAsync,
+     SendJobCreatedAsync, SendJobRemovedAsync
+
+3. Created `IEncodingTaskExecutor.cs` interface:
+   - Optional interface for custom task executors
+   - Allows injection of specialized task handling
+
+4. Created `EncodingProgressBroadcasterAdapter.cs` in Server project:
+   - Implements `IEncodingProgressBroadcaster`
+   - Bridges EncoderV2 worker with `IEncodingProgressHubService`
+   - Maps EncodingProgress entities to SignalR DTOs
+
+5. Updated `ServiceCollectionExtensions.cs`:
+   - Added `AddEncoderV2TaskWorker()` extension methods
+   - Supports custom `EncoderV2WorkerOptions` configuration
+   - Registers worker as hosted service
+
+6. Updated `EncodingProgressHubServiceExtensions.cs`:
+   - Added `IEncodingProgressBroadcaster` registration
+   - Added `AddEncoderV2()` and `AddEncoderV2TaskWorker()` calls
+   - Default configuration: single concurrent task, 1s polling interval
+
+7. Added project reference in `NoMercy.Server.csproj`:
+   - Reference to `NoMercy.EncoderV2` project
+
+**Worker Configuration:**
+```csharp
+services.AddEncoderV2TaskWorker(options =>
+{
+    options.MaxConcurrentTasks = 1;
+    options.PollingIntervalMs = 1000;
+    options.LocalTasksOnly = true;
+});
+```
+
+**Integration Architecture:**
+```
++-------------------------------------------------------------+
+| NoMercy.Server                                               |
++-------------------------------------------------------------+
+| EncoderV2TaskWorker (BackgroundService)                     |
+|   +-- Polls QueueContext.EncodingTasks                      |
+|   +-- Uses IJobDispatcher to manage task lifecycle          |
+|   +-- Broadcasts via IEncodingProgressBroadcaster           |
+|                                                              |
+| EncodingProgressBroadcasterAdapter                          |
+|   +-- Implements IEncodingProgressBroadcaster               |
+|   +-- Delegates to IEncodingProgressHubService (SignalR)    |
+|                                                              |
+| EncodingProgressHub                                          |
+|   +-- WebSocket endpoint for real-time updates              |
++-------------------------------------------------------------+
+```
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+- NoMercy.Server: BUILD SUCCEEDED
+
+**Phase 7 Progress (API & Integration):**
+- ✅ ProfileController (CRUD endpoints)
+- ✅ EncodingController (job submission)
+- ✅ ProgressHub (SignalR real-time updates)
+- ✅ Integrate with existing Queue system
+- ❌ Add API documentation (Swagger)
+
+**Next Steps:**
+- Add API documentation (Swagger)
