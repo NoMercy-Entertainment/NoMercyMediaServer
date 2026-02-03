@@ -655,8 +655,60 @@
 - ✅ NodeCapabilities (pre-existing via CapabilityDetector)
 
 **Next Steps (Phase 7: API & Integration):**
-- Create ProfileController (CRUD endpoints)
+- ~~Create ProfileController (CRUD endpoints)~~ ✓
 - Create EncodingController (job submission)
 - Create ProgressHub (SignalR real-time updates)
 - Integrate with existing Queue system
 - Add API documentation (Swagger)
+
+---
+
+### 2026-02-03: ProfilesController Implementation (Phase 7)
+
+**Task Completed:** Create ProfilesController for EncoderV2 CRUD endpoints
+
+**Changes Made:**
+
+1. Created `ProfilesController.cs` in `src/NoMercy.Api/Controllers/V2/Dashboard/`
+   - REST API v2 controller for encoding profile management
+   - Inherits from `BaseController` for standardized error responses
+   - Uses `[ApiVersion(2.0)]` for API versioning
+   - Uses `IProfileRepository` from EncoderV2 for database operations
+   - Requires moderator authorization for all endpoints
+
+2. Endpoints Implemented:
+   - `GET /api/v2/dashboard/encoder/profiles` - List all profiles
+   - `GET /api/v2/dashboard/encoder/profiles/{id}` - Get profile by ULID
+   - `POST /api/v2/dashboard/encoder/profiles` - Create new profile
+   - `PATCH /api/v2/dashboard/encoder/profiles/{id}` - Update existing profile
+   - `DELETE /api/v2/dashboard/encoder/profiles/{id}` - Delete profile
+   - `GET /api/v2/dashboard/encoder/profiles/default` - Get default profile
+   - `POST /api/v2/dashboard/encoder/profiles/{id}/duplicate` - Duplicate profile
+
+3. Request DTOs Created:
+   - `CreateProfileRequest`: Name (required), Container, Param, VideoProfiles, AudioProfiles, SubtitleProfiles
+   - `UpdateProfileRequest`: All fields optional for partial updates
+   - `DuplicateProfileRequest`: Optional new name for duplicated profile
+
+4. Updated `NoMercy.Api.csproj`:
+   - Added project reference to `NoMercy.EncoderV2`
+
+**API Response Format:**
+All endpoints return `StatusResponseDto<T>` with:
+- `status`: "ok" or "error"
+- `data`: Response payload
+- `message`: Human-readable message
+- `args`: Message interpolation arguments
+
+**Build Status:**
+- NoMercy.Api: BUILD SUCCEEDED
+
+**Phase 7 Progress (API & Integration):**
+- ✅ ProfileController (CRUD endpoints)
+- ❌ EncodingController (job submission)
+- ❌ ProgressHub (SignalR real-time updates)
+- ❌ Integrate with existing Queue system
+- ❌ Add API documentation (Swagger)
+
+**Next Steps:**
+- Implement EncodingController for job submission endpoints
