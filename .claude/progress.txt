@@ -705,10 +705,60 @@ All endpoints return `StatusResponseDto<T>` with:
 
 **Phase 7 Progress (API & Integration):**
 - ✅ ProfileController (CRUD endpoints)
-- ❌ EncodingController (job submission)
+- ✅ EncodingController (job submission)
 - ❌ ProgressHub (SignalR real-time updates)
 - ❌ Integrate with existing Queue system
 - ❌ Add API documentation (Swagger)
 
 **Next Steps:**
-- Implement EncodingController for job submission endpoints
+- Implement ProgressHub for SignalR real-time updates
+
+---
+
+### 2026-02-03: EncodingController Implementation (Phase 7)
+
+**Task Completed:** Create EncodingController for job submission endpoints
+
+**Changes Made:**
+
+1. Created `EncodingController.cs` in `src/NoMercy.Api/Controllers/V2/Dashboard/`
+   - REST API v2 controller for encoding job management
+   - Inherits from `BaseController` for standardized error responses
+   - Uses `[ApiVersion(2.0)]` for API versioning
+   - Uses `IJobDispatcher` from EncoderV2 for job operations
+   - Requires moderator authorization for all endpoints
+
+2. Job Management Endpoints:
+   - `GET /api/v2/dashboard/encoder/jobs` - List all jobs with optional state filter
+   - `GET /api/v2/dashboard/encoder/jobs/{id}` - Get job status with progress details
+   - `POST /api/v2/dashboard/encoder/jobs` - Submit new encoding job
+   - `POST /api/v2/dashboard/encoder/jobs/{id}/cancel` - Cancel job and pending tasks
+   - `POST /api/v2/dashboard/encoder/jobs/{id}/retry` - Retry failed tasks
+
+3. Task Management Endpoints (for encoder nodes):
+   - `GET /api/v2/dashboard/encoder/jobs/tasks/next` - Get next pending task
+   - `POST /api/v2/dashboard/encoder/jobs/tasks/{taskId}/assign` - Assign task to node
+   - `POST /api/v2/dashboard/encoder/jobs/tasks/{taskId}/start` - Mark task as started
+   - `POST /api/v2/dashboard/encoder/jobs/tasks/{taskId}/complete` - Mark task as completed
+   - `POST /api/v2/dashboard/encoder/jobs/tasks/{taskId}/fail` - Mark task as failed
+   - `POST /api/v2/dashboard/encoder/jobs/tasks/{taskId}/progress` - Record task progress
+
+4. Request DTOs Created:
+   - `SubmitJobRequest`: Job submission with profile, priority, strategies, options
+   - `AssignTaskRequest`: Task-to-node assignment
+   - `CompleteTaskRequest`: Task completion with optional output file
+   - `FailTaskRequest`: Task failure with error message
+   - `RecordProgressRequest`: Progress data (fps, speed, bitrate, time, frames)
+
+**Build Status:**
+- NoMercy.Api: BUILD SUCCEEDED
+
+**Phase 7 Progress (API & Integration):**
+- ✅ ProfileController (CRUD endpoints)
+- ✅ EncodingController (job submission)
+- ❌ ProgressHub (SignalR real-time updates)
+- ❌ Integrate with existing Queue system
+- ❌ Add API documentation (Swagger)
+
+**Next Steps:**
+- Implement ProgressHub for SignalR real-time updates
