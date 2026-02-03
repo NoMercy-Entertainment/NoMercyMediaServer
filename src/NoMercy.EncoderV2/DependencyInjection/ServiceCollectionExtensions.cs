@@ -4,8 +4,10 @@ using NoMercy.EncoderV2.Factories;
 using NoMercy.EncoderV2.PostProcessing;
 using NoMercy.EncoderV2.Processing;
 using NoMercy.EncoderV2.Profiles;
+using NoMercy.EncoderV2.Repositories;
 using NoMercy.EncoderV2.Services;
 using NoMercy.EncoderV2.Specifications.HLS;
+using NoMercy.EncoderV2.Streams;
 using NoMercy.EncoderV2.Tasks;
 using NoMercy.EncoderV2.Validation;
 
@@ -68,6 +70,13 @@ public static class ServiceCollectionExtensions
         // Task distribution
         services.AddScoped<ITaskSplitter, TaskSplitter>();
         services.AddScoped<INodeSelector, NodeSelector>();
+        services.AddScoped<IJobDispatcher, JobDispatcher>();
+
+        // Stream analysis
+        services.AddScoped<IStreamAnalyzer, StreamAnalyzer>();
+
+        // Repositories
+        services.AddScoped<IProfileRepository, ProfileRepository>();
 
         // Profiles
         services.AddSingleton<IProfileRegistry>(sp =>

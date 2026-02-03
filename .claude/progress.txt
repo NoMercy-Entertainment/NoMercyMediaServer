@@ -399,9 +399,73 @@
 
 **Phase 5 Progress (Task Distribution):**
 - ✅ TaskSplitter (Job → Task decomposition)
-- ❌ NodeSelector (capability matching)
+- ✅ NodeSelector (capability matching)
 - ❌ JobDispatcher (queue integration)
 - ❌ NodeHealthMonitor (30-second health checks)
 
 **Next Steps:**
-- Implement NodeSelector for capability-based node matching
+- ~~Implement NodeSelector for capability-based node matching~~ ✓
+
+---
+
+### 2026-02-03: NodeSelector Implementation (Phase 5)
+
+**Task Completed:** Implement NodeSelector for capability-based node matching
+
+**Changes Made:**
+
+1. Created `INodeSelector.cs` in `src/NoMercy.EncoderV2/Tasks/`
+   - Interface for node selection and capability matching
+   - Enums for selection strategies: LeastLoaded, BestCapability, RoundRobin, Fastest, Auto
+   - DTOs for selection options, results, and batch assignments:
+     - `NodeSelectionOptions`: Strategy, GPU requirements, memory, heartbeat age
+     - `NodeSelectionResult`: Selected node with score, alternatives, reason
+     - `NodeCandidate`: Node with score breakdown and warnings
+     - `BatchAssignmentResult`: For assigning multiple tasks
+     - `TaskAssignment`, `UnassignedTask`: Individual assignment results
+
+2. Implemented `NodeSelector.cs` with capability matching:
+   - **LeastLoaded Strategy**: Select node with lowest current load percentage
+   - **BestCapability Strategy**: Select node with highest hardware score
+   - **RoundRobin Strategy**: Distribute tasks evenly across nodes
+   - **Fastest Strategy**: Prefer GPU nodes, then highest CPU cores
+   - **Auto Strategy**: Automatically choose based on task characteristics
+
+3. Key Features:
+   - `SelectNode()`: Select best node for a single task
+   - `SelectNodesForTasks()`: Batch assignment with capacity tracking
+   - `CanNodeHandleTask()`: Check if node meets task requirements
+   - `CalculateNodeScore()`: Weighted scoring across multiple factors
+   - `GetCapableNodes()`: List all nodes that can handle a task
+   - `FilterHealthyNodes()`: Filter by heartbeat age
+   - `DetermineOptimalStrategy()`: Auto-select strategy per task type
+
+4. Scoring System (weighted factors):
+   - GPU Match: 30% (NVIDIA bonus, GPU requirement match)
+   - Capacity: 25% (available slots vs max concurrent tasks)
+   - Memory: 15% (meets requirement + excess ratio)
+   - CPU: 15% (normalized core count)
+   - Acceleration: 15% (NVENC, QSV, VAAPI, VideoToolbox support)
+
+5. Health Checks:
+   - Node enabled/healthy status
+   - Last heartbeat age validation (configurable, default 60s)
+   - Capacity check (exclude full nodes option)
+   - Memory requirement validation
+
+6. Updated DI Configuration:
+   - Added `INodeSelector` registration to `DependencyInjection/ServiceCollectionExtensions.cs`
+   - Added `INodeSelector` registration to `Composition/DependencyInjection.cs`
+   - Both registered as scoped services
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+
+**Phase 5 Progress (Task Distribution):**
+- ✅ TaskSplitter (Job → Task decomposition)
+- ✅ NodeSelector (capability matching)
+- ❌ JobDispatcher (queue integration)
+- ❌ NodeHealthMonitor (30-second health checks)
+
+**Next Steps:**
+- Implement JobDispatcher for queue integration

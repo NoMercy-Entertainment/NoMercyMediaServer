@@ -28,7 +28,7 @@
       <!-- Repositories - reference EncodingJob/EncodingTask from database -->
       <Compile Remove="Repositories\IJobRepository.cs" />
       <Compile Remove="Repositories\JobRepository.cs" />
-      <Compile Remove="Repositories\ProfileRepository.cs" />
+      <!-- ProfileRepository enabled for JobDispatcher support -->
 
       <!-- Execution - reference EncodingJob -->
       <Compile Remove="Execution\**\*.cs" />
