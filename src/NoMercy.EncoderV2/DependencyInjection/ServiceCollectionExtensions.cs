@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NoMercy.EncoderV2.Abstractions;
 using NoMercy.EncoderV2.Factories;
 using NoMercy.EncoderV2.PostProcessing;
@@ -72,6 +73,22 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INodeSelector, NodeSelector>();
         services.AddScoped<IJobDispatcher, JobDispatcher>();
 
+        // Node health monitoring (singleton for background service)
+        services.AddSingleton<HealthMonitorOptions>(sp =>
+        {
+            EncoderV2Options opts = sp.GetRequiredService<EncoderV2Options>();
+            return new HealthMonitorOptions
+            {
+                CheckIntervalSeconds = opts.HealthCheckIntervalSeconds,
+                HeartbeatTimeoutSeconds = opts.HeartbeatTimeoutSeconds,
+                AutoReassignTasks = opts.AutoReassignTasksOnNodeFailure,
+                VerboseLogging = opts.VerboseHealthLogging
+            };
+        });
+        services.AddSingleton<NodeHealthMonitor>();
+        services.AddSingleton<INodeHealthMonitor>(sp => sp.GetRequiredService<NodeHealthMonitor>());
+        services.AddHostedService(sp => sp.GetRequiredService<NodeHealthMonitor>());
+
         // Stream analysis
         services.AddScoped<IStreamAnalyzer, StreamAnalyzer>();
 
@@ -141,4 +158,24 @@ public sealed class EncoderV2Options
     /// Default output directory for encoded files
     /// </summary>
     public string? DefaultOutputDirectory { get; set; }
+
+    /// <summary>
+    /// Interval between node health checks in seconds (default: 30)
+    /// </summary>
+    public int HealthCheckIntervalSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Maximum age of last heartbeat before a node is considered unhealthy (default: 60 seconds)
+    /// </summary>
+    public int HeartbeatTimeoutSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// Whether to automatically reassign tasks when a node becomes unhealthy (default: true)
+    /// </summary>
+    public bool AutoReassignTasksOnNodeFailure { get; set; } = true;
+
+    /// <summary>
+    /// Whether to log detailed health check results (default: false)
+    /// </summary>
+    public bool VerboseHealthLogging { get; set; } = false;
 }

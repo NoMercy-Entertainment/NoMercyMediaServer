@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NoMercy.EncoderV2.Execution;
 using NoMercy.EncoderV2.FFmpeg;
 using NoMercy.EncoderV2.Hardware;
@@ -66,6 +67,13 @@ public static class DependencyInjection
         // Task Distribution (Scoped)
         services.AddScoped<ITaskSplitter, TaskSplitter>();
         services.AddScoped<INodeSelector, NodeSelector>();
+        services.AddScoped<IJobDispatcher, JobDispatcher>();
+
+        // Node Health Monitoring (Singleton for background service)
+        services.AddSingleton<HealthMonitorOptions>();
+        services.AddSingleton<NodeHealthMonitor>();
+        services.AddSingleton<INodeHealthMonitor>(sp => sp.GetRequiredService<NodeHealthMonitor>());
+        services.AddHostedService(sp => sp.GetRequiredService<NodeHealthMonitor>());
 
         // Hardware Acceleration (Singleton - GPU detection is expensive)
         services.AddSingleton<IHardwareAccelerationService, HardwareAccelerationService>();
