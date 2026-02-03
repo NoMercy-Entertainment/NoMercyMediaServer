@@ -464,8 +464,72 @@
 **Phase 5 Progress (Task Distribution):**
 - ✅ TaskSplitter (Job → Task decomposition)
 - ✅ NodeSelector (capability matching)
-- ❌ JobDispatcher (queue integration)
+- ✅ JobDispatcher (queue integration)
 - ❌ NodeHealthMonitor (30-second health checks)
 
 **Next Steps:**
-- Implement JobDispatcher for queue integration
+- Implement NodeHealthMonitor for 30-second health checks
+
+---
+
+### 2026-02-03: JobDispatcher Implementation (Phase 5)
+
+**Task Completed:** Implement JobDispatcher for queue integration
+
+**Changes Made:**
+
+1. Created `IJobDispatcher.cs` in `src/NoMercy.EncoderV2/Tasks/`
+   - Interface for encoding job dispatching and management
+   - Enums: `JobPriority` (Low, Normal, High, Urgent)
+   - DTOs for dispatch options, results, and status:
+     - `JobDispatchOptions`: Priority, split/node strategies, post-processing flags
+     - `JobDispatchResult`: Success, job, tasks, weights, unassigned tasks
+     - `JobCancelResult`: Success, cancelled/completed counts
+     - `TaskRetryResult`: Success, retried count, exceeded max retries
+     - `JobStatus`: Progress aggregation across all tasks
+
+2. Implemented `JobDispatcher.cs` with full queue integration:
+   - **Job Dispatch**: Create job, analyze media, split into tasks, optionally assign nodes
+   - **Job Cancellation**: Cancel all pending tasks, update job state
+   - **Task Retry**: Retry failed tasks with retry counting, reset job state
+   - **Status Queries**: Get job status with aggregated progress from tasks
+   - **Task Lifecycle**: Start, complete, fail tasks with node tracking
+   - **Node Failure Handling**: Reassign tasks from unhealthy nodes
+   - **Dependency Tracking**: Check task dependencies before execution
+
+3. Key Features:
+   - `DispatchAsync()`: Create job from profile, split tasks, optional node assignment
+   - `CancelJobAsync()`: Cancel job and all non-completed tasks
+   - `RetryFailedTasksAsync()`: Retry failed tasks respecting max retries
+   - `GetJobStatusAsync()`: Aggregate progress with ETA calculation
+   - `GetNextPendingTaskAsync()`: Get next executable task respecting dependencies
+   - `AssignTaskToNodeAsync()`: Manually assign task to specific node
+   - `StartTaskAsync()`: Mark task as running, update job state
+   - `CompleteTaskAsync()`: Mark task complete, check job completion
+   - `FailTaskAsync()`: Mark task failed, update job state if no remaining tasks
+   - `RecordProgressAsync()`: Store progress snapshot for task
+   - `ReassignTasksFromNodeAsync()`: Handle node failures gracefully
+
+4. Integration Points:
+   - Uses `ITaskSplitter` for job-to-task decomposition
+   - Uses `INodeSelector` for batch task-to-node assignment
+   - Uses `IStreamAnalyzer` for media file analysis
+   - Uses `IProfileRepository` for profile lookup from database
+   - Uses `QueueContext` for all database operations
+
+5. Updated Project Configuration:
+   - Enabled `ProfileRepository.cs` in csproj for profile access
+   - Added `IJobDispatcher`, `IStreamAnalyzer`, `IProfileRepository` to DI
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+- Full Solution: BUILD SUCCEEDED
+
+**Phase 5 Progress (Task Distribution):**
+- ✅ TaskSplitter (Job → Task decomposition)
+- ✅ NodeSelector (capability matching)
+- ✅ JobDispatcher (queue integration)
+- ❌ NodeHealthMonitor (30-second health checks)
+
+**Next Steps:**
+- Implement NodeHealthMonitor for 30-second health checks
