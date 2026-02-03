@@ -1,0 +1,345 @@
+## EncoderV2 Development Progress
+
+### 2026-02-03: Database Entities Implementation
+
+**Task Completed:** Implement Phase 1 database entities for EncoderV2
+
+**Changes Made:**
+
+1. Created `EncodingJob.cs` in `src/NoMercy.Database/Models/`
+   - Entity for encoding jobs with profile reference, input/output paths, state tracking
+   - Includes ProfileSnapshotJson for immutable profile state at job creation
+   - Supports job states: queued, encoding, completed, failed, cancelled
+
+2. Created `EncodingTask.cs` in `src/NoMercy.Database/Models/`
+   - Entity for individual tasks within an encoding job
+   - Supports task types: video_encoding, audio_encoding, subtitle_extraction, etc.
+   - Includes dependency tracking (DependenciesJson) for task sequencing
+   - Retry mechanism with configurable max retries
+
+3. Created `EncoderNode.cs` in `src/NoMercy.Database/Models/`
+   - Entity for distributed encoder nodes
+   - Tracks hardware capabilities (GPU, CPU cores, memory)
+   - Health monitoring with heartbeat tracking
+   - Supported hardware acceleration types (NVENC, QSV, VAAPI, etc.)
+
+4. Created `EncodingProgress.cs` in `src/NoMercy.Database/Models/`
+   - Entity for progress snapshots during encoding
+   - Tracks FPS, speed, bitrate, current time, estimated remaining
+   - Supports both frame count and time-based progress
+
+5. Updated `QueueContext.cs`
+   - Added DbSet<EncodingJob> EncodingJobs
+   - Added DbSet<EncodingTask> EncodingTasks
+   - Added DbSet<EncoderNode> EncoderNodes
+   - Added DbSet<EncodingProgress> EncodingProgress
+
+**Build Status:**
+- NoMercy.Database: BUILD SUCCEEDED
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+
+**Next Steps:**
+- ~~Create EF Core migration for new tables~~ ✓
+- Build ProfileManager with CRUD operations
+- Implement profile validation
+
+---
+
+### 2026-02-03: EF Core Migration for EncoderV2 Tables
+
+**Task Completed:** Create EF Core migration for new EncoderV2 tables using `dotnet ef` CLI
+
+**Changes Made:**
+
+1. Added `UlidToStringConverter` to `QueueContext.ConfigureConventions()`
+   - Required for Ulid properties in EncoderV2 entities
+
+2. Created `QueueContextDesignTimeFactory.cs`
+   - Implements `IDesignTimeDbContextFactory<QueueContext>`
+   - Enables migration generation without running the full application
+
+3. Removed `EncoderProfile` navigation property from `EncodingJob`
+   - Cross-database reference (QueueContext → MediaContext) not supported
+   - ProfileId kept as Ulid? for application-level reference
+
+4. Added `Microsoft.EntityFrameworkCore.Design` package to Server project
+   - Required for EF Core CLI tools
+
+5. Generated migration `20260203201619_AddEncoderV2Tables.cs` via CLI:
+   ```
+   dotnet ef migrations add AddEncoderV2Tables --context QueueContext \
+     --output-dir Migrations/Queue --project src/NoMercy.Database \
+     --startup-project src/NoMercy.Server
+   ```
+
+**Tables Created:**
+- `EncoderNodes`: Distributed node registry with hardware capabilities
+- `EncodingJobs`: Job tracking with profile snapshots and state management
+- `EncodingTasks`: Individual tasks with dependencies, retry logic, node assignment
+- `EncodingProgress`: Real-time progress snapshots for monitoring
+
+**Indexes Created:**
+- `IX_EncodingProgress_TaskId`
+- `IX_EncodingTasks_AssignedNodeId`
+- `IX_EncodingTasks_JobId`
+
+**Build Status:**
+- NoMercy.Database: BUILD SUCCEEDED
+
+**Next Steps:**
+- ~~Build ProfileManager with CRUD operations~~ ✓ (already existed)
+- ~~Implement profile validation~~ ✓ (already existed)
+- ~~Create default profiles (HLS, MP4, MKV variants)~~ ✓ (already existed)
+
+---
+
+### 2026-02-03: FontExtractor Implementation (Phase 3)
+
+**Task Completed:** Implement FontExtractor for embedded font extraction
+
+**Changes Made:**
+
+1. Created `FontExtractor.cs` in `src/NoMercy.EncoderV2/PostProcessing/`
+   - Implements `IFontExtractor` interface for dependency injection
+   - Extracts embedded fonts from media files (MKV, ASS/SSA containers)
+   - Uses FFmpeg `-dump_attachment:t` command for extraction
+   - Generates `fonts.json` manifest with MIME types for web delivery
+   - Supports async operations with cancellation tokens
+
+2. Key Features:
+   - `ExtractFontsAsync()`: Extracts all fonts and creates manifest
+   - `HasFontsAsync()`: Quick check for font presence
+   - `GetFontMetadataAsync()`: Get font info without extraction
+   - Font detection by MIME type, file extension, and codec name
+   - Supports TTF, OTF, WOFF, WOFF2, EOT formats
+
+3. Updated `DependencyInjection.cs`
+   - Added `using NoMercy.EncoderV2.PostProcessing;`
+   - Registered `IFontExtractor` as scoped service
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+- Full solution: BUILD SUCCEEDED
+
+**Phase 3 Progress (Stream Processing):**
+- ✅ VideoStreamProcessor
+- ✅ AudioStreamProcessor
+- ✅ SubtitleStreamProcessor
+- ✅ FontExtractor
+- ❌ ChapterProcessor
+- ❌ SpriteGenerator
+
+**Next Steps:**
+- ~~Implement ChapterProcessor for chapter marker extraction~~ ✓
+- Implement SpriteGenerator for thumbnail sprite sheets
+
+---
+
+### 2026-02-03: ChapterProcessor Implementation (Phase 3)
+
+**Task Completed:** Implement ChapterProcessor for chapter extraction to WebVTT
+
+**Changes Made:**
+
+1. Created `ChapterProcessor.cs` in `src/NoMercy.EncoderV2/PostProcessing/`
+   - Implements `IChapterProcessor` interface for dependency injection
+   - Extracts chapter markers from media files using FFprobe
+   - Generates `chapters.vtt` file in WebVTT format for video players
+   - Supports MKV, MP4, and other container formats with embedded chapters
+
+2. Key Features:
+   - `ExtractChaptersAsync()`: Full extraction with VTT file generation
+   - `HasChaptersAsync()`: Quick check for chapter presence
+   - `GetChapterMetadataAsync()`: Get chapter info without file generation
+   - `WriteChaptersAsync()`: Pipeline-compatible alias for ExtractChaptersAsync
+   - Handles missing chapters gracefully (returns success with empty list)
+   - Fallback chapter titles ("Chapter N") when title is missing
+
+3. DTOs Created:
+   - `ChapterInfo`: Public DTO with Id, Title, StartTime, EndTime
+   - `ChapterExtractionResult`: Result object with Success, OutputPath, Chapters, ErrorMessage
+   - `FfprobeChapterRoot`, `FfprobeChapter`, `FfprobeTags`: Internal DTOs for JSON parsing
+
+4. Updated `ServiceCollectionExtensions.cs`
+   - Added `using NoMercy.EncoderV2.PostProcessing;`
+   - Registered `IChapterProcessor` as scoped service
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+
+**Phase 3 Progress (Stream Processing):**
+- ✅ VideoStreamProcessor
+- ✅ AudioStreamProcessor
+- ✅ SubtitleStreamProcessor
+- ✅ FontExtractor
+- ✅ ChapterProcessor
+- ❌ SpriteGenerator
+
+**Next Steps:**
+- ~~Implement SpriteGenerator for thumbnail sprite sheets~~ ✓
+
+---
+
+### 2026-02-03: SpriteGenerator Implementation (Phase 3 Complete)
+
+**Task Completed:** Implement SpriteGenerator for thumbnail sprite sheet generation
+
+**Changes Made:**
+
+1. Created `SpriteGenerator.cs` in `src/NoMercy.EncoderV2/PostProcessing/`
+   - Implements `ISpriteGenerator` interface for dependency injection
+   - Extracts thumbnails from media files at configurable intervals
+   - Combines thumbnails into WebP sprite sheet using FFmpeg tile filter
+   - Generates WebVTT file with xywh fragment identifiers for video player scrubbing
+
+2. Key Features:
+   - `GenerateSpriteAsync()`: Full extraction from media file with configurable dimensions/interval
+   - `GenerateSpriteFromThumbnailsAsync()`: Create sprite from pre-extracted thumbnails
+   - `GetDurationAsync()`: Query media file duration using FFprobe
+   - `CalculateSpriteMetadata()`: Calculate grid dimensions and frame positions
+   - Automatic cleanup of individual thumbnail files after sprite generation
+   - Support for aspect ratio preservation when height is not specified
+
+3. DTOs Created:
+   - `SpriteFrame`: Individual frame info with index, timestamp, x, y, width, height
+   - `SpriteMetadata`: Complete sprite info including grid dimensions and frame list
+   - `SpriteGenerationResult`: Result object with Success, file paths, metadata, ErrorMessage
+   - `FfprobeDurationRoot`, `FfprobeDurationFormat`: Internal DTOs for duration parsing
+
+4. Updated DI Configuration:
+   - Added `ISpriteGenerator` registration to `Composition/DependencyInjection.cs`
+   - Added `ISpriteGenerator` registration to `DependencyInjection/ServiceCollectionExtensions.cs`
+   - Both registered as scoped services (one per encoding job)
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+
+**Phase 3 Progress (Stream Processing) - COMPLETE:**
+- ✅ VideoStreamProcessor
+- ✅ AudioStreamProcessor
+- ✅ SubtitleStreamProcessor
+- ✅ FontExtractor
+- ✅ ChapterProcessor
+- ✅ SpriteGenerator
+
+**Next Steps (Phase 4: FFmpeg Integration):**
+- ~~Implement FFmpegCommandBuilder~~ ✓ (already existed)
+- ~~Implement HDRProcessor (HDR→SDR tonemap)~~ ✓
+- ~~Implement ProgressMonitor (FFmpeg `-progress -` parsing)~~ ✓ (already existed)
+- ~~Implement EncodingJobExecutor~~ ✓ (already existed)
+- Implement PostProcessor
+
+---
+
+### 2026-02-03: HDRProcessor Implementation (Phase 4)
+
+**Task Completed:** Implement HDRProcessor for HDR detection and tone mapping
+
+**Changes Made:**
+
+1. Created `IHdrProcessor.cs` in `src/NoMercy.EncoderV2/Processing/`
+   - Interface for HDR detection and processing
+   - Enums for HDR formats: HDR10, HDR10+, HLG, Dolby Vision
+   - Enums for tone mapping algorithms: Hable, Reinhard, Mobius, BT.2390, Linear
+   - Hardware acceleration options: CUDA, OpenCL, Vulkan
+   - DTOs: HdrDetectionResult, HdrConversionResult, HdrProcessingOptions
+
+2. Created `HdrProcessor.cs` in `src/NoMercy.EncoderV2/Processing/`
+   - Implements `IHdrProcessor` interface for dependency injection
+   - HDR detection via FFprobe with JSON parsing and regex fallback
+   - Multiple tone mapping algorithm support with configurable parameters
+   - Software tone mapping using zscale and tonemap filters
+   - Hardware-accelerated filter chains for CUDA/OpenCL/Vulkan
+   - SDR cache mechanism for sharing converted files across quality levels (PRD G8)
+   - Recommended algorithm selection based on HDR format
+
+3. Key Features:
+   - `DetectHdrAsync()`: Analyzes media for HDR format, color space, and metadata
+   - `ConvertToSdrAsync()`: Full HDR→SDR conversion with progress callback
+   - `BuildToneMappingFilterChain()`: Builds FFmpeg filter string for tone mapping
+   - `GetCachedSdrPath()`: Checks for cached SDR versions to avoid re-processing
+   - `GetRecommendedAlgorithm()`: Returns best algorithm per HDR format
+   - MaxCLL/MaxFALL metadata extraction
+   - Master display color volume parsing
+   - Dolby Vision side data detection
+
+4. Updated DI Configuration:
+   - Added `using NoMercy.EncoderV2.Processing;` to both DI files
+   - Registered `IHdrProcessor` as scoped service in both configurations
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+
+**Phase 4 Progress (FFmpeg Integration):**
+- ✅ FFmpegCommandBuilder (pre-existing)
+- ✅ HDRProcessor
+- ✅ ProgressMonitor (pre-existing)
+- ✅ EncodingJobExecutor (pre-existing)
+- ❌ PostProcessor
+
+**Next Steps:**
+- ~~Implement PostProcessor for post-encoding tasks~~ ✓
+
+---
+
+### 2026-02-03: PostProcessor Implementation (Phase 4 Complete)
+
+**Task Completed:** Implement PostProcessor for post-encoding orchestration
+
+**Changes Made:**
+
+1. Created `PostProcessor.cs` in `src/NoMercy.EncoderV2/PostProcessing/`
+   - Implements `IPostProcessor` interface for dependency injection
+   - Orchestrates all post-processing steps after encoding completes
+   - Configurable via `PostProcessingOptions` for enabling/disabling features
+   - Progress callback support for real-time UI updates
+
+2. Key Features:
+   - `ProcessAsync()`: Executes all enabled post-processing steps in sequence
+   - `ExtractFontsAsync()`: Delegates to `IFontExtractor`
+   - `ExtractChaptersAsync()`: Delegates to `IChapterProcessor`
+   - `GenerateSpritesAsync()`: Delegates to `ISpriteGenerator`
+   - `ValidateOutputAsync()`: Validates encoded output files and playlists
+   - Master playlist generation for HLS from existing variant playlists
+   - Parses video/audio folder naming conventions (video_1920x1080_SDR, audio_eng_aac)
+   - Bandwidth estimation based on resolution and HDR status
+
+3. DTOs Created:
+   - `PostProcessingStepResult`: Individual step outcome with timing and metadata
+   - `PostProcessingResult`: Aggregated result with all step outcomes
+   - `PostProcessingOptions`: Configuration for enabling/disabling steps
+
+4. Post-Processing Steps (in order):
+   1. Font Extraction → fonts/ directory + fonts.json
+   2. Chapter Extraction → chapters.vtt
+   3. Sprite Generation → thumbs_*.webp + thumbs_*.vtt
+   4. Output Validation → Verify playlists and media files
+   5. Master Playlist Generation → {filename}.m3u8 (HLS only)
+
+5. Updated Project Configuration:
+   - Re-enabled `Validation/`, `Specifications/`, and `Streams/` folders in csproj
+   - Only excludes specific files with actual broken dependencies:
+     - `Validation/CodecValidator.cs` (needs IFFmpegService)
+     - `Validation/ProfileValidator.cs` (needs excluded types)
+     - `Validation/Rules/**/*.cs`
+
+6. Updated DI Configuration:
+   - Added `IOutputValidator`, `IHLSPlaylistGenerator` registrations
+   - Added `IPostProcessor` registration as scoped service
+   - Both `Composition/DependencyInjection.cs` and `DependencyInjection/ServiceCollectionExtensions.cs`
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED
+
+**Phase 4 Progress (FFmpeg Integration) - COMPLETE:**
+- ✅ FFmpegCommandBuilder (pre-existing)
+- ✅ HDRProcessor
+- ✅ ProgressMonitor (pre-existing)
+- ✅ EncodingJobExecutor (pre-existing)
+- ✅ PostProcessor
+
+**Next Steps (Phase 5: Task Distribution):**
+- Implement TaskSplitter (Job → Task decomposition)
+- Implement NodeSelector (capability matching)
+- Implement JobDispatcher (queue integration)
+- Implement NodeHealthMonitor (30-second health checks)
