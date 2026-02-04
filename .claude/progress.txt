@@ -984,8 +984,75 @@ services.AddEncoderV2TaskWorker(options =>
 - ✅ Add API documentation (Swagger)
 
 **Next Steps (Phase 8: Testing & Validation):**
-- Unit tests (profile validation, stream processing, command generation)
+- ~~Unit tests (profile validation, stream processing, command generation)~~ ✓ (partial - stream processors done)
 - Integration tests (end-to-end encoding, multi-node distribution)
 - Production validation (encode test files from 16,000+ library)
 - Performance benchmarking
 - Stress testing (100+ concurrent jobs)
+
+---
+
+### 2026-02-04: Stream Processor Unit Tests (Phase 8)
+
+**Task Completed:** Add unit tests for stream processing classes
+
+**Changes Made:**
+
+1. Created `StreamProcessorTests.cs` in `tests/NoMercy.Tests.EncoderV2/Streams/`
+   - 32 unit tests covering stream processor functionality
+   - Tests organized by processor type with clear naming conventions
+
+2. **VideoStreamProcessor Tests (13 tests):**
+   - `BuildVideoFilterChain_NoScalingNeeded_ReturnsEmptyList`
+   - `BuildVideoFilterChain_ScalingNeeded_ReturnsScaleFilter`
+   - `BuildVideoFilterChain_WidthChangeOnly_ReturnsScaleFilter`
+   - `BuildVideoFilterChain_HeightChangeOnly_ReturnsScaleFilter`
+   - `BuildVideoFilterChain_HdrToSdrConversion_ReturnsToneMapFilters`
+   - `BuildVideoFilterChain_HdrToSdrNotRequested_NoToneMapFilters`
+   - `BuildVideoFilterChain_SdrWithConversionRequested_NoToneMapFilters`
+   - `BuildVideoFilterChain_ScalingAndHdrConversion_ReturnsBothFilters`
+   - Parameterized tests for common downscale scenarios (4K→1080p, 1080p→720p, etc.)
+
+3. **AudioStreamProcessor Tests (10 tests):**
+   - `BuildAudioFilterChain_NoChangesNeeded_ReturnsEmptyList`
+   - `BuildAudioFilterChain_SampleRateChange_ReturnsResampleFilter`
+   - `BuildAudioFilterChain_ChannelDownmix_ReturnsPanFilter`
+   - `BuildAudioFilterChain_BothChanges_ReturnsBothFilters`
+   - `BuildAudioFilterChain_ZeroTargetSampleRate_NoResampleFilter`
+   - `BuildAudioFilterChain_ZeroTargetChannels_NoPanFilter`
+   - Parameterized tests for common sample rate conversions
+
+4. **SubtitleStreamProcessor Tests (9 tests):**
+   - `RequiresConversion_SameCodec_ReturnsFalse`
+   - `RequiresConversion_DifferentCodecs_ReturnsTrue`
+   - `RequiresConversion_SubripToSrt_ReturnsFalse` (codec normalization)
+   - `RequiresConversion_CaseInsensitive_ReturnsFalse`
+   - `RequiresConversion_AssToWebvtt_ReturnsTrue`
+   - `RequiresConversion_SsaToAss_ReturnsTrue`
+   - Parameterized tests for common subtitle conversions
+
+5. Updated `NoMercy.Tests.EncoderV2.csproj`:
+   - Added project reference to `NoMercy.Encoder` for FFprobe DTOs
+
+**Test Results:**
+- All 32 new tests: PASSED
+- All 219 total tests: PASSED
+- Duration: 297ms
+
+**Build Status:**
+- NoMercy.Tests.EncoderV2: BUILD SUCCEEDED
+
+**Phase 8 Progress (Testing & Validation):**
+- ✅ Stream processor unit tests (32 tests)
+- ✅ Profile validation tests (pre-existing)
+- ✅ Command generation tests (pre-existing)
+- ✅ Codec tests (pre-existing)
+- ✅ Container tests (pre-existing)
+- ❌ Integration tests (end-to-end encoding)
+- ❌ Multi-node distribution tests
+- ❌ Production validation
+- ❌ Performance benchmarking
+- ❌ Stress testing
+
+**Next Steps:**
+- Continue with integration tests for end-to-end encoding workflows
