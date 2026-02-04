@@ -1309,8 +1309,92 @@ services.AddEncoderV2TaskWorker(options =>
 - ✅ End-to-end encoding integration tests - 11 tests
 - ✅ Multi-node distribution tests - 21 tests
 - ✅ Production validation tests - 71 tests
-- ❌ Performance benchmarking
-- ❌ Stress testing
+- ✅ Performance benchmarking tests - 20 tests
+- ⏳ Stress testing (requires production environment)
 
 **Next Steps:**
-- Add performance benchmarking tests
+- Stress testing with real media files (requires production environment)
+
+---
+
+### 2026-02-04: Performance Benchmarking Tests (Phase 8)
+
+**Task Completed:** Add performance benchmarking tests for PRD performance requirements
+
+**Changes Made:**
+
+1. Created `PerformanceBenchmarkTests.cs` in `tests/NoMercy.Tests.EncoderV2/Integration/`
+   - 20 integration tests covering all PRD performance requirements
+   - Uses InMemory database via TestQueueContext (shared with other integration tests)
+   - Tests real service implementations (NodeSelector, PlaylistValidator, OutputValidator)
+
+2. **Database Query Performance Tests (5 tests - TR4: < 100ms):**
+   - `DatabasePerformance_JobQueryById_CompletesWithinThreshold`
+   - `DatabasePerformance_JobWithTasksQuery_CompletesWithinThreshold`
+   - `DatabasePerformance_BulkTaskQuery_CompletesWithinThreshold`
+   - `DatabasePerformance_ProgressRecording_CompletesWithinThreshold`
+   - `DatabasePerformance_NodeHealthQuery_CompletesWithinThreshold`
+
+3. **Task Assignment Performance Tests (4 tests - TR6: < 5 seconds):**
+   - `TaskAssignment_SingleTask_CompletesWithinThreshold`
+   - `TaskAssignment_BatchAssignment_CompletesWithinThreshold`: 100 tasks, 10 nodes
+   - `TaskAssignment_LargeClusterScenario_CompletesWithinThreshold`: 500 tasks, 50 nodes
+   - `TaskAssignment_CapabilityMatching_CompletesWithinThreshold`: GPU/memory requirements
+
+4. **Progress Update Latency Tests (2 tests - TR2: < 1 second):**
+   - `ProgressUpdate_SingleUpdate_CompletesWithinThreshold`
+   - `ProgressUpdate_RapidUpdates_MaintainsLatency`: 100 rapid updates with P95 validation
+
+5. **Output Validation Performance Tests (4 tests - TR5: < 30 seconds):**
+   - `OutputValidation_SmallPlaylist_CompletesWithinThreshold`: 10 segments
+   - `OutputValidation_LargePlaylist_CompletesWithinThreshold`: 240 segments
+   - `OutputValidation_MasterPlaylistWithVariants_CompletesWithinThreshold`: 5 variants, 3 audio groups
+   - `OutputValidation_CompleteOutputStructure_CompletesWithinThreshold`: Full episode with 3 video + 2 audio
+
+6. **API Response Time Simulation Tests (3 tests - TR3: < 200ms):**
+   - `ApiSimulation_GetJobStatus_CompletesWithinThreshold`: Job with tasks and progress
+   - `ApiSimulation_ListJobs_CompletesWithinThreshold`: 50 jobs with filtering
+   - `ApiSimulation_GetNodeStatuses_CompletesWithinThreshold`: 20 nodes with aggregation
+
+7. **Scalability Tests (2 tests - TR7-TR10):**
+   - `Scalability_100ConcurrentJobs_MaintainsPerformance`: 100 jobs, 500 tasks
+   - `Scalability_BatchTaskAssignment_HandlesLargeWorkloads`: 500 tasks, 50 nodes
+
+**Performance Thresholds Validated:**
+| Requirement | Threshold | Test Coverage |
+|-------------|-----------|---------------|
+| TR2: Progress update latency | < 1 second | 2 tests |
+| TR3: API response time | < 200ms | 3 tests |
+| TR4: Database query time | < 100ms | 5 tests |
+| TR5: Output validation time | < 30 seconds | 4 tests |
+| TR6: Task assignment latency | < 5 seconds | 4 tests |
+
+**Test Results:**
+- All 20 new tests: PASSED
+- All 355 total tests: PASSED
+- Duration: ~3.0 seconds
+
+**Build Status:**
+- NoMercy.EncoderV2: BUILD SUCCEEDED (0 warnings, 0 errors)
+- NoMercy.Tests.EncoderV2: BUILD SUCCEEDED
+
+**Phase 8 Progress (Testing & Validation) - NEARLY COMPLETE:**
+- ✅ Stream processor unit tests (32 tests)
+- ✅ Profile validation tests (pre-existing)
+- ✅ Command generation tests (pre-existing)
+- ✅ Codec tests (pre-existing)
+- ✅ Container tests (pre-existing)
+- ✅ Integration tests (node selector, job lifecycle) - 13 tests
+- ✅ End-to-end encoding integration tests - 11 tests
+- ✅ Multi-node distribution tests - 21 tests
+- ✅ Production validation tests - 71 tests
+- ✅ Performance benchmarking tests - 20 tests
+- ⏳ Stress testing (requires production environment with real media files)
+
+**Total Test Count: 355 tests**
+
+**PRD Implementation Status: ~95% Complete**
+
+**Remaining Items:**
+- Stress testing (100+ concurrent jobs) - Requires production environment
+- Real media file encoding validation - Requires test media files
