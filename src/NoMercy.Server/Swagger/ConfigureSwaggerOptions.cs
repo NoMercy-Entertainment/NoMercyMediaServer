@@ -67,11 +67,36 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
 
     private static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description, string groupName)
     {
+        string baseDescription = groupName switch
+        {
+            "v1" => """
+                NoMercy MediaServer API v1
+
+                Core API endpoints for media library management, streaming, and user interactions.
+                """,
+            "v2" => """
+                NoMercy MediaServer API v2
+
+                Enhanced API with EncoderV2 distributed encoding system.
+
+                ## EncoderV2 Features
+                - **Profiles**: Manage encoding profiles with video, audio, and subtitle configurations
+                - **Jobs**: Submit, monitor, and control encoding jobs
+                - **Tasks**: Distributed task execution across encoder nodes
+                - **Real-time Updates**: SignalR hub at `/encodingProgressHub` for live progress
+
+                ## Authentication
+                All endpoints require OAuth2 authentication via Keycloak.
+                Moderator role required for encoding operations.
+                """,
+            _ => "NoMercy MediaServer API"
+        };
+
         OpenApiInfo info = new()
         {
             Title = "NoMercy API",
-            Version = groupName, // Use forced group name (e.g., v1)
-            Description = "NoMercy API",
+            Version = groupName,
+            Description = baseDescription,
             Contact = new()
             {
                 Name = "NoMercy",
@@ -81,7 +106,7 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
             TermsOfService = new("https://nomercy.tv/terms-of-service")
         };
 
-        if (description.IsDeprecated) info.Description += " This API version has been deprecated.";
+        if (description.IsDeprecated) info.Description += "\n\n**⚠️ This API version has been deprecated.**";
 
         return info;
     }

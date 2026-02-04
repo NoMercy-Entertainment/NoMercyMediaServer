@@ -290,7 +290,31 @@ public static class ServiceConfiguration
 
     private static void ConfigureSwagger(IServiceCollection services)
     {
-        services.AddSwaggerGen(options => options.OperationFilter<SwaggerDefaultValues>());
+        services.AddSwaggerGen(options =>
+        {
+            options.OperationFilter<SwaggerDefaultValues>();
+
+            // Include XML comments from the API project
+            string apiXmlFile = Path.Combine(AppContext.BaseDirectory, "NoMercy.Api.xml");
+            if (File.Exists(apiXmlFile))
+            {
+                options.IncludeXmlComments(apiXmlFile);
+            }
+
+            // Include XML comments from EncoderV2 project for DTO documentation
+            string encoderV2XmlFile = Path.Combine(AppContext.BaseDirectory, "NoMercy.EncoderV2.xml");
+            if (File.Exists(encoderV2XmlFile))
+            {
+                options.IncludeXmlComments(encoderV2XmlFile);
+            }
+
+            // Include XML comments from Database project for model documentation
+            string databaseXmlFile = Path.Combine(AppContext.BaseDirectory, "NoMercy.Database.xml");
+            if (File.Exists(databaseXmlFile))
+            {
+                options.IncludeXmlComments(databaseXmlFile);
+            }
+        });
         services.AddSwaggerGenNewtonsoftSupport();
         services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
     }
