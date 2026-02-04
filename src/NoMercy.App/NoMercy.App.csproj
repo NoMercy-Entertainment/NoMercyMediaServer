@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -57,29 +57,16 @@
         <None Include="wwwroot\**">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
-        <None Include="..\..\assets\icons\*.*" Link="Resources\AppIcon\%(Filename)%(Extension)">
+        <Content Include="..\..\assets\icons\*.*" Link="Resources\AppIcon\%(Filename)%(Extension)">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
-
-    <!-- Ensure static assets manifest is included in single-file publish -->
-    <Target Name="IncludeStaticAssetsManifest" AfterTargets="GenerateStaticWebAssetsManifest">
-        <ItemGroup>
-            <ContentWithTargetPath Include="$(IntermediateOutputPath)staticwebassets\**\*.json"
-                                   TargetPath="%(Filename)%(Extension)"
-                                   CopyToPublishDirectory="PreserveNewest" />
-        </ItemGroup>
-    </Target>
-
-    <!-- Mark manifest for extraction from single-file bundle -->
-    <ItemGroup>
-        <Content Update="$(TargetName).staticwebassets.endpoints.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
             <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
         </Content>
     </ItemGroup>
 
+    <!-- Exclude static assets manifest from single-file bundle so it stays next to exe -->
+    <ItemGroup>
+        <ExcludeFromSingleFile Include="$(TargetName).staticwebassets.endpoints.json" />
+    </ItemGroup>
+
 </Project>
-
-

@@ -7,6 +7,10 @@ namespace NoMercy.App;
 
 internal class Program
 {
+    // For single-file deployments, get the directory where the exe is located (not the extraction folder)
+    private static readonly string ExeDirectory = Path.GetDirectoryName(Environment.ProcessPath)
+                                                  ?? AppContext.BaseDirectory;
+
     [STAThread]
     private static void Main(string[] args)
     {
@@ -52,7 +56,13 @@ internal class Program
         application.UseAutoServerClose();
 
         application.WebApp.UseStaticFiles();
-        application.WebApp.MapStaticAssets();
+
+        // For single-file deployments, the manifest is next to the exe, not in the extraction folder
+        string manifestPath = Path.Combine(ExeDirectory, "NoMercyApp.staticwebassets.endpoints.json");
+        if (File.Exists(manifestPath))
+            application.WebApp.MapStaticAssets(manifestPath);
+        else
+            application.WebApp.MapStaticAssets();
 
         application.Run();
     }
@@ -61,11 +71,11 @@ internal class Program
     {
         string iconPath;
         if (OperatingSystem.IsWindows())
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.ico");
+            iconPath = Path.Combine(ExeDirectory, "Resources", "AppIcon", "icon.ico");
         else if (OperatingSystem.IsLinux())
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.png");
+            iconPath = Path.Combine(ExeDirectory, "Resources", "AppIcon", "icon.png");
         else if (OperatingSystem.IsMacOS())
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.icns");
+            iconPath = Path.Combine(ExeDirectory, "Resources", "AppIcon", "icon.icns");
         else
             throw new PlatformNotSupportedException("Unsupported OS platform");
 
@@ -74,5 +84,3 @@ internal class Program
         return iconPath;
     }
 }
-
-
