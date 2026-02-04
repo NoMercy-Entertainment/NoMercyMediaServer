@@ -13,7 +13,7 @@ internal class Program
     private static void Main(string[] args)
     {
         string windowTitle = "NoMercy TV";
-        string iconPath = ExtractIconToTemp();
+        string iconPath = GetIconPath();
 
         // Set environment variable for URL before creating builder
         if (!Debugger.IsAttached)
@@ -72,7 +72,7 @@ internal class Program
         application.Run();
     }
 
-    private static string ExtractIconToTemp()
+    private static string GetIconPath()
     {
         string iconName;
         if (OperatingSystem.IsWindows())
@@ -84,12 +84,11 @@ internal class Program
         else
             throw new PlatformNotSupportedException("Unsupported OS platform");
 
-        // Extract embedded icon to temp directory
+        // Extract embedded icon to temp directory (InfiniFrame requires a file path)
         string tempDir = Path.Combine(Path.GetTempPath(), "NoMercyApp");
         Directory.CreateDirectory(tempDir);
         string iconPath = Path.Combine(tempDir, iconName);
 
-        // Only extract if not already present
         if (!File.Exists(iconPath))
         {
             Assembly assembly = typeof(Program).Assembly;
