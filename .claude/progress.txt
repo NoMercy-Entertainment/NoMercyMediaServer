@@ -1231,9 +1231,86 @@ services.AddEncoderV2TaskWorker(options =>
 - ✅ Integration tests (node selector, job lifecycle) - 13 tests
 - ✅ End-to-end encoding integration tests - 11 tests
 - ✅ Multi-node distribution tests - 21 tests
-- ❌ Production validation
+- ✅ Production validation tests - 71 tests (30 parameterized)
 - ❌ Performance benchmarking
 - ❌ Stress testing
 
 **Next Steps:**
-- Add production validation tests
+- Add performance benchmarking tests
+
+---
+
+### 2026-02-04: Production Validation Tests (Phase 8)
+
+**Task Completed:** Add production validation tests for output structure compliance
+
+**Changes Made:**
+
+1. Created `ProductionValidationTests.cs` in `tests/NoMercy.Tests.EncoderV2/Integration/`
+   - 71 tests (including parameterized theory tests) covering production output validation
+   - Uses real service implementations (HLSPlaylistGenerator, PlaylistValidator, MP4Validator, MKVValidator, etc.)
+   - File-based tests using temp directories with automatic cleanup
+
+2. **HLS Output Structure Tests (3 tests):**
+   - `HLSOutputStructure_MatchesProductionFormat_VideoAndAudioFolders`: Full production output with master playlist, video variant folders, audio track folders, media playlists, and segments
+   - `HLSOutputStructure_HDRContent_CreatesSdrVariantFolders`: Verifies HDR/SDR folder naming convention (video_{w}x{h}_{HDR|SDR})
+   - `HLSOutputOrchestrator_FolderNaming_MatchesProductionConvention`: Tests all resolution and audio folder naming patterns
+
+3. **Master Playlist Validation Tests (4 tests):**
+   - `MasterPlaylist_ContainsAllVariantStreams_WithCorrectAttributes`: 3 variant streams with bandwidth, resolution, codecs, audio groups, and bandwidth ordering
+   - `MediaPlaylist_RFC8216Compliance_ContainsRequiredTags`: 240-segment playlist with EXTM3U, VERSION, TARGETDURATION, MEDIA-SEQUENCE, PLAYLIST-TYPE, INDEPENDENT-SEGMENTS, ENDLIST tags
+   - `PlaylistValidator_MasterPlaylist_DetectsVariantsAndResolutions`: Validator correctly parses BANDWIDTH, RESOLUTION, CODECS from #EXT-X-STREAM-INF
+   - `PlaylistValidator_MediaPlaylist_ParsesSegmentsAndDuration`: Validates segment count, target duration, and total duration calculation
+
+4. **HLS Specification Validation Tests (3 tests + 10 parameterized):**
+   - `HLSSpecification_DefaultValues_PassValidation`: Default values are valid
+   - `HLSSpecification_VersionRange_ValidatesCorrectly`: Version 0-8 boundary testing
+   - `HLSSpecification_TargetDuration_ValidatesRange`: Duration 0, 1, 10, 60, 61 boundary testing
+
+5. **MP4 Specification Validation Tests (4 tests + 18 parameterized):**
+   - `MP4Specification_DefaultValues_PassValidation`: Default isom/FastStart/timescale values
+   - `MP4Specification_ValidVideoAndAudioTracks_PassValidation`: Video+audio track pair with correct handler types
+   - `MP4Specification_DuplicateTrackIds_FailValidation`: Duplicate track IDs correctly rejected
+   - Brand validation, codec FourCC validation, language code validation (parameterized)
+
+6. **MKV Specification Validation Tests (4 tests + 18 parameterized):**
+   - `MKVSpecification_DefaultValues_PassValidation`: Default DocType/TimestampScale values
+   - `MKVSpecification_ValidTracks_PassValidation`: Video+audio+subtitle track set
+   - `MKVSpecification_ChaptersValidation_AcceptsChronologicalOrder`: 4 chapters in order
+   - `MKVSpecification_ChaptersOutOfOrder_WarnsButDoesNotFail`: Out-of-order produces warning not error
+   - Codec ID validation, language validation (ISO 639-2 + BCP-47)
+
+7. **Output Validator Tests (5 tests):**
+   - Missing file, empty file, invalid header, missing segment references, file validation
+
+8. **Production Supplementary File Tests (3 tests):**
+   - `ProductionOutput_FontsJsonManifest_HasCorrectStructure`: fonts/ directory + fonts.json
+   - `ProductionOutput_ChaptersVtt_HasValidWebVTTFormat`: WebVTT with chapter markers
+   - `ProductionOutput_SpriteVtt_HasValidTimingFormat`: xywh fragment identifiers
+
+9. **Complete Production Output Structure Test (1 test):**
+   - `ProductionOutput_CompleteStructure_MatchesPRDAppendixA`: Full validation of PRD Appendix A directory structure including master playlist, 3 video qualities, 2 audio tracks, subtitles (ASS+VTT), fonts directory + manifest, sprite sheets + VTT, chapters.vtt
+
+**Test Results:**
+- All 71 new tests: PASSED
+- All 335 total tests: PASSED
+- Duration: ~4.0 seconds
+
+**Build Status:**
+- NoMercy.Tests.EncoderV2: BUILD SUCCEEDED
+
+**Phase 8 Progress (Testing & Validation):**
+- ✅ Stream processor unit tests (32 tests)
+- ✅ Profile validation tests (pre-existing)
+- ✅ Command generation tests (pre-existing)
+- ✅ Codec tests (pre-existing)
+- ✅ Container tests (pre-existing)
+- ✅ Integration tests (node selector, job lifecycle) - 13 tests
+- ✅ End-to-end encoding integration tests - 11 tests
+- ✅ Multi-node distribution tests - 21 tests
+- ✅ Production validation tests - 71 tests
+- ❌ Performance benchmarking
+- ❌ Stress testing
+
+**Next Steps:**
+- Add performance benchmarking tests
