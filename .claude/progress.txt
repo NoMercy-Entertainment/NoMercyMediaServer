@@ -1160,10 +1160,80 @@ services.AddEncoderV2TaskWorker(options =>
 - ✅ Container tests (pre-existing)
 - ✅ Integration tests (node selector, job lifecycle) - 13 tests
 - ✅ End-to-end encoding integration tests - 11 tests
-- ❌ Multi-node distribution tests
+- ✅ Multi-node distribution tests - 21 tests
 - ❌ Production validation
 - ❌ Performance benchmarking
 - ❌ Stress testing
 
 **Next Steps:**
-- Add multi-node distribution tests
+- ~~Add multi-node distribution tests~~ ✓
+- Add production validation tests
+
+---
+
+### 2026-02-04: Multi-Node Distribution Tests (Phase 8)
+
+**Task Completed:** Add multi-node distribution integration tests
+
+**Changes Made:**
+
+1. Created `MultiNodeDistributionTests.cs` in `tests/NoMercy.Tests.EncoderV2/Integration/`
+   - 21 integration tests covering distributed encoding across multiple encoder nodes
+   - Uses InMemory database via TestQueueContext (shared from EncodingPipelineIntegrationTests)
+   - Tests real NodeSelector and NodeHealthMonitor implementations with fast timeouts
+
+2. **Task Distribution Tests (4 tests):**
+   - `Distribution_TasksDistributedAcrossMultipleNodes_NoSingleNodeOverloaded`: Verifies 10 tasks spread across 5-node heterogeneous cluster without exceeding MaxConcurrentTasks
+   - `Distribution_GpuTasksPreferGpuNodes_CpuTasksAcceptAnyNode`: GPU tasks routed to GPU nodes with StrictGpuRequirement, CPU tasks flexible
+   - `Distribution_HighMemoryTasks_OnlyAssignedToHighMemoryNodes`: 48GB memory requirement filters to only qualifying nodes
+   - `Distribution_MixedWorkload_BalancesAcrossNodeTypes`: Realistic job (HDR, 3 video qualities, 2 audio tracks, subtitles, post-processing) balanced across node types
+
+3. **Health Monitoring Tests (5 tests):**
+   - `HealthMonitor_HealthCheckDetectsStaleHeartbeat_MarksNodeUnhealthy`: Stale heartbeat detection marks node unhealthy
+   - `HealthMonitor_RecordHeartbeat_RecoversUnhealthyNode`: Heartbeat from unhealthy node triggers recovery
+   - `HealthMonitor_UnhealthyNodeWithRunningTasks_TasksReassigned`: Health check detects failure and reassigns 2 tasks
+   - `HealthMonitor_DisableNode_ReassignsTasksAndPreventsNewAssignment`: Admin disable reassigns tasks, excludes from selection
+   - `HealthMonitor_GetNodeSummary_ReturnsAccurateStatistics`: Cluster summary (4 nodes: 2 healthy, 1 unhealthy, 1 disabled)
+
+4. **Node Failure and Recovery Tests (2 tests):**
+   - `NodeFailover_MultipleNodesInCluster_TasksRedistributedToSurvivors`: 3-node cluster, Node-2 fails, tasks reassigned, surviving nodes pick them up
+   - `NodeRecovery_NodeComesBackOnline_BecomesAvailableForSelection`: Unhealthy node sends heartbeat, recovers, becomes selectable again
+
+5. **Concurrent Multi-Job Tests (2 tests):**
+   - `ConcurrentJobs_MultipleJobsCompeteForNodes_TasksDistributedFairly`: 3 concurrent jobs, 6 total tasks, distributed across 3 workers respecting capacity
+   - `ConcurrentJobs_HighPriorityJobGetsNodeFirst_LowerPriorityWaits`: Priority=100 (urgent) processed before Priority=-10 (batch) despite older creation time
+
+6. **Capability Scoring Tests (3 tests):**
+   - `Scoring_NvidiaGpuNode_ScoresHigherThanCpuNodeForVideoEncoding`: NVIDIA GPU node scores higher for video encoding
+   - `Scoring_PartiallyLoadedNode_ScoresLowerThanIdleNode`: Idle node (0/4 tasks) outscores loaded node (3/4 tasks)
+   - `Scoring_AutoStrategy_SelectsBestCapabilityForGpuTasks`: Auto strategy selects BestCapability for HDR/GPU, RoundRobin for light tasks
+
+7. **Edge Case Tests (5 tests):**
+   - `EdgeCase_SingleNodeCluster_AllTasksGoToSingleNode`: All 5 tasks assigned to single node
+   - `EdgeCase_AllNodesAtCapacity_TasksRemainUnassigned`: Full nodes with ExcludeFullNodes returns failure
+   - `EdgeCase_EmptyNodeList_ReturnsFailure`: Empty node list handled gracefully
+   - `EdgeCase_FilterHealthyNodes_ExcludesDisabledAndStaleNodes`: Only enabled+healthy+recent heartbeat nodes pass filter
+   - `EdgeCase_NodeRecoversAndCompletedTasksUntouched`: Node failure only reassigns running tasks, completed tasks preserved
+
+**Test Results:**
+- All 21 new tests: PASSED
+- Test duration: ~4.1 seconds
+
+**Build Status:**
+- NoMercy.Tests.EncoderV2: BUILD SUCCEEDED
+
+**Phase 8 Progress (Testing & Validation):**
+- ✅ Stream processor unit tests (32 tests)
+- ✅ Profile validation tests (pre-existing)
+- ✅ Command generation tests (pre-existing)
+- ✅ Codec tests (pre-existing)
+- ✅ Container tests (pre-existing)
+- ✅ Integration tests (node selector, job lifecycle) - 13 tests
+- ✅ End-to-end encoding integration tests - 11 tests
+- ✅ Multi-node distribution tests - 21 tests
+- ❌ Production validation
+- ❌ Performance benchmarking
+- ❌ Stress testing
+
+**Next Steps:**
+- Add production validation tests
