@@ -62,5 +62,24 @@
         </None>
     </ItemGroup>
 
+    <!-- Ensure static assets manifest is included in single-file publish -->
+    <Target Name="IncludeStaticAssetsManifest" AfterTargets="GenerateStaticWebAssetsManifest">
+        <ItemGroup>
+            <ContentWithTargetPath Include="$(IntermediateOutputPath)staticwebassets\**\*.json"
+                                   TargetPath="%(Filename)%(Extension)"
+                                   CopyToPublishDirectory="PreserveNewest" />
+        </ItemGroup>
+    </Target>
+
+    <!-- Mark manifest for extraction from single-file bundle -->
+    <ItemGroup>
+        <Content Update="$(TargetName).staticwebassets.endpoints.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+        </Content>
+    </ItemGroup>
+
 </Project>
+
 

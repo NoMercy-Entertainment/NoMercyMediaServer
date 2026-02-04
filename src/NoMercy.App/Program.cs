@@ -52,6 +52,7 @@ internal class Program
         application.UseAutoServerClose();
 
         application.WebApp.UseStaticFiles();
+        application.WebApp.MapStaticAssets();
 
         application.Run();
     }
@@ -73,4 +74,5 @@ internal class Program
         return iconPath;
     }
 }
+
 
