@@ -1056,3 +1056,61 @@ services.AddEncoderV2TaskWorker(options =>
 
 **Next Steps:**
 - Continue with integration tests for end-to-end encoding workflows
+
+---
+
+### 2026-02-04: Pipeline Integration Tests (Phase 8)
+
+**Task Completed:** Add integration tests for EncoderV2 pipeline components
+
+**Changes Made:**
+
+1. Created `EncodingPipelineIntegrationTests.cs` in `tests/NoMercy.Tests.EncoderV2/Integration/`
+   - 13 integration tests for pipeline components
+   - Uses InMemory database via TestQueueContext to avoid SQLite conflicts
+
+2. Created `TestQueueContext` helper class:
+   - Inherits from `QueueContext` to override `OnConfiguring()`
+   - Prevents SQLite configuration conflict with InMemory provider
+   - Enables isolated database testing per test method
+
+3. **Node Selector Tests (5 tests):**
+   - `NodeSelector_SelectNode_ReturnsHealthyNode`: Verifies healthy node selection
+   - `NodeSelector_WithGpuRequirement_PrefersGpuNodes`: Tests GPU preference with BestCapability strategy
+   - `NodeSelector_SelectNodesForTasks_AssignsAllTasks`: Tests batch task assignment
+   - `NodeSelector_LeastLoadedStrategy_BalancesLoad`: Verifies load balancing across nodes
+   - `NodeSelector_NoHealthyNodes_ReturnsFailure`: Tests failure case handling
+
+4. **Job Lifecycle Database Tests (8 tests):**
+   - `JobLifecycle_CancelJob_UpdatesJobAndTaskStates`: Tests job cancellation flow
+   - `JobLifecycle_RetryFailedTasks_ResetsTaskState`: Tests retry mechanism
+   - `JobLifecycle_GetJobStatus_ReturnsAggregatedProgress`: Tests progress aggregation
+   - `JobLifecycle_TaskStateTransitions_UpdatesCorrectly`: Tests state machine transitions
+   - `JobLifecycle_RecordProgress_StoresProgressSnapshot`: Tests progress recording
+   - `JobLifecycle_ReassignTasksFromNode_ResetsTasksToUnassigned`: Tests node failure handling
+   - `JobLifecycle_TaskDependencies_RespectsExecutionOrder`: Tests dependency blocking
+   - `JobLifecycle_FailTask_MarksTaskAndJobAsFailed`: Tests failure propagation
+
+**Test Results:**
+- All 13 new tests: PASSED
+- Test duration: ~4.7 seconds
+
+**Build Status:**
+- NoMercy.Tests.EncoderV2: BUILD SUCCEEDED
+
+**Phase 8 Progress (Testing & Validation):**
+- ✅ Stream processor unit tests (32 tests)
+- ✅ Profile validation tests (pre-existing)
+- ✅ Command generation tests (pre-existing)
+- ✅ Codec tests (pre-existing)
+- ✅ Container tests (pre-existing)
+- ✅ Integration tests (node selector, job lifecycle) - 13 tests
+- ❌ End-to-end encoding integration tests
+- ❌ Multi-node distribution tests
+- ❌ Production validation
+- ❌ Performance benchmarking
+- ❌ Stress testing
+
+**Next Steps:**
+- Add end-to-end encoding integration tests (with real FFmpeg execution)
+- Add multi-node distribution tests
