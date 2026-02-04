@@ -927,7 +927,65 @@ services.AddEncoderV2TaskWorker(options =>
 - ✅ EncodingController (job submission)
 - ✅ ProgressHub (SignalR real-time updates)
 - ✅ Integrate with existing Queue system
-- ❌ Add API documentation (Swagger)
+- ✅ Add API documentation (Swagger)
 
-**Next Steps:**
-- Add API documentation (Swagger)
+**Phase 7 Complete - Next: Phase 8 (Testing & Validation)**
+
+---
+
+### 2026-02-04: Swagger API Documentation (Phase 7 Complete)
+
+**Task Completed:** Add API documentation (Swagger) for EncoderV2 endpoints
+
+**Changes Made:**
+
+1. Enabled XML documentation generation in project files:
+   - `NoMercy.Api.csproj`: Added `<GenerateDocumentationFile>true</GenerateDocumentationFile>`
+   - `NoMercy.EncoderV2.csproj`: Added `<GenerateDocumentationFile>true</GenerateDocumentationFile>`
+   - `NoMercy.Database.csproj`: Added `<GenerateDocumentationFile>true</GenerateDocumentationFile>`
+   - Suppressed warning 1591 (missing XML comments) with `<NoWarn>$(NoWarn);1591</NoWarn>`
+
+2. Updated `ServiceConfiguration.cs`:
+   - Configured `AddSwaggerGen()` to include XML comments from:
+     - `NoMercy.Api.xml` (controller documentation)
+     - `NoMercy.EncoderV2.xml` (DTO and service documentation)
+     - `NoMercy.Database.xml` (model documentation)
+   - XML files are loaded conditionally (only if they exist)
+
+3. Updated `ConfigureSwaggerOptions.cs`:
+   - Added version-specific API descriptions
+   - v1: Core API for media library management
+   - v2: Enhanced API with EncoderV2 distributed encoding system
+   - Included EncoderV2 feature highlights:
+     - Profiles: Encoding profile management
+     - Jobs: Job submission and control
+     - Tasks: Distributed task execution
+     - Real-time Updates: SignalR hub documentation
+   - Authentication requirements documented
+
+**Swagger Documentation Features:**
+- XML comments from controllers appear in Swagger UI descriptions
+- Request/Response DTOs have documented properties
+- `[ProducesResponseType]` attributes show expected HTTP status codes
+- Version-specific descriptions help users understand API capabilities
+- SignalR hub endpoint (`/encodingProgressHub`) documented
+
+**Build Status:**
+- NoMercy.Api: BUILD SUCCEEDED (XML generated: 47KB)
+- NoMercy.EncoderV2: BUILD SUCCEEDED (XML generated: 214KB)
+- NoMercy.Database: BUILD SUCCEEDED (XML generated: 14KB)
+- NoMercy.Server: BUILD SUCCEEDED
+
+**Phase 7 Progress (API & Integration) - COMPLETE:**
+- ✅ ProfileController (CRUD endpoints)
+- ✅ EncodingController (job submission)
+- ✅ ProgressHub (SignalR real-time updates)
+- ✅ Integrate with existing Queue system
+- ✅ Add API documentation (Swagger)
+
+**Next Steps (Phase 8: Testing & Validation):**
+- Unit tests (profile validation, stream processing, command generation)
+- Integration tests (end-to-end encoding, multi-node distribution)
+- Production validation (encode test files from 16,000+ library)
+- Performance benchmarking
+- Stress testing (100+ concurrent jobs)

@@ -30,6 +30,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\NoMercy.EncoderV2\NoMercy.EncoderV2.csproj" />
         <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj" />
+        <ProjectReference Include="..\..\src\NoMercy.Encoder\NoMercy.Encoder.csproj" />
     </ItemGroup>
 
     <ItemGroup>
