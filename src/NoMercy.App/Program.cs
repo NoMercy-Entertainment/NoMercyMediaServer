@@ -7,13 +7,6 @@ namespace NoMercy.App;
 
 internal class Program
 {
-    private static int WindowWidth { get; set; } = 1280;
-    private static int WindowHeight { get; set; } = 720;
-    private static int WindowRestoreWidth { get; set; } = 1280;
-    private static int WindowRestoreHeight { get; set; } = 720;
-    private static int Top { get; set; }
-    private static int Left { get; set; }
-
     [STAThread]
     private static void Main(string[] args)
     {
@@ -31,86 +24,35 @@ internal class Program
         IInfiniFrameWindowBuilder window = builder.Window
             .Center()
             .SetTitle(windowTitle)
-            .SetMinSize(960 + 16, 540 + 39)
+            .SetMinSize(1280 + 16, 720 + 39)
             .SetResizable(true)
             .SetIconFile(iconPath)
             .SetUseOsDefaultSize(false)
-            .SetSmoothScrollingEnabled(true)
             .SetMediaAutoplayEnabled(true)
-            .SetMediaStreamEnabled(true);
+            .SetMediaStreamEnabled(true)
+            .SetBrowserControlInitParameters("--remote-debugging-port=9222")
+            .RegisterFullScreenWebMessageHandler()
+            .RegisterOpenExternalTargetWebMessageHandler()
+            .RegisterTitleChangedWebMessageHandler()
+            .RegisterWindowManagementWebMessageHandler()
+            .RegisterWebMessageReceivedHandler((sender, message) =>
+            {
+                if (sender is not IInfiniFrameWindow window) return;
+
+                string response = $"Received message: \"{message}\"";
+                window.SendWebMessage(response);
+            });
 
         // In debug mode, load from dev server; otherwise use local server
-        window.SetStartUrl(Debugger.IsAttached ? "https://app-dev.nomercy.tv" : "https://app.nomercy.tv");
-
-        window.RegisterFullScreenWebMessageHandler()
-            .RegisterWindowManagementWebMessageHandler()
-            .RegisterCustomSchemeHandler("nomercy",
-                (object sender, string scheme, string url, out string? contentType) =>
-                {
-                    contentType = "text/javascript";
-                    return new MemoryStream("""
-                        (() =>{
-                            window.setTimeout(() => {
-                                alert(`NoMercy custom scheme handler loaded.`);
-                            }, 1000);
-                        })();
-                    """u8.ToArray());
-                })
-            .RegisterWebMessageReceivedHandler((object? sender, string message) =>
-            {
-                if (sender is not IInfiniFrameWindow infiniFrameWindow) return;
-
-                switch (message)
-                {
-                    case "enterFullscreen":
-                        infiniFrameWindow.SetFullScreen(true);
-                        return;
-                    case "exitFullscreen":
-                        infiniFrameWindow.SetFullScreen(false);
-                        return;
-                }
-            })
-            .RegisterWindowCreatedHandler((sender, _) =>
-            {
-                if (sender is not IInfiniFrameWindow infiniFrameWindow) return;
-
-                InfiniMonitor primaryMonitor = infiniFrameWindow.MainMonitor;
-
-                WindowWidth = primaryMonitor.WorkArea.Width / 2;
-                WindowHeight = (int)(primaryMonitor.WorkArea.Width / 2 / 16 * 9.3);
-                Top = infiniFrameWindow.Top;
-                Left = infiniFrameWindow.Left;
-                infiniFrameWindow.SetSize(WindowWidth, WindowHeight);
-                infiniFrameWindow.Center();
-            })
-            .RegisterMaximizedHandler((sender, _) =>
-            {
-                if (sender is not IInfiniFrameWindow infiniFrameWindow) return;
-
-                WindowRestoreWidth = WindowWidth;
-                WindowRestoreHeight = WindowHeight;
-
-                InfiniMonitor primaryMonitor = infiniFrameWindow.MainMonitor;
-                WindowWidth = primaryMonitor.WorkArea.Width;
-                WindowHeight = primaryMonitor.WorkArea.Height;
-            })
-            .RegisterRestoredHandler((sender, _) =>
-            {
-                WindowWidth = WindowRestoreWidth;
-                WindowHeight = WindowRestoreHeight;
-            })
-            .RegisterLocationChangedHandler((sender, e) =>
-            {
-                if (e.IsEmpty || e.X == 0) return;
-                Top = e.Y;
-                Left = e.X;
-            });
+        if(Debugger.IsAttached)
+            window.SetStartUrl("https://app-dev.nomercy.tv");
 
         InfiniFrameWebApplication application = builder.Build();
 
         application.UseAutoServerClose();
 
         application.WebApp.UseStaticFiles();
+        application.WebApp.MapStaticAssets();
 
         application.Run();
     }

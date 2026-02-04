@@ -57,6 +57,21 @@ runs:
         # Clean up
         rm -rf ./src/NoMercy.App/Resources/wwwroot
 
+    - name: Inject InfiniFrame Script
+      if: inputs.project == 'App'
+      shell: bash
+      run: |
+        # Inject InfiniFrame script tag before closing </body> tag
+        # This is required for InfiniFrame library but cannot be in the source Vue app
+        INDEX_FILE="./src/NoMercy.App/wwwroot/index.html"
+        if [ -f "$INDEX_FILE" ]; then
+          # macOS sed requires empty string for in-place editing
+          sed -i '' 's|</body>|<script src="/_content/InfiniLore.InfiniFrame.Js/InfiniFrame.js"></script></body>|' "$INDEX_FILE"
+          echo "InfiniFrame script injected into index.html"
+        else
+          echo "Warning: index.html not found at $INDEX_FILE"
+        fi
+
     - name: Build Project for All Platforms
       shell: bash
       run: |
