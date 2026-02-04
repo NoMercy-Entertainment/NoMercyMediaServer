@@ -1,21 +1,19 @@
 using System.Diagnostics;
+using System.Reflection;
 using InfiniFrame;
 using InfiniFrame.Js.MessageHandlers;
 using InfiniFrame.WebServer;
+using Microsoft.Extensions.FileProviders;
 
 namespace NoMercy.App;
 
 internal class Program
 {
-    // For single-file deployments, get the directory where the exe is located (not the extraction folder)
-    private static readonly string ExeDirectory = Path.GetDirectoryName(Environment.ProcessPath)
-                                                  ?? AppContext.BaseDirectory;
-
     [STAThread]
     private static void Main(string[] args)
     {
         string windowTitle = "NoMercy TV";
-        string iconPath = GetIconPath();
+        string iconPath = ExtractIconToTemp();
 
         // Set environment variable for URL before creating builder
         if (!Debugger.IsAttached)
@@ -41,45 +39,69 @@ internal class Program
             .RegisterWindowManagementWebMessageHandler()
             .RegisterWebMessageReceivedHandler((sender, message) =>
             {
-                if (sender is not IInfiniFrameWindow window) return;
+                if (sender is not IInfiniFrameWindow infiniWindow) return;
 
                 string response = $"Received message: \"{message}\"";
-                window.SendWebMessage(response);
+                infiniWindow.SendWebMessage(response);
             });
 
         // In debug mode, load from dev server; otherwise use local server
-        if(Debugger.IsAttached)
+        if (Debugger.IsAttached)
             window.SetStartUrl("https://app-dev.nomercy.tv");
 
         InfiniFrameWebApplication application = builder.Build();
 
         application.UseAutoServerClose();
 
-        application.WebApp.UseStaticFiles();
+        // Use embedded file provider for static files from the assembly
+        Assembly assembly = typeof(Program).Assembly;
+        ManifestEmbeddedFileProvider embeddedProvider = new(assembly, "wwwroot");
 
-        // For single-file deployments, the manifest is next to the exe, not in the extraction folder
-        string manifestPath = Path.Combine(ExeDirectory, "NoMercyApp.staticwebassets.endpoints.json");
-        if (File.Exists(manifestPath))
-            application.WebApp.MapStaticAssets(manifestPath);
-        else
-            application.WebApp.MapStaticAssets();
+        // Serve default files (index.html) from embedded resources
+        application.WebApp.UseDefaultFiles(new DefaultFilesOptions
+        {
+            FileProvider = embeddedProvider
+        });
+
+        // Serve static files from embedded resources
+        application.WebApp.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = embeddedProvider
+        });
 
         application.Run();
     }
 
-    private static string GetIconPath()
+    private static string ExtractIconToTemp()
     {
-        string iconPath;
+        string iconName;
         if (OperatingSystem.IsWindows())
-            iconPath = Path.Combine(ExeDirectory, "Resources", "AppIcon", "icon.ico");
+            iconName = "icon.ico";
         else if (OperatingSystem.IsLinux())
-            iconPath = Path.Combine(ExeDirectory, "Resources", "AppIcon", "icon.png");
+            iconName = "icon.png";
         else if (OperatingSystem.IsMacOS())
-            iconPath = Path.Combine(ExeDirectory, "Resources", "AppIcon", "icon.icns");
+            iconName = "icon.icns";
         else
             throw new PlatformNotSupportedException("Unsupported OS platform");
 
-        if (!File.Exists(iconPath)) throw new FileNotFoundException("Tray icon file not found", iconPath);
+        // Extract embedded icon to temp directory
+        string tempDir = Path.Combine(Path.GetTempPath(), "NoMercyApp");
+        Directory.CreateDirectory(tempDir);
+        string iconPath = Path.Combine(tempDir, iconName);
+
+        // Only extract if not already present
+        if (!File.Exists(iconPath))
+        {
+            Assembly assembly = typeof(Program).Assembly;
+            string resourceName = $"NoMercy.App.Resources.AppIcon.{iconName}";
+
+            using Stream? stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream == null)
+                throw new FileNotFoundException($"Embedded icon resource not found: {resourceName}");
+
+            using FileStream fileStream = File.Create(iconPath);
+            stream.CopyTo(fileStream);
+        }
 
         return iconPath;
     }

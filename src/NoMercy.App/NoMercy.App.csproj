@@ -19,6 +19,8 @@
         <PackageTags>streaming media content-management private streaming-video streaming-audio blurayrip video-encoder</PackageTags>
         <NeutralLanguage>en</NeutralLanguage>
         <OutputType>WinExe</OutputType>
+        <!-- Disable all default content handling -->
+        <EnableDefaultContentItems>false</EnableDefaultContentItems>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -33,7 +35,6 @@
         <SelfContained>true</SelfContained>
         <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
         <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-        <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
 
@@ -48,25 +49,41 @@
         <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
     </ItemGroup>
 
+    <!-- Remove ALL wwwroot items from any item type first -->
     <ItemGroup>
-        <EmbeddedResource Include="wwwroot\**" />
+        <Content Remove="wwwroot\**\*" />
+        <None Remove="wwwroot\**\*" />
+    </ItemGroup>
+
+    <!-- Embed ALL wwwroot files as resources - explicitly include all extensions -->
+    <ItemGroup>
+        <EmbeddedResource Include="wwwroot\**\*.html" />
+        <EmbeddedResource Include="wwwroot\**\*.htm" />
+        <EmbeddedResource Include="wwwroot\**\*.js" />
+        <EmbeddedResource Include="wwwroot\**\*.css" />
+        <EmbeddedResource Include="wwwroot\**\*.json" />
+        <EmbeddedResource Include="wwwroot\**\*.svg" />
+        <EmbeddedResource Include="wwwroot\**\*.png" />
+        <EmbeddedResource Include="wwwroot\**\*.jpg" />
+        <EmbeddedResource Include="wwwroot\**\*.jpeg" />
+        <EmbeddedResource Include="wwwroot\**\*.gif" />
+        <EmbeddedResource Include="wwwroot\**\*.ico" />
+        <EmbeddedResource Include="wwwroot\**\*.woff" />
+        <EmbeddedResource Include="wwwroot\**\*.woff2" />
+        <EmbeddedResource Include="wwwroot\**\*.ttf" />
+        <EmbeddedResource Include="wwwroot\**\*.eot" />
+        <EmbeddedResource Include="wwwroot\**\*.webmanifest" />
+        <EmbeddedResource Include="wwwroot\**\*.txt" />
+        <EmbeddedResource Include="wwwroot\**\*.xml" />
+        <EmbeddedResource Include="wwwroot\**\*.webp" />
+        <EmbeddedResource Include="wwwroot\**\*.br" />
+        <EmbeddedResource Include="wwwroot\**\*.gz" />
+        <EmbeddedResource Include="wwwroot\_headers" />
+    </ItemGroup>
+
+    <!-- Embed icons as resources for runtime extraction -->
+    <ItemGroup>
         <EmbeddedResource Include="..\..\assets\icons\*.*" Link="Resources\AppIcon\%(Filename)%(Extension)" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="wwwroot\**">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-        <Content Include="..\..\assets\icons\*.*" Link="Resources\AppIcon\%(Filename)%(Extension)">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-        </Content>
-    </ItemGroup>
-
-    <!-- Exclude static assets manifest from single-file bundle so it stays next to exe -->
-    <ItemGroup>
-        <ExcludeFromSingleFile Include="$(TargetName).staticwebassets.endpoints.json" />
     </ItemGroup>
 
 </Project>
