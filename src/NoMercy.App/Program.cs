@@ -3,7 +3,7 @@ using System.Reflection;
 using InfiniFrame;
 using InfiniFrame.Js.MessageHandlers;
 using InfiniFrame.WebServer;
-using Microsoft.Extensions.FileProviders;
+using NoMercy.App.EmbeddedStaticAssets;
 
 namespace NoMercy.App;
 
@@ -53,21 +53,14 @@ internal class Program
 
         application.UseAutoServerClose();
 
-        // Use embedded file provider for static files from the assembly
-        Assembly assembly = typeof(Program).Assembly;
-        ManifestEmbeddedFileProvider embeddedProvider = new(assembly, "wwwroot");
-
-        // Serve default files (index.html) from embedded resources
-        application.WebApp.UseDefaultFiles(new DefaultFilesOptions
+        // Use custom embedded static assets middleware with optimizations
+        // (compression, caching, ETags) - replaces MapStaticAssets for embedded resources
+        // Also injects the InfiniFrame.js script tag into HTML files at runtime
+        application.WebApp.UseEmbeddedStaticAssets(options =>
         {
-            FileProvider = embeddedProvider
-        });
-
-        // Serve static files from embedded resources
-        application.WebApp.UseStaticFiles(new StaticFileOptions
-        {
-            FileProvider = embeddedProvider
-        });
+            // Inject InfiniFrame script before </body> - required for InfiniFrame communication
+            options.InjectScripts.Add("/_content/InfiniLore.InfiniFrame.Js/InfiniFrame.js");
+        }, typeof(Program).Assembly, "wwwroot");
 
         application.Run();
     }

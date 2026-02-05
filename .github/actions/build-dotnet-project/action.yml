@@ -57,19 +57,27 @@ runs:
         # Clean up
         rm -rf ./src/NoMercy.App/Resources/wwwroot
 
-    - name: Inject InfiniFrame Script
+    # Note: InfiniFrame script injection is now handled at runtime by EmbeddedStaticAssetsMiddleware
+    # See src/NoMercy.App/Program.cs for the injection configuration
+
+    - name: Copy InfiniFrame.js to wwwroot
       if: inputs.project == 'App'
       shell: bash
       run: |
-        # Inject InfiniFrame script tag before closing </body> tag
-        # This is required for InfiniFrame library but cannot be in the source Vue app
-        INDEX_FILE="./src/NoMercy.App/wwwroot/index.html"
-        if [ -f "$INDEX_FILE" ]; then
-          # macOS sed requires empty string for in-place editing
-          sed -i '' 's|</body>|<script src="/_content/InfiniLore.InfiniFrame.Js/InfiniFrame.js"></script></body>|' "$INDEX_FILE"
-          echo "InfiniFrame script injected into index.html"
+        # Copy InfiniFrame.js from NuGet package to wwwroot for embedding
+        # This is needed because StaticWebAssetsEnabled=false disables automatic RCL asset copying
+        mkdir -p ./src/NoMercy.App/wwwroot/_content/InfiniLore.InfiniFrame.Js
+
+        # Find the InfiniFrame.Js package in the NuGet cache
+        NUGET_CACHE="${HOME}/.nuget/packages"
+        INFINIFRAME_PKG=$(find "$NUGET_CACHE/infinilore.infiniframe.js" -maxdepth 1 -type d | sort -V | tail -1)
+
+        if [ -d "$INFINIFRAME_PKG/staticwebassets" ]; then
+          cp "$INFINIFRAME_PKG/staticwebassets/InfiniFrame.js" "./src/NoMercy.App/wwwroot/_content/InfiniLore.InfiniFrame.Js/"
+          echo "InfiniFrame.js copied from $INFINIFRAME_PKG"
         else
-          echo "Warning: index.html not found at $INDEX_FILE"
+          echo "Warning: InfiniFrame.js not found in NuGet cache"
+          exit 1
         fi
 
     - name: Build Project for All Platforms
