@@ -7,6 +7,17 @@ set -e
 echo "Setting up development environment..."
 echo "======================================"
 
+sudo mkdir -p /home/vscode/.local/share/claude
+sudo chown -R vscode:vscode /home/vscode/.local
+
+# Install Claude CLI
+echo ""
+echo "[1/5] Installing Claude CLI..."
+curl -fsSL https://claude.ai/install.sh | bash
+
+# Add Claude CLI to PATH for current session
+export PATH="${HOME}/.local/bin:${PATH}"
+
 # Check if there's an exported config to import
 if [ -d ".devcontainer/config" ]; then
     echo "Found exported configuration, importing..."

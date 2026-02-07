@@ -43,7 +43,7 @@
 	},
 
 	// Set up shell configuration and restore dependencies
-	"postCreateCommand": "bash .devcontainer/setup-environment.sh && mkdir -p /home/vscode/.local && sudo chown -R vscode:vscode /home/vscode/.local && dotnet restore",
+	"postCreateCommand": "bash .devcontainer/setup-environment.sh && mkdir -p /home/vscode/.local && sudo chown -R vscode:vscode /home/vscode/.local && dotnet restore && sudo chown -R vscode:vscode /home/vscode/.local/share/claude",
 
 	// Configure tool-specific properties.
 	"customizations": {
