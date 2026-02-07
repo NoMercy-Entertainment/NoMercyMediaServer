@@ -5,12 +5,10 @@ namespace NoMercy.Server;
 
 public class Startup
 {
-    private readonly IApiVersionDescriptionProvider _provider;
     private readonly StartupOptions _options;
 
-    public Startup(IApiVersionDescriptionProvider provider, StartupOptions options)
+    public Startup(StartupOptions options)
     {
-        _provider = provider;
         _options = options;
     }
 
@@ -23,6 +21,7 @@ public class Startup
 
     public void Configure(IApplicationBuilder app)
     {
-        ApplicationConfiguration.ConfigureApp(app, _provider);
+        IApiVersionDescriptionProvider provider = app.ApplicationServices.GetRequiredService<IApiVersionDescriptionProvider>();
+        ApplicationConfiguration.ConfigureApp(app, provider);
     }
 }

@@ -629,3 +629,6 @@ openapi-*.json
 .gpg-keys/
 *.gpg
 *.asc
+# InfiniFrame.js copied from NuGet package at build time
+src/NoMercy.App/wwwroot/_content/
+src/NoMercy.App/wwwroot/*

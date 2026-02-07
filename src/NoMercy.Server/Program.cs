@@ -182,7 +182,6 @@ public static class Program
             .ConfigureServices(services =>
             {
                 services.AddSingleton<StartupOptions>(options);
-                services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
                 services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
                 services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
                 

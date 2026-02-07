@@ -1,4 +1,5 @@
 using FFMpegCore;
+using NoMercy.Database;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -145,10 +146,10 @@ public class BaseAudio : Classes
         return this;
     }
 
-    public BaseAudio AddCustomArguments((string key, string val)[] profileCustomArguments)
+    public BaseAudio AddCustomArguments(CustomArgument[] profileCustomArguments)
     {
-        foreach ((string key, string val) in profileCustomArguments)
-            AddCustomArgument(key, val);
+        foreach (CustomArgument arg in profileCustomArguments)
+            AddCustomArgument(arg.Key, arg.Val);
         return this;
     }
 

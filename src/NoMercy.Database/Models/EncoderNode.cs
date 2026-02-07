@@ -79,6 +79,7 @@ public class EncoderNode : Timestamps
     public string SupportedAccelerationsJson { get; set; } = "[]";
 
     [NotMapped]
+    [JsonIgnore]
     public string[] SupportedAccelerations
     {
         get => !string.IsNullOrEmpty(SupportedAccelerationsJson)

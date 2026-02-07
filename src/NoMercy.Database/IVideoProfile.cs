@@ -17,6 +17,6 @@ public class IVideoProfile
     public int Crf { get; set; }
     public int KeyInt { get; set; }
     public string[] Opts { get; set; } = [];
-    public (string key, string Val)[] CustomArguments { get; set; } = [];
+    public CustomArgument[] CustomArguments { get; set; } = [];
     public bool ConvertHdrToSdr { get; set; }
 }

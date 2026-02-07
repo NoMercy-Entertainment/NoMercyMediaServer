@@ -1,4 +1,5 @@
 using FFMpegCore;
+using NoMercy.Database;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.Extensions;
@@ -87,10 +88,10 @@ public class BaseSubtitle : Classes
         return this;
     }
 
-    public BaseSubtitle AddCustomArguments((string key, string val)[] profileCustomArguments)
+    public BaseSubtitle AddCustomArguments(CustomArgument[] profileCustomArguments)
     {
-        foreach ((string key, string val) in profileCustomArguments)
-            AddCustomArgument(key, val);
+        foreach (CustomArgument arg in profileCustomArguments)
+            AddCustomArgument(arg.Key, arg.Val);
         return this;
     }
 

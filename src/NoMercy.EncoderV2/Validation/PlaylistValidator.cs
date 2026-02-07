@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace NoMercy.EncoderV2.Validation;
 
 /// <summary>
@@ -147,7 +149,7 @@ public class PlaylistValidator : IPlaylistValidator
                 if (trimmed.StartsWith("#EXT-X-TARGETDURATION:"))
                 {
                     string durationStr = trimmed.Substring("#EXT-X-TARGETDURATION:".Length);
-                    if (double.TryParse(durationStr, out double targetDuration))
+                    if (double.TryParse(durationStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double targetDuration))
                     {
                         result.TargetDuration = targetDuration;
                     }
@@ -162,7 +164,7 @@ public class PlaylistValidator : IPlaylistValidator
                         durationStr = durationStr.Substring(0, commaIndex);
                     }
 
-                    if (double.TryParse(durationStr, out double segmentDuration))
+                    if (double.TryParse(durationStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double segmentDuration))
                     {
                         totalDuration += segmentDuration;
 

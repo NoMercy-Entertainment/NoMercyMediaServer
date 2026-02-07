@@ -109,8 +109,6 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "Item not found"
             });
 
-        Logger.Socket(userData);
-
         mediaContext.UserData.RemoveRange(userData);
         await mediaContext.SaveChangesAsync();
 

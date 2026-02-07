@@ -7,5 +7,5 @@ public class ISubtitleProfile
     public string PlaylistName { get; set; } = string.Empty;
     public string[] AllowedLanguages { get; set; } = [];
     public string[] Opts { get; set; } = [];
-    public (string key, string Val)[] CustomArguments { get; set; } = [];
+    public CustomArgument[] CustomArguments { get; set; } = [];
 }

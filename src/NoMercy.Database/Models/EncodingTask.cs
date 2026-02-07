@@ -57,6 +57,7 @@ public class EncodingTask : Timestamps
     public string DependenciesJson { get; set; } = "[]";
 
     [NotMapped]
+    [JsonIgnore]
     public string[] Dependencies
     {
         get => !string.IsNullOrEmpty(DependenciesJson)

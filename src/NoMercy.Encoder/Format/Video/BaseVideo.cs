@@ -1,6 +1,7 @@
 // ReSharper disable MemberCanBeProtected.Global
 // ReSharper disable MemberCanBePrivate.Global
 
+using NoMercy.Database;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -144,10 +145,10 @@ public abstract class BaseVideo : Classes
         return this;
     }
 
-    public BaseVideo AddCustomArguments((string key, string val)[] profileCustomArguments)
+    public BaseVideo AddCustomArguments(CustomArgument[] profileCustomArguments)
     {
-        foreach ((string key, string val) in profileCustomArguments)
-            AddCustomArgument(key, val);
+        foreach (CustomArgument arg in profileCustomArguments)
+            AddCustomArgument(arg.Key, arg.Val);
         return this;
     }
 

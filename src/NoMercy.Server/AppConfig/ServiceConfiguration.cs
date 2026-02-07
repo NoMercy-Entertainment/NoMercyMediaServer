@@ -35,6 +35,7 @@ using NoMercy.Queue;
 using NoMercy.Queue.Extensions;
 using NoMercy.Queue.Jobs;
 using NoMercy.Server.services;
+using NoMercy.EncoderV2.DependencyInjection;
 using NoMercy.Server.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
@@ -153,6 +154,8 @@ public static class ServiceConfiguration
         services.AddSingleton<JobQueue>();
         services.AddSingleton<JobDispatcher>();
         services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
+
+        services.AddEncoderV2();
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();
