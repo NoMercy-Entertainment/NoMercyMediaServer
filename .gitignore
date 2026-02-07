@@ -7,6 +7,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Claude credentials (mounted from host, never commit)
+.devcontainer/config/claude-credentials.json
+
 # User-specific files
 *.rsuser
 *.suo
@@ -601,7 +604,6 @@ build.log
 
 # IDE and Editor specific
 .run/
-.claude/
 .vscode-test/
 
 # macOS specific

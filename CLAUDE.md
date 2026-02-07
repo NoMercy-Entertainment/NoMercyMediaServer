@@ -261,6 +261,34 @@ Located in `src/NoMercy.Providers/`:
 
 All providers implement async patterns with retry logic and rate limiting.
 
+## Dev Container & Security Rules
+
+### Server Access
+- The server uses wildcard SSL certs issued per device ID: `*.{device-id}.nomercy.tv`
+- DNS records are created by the NoMercy API during server registration
+- Device IDs are hardware-derived and differ between host and container
+- Always access the server via its registered domain, never via `localhost`
+- From inside the container, always use the external URL with proper CA verification:
+  ```bash
+  curl --cacert ~/.local/share/NoMercy_dev/root/certs/ca.pem https://{external-ip-dashed}.{device-id}.nomercy.tv:7626/...
+  ```
+
+### Security - Mandatory
+- **NEVER** use `curl -sk`, `--insecure`, or skip certificate verification
+- **NEVER** use `localhost` to access the server — always use the proper `*.nomercy.tv` domain
+- **NEVER** suggest bypassing SSL warnings or security measures
+- **NEVER** override internal server behavior (cert, device ID, DNS, registration) with CLI flags unless explicitly asked
+- The cert, device ID, and DNS setup are integral parts of the system — they must not be worked around
+
+### Running in Dev Container
+```bash
+# Start with host LAN IP so both container and host can access
+dotnet run --project src/NoMercy.Server -- --dev --internal-ip <HOST_LAN_IP>
+```
+- The `--internal-ip` flag is needed because the container's Docker IP (172.17.x.x) isn't routable from the host
+- Check the log file for the actual Internal/External addresses after startup
+- The external URL (via public IP) is accessible from both host browser and container
+
 ## Cross-Platform Deployment
 
 - **Linux**: Systemd services, DEB/RPM/Arch packages

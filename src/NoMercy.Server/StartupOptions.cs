@@ -77,17 +77,24 @@ public class StartupOptions
         else
         {
             InternalPort = 7626;
-            MediaContext mediaContext = new();
-            Configuration? internalPortConfig = mediaContext.Configuration
-                .FirstOrDefault(c => c.Key == "internalPort");
-            if (internalPortConfig != null)
+            try
             {
-                InternalPort = int.Parse(internalPortConfig.Value);
-                Logger.App("Loaded internal port from database: " + InternalPort);
+                MediaContext mediaContext = new();
+                Configuration? internalPortConfig = mediaContext.Configuration
+                    .FirstOrDefault(c => c.Key == "internalPort");
+                if (internalPortConfig != null)
+                {
+                    InternalPort = int.Parse(internalPortConfig.Value);
+                    Logger.App("Loaded internal port from database: " + InternalPort);
+                }
+                mediaContext.Dispose();
+            }
+            catch (Exception)
+            {
+                Logger.App("Database not yet initialized, using default internal port.");
             }
             Config.InternalServerPort = InternalPort;
             options.Add("internalPort", InternalPort.ToString());
-            mediaContext.Dispose();
         }
 
         if (ExternalPort != 0)
@@ -99,17 +106,24 @@ public class StartupOptions
         else
         {
             ExternalPort = 7626;
-            MediaContext mediaContext = new();
-            Configuration? externalPortConfig = mediaContext.Configuration
-                .FirstOrDefault(c => c.Key == "externalPort");
-            if (externalPortConfig != null)
+            try
             {
-                ExternalPort = int.Parse(externalPortConfig.Value);
-                Logger.App("Loaded external port from database: " + ExternalPort);
+                MediaContext mediaContext = new();
+                Configuration? externalPortConfig = mediaContext.Configuration
+                    .FirstOrDefault(c => c.Key == "externalPort");
+                if (externalPortConfig != null)
+                {
+                    ExternalPort = int.Parse(externalPortConfig.Value);
+                    Logger.App("Loaded external port from database: " + ExternalPort);
+                }
+                mediaContext.Dispose();
+            }
+            catch (Exception)
+            {
+                Logger.App("Database not yet initialized, using default external port.");
             }
             Config.ExternalServerPort = ExternalPort;
             options.Add("externalPort", ExternalPort.ToString());
-            mediaContext.Dispose();
         }
 
         if (!string.IsNullOrEmpty(InternalIp))
