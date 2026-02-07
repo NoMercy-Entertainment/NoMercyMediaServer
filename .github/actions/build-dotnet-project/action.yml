@@ -57,6 +57,29 @@ runs:
         # Clean up
         rm -rf ./src/NoMercy.App/Resources/wwwroot
 
+    # Note: InfiniFrame script injection is now handled at runtime by EmbeddedStaticAssetsMiddleware
+    # See src/NoMercy.App/Program.cs for the injection configuration
+
+    - name: Copy InfiniFrame.js to wwwroot
+      if: inputs.project == 'App'
+      shell: bash
+      run: |
+        # Copy InfiniFrame.js from NuGet package to wwwroot for embedding
+        # This is needed because StaticWebAssetsEnabled=false disables automatic RCL asset copying
+        mkdir -p ./src/NoMercy.App/wwwroot/_content/InfiniLore.InfiniFrame.Js
+
+        # Find the InfiniFrame.Js package in the NuGet cache
+        NUGET_CACHE="${HOME}/.nuget/packages"
+        INFINIFRAME_PKG=$(find "$NUGET_CACHE/infinilore.infiniframe.js" -maxdepth 1 -type d | sort -V | tail -1)
+
+        if [ -d "$INFINIFRAME_PKG/staticwebassets" ]; then
+          cp "$INFINIFRAME_PKG/staticwebassets/InfiniFrame.js" "./src/NoMercy.App/wwwroot/_content/InfiniLore.InfiniFrame.Js/"
+          echo "InfiniFrame.js copied from $INFINIFRAME_PKG"
+        else
+          echo "Warning: InfiniFrame.js not found in NuGet cache"
+          exit 1
+        fi
+
     - name: Build Project for All Platforms
       shell: bash
       run: |
