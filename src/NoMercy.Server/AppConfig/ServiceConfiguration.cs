@@ -114,14 +114,12 @@ public static class ServiceConfiguration
         {
             optionsAction.UseSqlite($"Data Source={AppFiles.QueueDatabase} Pooling=True");
         });
-        services.AddTransient<QueueContext>();
 
         services.AddDbContext<MediaContext>(optionsAction =>
         {
             optionsAction.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
         });
-        services.AddTransient<MediaContext>();
 
         // Add Repositories
         services.AddScoped<HomeRepository>();

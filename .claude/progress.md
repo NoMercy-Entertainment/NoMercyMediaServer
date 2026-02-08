@@ -351,3 +351,29 @@
 
 **Test results**: All 1,016 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CRIT-13 — Remove duplicate DbContext registration (scoped + transient)
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Removed `services.AddTransient<QueueContext>();` (line 117) and `services.AddTransient<MediaContext>();` (line 124) from `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs`
+- **The bug**: `AddDbContext<T>()` registers the DbContext as Scoped (one instance per request scope), but the subsequent `AddTransient<T>()` calls shadow that registration, causing DI to create a **new instance on every resolution**. This means:
+  - Multiple change trackers per request — entities loaded by one resolution are invisible to another
+  - `SaveChanges()` on one instance misses changes tracked by another instance in the same scope
+  - Connection pool exhaustion from excessive connection creation
+- **The fix**: Remove the two `AddTransient` lines. The `AddDbContext<T>()` scoped registration is the correct lifetime for DbContexts — one instance per HTTP request scope, shared across all services within that request.
+- **Investigation**: Confirmed that `JobDispatcher` and `QueueRunner` create their own `new QueueContext()` directly (bypassing DI entirely), so they are unaffected by this change. The `JobQueue` singleton DI registration (line 153) is also unaffected since `JobDispatcher`/`QueueRunner` use their own static instances. The direct `new MediaContext()`/`new QueueContext()` patterns are a separate issue tracked by CRIT-01.
+- Created `tests/NoMercy.Tests.Api/DbContextRegistrationTests.cs` with 8 tests:
+  - **MediaContext scoped identity** (1 test): Two resolutions within the same scope return the same instance (`Assert.Same`)
+  - **QueueContext scoped identity** (1 test): Two resolutions within the same scope return the same instance
+  - **MediaContext cross-scope isolation** (1 test): Different scopes return different instances (`Assert.NotSame`)
+  - **QueueContext cross-scope isolation** (1 test): Different scopes return different instances
+  - **MediaContext not transient** (1 test): Verifies `ReferenceEquals` is true within scope (would be false if transient)
+  - **QueueContext not transient** (1 test): Same verification for QueueContext
+  - **SaveChanges persists within scope** (1 test): Modifies a user name, calls SaveChanges, re-resolves context from same scope, verifies change is visible
+  - **Change tracking shared across resolutions** (1 test): Modifies entity via ctx1, verifies ctx2's Local collection sees the change (proves shared change tracker)
+
+**Test results**: All 1,024 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 251 Api + 307 Providers). Build succeeds with 0 errors.
+
