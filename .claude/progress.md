@@ -403,3 +403,24 @@
 
 **Test results**: All 1,035 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## PROV-CRIT-03 — Fix `.Result` on `SendAsync` in TvdbBaseClient
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Providers/TVDB/Client/TvdbBaseClient.cs:107-109` — replaced `.Result` blocking call with proper `await`
+- **The bug**: `await client.SendAsync(httpRequestMessage).Result.Content.ReadAsStringAsync()` mixes synchronous `.Result` (which blocks the thread waiting for `SendAsync` to complete) with `await` on `ReadAsStringAsync()`. This can cause deadlocks when called from a synchronization context (e.g., ASP.NET request thread), because `.Result` blocks the thread that `await` needs to resume on.
+- **The fix**: Split into two proper await calls:
+  ```csharp
+  HttpResponseMessage httpResponse = await client.SendAsync(httpRequestMessage);
+  string response = await httpResponse.Content.ReadAsStringAsync();
+  ```
+- Created `tests/NoMercy.Tests.Providers/TVDB/Client/TvdbBaseClientTests.cs` with 3 tests:
+  - **IL structural regression test** (`GetToken_StateMachine_DoesNotCallTaskResult`): Inspects the compiled state machine IL of `GetToken` to verify no `get_Result` call exists on any `Task` type — this is the definitive proof that `.Result` is no longer used
+  - **Async signature verification** (`GetToken_IsAsync_ReturnsTask`): Verifies `GetToken` is declared as async (returns `Task<T>`)
+  - **Double-await verification** (`GetToken_StateMachine_HasMultipleAwaiterGetResult`): Counts `TaskAwaiter.GetResult()` calls in the state machine IL — the fixed code should have at least 2 await points (one for `SendAsync`, one for `ReadAsStringAsync`), whereas the buggy code only had 1 (the `SendAsync` was resolved synchronously via `.Result`)
+
+**Test results**: All 1,038 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 310 Providers). Build succeeds with 0 errors.
+
