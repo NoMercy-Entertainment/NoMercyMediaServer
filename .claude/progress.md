@@ -212,3 +212,42 @@
 
 **Test results**: 26 new queue behavior tests pass (229 total in NoMercy.Tests.Queue). All 899 tests pass across all projects (120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CHAR-09 — Encoder command-building tests (capture FFmpeg CLI args)
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Created `tests/NoMercy.Tests.Encoder/` project with references to `NoMercy.Encoder`
+- Added project to solution under Tests folder
+- Added `InternalsVisibleTo` attribute to `NoMercy.Encoder.csproj` for test access to internal members (`VideoStream`, `AudioStream`, `Index`, `IsVideo`, `IsAudio`)
+- Created `EncoderCommandBuildingTests.cs` with 111 test methods covering FFmpeg CLI argument construction:
+  - **Helper infrastructure**: `CreateSdrProbeData()`, `CreateHdrProbeData()`, `CreateVideoStream()`, `CreateAudioStream()` using reflection to populate FFMpegCore stream properties; `CreateHlsContainer()` manually builds container with video/audio streams (bypassing `FfMpeg.Open()` which requires ffprobe); `BuildCommand()` wraps `FFmpegCommandBuilder` for clean test calls; `IDisposable` with temp directory for `CreateFolder()` side effects
+  - **Global options** (5 tests): `-hide_banner`, `-probesize`/`-analyzeduration`, `-progress -`, `-threads 0` (no priority), `-threads N` (priority mode)
+  - **Input options** (5 tests): `-i` with input file path, `-y` overwrite flag, `-map_metadata -1`, no `-gpu any` without accelerators, `-gpu any` + accelerator args with GPU
+  - **Video codec selection** (3 tests): X264→`-c:v libx264`, X265→`-c:v libx265`, AV1→`-c:v librav1e`
+  - **Filter complex** (2 tests): SDR video filter chain with `format=yuv420p` and `[v0_hls_0]` output label; audio volume filter `volume=3` with `[a0_hls_0]` label
+  - **Video output parameters** (6 tests): `-map [v0_hls_0]` stream mapping, bt709 color space (4 properties), H.264 bitstream filter `h264_mp4toannexb`, HEVC bitstream filter `hevc_mp4toannexb`, `-metadata title=` with title
+  - **HLS-specific parameters** (9 tests): `-hls_segment_filename`, `-hls_allow_cache 1`, `-hls_segment_type mpegts`, `-hls_playlist_type`, `-hls_time 4`/`-hls_init_time 4`, `-hls_flags independent_segments`, `-f hls`, `-start_number 0`, custom HLS time value (10)
+  - **Audio output parameters** (5 tests): `-c:a aac`, `-map [a0_hls_0]`, `-b:a 192k` bitrate, `-ac 6` channels, `-ar 44100` sample rate
+  - **Codec quality flags** (8 tests): CRF with VBR flags, preset, profile, video bitrate, maxrate, bufsize, level, keyframe interval (`-g`/`-keyint_min`)
+  - **Video codec factory** (7 tests): `BaseVideo.Create()` returns correct type for libx264, h264_nvenc, libx265, hevc_nvenc, vp9, libvpx-vp9; unsupported codec throws
+  - **Audio codec factory** (8 tests): `BaseAudio.Create()` returns correct type for aac, libmp3lame, opus, flac, ac3, eac3, truehd; unsupported codec throws
+  - **Container factory** (6 tests): `BaseContainer.Create()` returns correct type for mkv, Mp4, mp3, flac, m3u8; unsupported container throws
+  - **Codec fluent API setters** (12 tests): CRF out-of-range throws (>51, <0), negative bitrate throws, invalid preset/profile/tune/level throws, GetPasses with/without bitrate, CRF boundary validation (0 and 51 valid), default codec values for X264/X265/AV1
+  - **Audio setter validation** (3 tests): zero bitrate throws, negative channels throws, zero sample rate throws
+  - **HLS configuration** (4 tests): `SetHlsTime()` reflected in command, `SetHlsPlaylistType()` reflected in command, ContainerDto is HLS, extension is m3u8
+  - **Container available codecs** (5 tests): HLS includes H264/H265/AAC, `GetName()` maps correctly, unsupported format throws
+  - **Codec constants** (7 tests): H264, H264Nvenc, H265, AV1, AAC, MP3, FLAC constant values verified
+  - **Command order** (4 tests): global options before input, input before filter_complex, filter_complex before outputs, video outputs before audio outputs
+  - **Scale configuration** (3 tests): single value reflected in command, width+height reflected, fluent API returns self
+  - **HDR/color space** (2 tests): UHD video gets bt2020 color primaries, 10-bit pixel format gets smpte2084 color_trc
+  - **GetFullCommand integration** (1 test): `VideoAudioFile.GetFullCommand()` returns complete command string
+  - **Custom arguments** (2 tests): container and video custom args appear in built command
+  - **Audio metadata** (1 test): `-metadata:s:a:0` with language present
+  - **FrameSizes constants** (1 test): verifies 240p through 4k resolutions exist
+- Testing approach: Constructs `FFmpegCommandBuilder` directly with manually-built `Hls` containers containing `BaseVideo`/`BaseAudio` streams, bypassing `FfMpeg.Open()` (which requires ffprobe binary) and `CropDetect()` (which requires ffmpeg binary). Uses temp directories for `CreateFolder()` side effects during `BuildCommand()`. FFMpegCore stream properties set via reflection since constructors don't accept parameters.
+
+**Test results**: 111 new encoder tests pass (111 total in NoMercy.Tests.Encoder). All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
+
