@@ -446,3 +446,24 @@
 
 **Test results**: All 1,045 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 317 Providers). Build succeeds with 0 errors.
 
+---
+
+## PROV-H06 — Remove dead code (contradictory while loop) in AcoustId
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Removed contradictory while loop from `src/NoMercy.Providers/AcoustId/Client/AcoustIdBaseClient.cs:79-92`
+- Removed unused `int iteration = 0;` variable (line 73)
+- **The bug**: The while loop condition `data?.Results.Length == 0 && data.Results.Any(...)` was contradictory — an array with `Length == 0` can never have `.Any()` return `true`. The loop body (which would re-fetch the URL up to 10 times) could never execute. This was dead code that added complexity without effect.
+- **The fix**: Removed the entire while loop (lines 79-92) and the associated `int iteration = 0;` variable (line 73). The early return on line 75-77 already handles the case where valid results with titled recordings exist, and the method correctly falls through to throw or return data otherwise.
+- Created `tests/NoMercy.Tests.Providers/AcoustId/Client/AcoustIdBaseClientTests.cs` with 6 tests:
+  - **IL structural regression — no iteration field** (1 test): Inspects the async state machine fields to verify no `iteration` variable exists in the compiled IL (proves the while loop and its counter are gone)
+  - **IL structural regression — no while loop fields** (1 test): Additional verification that no iteration-like counter fields remain in the state machine
+  - **Async return type** (1 test): Verifies `Get<T>` returns `Task<T?>` (generic task)
+  - **AsyncStateMachine attribute** (1 test): Verifies `Get<T>` has the `AsyncStateMachineAttribute`
+  - **Method parameters** (1 test): Verifies `Get<T>` has 4 parameters: url, query, priority, retry
+  - **IDisposable** (1 test): Verifies `AcoustIdBaseClient` implements `IDisposable`
+
+**Test results**: All 1,051 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 323 Providers). Build succeeds with 0 errors.
+

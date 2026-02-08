@@ -70,26 +70,9 @@ public class AcoustIdBaseClient : IDisposable
 
             data = response.FromJson<T>();
 
-            int iteration = 0;
-
             if (data?.Results.Length > 0 && data.Results
                     .Any(fpResult => fpResult.Recordings is not null && fpResult.Recordings
                         .Any(recording => recording?.Title != null))) return data as T;
-
-            while (data?.Results.Length == 0 && data.Results
-                       .Any(fpResult => fpResult.Recordings is not null && fpResult.Recordings
-                           .Any(recording => recording?.Title == null)) && iteration < 10)
-            {
-                response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
-
-                await CacheController.Write(newUrl, response);
-
-                Logger.Request(response, LogEventLevel.Verbose);
-
-                data = response.FromJson<T>();
-
-                iteration++;
-            }
         }
         catch (Exception e)
         {
