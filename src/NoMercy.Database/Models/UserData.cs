@@ -36,7 +36,7 @@ public class UserData : Timestamps
     [JsonProperty("movie_id")] public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty("episode_id")] public int? TvId { get; set; }
+    [JsonProperty("tv_id")] public int? TvId { get; set; }
     public Tv? Tv { get; set; }
 
     [JsonProperty("collection_id")] public int? CollectionId { get; set; }

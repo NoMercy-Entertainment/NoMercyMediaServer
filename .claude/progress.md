@@ -756,3 +756,27 @@
 
 **Test results**: All 1,201 tests pass across all projects (86 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
 
+---
+
+## DBMOD-H01 — Fix UserData.TvId wrong JsonProperty
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Database/Models/UserData.cs:39` — changed `[JsonProperty("episode_id")]` to `[JsonProperty("tv_id")]` on the `TvId` property
+- **The bug**: `TvId` had `[JsonProperty("episode_id")]` — the wrong JSON mapping. This meant:
+  - Serialization: `TvId` would serialize as `"episode_id"` in JSON responses, causing API clients to see the TV show ID under the wrong key
+  - Deserialization: JSON payloads with `"tv_id"` would not populate `TvId` (it would remain null/0), while `"episode_id"` payloads would incorrectly set it
+  - This is a data corruption bug — TV show IDs were silently misrepresented as episode IDs in all JSON communication
+- **The fix**: Changed `[JsonProperty("episode_id")]` to `[JsonProperty("tv_id")]` to match the property name in snake_case, consistent with all other FK properties in the class (`movie_id`, `collection_id`, `special_id`, `video_file_id`, `user_id`)
+- Created `tests/NoMercy.Tests.Database/UserDataJsonPropertyTests.cs` with 25 tests:
+  - **TvId JsonProperty checks** (2 tests): Verifies `TvId` has `[JsonProperty("tv_id")]` and is NOT `"episode_id"`
+  - **Other FK JsonProperty checks** (5 tests): Verifies `MovieId`, `CollectionId`, `SpecialId`, `UserId`, `VideoFileId` all have correct `[JsonProperty]` values
+  - **Serialization correctness** (1 test): `TvId = 42` serializes to `"tv_id":42` and NOT `"episode_id"`
+  - **Deserialization from correct key** (1 test): `{"tv_id": 99}` deserializes into `TvId = 99`
+  - **Deserialization ignores old key** (1 test): `{"episode_id": 99}` does NOT populate `TvId` (remains null)
+  - **Round-trip preservation** (1 test): Serialize→deserialize preserves `TvId` value
+  - **Theory-based comprehensive check** (14 cases): Verifies all 14 properties with `[JsonProperty]` have correct snake_case JSON names
+
+**Test results**: All 1,226 tests pass across all projects (111 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
+
