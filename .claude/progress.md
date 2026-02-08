@@ -780,3 +780,29 @@
 
 **Test results**: All 1,226 tests pass across all projects (111 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
 
+---
+
+## DBMOD-H02 — Fix Network.cs duplicate JsonProperty
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Database/Models/Network.cs:20` — changed `[JsonProperty("id")]` to `[JsonProperty("network_tv")]` on the `NetworkTv` collection navigation property
+- **The bug**: The `NetworkTv` collection property had `[JsonProperty("id")]`, identical to the `Id` scalar property on line 12. This caused a serialization conflict:
+  - During JSON serialization, two properties would map to the same `"id"` key — the serializer would either throw an exception or produce ambiguous output where the collection overwrites the integer ID
+  - During deserialization, a JSON payload with `"id": 42` would attempt to populate both the `int Id` and the `ICollection<NetworkTv> NetworkTv` — causing type mismatch errors or silent data loss
+  - API consumers would never see the `NetworkTv` data under its own key
+- **The fix**: Changed to `[JsonProperty("network_tv")]` — matching the snake_case convention used by all other collection navigation properties in the codebase (e.g., `Artist.ArtistTrack` → `"artist_track"`, `Album.AlbumTrack` → `"album_track"`, `Collection.CollectionMovies` → `"collection_movies"`)
+- Created `tests/NoMercy.Tests.Database/NetworkJsonPropertyTests.cs` with 24 tests:
+  - **NetworkTv JsonProperty checks** (2 tests): Verifies `NetworkTv` has `[JsonProperty("network_tv")]` and is NOT `"id"`
+  - **Id JsonProperty check** (1 test): Verifies `Id` has `[JsonProperty("id")]`
+  - **Id and NetworkTv differ** (1 test): Verifies `Id` and `NetworkTv` have different `[JsonProperty]` values
+  - **Other property JsonProperty checks** (6 tests): Verifies `Name`, `Logo`, `OriginCountry`, `Description`, `Headquarters`, `Homepage` all have correct `[JsonProperty]` values
+  - **Serialization correctness** (3 tests): `NetworkTv` serializes under `"network_tv"` key; `Id` serializes under `"id"` key; no duplicate `"id"` keys in serialized JSON
+  - **Deserialization correctness** (1 test): `{"id":99}` deserializes into `Id = 99` correctly
+  - **Round-trip preservation** (1 test): Serialize→deserialize preserves `Id` value
+  - **Theory-based comprehensive check** (8 cases): Verifies all 8 properties with `[JsonProperty]` have correct snake_case JSON names
+  - **No duplicate JsonProperty names** (1 test): Verifies all `[JsonProperty]` values across the entire `Network` class are unique
+
+**Test results**: All 1,250 tests pass across all projects (135 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
+

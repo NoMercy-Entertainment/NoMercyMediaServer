@@ -17,5 +17,5 @@ public class Network : Timestamps
     [JsonProperty("headquarters")] public string? Headquarters { get; set; }
     [JsonProperty("homepage")] public Uri? Homepage { get; set; }
     
-    [JsonProperty("id")] public ICollection<NetworkTv> NetworkTv { get; set; } = new HashSet<NetworkTv>();
+    [JsonProperty("network_tv")] public ICollection<NetworkTv> NetworkTv { get; set; } = new HashSet<NetworkTv>();
 }
