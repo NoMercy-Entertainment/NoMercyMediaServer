@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -13,7 +14,7 @@ public class ReleaseGroup : ColorPaletteTimeStamps
 
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("disambiguation")] public string? Disambiguation { get; set; }
-    [JsonProperty("description")] public string? Description { get; set; }
+    [MaxLength(4096)] [JsonProperty("description")] public string? Description { get; set; }
     [JsonProperty("year")] public int Year { get; set; }
     [JsonProperty("cover")] public string? Cover { get; set; }
 

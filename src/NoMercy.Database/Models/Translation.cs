@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -36,10 +37,10 @@ public class Translation : Timestamps
     [JsonProperty("name")] public string? Name { get; set; }
     [JsonProperty("english_name")] public string? EnglishName { get; set; }
     [JsonProperty("title")] public string? Title { get; set; }
-    [JsonProperty("overview")] public string? Overview { get; set; }
-    [JsonProperty("description")] public string? Description { get; set; }
+    [MaxLength(4096)] [JsonProperty("overview")] public string? Overview { get; set; }
+    [MaxLength(4096)] [JsonProperty("description")] public string? Description { get; set; }
     [JsonProperty("homepage")] public string? Homepage { get; set; }
-    [JsonProperty("biography")] public string? Biography { get; set; }
+    [MaxLength(4096)] [JsonProperty("biography")] public string? Biography { get; set; }
 
     [JsonProperty("tv_id")] public int? TvId { get; set; }
     public Tv? Tv { get; set; }

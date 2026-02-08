@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
@@ -30,7 +31,7 @@ public class Movie : ColorPaletteTimeStamps
     [JsonProperty("imdb_id")] public string? ImdbId { get; set; }
     [JsonProperty("original_title")] public string? OriginalTitle { get; set; }
     [JsonProperty("original_language")] public string? OriginalLanguage { get; set; }
-    [JsonProperty("overview")] public string? Overview { get; set; }
+    [MaxLength(4096)] [JsonProperty("overview")] public string? Overview { get; set; }
     [JsonProperty("popularity")] public double? Popularity { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
     [JsonProperty("release_date")] public DateTime? ReleaseDate { get; set; }

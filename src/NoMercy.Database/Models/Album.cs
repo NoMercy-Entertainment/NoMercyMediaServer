@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -18,7 +19,7 @@ public class Album : ColorPaletteTimeStamps
 
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("disambiguation")] public string? Disambiguation { get; set; }
-    [JsonProperty("description")] public string? Description { get; set; }
+    [MaxLength(4096)] [JsonProperty("description")] public string? Description { get; set; }
     [JsonProperty("cover")] public string? Cover { get; set; }
     [JsonProperty("country")] public string? Country { get; set; }
     [JsonProperty("year")] public int Year { get; set; }

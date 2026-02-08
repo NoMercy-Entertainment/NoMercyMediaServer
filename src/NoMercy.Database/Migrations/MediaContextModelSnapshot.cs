@@ -82,7 +82,7 @@ namespace NoMercy.Database.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Disambiguation")
@@ -307,7 +307,7 @@ namespace NoMercy.Database.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Disambiguation")
@@ -603,7 +603,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Overview")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Parts")
@@ -713,7 +713,7 @@ namespace NoMercy.Database.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Headquarters")
@@ -1140,7 +1140,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Overview")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ProductionCode")
@@ -2060,7 +2060,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Overview")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<double?>("Popularity")
@@ -2262,7 +2262,7 @@ namespace NoMercy.Database.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Headquarters")
@@ -2374,7 +2374,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Biography")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("BirthDay")
@@ -2554,7 +2554,7 @@ namespace NoMercy.Database.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Duration")
@@ -2638,7 +2638,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Overview")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Poster")
@@ -2709,7 +2709,7 @@ namespace NoMercy.Database.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Disambiguation")
@@ -2814,7 +2814,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Overview")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Poster")
@@ -2887,7 +2887,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Overview")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Poster")
@@ -2970,7 +2970,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Overview")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Poster")
@@ -3178,7 +3178,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Biography")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("CollectionId")
@@ -3191,7 +3191,7 @@ namespace NoMercy.Database.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("EnglishName")
@@ -3224,7 +3224,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Overview")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("PersonId")
@@ -3375,7 +3375,7 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Overview")
-                        .HasMaxLength(256)
+                        .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
                     b.Property<double?>("Popularity")

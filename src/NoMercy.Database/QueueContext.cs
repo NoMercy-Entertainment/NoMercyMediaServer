@@ -40,6 +40,10 @@ public class QueueContext : DbContext
             .ToList()
             .ForEach(p => p.DeleteBehavior = DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<QueueJob>()
+            .Property(j => j.Payload)
+            .HasMaxLength(4096);
+
         base.OnModelCreating(modelBuilder);
     }
 

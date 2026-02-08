@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -12,7 +13,7 @@ public class Playlist : ColorPaletteTimeStamps
     public Guid Id { get; set; } = Guid.NewGuid();
 
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
-    [JsonProperty("description")] public string? Description { get; set; }
+    [MaxLength(4096)] [JsonProperty("description")] public string? Description { get; set; }
     [JsonProperty("cover")] public string? Cover { get; set; }
     [JsonProperty("filename")] public string? Filename { get; set; }
     [JsonProperty("duration")] public string? Duration { get; set; }

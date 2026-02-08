@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -17,7 +18,7 @@ public class Special : ColorPaletteTimeStamps
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }
     [JsonProperty("creator")] public string? Creator { get; set; }
-    [JsonProperty("overview")] public string? Overview { get; set; }
+    [MaxLength(4096)] [JsonProperty("overview")] public string? Overview { get; set; }
 
     [JsonProperty("items")] public ICollection<SpecialItem> Items { get; set; } = [];
     [JsonProperty("special_user")] public ICollection<SpecialUser> SpecialUser { get; set; } = [];

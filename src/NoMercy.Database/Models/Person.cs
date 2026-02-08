@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -18,7 +19,7 @@ public class Person : ColorPaletteTimeStamps
 
     [JsonProperty("adult")] public bool Adult { get; set; }
     [JsonProperty("also_known_as")] public string? AlsoKnownAs { get; set; }
-    [JsonProperty("biography")] public string? Biography { get; set; }
+    [MaxLength(4096)] [JsonProperty("biography")] public string? Biography { get; set; }
     [JsonProperty("birthday")] public DateTime? BirthDay { get; set; }
     [JsonProperty("deathday")] public DateTime? DeathDay { get; set; }
     [JsonProperty("homepage")] public string? Homepage { get; set; }

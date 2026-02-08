@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -10,7 +11,7 @@ public class Company : Timestamps
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")] public int Id { get; set; }
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
-    [JsonProperty("description")] public string? Description { get; set; }
+    [MaxLength(4096)] [JsonProperty("description")] public string? Description { get; set; }
     [JsonProperty("headquarters")] public string? Headquarters { get; set; }
     [JsonProperty("homepage")] public Uri? Homepage { get; set; }
     [JsonProperty("logo")] public string? Logo { get; set; }

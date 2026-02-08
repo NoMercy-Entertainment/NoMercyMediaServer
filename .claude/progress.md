@@ -696,3 +696,33 @@
 
 **Test results**: All 1,155 tests pass across all projects (40 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
 
+---
+
+## DBMOD-CRIT-03 — Fix QueueJob.Payload limited to 256 characters
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Added `[MaxLength(4096)]` to `QueueJob.Payload` in `src/NoMercy.Database/Models/QueueJob.cs`
+- Added `[MaxLength(4096)]` to 18 large-text fields across 14 MediaContext model classes:
+  - **Overview** (8 models): Movie, Episode, Tv, Season, Collection, Similar, Recommendation, Special
+  - **Biography** (1 model): Person
+  - **Description** (5 models): Network, Company, Artist, Album, ReleaseGroup, Playlist
+  - **Translation** (3 fields): Overview, Description, Biography
+- **The bug**: `ConfigureConventions` in both `MediaContext` and `QueueContext` sets `HaveMaxLength(256)` on ALL string properties. `QueueJob.Payload` stores serialized job data (JSON) — 256 chars is far too small, causing job payloads to be silently truncated. Similarly, Overview/Biography/Description fields from TMDB/TVDB/MusicBrainz APIs frequently exceed 256 chars.
+- **The fix**:
+  1. Added `[MaxLength(4096)]` data annotation attributes to all affected properties
+  2. Added explicit fluent API override in `QueueContext.OnModelCreating()`: `modelBuilder.Entity<QueueJob>().Property(j => j.Payload).HasMaxLength(4096)` — because EF Core's `ConfigureConventions` `HaveMaxLength(256)` takes precedence over data annotations
+  3. Added generic `[MaxLength]` attribute scanning in `MediaContext.OnModelCreating()` that reads `[MaxLength]` attributes via reflection and calls `SetMaxLength()` on matching properties — this ensures data annotations override the convention for all 18 fields
+  4. Updated `MediaContextModelSnapshot.cs` — changed `HasMaxLength(256)` to `HasMaxLength(4096)` on all 18 Overview/Biography/Description property entries
+  5. Added `using System.ComponentModel.DataAnnotations` to all 14 affected model files and both DbContext files
+- **Consistency**: `FailedJob.Payload` already had `[MaxLength(4092)]` — the new `QueueJob.Payload` uses 4096 (a round power of 2), which is close to but not identical to `FailedJob`'s existing value
+- Created `tests/NoMercy.Tests.Database/QueueJobPayloadMaxLengthTests.cs` with 26 tests:
+  - **QueueJob.Payload attribute checks** (3 tests): HasMaxLengthAttribute, MaxLengthIs4096, MaxLengthIsNotDefault256
+  - **QueueJob.Payload exceeds default** (1 test): Verifies MaxLength > 256
+  - **Theory-based large text field check** (18 cases): Verifies all 18 Overview/Biography/Description properties across all 14 models have `[MaxLength(4096)]`
+  - **QueueContext runtime model** (2 tests): Payload has MaxLength 4096 at runtime; Queue property still has convention 256
+  - **Object-level validation** (2 tests): QueueJob can store 1000 and 4096 character payloads
+
+**Test results**: All 1,181 tests pass across all projects (66 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
+

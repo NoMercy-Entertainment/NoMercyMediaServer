@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
@@ -77,6 +79,18 @@ public class MediaContext : DbContext
             .WithMany()
             .HasForeignKey(t => t.MetadataId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Model.GetEntityTypes()
+            .SelectMany(t => t.GetProperties())
+            .Where(p => p.ClrType == typeof(string))
+            .ToList()
+            .ForEach(p =>
+            {
+                MaxLengthAttribute? maxLengthAttr = p.PropertyInfo
+                    ?.GetCustomAttribute<MaxLengthAttribute>();
+                if (maxLengthAttr is not null)
+                    p.SetMaxLength(maxLengthAttr.Length);
+            });
 
         List<IMutableEntityType> entityTypes = modelBuilder.Model.GetEntityTypes()
             .Where(t => t.ClrType.IsSubclassOf(typeof(Timestamps)) || t.ClrType == typeof(Timestamps))

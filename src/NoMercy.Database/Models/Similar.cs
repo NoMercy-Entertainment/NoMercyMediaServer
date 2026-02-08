@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -20,7 +21,7 @@ public class Similar : ColorPaletteTimeStamps
     public int Id { get; set; }
 
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
-    [JsonProperty("overview")] public string? Overview { get; set; }
+    [MaxLength(4096)] [JsonProperty("overview")] public string? Overview { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
     [JsonProperty("title")] public string? Title { get; set; }
     [JsonProperty("titleSort")] public string? TitleSort { get; set; }

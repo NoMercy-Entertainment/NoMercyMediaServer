@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -12,7 +13,7 @@ public class Network : Timestamps
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
     [JsonProperty("logo")] public string? Logo { get; set; }
     [JsonProperty("origin_country")] public string? OriginCountry { get; set; }
-    [JsonProperty("description")] public string? Description { get; set; }
+    [MaxLength(4096)] [JsonProperty("description")] public string? Description { get; set; }
     [JsonProperty("headquarters")] public string? Headquarters { get; set; }
     [JsonProperty("homepage")] public Uri? Homepage { get; set; }
     

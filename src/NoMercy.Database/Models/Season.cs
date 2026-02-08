@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
@@ -18,7 +19,7 @@ public class Season : ColorPaletteTimeStamps
     [JsonProperty("name")] public string? Title { get; set; }
     [JsonProperty("air_date")] public DateTime? AirDate { get; set; }
     [JsonProperty("episode_count")] public int EpisodeCount { get; set; }
-    [JsonProperty("overview")] public string? Overview { get; set; }
+    [MaxLength(4096)] [JsonProperty("overview")] public string? Overview { get; set; }
     [JsonProperty("poster_path")] public string? Poster { get; set; }
     [JsonProperty("season_number")] public int SeasonNumber { get; set; }
 

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Extensions;
@@ -36,7 +37,7 @@ public class Tv : ColorPaletteTimeStamps
     [JsonProperty("number_of_seasons")] public int? NumberOfSeasons { get; set; }
     [JsonProperty("origin_country")] public string? OriginCountry { get; set; }
     [JsonProperty("original_language")] public string? OriginalLanguage { get; set; }
-    [JsonProperty("overview")] public string? Overview { get; set; }
+    [MaxLength(4096)] [JsonProperty("overview")] public string? Overview { get; set; }
     [JsonProperty("popularity")] public double? Popularity { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
     [JsonProperty("spoken_languages")] public string? SpokenLanguages { get; set; }

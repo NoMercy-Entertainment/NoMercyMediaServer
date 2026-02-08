@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -12,7 +13,7 @@ public class QueueJob
 
     public int Priority { get; set; }
     public string Queue { get; set; } = "default";
-    public required string Payload { get; set; }
+    [MaxLength(4096)] public required string Payload { get; set; }
     public byte Attempts { get; set; } = 0;
     public DateTime? ReservedAt { get; set; }
     public DateTime AvailableAt { get; set; }
