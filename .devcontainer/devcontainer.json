@@ -50,6 +50,7 @@
 		"vscode": {
 			"extensions": [
 				"ms-dotnettools.csharp",
+				"ms-dotnettools.csdevkit",
 				"ms-dotnettools.vscode-dotnet-runtime",
 				"formulahendry.code-runner",
 				"GitHub.copilot",
