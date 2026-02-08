@@ -672,3 +672,27 @@
 
 **Test results**: All 1,128 tests pass across all projects (13 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
 
+---
+
+## DBMOD-CRIT-02 — Fix Library.cs JsonProperty names all shifted
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Database/Models/Library.cs:18-24` — realigned all `[JsonProperty]` attribute values to match their corresponding property names
+- **The bug**: The `[JsonProperty]` values on the first four scalar properties after `Id` were shifted by one position:
+  - `ChapterImages` (bool) had `[JsonProperty("auto_refresh_interval")]` — should be `"chapter_images"`
+  - `ExtractChapters` (bool) had `[JsonProperty("chapter_images")]` — should be `"extract_chapters"`
+  - `ExtractChaptersDuring` (bool) had `[JsonProperty("extract_chapters")]` — should be `"extract_chapters_during"`
+  - `AutoRefreshInterval` (int) had `[JsonProperty("name")]` — should be `"auto_refresh_interval"`
+- **Impact**: Every JSON serialization/deserialization of `Library` produced wrong field mappings. `ChapterImages` would serialize as `"auto_refresh_interval"`, `AutoRefreshInterval` (an int) would serialize as `"name"`, etc. Any client consuming the API would see mismatched data — boolean values in integer fields, integers in string fields.
+- **The fix**: Corrected all four `[JsonProperty]` values to match their property names in snake_case. `Image` and `Order` were already correct and left unchanged.
+- Created `tests/NoMercy.Tests.Database/LibraryJsonPropertyTests.cs` with 27 tests:
+  - **Individual JsonProperty name checks** (9 tests): Verifies `ChapterImages`, `ExtractChapters`, `ExtractChaptersDuring`, `AutoRefreshInterval`, `Image`, `Order`, `Title`, `Type`, `Id` all have correct `[JsonProperty]` attribute values
+  - **Serialization correctness** (3 tests): `ChapterImages` serializes to `"chapter_images"` (not `"auto_refresh_interval"`), `AutoRefreshInterval` serializes to `"auto_refresh_interval"` (not `"name"`), `ExtractChaptersDuring` serializes to `"extract_chapters_during"` (not `"extract_chapters"`)
+  - **Deserialization correctness** (3 tests): `"chapter_images"` JSON key deserializes into `ChapterImages`, `"auto_refresh_interval"` into `AutoRefreshInterval`, `"extract_chapters_during"` into `ExtractChaptersDuring`
+  - **Round-trip preservation** (1 test): All previously-shifted properties survive serialize→deserialize with correct values
+  - **Theory-based comprehensive check** (11 cases): Verifies all 11 scalar properties have snake_case `[JsonProperty]` names matching their C# property names
+
+**Test results**: All 1,155 tests pass across all projects (40 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
+

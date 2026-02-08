@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item DBMOD-CRIT-02
+**Next up**: Phase 1-2, item DBMOD-CRIT-03
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -76,7 +76,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] PMOD-CRIT-02 — Fix TVDB properties missing setters
 - [x] PMOD-CRIT-03 — Fix TMDB `video` field typed as `string?`
 - [x] DBMOD-CRIT-01 — Fix Track.MetadataId type mismatch
-- [ ] DBMOD-CRIT-02 — Fix Library.cs JsonProperty names all shifted
+- [x] DBMOD-CRIT-02 — Fix Library.cs JsonProperty names all shifted
 - [ ] DBMOD-CRIT-03 — Fix QueueJob.Payload limited to 256 characters
 - [ ] DBMOD-CRIT-04 — Fix Cast.cs initializes nullable navigation to new()
 - [ ] DBMOD-H01 — Fix UserData.TvId wrong JsonProperty

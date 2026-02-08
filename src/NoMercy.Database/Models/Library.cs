@@ -15,13 +15,13 @@ public class Library : Timestamps
     [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [JsonProperty("auto_refresh_interval")]
+    [JsonProperty("chapter_images")]
     public bool ChapterImages { get; set; }
 
-    [JsonProperty("chapter_images")] public bool ExtractChapters { get; set; }
-    [JsonProperty("extract_chapters")] public bool ExtractChaptersDuring { get; set; }
+    [JsonProperty("extract_chapters")] public bool ExtractChapters { get; set; }
+    [JsonProperty("extract_chapters_during")] public bool ExtractChaptersDuring { get; set; }
     [JsonProperty("image")] public string? Image { get; set; }
-    [JsonProperty("name")] public int AutoRefreshInterval { get; set; }
+    [JsonProperty("auto_refresh_interval")] public int AutoRefreshInterval { get; set; }
     [JsonProperty("order")] public int? Order { get; set; }
 
     [JsonProperty("perfect_subtitle_match")]
