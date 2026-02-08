@@ -98,6 +98,6 @@ public record CollectionMovieDto
         NumberOfItems = 1;
         HaveItems = 0;
 
-        VideoId = tmdbMovie.Video;
+        VideoId = tmdbMovie.Video?.ToString();
     }
 }

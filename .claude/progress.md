@@ -593,3 +593,43 @@
 
 **Test results**: All 1,096 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 368 Providers). Build succeeds with 0 errors.
 
+---
+
+## PMOD-CRIT-03 — Fix TMDB `video` field typed as `string?`
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Providers/TMDB/Models/Movies/TmdbMovie.cs:15` — changed `Video` property type from `string?` to `bool?`
+- Fixed `src/NoMercy.Providers/TMDB/Models/Collections/TmdbCollectionPart.cs:18` — changed `Video` property type from `string?` to `bool?`
+- Fixed `src/NoMercy.Providers/TMDB/Models/Shared/TmdbShowOrMovie.cs:15` — changed `Video` property type from `string?` to `bool?`
+- **The bug**: The TMDB API returns the `video` field as a boolean (`true`/`false`), but three model classes typed it as `string?`. Newtonsoft.Json would either throw a `JsonReaderException` when encountering a boolean value during deserialization, or silently produce `null`/`"True"`/`"False"` string representations depending on settings. This corrupted the data flowing through `TmdbShowOrMovie` constructors and into `MovieManager` and `CollectionMovieDto`.
+- **The fix**: Changed all three properties to `bool?`. Updated two downstream consumers:
+  - `CollectionMovieDto.cs:101` — `VideoId = tmdbMovie.Video` → `VideoId = tmdbMovie.Video?.ToString()` (preserves existing `string? VideoId` DTO type)
+  - `MovieManager.cs:69-70` — `Trailer = movieAppends.Video` and `Video = movieAppends.Video` → `.Video?.ToString()` (preserves existing database `string?` column type)
+  - `TmdbMovieMockData.cs:35` — `Video = "false"` → `Video = false` (mock data matches new type)
+- Created `tests/NoMercy.Tests.Providers/TMDB/Models/TmdbVideoFieldTypeTests.cs` with 21 tests:
+  - **TmdbMovie property type** (1 test): Verifies `Video` property type is `bool?` via reflection
+  - **TmdbMovie JsonProperty attribute** (1 test): Verifies `[JsonProperty("video")]` present
+  - **TmdbMovie deserializes true** (1 test): JSON `{"video": true}` deserializes to `true`
+  - **TmdbMovie deserializes false** (1 test): JSON `{"video": false}` deserializes to `false`
+  - **TmdbMovie deserializes null** (1 test): JSON `{"video": null}` deserializes to `null`
+  - **TmdbMovie default is null** (1 test): New instance has `Video == null`
+  - **TmdbMovie round-trip** (1 test): Serialize then deserialize preserves value
+  - **TmdbCollectionPart property type** (1 test): Verifies `Video` property type is `bool?`
+  - **TmdbCollectionPart JsonProperty attribute** (1 test): Verifies `[JsonProperty("video")]` present
+  - **TmdbCollectionPart deserializes true** (1 test): JSON `{"video": true}` → `true`
+  - **TmdbCollectionPart deserializes false** (1 test): JSON `{"video": false}` → `false`
+  - **TmdbCollectionPart deserializes null** (1 test): JSON `{"video": null}` → `null`
+  - **TmdbCollectionPart round-trip** (1 test): Serialize then deserialize preserves value
+  - **TmdbShowOrMovie property type** (1 test): Verifies `Video` property type is `bool?`
+  - **TmdbShowOrMovie JsonProperty attribute** (1 test): Verifies `[JsonProperty("video")]` present
+  - **TmdbShowOrMovie copied from TmdbMovie (true)** (1 test): Constructor copies `Video = true` correctly
+  - **TmdbShowOrMovie copied from TmdbMovie (false)** (1 test): Constructor copies `Video = false` correctly
+  - **TmdbShowOrMovie copied from TmdbMovie (null)** (1 test): Constructor copies `Video = null` correctly
+  - **TmdbMovie realistic API JSON** (1 test): Full TMDB API-shaped JSON with `"video": false` deserializes correctly
+  - **TmdbCollectionPart realistic API JSON** (1 test): Full TMDB API-shaped JSON deserializes correctly
+  - **TmdbShowOrMovie via TmdbMovie deserialization** (1 test): Deserialize TmdbMovie from JSON, pass to TmdbShowOrMovie constructor, verify Video preserved
+
+**Test results**: All 1,117 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
+

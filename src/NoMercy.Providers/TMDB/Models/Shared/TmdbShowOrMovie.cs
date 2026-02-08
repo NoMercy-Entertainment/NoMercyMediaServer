@@ -12,7 +12,7 @@ public class TmdbShowOrMovie : TmdbBase
     [JsonProperty("tagline")] public string? Tagline { get; set; }
     [JsonProperty("title")] public string? Title { get; set; }
     [JsonProperty("release_date")] public DateTime? ReleaseDate { get; set; }
-    [JsonProperty("video")] public string? Video { get; set; }
+    [JsonProperty("video")] public bool? Video { get; set; }
 
     [JsonProperty("first_air_date")] public DateTime? FirstAirDate { get; set; }
     [JsonProperty("genre_ids")] public int?[] GenreIds { get; set; } = [];

@@ -66,8 +66,8 @@ public class MovieManager(
             Runtime = movieAppends.Runtime,
             Status = movieAppends.Status,
             Tagline = movieAppends.Tagline,
-            Trailer = movieAppends.Video,
-            Video = movieAppends.Video,
+            Trailer = movieAppends.Video?.ToString(),
+            Video = movieAppends.Video?.ToString(),
             VoteAverage = movieAppends.VoteAverage,
             VoteCount = movieAppends.VoteCount,
             
