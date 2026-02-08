@@ -47,9 +47,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="InfiniLore.InfiniFrame" Version="0.1.0-preview.25" />
-        <PackageReference Include="InfiniLore.InfiniFrame.WebServer" Version="0.1.0-preview.25" />
-        <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
+        <PackageReference Include="InfiniLore.InfiniFrame" />
+        <PackageReference Include="InfiniLore.InfiniFrame.WebServer" />
+        <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
     </ItemGroup>
 
     <!-- Remove wwwroot from Content (SDK.Web default) and embed as resources -->

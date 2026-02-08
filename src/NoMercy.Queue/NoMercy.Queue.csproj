@@ -17,9 +17,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core" Version="5.2.1"/>
-        <PackageReference Include="NCrontab" Version="3.4.0" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+        <PackageReference Include="Castle.Core"/>
+        <PackageReference Include="NCrontab" />
+        <PackageReference Include="Newtonsoft.Json" />
     </ItemGroup>
 
     <ItemGroup>

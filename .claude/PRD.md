@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 0, item CPM-02
+**Next up**: Phase 0, item CPM-03
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -57,7 +57,7 @@ Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-mana
 - [x] CHAR-09 — Encoder command-building tests (capture FFmpeg CLI args)
 - [x] CHAR-10 — CI pipeline that runs all characterization tests
 - [x] CPM-01 — Create `Directory.Packages.props` with all package versions
-- [ ] CPM-02 — Remove `Version` from all `.csproj` PackageReference entries
+- [x] CPM-02 — Remove `Version` from all `.csproj` PackageReference entries
 - [ ] CPM-03 — Verify full build + test suite passes after CPM migration
 
 ### Phase 1-2: Fix What's Broken

@@ -17,26 +17,26 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core" Version="5.2.1"/>
-        <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" Version="9.100.1" />
-        <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.3.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.10" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
+        <PackageReference Include="Castle.Core"/>
+        <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" />
+        <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.10" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.10" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.10" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Moq" Version="4.20.72"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageReference Include="Ulid" Version="1.4.1" />
-        <PackageReference Include="xunit" Version="2.9.3"/>
+        <PackageReference Include="Moq"/>
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Ulid" />
+        <PackageReference Include="xunit"/>
     </ItemGroup>
 
     <ItemGroup>

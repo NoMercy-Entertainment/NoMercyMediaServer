@@ -11,15 +11,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core" Version="5.2.1"/>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
-        <PackageReference Include="Mono.Nat" Version="3.0.4"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageReference Include="Sharpcaster" Version="3.0.0" />
-        <PackageReference Include="System.Net.WebSockets" Version="4.3.0"/>
-        <PackageReference Include="Ulid" Version="1.4.1" />
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
+        <PackageReference Include="Castle.Core"/>
+        <PackageReference Include="Microsoft.AspNetCore.SignalR"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="Mono.Nat"/>
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Sharpcaster" />
+        <PackageReference Include="System.Net.WebSockets"/>
+        <PackageReference Include="Ulid" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     </ItemGroup>
 
     <ItemGroup>

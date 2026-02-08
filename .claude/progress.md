@@ -294,3 +294,21 @@
 
 **Test results**: All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CPM-02 — Remove `Version` from all `.csproj` PackageReference entries
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Removed `Version="..."` attribute from all `PackageReference` entries across 21 `.csproj` files (src and tests)
+- Flipped `ManagePackageVersionsCentrally` from `false` to `true` in `Directory.Packages.props` to activate Central Package Management
+- Total of ~170 `PackageReference` entries across 21 files were updated (the 22nd file, `NoMercy.Globals.csproj`, had no PackageReference entries)
+- Multi-line PackageReference entries (with child elements like `PrivateAssets` and `IncludeAssets`) preserved correctly
+- Non-PackageReference `<Version>` properties (e.g., `<Version>0.1.236</Version>` in Server.csproj, `<Version>0.0.1</Version>` in App.csproj) left untouched
+- Files affected:
+  - **src/**: NoMercy.Api, NoMercy.App, NoMercy.Data, NoMercy.Database, NoMercy.Encoder, NoMercy.Helpers, NoMercy.MediaProcessing, NoMercy.MediaSources, NoMercy.Networking, NoMercy.NmSystem, NoMercy.Providers, NoMercy.Queue, NoMercy.Server, NoMercy.Setup
+  - **tests/**: NoMercy.Tests.Api, NoMercy.Tests.Database, NoMercy.Tests.Encoder, NoMercy.Tests.MediaProcessing, NoMercy.Tests.Providers, NoMercy.Tests.Queue, NoMercy.Tests.Repositories
+
+**Test results**: All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
+

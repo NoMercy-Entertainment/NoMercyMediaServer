@@ -28,11 +28,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="AcoustID.NET" Version="1.3.3"/>
-        <PackageReference Include="Castle.Core" Version="5.2.1"/>
-        <PackageReference Include="ExtendedNumerics.BigRational" Version="3000.0.2.132" />
-        <PackageReference Include="MusixmatchClientLib" Version="1.1.9"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+        <PackageReference Include="AcoustID.NET"/>
+        <PackageReference Include="Castle.Core"/>
+        <PackageReference Include="ExtendedNumerics.BigRational" />
+        <PackageReference Include="MusixmatchClientLib"/>
+        <PackageReference Include="Newtonsoft.Json" />
     </ItemGroup>
 
     <ItemGroup>

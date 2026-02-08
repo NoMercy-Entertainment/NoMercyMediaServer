@@ -20,10 +20,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core" Version="5.2.1"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageReference Include="Stowage" Version="2.0.1" />
-        <PackageReference Include="SubtitlesParserV2" Version="2.3.0" />
-        <PackageReference Include="TagLibSharp" Version="2.3.0"/>
+        <PackageReference Include="Castle.Core"/>
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Stowage" />
+        <PackageReference Include="SubtitlesParserV2" />
+        <PackageReference Include="TagLibSharp"/>
     </ItemGroup>
 </Project>

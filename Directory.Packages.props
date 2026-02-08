@@ -1,7 +1,6 @@
 <Project>
   <PropertyGroup>
-    <!-- Activated in CPM-02 when Version attributes are removed from .csproj files -->
-    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
 

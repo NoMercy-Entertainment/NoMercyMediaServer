@@ -12,25 +12,25 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Asp.Versioning.Http" Version="8.1.0"/>
-        <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0"/>
-        <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0"/>
-        <PackageReference Include="Castle.Core" Version="5.2.1"/>
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.10" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.10" />
-        <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.14.0" />
-        <PackageReference Include="MimeMapping" Version="3.1.0"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="9.0.6" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.6" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.6" />
-        <PackageReference Include="System.Net.WebSockets" Version="4.3.0"/>
-        <PackageReference Include="Ulid" Version="1.4.1" />
-        <PackageReference Include="xunit" Version="2.9.3"/>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.10" />
+        <PackageReference Include="Asp.Versioning.Http"/>
+        <PackageReference Include="Asp.Versioning.Mvc"/>
+        <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer"/>
+        <PackageReference Include="Castle.Core"/>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" />
+        <PackageReference Include="Microsoft.Extensions.Localization" />
+        <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
+        <PackageReference Include="MimeMapping"/>
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+        <PackageReference Include="System.Net.WebSockets"/>
+        <PackageReference Include="Ulid" />
+        <PackageReference Include="xunit"/>
+        <PackageReference Include="Microsoft.AspNetCore.SignalR"/>
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
     </ItemGroup>
 
     <ItemGroup>
