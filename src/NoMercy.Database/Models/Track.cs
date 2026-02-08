@@ -62,7 +62,7 @@ public class Track : ColorPaletteTimeStamps
     [JsonProperty("folder_id")] public Ulid FolderId { get; set; }
     public Folder LibraryFolder { get; set; } = null!;
 
-    [JsonProperty("metadata_id")] public int? MetadataId { get; set; }
+    [JsonProperty("metadata_id")] public Ulid? MetadataId { get; set; }
     public Metadata Metadata { get; init; } = null!;
 
     [JsonProperty("album_track")] public ICollection<AlbumTrack> AlbumTrack { get; set; } = [];

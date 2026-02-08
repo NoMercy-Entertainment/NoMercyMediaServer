@@ -66,6 +66,18 @@ public class MediaContext : DbContext
             .Property(t => t.JobId)
             .IsRequired(false);
 
+        modelBuilder.Entity<Metadata>()
+            .HasOne(m => m.AudioTrack)
+            .WithOne()
+            .HasForeignKey<Metadata>(m => m.AudioTrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Track>()
+            .HasOne(t => t.Metadata)
+            .WithMany()
+            .HasForeignKey(t => t.MetadataId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         List<IMutableEntityType> entityTypes = modelBuilder.Model.GetEntityTypes()
             .Where(t => t.ClrType.IsSubclassOf(typeof(Timestamps)) || t.ClrType == typeof(Timestamps))
             .ToList();

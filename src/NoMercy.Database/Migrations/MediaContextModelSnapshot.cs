@@ -3097,8 +3097,8 @@ namespace NoMercy.Database.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("MetadataId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("MetadataId")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4751,7 +4751,7 @@ namespace NoMercy.Database.Migrations
             modelBuilder.Entity("NoMercy.Database.Models.Metadata", b =>
                 {
                     b.HasOne("NoMercy.Database.Models.Track", "AudioTrack")
-                        .WithOne("Metadata")
+                        .WithOne()
                         .HasForeignKey("NoMercy.Database.Models.Metadata", "AudioTrackId")
                         .OnDelete(DeleteBehavior.Cascade);
 
@@ -5109,7 +5109,14 @@ namespace NoMercy.Database.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("NoMercy.Database.Models.Metadata", "Metadata")
+                        .WithMany()
+                        .HasForeignKey("MetadataId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.Navigation("LibraryFolder");
+
+                    b.Navigation("Metadata");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.TrackUser", b =>
@@ -5592,9 +5599,6 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("Images");
 
                     b.Navigation("LibraryTrack");
-
-                    b.Navigation("Metadata")
-                        .IsRequired();
 
                     b.Navigation("MusicGenreTrack");
 

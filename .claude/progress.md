@@ -633,3 +633,42 @@
 
 **Test results**: All 1,117 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
 
+---
+
+## DBMOD-CRIT-01 — Fix Track.MetadataId type mismatch
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Database/Models/Track.cs:65` — changed `MetadataId` property type from `int?` to `Ulid?`
+- **The bug**: `Track.MetadataId` was declared as `int?` but the FK target `Metadata.Id` is `Ulid`. This type mismatch meant:
+  - EF Core could not discover the FK relationship by convention (Ulid PK vs int FK)
+  - The `MetadataId` column was created as `INTEGER` in SQLite while it should be `TEXT` (matching Ulid storage)
+  - Any attempt to set `Track.MetadataId` to a real `Metadata.Id` value would fail at runtime due to type incompatibility
+  - This was inconsistent with `VideoFile.MetadataId` (Ulid?) and `Album.MetadataId` (Ulid?) which were correctly typed
+- **The fix**:
+  1. Changed `Track.MetadataId` from `int?` to `Ulid?` to match `Metadata.Id` type
+  2. Added explicit relationship configuration in `MediaContext.OnModelCreating()` to disambiguate the Track↔Metadata relationships:
+     - `Track.Metadata` (via `Track.MetadataId`) — Track belongs to a Metadata record (many-to-one)
+     - `Metadata.AudioTrack` (via `Metadata.AudioTrackId`) — Metadata has one audio Track (one-to-one, independent relationship)
+  3. Updated `MediaContextModelSnapshot.cs`:
+     - Changed Track's MetadataId from `Property<int?>` / `INTEGER` to `Property<string>` / `TEXT`
+     - Added `Track.HasOne(Metadata).WithMany().HasForeignKey(MetadataId)` FK configuration
+     - Changed `Metadata.AudioTrack.WithOne("Metadata")` to `WithOne()` since Track.Metadata is now a separate relationship
+     - Removed `Navigation("Metadata").IsRequired()` since MetadataId is nullable
+- **Why explicit configuration was needed**: With `int?`, EF Core couldn't match the FK by convention, so `Track.Metadata` was configured as the inverse of `Metadata.AudioTrack` (via `AudioTrackId`). With the corrected `Ulid?`, EF Core discovers the FK but then finds TWO possible relationships (Track→Metadata via MetadataId, and Metadata→Track via AudioTrackId) with the same navigation property, causing an "ambiguous dependent side" error. The explicit configuration separates them into two independent relationships.
+- Created `tests/NoMercy.Tests.Database/TrackMetadataIdTests.cs` with 11 tests:
+  - **Property type is nullable Ulid** (1 test): Verifies `MetadataId` type is `Ulid?` via reflection
+  - **Matches Metadata.Id type** (1 test): Verifies underlying type of `Track.MetadataId` equals `Metadata.Id` type
+  - **Consistent with VideoFile.MetadataId** (1 test): Verifies same type as `VideoFile.MetadataId` (Ulid?)
+  - **Consistent with Album.MetadataId** (1 test): Verifies same type as `Album.MetadataId` (Ulid?)
+  - **Correct JsonProperty attribute** (1 test): Verifies `[JsonProperty("metadata_id")]` present
+  - **Default value is null** (1 test): New Track has `MetadataId == null`
+  - **Can be assigned Ulid** (1 test): Verifies assignment of `Ulid.NewUlid()` works
+  - **Can be assigned null** (1 test): Verifies nullability works
+  - **Serializes to JSON** (1 test): Verifies Ulid value appears in serialized JSON
+  - **Is not int** (1 test): Regression test verifying type is not `int?` or `int`
+  - **Metadata navigation exists** (1 test): Verifies `Track.Metadata` navigation property exists and returns `Metadata` type
+
+**Test results**: All 1,128 tests pass across all projects (13 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
+
