@@ -159,3 +159,30 @@
 
 **Test results**: 57 new query output tests pass (120 total in NoMercy.Tests.Repositories). All 812 tests pass across all projects (120 Repositories + 203 Queue + 182 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CHAR-07 — SignalR hub connection tests
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Added `Microsoft.AspNetCore.SignalR.Client` package to `NoMercy.Tests.Api` project
+- Created `SignalRHubConnectionTests.cs` with 61 test methods covering all 5 mapped SignalR hubs via the negotiate HTTP endpoint:
+  - **Hub endpoint existence** (5 tests): Verify `/videoHub`, `/musicHub`, `/castHub`, `/dashboardHub`, `/ripperHub` negotiate endpoints return 200 OK
+  - **Negotiate response shape — connectionId** (5 tests): Verify all hubs return non-empty `connectionId` in negotiate response
+  - **Negotiate response shape — connectionToken** (5 tests): Verify all hubs return non-empty `connectionToken` in negotiate response
+  - **Transport advertisement — WebSockets** (5 tests): Verify all hubs advertise `WebSockets` in `availableTransports`
+  - **Transport exclusivity — WebSockets only** (5 tests): Verify all hubs only advertise `WebSockets` (no LongPolling/SSE), confirming the `HttpTransportType.WebSockets` configuration
+  - **Negotiate version** (5 tests): Verify all hubs return `negotiateVersion: 1`
+  - **Authentication required** (5 tests): Verify all hubs return 401/403 when unauthenticated
+  - **Unique connection IDs** (5 tests): Verify successive negotiate calls return different `connectionId` values
+  - **Invalid hub path** (1 test): Verify `/nonExistentHub/negotiate` returns 404
+  - **HTTP method rejection** (5 tests): Verify GET requests to negotiate endpoints are rejected (POST required)
+  - **Negotiate without version param** (5 tests): Verify negotiate works or returns 400 without `negotiateVersion` query param
+  - **JSON content type** (5 tests): Verify negotiate responses have `application/json` content type
+  - **Transfer formats** (5 tests): Verify WebSockets transport advertises both `Text` and `Binary` transfer formats
+- Testing approach: Uses `WebApplicationFactory`'s HTTP client to test the SignalR negotiate protocol (HTTP POST endpoints). The negotiate endpoint is the standard SignalR handshake that returns connection metadata, transport options, and session tokens. This approach tests the hub configuration (auth, transport settings, endpoint mapping) without requiring actual WebSocket connections.
+- `SocketHub` is not tested because it is not mapped to an endpoint in `ApplicationConfiguration.ConfigureEndpoints`
+
+**Test results**: 61 new SignalR hub tests pass (243 total in NoMercy.Tests.Api). All 873 tests pass across all projects (120 Repositories + 203 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
+
