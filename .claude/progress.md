@@ -269,3 +269,28 @@
 
 **Test results**: All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CPM-01 — Create `Directory.Packages.props` with all package versions
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Audited all 19 `.csproj` files across `src/` and `tests/` directories, extracting every `PackageReference` entry with its version
+- Identified 91 unique packages with consistent versions across all projects (no version conflicts found)
+- Created `Directory.Packages.props` at the solution root with all 91 `PackageVersion` entries organized into logical sections:
+  - **API & Web** (26 packages): ASP.NET Core, SignalR, Swagger, authentication, versioning
+  - **Swagger** (4 packages): Swashbuckle components
+  - **Entity Framework** (9 packages): EF Core, SQLite, design-time tools
+  - **Serialization** (1 package): Newtonsoft.Json
+  - **Logging** (6 packages): Serilog (dev channel), Sentry
+  - **Media & Encoding** (10 packages): FFMpegCore, ImageSharp, MediaInfo, TagLib
+  - **Providers** (3 packages): AcoustID, MusixMatch, BigRational
+  - **System & Infrastructure** (27 packages): Castle.Core, DeviceId, Humanizer, Polly, etc.
+  - **Benchmarking** (1 package): BenchmarkDotNet
+  - **Testing** (6 packages): xunit, MSTest SDK, FluentAssertions, Moq, coverlet
+- Set `ManagePackageVersionsCentrally` to `false` so the build continues to pass — CPM-02 will remove `Version` attributes from `.csproj` files and activate CPM by flipping this to `true`
+- Pre-release packages cataloged as-is (Serilog `4.3.1-dev-02373`, Serilog.Expressions `5.1.0-dev-02301`, Serilog.Sinks.Console `6.0.1-dev-00953`, Humanizer `3.0.0-beta.96`, LibreHardwareMonitorLib `0.9.5-pre437`, InfiniLore `0.1.0-preview.25`)
+
+**Test results**: All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
+
