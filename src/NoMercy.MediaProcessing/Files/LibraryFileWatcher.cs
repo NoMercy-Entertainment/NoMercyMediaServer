@@ -28,7 +28,7 @@ public class LibraryFileWatcher
     private static readonly Lock LockObject = new();
 
     private static readonly JobDispatcher JobDispatcher = new();
-    private static readonly FileRepository FileRepository = new();
+    private static readonly FileRepository FileRepository = new(MediaContext);
     private static readonly FileManager FileManager = new(FileRepository);
 
     private const int Delay = 10;
@@ -99,8 +99,7 @@ public class LibraryFileWatcher
 
     private Library? GetLibraryByPath(string path)
     {
-        using MediaContext mediaContext = new();
-        return mediaContext.Libraries
+        return MediaContext.Libraries
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .FirstOrDefault(library => library.FolderLibraries

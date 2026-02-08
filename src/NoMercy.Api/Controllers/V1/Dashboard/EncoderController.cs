@@ -6,7 +6,6 @@ using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.Dashboard.DTO;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Encoder.Format.Container;
 using NoMercy.Encoder.Format.Rules;
@@ -28,7 +27,6 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view encoder profiles");
 
-        await using MediaContext mediaContext = new();
         List<EncoderProfile> encoderProfiles = await encoderRepository.GetEncoderProfilesAsync();
 
         return Ok(encoderProfiles);
@@ -42,7 +40,6 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
 
         try
         {
-            await using MediaContext mediaContext = new();
             int encoderProfiles = await encoderRepository.GetEncoderProfileCountAsync();
 
             EncoderProfile profile = new()

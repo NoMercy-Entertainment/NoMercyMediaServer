@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Files;
@@ -18,7 +19,8 @@ namespace NoMercy.MediaProcessing.Libraries;
 
 public class LibraryManager(
     LibraryRepository libraryRepository,
-    JobDispatcher jobDispatcher
+    JobDispatcher jobDispatcher,
+    MediaContext mediaContext
 )
     : BaseManager, ILibraryManager
 {
@@ -181,9 +183,9 @@ public class LibraryManager(
             return;
         }
         
-        FileRepository fileRepository = new();
+        FileRepository fileRepository = new(mediaContext);
         FileManager fileManager = new(fileRepository);
-        
+
         await fileManager.FindFiles(id, library);
     }
 }

@@ -50,7 +50,7 @@ public class FindMediaFilesJob : IShouldQueue
 
         if (library == null) return;
 
-        await using FileLogic file = new(Id, library);
+        await using FileLogic file = new(Id, library, context);
         await file.Process();
 
         if (file.Files.Count > 0)

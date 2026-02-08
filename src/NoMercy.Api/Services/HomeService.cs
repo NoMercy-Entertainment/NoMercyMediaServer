@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Media;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
@@ -14,14 +15,16 @@ namespace NoMercy.Api.Services;
 public class HomeService
 {
     private readonly MediaContext _mediaContext;
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly LibraryRepository _libraryRepository;
     private readonly HomeRepository _homeRepository;
 
-    public HomeService(HomeRepository homeRepository, LibraryRepository libraryRepository, MediaContext mediaContext)
+    public HomeService(HomeRepository homeRepository, LibraryRepository libraryRepository, MediaContext mediaContext, IDbContextFactory<MediaContext> contextFactory)
     {
         _homeRepository = homeRepository;
         _libraryRepository = libraryRepository;
         _mediaContext = mediaContext;
+        _contextFactory = contextFactory;
     }
 
     public async Task<List<GenreRowDto<GenreRowItemDto>>> GetHomePageContent(
@@ -182,7 +185,7 @@ public class HomeService
         List<Task<(Library library, List<Movie> movies, List<Tv> shows)>> libraryTasks = libraries
             .Select(async library =>
             {
-                MediaContext context = new();
+                MediaContext context = await _contextFactory.CreateDbContextAsync();
                 List<Movie> libraryMovies = [];
                 await foreach (Movie movie in _libraryRepository
                     .GetLibraryMovies(context, userId, library.Id, language, 36, 0, m => m.CreatedAt, "desc"))

@@ -532,8 +532,7 @@ public class ServerController(
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return BadRequestResponse("Wallpaper setting is only supported on Windows");
 
-        await using MediaContext mediaContext = new();
-        Image? wallpaper = await mediaContext.Images
+        Image? wallpaper = await context.Images
             .FirstOrDefaultAsync(config => config.FilePath == request.Path);
 
         if (wallpaper?.FilePath is null)

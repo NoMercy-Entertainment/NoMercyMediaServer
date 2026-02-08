@@ -12,9 +12,9 @@ using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDisposable
+public partial class FileLogic(int id, Library library, MediaContext mediaContext) : IDisposable, IAsyncDisposable
 {
-    private readonly MediaContext _mediaContext = new();
+    private readonly MediaContext _mediaContext = mediaContext;
 
     private int Id { get; set; } = id;
     private Library Library { get; set; } = library;

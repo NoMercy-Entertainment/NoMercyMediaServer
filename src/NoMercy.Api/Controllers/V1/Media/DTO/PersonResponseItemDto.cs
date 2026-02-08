@@ -92,14 +92,12 @@ public record PersonResponseItemDto
             .ToArray();
     }
 
-    public PersonResponseItemDto(TmdbPersonAppends tmdbPersonAppends, string? country)
+    public PersonResponseItemDto(TmdbPersonAppends tmdbPersonAppends, string? country, MediaContext mediaContext)
     {
         string? biography = tmdbPersonAppends.Translations.Translations
             .FirstOrDefault(translation => translation.Iso31661 == country)?.TmdbPersonTranslationData.Overview;
 
-        using MediaContext context = new();
-
-        Person? person = context.People
+        Person? person = mediaContext.People
             .Where(p => p.Id == tmdbPersonAppends.Id)
             .Include(p => p.Casts)
             .ThenInclude(c => c.Movie)

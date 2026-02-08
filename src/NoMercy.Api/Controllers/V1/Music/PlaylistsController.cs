@@ -229,9 +229,7 @@ public class PlaylistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to upload playlist covers");
 
-        await using MediaContext mediaContext = new();
-
-        Playlist? playlist = await mediaContext.Playlists
+        Playlist? playlist = await _mediaContext.Playlists
             .Where(pt => pt.UserId == User.UserId())
             .FirstOrDefaultAsync(playlist => playlist.Id == id);
 
@@ -247,12 +245,12 @@ public class PlaylistsController : BaseController
         {
             await image.CopyToAsync(stream);
         }
-        
+
         playlist.Cover = $"/{slug}.jpg";
         playlist._colorPalette = await CoverArtImageManagerManager
             .ColorPalette("cover", new(filePath2));
-        
-        await mediaContext.SaveChangesAsync();
+
+        await _mediaContext.SaveChangesAsync();
         
         Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {

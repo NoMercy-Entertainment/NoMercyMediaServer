@@ -14,8 +14,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<Artist?> GetArtistAsync(Guid userId, Guid id)
     {
-        MediaContext context = new();
-        return context.Artists
+        return mediaContext.Artists
             .AsNoTracking()
             .Where(artist => artist.Id == id)
             .Where(artist => artist.Library.LibraryUsers.Any(u => u.UserId == userId))
@@ -50,8 +49,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<Artist> GetArtistsAsync(Guid userId, string letter)
     {
-        MediaContext context = new();
-        return context.Artists
+        return mediaContext.Artists
             .AsNoTracking()
             .Where(artist => artist.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Where(artist => (letter == "_" || letter == "#")
@@ -97,8 +95,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<Album?> GetAlbumAsync(Guid userId, Guid id)
     {
-        MediaContext context = new();
-        return context.Albums
+        return mediaContext.Albums
             .AsNoTracking()
             .Where(album => album.Id == id)
             .Where(album => album.Library.LibraryUsers.Any(u => u.UserId == userId))
@@ -124,8 +121,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<Album> GetAlbumsAsync(Guid userId, string letter)
     {
-        MediaContext context = new();
-        return context.Albums
+        return mediaContext.Albums
             .AsNoTracking()
             .Where(album => album.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Where(album => (letter == "_" || letter == "#")
@@ -167,8 +163,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<List<AlbumTrack>> GetAlbumTracksForIdsAsync(List<Guid> albumIds)
     {
-        MediaContext context = new();
-        return context.AlbumTrack
+        return mediaContext.AlbumTrack
             .AsNoTracking()
             .Where(at => albumIds.Contains(at.AlbumId))
             .Include(at => at.Track)
@@ -181,8 +176,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<Track?> GetTrackAsync(Guid id)
     {
-        MediaContext context = new();
-        return context.Tracks
+        return mediaContext.Tracks
             .AsNoTracking()
             .Where(track => track.Id == id)
             .Include(track => track.AlbumTrack)
@@ -196,8 +190,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<TrackUser> GetTracksAsync(Guid userId)
     {
-        MediaContext context = new();
-        return context.TrackUser
+        return mediaContext.TrackUser
             .AsNoTracking()
             .Where(tu => tu.UserId == userId)
             .Include(trackUser => trackUser.Track)
@@ -243,8 +236,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<Track?> GetTrackWithIncludesAsync(Guid id)
     {
-        MediaContext context = new();
-        return context.Tracks
+        return mediaContext.Tracks
             .AsNoTracking()
             .Where(track => track.Id == id)
             .Include(track => track.ArtistTrack)
@@ -273,8 +265,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<List<CarouselResponseItemDto>> GetCarouselPlaylistsAsync(Guid userId)
     {
-        MediaContext context = new();
-        return context.Playlists
+        return mediaContext.Playlists
             .AsNoTracking()
             .Where(playlist => playlist.UserId == userId)
             .Include(playlist => playlist.Tracks)
@@ -286,8 +277,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<Playlist?> GetPlaylistAsync(Guid userId, Guid id)
     {
-        MediaContext context = new();
-        return context.Playlists
+        return mediaContext.Playlists
             .AsNoTracking()
             .Where(playlist => playlist.Id == id)
             .Where(playlist => playlist.UserId == userId)
@@ -308,8 +298,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<Album> GetLatestAlbumsAsync()
     {
-        MediaContext context = new();
-        return context.Albums
+        return mediaContext.Albums
             .AsNoTracking()
             .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Count > 0)
             .Include(album => album.AlbumTrack)
@@ -319,8 +308,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<Artist> GetLatestArtistsAsync()
     {
-        MediaContext context = new();
-        return context.Artists
+        return mediaContext.Artists
             .AsNoTracking()
             .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Count > 0)
             .Include(artist => artist.Images.Where(image => image.Type == "thumb"))
@@ -331,8 +319,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<MusicGenre> GetLatestGenresAsync()
     {
-        MediaContext context = new();
-        return context.MusicGenres
+        return mediaContext.MusicGenres
             .AsNoTracking()
             .Where(genre => genre.MusicGenreTracks.Count > 0)
             .Include(genre => genre.MusicGenreTracks)
@@ -341,8 +328,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<ArtistTrack> GetFavoriteArtistAsync(Guid userId)
     {
-        MediaContext context = new();
-        return context.MusicPlays
+        return mediaContext.MusicPlays
             .AsNoTracking()
             .Where(musicPlay => musicPlay.UserId == userId)
             .Include(musicPlay => musicPlay.Track)
@@ -354,8 +340,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<AlbumTrack> GetFavoriteAlbumAsync(Guid userId)
     {
-        MediaContext context = new();
-        return context.MusicPlays
+        return mediaContext.MusicPlays
             .AsNoTracking()
             .Where(musicPlay => musicPlay.UserId == userId)
             .Include(musicPlay => musicPlay.Track)
@@ -366,8 +351,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<PlaylistTrack> GetFavoritePlaylistAsync(Guid userId)
     {
-        MediaContext context = new();
-        return context.MusicPlays
+        return mediaContext.MusicPlays
             .AsNoTracking()
             .Where(musicPlay => musicPlay.Track.PlaylistTrack.All(pt => pt.Playlist.UserId == userId))
             .Include(musicPlay => musicPlay.Track)
@@ -378,8 +362,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<ArtistUser> GetFavoriteArtistsAsync(Guid userId)
     {
-        MediaContext context = new();
-        return context.ArtistUser
+        return mediaContext.ArtistUser
             .AsNoTracking()
             .Where(artistUser => artistUser.UserId == userId)
             .Include(artistUser => artistUser.Artist)
@@ -391,8 +374,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<AlbumUser> GetFavoriteAlbumsAsync(Guid userId)
     {
-        MediaContext context = new();
-        return context.AlbumUser
+        return mediaContext.AlbumUser
             .AsNoTracking()
             .Where(albumUser => albumUser.UserId == userId)
             .Include(albumUser => albumUser.Album)
@@ -406,8 +388,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public IQueryable<TrackUser> GetFavoriteTracksAsync(Guid userId)
     {
-        MediaContext context = new();
-        return context.TrackUser
+        return mediaContext.TrackUser
             .AsNoTracking()
             .Where(trackUser => trackUser.UserId == userId)
             .Include(trackUser => trackUser.Track)
@@ -420,8 +401,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<List<ArtistTrack>> GetArtistTracksForCollectionAsync(List<Guid> artistIds)
     {
-        MediaContext context = new();
-        return context.ArtistTrack
+        return mediaContext.ArtistTrack
             .AsNoTracking()
             .Where(artistTrack => artistIds.Contains(artistTrack.ArtistId))
             .Include(artistTrack => artistTrack.Track)
@@ -434,8 +414,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public List<Guid> SearchArtistIds(string normalizedQuery)
     {
-        MediaContext context = new();
-        return context.Artists
+        return mediaContext.Artists
             .AsNoTracking()
             .Select(artist => new { artist.Id, artist.Name })
             .ToList()
@@ -446,8 +425,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public List<Guid> SearchAlbumIds(string normalizedQuery)
     {
-        MediaContext context = new();
-        return context.Albums
+        return mediaContext.Albums
             .AsNoTracking()
             .Select(album => new { album.Id, album.Name })
             .ToList()
@@ -458,8 +436,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public List<Guid> SearchPlaylistIds(string normalizedQuery)
     {
-        MediaContext context = new();
-        return context.Playlists
+        return mediaContext.Playlists
             .AsNoTracking()
             .Select(playlist => new { playlist.Id, playlist.Name })
             .ToList()
@@ -470,8 +447,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public List<Guid> SearchTrackIds(string normalizedQuery)
     {
-        MediaContext context = new();
-        return context.Tracks
+        return mediaContext.Tracks
             .AsNoTracking()
             .Select(track => new { track.Id, track.Name })
             .ToList()
@@ -482,8 +458,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<List<Artist>> GetArtistsByIdsAsync(List<Guid> artistIds)
     {
-        MediaContext context = new();
-        return context.Artists
+        return mediaContext.Artists
             .AsNoTracking()
             .Where(artist => artistIds.Contains(artist.Id))
             .Include(artist => artist.ArtistTrack)
@@ -495,8 +470,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<List<Album>> GetAlbumsByIdsAsync(List<Guid> albumIds)
     {
-        MediaContext context = new();
-        return context.Albums
+        return mediaContext.Albums
             .AsNoTracking()
             .Where(album => albumIds.Contains(album.Id))
             .Include(album => album.AlbumTrack)
@@ -511,8 +485,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<List<Playlist>> GetPlaylistsByIdsAsync(List<Guid> playlistIds)
     {
-        MediaContext context = new();
-        return context.Playlists
+        return mediaContext.Playlists
             .AsNoTracking()
             .Where(playlist => playlistIds.Contains(playlist.Id))
             .Include(playlist => playlist.Tracks)
@@ -523,8 +496,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<List<Track>> GetTracksByIdsAsync(List<Guid> trackIds)
     {
-        MediaContext context = new();
-        return context.Tracks
+        return mediaContext.Tracks
             .AsNoTracking()
             .Where(track => trackIds.Contains(track.Id))
             .Include(track => track.ArtistTrack)
@@ -543,8 +515,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<PlaylistTrack?> GetPlaylistTrackAsync(Guid userId, Guid playlistId, Guid trackId)
     {
-        MediaContext context = new();
-        return context.PlaylistTrack
+        return mediaContext.PlaylistTrack
             .Include(pt => pt.Track)
             .ThenInclude(track => track.Images)
             .Include(pt => pt.Playlist)
@@ -562,8 +533,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<AlbumTrack?> GetAlbumTrackAsync(Guid userId, Guid albumId, Guid trackId)
     {
-        MediaContext context = new();
-        return context.AlbumTrack
+        return mediaContext.AlbumTrack
             .Where(at => at.AlbumId == albumId && at.TrackId == trackId)
             .Include(at => at.Track)
             .Include(at => at.Album)
@@ -578,8 +548,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<ArtistTrack?> GetArtistTrackAsync(Guid userId, Guid artistId, Guid trackId)
     {
-        MediaContext context = new();
-        return context.ArtistTrack
+        return mediaContext.ArtistTrack
             .Where(at => at.ArtistId == artistId && at.TrackId == trackId)
             .Include(at => at.Track)
             .Include(at => at.Artist)
@@ -595,8 +564,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     public Task<MusicGenreTrack?> GetGenreTrackAsync(Guid userId, Guid genreId, Guid trackId)
     {
-        MediaContext context = new();
-        return context.MusicGenreTrack
+        return mediaContext.MusicGenreTrack
             .Where(genre =>
                 genre.Genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
                 genre.Genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))

@@ -635,7 +635,7 @@ public class LibrariesController(
         {
             await using MediaContext mediaContext = new();
 
-            FileRepository fileRepository = new();
+            FileRepository fileRepository = new(mediaContext);
             FileManager fileManager = new(fileRepository);
 
             await fileManager.MoveToLibraryFolder(request.Id, folder);

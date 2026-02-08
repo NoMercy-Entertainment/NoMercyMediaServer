@@ -215,9 +215,7 @@ public class AlbumsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to upload album covers");
 
-        await using MediaContext mediaContext = new();
-
-        Album? album = await mediaContext.Albums
+        Album? album = await _mediaContext.Albums
             .Include(album => album.LibraryFolder)
             .FirstOrDefaultAsync(album => album.Id == id);
 
@@ -245,12 +243,12 @@ public class AlbumsController : BaseController
         {
             await image.CopyToAsync(stream);
         }
-        
+
         album.Cover = $"/{slug}.jpg";
         album._colorPalette = await CoverArtImageManagerManager
             .ColorPalette("cover", new(filePath2));
-        
-        await mediaContext.SaveChangesAsync();
+
+        await _mediaContext.SaveChangesAsync();
         
         return Ok(new StatusResponseDto<ImageUploadResponseDto>
         {

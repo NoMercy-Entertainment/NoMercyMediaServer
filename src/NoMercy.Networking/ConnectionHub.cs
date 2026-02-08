@@ -14,11 +14,13 @@ namespace NoMercy.Networking;
 public class ConnectionHub : Hub
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
     private string Endpoint { get; set; }
 
-    protected ConnectionHub(IHttpContextAccessor httpContextAccessor)
+    protected ConnectionHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory)
     {
         _httpContextAccessor = httpContextAccessor;
+        _contextFactory = contextFactory;
         Endpoint = _httpContextAccessor.HttpContext?.Request.Path.Value ?? "Unknown";
         // Logger.Socket($"Connected to {Endpoint}");
     }
@@ -88,7 +90,7 @@ public class ConnectionHub : Hub
 
         }
 
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
         await mediaContext.Devices.Upsert(client)
             .On(x => x.DeviceId)
             .WhenMatched((ds, di) => new()
@@ -139,7 +141,7 @@ public class ConnectionHub : Hub
 
         if (Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
         {
-            await using MediaContext mediaContext = new();
+            await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
             Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
             if (device is not null)
             {

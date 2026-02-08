@@ -10,7 +10,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Api.Controllers.Socket.video;
 
-public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackService)
+public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackService, IDbContextFactory<MediaContext> contextFactory)
 {
     public async Task HandleCommand(User user, string command, object? data, VideoPlayerState state, Client? device)
     {
@@ -115,14 +115,14 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
     {
         int seekTime = int.Parse(data?.ToString() ?? "0") * 1000;
         state.Time = seekTime;
-        await VideoPlaybackService.StoreWatchProgression(state, user);
+        await videoPlaybackService.StoreWatchProgression(state, user);
     }
     
     private async Task HandleForward(User user, VideoPlayerState state, object? data)
     {
         int seekTime = int.Parse(data?.ToString() ?? "10") * 1000;
         state.Time += seekTime;
-        await VideoPlaybackService.StoreWatchProgression(state, user);
+        await videoPlaybackService.StoreWatchProgression(state, user);
     }
     
     private async Task HandleBackward(User user, VideoPlayerState state, object? data)
@@ -135,7 +135,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
         
         int seekTime = int.Parse(data?.ToString() ?? "10") * 1000;
         state.Time -= seekTime;
-        await VideoPlaybackService.StoreWatchProgression(state, user);
+        await videoPlaybackService.StoreWatchProgression(state, user);
     }
 
     private void HandleNext(VideoPlayerState state)
@@ -256,7 +256,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
         {
             device.VolumePercent = volume;
 
-            await using MediaContext mediaContext = new();
+            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
             await mediaContext.Devices
                 .Where(d => d.DeviceId == device.DeviceId)
                 .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, volume));
@@ -520,7 +520,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                 : null
         };
         
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
 
         UpsertCommandBuilder<PlaybackPreference> query = mediaContext.PlaybackPreferences
             .Upsert(playbackPreference);

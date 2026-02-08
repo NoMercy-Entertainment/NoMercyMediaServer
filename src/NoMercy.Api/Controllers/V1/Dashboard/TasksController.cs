@@ -26,7 +26,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/tasks", Order = 10)]
-public class TasksController : BaseController
+public class TasksController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -133,7 +133,6 @@ public class TasksController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view encoder queue");
 
-        await using MediaContext mediaContext = new();
         await using QueueContext queueContext = new();
 
         ImmutableList<QueueJob> jobs = queueContext.QueueJobs

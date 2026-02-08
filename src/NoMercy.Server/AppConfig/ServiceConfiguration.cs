@@ -121,6 +121,12 @@ public static class ServiceConfiguration
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
         });
 
+        services.AddDbContextFactory<MediaContext>(optionsAction =>
+        {
+            optionsAction.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+        }, ServiceLifetime.Scoped);
+
         // Add Repositories
         services.AddScoped<HomeRepository>();
         services.AddScoped<MusicRepository>();

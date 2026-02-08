@@ -21,7 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/specials", Order = 11)]
-public class SpecialsController : BaseController
+public class SpecialsController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -350,7 +350,7 @@ public class SpecialsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan the special");
 
-        LibraryLogic specialLogic = new(id);
+        LibraryLogic specialLogic = new(id, mediaContext);
 
         if (await specialLogic.Process())
             return Ok(new StatusResponseDto<List<dynamic>>

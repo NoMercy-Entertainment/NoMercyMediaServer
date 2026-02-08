@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Database;
 using NoMercy.Networking;
 using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster.Models.ChromecastStatus;
@@ -11,7 +13,8 @@ namespace NoMercy.Api.Controllers.Socket;
 
 public class CastHub : ConnectionHub
 {
-    public CastHub(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
+    public CastHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory)
+        : base(httpContextAccessor, contextFactory)
     {
     }
 

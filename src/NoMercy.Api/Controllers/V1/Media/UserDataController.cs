@@ -75,7 +75,6 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "You do not have permission to remove continue watching"
             });
 
-        await using MediaContext mediaContext = new();
 
         List<UserData>? userData = body.Type switch
         {
@@ -133,7 +132,6 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "You do not have permission to view watched"
             });
 
-        await using MediaContext mediaContext = new();
 
         UserData? userData = body.Type switch
         {
@@ -188,7 +186,6 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "You do not have permission to view favorites"
             });
 
-        await using MediaContext mediaContext = new();
 
         UserData? userData = body.Type switch
         {

@@ -11,6 +11,7 @@ namespace NoMercy.Api.Controllers.Socket.video;
 public class VideoPlayerStateFactory
 {
     public static async Task<VideoPlayerState> Create(
+        IDbContextFactory<MediaContext> contextFactory,
         User user,
         Device device,
         VideoPlaylistResponseDto item,
@@ -18,7 +19,7 @@ public class VideoPlayerStateFactory
         string type,
         dynamic listId)
     {
-        await using MediaContext context = new();
+        await using MediaContext context = await contextFactory.CreateDbContextAsync();
 
         ArgumentNullException.ThrowIfNull(listId);
 

@@ -20,7 +20,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/configuration", Order = 10)]
-public class ConfigurationController : BaseController
+public class ConfigurationController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -47,9 +47,8 @@ public class ConfigurationController : BaseController
     }
 
     [NonAction]
-    private static string DeviceName()
+    private string DeviceName()
     {
-        MediaContext mediaContext = new();
         Configuration? device = mediaContext.Configuration.FirstOrDefault(device => device.Key == "serverName");
         return device?.Value ?? Environment.MachineName;
     }
@@ -73,7 +72,6 @@ public class ConfigurationController : BaseController
             return UnauthorizedResponse("You do not have permission to update configuration");
 
         Guid userId = User.UserId();
-        await using MediaContext mediaContext = new();
 
         if (request.InternalServerPort != 0)
         {
@@ -195,8 +193,7 @@ public class ConfigurationController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view languages");
 
-        await using MediaContext context = new();
-        List<Language> languages = await context.Languages
+        List<Language> languages = await mediaContext.Languages
             .ToListAsync();
 
         return Ok(languages.Select(language => new LanguageDto
@@ -215,8 +212,7 @@ public class ConfigurationController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view countries");
 
-        await using MediaContext context = new();
-        List<Country> countries = await context.Countries
+        List<Country> countries = await mediaContext.Countries
             .ToListAsync();
 
         return Ok(countries.Select(country => new CountryDto

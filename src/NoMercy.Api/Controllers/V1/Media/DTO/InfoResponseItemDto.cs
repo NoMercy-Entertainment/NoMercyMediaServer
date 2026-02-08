@@ -255,7 +255,7 @@ public record InfoResponseItemDto
             .Select(cm => new CompanyDto(cm));
     }
 
-    public InfoResponseItemDto(Tv tv, string? country)
+    public InfoResponseItemDto(Tv tv, string? country, MediaContext? mediaContext = null)
     {
         string? title = tv.Translations.FirstOrDefault()?.Title;
         string? overview = tv.Translations.FirstOrDefault()?.Overview;
@@ -366,7 +366,7 @@ public record InfoResponseItemDto
         Creator = tv.Creators
             .Select(people => new PeopleDto(people)).FirstOrDefault();
 
-        using MediaContext mediaContext = new();
+        if (mediaContext is null) return;
 
         IEnumerable<int> similarIds = tv.SimilarFrom
             .Select(similar => similar.MediaId);

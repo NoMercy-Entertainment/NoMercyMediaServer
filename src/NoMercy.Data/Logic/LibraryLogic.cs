@@ -10,9 +10,9 @@ using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public class LibraryLogic(Ulid id) : IDisposable, IAsyncDisposable
+public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAsyncDisposable
 {
-    private readonly MediaContext _mediaContext = new();
+    private readonly MediaContext _mediaContext = mediaContext;
     private Library Library { get; set; } = new();
 
     public Ulid Id { get; set; } = id;

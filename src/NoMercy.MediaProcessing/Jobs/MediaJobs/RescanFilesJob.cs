@@ -23,7 +23,7 @@ public class RescanFilesJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         LibraryRepository libraryRepository = new(context);
-        LibraryManager libraryManager = new(libraryRepository, jobDispatcher);
+        LibraryManager libraryManager = new(libraryRepository, jobDispatcher, context);
         
         await libraryManager.RescanFiles(LibraryId, Id);
         

@@ -10,27 +10,27 @@ namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 public class SeasonPaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<SeasonPaletteCronJob> _logger;
+    private readonly MediaContext _context;
 
     public string CronExpression => new CronExpressionBuilder().Daily();
     public string JobName => "Season ColorPalette Job";
 
-    public SeasonPaletteCronJob(ILogger<SeasonPaletteCronJob> logger)
+    public SeasonPaletteCronJob(ILogger<SeasonPaletteCronJob> logger, MediaContext context)
     {
         _logger = logger;
+        _context = context;
     }
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        await using MediaContext context = new();
-
-        List<Season[]> seasons = context.Seasons
+        List<Season[]> seasons = _context.Seasons
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
             .Take(5000)
             .ToList()
             .Chunk(5)
             .ToList();
-        
+
         _logger.LogTrace("Found {Count} season chunks to process", seasons.Count);
 
         foreach (Season[] seasonChunk in seasons)
@@ -49,8 +49,8 @@ public class SeasonPaletteCronJob : ICronJobExecutor
                 }
             }
 
-            await context.SaveChangesAsync(cancellationToken);
-            
+            await _context.SaveChangesAsync(cancellationToken);
+
         }
 
         _logger.LogTrace("Season palette job completed, updated: {Count}", seasons.Sum(x => x.Length));

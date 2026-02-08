@@ -107,8 +107,7 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like artists");
 
-        await using MediaContext mediaContext = new();
-        Artist? artist = await mediaContext.Artists
+        Artist? artist = await _mediaContext.Artists
             .AsNoTracking()
             .Where(artistUser => artistUser.Id == id)
             .FirstOrDefaultAsync();
@@ -151,8 +150,6 @@ public class ArtistsController : BaseController
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan artists");
-
-        await using MediaContext mediaContext = new();
 
         return Ok(new StatusResponseDto<string>
         {
@@ -244,9 +241,7 @@ public class ArtistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to upload artist covers");
 
-        await using MediaContext mediaContext = new();
-
-        Artist? artist = await mediaContext.Artists
+        Artist? artist = await _mediaContext.Artists
             .Include(artist => artist.LibraryFolder)
             .FirstOrDefaultAsync(artist => artist.Id == id);
 
@@ -274,12 +269,12 @@ public class ArtistsController : BaseController
         {
             await image.CopyToAsync(stream);
         }
-        
+
         artist.Cover = $"/{slug}.jpg";
         artist._colorPalette = await CoverArtImageManagerManager
             .ColorPalette("cover", new(filePath2));
-        
-        await mediaContext.SaveChangesAsync();
+
+        await _mediaContext.SaveChangesAsync();
         
         Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {

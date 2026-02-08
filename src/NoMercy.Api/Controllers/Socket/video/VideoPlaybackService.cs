@@ -11,12 +11,14 @@ namespace NoMercy.Api.Controllers.Socket.video;
 public class VideoPlaybackService
 {
     private readonly VideoPlayerStateManager _stateManager;
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
     private static int _playerStateEventId;
     private static int PlayerStateEventId => ++_playerStateEventId;
 
-    public VideoPlaybackService(VideoPlayerStateManager stateManager)
+    public VideoPlaybackService(VideoPlayerStateManager stateManager, IDbContextFactory<MediaContext> contextFactory)
     {
         _stateManager = stateManager;
+        _contextFactory = contextFactory;
     }
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
@@ -150,31 +152,31 @@ public class VideoPlaybackService
         }
     }
     
-    internal static async Task StoreWatchProgression(VideoPlayerState state, User user)
+    internal async Task StoreWatchProgression(VideoPlayerState state, User user)
     {
         if (state.CurrentItem is null || state.Time <= 0) return;
-        
+
         UserData userdata = new()
         {
             UserId = user.Id,
             Type = state.CurrentItem.PlaylistType,
             Time = state.Time / 1000,
             VideoFileId = state.CurrentItem.VideoId,
-            MovieId = state.CurrentItem.PlaylistType == Config.MovieMediaType 
+            MovieId = state.CurrentItem.PlaylistType == Config.MovieMediaType
                 ? state.CurrentItem.TmdbId
                 : null,
-            TvId = state.CurrentItem.PlaylistType == Config.TvMediaType 
+            TvId = state.CurrentItem.PlaylistType == Config.TvMediaType
                 ? state.CurrentItem.TmdbId
                 : null,
             CollectionId = state.CurrentItem.PlaylistType == Config.CollectionMediaType
-                ? int.Parse(state.CurrentItem.PlaylistId) 
+                ? int.Parse(state.CurrentItem.PlaylistId)
                 : null,
             SpecialId = state.CurrentItem.PlaylistType == Config.SpecialMediaType
-                ? Ulid.Parse(state.CurrentItem.PlaylistId) 
+                ? Ulid.Parse(state.CurrentItem.PlaylistId)
                 : null
         };
 
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
         UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(userdata);
         
         query = state.CurrentItem.PlaylistType switch

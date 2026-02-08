@@ -16,7 +16,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/users", Order = 10)]
-public class UsersController : BaseController
+public class UsersController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -24,7 +24,6 @@ public class UsersController : BaseController
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to view users");
 
-        await using MediaContext mediaContext = new();
 
         List<User> users = await mediaContext.Users
             .Include(user => user.LibraryUser)
@@ -42,7 +41,6 @@ public class UsersController : BaseController
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to create a user");
 
-        await using MediaContext mediaContext = new();
 
         Guid userId = User.UserId();
         User? hasPermission = mediaContext.Users.FirstOrDefault(user => user.Id.Equals(userId));
@@ -129,7 +127,6 @@ public class UsersController : BaseController
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to view user permissions");
 
-        await using MediaContext mediaContext = new();
 
         List<User> users = await mediaContext.Users
             .Include(user => user.LibraryUser)
@@ -179,7 +176,6 @@ public class UsersController : BaseController
         if (User.IsSelf(id))
             return UnauthorizedResponse("You do not have permission to edit your own permissions");
 
-        await using MediaContext mediaContext = new();
 
         User? user = await mediaContext.Users
             .Where(user => user.Id == id)

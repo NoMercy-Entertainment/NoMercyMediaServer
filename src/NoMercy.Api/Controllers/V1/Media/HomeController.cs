@@ -3,6 +3,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Api.Controllers.V1.Media.DTO.Components;
@@ -27,10 +28,12 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class HomeController : BaseController
 {
     private readonly HomeService _homeService;
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
 
-    public HomeController(HomeService homeService)
+    public HomeController(HomeService homeService, IDbContextFactory<MediaContext> contextFactory)
     {
         _homeService = homeService;
+        _contextFactory = contextFactory;
     }
 
     [HttpGet]
@@ -59,14 +62,14 @@ public class HomeController : BaseController
 
         if (request.Page != 0) return Ok(response);
 
-        LibraryRepository libraryRepository = new(new());
+        LibraryRepository libraryRepository = new(await _contextFactory.CreateDbContextAsync());
         List<Library> libraries = await libraryRepository.GetLibraries(userId);
 
         // Fetch all library data in parallel - each task needs its own MediaContext for thread safety
         Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = libraries
             .Select(async library =>
             {
-                MediaContext context = new();
+                await using MediaContext context = await _contextFactory.CreateDbContextAsync();
                 List<Movie> libraryMovies = [];
                 await foreach (Movie movie in libraryRepository
                                    .GetLibraryMovies(context, userId, library.Id, language, request.Take, request.Page, m => m.CreatedAt, "desc"))

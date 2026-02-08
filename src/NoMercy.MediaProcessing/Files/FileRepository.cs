@@ -28,12 +28,13 @@ using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Files;
 
-public class FileRepository : IFileRepository
+public class FileRepository(MediaContext context) : IFileRepository
 {
+    private readonly MediaContext _context = context;
+
     public Task StoreVideoFile(VideoFile videoFile)
     {
-        MediaContext context = new();
-        return context.VideoFiles.Upsert(videoFile)
+        return _context.VideoFiles.Upsert(videoFile)
             .On(vf => vf.Filename)
             .WhenMatched((vs, vi) => new()
             {
@@ -56,8 +57,7 @@ public class FileRepository : IFileRepository
 
     public async Task<Ulid> StoreMetadata(Metadata metadata)
     {
-        MediaContext context = new();
-        await context.Metadata.Upsert(metadata)
+        await _context.Metadata.Upsert(metadata)
             .On(mf => new { mf.Filename, mf.HostFolder })
             .WhenMatched((ms, mi) => new()
             {
@@ -79,7 +79,7 @@ public class FileRepository : IFileRepository
             })
             .RunAsync();
 
-        return context.Metadata
+        return _context.Metadata
             .Where(m => m.Filename == metadata.Filename)
             .Where(m => m.HostFolder == metadata.HostFolder)
             .Select(m => m.Id)
@@ -90,8 +90,7 @@ public class FileRepository : IFileRepository
     {
         if (item.Parsed == null) return null;
 
-        MediaContext context = new();
-        return await context.Episodes
+        return await _context.Episodes
             .Where(e => e.TvId == showId)
             .Where(e => e.SeasonNumber == item.Parsed!.Season)
             .Where(e => e.EpisodeNumber == item.Parsed!.Episode)
@@ -100,7 +99,6 @@ public class FileRepository : IFileRepository
 
     public async Task<(Movie? movie, Tv? show, string type)> MediaType(int id, Library library)
     {
-        MediaContext context = new();
         Movie? movie = null;
         Tv? show = null;
         string type = "";
@@ -108,26 +106,26 @@ public class FileRepository : IFileRepository
         switch (library.Type)
         {
             case Config.MovieMediaType:
-                movie = await context.Movies
+                movie = await _context.Movies
                     .Where(m => m.Id == id)
                     .FirstOrDefaultAsync();
                 type = library.Type;
                 break;
             case Config.TvMediaType:
             case Config.AnimeMediaType:
-                show = await context.Tvs
+                show = await _context.Tvs
                     .Where(t => t.Id == id)
                     .FirstOrDefaultAsync();
 
                 if (show == null)
                 {
-                    Episode? episode = await context.Episodes
+                    Episode? episode = await _context.Episodes
                         .Where(e => e.Id == id)
                         .FirstOrDefaultAsync();
 
                     if (episode != null)
                     {
-                        show = await context.Tvs
+                        show = await _context.Tvs
                             .Where(t => t.Id == episode.TvId)
                             .FirstOrDefaultAsync();
                     }
@@ -221,7 +219,7 @@ public class FileRepository : IFileRepository
         return fileList.OrderBy(file => file.Name).ToList();
     }
 
-    private static async Task<bool> ProcessVideoFileInfo(string libraryType, FileInfo file,
+    private async Task<bool> ProcessVideoFileInfo(string libraryType, FileInfo file,
         ConcurrentBag<FileItem> fileList)
     {
         MovieOrEpisode match = new();
@@ -260,11 +258,10 @@ public class FileRepository : IFileRepository
                 TmdbTvShow? show = shows?.Results.FirstOrDefault();
                 if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) return true;
 
-                MediaContext context = new();
-                bool hasShow = context.Tvs
+                bool hasShow = _context.Tvs
                     .Any(item => item.Id == show.Id);
 
-                Ulid libraryId = await context.Libraries
+                Ulid libraryId = await _context.Libraries
                     .Where(item => item.Type == libraryType)
                     .Select(item => item.Id)
                     .FirstOrDefaultAsync();
@@ -286,14 +283,14 @@ public class FileRepository : IFileRepository
                     await job.Handle();
                 }
 
-                Episode? episode = context.Episodes
+                Episode? episode = _context.Episodes
                     .Where(item => item.TvId == show.Id)
                     .Where(item => item.SeasonNumber == parsed.Season)
                     .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
 
                 if (episode == null)
                 {
-                    List<Episode> episodes = context.Episodes
+                    List<Episode> episodes = _context.Episodes
                         .Where(item => item.TvId == show.Id)
                         .Where(item => item.SeasonNumber > 0)
                         .OrderBy(item => item.SeasonNumber)
@@ -310,7 +307,7 @@ public class FileRepository : IFileRepository
                     TmdbEpisodeDetails? details = await episodeClient.Details(true);
                     if (details == null) return true;
 
-                    Season? season = await context.Seasons
+                    Season? season = await _context.Seasons
                         .FirstOrDefaultAsync(season =>
                             season.TvId == show.Id && season.SeasonNumber == details.SeasonNumber);
 
@@ -329,8 +326,8 @@ public class FileRepository : IFileRepository
                         SeasonId = season?.Id ?? 0,
                     };
 
-                    context.Episodes.Add(episode);
-                    await context.SaveChangesAsync();
+                    _context.Episodes.Add(episode);
+                    await _context.SaveChangesAsync();
                 }
 
                 match = new()
@@ -354,8 +351,7 @@ public class FileRepository : IFileRepository
                 TmdbMovie? movie = movies?.Results.FirstOrDefault();
                 if (movie == null) return true;
 
-                MediaContext context = new();
-                Movie? movieItem = context.Movies
+                Movie? movieItem = _context.Movies
                     .FirstOrDefault(item => item.Id == movie.Id);
 
                 if (movieItem == null)
@@ -364,10 +360,10 @@ public class FileRepository : IFileRepository
                     TmdbMovieDetails? details = await movieClient.Details(true);
                     if (details == null) return true;
 
-                    bool hasMovie = context.Movies
+                    bool hasMovie = _context.Movies
                         .Any(item => item.Id == movie.Id);
 
-                    Ulid libraryId = await context.Libraries
+                    Ulid libraryId = await _context.Libraries
                         .Where(item => item.Type == libraryType)
                         .Select(item => item.Id)
                         .FirstOrDefaultAsync();

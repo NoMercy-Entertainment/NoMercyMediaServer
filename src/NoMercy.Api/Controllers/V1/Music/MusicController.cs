@@ -26,10 +26,12 @@ namespace NoMercy.Api.Controllers.V1.Music;
 public class MusicController : BaseController
 {
     private readonly MusicRepository _musicRepository;
+    private readonly MediaContext _mediaContext;
 
-    public MusicController(MusicRepository musicService)
+    public MusicController(MusicRepository musicService, MediaContext mediaContext)
     {
         _musicRepository = musicService;
+        _mediaContext = mediaContext;
     }
 
     [HttpGet]
@@ -296,8 +298,7 @@ public class MusicController : BaseController
         List<Guid> playlistIds = _musicRepository.SearchPlaylistIds(normalizedQuery);
         List<Guid> trackIds = _musicRepository.SearchTrackIds(normalizedQuery);
         // Step 2: Query full data using the IDs
-        MediaContext mediaContext = new();
-        List<Artist> artists = mediaContext.Artists
+        List<Artist> artists = _mediaContext.Artists
             .Where(artist => artistIds.Contains(artist.Id))
             .Include(artist => artist.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Track)
@@ -305,7 +306,7 @@ public class MusicController : BaseController
             .ThenInclude(albumArtist => albumArtist.Album)
             .ToList();
 
-        List<Album> albums = mediaContext.Albums
+        List<Album> albums = _mediaContext.Albums
             .Where(album => albumIds.Contains(album.Id))
             .Include(album => album.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Track)
@@ -316,14 +317,14 @@ public class MusicController : BaseController
             .ThenInclude(song => song.TrackUser)
             .ToList();
 
-        List<Playlist> playlists = mediaContext.Playlists
+        List<Playlist> playlists = _mediaContext.Playlists
             .Where(playlist => playlistIds.Contains(playlist.Id))
             .Include(playlist => playlist.Tracks)
             .ThenInclude(playlistTrack => playlistTrack.Track)
             .ThenInclude(song => song.TrackUser)
             .ToList();
 
-        List<Track> songs = mediaContext.Tracks
+        List<Track> songs = _mediaContext.Tracks
             .Where(track => trackIds.Contains(track.Id))
             .Include(track => track.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Artist)

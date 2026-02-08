@@ -13,11 +13,9 @@ public record LibraryResponseDto
 
     [JsonProperty("data")] public List<LibraryResponseItemDto> Data { get; set; } = [];
 
-    public static async Task<List<Movie>> GetLibraryMovies(Guid userId, Ulid libraryId, string language, int take,
+    public static async Task<List<Movie>> GetLibraryMovies(MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int take,
         int page = 0)
     {
-        await using MediaContext mediaContext = new();
-
         IIncludableQueryable<Movie, Certification> query = mediaContext.Movies
                 .AsNoTracking()
                 .Where(movie => movie.Library.Id == libraryId)
@@ -50,11 +48,9 @@ public record LibraryResponseDto
         return movies;
     }
 
-    public static async Task<List<Tv>> GetLibraryShows(Guid userId, Ulid libraryId, string language, int take,
+    public static async Task<List<Tv>> GetLibraryShows(MediaContext mediaContext, Guid userId, Ulid libraryId, string language, int take,
         int page = 0)
     {
-        await using MediaContext mediaContext = new();
-
         IIncludableQueryable<Tv, Certification> query = mediaContext.Tvs.AsNoTracking()
                 .Where(tv => tv.Library.Id == libraryId)
                 .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))

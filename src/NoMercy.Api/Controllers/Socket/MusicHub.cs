@@ -24,12 +24,13 @@ public class MusicHub : ConnectionHub
 
     public MusicHub(
         IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<MediaContext> contextFactory,
         MusicPlaybackService musicPlaybackService,
         MusicPlayerStateManager musicPlayerStateManager,
         MusicDeviceManager musicDeviceManager,
         MusicPlaylistManager musicPlaylistManager,
         MusicPlaybackCommandHandler commandHandler)
-        : base(httpContextAccessor)
+        : base(httpContextAccessor, contextFactory)
     {
         _httpContextAccessor = httpContextAccessor;
         _musicPlaybackService = musicPlaybackService;

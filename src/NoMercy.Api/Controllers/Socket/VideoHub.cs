@@ -24,16 +24,20 @@ public class VideoHub : ConnectionHub
     private readonly VideoPlaylistManager _videoPlaylistManager;
     private readonly VideoPlaybackCommandHandler _commandHandler;
 
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
+
     public VideoHub(
         IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<MediaContext> contextFactory,
         VideoPlaybackService videoPlaybackService,
         VideoPlayerStateManager videoPlayerStateManager,
         VideoDeviceManager videoDeviceManager,
         VideoPlaylistManager videoPlaylistManager,
         VideoPlaybackCommandHandler commandHandler)
-        : base(httpContextAccessor)
+        : base(httpContextAccessor, contextFactory)
     {
         _httpContextAccessor = httpContextAccessor;
+        _contextFactory = contextFactory;
         _videoPlaybackService = videoPlaybackService;
         _videoPlayerStateManager = videoPlayerStateManager;
         _videoDeviceManager = videoDeviceManager;
@@ -72,10 +76,10 @@ public class VideoHub : ConnectionHub
                 : null
         };
 
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
 
         UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(userdata);
-        
+
         query = request.PlaylistType switch
         {
             Config.MovieMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.MovieId }),
@@ -84,7 +88,7 @@ public class VideoHub : ConnectionHub
             Config.SpecialMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.SpecialId }),
             _ => throw new ArgumentException("Invalid playlist type", request.PlaylistType)
         };
-        
+
         await query.WhenMatched((uds, udi) => new()
             {
                 Id = uds.Id,
@@ -110,7 +114,7 @@ public class VideoHub : ConnectionHub
 
         if (user is null) return;
 
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
         UserData[] userdata = await mediaContext.UserData
             .Where(x => x.UserId == user.Id)
             .Where(x => x.Type == request.PlaylistType)
@@ -172,7 +176,7 @@ public class VideoHub : ConnectionHub
         List<VideoPlaylistResponseDto> playlist)
     {
         Device device = GetCurrentDevice(user);
-        VideoPlayerState videoPlayerState = await VideoPlayerStateFactory.Create(user, device, item, playlist, type, listId);
+        VideoPlayerState videoPlayerState = await VideoPlayerStateFactory.Create(_contextFactory, user, device, item, playlist, type, listId);
 
         _videoPlayerStateManager.UpdateState(user.Id, videoPlayerState);
         _videoPlaybackService.StartPlaybackTimer(user);

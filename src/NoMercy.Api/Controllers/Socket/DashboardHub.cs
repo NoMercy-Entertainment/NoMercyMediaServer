@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
 using NoMercy.Networking;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -6,7 +8,8 @@ namespace NoMercy.Api.Controllers.Socket;
 
 public class DashboardHub : ConnectionHub
 {
-    public DashboardHub(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
+    public DashboardHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory)
+        : base(httpContextAccessor, contextFactory)
     {
     }
 

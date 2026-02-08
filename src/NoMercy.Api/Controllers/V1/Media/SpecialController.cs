@@ -18,7 +18,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/specials")]
-public class SpecialController(SpecialRepository specialRepository, MediaContext context) : BaseController
+public class SpecialController(SpecialRepository specialRepository, MediaContext context, IDbContextFactory<MediaContext> contextFactory) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
@@ -101,7 +101,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         // Fetch movies and TVs in parallel
         Task<List<SpecialItemsDto>> moviesTask = Task.Run(async () =>
         {
-            MediaContext mediaContext = new();
+            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
             List<SpecialItemsDto> movieItems = [];
             IAsyncEnumerable<Movie> specialMovies =
                 SpecialResponseDto.GetSpecialMovies(mediaContext, userId, movieIds, language, country);
@@ -112,7 +112,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
         Task<List<SpecialItemsDto>> tvsTask = Task.Run(async () =>
         {
-            MediaContext mediaContext = new();
+            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
             List<SpecialItemsDto> tvItems = [];
             IAsyncEnumerable<Tv> specialTvs =
                 SpecialResponseDto.GetSpecialTvs(mediaContext, userId, tvIds, language, country);

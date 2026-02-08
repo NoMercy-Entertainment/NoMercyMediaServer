@@ -864,3 +864,54 @@
 
 **Test results**: All 1,269 tests pass across all projects (135 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 408 Providers). Build succeeds with 0 errors.
 
+---
+
+## CRIT-01 — Replace all `new MediaContext()` with DI
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Eliminated all `new MediaContext()` calls from the DI-managed codebase (~140+ occurrences across ~60 files), replacing them with proper dependency injection patterns
+- **The bug**: `new MediaContext()` bypassed the DI container entirely, creating orphaned DbContexts that:
+  - Were never disposed (memory leaks, connection pool exhaustion)
+  - Used separate connection pools from the DI-managed contexts
+  - Could not participate in request-scoped change tracking
+  - Made unit testing impossible (no way to substitute an in-memory database)
+
+**Fix patterns applied**:
+1. **Sequential code (controllers, repositories, services)**: Replaced `new MediaContext()` with the DI-injected scoped `MediaContext` from the primary constructor parameter
+2. **Concurrent code (Task.Run, Task.WhenAll)**: Used `IDbContextFactory<MediaContext>` to create a separate context per concurrent branch — DbContext is not thread-safe, so each parallel task needs its own instance
+3. **Singleton services (StorageMonitor, ConnectionHub)**: Used `IDbContextFactory<MediaContext>` since singletons outlive scoped contexts
+4. **Cron jobs**: Used constructor-injected `MediaContext` since they're resolved via `IServiceScope` in the CronWorker
+5. **Background jobs with proper `await using`**: Left as-is (they already create and dispose their own contexts correctly)
+6. **Startup code (before DI is available)**: Left as-is (UserSettings, Register, StartupOptions, Dev, ApplicationConfiguration, DatabaseSeeder)
+7. **Static classes (ClaimsPrincipleExtensions)**: Left as-is (separate task CRIT-05)
+
+**Files modified** (~60 files across the codebase):
+- **DI registration**: `ServiceConfiguration.cs` — added `IDbContextFactory<MediaContext>` registration
+- **Repositories**: `MusicRepository.cs` (30+ methods), `FileRepository.cs` (6 methods)
+- **API Controllers**: `SearchController`, `HomeController`, `UserDataController`, `PeopleController`, `SpecialController`, `PlaylistsController`, `MusicController`, `ArtistsController`, `AlbumsController`, `ConfigurationController`, `EncoderController`, `ServerController`, `ServerActivityController`, `UsersController`, `TasksController`, `LibrariesController`, `SpecialsController`
+- **SignalR Hubs**: `VideoHub`, `MusicHub`, `ConnectionHub`, `CastHub`, `DashboardHub`, `SocketHub`, `RipperHub`
+- **Services**: `HomeService`, `VideoPlaybackService`, `VideoPlaybackCommandHandler`, `VideoPlayerStateFactory`
+- **DTOs**: `LibraryResponseDto`, `PeopleResponseDto`, `InfoResponseItemDto`, `PersonResponseItemDto`
+- **Cron Jobs**: All 12 palette cron jobs (Tv, Season, Episode, Movie, Collection, Person, Recommendation, Similar, Image, FanartArtistImages, Artist, Album)
+- **Logic/Processing**: `MusicLogic`, `FileLogic`, `LibraryLogic`, `LibraryManager`, `LibraryFileWatcher`
+- **Jobs**: `MusicJob`, `FindMediaFilesJob`, `AddMovieJob`, `EncodeVideoJob`, `RescanFilesJob`, `RescanLibraryJob`
+- **System**: `StorageMonitor`
+
+**Key design decisions**:
+- SearchController's `MusicRepository` search methods (Step 1) are called sequentially because `MusicRepository` shares a single scoped DbContext. Only Step 2 (full Include queries) uses `IDbContextFactory` for parallel execution.
+- DTOs that needed context now accept `MediaContext` as a parameter rather than creating their own
+- `FileRepository.ProcessVideoFileInfo` was changed from static to instance method to access the injected context
+
+**Tests added**: 7 new tests in `DiContextInjectionTests.cs`:
+- `MusicRepository_UsesInjectedContext_NotNewInstance` — verifies search finds data through injected context
+- `MusicRepository_SearchAlbumIds_UsesInjectedContext` — album search works through DI
+- `MusicRepository_SearchTrackIds_UsesInjectedContext` — track search works through DI
+- `MusicRepository_SearchPlaylistIds_UsesInjectedContext` — playlist search works through DI
+- `MusicRepository_GetArtistAsync_UsesInjectedContext` — async query works through DI
+- `DbContextFactory_CreatesDistinctContextsForConcurrentUse` — factory produces isolated contexts for safe parallel use
+- `MusicRepository_EmptyContext_ReturnsNoResults` — proves repository reads from injected context (not global/static), returning empty when given empty DB
+
+**Test results**: All 1,276 tests pass across all projects (135 Database + 111 Encoder + 127 Repositories + 233 Queue + 262 Api + 408 Providers). Build succeeds with 0 errors.
+

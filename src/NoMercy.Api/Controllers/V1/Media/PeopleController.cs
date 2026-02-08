@@ -14,7 +14,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Tags(tags: "Media People")]
 [ApiVersion(1.0)]
 [Authorize]
-public class PeopleController : BaseController
+public class PeopleController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     [Route("api/v{version:apiVersion}/person")] // match themoviedb.org API
@@ -26,10 +26,8 @@ public class PeopleController : BaseController
 
         string language = Language();
 
-        await using MediaContext mediaContext = new();
-
         List<PeopleResponseItemDto> people = await PeopleResponseDto
-            .GetPeople(userId, language, request.Take, request.Page);
+            .GetPeople(mediaContext, userId, language, request.Take, request.Page);
 
         return GetPaginatedResponse(people, request);
     }
@@ -51,7 +49,7 @@ public class PeopleController : BaseController
 
         return Ok(new PersonResponseDto
         {
-            Data = new(personAppends, country)
+            Data = new(personAppends, country, mediaContext)
         });
     }
 }

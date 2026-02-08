@@ -43,7 +43,7 @@ public class MusicJob : IShouldQueue, IDisposable, IAsyncDisposable
         {
             Logger.App($"Music {list.Path}: Processing");
 
-            MusicLogic music = new(Library, list);
+            MusicLogic music = new(Library, list, _mediaContext);
             await music.Process();
         }
     }

@@ -11,11 +11,9 @@ public record PeopleResponseDto
     [JsonProperty("nextId")] public long? NextId { get; set; }
     [JsonProperty("data")] public IEnumerable<PeopleResponseItemDto> Data { get; set; } = [];
 
-    public static async Task<List<PeopleResponseItemDto>> GetPeople(Guid userId, string language, int take,
+    public static async Task<List<PeopleResponseItemDto>> GetPeople(MediaContext mediaContext, Guid userId, string language, int take,
         int page = 0)
     {
-        await using MediaContext mediaContext = new();
-
         IIncludableQueryable<Person, IEnumerable<Translation>> query = mediaContext.People
             .AsNoTracking()
             .Where(person =>
