@@ -30,6 +30,32 @@ public static class TestMediaContextFactory
         return context;
     }
 
+    public static (MediaContext Context, SqlCaptureInterceptor Interceptor) CreateContextWithInterceptor(string? databaseName = null)
+    {
+        string dbName = databaseName ?? Guid.NewGuid().ToString();
+        SqliteConnection connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
+        connection.Open();
+
+        SqlCaptureInterceptor interceptor = new();
+        DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
+            .UseSqlite(connection, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .AddInterceptors(interceptor)
+            .Options;
+
+        TestMediaContext context = new(options);
+        context.Database.EnsureCreated();
+
+        return (context, interceptor);
+    }
+
+    public static (MediaContext Context, SqlCaptureInterceptor Interceptor) CreateSeededContextWithInterceptor()
+    {
+        (MediaContext context, SqlCaptureInterceptor interceptor) = CreateContextWithInterceptor();
+        SeedData(context);
+        interceptor.Clear();
+        return (context, interceptor);
+    }
+
     public static void SeedData(MediaContext context)
     {
         User testUser = new()

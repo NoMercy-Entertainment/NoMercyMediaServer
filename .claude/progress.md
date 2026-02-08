@@ -128,3 +128,34 @@
 
 **Test results**: 75 new dashboard tests pass (182 total in NoMercy.Tests.Api). All 755 tests pass across all projects (63 Repositories + 203 Queue + 182 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CHAR-06 — Query output tests for every repository method via `ToQueryString()`
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Created `Infrastructure/SqlCaptureInterceptor.cs` — `DbCommandInterceptor` subclass that captures all SQL commands (reader, scalar, non-query) for both sync and async execution paths
+- Extended `TestMediaContextFactory` with `CreateContextWithInterceptor()` and `CreateSeededContextWithInterceptor()` methods that wire up the SQL interceptor alongside in-memory SQLite
+- Created `QueryOutputTests.cs` with 57 test methods covering query SQL generation across all 12 repositories:
+  - **MovieRepository** (5 tests): GetMovieAsync, GetMovieAvailableAsync, GetMoviePlaylistAsync, DeleteMovieAsync, GetMovieDetailAsync (compiled query)
+  - **TvShowRepository** (5 tests): GetTvAvailableAsync, GetTvPlaylistAsync, DeleteTvAsync, GetMissingLibraryShows, GetTvAsync (compiled query)
+  - **GenreRepository** (6 tests): GetGenresAsync (via ToQueryString()), GetGenreAsync, GetGenresWithCountsAsync, GetMusicGenresAsync, GetPaginatedMusicGenresAsync, GetMusicGenreAsync
+  - **HomeRepository** (9 tests): GetHomeTvs, GetHomeMovies, GetContinueWatchingAsync, GetScreensaverImagesAsync, GetLibrariesAsync, GetMovieCountAsync, GetTvCountAsync, GetAnimeCountAsync, GetHomeGenresAsync
+  - **LibraryRepository** (12 tests): GetLibraries, GetLibraryByIdAsync (2 overloads), GetLibraryMovieCardsAsync, GetLibraryTvCardsAsync, GetPaginatedLibraryMovies, GetPaginatedLibraryShows, GetAllLibrariesAsync, GetFoldersAsync, GetRandomTvShow, GetRandomMovie
+  - **CollectionRepository** (6 tests): GetCollectionsAsync, GetCollectionsListAsync, GetCollectionAsync, GetCollectionItems, GetAvailableCollectionAsync, GetCollectionPlaylistAsync
+  - **SpecialRepository** (4 tests): GetSpecialsAsync, GetSpecialAsync, GetSpecialItems, GetSpecialPlaylistAsync
+  - **DeviceRepository** (1 test): GetDevicesAsync
+  - **EncoderRepository** (3 tests): GetEncoderProfilesAsync, GetEncoderProfileByIdAsync, GetEncoderProfileCountAsync
+  - **FolderRepository** (5 tests): GetFolderByIdAsync, GetFolderByPathAsync, GetFoldersByLibraryIdAsync, GetFolderById, GetFolderByPath
+  - **LanguageRepository** (2 tests): GetLanguagesAsync, GetLanguagesAsync with filter
+- Three testing strategies used per method type:
+  - `IQueryable` methods: `ToQueryString()` called directly (GenreRepository.GetGenresAsync)
+  - Materialized methods: SQL captured via `SqlCaptureInterceptor` during execution
+  - Compiled queries (`EF.CompileAsyncQuery`): SQL captured via interceptor when invoked
+- CRUD-only methods (Add/Update/Delete/Like/Upsert) excluded — no complex query to verify
+- `MusicRepository` methods that create `new MediaContext()` internally cannot be tested with in-memory SQLite — documented as out of scope (to be fixed by CRIT-01)
+- Assertions verify: correct table names (e.g., `"LibraryUser"` not `"LibraryUsers"`), SQL clauses (WHERE, ORDER BY, LIMIT, COUNT, DELETE), and query execution
+
+**Test results**: 57 new query output tests pass (120 total in NoMercy.Tests.Repositories). All 812 tests pass across all projects (120 Repositories + 203 Queue + 182 Api + 307 Providers). Build succeeds with 0 errors.
+
