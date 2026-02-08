@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 0, item CHAR-05
+**Next up**: Phase 0, item CHAR-06
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -50,7 +50,7 @@ Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-mana
 - [x] CHAR-02 — Set up `NoMercy.Tests.Repositories` project with in-memory SQLite + seed data
 - [x] CHAR-03 — Snapshot tests for all `/api/v1/` Media endpoints
 - [x] CHAR-04 — Snapshot tests for all `/api/v1/` Music endpoints
-- [ ] CHAR-05 — Snapshot tests for all `/api/v1/` Dashboard endpoints
+- [x] CHAR-05 — Snapshot tests for all `/api/v1/` Dashboard endpoints
 - [ ] CHAR-06 — Query output tests for every repository method via `ToQueryString()`
 - [ ] CHAR-07 — SignalR hub connection tests
 - [ ] CHAR-08 — Queue behavior tests (enqueue, reserve, execute, fail, retry)

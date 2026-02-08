@@ -101,3 +101,30 @@
 
 **Test results**: 51 new music tests pass (107 total in NoMercy.Tests.Api). All 680 tests pass across all projects (63 Repositories + 203 Queue + 107 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CHAR-05 — Snapshot tests for all `/api/v1/` Dashboard endpoints
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Created `DashboardEndpointSnapshotTests.cs` with 75 test methods covering all 12 dashboard controllers:
+  - **ConfigurationController** (4 tests): GET index, POST store, GET languages, GET countries
+  - **DevicesController** (3 tests): GET index, POST create, DELETE destroy
+  - **EncoderController** (5 tests): GET index, POST create, DELETE non-existent, GET containers, GET framesizes
+  - **Dashboard LibrariesController** (10 tests): GET index, POST store, DELETE non-existent, POST rescan, POST rescan by ID non-existent, POST refresh, POST refresh by ID non-existent, POST add folder non-existent library, DELETE folder non-existent, DELETE encoder profile non-existent
+  - **LogController** (3 tests): GET logs, GET levels, GET types
+  - **PluginController** (3 tests): GET index, GET credentials, POST set credentials
+  - **ServerActivityController** (3 tests): GET index, POST create, DELETE destroy
+  - **ServerController** (11 tests): GET index, GET setup (with setup_complete shape), POST start, POST restart, GET update/check, GET info (with setup_complete shape), GET resources, GET paths, GET storage, POST directorytree, POST loglevel skipped (destructive)
+  - **SpecialsController** (5 tests): GET index, POST store, DELETE non-existent, POST rescan all, POST rescan by ID
+  - **TasksController** (9 tests): GET index, POST store, GET runners, GET queue, DELETE queue non-existent, GET failed, POST retry failed, POST pause non-existent, POST resume non-existent
+  - **UsersController** (7 tests): GET index (documents known NullRef bug in PermissionsResponseItemDto), GET permissions, DELETE non-existent, DELETE owner denied, PATCH notifications, GET user permissions self denied, GET user permissions non-existent
+  - **OpticalMediaController** (1 test): GET drives
+  - **Cross-cutting auth** (12 tests): Theory-based 401/403 verification for all dashboard endpoints when unauthenticated
+- Discovered server-side bugs during testing (documented, not fixed — out of scope):
+  - UsersController.Index includes `LibraryUser` but not `.ThenInclude(x => x.Library)`, causing NullReferenceException in PermissionsResponseItemDto
+  - JSON property names use snake_case (`setup_complete`) via Newtonsoft `[JsonProperty]`, not camelCase
+
+**Test results**: 75 new dashboard tests pass (182 total in NoMercy.Tests.Api). All 755 tests pass across all projects (63 Repositories + 203 Queue + 182 Api + 307 Providers). Build succeeds with 0 errors.
+
