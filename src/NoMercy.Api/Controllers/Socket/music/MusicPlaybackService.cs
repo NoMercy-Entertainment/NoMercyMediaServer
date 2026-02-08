@@ -28,7 +28,7 @@ public class MusicPlaybackService
 
         if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? _)) return;
 
-        Timer timer = new(_ =>
+        Timer timer = new(async _ =>
         {
             if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? playerState)) return;
             if (!playerState.PlayState || playerState.CurrentItem is null) return;
@@ -36,13 +36,13 @@ public class MusicPlaybackService
             playerState.Time += TimerInterval;
 
             int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
-            
+
             if (playerState.Time >= (duration / 2) && playerState.Time < (duration / 2) + TimerInterval)
             {
-                _musicRepository.RecordPlaybackAsync(playerState.CurrentItem.Id, user.Id).Wait();
+                await _musicRepository.RecordPlaybackAsync(playerState.CurrentItem.Id, user.Id);
             }
 
-            if (playerState.Time >= duration) HandleTrackCompletion(user, playerState).Wait();
+            if (playerState.Time >= duration) await HandleTrackCompletion(user, playerState);
         }, null, 100, TimerInterval);
 
         _timers[user.Id] = timer;

@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item CRIT-04
+**Next up**: Phase 1-2, item CRIT-05
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -84,7 +84,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] SYS-H14 — Fix macOS cloudflared architectures swapped
 - [x] AUTH-BUG — Fix inverted expiration check in auth
 - [x] CRIT-01 — Replace all `new MediaContext()` with DI
-- [ ] CRIT-04 — Fix `.Wait()` / `.Result` deadlock patterns
+- [x] CRIT-04 — Fix `.Wait()` / `.Result` deadlock patterns
 - [ ] CRIT-05 — Fix static ClaimsPrincipleExtensions (not DI-friendly)
 - [ ] CRIT-06 — Fix `lock(Context)` in JobQueue
 - [ ] CRIT-07 — Implement HttpClientFactory for all providers

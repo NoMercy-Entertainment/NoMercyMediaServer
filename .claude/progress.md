@@ -915,3 +915,53 @@
 
 **Test results**: All 1,276 tests pass across all projects (135 Database + 111 Encoder + 127 Repositories + 233 Queue + 262 Api + 408 Providers). Build succeeds with 0 errors.
 
+---
+
+## CRIT-04 — Fix `.Wait()` / `.Result` deadlock patterns
+
+**Date**: 2026-02-08
+
+**What was done**:
+
+### Files Modified
+
+1. **`src/NoMercy.Api/Controllers/V1/Media/HomeController.cs`**:
+   - Replaced `Task.Delay(1000).Wait()` with `await Task.Delay(1000, timeoutCts.Token)`
+   - Added 30-second timeout via `CancellationTokenSource.CreateLinkedTokenSource` + `CancelAfter` to prevent infinite waits if encoding fails
+   - Linked to `HttpContext.RequestAborted` so client disconnects also cancel the wait
+
+2. **`src/NoMercy.Api/Controllers/Socket/music/MusicPlaybackService.cs`**:
+   - Changed Timer callback from sync `void` lambda to `async void` lambda
+   - Replaced `_musicRepository.RecordPlaybackAsync(...).Wait()` with `await _musicRepository.RecordPlaybackAsync(...)`
+   - Replaced `HandleTrackCompletion(user, playerState).Wait()` with `await HandleTrackCompletion(user, playerState)`
+
+3. **`src/NoMercy.Api/Controllers/Socket/video/VideoPlaybackService.cs`**:
+   - Changed Timer callback from sync `void` lambda to `async void` lambda
+   - Replaced `StoreWatchProgression(playerState, user).Wait()` with `await StoreWatchProgression(playerState, user)`
+   - Replaced `HandleTrackCompletion(user, playerState).Wait()` with `await HandleTrackCompletion(user, playerState)`
+
+4. **`src/NoMercy.Queue/JobQueue.cs`**:
+   - Changed `ReserveJobQuery` from `EF.CompileAsyncQuery` to `EF.CompileQuery` — returns `QueueJob?` directly instead of `Task<QueueJob?>`
+   - Removed `.Result` call in `ReserveJob()` method
+   - Changed `ExistsQuery` from `EF.CompileAsyncQuery` to `EF.CompileQuery` — returns `bool` directly instead of `Task<bool>`
+   - Removed `.Result` call in `Exists()` method
+
+### Design Decisions
+- **Timer callbacks**: Used `async void` because `System.Threading.Timer` requires `void` callbacks. This is one of the accepted cases for `async void` (event-handler-like patterns).
+- **JobQueue compiled queries**: Switched to synchronous `EF.CompileQuery` instead of making the methods async, because these methods are called under `lock()` (which doesn't support `await`). Synchronous compiled queries avoid the `.Result` deadlock risk entirely.
+- **HomeController timeout**: Added a 30-second timeout linked to `HttpContext.RequestAborted` to prevent thread starvation if the HLS segment never appears.
+
+### Tests Added (10 new tests in `tests/NoMercy.Tests.Queue/BlockingPatternTests.cs`)
+- `JobQueue_ReserveJobQuery_IsSynchronous` — reflection test verifying ReserveJobQuery returns `QueueJob?` not `Task<QueueJob?>`
+- `JobQueue_ExistsQuery_IsSynchronous` — reflection test verifying ExistsQuery returns `bool` not `Task<bool>`
+- `JobQueue_ReserveJob_WorksWithSynchronousQuery` — functional test of reserve after query type change
+- `JobQueue_Enqueue_DuplicateCheckWorksSynchronously` — functional test of duplicate detection after query type change
+- `JobQueue_SourceCode_NoBlockingPatterns` — static analysis verifying no `.Wait()` or `.Result` in JobQueue.cs
+- `HomeController_SourceCode_NoBlockingWait` — static analysis verifying no `Task.Delay().Wait()` in HomeController.cs
+- `MusicPlaybackService_SourceCode_NoBlockingPatterns` — static analysis verifying no `.Wait()` in MusicPlaybackService.cs
+- `VideoPlaybackService_SourceCode_NoBlockingPatterns` — static analysis verifying no `.Wait()` in VideoPlaybackService.cs
+- `HomeController_UsesAsyncDelay` — verifies `await Task.Delay` is present
+- `HomeController_HasTimeout` — verifies `CancelAfter` timeout is present
+
+**Test results**: All 1,040 tests pass (127 Repositories + 243 Queue + 408 Providers + 262 Api). Build succeeds with 0 errors.
+

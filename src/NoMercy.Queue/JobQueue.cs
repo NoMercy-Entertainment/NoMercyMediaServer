@@ -39,8 +39,8 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         }
     }
 
-    public static readonly Func<QueueContext, byte, string, long?, Task<QueueJob?>> ReserveJobQuery =
-        EF.CompileAsyncQuery((QueueContext queueContext, byte maxAttempts, string name, long? currentJobId) =>
+    public static readonly Func<QueueContext, byte, string, long?, QueueJob?> ReserveJobQuery =
+        EF.CompileQuery((QueueContext queueContext, byte maxAttempts, string name, long? currentJobId) =>
             queueContext.QueueJobs
                 .Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
                 .Where(j => currentJobId == null)
@@ -55,7 +55,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         {
             lock (Context)
             {
-                QueueJob? job = ReserveJobQuery(Context, maxAttempts, name, currentJobId).Result;
+                QueueJob? job = ReserveJobQuery(Context, maxAttempts, name, currentJobId);
 
                 if (job == null) return job;
 
@@ -218,12 +218,12 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         }
     }
 
-    private static readonly Func<QueueContext, string, Task<bool>> ExistsQuery =
-        EF.CompileAsyncQuery((QueueContext queueContext, string payloadString) =>
+    private static readonly Func<QueueContext, string, bool> ExistsQuery =
+        EF.CompileQuery((QueueContext queueContext, string payloadString) =>
             queueContext.QueueJobs.Any(queueJob => queueJob.Payload == payloadString));
 
     private bool Exists(string payloadString)
     {
-        return ExistsQuery(Context, payloadString).Result;
+        return ExistsQuery(Context, payloadString);
     }
 }

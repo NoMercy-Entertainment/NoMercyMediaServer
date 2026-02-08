@@ -31,7 +31,7 @@ public class VideoPlaybackService
 
         if (!_stateManager.TryGetValue(user.Id, out VideoPlayerState? _)) return;
 
-        Timer timer = new(_ =>
+        Timer timer = new(async _ =>
         {
             if (!_stateManager.TryGetValue(user.Id, out VideoPlayerState? playerState)) return;
             if (!playerState.PlayState || playerState.CurrentItem is null) return;
@@ -41,9 +41,9 @@ public class VideoPlaybackService
             if (_lastTimes.TryGetValue(user.Id, out int lastTimer) && lastTimer >= 1000)
             {
                 _lastTimes[user.Id] = 0;
-                StoreWatchProgression(playerState, user).Wait();
+                await StoreWatchProgression(playerState, user);
             }
-            else 
+            else
             {
                 _lastTimes.AddOrUpdate(user.Id, 0, (_, value) => value + TimerInterval);
             }
@@ -52,9 +52,9 @@ public class VideoPlaybackService
 
             // Logger.App($"{playerState.Time}-{duration}");
             if (playerState.Time < duration - TimerInterval) return;
-            
+
             RemoveTimer(user.Id);
-            HandleTrackCompletion(user, playerState).Wait();
+            await HandleTrackCompletion(user, playerState);
         }, null, 100, TimerInterval);
 
         _timers[user.Id] = timer;

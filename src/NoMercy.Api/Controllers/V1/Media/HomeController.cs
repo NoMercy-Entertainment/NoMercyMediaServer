@@ -290,9 +290,11 @@ public class HomeController : BaseController
             return Task.CompletedTask;
         });
 
+        using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
         while (!System.IO.File.Exists(Path.Combine(folder, "video_00002.ts")))
         {
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000, timeoutCts.Token);
         }
         
         return Ok(
