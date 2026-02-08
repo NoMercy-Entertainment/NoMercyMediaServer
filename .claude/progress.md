@@ -726,3 +726,33 @@
 
 **Test results**: All 1,181 tests pass across all projects (66 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
 
+---
+
+## DBMOD-CRIT-04 — Fix Cast.cs initializes nullable navigation to new()
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Database/Models/Cast.cs:33,36,39,42` — removed `= new()` initializer from four nullable navigation properties
+- **The bug**: Four nullable navigation properties (`Movie?`, `Tv?`, `Season?`, `Episode?`) were initialized to `new()`. This meant:
+  - `cast.Movie is not null` would always be `true` even when no Movie entity was loaded from the database
+  - Null checks used throughout the codebase to determine which entity type a Cast belongs to would always pass, leading to incorrect branching
+  - EF Core would see non-null navigation properties and could attempt to insert empty related entities during `SaveChanges()`
+  - The `= new()` created empty Movie/Tv/Season/Episode instances with default values (Id=0), which is semantically wrong — a Cast with `MovieId = null` should have `Movie = null`
+- **The fix**: Removed `= new()` from all four nullable navigation properties:
+  - `public Movie? Movie { get; set; } = new()` → `public Movie? Movie { get; set; }`
+  - `public Tv? Tv { get; set; } = new()` → `public Tv? Tv { get; set; }`
+  - `public Season? Season { get; set; } = new()` → `public Season? Season { get; set; }`
+  - `public Episode? Episode { get; set; } = new()` → `public Episode? Episode { get; set; }`
+- Non-nullable navigations (`Person` and `Role`) correctly use `= null!` and were left unchanged
+- Created `tests/NoMercy.Tests.Database/CastNavigationInitializerTests.cs` with 20 tests:
+  - **Default null checks** (4 tests): Verify `Movie`, `Tv`, `Season`, `Episode` are all `null` on a new `Cast` instance
+  - **Nullability annotation checks** (4 tests): Verify all four properties have `NullabilityState.Nullable` via `NullabilityInfoContext`
+  - **Null pattern matching** (4 tests): Verify `cast.Movie is not null` returns `false` when not loaded (the core bug fix validation)
+  - **Theory-based initializer check** (4 cases): Verify all four navigation properties return `null` via reflection `GetValue()`
+  - **Non-nullable navigations preserved** (2 tests): Verify `Person` and `Role` remain `NullabilityState.NotNull`
+  - **Assignment works** (1 test): Verify `Movie` can be assigned a real `Movie` instance
+  - **Null assignment works** (1 test): Verify `Movie` can be set back to `null` after assignment
+
+**Test results**: All 1,201 tests pass across all projects (86 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
+

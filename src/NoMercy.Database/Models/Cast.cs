@@ -30,16 +30,16 @@ public class Cast
     public Person Person { get; set; } = null!;
 
     [JsonProperty("movie_id")] public int? MovieId { get; set; }
-    public Movie? Movie { get; set; } = new();
+    public Movie? Movie { get; set; }
 
     [JsonProperty("tv_id")] public int? TvId { get; set; }
-    public Tv? Tv { get; set; } = new();
+    public Tv? Tv { get; set; }
 
     [JsonProperty("season_id")] public int? SeasonId { get; set; }
-    public Season? Season { get; set; } = new();
+    public Season? Season { get; set; }
 
     [JsonProperty("episode_id")] public int? EpisodeId { get; set; }
-    public Episode? Episode { get; set; } = new();
+    public Episode? Episode { get; set; }
 
     [JsonProperty("role_id")] public int? RoleId { get; set; }
     public Role Role { get; set; } = null!;

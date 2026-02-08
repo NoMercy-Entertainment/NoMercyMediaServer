@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item DBMOD-CRIT-04
+**Next up**: Phase 1-2, item DBMOD-H01
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -78,7 +78,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] DBMOD-CRIT-01 — Fix Track.MetadataId type mismatch
 - [x] DBMOD-CRIT-02 — Fix Library.cs JsonProperty names all shifted
 - [x] DBMOD-CRIT-03 — Fix QueueJob.Payload limited to 256 characters
-- [ ] DBMOD-CRIT-04 — Fix Cast.cs initializes nullable navigation to new()
+- [x] DBMOD-CRIT-04 — Fix Cast.cs initializes nullable navigation to new()
 - [ ] DBMOD-H01 — Fix UserData.TvId wrong JsonProperty
 - [ ] DBMOD-H02 — Fix Network.cs duplicate JsonProperty
 - [ ] SYS-H14 — Fix macOS cloudflared architectures swapped
