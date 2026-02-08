@@ -50,3 +50,33 @@
 
 **Test results**: 63 new tests pass (all in NoMercy.Tests.Repositories). Build succeeds with 0 errors. 3 pre-existing failures in NoMercy.Tests.Api (from CHAR-01) are unrelated to this change.
 
+---
+
+## CHAR-03 — Snapshot tests for all `/api/v1/` Media endpoints
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Extended `NoMercyApiFactory.SeedMediaData()` with realistic test data: 2 libraries (movie + tv), 1 folder, 2 genres (Action/Drama), 2 movies (Fight Club id=550, Pulp Fiction id=680), 1 TV show (Breaking Bad id=1399), 1 season, 2 episodes, 4 video files, genre-movie/genre-tv joins, library-movie/library-tv/library-user joins
+- Added static `DbLock` + `_dbInitialized` flag to prevent parallel test fixture race conditions during DB initialization
+- Added DB file deletion before `EnsureCreated()` to handle stale state between test runs
+- Created `MediaEndpointSnapshotTests.cs` with 51 test methods covering all 10 media controllers:
+  - **MoviesController** (9 tests): GET detail, non-existent, unauthenticated, available shape, available not-found, watch, like, watch-list, delete
+  - **TvShowsController** (9 tests): GET detail, available shape, available not-found, watch, like, watch-list, delete, missing
+  - **CollectionsController** (6 tests): list, lolomo, available not-found, watch not-found, like, watch-list
+  - **GenresController** (4 tests): list, seeded genre, non-existent, lolomo
+  - **LibrariesController** (6 tests): list, single library, lolomo, by-letter, mobile, tv
+  - **HomeController** (4 tests): index paginated, page1 shape, home component, home-tv
+  - **SearchController** (4 tests): video, no results, video-tv, music no results
+  - **PeopleController** (1 test): index paginated
+  - **UserDataController** (2 tests): index, continue watching
+  - **SpecialController** (2 tests): index, lolomo
+  - **Cross-cutting auth** (10 tests): Theory-based 401/403 verification for all protected endpoints when unauthenticated
+- Helper methods: `JsonBody()`, `AssertJsonHasProperty()`, `EnumerateProperties()`, `AssertStatusResponse()` (handles both custom StatusResponseDto and ASP.NET ProblemDetails formats)
+- Discovered server-side bugs during testing (documented as known issues, not fixed — out of scope):
+  - GenresController lolomo has CA2021 incompatible cast bug (returns 500)
+  - VideoPlaylistResponseDto JSON serialization error on watch endpoints (returns 500)
+  - TMDB client throws without API key when fetching non-existent movies (returns 500)
+
+**Test results**: 51 new tests pass (56 total in NoMercy.Tests.Api including 5 from CHAR-01). All 634 tests pass across all projects (63 Repositories + 203 Queue + 56 Api + 307 Providers + 5 other). Build succeeds with 0 errors.
+

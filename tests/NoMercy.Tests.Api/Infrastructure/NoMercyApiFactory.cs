@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;
@@ -19,9 +20,19 @@ namespace NoMercy.Tests.Api.Infrastructure;
 
 public class NoMercyApiFactory : WebApplicationFactory<Startup>
 {
+    private static readonly object DbLock = new();
+    private static bool _dbInitialized;
+
     public NoMercyApiFactory()
     {
-        EnsureDirectoriesAndSeedDatabase();
+        lock (DbLock)
+        {
+            if (!_dbInitialized)
+            {
+                EnsureDirectoriesAndSeedDatabase();
+                _dbInitialized = true;
+            }
+        }
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -52,6 +63,10 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             });
     }
 
+    public static readonly Ulid MovieLibraryId = Ulid.NewUlid();
+    public static readonly Ulid TvLibraryId = Ulid.NewUlid();
+    public static readonly Ulid MovieFolderId = Ulid.NewUlid();
+
     private static void EnsureDirectoriesAndSeedDatabase()
     {
         foreach (string path in AppFiles.AllPaths())
@@ -59,6 +74,10 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
         }
+
+        string mediaDbPath = Path.Combine(AppFiles.DataPath, "media.db");
+        if (File.Exists(mediaDbPath))
+            File.Delete(mediaDbPath);
 
         using MediaContext mediaContext = new();
         mediaContext.Database.EnsureCreated();
@@ -78,11 +97,206 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             mediaContext.SaveChanges();
         }
 
+        SeedMediaData(mediaContext);
+
         ClaimsPrincipleExtensions.Users.Clear();
         ClaimsPrincipleExtensions.Users.AddRange(mediaContext.Users.ToList());
 
+        string queueDbPath = Path.Combine(AppFiles.DataPath, "queue.db");
+        if (File.Exists(queueDbPath))
+            File.Delete(queueDbPath);
+
         using QueueContext queueContext = new();
         queueContext.Database.EnsureCreated();
+    }
+
+    private static void SeedMediaData(MediaContext context)
+    {
+        if (context.Libraries.Any())
+            return;
+
+        // Step 1: Core entities (no FK dependencies)
+        Library movieLibrary = new()
+        {
+            Id = MovieLibraryId,
+            Title = "Movies",
+            Type = "movie",
+            Order = 1
+        };
+        Library tvLibrary = new()
+        {
+            Id = TvLibraryId,
+            Title = "TV Shows",
+            Type = "tv",
+            Order = 2
+        };
+        context.Libraries.AddRange(movieLibrary, tvLibrary);
+
+        Folder movieFolder = new()
+        {
+            Id = MovieFolderId,
+            Path = "/media/movies"
+        };
+        context.Folders.Add(movieFolder);
+
+        Genre actionGenre = new() { Id = 28, Name = "Action" };
+        Genre dramaGenre = new() { Id = 18, Name = "Drama" };
+        context.Genres.AddRange(actionGenre, dramaGenre);
+
+        context.SaveChanges();
+
+        // Step 2: Entities with FK to libraries/folders/user
+        context.LibraryUser.AddRange(
+            new LibraryUser(MovieLibraryId, TestAuthHandler.DefaultUserId),
+            new LibraryUser(TvLibraryId, TestAuthHandler.DefaultUserId));
+
+        context.FolderLibrary.Add(new FolderLibrary(MovieFolderId, MovieLibraryId));
+
+        Movie movie1 = new()
+        {
+            Id = 550,
+            Title = "Fight Club",
+            TitleSort = "fight club",
+            Overview = "An insomniac office worker and a devil-may-care soap maker form an underground fight club.",
+            Poster = "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+            Backdrop = "/hZkgoQYus5dXo3H8T7Uef6DNknx.jpg",
+            ReleaseDate = new DateTime(1999, 10, 15),
+            LibraryId = MovieLibraryId,
+            VoteAverage = 8.4
+        };
+        Movie movie2 = new()
+        {
+            Id = 680,
+            Title = "Pulp Fiction",
+            TitleSort = "pulp fiction",
+            Overview = "The lives of two mob hitmen intertwine in four tales of violence and redemption.",
+            Poster = "/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",
+            Backdrop = "/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",
+            ReleaseDate = new DateTime(1994, 9, 10),
+            LibraryId = MovieLibraryId,
+            VoteAverage = 8.5
+        };
+        context.Movies.AddRange(movie1, movie2);
+
+        Tv show1 = new()
+        {
+            Id = 1399,
+            Title = "Breaking Bad",
+            TitleSort = "breaking bad",
+            Overview = "A chemistry teacher teams up with a former student to cook and sell crystal meth.",
+            Poster = "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg",
+            Backdrop = "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
+            FirstAirDate = new DateTime(2008, 1, 20),
+            NumberOfEpisodes = 62,
+            NumberOfSeasons = 5,
+            LibraryId = TvLibraryId,
+            VoteAverage = 8.9
+        };
+        context.Tvs.Add(show1);
+
+        context.SaveChanges();
+
+        // Step 3: Join tables and child entities (FK to movies/tv/genres)
+        context.LibraryMovie.AddRange(
+            new LibraryMovie(MovieLibraryId, 550),
+            new LibraryMovie(MovieLibraryId, 680));
+
+        context.LibraryTv.Add(new LibraryTv(TvLibraryId, 1399));
+
+        context.GenreMovie.AddRange(
+            new GenreMovie { GenreId = 28, MovieId = 550 },
+            new GenreMovie { GenreId = 18, MovieId = 550 },
+            new GenreMovie { GenreId = 18, MovieId = 680 });
+
+        context.GenreTv.Add(new GenreTv { GenreId = 18, TvId = 1399 });
+
+        Season season1 = new()
+        {
+            Id = 3572,
+            Title = "Season 1",
+            SeasonNumber = 1,
+            EpisodeCount = 7,
+            TvId = 1399
+        };
+        context.Seasons.Add(season1);
+
+        context.SaveChanges();
+
+        // Step 4: Episodes (FK to season/tv) and video files (FK to movie/episode)
+        Episode episode1 = new()
+        {
+            Id = 62085,
+            Title = "Pilot",
+            EpisodeNumber = 1,
+            SeasonNumber = 1,
+            TvId = 1399,
+            SeasonId = 3572,
+            Overview = "Walter White is diagnosed with advanced lung cancer."
+        };
+        Episode episode2 = new()
+        {
+            Id = 62086,
+            Title = "Cat's in the Bag...",
+            EpisodeNumber = 2,
+            SeasonNumber = 1,
+            TvId = 1399,
+            SeasonId = 3572,
+            Overview = "Walt and Jesse deal with a corpse and a prisoner."
+        };
+        context.Episodes.AddRange(episode1, episode2);
+
+        VideoFile movieVideoFile1 = new()
+        {
+            Id = Ulid.NewUlid(),
+            Filename = "Fight.Club.1999.1080p.mkv",
+            Folder = "/media/movies/Fight Club (1999)",
+            HostFolder = "/media/movies/Fight Club (1999)",
+            Languages = "en",
+            Quality = "1080p",
+            Share = "movies",
+            MovieId = 550
+        };
+        VideoFile movieVideoFile2 = new()
+        {
+            Id = Ulid.NewUlid(),
+            Filename = "Pulp.Fiction.1994.1080p.mkv",
+            Folder = "/media/movies/Pulp Fiction (1994)",
+            HostFolder = "/media/movies/Pulp Fiction (1994)",
+            Languages = "en",
+            Quality = "1080p",
+            Share = "movies",
+            MovieId = 680
+        };
+        context.VideoFiles.AddRange(movieVideoFile1, movieVideoFile2);
+
+        context.SaveChanges();
+
+        // Step 5: TV video files (FK to episodes)
+        VideoFile tvVideoFile1 = new()
+        {
+            Id = Ulid.NewUlid(),
+            Filename = "Breaking.Bad.S01E01.mkv",
+            Folder = "/media/tv/Breaking Bad/Season 01",
+            HostFolder = "/media/tv/Breaking Bad/Season 01",
+            Languages = "en",
+            Quality = "1080p",
+            Share = "tv",
+            EpisodeId = 62085
+        };
+        VideoFile tvVideoFile2 = new()
+        {
+            Id = Ulid.NewUlid(),
+            Filename = "Breaking.Bad.S01E02.mkv",
+            Folder = "/media/tv/Breaking Bad/Season 01",
+            HostFolder = "/media/tv/Breaking Bad/Season 01",
+            Languages = "en",
+            Quality = "1080p",
+            Share = "tv",
+            EpisodeId = 62086
+        };
+        context.VideoFiles.AddRange(tvVideoFile1, tvVideoFile2);
+
+        context.SaveChanges();
     }
 
     private static void RemoveHostedServices(IServiceCollection services)
