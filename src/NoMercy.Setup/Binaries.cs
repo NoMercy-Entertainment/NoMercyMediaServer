@@ -289,12 +289,12 @@ public static class Binaries
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
         {
-            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-amd64.tgz"))?.BrowserDownloadUrl;
+            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-arm64.tgz"))?.BrowserDownloadUrl;
             needsExtraction = true;
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
         {
-            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-arm64.tgz"))?.BrowserDownloadUrl;
+            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-amd64.tgz"))?.BrowserDownloadUrl;
             needsExtraction = true;
         }
 

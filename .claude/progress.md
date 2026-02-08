@@ -806,3 +806,28 @@
 
 **Test results**: All 1,250 tests pass across all projects (135 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 389 Providers). Build succeeds with 0 errors.
 
+---
+
+## SYS-H14 — Fix macOS cloudflared architectures swapped
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Setup/Binaries.cs:290-298` — swapped the macOS cloudflared download URLs so each architecture downloads the correct binary
+- **The bug**: The macOS Arm64 branch (line 290-293) downloaded `cloudflared-darwin-amd64.tgz` and the macOS X64 branch (line 295-298) downloaded `cloudflared-darwin-arm64.tgz`. The architecture strings were swapped — Arm64 Macs would get the x86_64 binary (which would fail to run or run under Rosetta with degraded performance), and Intel Macs would get the ARM64 binary (which would fail entirely).
+- **The fix**: Swapped the asset names:
+  - Arm64 branch: `cloudflared-darwin-amd64.tgz` → `cloudflared-darwin-arm64.tgz`
+  - X64 branch: `cloudflared-darwin-arm64.tgz` → `cloudflared-darwin-amd64.tgz`
+- Created `tests/NoMercy.Tests.Providers/Setup/BinariesCloudflaredArchTests.cs` with 8 tests:
+  - **IsAsyncMethod** (1 test): Verifies `DownloadCloudflared` has `AsyncStateMachineAttribute`
+  - **MacOS Arm64 downloads arm64 binary** (1 test): Source code regex verifies `Architecture.Arm64` branch within `OSPlatform.OSX` context downloads `cloudflared-darwin-arm64.tgz`
+  - **MacOS X64 downloads amd64 binary** (1 test): Source code regex verifies `Architecture.X64` branch within `OSPlatform.OSX` context downloads `cloudflared-darwin-amd64.tgz`
+  - **MacOS architectures not swapped** (1 test): Extracts all (Architecture, darwin-asset) pairs and verifies Arm64→arm64, X64→amd64 mapping
+  - **Windows downloads amd64** (1 test): Verifies `cloudflared-windows-amd64.exe` present in method
+  - **Linux Arm64 downloads arm** (1 test): Verifies Linux Arm64 branch downloads `cloudflared-linux-arm`
+  - **Linux X64 downloads amd64** (1 test): Verifies Linux X64 branch downloads `cloudflared-linux-amd64`
+  - **All platform assets present** (1 test): Verifies all 5 cloudflared platform binaries are referenced in the method
+- Testing approach: Source code analysis via regex — reads the source file, extracts the `DownloadCloudflared` method body, and uses regex patterns anchored to `OSPlatform` + `Architecture` checks to verify each architecture branch downloads the correct binary. This catches swapped architectures that would not be detectable by IL inspection (compiler optimizes string literals in state machines).
+
+**Test results**: All 1,258 tests pass across all projects (135 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 397 Providers). Build succeeds with 0 errors.
+
