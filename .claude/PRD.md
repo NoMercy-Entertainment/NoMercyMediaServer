@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 0, item CHAR-08
+**Next up**: Phase 0, item CHAR-09
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -53,7 +53,7 @@ Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-mana
 - [x] CHAR-05 — Snapshot tests for all `/api/v1/` Dashboard endpoints
 - [x] CHAR-06 — Query output tests for every repository method via `ToQueryString()`
 - [x] CHAR-07 — SignalR hub connection tests
-- [ ] CHAR-08 — Queue behavior tests (enqueue, reserve, execute, fail, retry)
+- [x] CHAR-08 — Queue behavior tests (enqueue, reserve, execute, fail, retry)
 - [ ] CHAR-09 — Encoder command-building tests (capture FFmpeg CLI args)
 - [ ] CHAR-10 — CI pipeline that runs all characterization tests
 - [ ] CPM-01 — Create `Directory.Packages.props` with all package versions

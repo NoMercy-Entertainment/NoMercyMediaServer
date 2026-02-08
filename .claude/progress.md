@@ -186,3 +186,29 @@
 
 **Test results**: 61 new SignalR hub tests pass (243 total in NoMercy.Tests.Api). All 873 tests pass across all projects (120 Repositories + 203 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CHAR-08 — Queue behavior tests (enqueue, reserve, execute, fail, retry)
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Created `QueueBehaviorTests.cs` in `NoMercy.Tests.Queue` with 26 tests covering behavioral gaps in the existing queue test suite:
+  - **Implicit retry loop** (2 tests): Verify that failing a job under maxAttempts keeps it in QueueJobs with ReservedAt cleared, and that it can be re-reserved. Full 3-attempt cycle: fail twice, succeed on third attempt.
+  - **Attempt boundary precision** (3 tests): Verify FailJob behavior at exactly maxAttempts (permanent fail), one under (stays in queue), and well above (permanent fail).
+  - **Full retry lifecycle** (1 test): Enqueue → exhaust retries → permanent failure → RetryFailedJobs → attempts reset to 0 → reserve and succeed.
+  - **Cross-queue isolation** (2 tests): Jobs on queue "alpha" not returned when reserving on "beta"; multiple queues serve their own jobs independently.
+  - **currentJobId guard** (2 tests): ReserveJob with non-null currentJobId returns null (worker busy guard); ReserveJob with null currentJobId returns the job.
+  - **Exception content preservation** (2 tests): FailJob preserves InnerException content in FailedJob record; uses outer exception when no InnerException exists.
+  - **RetryFailedJobs behavior** (4 tests): Resets Attempts to 0; preserves queue name; processes all 5 failed jobs; specific ID only retries that job.
+  - **Enqueue duplicate semantics** (2 tests): Different payloads on same queue both stored; same payload on different queues blocked (global duplicate check).
+  - **Reserve sequencing** (2 tests): Second reserve on single job returns null (already reserved); two jobs reserved sequentially after delete returns both.
+  - **Dequeue vs ReserveJob** (1 test): Dequeue removes job immediately without setting ReservedAt or incrementing Attempts.
+  - **DeleteJob idempotency** (1 test): Double-deleting same job does not throw (catch block swallows).
+  - **Serialization round-trip** (1 test): AnotherTestJob with Value=42 survives enqueue → reserve → deserialize → execute → Value=84.
+  - **Enqueue after delete** (1 test): Same payload can be re-enqueued after being deleted.
+  - **FailJob always clears ReservedAt** (1 test): ReservedAt set to null regardless of attempt count.
+  - **Priority ordering** (1 test): 5 jobs with priorities [3,1,5,2,4] reserved in order [5,4,3,2,1].
+
+**Test results**: 26 new queue behavior tests pass (229 total in NoMercy.Tests.Queue). All 899 tests pass across all projects (120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
+
