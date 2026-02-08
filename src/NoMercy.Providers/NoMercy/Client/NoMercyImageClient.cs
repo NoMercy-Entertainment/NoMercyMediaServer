@@ -39,13 +39,12 @@ public abstract class NoMercyImageClient : TmdbBaseClient
                 HttpResponseMessage response = await httpClient.GetAsync(url);
                 if (!response.IsSuccessStatusCode) return null;
 
-                if (download is false)
-                    return Image.Load<Rgba32>(await response.Content.ReadAsStreamAsync());
+                byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
-                if (!File.Exists(filePath))
-                    await File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());
+                if (download is not false && !File.Exists(filePath))
+                    await File.WriteAllBytesAsync(filePath, bytes);
 
-                return Image.Load<Rgba32>(await response.Content.ReadAsStreamAsync());
+                return Image.Load<Rgba32>(bytes);
             }
             catch (Exception e)
             {

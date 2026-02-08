@@ -517,3 +517,29 @@
 
 **Test results**: All 1,067 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 339 Providers). Build succeeds with 0 errors.
 
+---
+
+## PROV-H16 — Fix response content read 3 times in NoMercy Image
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Providers/NoMercy/Client/NoMercyImageClient.cs:42-48` — replaced multiple content reads with a single `ReadAsByteArrayAsync()` call
+- **The bug**: The `Download` method's local async function read response content multiple times:
+  1. If `download is false`: called `ReadAsStreamAsync()` to load image (consuming the stream) — this path worked
+  2. If `download is true`: called `ReadAsByteArrayAsync()` to write the file (first content read), then called `ReadAsStreamAsync()` to load the image (second content read on already-consumed response — producing corrupt/empty images)
+  - The response content was consumed on the first read, making the second read return empty/corrupt data
+- **The fix**: Read content once as `byte[]` via `ReadAsByteArrayAsync()`, then use the same byte array for both `File.WriteAllBytesAsync()` and `Image.Load<Rgba32>(bytes)`. Also simplified the download condition: `if (download is not false && !File.Exists(filePath))` combines the two checks.
+- Created `tests/NoMercy.Tests.Providers/NoMercy/Client/NoMercyImageClientTests.cs` with 8 tests:
+  - **Download is static and returns Task** (1 test): Verifies `Download` is a static method returning `Task<Image<Rgba32>?>`
+  - **Download parameter signature** (1 test): Verifies `Download(string? path, bool? download = true)` — 2 params with correct types and defaults
+  - **IL regression — no ReadAsStreamAsync** (1 test): Inspects the local function's compiled state machine IL to verify `ReadAsStreamAsync` is never called (the root cause of the bug)
+  - **IL regression — calls ReadAsByteArrayAsync** (1 test): Verifies the state machine calls `ReadAsByteArrayAsync` (the fix)
+  - **IL regression — ReadAsByteArrayAsync called exactly once** (1 test): Verifies content is read exactly once (not multiple times like the original bug)
+  - **IL regression — no multiple content reads** (1 test): Verifies no combination of `ReadAsByteArrayAsync`/`ReadAsStreamAsync`/`ReadAsStringAsync` exceeds 1 call total
+  - **Image.Load uses byte[] overload** (1 test): Verifies `Image.Load` is called with `byte[]` or `ReadOnlySpan<byte>` parameter, not `Stream`
+  - **Local function has async state machine** (1 test): Verifies the compiler-generated state machine for the local `Task()` function can be found (prerequisite for all IL tests)
+- Note: Unlike PROV-H10/H12, this method uses a local async function `Task()` inside `Download()` rather than being directly async. The IL tests target the compiler-generated state machine for the local function by searching nested types that implement `IAsyncStateMachine`.
+
+**Test results**: All 1,075 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 347 Providers). Build succeeds with 0 errors.
+
