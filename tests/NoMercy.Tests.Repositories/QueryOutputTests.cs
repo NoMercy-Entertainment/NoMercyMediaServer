@@ -14,6 +14,7 @@ namespace NoMercy.Tests.Repositories;
 /// Simple CRUD operations (Add/Update/Delete/Like/Upsert) are excluded.
 /// Compiled queries (EF.CompileAsyncQuery) are tested via interceptor execution.
 /// </summary>
+[Trait("Category", "Characterization")]
 public class QueryOutputTests : IDisposable
 {
     private readonly MediaContext _context;

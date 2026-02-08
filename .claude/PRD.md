@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 0, item CHAR-10
+**Next up**: Phase 0, item CPM-01
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -55,7 +55,7 @@ Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-mana
 - [x] CHAR-07 — SignalR hub connection tests
 - [x] CHAR-08 — Queue behavior tests (enqueue, reserve, execute, fail, retry)
 - [x] CHAR-09 — Encoder command-building tests (capture FFmpeg CLI args)
-- [ ] CHAR-10 — CI pipeline that runs all characterization tests
+- [x] CHAR-10 — CI pipeline that runs all characterization tests
 - [ ] CPM-01 — Create `Directory.Packages.props` with all package versions
 - [ ] CPM-02 — Remove `Version` from all `.csproj` PackageReference entries
 - [ ] CPM-03 — Verify full build + test suite passes after CPM migration

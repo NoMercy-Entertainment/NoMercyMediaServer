@@ -5,6 +5,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
+[Trait("Category", "Characterization")]
 public class SignalRHubConnectionTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;

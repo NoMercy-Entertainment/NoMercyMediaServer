@@ -6,6 +6,7 @@ using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
 
+[Trait("Category", "Characterization")]
 public class LibraryRepositoryTests : IDisposable
 {
     private readonly MediaContext _context;

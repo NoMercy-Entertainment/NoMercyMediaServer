@@ -9,6 +9,7 @@ using NoMercy.NmSystem;
 
 namespace NoMercy.Tests.Encoder;
 
+[Trait("Category", "Characterization")]
 public class EncoderCommandBuildingTests : IDisposable
 {
     private readonly string _tempDir;

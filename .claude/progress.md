@@ -251,3 +251,21 @@
 
 **Test results**: 111 new encoder tests pass (111 total in NoMercy.Tests.Encoder). All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CHAR-10 — CI pipeline that runs all characterization tests
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Added `[Trait("Category", "Characterization")]` attribute to all 15 characterization test classes across 4 test projects:
+  - **NoMercy.Tests.Api** (6 classes): `HealthControllerTests`, `AuthenticationTests`, `MediaEndpointSnapshotTests`, `MusicEndpointSnapshotTests`, `DashboardEndpointSnapshotTests`, `SignalRHubConnectionTests`
+  - **NoMercy.Tests.Repositories** (7 classes): `TestMediaContextFactoryTests`, `MovieRepositoryTests`, `LibraryRepositoryTests`, `TvShowRepositoryTests`, `GenreRepositoryTests`, `HomeRepositoryTests`, `QueryOutputTests`
+  - **NoMercy.Tests.Encoder** (1 class): `EncoderCommandBuildingTests`
+  - **NoMercy.Tests.Queue** (1 class): `QueueBehaviorTests`
+- Updated `.github/workflows/test.yml` — expanded the fast test job filter from `Category=Unit|Category=ErrorHandling` to `Category=Unit|Category=ErrorHandling|Category=Characterization` so all 500 characterization tests run on every push/PR alongside existing unit and error handling tests
+- Pre-existing queue tests (`CertificateRenewalJobTests`, `CronExpressionBuilderTests`, `EdgeCaseAndInterfaceTests`, `JobDispatcherTests`) were intentionally left uncategorized since they predate the CHAR tasks
+- Verified the `--filter "Category=Characterization"` picks up exactly 500 tests (243 Api + 120 Repositories + 111 Encoder + 26 Queue)
+
+**Test results**: All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
+

@@ -5,6 +5,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
+[Trait("Category", "Characterization")]
 public class HealthControllerTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly HttpClient _client;

@@ -6,6 +6,7 @@ using Xunit;
 
 namespace NoMercy.Tests.Api;
 
+[Trait("Category", "Characterization")]
 public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
 {
     private readonly NoMercyApiFactory _factory;

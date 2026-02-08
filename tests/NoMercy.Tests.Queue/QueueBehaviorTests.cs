@@ -13,6 +13,7 @@ namespace NoMercy.Tests.Queue;
 /// behavioral gaps: implicit retry loops, cross-queue isolation, currentJobId guard,
 /// attempt boundary precision, and exception preservation.
 /// </summary>
+[Trait("Category", "Characterization")]
 public class QueueBehaviorTests : IDisposable
 {
     private readonly QueueContext _context;
