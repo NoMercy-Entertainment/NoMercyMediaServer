@@ -41,13 +41,13 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 0, item CHAR-02
+**Next up**: Phase 0, item CHAR-03
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
 
 - [x] CHAR-01 — Set up `NoMercy.Tests.Api` project with `WebApplicationFactory` and auth helpers
-- [ ] CHAR-02 — Set up `NoMercy.Tests.Repositories` project with in-memory SQLite + seed data
+- [x] CHAR-02 — Set up `NoMercy.Tests.Repositories` project with in-memory SQLite + seed data
 - [ ] CHAR-03 — Snapshot tests for all `/api/v1/` Media endpoints
 - [ ] CHAR-04 — Snapshot tests for all `/api/v1/` Music endpoints
 - [ ] CHAR-05 — Snapshot tests for all `/api/v1/` Dashboard endpoints
