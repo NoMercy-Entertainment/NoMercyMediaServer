@@ -467,3 +467,28 @@
 
 **Test results**: All 1,051 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 323 Providers). Build succeeds with 0 errors.
 
+---
+
+## PROV-H10 — Fix stream consumed then reused in FanArt Image
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Providers/FanArt/Client/FanArtImageClient.cs:47-54` — replaced stream-based content reading with a single `ReadAsByteArrayAsync()` call
+- **The bug**: The `Download` method read response content as a stream (line 47: `ReadAsStreamAsync()`), then:
+  1. If `download is false`: loaded the image from the stream (consuming it) — this path worked
+  2. If `download is true`: wrote the file using `ReadAsByteArrayAsync()` (re-reading the already-consumed response content — may return empty/corrupt data), then tried to load the image from the already-consumed stream (position at end — corrupt/empty image)
+  - The stream was consumed on first read, making subsequent reads return empty/corrupt data
+- **The fix**: Read content once as `byte[]` via `ReadAsByteArrayAsync()`, then use the same byte array for both `File.WriteAllBytesAsync()` and `Image.Load<Rgba32>(bytes)`. Also simplified the download condition: `if (download is not false && !File.Exists(filePath))` combines the two checks.
+- Created `tests/NoMercy.Tests.Providers/FanArt/Client/FanArtImageClientTests.cs` with 8 tests:
+  - **Download is static async** (1 test): Verifies `Download` is a static method with `AsyncStateMachineAttribute`
+  - **Download returns Task of nullable Image** (1 test): Verifies return type is `Task<Image<Rgba32>?>`
+  - **Download parameter signature** (1 test): Verifies `Download(Uri url, bool? download = true)` — 2 params with correct types and defaults
+  - **IL regression — no ReadAsStreamAsync** (1 test): Inspects compiled state machine IL to verify `ReadAsStreamAsync` is never called (the root cause of the bug)
+  - **IL regression — calls ReadAsByteArrayAsync** (1 test): Verifies the state machine calls `ReadAsByteArrayAsync` (the fix)
+  - **IL regression — ReadAsByteArrayAsync called exactly once** (1 test): Verifies content is read exactly once (not twice like the original bug)
+  - **IL regression — no multiple content reads** (1 test): Verifies no combination of `ReadAsByteArrayAsync`/`ReadAsStreamAsync`/`ReadAsStringAsync` exceeds 1 call total
+  - **Image.Load uses byte[] overload** (1 test): Verifies `Image.Load` is called with `byte[]` or `ReadOnlySpan<byte>` parameter, not `Stream`
+
+**Test results**: All 1,059 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 331 Providers). Build succeeds with 0 errors.
+
