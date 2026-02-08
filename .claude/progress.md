@@ -424,3 +424,25 @@
 
 **Test results**: All 1,038 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 310 Providers). Build succeeds with 0 errors.
 
+---
+
+## PROV-CRIT-04 — Fix inverted client-key condition in FanArt
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Providers/FanArt/Client/FanArtBaseClient.cs:28,44` — changed `if (string.IsNullOrEmpty(...))` to `if (!string.IsNullOrEmpty(...))`
+- **The bug**: Both constructors (parameterless and Guid) had `if (string.IsNullOrEmpty(ApiInfo.FanArtClientKey))` guarding `_client.DefaultRequestHeaders.Add("client-key", ...)`. This inverted logic added the `client-key` header when the key was empty/null (sending an empty string), and skipped it when the key was actually populated. FanArt API requests with a valid client key never sent it.
+- **The fix**: Added `!` negation to both conditions: `if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))` — now the header is only added when a non-empty client key exists.
+- Created `tests/NoMercy.Tests.Providers/FanArt/Client/FanArtBaseClientTests.cs` with 7 tests:
+  - **Parameterless constructor with populated key** (1 test): Sets `ApiInfo.FanArtClientKey` to a value, creates client via reflection, verifies `client-key` header IS present with correct value
+  - **Parameterless constructor with empty key** (1 test): Sets key to `string.Empty`, verifies `client-key` header is NOT present
+  - **Parameterless constructor with null key** (1 test): Sets key to `null`, verifies `client-key` header is NOT present
+  - **Guid constructor with populated key** (1 test): Same verification as parameterless but via `FanArtBaseClient(Guid)` constructor
+  - **Guid constructor with empty key** (1 test): Verifies no header when empty via Guid constructor
+  - **Guid constructor sets Id** (1 test): Verifies the Guid constructor correctly sets the protected `Id` property
+  - **Constructor always adds api-key** (1 test): Verifies `api-key` header is always present regardless of client key state
+- Tests use `IDisposable` to save/restore `ApiInfo.FanArtClientKey` static state between tests
+
+**Test results**: All 1,045 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 317 Providers). Build succeeds with 0 errors.
+

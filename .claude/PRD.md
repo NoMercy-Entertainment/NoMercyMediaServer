@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item PROV-CRIT-04
+**Next up**: Phase 1-2, item PROV-H06
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -67,7 +67,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] CRIT-13 — Remove duplicate DbContext registration (scoped + transient)
 - [x] HIGH-15 — Fix image controller `| true` logic bug
 - [x] PROV-CRIT-03 — Fix `.Result` on `SendAsync` in TvdbBaseClient
-- [ ] PROV-CRIT-04 — Fix inverted client-key condition in FanArt
+- [x] PROV-CRIT-04 — Fix inverted client-key condition in FanArt
 - [ ] PROV-H06 — Remove dead code (contradictory while loop) in AcoustId
 - [ ] PROV-H10 — Fix stream consumed then reused in FanArt Image
 - [ ] PROV-H12 — Fix stream consumed then reused in CoverArt Image

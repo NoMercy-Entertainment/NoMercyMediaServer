@@ -25,7 +25,7 @@ public class FanArtBaseClient : IDisposable
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtApiKey);
-        if (string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
+        if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
         {
             _client.DefaultRequestHeaders.Add("client-key", ApiInfo.FanArtClientKey);
         }
@@ -41,7 +41,7 @@ public class FanArtBaseClient : IDisposable
         _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
         _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtApiKey);
-        if (string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
+        if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
         {
             _client.DefaultRequestHeaders.Add("client-key", ApiInfo.FanArtClientKey);
         }
