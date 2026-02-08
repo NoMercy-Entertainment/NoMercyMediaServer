@@ -65,7 +65,16 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     public static readonly Ulid MovieLibraryId = Ulid.NewUlid();
     public static readonly Ulid TvLibraryId = Ulid.NewUlid();
+    public static readonly Ulid MusicLibraryId = Ulid.NewUlid();
     public static readonly Ulid MovieFolderId = Ulid.NewUlid();
+    public static readonly Ulid MusicFolderId = Ulid.NewUlid();
+
+    public static readonly Guid ArtistId1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    public static readonly Guid AlbumId1 = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    public static readonly Guid TrackId1 = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    public static readonly Guid TrackId2 = Guid.Parse("33333333-3333-3333-3333-333333333334");
+    public static readonly Guid PlaylistId1 = Guid.Parse("44444444-4444-4444-4444-444444444444");
+    public static readonly Guid MusicGenreId1 = Guid.Parse("55555555-5555-5555-5555-555555555555");
 
     private static void EnsureDirectoriesAndSeedDatabase()
     {
@@ -295,6 +304,135 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             EpisodeId = 62086
         };
         context.VideoFiles.AddRange(tvVideoFile1, tvVideoFile2);
+
+        context.SaveChanges();
+
+        // Step 6: Music entities — library, folder, artist, album, tracks, playlist, genre
+        Library musicLibrary = new()
+        {
+            Id = MusicLibraryId,
+            Title = "Music",
+            Type = "music",
+            Order = 3
+        };
+        context.Libraries.Add(musicLibrary);
+
+        Folder musicFolder = new()
+        {
+            Id = MusicFolderId,
+            Path = "/media/music"
+        };
+        context.Folders.Add(musicFolder);
+
+        context.SaveChanges();
+
+        context.LibraryUser.Add(new LibraryUser(MusicLibraryId, TestAuthHandler.DefaultUserId));
+        context.FolderLibrary.Add(new FolderLibrary(MusicFolderId, MusicLibraryId));
+
+        MusicGenre rockGenre = new()
+        {
+            Id = MusicGenreId1,
+            Name = "Rock"
+        };
+        context.MusicGenres.Add(rockGenre);
+
+        Artist artist1 = new()
+        {
+            Id = ArtistId1,
+            Name = "Test Artist",
+            TitleSort = "test artist",
+            Description = "A test artist for snapshot testing",
+            Cover = "/test-artist.jpg",
+            HostFolder = "/media/music/Test Artist",
+            LibraryId = MusicLibraryId,
+            FolderId = MusicFolderId
+        };
+        context.Artists.Add(artist1);
+
+        Album album1 = new()
+        {
+            Id = AlbumId1,
+            Name = "Test Album",
+            Description = "A test album",
+            Cover = "/test-album.jpg",
+            Year = 2020,
+            Tracks = 2,
+            HostFolder = "/media/music/Test Artist/Test Album",
+            LibraryId = MusicLibraryId,
+            FolderId = MusicFolderId
+        };
+        context.Albums.Add(album1);
+
+        context.SaveChanges();
+
+        Track track1 = new()
+        {
+            Id = TrackId1,
+            Name = "Test Track 1",
+            TrackNumber = 1,
+            DiscNumber = 1,
+            Duration = "3:45",
+            Filename = "01-test-track-1.flac",
+            Folder = "/media/music/Test Artist/Test Album",
+            HostFolder = "/media/music/Test Artist/Test Album",
+            FolderId = MusicFolderId
+        };
+        Track track2 = new()
+        {
+            Id = TrackId2,
+            Name = "Test Track 2",
+            TrackNumber = 2,
+            DiscNumber = 1,
+            Duration = "4:20",
+            Filename = "02-test-track-2.flac",
+            Folder = "/media/music/Test Artist/Test Album",
+            HostFolder = "/media/music/Test Artist/Test Album",
+            FolderId = MusicFolderId
+        };
+        context.Tracks.AddRange(track1, track2);
+
+        context.SaveChanges();
+
+        // Step 7: Music join tables
+        context.ArtistTrack.AddRange(
+            new ArtistTrack { ArtistId = ArtistId1, TrackId = TrackId1 },
+            new ArtistTrack { ArtistId = ArtistId1, TrackId = TrackId2 });
+
+        context.AlbumTrack.AddRange(
+            new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId1 },
+            new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId2 });
+
+        context.AlbumArtist.Add(new AlbumArtist { AlbumId = AlbumId1, ArtistId = ArtistId1 });
+
+        context.ArtistLibrary.Add(new ArtistLibrary(ArtistId1, MusicLibraryId));
+        context.AlbumLibrary.Add(new AlbumLibrary(AlbumId1, MusicLibraryId));
+
+        context.LibraryTrack.AddRange(
+            new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId1 },
+            new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId2 });
+
+        context.ArtistMusicGenre.Add(
+            new ArtistMusicGenre { ArtistId = ArtistId1, MusicGenreId = MusicGenreId1 });
+
+        Playlist playlist1 = new()
+        {
+            Id = PlaylistId1,
+            Name = "Test Playlist",
+            Description = "A test playlist",
+            UserId = TestAuthHandler.DefaultUserId
+        };
+        context.Playlists.Add(playlist1);
+
+        context.SaveChanges();
+
+        context.PlaylistTrack.Add(
+            new PlaylistTrack { PlaylistId = PlaylistId1, TrackId = TrackId1 });
+
+        // Favorite the artist/track so favorites endpoints have data
+        context.ArtistUser.Add(
+            new ArtistUser { ArtistId = ArtistId1, UserId = TestAuthHandler.DefaultUserId });
+        context.TrackUser.Add(
+            new TrackUser { TrackId = TrackId1, UserId = TestAuthHandler.DefaultUserId });
 
         context.SaveChanges();
     }

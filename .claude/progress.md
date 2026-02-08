@@ -80,3 +80,24 @@
 
 **Test results**: 51 new tests pass (56 total in NoMercy.Tests.Api including 5 from CHAR-01). All 634 tests pass across all projects (63 Repositories + 203 Queue + 56 Api + 307 Providers + 5 other). Build succeeds with 0 errors.
 
+---
+
+## CHAR-04 — Snapshot tests for all `/api/v1/` Music endpoints
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Extended `NoMercyApiFactory.SeedMediaData()` with music test data: 1 music library, 1 music folder, 1 artist (Test Artist), 1 album (Test Album), 2 tracks, 1 playlist (Test Playlist), 1 music genre (Rock), all necessary join tables (ArtistTrack, AlbumTrack, AlbumArtist, ArtistLibrary, AlbumLibrary, LibraryTrack, ArtistMusicGenre, PlaylistTrack, ArtistUser, TrackUser)
+- Added static IDs for music entities: `MusicLibraryId`, `MusicFolderId`, `ArtistId1`, `AlbumId1`, `TrackId1`, `TrackId2`, `PlaylistId1`, `MusicGenreId1`
+- Created `MusicEndpointSnapshotTests.cs` with 51 test methods covering all 6 music controllers:
+  - **MusicController** (9 tests): GET index, start, POST favorites, favorite-artists, favorite-albums, playlists, search (no results + with query), type search
+  - **ArtistsController** (5 tests): GET index (letter), show, show non-existent, POST like, like non-existent, DELETE
+  - **AlbumsController** (5 tests): GET index, show, show non-existent, POST like, rescan
+  - **PlaylistsController** (7 tests): GET index, show, show non-existent, POST create, create duplicate, DELETE, POST add track, DELETE remove track non-existent
+  - **Music GenresController** (4 tests): GET index, by letter, show, show non-existent
+  - **TracksController** (7 tests): GET index, POST like, like non-existent, GET lyrics (with timeout handling for external provider), lyrics non-existent, POST playback, playback non-existent
+  - **Cross-cutting auth** (7 tests): Theory-based 401/403 verification for all music endpoints when unauthenticated
+- Lyrics test uses CancellationTokenSource with 15s timeout to handle external NoMercyLyricsClient calls that are unavailable in test environment
+
+**Test results**: 51 new music tests pass (107 total in NoMercy.Tests.Api). All 680 tests pass across all projects (63 Repositories + 203 Queue + 107 Api + 307 Providers). Build succeeds with 0 errors.
+
