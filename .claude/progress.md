@@ -312,3 +312,24 @@
 
 **Test results**: All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CPM-03 — Verify full build + test suite passes after CPM migration
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Ran `dotnet restore` — all projects up-to-date, no package resolution errors
+- Ran `dotnet build` — compiled with 0 errors (74 pre-existing warnings, all CS8601/CS8600/NETSDK1206/CA2021 unrelated to CPM)
+- Ran `dotnet test` — all 1,012 tests pass with 0 failures across all 7 test projects:
+  - NoMercy.Tests.Database: 2 passed
+  - NoMercy.Tests.Encoder: 111 passed
+  - NoMercy.Tests.Repositories: 120 passed
+  - NoMercy.Tests.Queue: 229 passed
+  - NoMercy.Tests.Providers: 307 passed
+  - NoMercy.Tests.Api: 243 passed
+  - NoMercy.Tests.MediaProcessing: 0 tests (no test discoverer, pre-existing)
+- CPM migration (CPM-01 + CPM-02) confirmed fully functional — `Directory.Packages.props` with `ManagePackageVersionsCentrally=true` works correctly with all 21 `.csproj` files
+
+**Test results**: All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
+
