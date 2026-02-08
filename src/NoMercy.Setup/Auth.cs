@@ -55,7 +55,7 @@ public static class Auth
 
         int expiresInDays = _jwtSecurityToken.ValidTo.AddDays(-5).Subtract(DateTime.UtcNow).Days;
 
-        bool expired = NotBefore == null && expiresInDays >= 0;
+        bool expired = expiresInDays < 0;
 
         if (!expired)
             try

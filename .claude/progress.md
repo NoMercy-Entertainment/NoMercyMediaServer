@@ -831,3 +831,36 @@
 
 **Test results**: All 1,258 tests pass across all projects (135 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 397 Providers). Build succeeds with 0 errors.
 
+---
+
+## AUTH-BUG — Fix inverted expiration check in auth
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Setup/Auth.cs:58` — changed inverted expiration logic from `NotBefore == null && expiresInDays >= 0` to `expiresInDays < 0`
+- **The bug**: `bool expired = NotBefore == null && expiresInDays >= 0;` had two problems:
+  1. It marked valid tokens (with `expiresInDays >= 0`, meaning more than 5 days until expiry) as "expired"
+  2. It included an irrelevant `NotBefore == null` check that has nothing to do with token expiration
+  - The downstream control flow (`if (!expired)` → try refresh, `else` → full re-auth) meant:
+    - Valid tokens (`expiresInDays >= 0`) → `expired = true` → `!expired = false` → skipped refresh → went straight to full browser/password re-authentication (wrong!)
+    - Expired tokens (`expiresInDays < 0`) → `expired = false` → `!expired = true` → tried refresh first (this is backwards — expired tokens need full re-auth, not refresh)
+- **The fix**: Changed to `bool expired = expiresInDays < 0;` — now:
+  - Valid tokens (`expiresInDays >= 0`) → `expired = false` → `!expired = true` → tries preemptive refresh with fallback to browser (correct)
+  - Expired tokens (`expiresInDays < 0`) → `expired = true` → goes directly to browser/password re-auth (correct — refresh token likely expired too)
+- **Context**: `expiresInDays` is computed as `_jwtSecurityToken.ValidTo.AddDays(-5).Subtract(DateTime.UtcNow).Days` — a 5-day early refresh window. So `expiresInDays < 0` means the token is within 5 days of expiry or already expired.
+- Created `tests/NoMercy.Tests.Providers/Setup/AuthExpirationTests.cs` with 11 tests:
+  - **No NotBefore reference** (1 test): Source code analysis verifies the `expired` expression does not reference `NotBefore`
+  - **Uses less-than-zero** (1 test): Verifies expression contains `expiresInDays` and `< 0`
+  - **Not inverted (no >= 0)** (1 test): Regression test verifying `>= 0` is not in the expression
+  - **No buggy pattern** (1 test): Regex verifies the original `NotBefore == null && expiresInDays >= 0` pattern is gone
+  - **Valid token not expired** (1 test): `expiresInDays = 5` → `expired = false`
+  - **Expired token is expired** (1 test): `expiresInDays = -2` → `expired = true`
+  - **Zero days not expired** (1 test): `expiresInDays = 0` → `expired = false` (boundary)
+  - **Negative one is expired** (1 test): `expiresInDays = -1` → `expired = true`
+  - **Expression is simple** (1 test): Verifies the full expression is exactly `expiresInDays < 0`
+  - **Refresh-first control flow** (1 test): Verifies `if (!expired)` leads to `TokenByRefreshGrand`
+  - **Else goes to browser** (1 test): Verifies `else` branch calls `TokenByBrowserOrPassword`
+
+**Test results**: All 1,269 tests pass across all projects (135 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 408 Providers). Build succeeds with 0 errors.
+
