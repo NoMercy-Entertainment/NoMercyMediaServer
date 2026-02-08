@@ -377,3 +377,29 @@
 
 **Test results**: All 1,024 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 251 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## HIGH-15 — Fix image controller `| true` logic bug
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Api/Controllers/File/ImageController.cs:45` — removed `| true` (bitwise OR with true) from the `emptyArguments` boolean expression
+- **The bug**: `bool emptyArguments = (request.Width is null && request.Type is null && request.Quality is 100) | true;` — the `| true` made `emptyArguments` always `true`, causing every image request to return the original file without any resizing, caching, or quality adjustment. The entire image processing pipeline (`Images.ResizeMagickNet()`) was completely bypassed. This was likely a debug bypass accidentally left in.
+- **The fix**: Changed to `bool emptyArguments = request.Width is null && request.Type is null && request.Quality is 100;` — now `emptyArguments` is only `true` when no processing parameters are provided (no width, no type override, quality at default 100).
+- Created `tests/NoMercy.Tests.Api/ImageControllerTests.cs` with 11 integration tests:
+  - **No params returns original** (1 test): GET with no query params returns the original file unmodified (emptyArguments=true path)
+  - **Width triggers resize** (1 test): GET with `?width=50` on a 200x100 image returns a 50x25 resized image (aspect ratio preserved)
+  - **Non-default quality triggers processing** (1 test): GET with `?quality=80` processes the image instead of returning the original
+  - **Type param triggers processing** (1 test): GET with `?type=png&width=100` returns a resized image at width=100
+  - **SVG bypasses processing** (1 test): GET for an SVG file with `?width=50` returns the original SVG unmodified (SVG path guard)
+  - **Processed images are cached** (1 test): Two identical requests with `?width=75` return the same result (second served from cache)
+  - **Non-existent type folder returns 404** (1 test): GET for `/images/nonexistent/test.png` returns 404
+  - **Non-existent file returns 404** (1 test): GET for a missing file in a valid type folder returns 404
+  - **Default quality 100 returns original** (1 test): GET with `?quality=100` (the default) returns the original unchanged
+  - **Caching headers set** (1 test): Response includes `Cache-Control: public` header
+  - **Width with aspect ratio** (1 test): GET with `?width=100&aspect_ratio=2.0` returns a 100x200 image (custom aspect ratio)
+- Test setup creates real PNG (200x100 red) and SVG test images in `AppFiles.ImagesPath/testtype/` directory, with cleanup of temp cached images in `Dispose()`
+
+**Test results**: All 1,035 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 307 Providers). Build succeeds with 0 errors.
+

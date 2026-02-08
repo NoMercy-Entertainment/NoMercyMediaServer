@@ -42,7 +42,7 @@ public class ImageController : Controller
             long originalFileSize = fileInfo.Length;
             string originalMimeType = MimeUtility.GetMimeMapping(filePath);
 
-            bool emptyArguments = (request.Width is null && request.Type is null && request.Quality is 100) | true;
+            bool emptyArguments = request.Width is null && request.Type is null && request.Quality is 100;
 
             if (emptyArguments || path.Contains(".svg") ||
                 (originalFileSize < request.Width && originalMimeType == request.Format.DefaultMimeType))
