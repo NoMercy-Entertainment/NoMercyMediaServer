@@ -333,3 +333,21 @@
 
 **Test results**: All 1,012 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 229 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
 
+---
+
+## CRIT-09 — Fix missing job retry return value
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Queue/JobQueue.cs:76` — added missing `return` before the recursive `ReserveJob()` call in the catch block
+- **The bug**: When `ReserveJob()` caught a transient (non-relational) exception and retried recursively, the result of the recursive call was discarded. The method always fell through to `return null` on line 84, causing jobs to silently fail to be reserved and the queue to stall.
+- **The fix**: Changed `ReserveJob(name, currentJobId, attempt + 1);` to `return ReserveJob(name, currentJobId, attempt + 1);`
+- Created `tests/NoMercy.Tests.Queue/ReserveJobRetryTests.cs` with 4 tests:
+  - **IL structural regression test**: Inspects the compiled IL of `ReserveJob` via reflection to verify no `pop` opcode follows the recursive call (which would indicate the return value is being discarded)
+  - **Max retry attempts exceeded**: Verifies `ReserveJob` returns null when called with `attempt=10` (the retry ceiling)
+  - **Normal path success**: Verifies `ReserveJob` returns the job with correct `ReservedAt` and `Attempts` values
+  - **Normal path no job**: Verifies `ReserveJob` returns null when no matching jobs exist
+
+**Test results**: All 1,016 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 243 Api + 307 Providers). Build succeeds with 0 errors.
+

@@ -73,7 +73,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
             if (attempt < 10)
             {
                 Thread.Sleep(2000);
-                ReserveJob(name, currentJobId, attempt + 1);
+                return ReserveJob(name, currentJobId, attempt + 1);
             }
             else
             {
