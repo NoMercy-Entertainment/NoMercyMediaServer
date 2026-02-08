@@ -543,3 +543,24 @@
 
 **Test results**: All 1,075 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 347 Providers). Build succeeds with 0 errors.
 
+---
+
+## PMOD-CRIT-01 — Fix MusixMatch AlbumName typed as `long`
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Providers/MusixMatch/Models/MusixMatchMusixMatchTrack.cs:41` — changed `AlbumName` property type from `long` to `string?`
+- **The bug**: `[JsonProperty("album_name")] public long AlbumName { get; set; }` — the MusixMatch API returns album names as strings (e.g. "Abbey Road"), not numbers. With the `long` type, Newtonsoft.Json would throw a `JsonReaderException` when deserializing a real API response containing a string album name, or silently produce `0` if the field was missing/null.
+- **The fix**: Changed to `public string? AlbumName { get; set; }` — nullable string matches the API response format. All other `AlbumName` properties across the codebase (PlaylistTrackDto, ArtistTrackDto, TrackRowData, LrclibSongResult) are already typed as `string` or `string?`.
+- Created `tests/NoMercy.Tests.Providers/MusixMatch/Models/MusixMatchMusixMatchTrackTests.cs` with 7 tests:
+  - **Property type is nullable string** (1 test): Verifies `AlbumName` property type is `string` via reflection
+  - **Deserializes string value** (1 test): JSON `{"album_name": "Abbey Road"}` deserializes to `"Abbey Road"`
+  - **Deserializes null value** (1 test): JSON `{"album_name": null}` deserializes to `null`
+  - **Deserializes empty string** (1 test): JSON `{"album_name": ""}` deserializes to `""`
+  - **Default value is null** (1 test): New instance has `AlbumName == null`
+  - **JsonProperty attribute correct** (1 test): Verifies `[JsonProperty("album_name")]` attribute is present with correct name
+  - **Round-trip serialization** (1 test): Serialize then deserialize preserves album name value
+
+**Test results**: All 1,082 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 354 Providers). Build succeeds with 0 errors.
+
