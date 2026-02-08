@@ -564,3 +564,32 @@
 
 **Test results**: All 1,082 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 354 Providers). Build succeeds with 0 errors.
 
+---
+
+## PMOD-CRIT-02 — Fix TVDB properties missing setters
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Fixed `src/NoMercy.Providers/TVDB/Models/TvdbAwardsResponse.cs:34` — added `set;` to `ForSeries` property
+- Fixed `src/NoMercy.Providers/TVDB/Models/TvdbCharacterResponse.cs:45` — added `set;` to `Tag` property
+- **The bug**: Both properties were declared as get-only (`{ get; }` without `set;`). Newtonsoft.Json cannot populate properties without setters during deserialization, so `ForSeries` would always be `false` and `Tag` would always be `0` regardless of the JSON payload from the TVDB API.
+- **The fix**: Added `set;` to both properties: `{ get; }` → `{ get; set; }`. This matches all other properties in their respective classes and allows JSON deserialization to populate them correctly.
+- Created `tests/NoMercy.Tests.Providers/TVDB/Models/TvdbModelPropertyTests.cs` with 14 tests:
+  - **ForSeries has setter** (1 test): Verifies `CanWrite` is true via reflection
+  - **ForSeries deserializes true** (1 test): JSON `{"forSeries": true}` deserializes to `true`
+  - **ForSeries deserializes false** (1 test): JSON `{"forSeries": false}` deserializes to `false`
+  - **ForSeries round-trip** (1 test): Serialize then deserialize preserves value
+  - **ForSeries JsonProperty attribute** (1 test): Verifies `[JsonProperty("forSeries")]` present
+  - **ForSeries default value** (1 test): New instance has `ForSeries == false`
+  - **Tag has setter** (1 test): Verifies `CanWrite` is true via reflection
+  - **Tag deserializes value** (1 test): JSON `{"tag": 42}` deserializes to `42`
+  - **Tag deserializes zero** (1 test): JSON `{"tag": 0}` deserializes to `0`
+  - **Tag round-trip** (1 test): Serialize then deserialize preserves value
+  - **Tag JsonProperty attribute** (1 test): Verifies `[JsonProperty("tag")]` present
+  - **Tag default value** (1 test): New instance has `Tag == 0`
+  - **Full award category deserialization** (1 test): Full JSON object with all fields including `forSeries` deserializes correctly
+  - **Full character tag option deserialization** (1 test): Full JSON object with all fields including `tag` deserializes correctly
+
+**Test results**: All 1,096 tests pass across all projects (2 Database + 111 Encoder + 120 Repositories + 233 Queue + 262 Api + 368 Providers). Build succeeds with 0 errors.
+

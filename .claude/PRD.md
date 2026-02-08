@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item PMOD-CRIT-02
+**Next up**: Phase 1-2, item PMOD-CRIT-03
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -73,7 +73,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] PROV-H12 — Fix stream consumed then reused in CoverArt Image
 - [x] PROV-H16 — Fix response content read 3 times in NoMercy Image
 - [x] PMOD-CRIT-01 — Fix MusixMatch AlbumName typed as `long`
-- [ ] PMOD-CRIT-02 — Fix TVDB properties missing setters
+- [x] PMOD-CRIT-02 — Fix TVDB properties missing setters
 - [ ] PMOD-CRIT-03 — Fix TMDB `video` field typed as `string?`
 - [ ] DBMOD-CRIT-01 — Fix Track.MetadataId type mismatch
 - [ ] DBMOD-CRIT-02 — Fix Library.cs JsonProperty names all shifted
