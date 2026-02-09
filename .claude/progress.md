@@ -1091,3 +1091,41 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 
 **Test results**: All 1,318 tests pass (135 Database + 111 Encoder + 135 Repositories + 257 Queue + 418 Providers + 262 Api). Build succeeds with 0 errors, 0 warnings.
 
+---
+
+## CRIT-11 — Fix FFmpeg process resource leak
+
+**Date**: 2026-02-09
+
+**What was done**:
+- Fixed `src/NoMercy.Encoder/FfMpeg.cs` — replaced `Dictionary<int, Process>` with `ConcurrentDictionary<int, Process>` for thread-safe concurrent encoding job tracking
+- Added try-finally blocks to `ExecStdErrOut` and `Run` methods to guarantee process cleanup on both normal exit and exception
+- The finally blocks: remove process from dictionary, kill process if still running, dispose process object
+- Added `using` declarations to `GetFingerprint` and `GetDuration` methods — processes were never disposed
+- Replaced `Dictionary.Add`/`Remove` with `ConcurrentDictionary.TryAdd`/`TryRemove` for thread safety
+- Added `WaitForExitAsync()` to `ExecStdErrOut` to ensure process completes before reading output
+- Changed `FfmpegProcess` from `private` to `internal` for test access (already has `InternalsVisibleTo`)
+
+**Problems fixed**:
+1. **Process resource leak on exception**: If `WaitForExitAsync()` threw (e.g., cancellation) or error output processing failed, the process object was never disposed and remained in the static dictionary — accumulating OS handles
+2. **Zombie processes**: On exception, processes that hadn't exited were never killed — they'd continue running as orphans consuming CPU/memory
+3. **Dictionary corruption under concurrency**: `Dictionary<int, Process>` is not thread-safe — concurrent `Add`/`Remove` from multiple encoding jobs could corrupt the dictionary, losing process references entirely
+4. **Missing disposal in helper methods**: `GetFingerprint` and `GetDuration` never disposed their `Process` objects — each call leaked an OS handle
+
+**What was preserved**:
+- Cross-caller process control (Pause/Resume via static dictionary) — still works
+- Progress reporting via OutputDataReceived events — unchanged
+- SignalR progress broadcasting — unchanged
+
+**Tests added**: `tests/NoMercy.Tests.Encoder/FfMpegProcessResourceTests.cs` with 8 tests:
+- **ProcessDictionary_IsConcurrentDictionary**: Verifies type is `ConcurrentDictionary<int, Process>`
+- **ExecStdErrOut_CleansUpDictionary_AfterNormalExit**: Process removed from dictionary after normal exit
+- **ExecStdErrOut_CleansUpDictionary_WhenProcessFails**: Process removed even on failure
+- **ExecStdErrOut_TracksProcessDuringExecution**: Process present in dictionary while running, removed after
+- **ExecStdErrOut_ConcurrentCalls_DontCorruptDictionary**: 10 concurrent processes all clean up correctly
+- **Pause_ReturnsFalse_ForNonExistentProcess**: Pause returns false for unknown process ID
+- **Resume_ReturnsFalse_ForNonExistentProcess**: Resume returns false for unknown process ID
+- **Pause_ReturnsTrue_ForTrackedProcess**: Pause returns true for tracked process (cross-caller control works)
+
+**Test results**: All 1,326 tests pass (135 Database + 119 Encoder + 135 Repositories + 257 Queue + 418 Providers + 262 Api). Build succeeds with 0 errors.
+
