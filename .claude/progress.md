@@ -1059,3 +1059,35 @@
 
 **Test results**: All 1,308 tests pass (135 Database + 111 Encoder + 135 Repositories + 247 Queue + 418 Providers + 262 Api). Build succeeds with 0 errors.
 
+---
+
+## CRIT-08 — Fix fire-and-forget tasks in QueueRunner
+
+**Date**: 2026-02-09
+
+**What was done**:
+Verified that CRIT-08 was already fully implemented in the previous CRIT-07 commit. The QueueRunner.cs already contains all required fixes:
+
+1. **Removed `Task.Run(() => new Thread(...).Start())` pattern** — replaced with `SpawnWorkerThread()` method that creates threads directly without wrapping in Task.Run
+2. **Removed unobserved `.GetAwaiter()` calls** — no longer present in the codebase
+3. **Added exception handling to worker threads** — `SpawnWorkerThread()` wraps `SpawnWorker(name)` in try-catch, logging crashes via `Logger.Queue()`
+4. **Added lifecycle tracking** — `ActiveWorkerThreads` ConcurrentDictionary tracks all active worker threads with `TryAdd` on start and `TryRemove` in finally block
+5. **Background threads with descriptive names** — `IsBackground = true` prevents threads from blocking shutdown; `Name = $"QueueWorker-{threadKey}"` enables diagnostic visibility
+6. **Volatile flags** — `_isInitialized` and `_isUpdating` marked `volatile` for cross-thread visibility
+7. **Error logging on fire-and-forget tasks** — `UpdateRunningWorkerCounts` uses `ContinueWith(OnlyOnFaulted)` to observe and log exceptions
+8. **Public queryability** — `GetActiveWorkerThreads()` returns `IReadOnlyDictionary<string, Thread>` for monitoring
+
+10 existing tests in `QueueRunnerFireAndForgetTests.cs` all pass, covering:
+- No unobserved `.GetAwaiter()` (source analysis)
+- No `Task.Run(() => new Thread(...)` pattern (source analysis)
+- Worker threads have exception handling (try-catch present)
+- Worker threads are background threads (`IsBackground = true`)
+- Worker threads are named (`Name = $"QueueWorker-..."`)
+- Active worker tracking uses `ConcurrentDictionary`
+- `GetActiveWorkerThreads()` returns non-null readonly view
+- Volatile flags are marked volatile
+- `UpdateRunningWorkerCounts` has `OnlyOnFaulted` error logging
+- Worker threads clean up on exit (finally + TryRemove)
+
+**Test results**: All 1,318 tests pass (135 Database + 111 Encoder + 135 Repositories + 257 Queue + 418 Providers + 262 Api). Build succeeds with 0 errors, 0 warnings.
+

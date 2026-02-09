@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.NmSystem.Information;
@@ -21,17 +22,17 @@ public static class QueueRunner
             //[Config.RequestRunners.Key] = (Config.RequestRunners.Value, [], new CancellationTokenSource()),
         };
 
-    private static bool _isInitialized;
+    private static volatile bool _isInitialized;
     private static readonly JobQueue JobQueue = new(new());
-    private static bool _isUpdating;
+    private static volatile bool _isUpdating;
+
+    private static readonly ConcurrentDictionary<string, Thread> ActiveWorkerThreads = new();
 
     public static async Task Initialize()
     {
         if (_isInitialized) return;
 
         _isInitialized = true;
-
-        List<Task> taskList = [];
 
         await using QueueContext queueContext = new();
         await queueContext.QueueJobs
@@ -41,15 +42,43 @@ public static class QueueRunner
         foreach (KeyValuePair<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource
                      _cancellationTokenSource)> keyValuePair in Workers)
             for (int i = 0; i < keyValuePair.Value.count; i++)
-                taskList.Add(Task.Run(() => new Thread(() => SpawnWorker(keyValuePair.Key)).Start()));
-
-        await Task.WhenAll(taskList);
+                SpawnWorkerThread(keyValuePair.Key);
 
         // Signal that queue workers are ready, allowing cron jobs to start execution
         CronWorker.SignalQueueWorkersReady();
     }
 
-    private static Task SpawnWorker(string name)
+    private static void SpawnWorkerThread(string name)
+    {
+        string threadKey = $"{name}-{Guid.NewGuid():N}";
+        Thread thread = new(() =>
+        {
+            try
+            {
+                SpawnWorker(name);
+            }
+            catch (Exception ex)
+            {
+                Logger.Queue(
+                    $"Worker {name} crashed: {ex.Message}",
+                    LogEventLevel.Error);
+            }
+            finally
+            {
+                ActiveWorkerThreads.TryRemove(threadKey, out _);
+            }
+        })
+        {
+            IsBackground = true,
+            Name = $"QueueWorker-{threadKey}",
+            Priority = ThreadPriority.Lowest
+        };
+
+        ActiveWorkerThreads.TryAdd(threadKey, thread);
+        thread.Start();
+    }
+
+    private static void SpawnWorker(string name)
     {
         QueueWorker queueWorkerInstance = new(JobQueue, name);
 
@@ -58,8 +87,6 @@ public static class QueueRunner
         Workers[name].workerInstances.Add(queueWorkerInstance);
 
         queueWorkerInstance.Start();
-
-        return Task.CompletedTask;
     }
 
 
@@ -135,19 +162,26 @@ public static class QueueRunner
 
         int i = Workers[name].workerInstances.Count;
 
-        Task.Run(async () =>
+        CancellationToken token = Workers[name]._cancellationTokenSource.Token;
+        Task workerTask = Task.Run(async () =>
         {
             while (!_isUpdating && i < Workers[name].count)
             {
                 if (_isUpdating || i >= Workers[name].count) break;
 
-                Task.Run(() => SpawnWorker(name)).ConfigureAwait(ConfigureAwaitOptions.None).GetAwaiter();
+                SpawnWorkerThread(name);
 
                 i += 1;
 
-                await Task.Delay(100);
+                await Task.Delay(100, token);
             }
-        }, Workers[name]._cancellationTokenSource.Token);
+        }, token);
+
+        workerTask.ContinueWith(
+            t => Logger.Queue(
+                $"UpdateRunningWorkerCounts for {name} failed: {t.Exception?.GetBaseException().Message}",
+                LogEventLevel.Error),
+            TaskContinuationOptions.OnlyOnFaulted);
     }
 
     public static async Task<bool> SetWorkerCount(string name, int max, Guid? userId)
@@ -192,5 +226,10 @@ public static class QueueRunner
     public static int GetWorkerIndex(string name, QueueWorker queueWorker)
     {
         return Workers[name].workerInstances.IndexOf(queueWorker);
+    }
+
+    public static IReadOnlyDictionary<string, Thread> GetActiveWorkerThreads()
+    {
+        return ActiveWorkerThreads;
     }
 }
