@@ -1129,3 +1129,34 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 
 **Test results**: All 1,326 tests pass (135 Database + 119 Encoder + 135 Repositories + 257 Queue + 418 Providers + 262 Api). Build succeeds with 0 errors.
 
+---
+
+## HIGH-09 — Clean up temp files on encoding failure
+
+**Date**: 2026-02-09
+
+**What was done**:
+- Added `CleanupPartialOutput` method to `EncodeVideoJob` that recursively deletes the output directory on encoding failure
+- Called the cleanup in the catch block of `Handle()`, before sending the failure notification and rethrowing
+- The cleanup is wrapped in its own try-catch to prevent cleanup failures from masking the original encoding error
+
+**The bug**: When video encoding failed (FFmpeg crash, cancellation, disk full, etc.), the partial output directory at `fileMetadata.Path` was left on disk. This directory contains HLS segments (.ts files), playlists (.m3u8), sprite images, subtitle files, and fonts — potentially gigabytes of unusable partial data that accumulates over time.
+
+**Fix**:
+- `EncodeVideoJob.CleanupPartialOutput(string outputPath)` — deletes the output directory recursively if it exists
+- Safe: input file (`InputFile`) is in a different directory from the output path (`fileMetadata.Path = folder.Path + folderName`)
+- Non-throwing: cleanup errors are logged as warnings rather than propagated, so the original exception is preserved
+
+**Files modified**:
+- `src/NoMercy.MediaProcessing/Jobs/MediaJobs/EncodeVideoJob.cs` — added cleanup call in catch block + `CleanupPartialOutput` method
+- `src/NoMercy.MediaProcessing/NoMercy.MediaProcessing.csproj` — added `InternalsVisibleTo` for test project
+- `tests/NoMercy.Tests.MediaProcessing/NoMercy.Tests.MediaProcessing.csproj` — added project reference to `NoMercy.MediaProcessing`, added `xunit.runner.visualstudio` package
+
+**Tests added**: `tests/NoMercy.Tests.MediaProcessing/Jobs/EncodeVideoJobCleanupTests.cs` with 4 tests:
+- **CleanupPartialOutput_RemovesExistingDirectory**: Verifies directory with files and subdirs is fully removed
+- **CleanupPartialOutput_NonExistentDirectory_DoesNotThrow**: Verifies no exception when path doesn't exist
+- **CleanupPartialOutput_RemovesAllNestedContent**: Verifies deep directory tree (segments, playlists, thumbnails) is cleaned
+- **CleanupPartialOutput_EmptyDirectory_RemovesIt**: Verifies empty directory is also removed
+
+**Test results**: All 1,344 tests pass (135 Database + 119 Encoder + 18 MediaProcessing + 135 Repositories + 257 Queue + 418 Providers + 262 Api). Build succeeds with 0 errors.
+

@@ -256,6 +256,8 @@ public class EncodeVideoJob : AbstractEncoderJob
         {
             Logger.Encoder(e, LogEventLevel.Error);
 
+            CleanupPartialOutput(fileMetadata.Path);
+
             Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
             {
                 Id = fileMetadata.Id,
@@ -376,6 +378,22 @@ public class EncodeVideoJob : AbstractEncoderJob
                 .AddCustomArguments(profile.CustomArguments);
 
             container.AddStream(stream);
+        }
+    }
+
+    internal static void CleanupPartialOutput(string outputPath)
+    {
+        try
+        {
+            if (Directory.Exists(outputPath))
+            {
+                Directory.Delete(outputPath, recursive: true);
+                Logger.Encoder($"Cleaned up partial encoding output: {outputPath}");
+            }
+        }
+        catch (Exception cleanupEx)
+        {
+            Logger.Encoder($"Failed to clean up partial output at {outputPath}: {cleanupEx.Message}", LogEventLevel.Warning);
         }
     }
 }
