@@ -1185,3 +1185,37 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 
 **Test results**: All 1,093 tests pass (18 MediaProcessing + 135 Repositories + 257 Queue + 262 Api + 421 Providers). Build succeeds with 0 errors.
 
+---
+
+## HIGH-16 — Fix race condition in worker counter
+
+**Date**: 2026-02-09
+
+**What was done**:
+- Added a dedicated `_workersLock` object to `QueueRunner` to synchronize all access to the `Workers` dictionary and its mutable `workerInstances` lists
+- `SpawnWorker`: Wrapped `Workers[name].workerInstances.Add()` in lock
+- `QueueWorkerCompleted`: Wrapped `ShouldRemoveWorker` check and `Workers[name].workerInstances.Remove()` in lock
+- `UpdateRunningWorkerCounts`: Replaced the non-atomic local counter pattern (`int i = ...; i += 1;`) with locked reads of `Workers[name].workerInstances.Count` and `Workers[name].count` on each loop iteration, ensuring the actual worker count is always checked atomically
+- `Start/Stop/Restart`: Take snapshots of worker instance lists under lock before iterating, preventing concurrent modification exceptions
+- `StartAll/StopAll/RestartAll`: Take snapshots of dictionary keys under lock
+- `SetWorkerCount`: All reads and mutations of `Workers[name]` protected by lock
+- `GetWorkerIndex`: Wrapped `IndexOf` call in lock
+
+**Root cause**: `Workers` dictionary contains `List<QueueWorker>` instances that were being mutated (Add/Remove) and read (Count/IndexOf) from multiple threads without synchronization. The `UpdateRunningWorkerCounts` method used a local `int i` counter that could go stale when another thread spawned or removed workers concurrently, leading to over-spawning or under-spawning workers.
+
+**Files changed**:
+- `src/NoMercy.Queue/QueueRunner.cs` — Added `_workersLock` and lock guards around all `Workers` access points
+- `tests/NoMercy.Tests.Queue/WorkerCountRaceConditionTests.cs` — New test file with 8 tests
+
+**Tests added**: `tests/NoMercy.Tests.Queue/WorkerCountRaceConditionTests.cs` with 8 tests:
+- **QueueRunner_HasWorkersLock**: Verifies `_workersLock` field exists as a static object
+- **QueueRunner_SourceCode_SpawnWorkerUsesLock**: Verifies SpawnWorker locks before list Add
+- **QueueRunner_SourceCode_QueueWorkerCompletedUsesLock**: Verifies event handler locks before list Remove
+- **QueueRunner_SourceCode_UpdateRunningWorkerCountsUsesLock**: Verifies count reads are locked
+- **QueueRunner_SourceCode_NoNonAtomicCounterIncrement**: Verifies old `i += 1` pattern is gone
+- **QueueRunner_SourceCode_GetWorkerIndexUsesLock**: Verifies IndexOf call is locked
+- **QueueRunner_SourceCode_SetWorkerCountUsesLock**: Verifies dictionary mutation is locked
+- **QueueRunner_SourceCode_StartStopUseLockForSnapshot**: Verifies Start/Stop take snapshots under lock
+
+**Test results**: All 1,101 tests pass (18 MediaProcessing + 135 Repositories + 265 Queue + 262 Api + 421 Providers). Build succeeds with 0 errors.
+
