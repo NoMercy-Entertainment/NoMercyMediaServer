@@ -1219,3 +1219,18 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 
 **Test results**: All 1,101 tests pass (18 MediaProcessing + 135 Repositories + 265 Queue + 262 Api + 421 Providers). Build succeeds with 0 errors.
 
+---
+
+## FIX-DI-01 — Fix DI lifetime mismatch: singleton VideoPlaybackService consuming scoped IDbContextFactory
+
+**Date**: 2026-02-09
+
+**What was done**:
+- Fixed `InvalidOperationException`: "Cannot consume scoped service `IDbContextFactory<MediaContext>` from singleton `VideoPlaybackService`"
+- Root cause: `AddDbContextFactory<MediaContext>()` in `ServiceConfiguration.cs` was registered with `ServiceLifetime.Scoped`, but `VideoPlaybackService` is registered as a singleton in `VideoHubServiceExtensions.cs`
+- Fix: Removed the explicit `ServiceLifetime.Scoped` parameter from `AddDbContextFactory<MediaContext>()`, letting it default to `Singleton`
+- `IDbContextFactory<T>` is designed to be a singleton — it creates short-lived `DbContext` instances on demand via `CreateDbContextAsync()`. The scoped `AddDbContext<MediaContext>()` registration (for direct injection into controllers) remains unchanged.
+
+**Files changed**:
+- `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs` (line 268): Removed `, ServiceLifetime.Scoped` from `AddDbContextFactory` call
+
