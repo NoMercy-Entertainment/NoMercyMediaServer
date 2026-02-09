@@ -9,11 +9,12 @@ namespace NoMercy.Queue;
 
 public class JobQueue(QueueContext context, byte maxAttempts = 3)
 {
+    private static readonly object _writeLock = new();
     private QueueContext Context { get; } = context;
 
     public void Enqueue(QueueJob queueJob)
     {
-        lock (Context)
+        lock (_writeLock)
         {
             bool exists = Exists(queueJob.Payload);
             if (exists) return;
@@ -26,7 +27,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
 
     public QueueJob? Dequeue()
     {
-        lock (Context)
+        lock (_writeLock)
         {
             QueueJob? job = Context.QueueJobs.FirstOrDefault();
             if (job == null) return job;
@@ -53,7 +54,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
     {
         try
         {
-            lock (Context)
+            lock (_writeLock)
             {
                 QueueJob? job = ReserveJobQuery(Context, maxAttempts, name, currentJobId);
 
@@ -88,7 +89,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
     {
         try
         {
-            lock (Context)
+            lock (_writeLock)
             {
                 queueJob.ReservedAt = null;
 
@@ -130,7 +131,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
     {
         try
         {
-            lock (Context)
+            lock (_writeLock)
             {
                 Context.QueueJobs.Remove(queueJob);
 
@@ -159,7 +160,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
     {
         try
         {
-            lock (Context)
+            lock (_writeLock)
             {
                 FailedJob? failedJob = Context.FailedJobs.Find(failedJobId);
                 if (failedJob == null) return;
@@ -193,7 +194,7 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
 
     public void RetryFailedJobs(long? failedJobId = null)
     {
-        lock (Context)
+        lock (_writeLock)
         {
             IQueryable<FailedJob> failedJobsQuery = Context.FailedJobs;
 

@@ -1001,3 +1001,26 @@
 
 **Test results**: All 1,048 tests pass (135 Repositories + 243 Queue + 408 Providers + 262 Api). Build succeeds with 0 errors.
 
+---
+
+## CRIT-06 — Fix `lock(Context)` in JobQueue
+
+**Date**: 2026-02-09
+
+**What was done**:
+- Replaced all 7 `lock(Context)` calls in `src/NoMercy.Queue/JobQueue.cs` with `lock(_writeLock)` using a dedicated `private static readonly object _writeLock = new()` field
+- The lock serialization behavior is preserved — all database writes are still serialized through the lock, preventing SQLite BUSY errors
+- The lock object is now a dedicated object instead of the DbContext, making intent clear and avoiding the anti-pattern of locking on a non-lock-designed object
+
+**Files changed**:
+- `src/NoMercy.Queue/JobQueue.cs` — added `_writeLock` field, replaced all `lock(Context)` with `lock(_writeLock)`
+- `tests/NoMercy.Tests.Queue/WriteLockTests.cs` — 4 new tests
+
+**Tests added** (4 tests in `WriteLockTests`):
+- `WriteLock_IsNotDbContextInstance` — reflection test confirming the lock object is NOT the DbContext
+- `WriteLock_IsStaticAndSharedAcrossInstances` — verifies the lock is static and shared across JobQueue instances
+- `ConcurrentEnqueue_AllJobsSucceed` — 20 concurrent enqueue operations from different threads all succeed
+- `ConcurrentEnqueueAndDequeue_MaintainsDataIntegrity` — concurrent enqueue + dequeue operations maintain correct job counts
+
+**Test results**: All 1,052 tests pass (135 Repositories + 247 Queue + 408 Providers + 262 Api). Build succeeds with 0 errors.
+
