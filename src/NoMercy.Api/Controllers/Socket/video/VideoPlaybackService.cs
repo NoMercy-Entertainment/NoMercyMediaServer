@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
@@ -11,14 +12,14 @@ namespace NoMercy.Api.Controllers.Socket.video;
 public class VideoPlaybackService
 {
     private readonly VideoPlayerStateManager _stateManager;
-    private readonly IDbContextFactory<MediaContext> _contextFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
     private static int _playerStateEventId;
     private static int PlayerStateEventId => ++_playerStateEventId;
 
-    public VideoPlaybackService(VideoPlayerStateManager stateManager, IDbContextFactory<MediaContext> contextFactory)
+    public VideoPlaybackService(VideoPlayerStateManager stateManager, IServiceScopeFactory scopeFactory)
     {
         _stateManager = stateManager;
-        _contextFactory = contextFactory;
+        _scopeFactory = scopeFactory;
     }
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
@@ -176,7 +177,9 @@ public class VideoPlaybackService
                 : null
         };
 
-        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
+        await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
         UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(userdata);
         
         query = state.CurrentItem.PlaylistType switch

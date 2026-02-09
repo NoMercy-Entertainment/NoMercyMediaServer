@@ -1221,16 +1221,23 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 
 ---
 
-## FIX-DI-01 — Fix DI lifetime mismatch: singleton VideoPlaybackService consuming scoped IDbContextFactory
+## FIX-DI-01 — Fix DI lifetime mismatch: singleton services consuming scoped IDbContextFactory
 
 **Date**: 2026-02-09
 
 **What was done**:
-- Fixed `InvalidOperationException`: "Cannot consume scoped service `IDbContextFactory<MediaContext>` from singleton `VideoPlaybackService`"
-- Root cause: `AddDbContextFactory<MediaContext>()` in `ServiceConfiguration.cs` was registered with `ServiceLifetime.Scoped`, but `VideoPlaybackService` is registered as a singleton in `VideoHubServiceExtensions.cs`
-- Fix: Removed the explicit `ServiceLifetime.Scoped` parameter from `AddDbContextFactory<MediaContext>()`, letting it default to `Singleton`
-- `IDbContextFactory<T>` is designed to be a singleton — it creates short-lived `DbContext` instances on demand via `CreateDbContextAsync()`. The scoped `AddDbContext<MediaContext>()` registration (for direct injection into controllers) remains unchanged.
+- Fixed `InvalidOperationException`: "Cannot consume scoped service `IDbContextFactory<MediaContext>` from singleton `VideoPlaybackService`" (and same for `VideoPlaybackCommandHandler`)
+- Root cause: `IDbContextFactory<MediaContext>` is registered as scoped (required because `AddDbContext` and `AddDbContextFactory` share `DbContextOptions<MediaContext>`), but `VideoPlaybackService` and `VideoPlaybackCommandHandler` are singletons that injected the factory directly
+- Fix: Changed both singleton services to inject `IServiceScopeFactory` instead of `IDbContextFactory<MediaContext>`, and create a scope on-demand when DB access is needed
+- Reverted initial attempt that changed factory lifetime to singleton (caused cascading error with scoped `DbContextOptions`)
+- `ServiceConfiguration.cs` factory registration kept as `ServiceLifetime.Scoped` (correct for coexistence with `AddDbContext`)
 
 **Files changed**:
-- `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs` (line 268): Removed `, ServiceLifetime.Scoped` from `AddDbContextFactory` call
+- `src/NoMercy.Api/Controllers/Socket/video/VideoPlaybackService.cs`: Replaced `IDbContextFactory<MediaContext>` constructor param with `IServiceScopeFactory`; `StoreWatchProgression()` now creates a scope to resolve the factory
+- `src/NoMercy.Api/Controllers/Socket/video/VideoPlaybackCommandHandler.cs`: Replaced `IDbContextFactory<MediaContext>` primary constructor param with `IServiceScopeFactory`; `HandleVolume()` and `SetPlaybackPreference()` now create scopes to resolve the factory
+- `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs`: Restored `ServiceLifetime.Scoped` on `AddDbContextFactory`
+
+**Note — pre-existing patterns not changed (not causing startup crash)**:
+- `MusicPlaybackService`: Creates `new MusicRepository(new())` bypassing DI entirely (long-lived context, resource leak)
+- `JobDispatcher`/`JobQueue`: Uses `new QueueContext()` directly; `JobQueue` is registered both scoped and singleton (duplicate)
 

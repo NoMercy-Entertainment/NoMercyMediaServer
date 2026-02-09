@@ -265,7 +265,7 @@ public static class ServiceConfiguration
         {
             optionsAction.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
-        });
+        }, ServiceLifetime.Scoped);
 
         // Add Repositories
         services.AddScoped<HomeRepository>();

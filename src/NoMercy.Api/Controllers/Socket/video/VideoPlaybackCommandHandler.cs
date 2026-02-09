@@ -1,5 +1,6 @@
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database;
@@ -10,7 +11,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Api.Controllers.Socket.video;
 
-public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackService, IDbContextFactory<MediaContext> contextFactory)
+public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackService, IServiceScopeFactory scopeFactory)
 {
     public async Task HandleCommand(User user, string command, object? data, VideoPlayerState state, Client? device)
     {
@@ -256,6 +257,8 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
         {
             device.VolumePercent = volume;
 
+            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+            IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
             await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
             await mediaContext.Devices
                 .Where(d => d.DeviceId == device.DeviceId)
@@ -520,6 +523,8 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                 : null
         };
         
+        await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
 
         UpsertCommandBuilder<PlaybackPreference> query = mediaContext.PlaybackPreferences
