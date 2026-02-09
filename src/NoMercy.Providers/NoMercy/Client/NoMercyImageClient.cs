@@ -1,5 +1,6 @@
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using Serilog.Events;
 using SixLabors.ImageSharp;
@@ -28,11 +29,7 @@ public abstract class NoMercyImageClient : TmdbBaseClient
 
                 if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
 
-                using HttpClient httpClient = new();
-                httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-                httpClient.BaseAddress = new("https://image.nomercy.tv/");
-                httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
-                httpClient.Timeout = TimeSpan.FromMinutes(5);
+                HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.NoMercyImage);
 
                 string url = path.StartsWith("http") ? path : $"original{path}";
 

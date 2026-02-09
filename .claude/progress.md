@@ -1024,3 +1024,38 @@
 
 **Test results**: All 1,052 tests pass (135 Repositories + 247 Queue + 408 Providers + 262 Api). Build succeeds with 0 errors.
 
+## CRIT-07 — Implement HttpClientFactory for all providers
+
+**Date**: 2026-02-09
+
+**Problem**: Every provider base client created `new HttpClient()` per instance, causing socket exhaustion under load. Static image download methods also created new HttpClient per call. The `OpenSubtitlesBaseClient.Dispose()` threw `NotImplementedException`.
+
+**Solution**: Introduced `IHttpClientFactory` via a static `HttpClientProvider` bridge (since providers are not DI-managed). Created named client registrations for all 17 providers.
+
+**Files created**:
+- `src/NoMercy.Providers/Helpers/HttpClientProvider.cs` — Static bridge: `Initialize(IHttpClientFactory)` + `CreateClient(name)` with `new HttpClient()` fallback
+- `src/NoMercy.Providers/Helpers/HttpClientNames.cs` — 17 named client constants
+- `tests/NoMercy.Tests.Providers/Helpers/HttpClientProviderTests.cs` — 9 tests: client configs, thread safety, concurrent access, unique names, socket exhaustion prevention
+- `tests/NoMercy.Tests.Providers/Helpers/ProviderDisposalTests.cs` — Verifies OpenSubtitlesBaseClient.Dispose() no longer throws
+
+**Files modified**:
+- `Directory.Packages.props` — Added `Microsoft.Extensions.Http 9.0.10`
+- `src/NoMercy.Providers/NoMercy.Providers.csproj` — Added `Microsoft.Extensions.Http` + `InternalsVisibleTo` for test project
+- `tests/NoMercy.Tests.Providers/NoMercy.Tests.Providers.csproj` — Added `Microsoft.Extensions.Http`
+- `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs` — Added `ConfigureHttpClients()` registering 17 named clients with base URLs, headers, timeouts
+- `src/NoMercy.Server/AppConfig/ApplicationConfiguration.cs` — Initialize `HttpClientProvider` from DI
+- 11 provider base clients updated to use `HttpClientProvider.CreateClient()` with `_client.BaseAddress ??= _baseUrl` fallback:
+  - `TmdbBaseClient`, `TvdbBaseClient`, `MusicBrainzBaseClient`, `AcoustIdBaseClient`, `OpenSubtitlesBaseClient`, `FanArtBaseClient`, `CoverArtBaseClient`, `LrclibBaseClient`, `MusixMatchBaseClient`, `TadbBaseClient`, `BaseClient` (Helpers)
+- 5 static image clients updated: `TmdbImageClient`, `FanArtImageClient`, `CoverArtCoverArtClient`, `NoMercyImageClient`, `KitsuIO`
+- `TmdbSeasonClient` — Fixed `new Dispose()` hiding base class
+- All provider `Dispose()` methods changed from `_client.Dispose()` to `GC.SuppressFinalize(this)` (factory manages handler lifecycle)
+- `OpenSubtitlesBaseClient.Dispose()` — Fixed `throw new NotImplementedException()` → `GC.SuppressFinalize(this)`
+
+**Key design decisions**:
+- Static `HttpClientProvider` bridge because providers are instantiated with `new`, not via DI
+- `_client.BaseAddress ??= _baseUrl` in all constructors: no-op when factory provides BaseAddress, sets it when fallback `new HttpClient()` is used (test environment)
+- `HttpClientProvider.Reset()` (internal) for test cleanup to prevent cross-test factory state pollution
+- `[Collection("HttpClientProvider")]` on test classes that modify static factory state to serialize execution
+
+**Test results**: All 1,308 tests pass (135 Database + 111 Encoder + 135 Repositories + 247 Queue + 418 Providers + 262 Api). Build succeeds with 0 errors.
+

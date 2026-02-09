@@ -14,15 +14,12 @@ public class OpenSubtitlesBaseClient : IDisposable
 
     internal static string? AccessToken { get; set; } = null;
 
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client;
 
     protected OpenSubtitlesBaseClient()
     {
-        _client.BaseAddress = _baseUrl;
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        _client.Timeout = TimeSpan.FromMinutes(5);
+        _client = HttpClientProvider.CreateClient(HttpClientNames.OpenSubtitles);
+        _client.BaseAddress ??= _baseUrl;
     }
 
     private static Helpers.Queue? _queue;
@@ -59,6 +56,6 @@ public class OpenSubtitlesBaseClient : IDisposable
 
     public void Dispose()
     {
-        throw new NotImplementedException();
+        GC.SuppressFinalize(this);
     }
 }

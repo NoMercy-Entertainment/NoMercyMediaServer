@@ -17,42 +17,25 @@ public class BaseClient : IDisposable
     protected virtual int Interval => 1000;
     protected virtual Dictionary<string, string?> QueryParams => new();
     protected virtual string UserAgent => Config.UserAgent;
-    private static BaseClient? _instance;
 
     protected BaseClient()
     {
-        _instance ??= this;
-        Client = new()
-        {
-            BaseAddress = _instance.BaseUrl,
-            DefaultRequestHeaders =
-            {
-                { "Accept", "application/json" },
-                { "User-Agent", _instance.UserAgent }
-            },
-            Timeout = TimeSpan.FromMinutes(5)
-        };
+        Client = HttpClientProvider.CreateClient(HttpClientNames.General);
+        Client.BaseAddress = BaseUrl;
+        Client.Timeout = TimeSpan.FromMinutes(5);
 
-        foreach ((string? key, string? value) in _instance.QueryParams)
+        foreach ((string? key, string? value) in QueryParams)
             Client.DefaultRequestHeaders.Add(key, value);
     }
 
     protected BaseClient(Guid id)
     {
         Id = id;
-        _instance ??= this;
-        Client = new()
-        {
-            BaseAddress = _instance.BaseUrl,
-            DefaultRequestHeaders =
-            {
-                { "Accept", "application/json" },
-                { "User-Agent", _instance.UserAgent }
-            },
-            Timeout = TimeSpan.FromMinutes(5)
-        };
+        Client = HttpClientProvider.CreateClient(HttpClientNames.General);
+        Client.BaseAddress = BaseUrl;
+        Client.Timeout = TimeSpan.FromMinutes(5);
 
-        foreach ((string? key, string? value) in _instance.QueryParams)
+        foreach ((string? key, string? value) in QueryParams)
             Client.DefaultRequestHeaders.Add(key, value);
     }
 
@@ -62,8 +45,8 @@ public class BaseClient : IDisposable
     {
         return _queue ??= new(new()
         {
-            Concurrent = _instance?.ConcurrentRequests ?? 1,
-            Interval = _instance?.Interval ?? 1000,
+            Concurrent = 1,
+            Interval = 1000,
             Start = true
         });
     }
@@ -92,6 +75,6 @@ public class BaseClient : IDisposable
 
     public void Dispose()
     {
-        Client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

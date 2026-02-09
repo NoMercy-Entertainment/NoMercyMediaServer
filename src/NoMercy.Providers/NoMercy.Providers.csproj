@@ -18,6 +18,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="NoMercy.Tests.Providers" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Compile Remove="Database\**"/>
         <EmbeddedResource Remove="Database\**"/>
         <None Remove="Database\**"/>
@@ -31,6 +35,7 @@
         <PackageReference Include="AcoustID.NET"/>
         <PackageReference Include="Castle.Core"/>
         <PackageReference Include="ExtendedNumerics.BigRational" />
+        <PackageReference Include="Microsoft.Extensions.Http" />
         <PackageReference Include="MusixmatchClientLib"/>
         <PackageReference Include="Newtonsoft.Json" />
     </ItemGroup>

@@ -31,6 +31,7 @@ using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercy.Queue;
 using NoMercy.Queue.Extensions;
 using NoMercy.Queue.Jobs;
@@ -48,6 +49,7 @@ public static class ServiceConfiguration
     public static void ConfigureServices(IServiceCollection services)
     {
         ConfigureKestrel(services);
+        ConfigureHttpClients(services);
         ConfigureCoreServices(services);
         ConfigureLogging(services);
         ConfigureAuth(services);
@@ -59,7 +61,145 @@ public static class ServiceConfiguration
     private static void ConfigureKestrel(IServiceCollection services)
     {
     }
-    
+
+    private static void ConfigureHttpClients(IServiceCollection services)
+    {
+        TimeSpan defaultTimeout = TimeSpan.FromMinutes(5);
+
+        services.AddHttpClient(HttpClientNames.Tmdb, client =>
+        {
+            client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.Timeout = defaultTimeout;
+        });
+
+        services.AddHttpClient(HttpClientNames.TmdbImage, client =>
+        {
+            client.BaseAddress = new Uri("https://image.tmdb.org/t/p/");
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.DefaultRequestHeaders.Add("Accept", "image/*");
+            client.Timeout = defaultTimeout;
+        });
+
+        services.AddHttpClient(HttpClientNames.Tvdb, client =>
+        {
+            client.BaseAddress = new Uri("https://api4.thetvdb.com/v4/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.Timeout = defaultTimeout;
+        });
+
+        services.AddHttpClient(HttpClientNames.TvdbLogin, client =>
+        {
+            client.BaseAddress = new Uri("https://api4.thetvdb.com/v4/");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        });
+
+        services.AddHttpClient(HttpClientNames.MusicBrainz, client =>
+        {
+            client.BaseAddress = new Uri("https://musicbrainz.org/ws/2/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+        });
+
+        services.AddHttpClient(HttpClientNames.AcoustId, client =>
+        {
+            client.BaseAddress = new Uri("https://api.acoustid.org/v2/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        });
+
+        services.AddHttpClient(HttpClientNames.OpenSubtitles, client =>
+        {
+            client.BaseAddress = new Uri("https://api.opensubtitles.org/xml-rpc");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.Timeout = defaultTimeout;
+        });
+
+        services.AddHttpClient(HttpClientNames.FanArt, client =>
+        {
+            client.BaseAddress = new Uri("http://webservice.fanart.tv/v3/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        });
+
+        services.AddHttpClient(HttpClientNames.FanArtImage, client =>
+        {
+            client.BaseAddress = new Uri("https://assets.fanart.tv");
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.DefaultRequestHeaders.Add("Accept", "image/*");
+        });
+
+        services.AddHttpClient(HttpClientNames.CoverArt, client =>
+        {
+            client.BaseAddress = new Uri("https://coverartarchive.org/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        });
+
+        services.AddHttpClient(HttpClientNames.CoverArtImage, client =>
+        {
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.DefaultRequestHeaders.Add("Accept", "image/*");
+        });
+
+        services.AddHttpClient(HttpClientNames.Lrclib, client =>
+        {
+            client.BaseAddress = new Uri("https://lrclib.net/api/get");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+        });
+
+        services.AddHttpClient(HttpClientNames.MusixMatch, client =>
+        {
+            client.BaseAddress = new Uri("https://apic-desktop.musixmatch.com/ws/1.1/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.DefaultRequestHeaders.Add("authority", "apic-desktop.musixmatch.com");
+            client.DefaultRequestHeaders.Add("cookie", "x-mxm-token-guid=");
+        });
+
+        services.AddHttpClient(HttpClientNames.Tadb, client =>
+        {
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.Timeout = defaultTimeout;
+        });
+
+        services.AddHttpClient(HttpClientNames.NoMercyImage, client =>
+        {
+            client.BaseAddress = new Uri("https://image.nomercy.tv/");
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.DefaultRequestHeaders.Add("Accept", "image/*");
+            client.Timeout = defaultTimeout;
+        });
+
+        services.AddHttpClient(HttpClientNames.KitsuIo, client =>
+        {
+            client.BaseAddress = new Uri("https://kitsu.io/api/edge/");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+        });
+
+        services.AddHttpClient(HttpClientNames.General, client =>
+        {
+            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            client.Timeout = defaultTimeout;
+        });
+    }
+
     private static void ConfigureCronJobs(IServiceCollection services)
     {
         services.AddScoped<CertificateRenewalJob>();

@@ -17,13 +17,8 @@ public class FanArtBaseClient : IDisposable
 
     protected FanArtBaseClient()
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _client = HttpClientProvider.CreateClient(HttpClientNames.FanArt);
+        _client.BaseAddress ??= _baseUrl;
         _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtApiKey);
         if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
         {
@@ -33,13 +28,8 @@ public class FanArtBaseClient : IDisposable
 
     protected FanArtBaseClient(Guid id)
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _client = HttpClientProvider.CreateClient(HttpClientNames.FanArt);
+        _client.BaseAddress ??= _baseUrl;
         _client.DefaultRequestHeaders.Add("api-key", ApiInfo.FanArtApiKey);
         if (!string.IsNullOrEmpty(ApiInfo.FanArtClientKey))
         {
@@ -77,6 +67,6 @@ public class FanArtBaseClient : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

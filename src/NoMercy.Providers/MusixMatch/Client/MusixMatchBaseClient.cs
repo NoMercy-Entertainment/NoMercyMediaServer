@@ -16,31 +16,14 @@ public class MusixMatchBaseClient : IDisposable
 
     protected MusixMatchBaseClient()
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-
-        _client.DefaultRequestHeaders.Add("authority", "apic-desktop.musixmatch.com");
-        _client.DefaultRequestHeaders.Add("cookie", "x-mxm-token-guid=");
+        _client = HttpClientProvider.CreateClient(HttpClientNames.MusixMatch);
+        _client.BaseAddress ??= _baseUrl;
     }
 
     protected MusixMatchBaseClient(Guid id)
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-
-        _client.DefaultRequestHeaders.Add("authority", "apic-desktop.musixmatch.com");
-        _client.DefaultRequestHeaders.Add("cookie", "x-mxm-token-guid=");
-
+        _client = HttpClientProvider.CreateClient(HttpClientNames.MusixMatch);
+        _client.BaseAddress ??= _baseUrl;
         Id = id;
     }
 
@@ -79,6 +62,6 @@ public class MusixMatchBaseClient : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

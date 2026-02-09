@@ -22,31 +22,18 @@ public class TvdbBaseClient : IDisposable
     {
         Login().Wait();
 
-
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+        _client = HttpClientProvider.CreateClient(HttpClientNames.Tvdb);
+        _client.BaseAddress ??= _baseUrl;
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {Token?.Data.Token}");
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        _client.Timeout = TimeSpan.FromMinutes(5);
     }
 
     protected TvdbBaseClient(int id)
     {
         Login().Wait();
 
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+        _client = HttpClientProvider.CreateClient(HttpClientNames.Tvdb);
+        _client.BaseAddress ??= _baseUrl;
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {Token?.Data.Token}");
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        _client.Timeout = TimeSpan.FromMinutes(5);
         Id = id;
     }
 
@@ -92,10 +79,8 @@ public class TvdbBaseClient : IDisposable
 
     private async Task<TvdbLoginResponse?> GetToken()
     {
-        HttpClient client = new();
-        client.BaseAddress = _baseUrl;
-        client.DefaultRequestHeaders.Add("Accept", "application/json");
-        client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.TvdbLogin);
+        client.BaseAddress ??= _baseUrl;
 
         JsonContent content = JsonContent.Create(new { apikey = ApiInfo.TvdbKey });
 
@@ -133,6 +118,6 @@ public class TvdbBaseClient : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item CRIT-07
+**Next up**: Phase 1-2, item CRIT-08
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -87,7 +87,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] CRIT-04 — Fix `.Wait()` / `.Result` deadlock patterns
 - [x] CRIT-05 — Fix static ClaimsPrincipleExtensions (not DI-friendly)
 - [x] CRIT-06 — Fix `lock(Context)` in JobQueue
-- [ ] CRIT-07 — Implement HttpClientFactory for all providers
+- [x] CRIT-07 — Implement HttpClientFactory for all providers
 - [ ] CRIT-08 — Fix fire-and-forget tasks in QueueRunner
 - [ ] CRIT-11 — Fix FFmpeg process resource leak
 - [ ] HIGH-09 — Clean up temp files on encoding failure

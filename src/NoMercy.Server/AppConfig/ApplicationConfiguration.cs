@@ -9,6 +9,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.Helpers;
 using NoMercy.Queue.Jobs;
 using NoMercy.Queue.Workers;
 
@@ -18,6 +19,8 @@ public static class ApplicationConfiguration
 {
     public static void ConfigureApp(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
     {
+        HttpClientProvider.Initialize(app.ApplicationServices.GetRequiredService<IHttpClientFactory>());
+
         ConfigureLocalization(app);
         ConfigureMiddleware(app);
         ConfigureStaticFiles(app);

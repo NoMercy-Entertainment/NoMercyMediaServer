@@ -1,5 +1,6 @@
 ﻿using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Models;
+using NoMercy.Providers.Helpers;
 using NoMercy.Setup;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -36,10 +37,7 @@ public class FanArtImageClient : FanArtBaseClient
 
         if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
 
-        HttpClient httpClient = new();
-        httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
-        httpClient.BaseAddress = new("https://assets.fanart.tv");
+        HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.FanArtImage);
 
         HttpResponseMessage response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return null;
