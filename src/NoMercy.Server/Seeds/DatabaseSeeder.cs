@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
+using NoMercy.Helpers;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -34,7 +35,9 @@ public static class DatabaseSeeder
             await LibrariesSeed.Init(mediaDbContext);
             await EncoderProfilesSeed.Init(mediaDbContext);
             await UsersSeed.Init(mediaDbContext);
-            
+
+            ClaimsPrincipleExtensions.Initialize(mediaDbContext);
+
             if (ShouldSeedMarvel)
             {
                 Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));

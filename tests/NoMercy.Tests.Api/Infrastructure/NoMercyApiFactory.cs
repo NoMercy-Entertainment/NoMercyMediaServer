@@ -108,8 +108,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         SeedMediaData(mediaContext);
 
-        ClaimsPrincipleExtensions.Users.Clear();
-        ClaimsPrincipleExtensions.Users.AddRange(mediaContext.Users.ToList());
+        ClaimsPrincipleExtensions.Initialize(mediaContext);
 
         string queueDbPath = Path.Combine(AppFiles.DataPath, "queue.db");
         if (File.Exists(queueDbPath))

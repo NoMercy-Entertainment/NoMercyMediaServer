@@ -7,15 +7,34 @@ namespace NoMercy.Helpers;
 
 public static class ClaimsPrincipleExtensions
 {
-    private static readonly MediaContext MediaContext = new();
+    public static readonly List<User> Users = [];
 
-    public static readonly List<User> Users = MediaContext.Users.ToList();
-    
-    public static readonly List<Ulid> FolderIds = MediaContext.Folders.Select(x => x.Id).ToList();
+    public static readonly List<Ulid> FolderIds = [];
 
-    private static readonly User Owner = Users.FirstOrDefault(u => u.Owner) ?? throw new InvalidOperationException();
+    private static User? Owner => Users.FirstOrDefault(u => u.Owner);
     private static List<User> ManagerUsers => Users.Where(u => u.Manage).ToList();
     private static List<User> AllowedUsers => Users.Where(u => u.Allowed).ToList();
+
+    public static void Initialize(MediaContext context)
+    {
+        Users.Clear();
+        Users.AddRange(context.Users.ToList());
+
+        FolderIds.Clear();
+        FolderIds.AddRange(context.Folders.Select(x => x.Id).ToList());
+    }
+
+    public static void RefreshUsers(MediaContext context)
+    {
+        Users.Clear();
+        Users.AddRange(context.Users.ToList());
+    }
+
+    public static void RefreshFolderIds(MediaContext context)
+    {
+        FolderIds.Clear();
+        FolderIds.AddRange(context.Folders.Select(x => x.Id).ToList());
+    }
 
     public static Guid UserId(this ClaimsPrincipal? principal)
     {
@@ -65,7 +84,7 @@ public static class ClaimsPrincipleExtensions
 
     public static bool IsOwner(this ClaimsPrincipal? principal)
     {
-        return principal?.UserId() == Owner.Id;
+        return Owner is not null && principal?.UserId() == Owner.Id;
     }
 
     public static bool IsModerator(this ClaimsPrincipal? principal)

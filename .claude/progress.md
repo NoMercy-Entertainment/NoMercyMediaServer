@@ -965,3 +965,39 @@
 
 **Test results**: All 1,040 tests pass (127 Repositories + 243 Queue + 408 Providers + 262 Api). Build succeeds with 0 errors.
 
+---
+
+## CRIT-05 — Fix static ClaimsPrincipleExtensions (not DI-friendly)
+
+**Date**: 2026-02-08
+
+**What was done**:
+- Removed the static `MediaContext` field from `ClaimsPrincipleExtensions` that was created via `new MediaContext()` and never disposed — this leaked a DbContext for the entire application lifetime
+- Removed the static initializers that froze `Users` and `FolderIds` at startup (loaded once, never refreshed)
+- Changed `Users` and `FolderIds` to empty collections initialized via new `Initialize(MediaContext)` method
+- Changed `Owner` from a static readonly field (throwing `InvalidOperationException` if no owner exists at class load time) to a computed property that dynamically finds the owner from the current `Users` list
+- Added `Initialize(MediaContext)` method — loads both Users and FolderIds from a provided context
+- Added `RefreshUsers(MediaContext)` and `RefreshFolderIds(MediaContext)` methods for targeted refresh
+- Updated `IsOwner()` to handle null `Owner` gracefully (returns false instead of throwing)
+- Called `ClaimsPrincipleExtensions.Initialize(mediaDbContext)` in `DatabaseSeeder.Run()` after user seeding completes — this is the earliest point where a MediaContext with seeded data is available
+- Updated `NoMercyApiFactory.cs` test infrastructure to use `Initialize(mediaContext)` instead of manual `Users.Clear()` + `Users.AddRange()`
+
+**Files changed**:
+- `src/NoMercy.Helpers/ClaimsPrincipleExtensions.cs` — removed static MediaContext, added Initialize/Refresh methods
+- `src/NoMercy.Server/Seeds/DatabaseSeeder.cs` — added Initialize call after seeding
+- `tests/NoMercy.Tests.Api/Infrastructure/NoMercyApiFactory.cs` — use Initialize instead of manual list manipulation
+- `tests/NoMercy.Tests.Repositories/NoMercy.Tests.Repositories.csproj` — added NoMercy.Helpers reference
+- `tests/NoMercy.Tests.Repositories/ClaimsPrincipleExtensionsTests.cs` — 8 new tests
+
+**Tests added** (8 tests in `ClaimsPrincipleExtensionsTests`):
+- `Initialize_LoadsUsersFromContext` — verifies users are loaded from database
+- `Initialize_LoadsFolderIdsFromContext` — verifies folder IDs are loaded from database
+- `NewUserCreatedAfterStartup_IsAccessibleViaAddUser` — verifies new users can be added after initialization
+- `DeletedUser_IsRemovedFromList` — verifies user removal works
+- `RefreshUsers_ReloadsFromDatabase` — verifies users added to DB are visible after refresh
+- `UpdateUser_ReplacesExistingUserInList` — verifies user update replaces existing entry
+- `Initialize_ClearsPreviousData` — verifies stale data is cleared on re-initialization
+- `NoStaticMediaContext_FieldDoesNotExist` — reflection test confirming static MediaContext field was removed
+
+**Test results**: All 1,048 tests pass (135 Repositories + 243 Queue + 408 Providers + 262 Api). Build succeeds with 0 errors.
+
