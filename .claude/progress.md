@@ -1160,3 +1160,28 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 
 **Test results**: All 1,344 tests pass (135 Database + 119 Encoder + 18 MediaProcessing + 135 Repositories + 257 Queue + 418 Providers + 262 Api). Build succeeds with 0 errors.
 
+---
+
+## HIGH-10 — Fix async void in queue processor
+
+**Date**: 2026-02-09
+
+**What was done**:
+- Fixed `async void RunTasks()` in `src/NoMercy.Providers/Helpers/Queue.cs:51` to add proper exception handling
+- The method is intentionally `async void` (fire-and-forget background loop), so the return type was kept
+- Added structured exception handling:
+  - `OperationCanceledException` → `break` for graceful shutdown
+  - General `Exception` → logged via `Logger.App()` with error level + 1-second back-off delay to prevent tight error loops
+- Previously, exceptions were silently swallowed with an empty catch block (`catch (Exception) { // }`)
+
+**Files changed**:
+- `src/NoMercy.Providers/Helpers/Queue.cs` — Added exception logging and back-off in `RunTasks()`
+- `tests/NoMercy.Tests.Providers/Helpers/QueueProcessorTests.cs` — New test file with 3 tests
+
+**Tests added**: `tests/NoMercy.Tests.Providers/Helpers/QueueProcessorTests.cs` with 3 tests:
+- **Queue_ContinuesProcessing_AfterTransientError**: Verifies queue still processes subsequent tasks after one task throws
+- **Queue_RejectsFailedTasks_WithErrorEvent**: Verifies failed tasks fire the Reject event with the correct exception
+- **Queue_ProcessesMultipleTasks_InOrder**: Verifies tasks execute sequentially and return correct results
+
+**Test results**: All 1,093 tests pass (18 MediaProcessing + 135 Repositories + 257 Queue + 262 Api + 421 Providers). Build succeeds with 0 errors.
+

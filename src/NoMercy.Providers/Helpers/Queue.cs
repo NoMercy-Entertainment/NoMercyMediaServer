@@ -55,9 +55,14 @@ public class Queue(QueueOptions options)
             {
                 await Dequeue();
             }
-            catch (Exception)
+            catch (OperationCanceledException)
             {
-                //
+                break;
+            }
+            catch (Exception ex)
+            {
+                Logger.App($"Queue processor error: {ex.Message}", LogEventLevel.Error);
+                await Task.Delay(1000);
             }
     }
 
