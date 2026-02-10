@@ -2008,3 +2008,25 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   1. `ProductionSignalR_DoesNotEnableDetailedErrors` — resolves `IOptions<HubOptions>` from the DI container (which runs without `--dev` flag) and asserts `EnableDetailedErrors` is false
 
 **Test results**: Build succeeds with 0 errors. New test passes. All 666 non-API tests pass (Repositories 208, MediaProcessing 28, Database 143, Queue 287). Pre-existing 12 API test failures are unchanged (verified by stashing changes).
+
+---
+
+## HIGH-14 — Set Kestrel limits (currently unlimited)
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Changed `src/NoMercy.Networking/Certificate.cs:22-25` from unlimited (`null`) Kestrel limits to generous finite values appropriate for a media server:
+  - `MaxRequestBodySize = 100L * 1024 * 1024 * 1024` (100GB — supports 4K remux uploads)
+  - `MaxConcurrentConnections = 1000` (many streaming clients)
+  - `MaxConcurrentUpgradedConnections = 500` (WebSocket/SignalR limit)
+  - `MaxRequestBufferSize = null` kept as-is (Kestrel manages adaptively)
+- Also removed duplicate `options.AddServerHeader = false;` line
+- Created `tests/NoMercy.Tests.Networking/KestrelLimitsTests.cs` with 5 unit tests:
+  1. `MaxRequestBodySize_IsFinite` — verifies 100GB limit is set instead of null
+  2. `MaxConcurrentConnections_IsFinite` — verifies 1000 connection limit
+  3. `MaxConcurrentUpgradedConnections_IsFinite` — verifies 500 upgraded connection limit
+  4. `MaxRequestBufferSize_IsAdaptive` — verifies null (adaptive) is intentional
+  5. `ServerHeader_IsDisabled` — verifies AddServerHeader is false
+
+**Test results**: Build succeeds with 0 errors. All 5 new tests pass (10 total in Networking). All non-API tests pass (Networking 10, Repositories 208, MediaProcessing 28, Database 143, Encoder 147, Queue 287, Providers 421). Pre-existing 12 API test failures are unchanged (verified by stashing changes).

@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item HIGH-14
+**Next up**: Phase 1-2, item MED-07
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -119,7 +119,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] HIGH-03 — Remove EnableSensitiveDataLogging in production
 - [x] HIGH-06 — Fix middleware ordering issues
 - [x] HIGH-07 — Fix SignalR detailed errors in production
-- [ ] HIGH-14 — Set Kestrel limits (currently unlimited)
+- [x] HIGH-14 — Set Kestrel limits (currently unlimited)
 - [ ] MED-07 — Reduce SignalR message limit from 100MB
 - [ ] MED-17 — Remove hardcoded configuration in static properties
 - [ ] MED-18 — Fix CORS configuration

@@ -19,11 +19,10 @@ public static class Certificate
             listenOptions.UseHttps(HttpsConnectionAdapterOptions()));
         
         options.AddServerHeader = false;
-        options.Limits.MaxRequestBodySize = null;
-        options.Limits.MaxRequestBufferSize = null;
-        options.Limits.MaxConcurrentConnections = null;
-        options.Limits.MaxConcurrentUpgradedConnections = null;
-        options.AddServerHeader = false;
+        options.Limits.MaxRequestBodySize = 100L * 1024 * 1024 * 1024; // 100GB — 4K remux support
+        options.Limits.MaxRequestBufferSize = null; // Kestrel manages adaptively
+        options.Limits.MaxConcurrentConnections = 1000; // Many streaming clients
+        options.Limits.MaxConcurrentUpgradedConnections = 500; // WebSocket/SignalR
     }
     
     private static HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()
