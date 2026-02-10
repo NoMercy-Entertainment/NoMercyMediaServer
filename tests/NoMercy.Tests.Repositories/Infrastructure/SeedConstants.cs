@@ -7,4 +7,6 @@ public static class SeedConstants
     public static readonly Ulid MovieLibraryId = Ulid.NewUlid();
     public static readonly Ulid TvLibraryId = Ulid.NewUlid();
     public static readonly Ulid MovieFolderId = Ulid.NewUlid();
+    public static readonly Ulid MusicLibraryId = Ulid.NewUlid();
+    public static readonly Ulid MusicFolderId = Ulid.NewUlid();
 }

@@ -1597,3 +1597,55 @@ Added missing `using`/dispose to 10 resource leak sites across cold paths: Media
 - `Build_StreamInfContainsBandwidth` — BANDWIDTH and AVERAGE-BANDWIDTH attributes present
 
 **Test results**: Build succeeds with 0 errors. All 133 encoder tests pass (119 existing + 14 new). All other test suites pass. Providers: 419/421 pass (2 pre-existing TMDB integration test failures unrelated to this change).
+
+---
+
+## HIGH-01 — Fix IQueryable returns (premature materialization)
+
+**Date**: 2026-02-10
+
+**What was done**:
+Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classified them as browsable (caller paginates) or terminal (should be materialized in the repository).
+
+**Browsable methods (renamed to drop misleading `Async` suffix):**
+- `GetArtistsAsync` → `GetArtists` — returns `IQueryable<Artist>`, caller iterates with foreach
+- `GetAlbumsAsync` → `GetAlbums` — returns `IQueryable<Album>`, caller iterates with foreach
+- `GetTracksAsync` → `GetTracks` — returns `IQueryable<TrackUser>`, caller iterates with foreach
+- `GetLatestAlbumsAsync` → `GetLatestAlbums` — callers add `.Take(36).ToListAsync()`
+- `GetLatestArtistsAsync` → `GetLatestArtists` — callers add `.Take(36).ToListAsync()`
+- `GetLatestGenresAsync` → `GetLatestGenres` — callers add `.Take(36).ToListAsync()`
+- `GetFavoriteArtistsAsync` → `GetFavoriteArtists` — callers add `.Take(36).ToListAsync()`
+- `GetFavoriteAlbumsAsync` → `GetFavoriteAlbums` — callers used `.AsEnumerable()` (now fixed to `.ToListAsync()`)
+- `GetFavoriteTracksAsync` → `GetFavoriteTracks` — no callers found
+
+**Terminal methods (materialized with `.ToListAsync()` in repository):**
+- `GetFavoriteArtistAsync` — now returns `Task<List<ArtistTrack>>` (was `IQueryable<ArtistTrack>`)
+- `GetFavoriteAlbumAsync` — now returns `Task<List<AlbumTrack>>` (was `IQueryable<AlbumTrack>`)
+- `GetFavoritePlaylistAsync` — now returns `Task<List<PlaylistTrack>>` (was `IQueryable<PlaylistTrack>`)
+
+**Callers updated:**
+- `ArtistsController.cs` — `GetArtistsAsync` → `GetArtists`
+- `AlbumsController.cs` — `GetAlbumsAsync` → `GetAlbums`
+- `TracksController.cs` — `GetTracksAsync` → `GetTracks`
+- `MusicController.cs` — All 12 method calls updated:
+  - Browsable: dropped `Async` suffix
+  - Terminal: added `await` with parenthesized pattern, removed `.AsEnumerable()`
+  - `GetFavoriteAlbums` callers: fixed from `.AsEnumerable().Take(36).ToList()` to `.Take(36).ToListAsync()` (pagination now runs in DB, not client-side)
+  - `Favorites()` method: changed from `IActionResult` to `async Task<IActionResult>`
+  - `FavoriteAlbums()` method: changed from `IActionResult` to `async Task<IActionResult>`
+
+**Files changed:**
+- `src/NoMercy.Data/Repositories/MusicRepository.cs` — 12 method signatures updated
+- `src/NoMercy.Api/Controllers/V1/Music/ArtistsController.cs` — 1 call site
+- `src/NoMercy.Api/Controllers/V1/Music/AlbumsController.cs` — 1 call site
+- `src/NoMercy.Api/Controllers/V1/Music/TracksController.cs` — 1 call site
+- `src/NoMercy.Api/Controllers/V1/Music/MusicController.cs` — 12 call sites
+- `tests/NoMercy.Tests.Repositories/Infrastructure/SeedConstants.cs` — added MusicLibraryId, MusicFolderId
+- `tests/NoMercy.Tests.Repositories/MusicRepositoryTests.cs` — new test file (17 tests)
+
+**Tests created (17 new):**
+- 10 browsable query tests verifying IQueryable can be paginated and materialized
+- 6 terminal query tests verifying materialized data supports client-side aggregation
+- 1 disposed context test verifying browsable queries don't throw when materialized
+
+**Test results**: Build succeeds with 0 errors. All 184 repository tests pass (167 existing + 17 new). All 262 API tests pass. All other test suites pass.

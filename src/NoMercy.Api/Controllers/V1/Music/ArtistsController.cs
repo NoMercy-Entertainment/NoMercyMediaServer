@@ -49,7 +49,7 @@ public class ArtistsController : BaseController
 
         List<ArtistsResponseItemDto> artists = [];
 
-        foreach (Artist artist in _musicRepository.GetArtistsAsync(userId, letter))
+        foreach (Artist artist in _musicRepository.GetArtists(userId, letter))
             artists.Add(new(artist));
 
         List<ArtistTrack> tracks = await _musicRepository.GetArtistTracksForCollectionAsync(

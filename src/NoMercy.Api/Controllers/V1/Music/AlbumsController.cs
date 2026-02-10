@@ -47,7 +47,7 @@ public class AlbumsController : BaseController
 
         string language = Language();
 
-        foreach (Album album in _musicRepository.GetAlbumsAsync(userId, letter))
+        foreach (Album album in _musicRepository.GetAlbums(userId, letter))
         {
             albums.Add(new(album, language));
         }

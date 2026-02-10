@@ -46,7 +46,7 @@ public class MusicRepository(MediaContext mediaContext)
             .FirstOrDefaultAsync(ct);
     }
 
-    public IQueryable<Artist> GetArtistsAsync(Guid userId, string letter)
+    public IQueryable<Artist> GetArtists(Guid userId, string letter)
     {
         return mediaContext.Artists
             .AsNoTracking()
@@ -118,7 +118,7 @@ public class MusicRepository(MediaContext mediaContext)
             .FirstOrDefaultAsync(ct);
     }
 
-    public IQueryable<Album> GetAlbumsAsync(Guid userId, string letter)
+    public IQueryable<Album> GetAlbums(Guid userId, string letter)
     {
         return mediaContext.Albums
             .AsNoTracking()
@@ -187,7 +187,7 @@ public class MusicRepository(MediaContext mediaContext)
             .FirstOrDefaultAsync(ct);
     }
 
-    public IQueryable<TrackUser> GetTracksAsync(Guid userId)
+    public IQueryable<TrackUser> GetTracks(Guid userId)
     {
         return mediaContext.TrackUser
             .AsNoTracking()
@@ -295,7 +295,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     #region Home Page Methods
 
-    public IQueryable<Album> GetLatestAlbumsAsync()
+    public IQueryable<Album> GetLatestAlbums()
     {
         return mediaContext.Albums
             .AsNoTracking()
@@ -305,7 +305,7 @@ public class MusicRepository(MediaContext mediaContext)
             .OrderByDescending(album => album.CreatedAt);
     }
 
-    public IQueryable<Artist> GetLatestArtistsAsync()
+    public IQueryable<Artist> GetLatestArtists()
     {
         return mediaContext.Artists
             .AsNoTracking()
@@ -316,7 +316,7 @@ public class MusicRepository(MediaContext mediaContext)
             .OrderByDescending(artist => artist.CreatedAt);
     }
 
-    public IQueryable<MusicGenre> GetLatestGenresAsync()
+    public IQueryable<MusicGenre> GetLatestGenres()
     {
         return mediaContext.MusicGenres
             .AsNoTracking()
@@ -325,7 +325,7 @@ public class MusicRepository(MediaContext mediaContext)
             .OrderByDescending(genre => genre.MusicGenreTracks.Count);
     }
 
-    public IQueryable<ArtistTrack> GetFavoriteArtistAsync(Guid userId)
+    public Task<List<ArtistTrack>> GetFavoriteArtistAsync(Guid userId, CancellationToken ct = default)
     {
         return mediaContext.MusicPlays
             .AsNoTracking()
@@ -334,10 +334,11 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(track => track.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Artist)
             .ThenInclude(artist => artist.Images.Where(image => image.Type == "thumb"))
-            .SelectMany(p => p.Track.ArtistTrack);
+            .SelectMany(p => p.Track.ArtistTrack)
+            .ToListAsync(ct);
     }
 
-    public IQueryable<AlbumTrack> GetFavoriteAlbumAsync(Guid userId)
+    public Task<List<AlbumTrack>> GetFavoriteAlbumAsync(Guid userId, CancellationToken ct = default)
     {
         return mediaContext.MusicPlays
             .AsNoTracking()
@@ -345,10 +346,11 @@ public class MusicRepository(MediaContext mediaContext)
             .Include(musicPlay => musicPlay.Track)
             .ThenInclude(track => track.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Album)
-            .SelectMany(p => p.Track.AlbumTrack);
+            .SelectMany(p => p.Track.AlbumTrack)
+            .ToListAsync(ct);
     }
 
-    public IQueryable<PlaylistTrack> GetFavoritePlaylistAsync(Guid userId)
+    public Task<List<PlaylistTrack>> GetFavoritePlaylistAsync(Guid userId, CancellationToken ct = default)
     {
         return mediaContext.MusicPlays
             .AsNoTracking()
@@ -356,10 +358,11 @@ public class MusicRepository(MediaContext mediaContext)
             .Include(musicPlay => musicPlay.Track)
             .ThenInclude(track => track.PlaylistTrack)
             .ThenInclude(playlistTrack => playlistTrack.Playlist)
-            .SelectMany(p => p.Track.PlaylistTrack);
+            .SelectMany(p => p.Track.PlaylistTrack)
+            .ToListAsync(ct);
     }
 
-    public IQueryable<ArtistUser> GetFavoriteArtistsAsync(Guid userId)
+    public IQueryable<ArtistUser> GetFavoriteArtists(Guid userId)
     {
         return mediaContext.ArtistUser
             .AsNoTracking()
@@ -371,7 +374,7 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(artist => artist.Images.Where(image => image.Type == "thumb"));
     }
 
-    public IQueryable<AlbumUser> GetFavoriteAlbumsAsync(Guid userId)
+    public IQueryable<AlbumUser> GetFavoriteAlbums(Guid userId)
     {
         return mediaContext.AlbumUser
             .AsNoTracking()
@@ -385,7 +388,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     #region Collection Operations (for CollectionsController)
 
-    public IQueryable<TrackUser> GetFavoriteTracksAsync(Guid userId)
+    public IQueryable<TrackUser> GetFavoriteTracks(Guid userId)
     {
         return mediaContext.TrackUser
             .AsNoTracking()

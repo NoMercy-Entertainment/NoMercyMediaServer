@@ -44,51 +44,47 @@ public class MusicController : BaseController
             return UnauthorizedResponse("You do not have permission to view music");
 
         // Run queries sequentially - DbContext is not thread-safe so parallel execution causes errors
-        TopMusicDto? favoriteArtist = _musicRepository.GetFavoriteArtistAsync(userId)
-            .AsEnumerable()
+        TopMusicDto? favoriteArtist = (await _musicRepository.GetFavoriteArtistAsync(userId))
             .Select(artistTrack => new TopMusicDto(artistTrack))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        TopMusicDto? favoriteAlbum = _musicRepository.GetFavoriteAlbumAsync(userId)
-            .AsEnumerable()
+        TopMusicDto? favoriteAlbum = (await _musicRepository.GetFavoriteAlbumAsync(userId))
             .Select(albumTrack => new TopMusicDto(albumTrack))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        TopMusicDto? favoritePlaylist = _musicRepository.GetFavoritePlaylistAsync(userId)
-            .AsEnumerable()
+        TopMusicDto? favoritePlaylist = (await _musicRepository.GetFavoritePlaylistAsync(userId))
             .Select(musicPlay => new TopMusicDto(musicPlay))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtistsAsync(userId)
+        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtists(userId)
             .Select(artistUser => new CarouselResponseItemDto(artistUser))
             .Take(36)
             .ToListAsync();
 
-        List<CarouselResponseItemDto> favoriteAlbums = _musicRepository.GetFavoriteAlbumsAsync(userId)
-            .AsEnumerable()
+        List<CarouselResponseItemDto> favoriteAlbums = await _musicRepository.GetFavoriteAlbums(userId)
             .Select(artistUser => new CarouselResponseItemDto(artistUser))
             .Take(36)
-            .ToList();
+            .ToListAsync();
 
         List<CarouselResponseItemDto> playlists = await _musicRepository.GetCarouselPlaylistsAsync(userId);
 
-        List<CarouselResponseItemDto> latestArtists = await _musicRepository.GetLatestArtistsAsync()
+        List<CarouselResponseItemDto> latestArtists = await _musicRepository.GetLatestArtists()
             .Select(artist => new CarouselResponseItemDto(artist))
             .Take(36)
             .ToListAsync();
 
-        List<CarouselResponseItemDto> latestGenres = await _musicRepository.GetLatestGenresAsync()
+        List<CarouselResponseItemDto> latestGenres = await _musicRepository.GetLatestGenres()
             .Select(genre => new CarouselResponseItemDto(genre))
             .Take(36)
             .ToListAsync();
 
-        List<CarouselResponseItemDto> latestAlbums = await _musicRepository.GetLatestAlbumsAsync()
+        List<CarouselResponseItemDto> latestAlbums = await _musicRepository.GetLatestAlbums()
             .Select(artist => new CarouselResponseItemDto(artist))
             .Take(36)
             .ToListAsync();
@@ -160,28 +156,25 @@ public class MusicController : BaseController
     
     [HttpPost]
     [Route("start/favorites")]
-    public IActionResult Favorites()
+    public async Task<IActionResult> Favorites()
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        TopMusicDto? favoriteArtist = _musicRepository.GetFavoriteArtistAsync(userId)
-            .AsEnumerable()
+        TopMusicDto? favoriteArtist = (await _musicRepository.GetFavoriteArtistAsync(userId))
             .Select(artistTrack => new TopMusicDto(artistTrack))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        TopMusicDto? favoriteAlbum = _musicRepository.GetFavoriteAlbumAsync(userId)
-            .AsEnumerable()
+        TopMusicDto? favoriteAlbum = (await _musicRepository.GetFavoriteAlbumAsync(userId))
             .Select(albumTrack => new TopMusicDto(albumTrack))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
             .FirstOrDefault();
 
-        TopMusicDto? favoritePlaylist = _musicRepository.GetFavoritePlaylistAsync(userId)
-            .AsEnumerable()
+        TopMusicDto? favoritePlaylist = (await _musicRepository.GetFavoritePlaylistAsync(userId))
             .Select(musicPlay => new TopMusicDto(musicPlay))
             .GroupBy(a => a.Name)
             .MaxBy(g => g.Count())?
@@ -214,7 +207,7 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtistsAsync(userId)
+        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtists(userId)
             .Select(artistUser => new CarouselResponseItemDto(artistUser))
             .Take(36)
             .ToListAsync();
@@ -231,17 +224,16 @@ public class MusicController : BaseController
 
     [HttpPost]
     [Route("start/favorite-albums")]
-    public IActionResult FavoriteAlbums([FromBody] CardRequestDto request)
+    public async Task<IActionResult> FavoriteAlbums([FromBody] CardRequestDto request)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        List<CarouselResponseItemDto> favoriteAlbums = _musicRepository.GetFavoriteAlbumsAsync(userId)
-            .AsEnumerable()
+        List<CarouselResponseItemDto> favoriteAlbums = await _musicRepository.GetFavoriteAlbums(userId)
             .Select(artistUser => new CarouselResponseItemDto(artistUser))
             .Take(36)
-            .ToList();
+            .ToListAsync();
 
         return Ok(ComponentResponse.From(
             Component.Carousel()

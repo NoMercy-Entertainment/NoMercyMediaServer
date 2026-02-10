@@ -42,7 +42,7 @@ public class TracksController : BaseController
 
         string language = Language();
 
-        foreach (TrackUser track in _musicRepository.GetTracksAsync(userId))
+        foreach (TrackUser track in _musicRepository.GetTracks(userId))
             tracks.Add(new(track.Track, language));
 
         if (tracks.Count == 0)
