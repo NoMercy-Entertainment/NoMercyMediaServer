@@ -13,85 +13,117 @@ namespace NoMercy.Data.Repositories;
 public class TvShowRepository(MediaContext context)
 {
     
-    public readonly Func<MediaContext, Guid, int, string, string, Task<Tv?>> GetTvAsync =
-        EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, int id, string language, string country) =>
-            mediaContext.Tvs.AsNoTracking()
-                .Where(tv => tv.Id == id)
-                .Where(tv => tv.Library.LibraryUsers
-                    .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
-                .Include(tv => tv.TvUser)
-                .Include(tv => tv.Library)
-                .ThenInclude(library => library.LibraryUsers)
-                .Include(tv => tv.Media
-                    .Where(media => media.Type == "Trailer"))
-                .Include(tv => tv.AlternativeTitles)
-                .Include(tv => tv.Translations
-                    .Where(translation => translation.Iso6391 == language))
-                .Include(tv => tv.Images
-                    .Where(image =>
-                        (image.Type == "logo" && image.Iso6391 == "en")
-                        || ((image.Type == "backdrop" || image.Type == "poster") &&
-                            (image.Iso6391 == "en" || image.Iso6391 == null))
-                    )
-                    .OrderByDescending(image => image.VoteAverage)
+    public async Task<Tv?> GetTvAsync(MediaContext mediaContext, Guid userId, int id, string language, string country, CancellationToken ct = default)
+    {
+        // Query 1: Core TV data — show metadata, seasons/episodes, show-level cast/crew, etc.
+        // Removed: AlternativeTitles (unused by DTO), Library.LibraryUsers (only needed in WHERE)
+        // Episode cast/crew split to Query 2 to reduce round-trips
+        Tv? tv = await mediaContext.Tvs.AsNoTracking()
+            .Where(tv => tv.Id == id)
+            .Where(tv => tv.Library.LibraryUsers
+                .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+            .Include(tv => tv.TvUser)
+            .Include(tv => tv.Media
+                .Where(media => media.Type == "Trailer"))
+            .Include(tv => tv.Translations
+                .Where(translation => translation.Iso6391 == language))
+            .Include(tv => tv.Images
+                .Where(image =>
+                    (image.Type == "logo" && image.Iso6391 == "en")
+                    || ((image.Type == "backdrop" || image.Type == "poster") &&
+                        (image.Iso6391 == "en" || image.Iso6391 == null))
                 )
-                .Include(tv => tv.CertificationTvs
-                    .Where(certification => certification.Certification.Iso31661 == country ||
-                                            certification.Certification.Iso31661 == "US"))
-                .ThenInclude(certificationTv => certificationTv.Certification)
-                .Include(tv => tv.Creators)
-                    .ThenInclude(genreTv => genreTv.Person)
-                .Include(tv => tv.GenreTvs)
-                    .ThenInclude(genreTv => genreTv.Genre)
-                .Include(tv => tv.KeywordTvs)
-                    .ThenInclude(keywordTv => keywordTv.Keyword)
-                .Include(tv => tv.Cast)
-                    .ThenInclude(castTv => castTv.Person)
-                .Include(tv => tv.Cast)
-                    .ThenInclude(castTv => castTv.Role)
-                .Include(tv => tv.Crew)
-                    .ThenInclude(crewTv => crewTv.Person)
-                .Include(tv => tv.Crew)
-                    .ThenInclude(crewTv => crewTv.Job)
-                .Include(tv => tv.Seasons)
-                .ThenInclude(season => season.Translations
+                .OrderByDescending(image => image.VoteAverage)
+            )
+            .Include(tv => tv.CertificationTvs
+                .Where(certification => certification.Certification.Iso31661 == country ||
+                                        certification.Certification.Iso31661 == "US"))
+            .ThenInclude(certificationTv => certificationTv.Certification)
+            .Include(tv => tv.Creators)
+                .ThenInclude(genreTv => genreTv.Person)
+            .Include(tv => tv.GenreTvs)
+                .ThenInclude(genreTv => genreTv.Genre)
+            .Include(tv => tv.KeywordTvs)
+                .ThenInclude(keywordTv => keywordTv.Keyword)
+            .Include(tv => tv.Cast)
+                .ThenInclude(castTv => castTv.Person)
+            .Include(tv => tv.Cast)
+                .ThenInclude(castTv => castTv.Role)
+            .Include(tv => tv.Crew)
+                .ThenInclude(crewTv => crewTv.Person)
+            .Include(tv => tv.Crew)
+                .ThenInclude(crewTv => crewTv.Job)
+            .Include(tv => tv.Seasons)
+            .ThenInclude(season => season.Translations
+                .Where(translation => translation.Iso6391 == language)
+            )
+            .Include(tv => tv.Seasons)
+                .ThenInclude(season => season.Episodes)
+                .ThenInclude(episode => episode.Translations
                     .Where(translation => translation.Iso6391 == language)
                 )
-                .Include(tv => tv.Seasons)
-                    .ThenInclude(season => season.Episodes)
-                    .ThenInclude(episode => episode.Translations
-                        .Where(translation => translation.Iso6391 == language)
-                    )
-                .Include(tv => tv.Seasons)
-                    .ThenInclude(season => season.Episodes)
-                    .ThenInclude(episode => episode.VideoFiles)
-                    .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId))
-                    )
-                .Include(tv => tv.Episodes)
-                    .ThenInclude(episode => episode.VideoFiles)
-                    .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
-                .Include(tv => tv.RecommendationFrom)
-                .Include(tv => tv.SimilarFrom)
-                .Include(tv => tv.Episodes)
-                    .ThenInclude(episode => episode.Cast)
-                    .ThenInclude(castTv => castTv.Person)
-                .Include(tv => tv.Episodes)
-                    .ThenInclude(episode => episode.Cast)
-                    .ThenInclude(castTv => castTv.Role)
-                .Include(tv => tv.Episodes)
-                    .ThenInclude(episode => episode.Crew)
-                    .ThenInclude(crewTv => crewTv.Person)
-                .Include(tv => tv.Episodes)
-                    .ThenInclude(episode => episode.Crew)
-                    .ThenInclude(crewTv => crewTv.Job)
-                .Include(tv => tv.WatchProviderMedia
-                    .Where(wpm => wpm.CountryCode == country))
-                    .ThenInclude(wpm => wpm.WatchProvider)
-                .Include(tv => tv.NetworkTvs)
-                    .ThenInclude(ntv => ntv.Network)
-                .Include(tv => tv.CompaniesTvs)
-                    .ThenInclude(ctv => ctv.Company)
-                .FirstOrDefault());
+            .Include(tv => tv.Seasons)
+                .ThenInclude(season => season.Episodes)
+                .ThenInclude(episode => episode.VideoFiles)
+                .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId))
+                )
+            .Include(tv => tv.Episodes)
+                .ThenInclude(episode => episode.VideoFiles)
+                .ThenInclude(file => file.UserData.Where(userData => userData.UserId.Equals(userId)))
+            .Include(tv => tv.RecommendationFrom)
+            .Include(tv => tv.SimilarFrom)
+            .Include(tv => tv.WatchProviderMedia
+                .Where(wpm => wpm.CountryCode == country))
+                .ThenInclude(wpm => wpm.WatchProvider)
+            .Include(tv => tv.NetworkTvs)
+                .ThenInclude(ntv => ntv.Network)
+            .Include(tv => tv.CompaniesTvs)
+                .ThenInclude(ctv => ctv.Company)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(ct);
+
+        if (tv is null) return null;
+
+        // Query 2: Episode-level cast/crew — loaded separately to reduce query complexity
+        // This avoids 4 additional split-query round-trips in the main query
+        List<Episode> episodesWithCastCrew = await mediaContext.Episodes.AsNoTracking()
+            .Where(e => e.TvId == id)
+            .Include(e => e.Cast)
+                .ThenInclude(c => c.Person)
+            .Include(e => e.Cast)
+                .ThenInclude(c => c.Role)
+            .Include(e => e.Crew)
+                .ThenInclude(c => c.Person)
+            .Include(e => e.Crew)
+                .ThenInclude(c => c.Job)
+            .AsSplitQuery()
+            .ToListAsync(ct);
+
+        // Merge episode cast/crew into the main query results
+        Dictionary<int, Episode> episodeLookup = episodesWithCastCrew.ToDictionary(e => e.Id);
+        foreach (Episode episode in tv.Episodes)
+        {
+            if (episodeLookup.TryGetValue(episode.Id, out Episode? loaded))
+            {
+                episode.Cast = loaded.Cast;
+                episode.Crew = loaded.Crew;
+            }
+        }
+
+        foreach (Season season in tv.Seasons)
+        {
+            foreach (Episode episode in season.Episodes)
+            {
+                if (episodeLookup.TryGetValue(episode.Id, out Episode? loaded))
+                {
+                    episode.Cast = loaded.Cast;
+                    episode.Crew = loaded.Crew;
+                }
+            }
+        }
+
+        return tv;
+    }
 
     public Task<bool> GetTvAvailableAsync(Guid userId, int id, CancellationToken ct = default)
     {

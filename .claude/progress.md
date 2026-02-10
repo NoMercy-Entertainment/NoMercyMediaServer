@@ -1522,3 +1522,43 @@ Added missing `using`/dispose to 10 resource leak sites across cold paths: Media
    - Partial match: "e" matches multiple artists
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 159 repository tests pass (149 existing + 10 new). All other test suites (Database, Queue, Encoder, MediaProcessing, Providers, Networking) pass unchanged.
+
+---
+
+## CRIT-03 — Split 55+ Include chains into focused queries
+
+**Date**: 2026-02-10
+
+**What was done**:
+
+### Problem
+`TvShowRepository.GetTvAsync` was a compiled query (`EF.CompileAsyncQuery`) with 27 Include/ThenInclude chains generating 27+ separate SQL round-trips per request (due to split query mode). `CollectionRepository.GetCollectionAsync` had 17 Include chains with similar overhead. Both included unused navigations (`AlternativeTitles`, `Library.LibraryUsers`) that added unnecessary queries.
+
+### Changes
+
+1. **`src/NoMercy.Data/Repositories/TvShowRepository.cs`** — Converted `GetTvAsync` from compiled query to regular async method split into two focused queries:
+   - **Query 1** (21 includes): Core TV data — show metadata, translations, images, certifications, genres, keywords, show-level cast/crew, seasons with episodes (translations/video files/user data), recommendations, similar, watch providers, networks, companies. Removed unused `AlternativeTitles` and `Library.LibraryUsers` includes.
+   - **Query 2** (4 includes): Episode-level cast/crew — loaded separately with Person/Role/Job navigations. Results merged into Query 1 entities via dictionary lookup.
+   - Benefits: Enables `CancellationToken` support (compiled queries couldn't accept it), reduces from 27 to 21+4=25 split queries but with the episode cast/crew batched efficiently, and removes 2 unnecessary includes.
+
+2. **`src/NoMercy.Data/Repositories/CollectionRepository.cs`** — Converted `GetCollectionAsync` to split into two focused queries:
+   - **Query 1** (11 includes): Core collection data — metadata, translations, images, collection movies with movie translations/video files/movie user/certifications/genres/images/keywords. Removed unused `Library.LibraryUsers` include.
+   - **Query 2** (4 includes): Movie-level cast/crew — loaded separately with Person/Role/Job navigations. Results merged into Query 1 movie entities via dictionary lookup.
+   - Benefits: Removes 1 unnecessary include, separates expensive cast/crew loading.
+
+3. **`tests/NoMercy.Tests.Repositories/QueryOutputTests.cs`** — Renamed compiled query test to `TvShowRepository_GetTvAsync_SplitQuery_GeneratesExpectedSql` to reflect the new implementation.
+
+### Tests added (7 new tests in `TvShowRepositoryTests.cs`):
+- `GetTvAsync_ReturnsShowWithAllNavigationProperties` — Verifies all navigation properties (translations, images, genres, keywords, cast, crew, seasons, recommendations, similar, certifications, creators) are populated
+- `GetTvAsync_MergesEpisodeCastCrewFromSplitQuery` — Verifies episode-level cast/crew is populated from the second query with Person and Role/Job navigations loaded
+- `GetTvAsync_MergesEpisodeCastCrewIntoSeasonEpisodes` — Verifies cast/crew merge works for episodes accessed via Season.Episodes path
+- `GetTvAsync_ReturnsNull_WhenUserHasNoAccess` — Access control check
+- `GetTvAsync_ReturnsNull_WhenShowDoesNotExist` — Not-found check
+- `GetTvAsync_IncludesShowLevelCastAndCrew` — Verifies show-level cast (Person + Role) and crew (Person + Job) are loaded
+- `GetTvAsync_IncludesSeasonsWithEpisodesAndVideoFiles` — Verifies season/episode/video file hierarchy is populated
+- `GetTvAsync_GeneratesSplitQueries` — Verifies multiple SQL queries are generated (uses SqlCaptureInterceptor)
+
+### Seed data helper
+- Added `SeedDetailData()` method to TvShowRepositoryTests that seeds Person, Role, Job, Cast (show + episode level), Crew (show + episode level), Creator, Translation, Image, Keyword, Certification, Similar, and Recommendation entities for comprehensive testing.
+
+**Test results**: Build succeeds with 0 errors. All 167 repository tests pass (159 existing + 8 new). All other test suites (Database: 135, Queue: 277, Encoder: 119, MediaProcessing: 28, Networking: 5, Api: 262) pass. Providers: 418/421 pass (3 pre-existing TMDB integration test failures unrelated to this change).

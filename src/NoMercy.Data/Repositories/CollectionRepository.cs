@@ -129,9 +129,12 @@ public class CollectionRepository(MediaContext context)
     //         .FirstOrDefaultAsync();
     // }
     
-    public Task<Collection?> GetCollectionAsync(Guid userId, int id, string? language, string country, CancellationToken ct = default)
+    public async Task<Collection?> GetCollectionAsync(Guid userId, int id, string? language, string country, CancellationToken ct = default)
     {
-        return context.Collections
+        // Query 1: Core collection data — metadata, translations, images
+        // Removed: Library.LibraryUsers Include (only needed in WHERE clause, not consumed by DTO)
+        // Movie cast/crew split to Query 2 to reduce round-trips
+        Collection? collection = await context.Collections
             .AsNoTracking()
             .Where(collection => collection.Id == id)
             .Where(collection => collection.Library.LibraryUsers
@@ -139,8 +142,6 @@ public class CollectionRepository(MediaContext context)
             .Include(collection => collection.CollectionUser
                 .Where(x => x.UserId.Equals(userId))
             )
-            .Include(collection => collection.Library)
-            .ThenInclude(library => library.LibraryUsers)
             .Include(collection => collection.CollectionMovies)
             .ThenInclude(movie => movie.Movie)
             .ThenInclude(movie => movie.Translations
@@ -166,22 +167,6 @@ public class CollectionRepository(MediaContext context)
             .ThenInclude(genreMovie => genreMovie.Genre)
             .Include(collection => collection.CollectionMovies)
             .ThenInclude(movie => movie.Movie)
-            .ThenInclude(movie => movie.Cast)
-            .ThenInclude(genreMovie => genreMovie.Person)
-            .Include(collection => collection.CollectionMovies)
-            .ThenInclude(movie => movie.Movie)
-            .ThenInclude(movie => movie.Cast)
-            .ThenInclude(genreMovie => genreMovie.Role)
-            .Include(collection => collection.CollectionMovies)
-            .ThenInclude(movie => movie.Movie)
-            .ThenInclude(movie => movie.Crew)
-            .ThenInclude(genreMovie => genreMovie.Job)
-            .Include(collection => collection.CollectionMovies)
-            .ThenInclude(movie => movie.Movie)
-            .ThenInclude(movie => movie.Crew)
-            .ThenInclude(genreMovie => genreMovie.Person)
-            .Include(collection => collection.CollectionMovies)
-            .ThenInclude(movie => movie.Movie)
             .ThenInclude(movie => movie.Images
                 .Where(image =>
                     (image.Type == "logo" && image.Iso6391 == "en")
@@ -191,6 +176,10 @@ public class CollectionRepository(MediaContext context)
                 .OrderByDescending(image => image.VoteAverage)
                 .Take(30)
             )
+            .Include(collection => collection.CollectionMovies)
+                .ThenInclude(movie => movie.Movie)
+                .ThenInclude(movie => movie.KeywordMovies)
+                .ThenInclude(keywordMovie => keywordMovie.Keyword)
             .Include(collection => collection.Translations
                 .Where(translation => translation.Iso6391 == language))
             .Include(collection => collection.Images
@@ -201,12 +190,38 @@ public class CollectionRepository(MediaContext context)
                 )
                 .OrderByDescending(image => image.VoteAverage)
             )
-            
-            .Include(collection => collection.CollectionMovies)
-                .ThenInclude(movie => movie.Movie)
-                .ThenInclude(movie => movie.KeywordMovies)
-                .ThenInclude(keywordMovie => keywordMovie.Keyword)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(ct);
+
+        if (collection is null) return null;
+
+        // Query 2: Movie-level cast/crew — loaded separately to reduce query complexity
+        List<int> movieIds = collection.CollectionMovies.Select(cm => cm.MovieId).ToList();
+        List<Movie> moviesWithCastCrew = await context.Movies.AsNoTracking()
+            .Where(m => movieIds.Contains(m.Id))
+            .Include(m => m.Cast)
+                .ThenInclude(c => c.Person)
+            .Include(m => m.Cast)
+                .ThenInclude(c => c.Role)
+            .Include(m => m.Crew)
+                .ThenInclude(c => c.Person)
+            .Include(m => m.Crew)
+                .ThenInclude(c => c.Job)
+            .AsSplitQuery()
+            .ToListAsync(ct);
+
+        // Merge movie cast/crew into the main query results
+        Dictionary<int, Movie> movieLookup = moviesWithCastCrew.ToDictionary(m => m.Id);
+        foreach (CollectionMovie cm in collection.CollectionMovies)
+        {
+            if (movieLookup.TryGetValue(cm.MovieId, out Movie? loaded))
+            {
+                cm.Movie.Cast = loaded.Cast;
+                cm.Movie.Crew = loaded.Crew;
+            }
+        }
+
+        return collection;
     }
 
     public Task<List<Collection>> GetCollectionItems(Guid userId, string? language, string country, int take = 1, int page = 0, CancellationToken ct = default)

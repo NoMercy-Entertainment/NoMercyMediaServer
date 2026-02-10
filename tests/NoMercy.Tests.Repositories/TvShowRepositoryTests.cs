@@ -130,6 +130,228 @@ public class TvShowRepositoryTests : IDisposable
         Assert.Null(tvUser);
     }
 
+    #region GetTvAsync — Split Query Tests
+
+    [Fact]
+    public async Task GetTvAsync_ReturnsShowWithAllNavigationProperties()
+    {
+        SeedDetailData(_context);
+
+        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+
+        Assert.NotNull(tv);
+        Assert.Equal(1399, tv.Id);
+        Assert.Equal("Breaking Bad", tv.Title);
+
+        Assert.NotEmpty(tv.Translations);
+        Assert.NotEmpty(tv.Images);
+        Assert.NotEmpty(tv.GenreTvs);
+        Assert.NotEmpty(tv.KeywordTvs);
+        Assert.NotEmpty(tv.Cast);
+        Assert.NotEmpty(tv.Crew);
+        Assert.NotEmpty(tv.Seasons);
+        Assert.NotEmpty(tv.RecommendationFrom);
+        Assert.NotEmpty(tv.SimilarFrom);
+        Assert.NotEmpty(tv.CertificationTvs);
+        Assert.NotEmpty(tv.Creators);
+    }
+
+    [Fact]
+    public async Task GetTvAsync_MergesEpisodeCastCrewFromSplitQuery()
+    {
+        SeedDetailData(_context);
+
+        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+
+        Assert.NotNull(tv);
+
+        // Episode cast/crew should be populated via the second query
+        Episode[] allEpisodes = tv.Episodes.ToArray();
+        Assert.NotEmpty(allEpisodes);
+        Assert.True(allEpisodes.Any(e => e.Cast.Count > 0),
+            "Episode-level cast should be populated from split query");
+        Assert.True(allEpisodes.Any(e => e.Crew.Count > 0),
+            "Episode-level crew should be populated from split query");
+
+        // Verify cast has Person and Role loaded
+        Cast episodeCast = allEpisodes.SelectMany(e => e.Cast).First();
+        Assert.NotNull(episodeCast.Person);
+        Assert.NotNull(episodeCast.Role);
+
+        // Verify crew has Person and Job loaded
+        Crew episodeCrew = allEpisodes.SelectMany(e => e.Crew).First();
+        Assert.NotNull(episodeCrew.Person);
+        Assert.NotNull(episodeCrew.Job);
+    }
+
+    [Fact]
+    public async Task GetTvAsync_MergesEpisodeCastCrewIntoSeasonEpisodes()
+    {
+        SeedDetailData(_context);
+
+        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+
+        Assert.NotNull(tv);
+
+        // Season episodes should also have cast/crew merged
+        Episode[] seasonEpisodes = tv.Seasons.SelectMany(s => s.Episodes).ToArray();
+        Assert.NotEmpty(seasonEpisodes);
+        Assert.True(seasonEpisodes.Any(e => e.Cast.Count > 0),
+            "Season-level episode cast should be populated from split query");
+        Assert.True(seasonEpisodes.Any(e => e.Crew.Count > 0),
+            "Season-level episode crew should be populated from split query");
+    }
+
+    [Fact]
+    public async Task GetTvAsync_ReturnsNull_WhenUserHasNoAccess()
+    {
+        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.OtherUserId, 1399, "en", "US");
+
+        Assert.Null(tv);
+    }
+
+    [Fact]
+    public async Task GetTvAsync_ReturnsNull_WhenShowDoesNotExist()
+    {
+        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 999999, "en", "US");
+
+        Assert.Null(tv);
+    }
+
+    [Fact]
+    public async Task GetTvAsync_IncludesShowLevelCastAndCrew()
+    {
+        SeedDetailData(_context);
+
+        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+
+        Assert.NotNull(tv);
+
+        // Show-level cast with Person and Role
+        Assert.NotEmpty(tv.Cast);
+        Cast showCast = tv.Cast.First();
+        Assert.NotNull(showCast.Person);
+        Assert.NotNull(showCast.Role);
+
+        // Show-level crew with Person and Job
+        Assert.NotEmpty(tv.Crew);
+        Crew showCrew = tv.Crew.First();
+        Assert.NotNull(showCrew.Person);
+        Assert.NotNull(showCrew.Job);
+    }
+
+    [Fact]
+    public async Task GetTvAsync_IncludesSeasonsWithEpisodesAndVideoFiles()
+    {
+        Tv? tv = await _repository.GetTvAsync(_context, SeedConstants.UserId, 1399, "en", "US");
+
+        Assert.NotNull(tv);
+        Assert.NotEmpty(tv.Seasons);
+        Season season = tv.Seasons.First();
+        Assert.NotEmpty(season.Episodes);
+        Assert.All(season.Episodes, e => Assert.NotEmpty(e.VideoFiles));
+    }
+
+    [Fact]
+    public async Task GetTvAsync_GeneratesSplitQueries()
+    {
+        (MediaContext ctx, SqlCaptureInterceptor interceptor) =
+            TestMediaContextFactory.CreateSeededContextWithInterceptor();
+        TvShowRepository repo = new(ctx);
+        SeedDetailData(ctx);
+        interceptor.Clear();
+
+        await repo.GetTvAsync(ctx, SeedConstants.UserId, 1399, "en", "US");
+
+        // Should generate multiple SQL queries (split query behavior)
+        Assert.True(interceptor.CapturedSql.Count > 1,
+            $"Expected multiple split queries, got {interceptor.CapturedSql.Count}");
+
+        ctx.Database.EnsureDeleted();
+        ctx.Dispose();
+    }
+
+    #endregion
+
+    private static void SeedDetailData(MediaContext context)
+    {
+        // Person
+        Person person1 = new() { Id = 17419, Name = "Bryan Cranston", TitleSort = "cranston, bryan" };
+        Person person2 = new() { Id = 84497, Name = "Vince Gilligan", TitleSort = "gilligan, vince" };
+        context.People.AddRange(person1, person2);
+
+        // Role and Job
+        Role role1 = new() { Character = "Walter White", EpisodeCount = 62 };
+        Job job1 = new() { CreditId = "crew-1", Task = "Director" };
+        context.Roles.Add(role1);
+        context.Jobs.Add(job1);
+        context.SaveChanges();
+
+        // Show-level Cast and Crew
+        context.Casts.Add(new Cast { CreditId = "cast-tv-1", PersonId = 17419, RoleId = role1.Id, TvId = 1399 });
+        context.Crews.Add(new Crew { CreditId = "crew-tv-1", PersonId = 84497, JobId = job1.Id, TvId = 1399 });
+
+        // Episode-level Cast and Crew
+        Role episodeRole = new() { Character = "Walter White", EpisodeCount = 1 };
+        Job episodeJob = new() { CreditId = "crew-ep-1", Task = "Writer" };
+        context.Roles.Add(episodeRole);
+        context.Jobs.Add(episodeJob);
+        context.SaveChanges();
+
+        context.Casts.Add(new Cast { CreditId = "cast-ep-1", PersonId = 17419, RoleId = episodeRole.Id, EpisodeId = 62085 });
+        context.Crews.Add(new Crew { CreditId = "crew-ep-2", PersonId = 84497, JobId = episodeJob.Id, EpisodeId = 62085 });
+
+        // Creator
+        context.Creators.Add(new Creator { PersonId = 84497, TvId = 1399 });
+
+        // Translation
+        context.Translations.Add(new Translation
+        {
+            Iso6391 = "en",
+            Iso31661 = "US",
+            Title = "Breaking Bad",
+            Overview = "A chemistry teacher diagnosed with lung cancer...",
+            TvId = 1399
+        });
+
+        // Image
+        context.Images.Add(new Image
+        {
+            FilePath = "/logo.png",
+            Type = "logo",
+            Iso6391 = "en",
+            AspectRatio = 1.78,
+            VoteAverage = 5.0,
+            TvId = 1399
+        });
+        context.Images.Add(new Image
+        {
+            FilePath = "/backdrop.jpg",
+            Type = "backdrop",
+            Iso6391 = "en",
+            AspectRatio = 1.78,
+            VoteAverage = 5.0,
+            TvId = 1399
+        });
+
+        // Keyword
+        Keyword keyword = new() { Id = 10765, Name = "drug dealer" };
+        context.Keywords.Add(keyword);
+        context.KeywordTv.Add(new KeywordTv { KeywordId = 10765, TvId = 1399 });
+
+        // Certification
+        Certification cert = new() { Iso31661 = "US", Rating = "TV-14", Meaning = "Parents Strongly Cautioned", Order = 3 };
+        context.Certifications.Add(cert);
+        context.SaveChanges();
+        context.CertificationTv.Add(new CertificationTv { CertificationId = cert.Id, TvId = 1399 });
+
+        // Similar and Recommendation
+        context.Similar.Add(new Similar { MediaId = 9999, TvFromId = 1399, Title = "Better Call Saul" });
+        context.Recommendations.Add(new Recommendation { MediaId = 9998, TvFromId = 1399, Title = "Ozark" });
+
+        context.SaveChanges();
+    }
+
     public void Dispose()
     {
         _context.Database.EnsureDeleted();

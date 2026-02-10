@@ -897,10 +897,10 @@ public class QueryOutputTests : IDisposable
 
     #endregion
 
-    #region TvShowRepository - Compiled Query
+    #region TvShowRepository - Split Detail Query
 
     [Fact]
-    public async Task TvShowRepository_GetTvAsync_CompiledQuery_GeneratesExpectedSql()
+    public async Task TvShowRepository_GetTvAsync_SplitQuery_GeneratesExpectedSql()
     {
         TvShowRepository repository = new(_context);
         _interceptor.Clear();
