@@ -1972,3 +1972,25 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   3. `MediaContext_OnConfiguring_GuardsSensitiveDataLogging_WithConfigIsDev` — source-level verification that the conditional guard exists in MediaContext.cs
 
 **Test results**: Build succeeds with 0 errors. All 143 database tests pass (3 new + 140 existing). All 1,239 non-API tests pass. Pre-existing 7 API test failures are unchanged.
+
+---
+
+## HIGH-06 — Fix middleware ordering issues
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Fixed `src/NoMercy.Server/AppConfig/ApplicationConfiguration.cs` middleware ordering in `ConfigureMiddleware()`:
+  1. **DeveloperExceptionPage**: Was always enabled — now conditional on `Config.IsDev` (security: prevents stack trace leaks in production)
+  2. **HSTS + HTTPS redirection**: Moved before response compression (security-first ordering)
+  3. **Response compression + caching**: Moved before CORS and routing (efficiency: compress before routing decides what to do)
+  4. **CORS**: Moved before `UseRouting()` so pre-flight OPTIONS requests are handled before routing middleware
+  5. **Removed duplicate `UseRequestLocalization()`**: Was called both in `ConfigureLocalization()` (with options) and again in `ConfigureMiddleware()` (without options — redundant)
+- New middleware order: Exception handling (conditional) → HSTS → HTTPS redirect → Compression → Caching → CORS → Routing → Localization → Auth → Access logging → Static files → WebSockets
+- Created `tests/NoMercy.Tests.Api/MiddlewareOrderingTests.cs` with 4 integration tests:
+  1. `DeveloperExceptionPage_NotServed_InNonDevMode` — verifies no HTML exception page for 404 in non-dev mode
+  2. `Compression_AppliedToResponses_WhenClientAcceptsGzip` — verifies Content-Encoding is set when client sends Accept-Encoding
+  3. `CorsPreFlight_ReturnsSuccess_ForAllowedOrigin` — verifies OPTIONS pre-flight from `https://nomercy.tv` gets 2xx with CORS headers
+  4. `CorsPreFlight_NoCorHeaders_ForDisallowedOrigin` — verifies disallowed origins don't get CORS Allow-Origin header
+
+**Test results**: Build succeeds with 0 errors. All 4 new middleware tests pass. All 1,239 non-API tests pass. Pre-existing 12 API test failures are unchanged (verified by stashing changes and running tests on base commit).

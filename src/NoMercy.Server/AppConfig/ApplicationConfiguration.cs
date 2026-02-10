@@ -67,15 +67,18 @@ public static class ApplicationConfiguration
 
     private static void ConfigureMiddleware(IApplicationBuilder app)
     {
-        app.UseDeveloperExceptionPage();
-        app.UseRouting();
-        app.UseCors("AllowNoMercyOrigins");
+        if (Config.IsDev)
+        {
+            app.UseDeveloperExceptionPage();
+        }
 
         app.UseHsts();
         app.UseHttpsRedirection();
         app.UseResponseCompression();
         app.UseResponseCaching();
-        app.UseRequestLocalization();
+
+        app.UseCors("AllowNoMercyOrigins");
+        app.UseRouting();
 
         app.UseMiddleware<LocalizationMiddleware>();
         app.UseMiddleware<TokenParamAuthMiddleware>();
@@ -83,7 +86,7 @@ public static class ApplicationConfiguration
         app.UseAuthorization();
         app.UseMiddleware<AccessLogMiddleware>();
         app.UseMiddleware<DynamicStaticFilesMiddleware>();
-        
+
         app.UseWebSockets();
 
         app.Use(async (context, next) =>
