@@ -7,7 +7,7 @@ namespace NoMercy.Data.Repositories;
 
 public class SpecialRepository(MediaContext context)
 {
-    public async Task<List<Special>> GetSpecialsAsync(Guid userId, string language, int take, int page)
+    public async Task<List<Special>> GetSpecialsAsync(Guid userId, string language, int take, int page, CancellationToken ct = default)
     {
         List<Special> specials = await context.Specials
             .AsNoTracking()
@@ -24,12 +24,12 @@ public class SpecialRepository(MediaContext context)
             .OrderBy(special => special.TitleSort)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return specials;
     }
-    
-    public Task<Special?> GetSpecialAsync(Guid userId, Ulid id)
+
+    public Task<Special?> GetSpecialAsync(Guid userId, Ulid id, CancellationToken ct = default)
     {
         return Task.FromResult(context.Specials
             .AsNoTracking()
@@ -56,7 +56,7 @@ public class SpecialRepository(MediaContext context)
             .FirstOrDefault());
     }
 
-    public Task<List<Special>> GetSpecialItems(Guid userId, string? language, string country, int take = 1, int page = 0)
+    public Task<List<Special>> GetSpecialItems(Guid userId, string? language, string country, int take = 1, int page = 0, CancellationToken ct = default)
     {
         return context.Specials
             .AsNoTracking()
@@ -76,10 +76,10 @@ public class SpecialRepository(MediaContext context)
             .OrderBy(special => special.TitleSort)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<Special?> GetSpecialPlaylistAsync(Guid userId, Ulid id, string language, string country)
+    public Task<Special?> GetSpecialPlaylistAsync(Guid userId, Ulid id, string language, string country, CancellationToken ct = default)
     {
         return context.Specials
             .AsNoTracking()
@@ -140,18 +140,18 @@ public class SpecialRepository(MediaContext context)
                     .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                     .Take(1))
                 .ThenInclude(c => c.Certification)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<bool> AddToWatchListAsync(Ulid specialId, Guid userId, bool add = true)
+    public async Task<bool> AddToWatchListAsync(Ulid specialId, Guid userId, bool add = true, CancellationToken ct = default)
     {
         Special? special = await context.Specials
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == specialId);
-    
+            .FirstOrDefaultAsync(s => s.Id == specialId, ct);
+
         if (special is null)
             return false;
-    
+
         if (add)
         {
             // Find the first item in the special with a video file (prefer movies)
@@ -162,19 +162,19 @@ public class SpecialRepository(MediaContext context)
                 .Include(si => si.Episode)
                     .ThenInclude(e => e!.VideoFiles)
                 .OrderBy(si => si.Order)
-                .FirstOrDefaultAsync();
-    
+                .FirstOrDefaultAsync(ct);
+
             if (firstItemWithVideo is not null)
             {
                 VideoFile? videoFile = firstItemWithVideo.Movie?.VideoFiles.FirstOrDefault(vf => vf.Folder != null)
                     ?? firstItemWithVideo.Episode?.VideoFiles.FirstOrDefault(vf => vf.Folder != null);
-    
+
                 if (videoFile is not null)
                 {
                     // Check if userdata already exists for this video file
                     UserData? existingUserData = await context.UserData
-                        .FirstOrDefaultAsync(ud => ud.UserId == userId && ud.VideoFileId == videoFile.Id);
-    
+                        .FirstOrDefaultAsync(ud => ud.UserId == userId && ud.VideoFileId == videoFile.Id, ct);
+
                     if (existingUserData is null)
                     {
                         context.UserData.Add(new()
@@ -195,12 +195,12 @@ public class SpecialRepository(MediaContext context)
             // Remove all userdata for this special
             List<UserData> userDataToRemove = await context.UserData
                 .Where(ud => ud.UserId == userId && ud.SpecialId == specialId)
-                .ToListAsync();
-    
+                .ToListAsync(ct);
+
             context.UserData.RemoveRange(userDataToRemove);
         }
-    
-        await context.SaveChangesAsync();
+
+        await context.SaveChangesAsync(ct);
         return true;
     }
 }

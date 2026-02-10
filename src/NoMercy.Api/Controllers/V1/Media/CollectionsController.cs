@@ -21,7 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class CollectionsController(CollectionRepository collectionRepository) : BaseController
 {
     [HttpGet]
-    public async Task<IActionResult> Collections([FromQuery] PageRequestDto request)
+    public async Task<IActionResult> Collections([FromQuery] PageRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -80,7 +80,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
     [HttpGet]
     [Route("{id:int}")]
-    public async Task<IActionResult> Collection(int id)
+    public async Task<IActionResult> Collection(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -114,7 +114,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
     [HttpGet]
     [Route("{id:int}/available")]
-    public async Task<IActionResult> Available(int id)
+    public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -150,7 +150,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
     [HttpGet]
     [Route("{id:int}/watch")]
-    public async Task<IActionResult> Watch(int id)
+    public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -170,7 +170,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
     [HttpPost]
     [Route("{id:int}/like")]
-    public async Task<IActionResult> Like(int id, [FromBody] LikeRequestDto request)
+    public async Task<IActionResult> Like(int id, [FromBody] LikeRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -194,7 +194,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
     [HttpPost]
     [Route("{id:int}/watch-list")]
-    public async Task<IActionResult> AddToWatchList(int id, [FromBody] WatchListRequestDto request)
+    public async Task<IActionResult> AddToWatchList(int id, [FromBody] WatchListRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())

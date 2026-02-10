@@ -7,7 +7,7 @@ namespace NoMercy.Data.Repositories;
 
 public class HomeRepository
 {
-    public async Task<List<Tv>> GetHomeTvs(MediaContext mediaContext, List<int> tvIds, string? language, string country)
+    public async Task<List<Tv>> GetHomeTvs(MediaContext mediaContext, List<int> tvIds, string? language, string country, CancellationToken ct = default)
     {
         return await mediaContext.Tvs
             .AsNoTracking()
@@ -22,10 +22,10 @@ public class HomeRepository
                 .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                 .Take(1))
                 .ThenInclude(c => c.Certification)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public async Task<List<Movie>> GetHomeMovies(MediaContext mediaContext, List<int> movieIds, string? language, string country)
+    public async Task<List<Movie>> GetHomeMovies(MediaContext mediaContext, List<int> movieIds, string? language, string country, CancellationToken ct = default)
     {
         return await mediaContext.Movies
             .AsNoTracking()
@@ -39,10 +39,10 @@ public class HomeRepository
                 .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                 .Take(1))
                 .ThenInclude(c => c.Certification)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public async Task<HashSet<UserData>> GetContinueWatchingAsync(MediaContext mediaContext, Guid userId, string language, string country)
+    public async Task<HashSet<UserData>> GetContinueWatchingAsync(MediaContext mediaContext, Guid userId, string language, string country, CancellationToken ct = default)
     {
         List<UserData> userData = await mediaContext.UserData
             .AsNoTracking()
@@ -109,14 +109,14 @@ public class HomeRepository
                     .Take(1))
                 .ThenInclude(c => c.Certification)
             .OrderByDescending(ud => ud.LastPlayedDate)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return userData
             .DistinctBy(ud => new { ud.MovieId, ud.CollectionId, ud.TvId, ud.SpecialId })
             .ToHashSet();
     }
 
-    public Task<HashSet<Image>> GetScreensaverImagesAsync(MediaContext mediaContext, Guid userId)
+    public Task<HashSet<Image>> GetScreensaverImagesAsync(MediaContext mediaContext, Guid userId, CancellationToken ct = default)
     {
         return mediaContext.Images
             .AsNoTracking()
@@ -127,10 +127,10 @@ public class HomeRepository
                 (image.Type == "backdrop" && (image.Iso6391 == null || image.Iso6391 == "") && image.Height >= 1080) ||
                 (image.Type == "logo" && image.Iso6391 == "en"))
             .OrderByDescending(image => image.Width)
-            .ToHashSetAsync();
+            .ToHashSetAsync(ct);
     }
 
-    public Task<List<Library>> GetLibrariesAsync(MediaContext mediaContext, Guid userId)
+    public Task<List<Library>> GetLibrariesAsync(MediaContext mediaContext, Guid userId, CancellationToken ct = default)
     {
         return mediaContext.Libraries
             .AsNoTracking()
@@ -144,34 +144,34 @@ public class HomeRepository
                 .ThenInclude(ll => ll.Language)
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<int> GetAnimeCountAsync(MediaContext mediaContext, Guid userId)
+    public Task<int> GetAnimeCountAsync(MediaContext mediaContext, Guid userId, CancellationToken ct = default)
     {
         return mediaContext.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .CountAsync(tv => tv.Library.Type == Config.AnimeMediaType);
+            .CountAsync(tv => tv.Library.Type == Config.AnimeMediaType, ct);
     }
 
-    public Task<int> GetMovieCountAsync(MediaContext mediaContext, Guid userId)
+    public Task<int> GetMovieCountAsync(MediaContext mediaContext, Guid userId, CancellationToken ct = default)
     {
         return mediaContext.Movies
             .AsNoTracking()
             .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .CountAsync(movie => movie.Library.Type == Config.MovieMediaType);
+            .CountAsync(movie => movie.Library.Type == Config.MovieMediaType, ct);
     }
 
-    public Task<int> GetTvCountAsync(MediaContext mediaContext, Guid userId)
+    public Task<int> GetTvCountAsync(MediaContext mediaContext, Guid userId, CancellationToken ct = default)
     {
         return mediaContext.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .CountAsync(tv => tv.Library.Type == Config.TvMediaType);
+            .CountAsync(tv => tv.Library.Type == Config.TvMediaType, ct);
     }
 
-    public async Task<List<Genre>> GetHomeGenresAsync(MediaContext mediaContext, Guid userId, string? language, int take, int page = 0)
+    public async Task<List<Genre>> GetHomeGenresAsync(MediaContext mediaContext, Guid userId, string? language, int take, int page = 0, CancellationToken ct = default)
     {
         return await mediaContext.Genres
             .AsNoTracking()
@@ -184,6 +184,6 @@ public class HomeRepository
             .OrderBy(genre => genre.Name)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 }

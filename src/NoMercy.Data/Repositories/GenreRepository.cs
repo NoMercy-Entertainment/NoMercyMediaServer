@@ -18,7 +18,7 @@ public class GenreRepository(MediaContext context)
 {
     private static readonly string[] Letters = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
     
-    public async Task<Genre?> GetGenreAsync(Guid userId, int id, string language, string country, int take, int page)
+    public async Task<Genre?> GetGenreAsync(Guid userId, int id, string language, string country, int take, int page, CancellationToken ct = default)
     {
         return await context.Genres
             .AsNoTracking()
@@ -61,7 +61,7 @@ public class GenreRepository(MediaContext context)
                     .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                     .Take(1))
                 .ThenInclude(c => c.Certification)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
     public IQueryable<Genre> GetGenresAsync(Guid userId, string language, int take, int page)
@@ -81,7 +81,7 @@ public class GenreRepository(MediaContext context)
             .Take(take);
     }
 
-    public async Task<List<GenreWithCountsDto>> GetGenresWithCountsAsync(Guid userId, string language, int take, int page)
+    public async Task<List<GenreWithCountsDto>> GetGenresWithCountsAsync(Guid userId, string language, int take, int page, CancellationToken ct = default)
     {
         return await context.Genres
             .AsNoTracking()
@@ -106,10 +106,10 @@ public class GenreRepository(MediaContext context)
                     gt.Tv.Library.LibraryUsers.Any(u => u.UserId == userId) &&
                     gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
             })
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<List<MusicGenre>> GetMusicGenresAsync(Guid userId)
+    public Task<List<MusicGenre>> GetMusicGenresAsync(Guid userId, CancellationToken ct = default)
     {
         return context.MusicGenres
             .AsNoTracking()
@@ -119,11 +119,11 @@ public class GenreRepository(MediaContext context)
             .Where(genre => genre.MusicGenreTracks.Count > 0)
             .Include(genre => genre.MusicGenreTracks)
             .OrderBy(genre => genre.Name)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
 
-    public Task<List<MusicGenre>> GetPaginatedMusicGenresAsync(Guid userId, string letter, int take, int page)
+    public Task<List<MusicGenre>> GetPaginatedMusicGenresAsync(Guid userId, string letter, int take, int page, CancellationToken ct = default)
     {
         return context.MusicGenres
             .AsNoTracking()
@@ -138,10 +138,10 @@ public class GenreRepository(MediaContext context)
             .OrderBy(genre => genre.Name)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<MusicGenre?> GetMusicGenreAsync(Guid userId, Guid genreId)
+    public Task<MusicGenre?> GetMusicGenreAsync(Guid userId, Guid genreId, CancellationToken ct = default)
     {
         return context.MusicGenres
             .AsNoTracking()
@@ -163,7 +163,7 @@ public class GenreRepository(MediaContext context)
                 .ThenInclude(track => track.ArtistTrack)
                 .ThenInclude(at => at.Artist)
                 .ThenInclude(artist => artist.Images)
-            
+
             .Include(genre => genre.MusicGenreTracks)
                 .ThenInclude(mgt => mgt.Track)
                 .ThenInclude(track => track.AlbumTrack)
@@ -176,6 +176,6 @@ public class GenreRepository(MediaContext context)
                 .ThenInclude(album => album.AlbumArtist)
                 .ThenInclude(aa => aa.Artist)
                 .ThenInclude(artist => artist.Images)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 }

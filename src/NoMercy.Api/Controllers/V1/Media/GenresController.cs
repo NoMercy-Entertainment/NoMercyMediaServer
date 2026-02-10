@@ -24,7 +24,7 @@ public class GenresController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Genres([FromQuery] PageRequestDto request)
+    public async Task<IActionResult> Genres([FromQuery] PageRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -53,7 +53,7 @@ public class GenresController : BaseController
 
     [HttpGet]
     [Route("{genreId}")]
-    public async Task<IActionResult> Genre(int genreId, [FromQuery] PageRequestDto request)
+    public async Task<IActionResult> Genre(int genreId, [FromQuery] PageRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())

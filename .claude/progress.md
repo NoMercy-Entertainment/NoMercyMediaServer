@@ -1450,3 +1450,37 @@ Added missing `using`/dispose to 10 resource leak sites across cold paths: Media
 - `Source_FileOpenWrite_HasUsing`: Scans all `src/*.cs` files for `File.OpenWrite`, `File.OpenRead`, `File.Create` declarations without `using`. Uses negative lookbehind to exclude `TagFile.Create` and `ZipFile.OpenRead`.
 
 **Test results**: Build succeeds with 0 errors. All 846 tests pass across 8 projects (262 Api + 28 MediaProcessing + 135 Database + 119 Encoder + 277 Queue + 135 Repositories + 421 Providers + 5 Networking) when run sequentially.
+
+---
+
+## MED-04 — Fix CancellationToken not propagated
+
+**Task**: Propagate `CancellationToken` from ASP.NET Core controller actions through repository methods to EF Core async terminal calls, so that cancelled HTTP requests abort database queries immediately instead of running to completion.
+
+**Repository changes** (8 files):
+
+1. `src/NoMercy.Data/Repositories/MovieRepository.cs` — 8 async methods updated with `CancellationToken ct = default`; 13 EF Core terminal calls now pass `ct`. Compiled query `GetMovieDetailAsync` left untouched. `.RunAsync()` on Upsert left untouched.
+2. `src/NoMercy.Data/Repositories/TvShowRepository.cs` — 7 async methods updated; 15 EF Core terminal calls propagated. Compiled query `GetTvAsync` left untouched.
+3. `src/NoMercy.Data/Repositories/LibraryRepository.cs` — 10 async methods updated (`GetLibraries`, `GetLibraryByIdAsync`, `GetLibraryMovieCardsAsync`, `GetLibraryTvCardsAsync`, `GetPaginatedLibraryMovies`, `GetPaginatedLibraryShows`, `GetRandomTvShow`, `GetRandomMovie`). Compiled queries `GetLibraryMovies`/`GetLibraryShows` left untouched.
+4. `src/NoMercy.Data/Repositories/HomeRepository.cs` — 9 async methods updated: `GetHomeTvs`, `GetHomeMovies`, `GetContinueWatchingAsync`, `GetScreensaverImagesAsync`, `GetLibrariesAsync`, `GetAnimeCountAsync`, `GetMovieCountAsync`, `GetTvCountAsync`, `GetHomeGenresAsync`.
+5. `src/NoMercy.Data/Repositories/GenreRepository.cs` — 5 async methods updated. IQueryable-returning `GetGenresAsync` left unchanged.
+6. `src/NoMercy.Data/Repositories/CollectionRepository.cs` — 8 async methods updated.
+7. `src/NoMercy.Data/Repositories/MusicRepository.cs` — 21 async methods updated. 12 IQueryable-returning methods and 4 synchronous search methods left unchanged.
+8. `src/NoMercy.Data/Repositories/SpecialRepository.cs` — 5 methods updated.
+
+**Controller changes** (8 files):
+
+1. `src/NoMercy.Api/Controllers/V1/Media/MoviesController.cs` — All async action methods now accept `CancellationToken ct = default` and pass it to repository calls.
+2. `src/NoMercy.Api/Controllers/V1/Media/TvShowsController.cs` — Same pattern.
+3. `src/NoMercy.Api/Controllers/V1/Media/LibrariesController.cs` — Same pattern. Uses named parameter `ct: ct` for `GetPaginatedLibraryShows` due to optional params.
+4. `src/NoMercy.Api/Controllers/V1/Media/CollectionsController.cs` — Same pattern.
+5. `src/NoMercy.Api/Controllers/V1/Media/GenresController.cs` — Same pattern.
+6. `src/NoMercy.Api/Controllers/V1/Media/HomeController.cs` — Same pattern.
+7. `src/NoMercy.Api/Controllers/V1/Media/SpecialController.cs` — Same pattern.
+8. `src/NoMercy.Api/Controllers/V1/Media/SearchController.cs` — Same pattern; `ct` also passed to `CreateDbContextAsync(ct)` and `ToListAsync(ct)` inside `Task.Run` lambdas.
+
+**Tests added**: `tests/NoMercy.Tests.Repositories/CancellationTokenPropagationTests.cs` — 14 tests:
+- 12 tests verify that passing an already-cancelled token throws `OperationCanceledException` (covers MovieRepository, TvShowRepository, LibraryRepository, CollectionRepository, GenreRepository, SpecialRepository)
+- 2 tests verify backward compatibility: methods still work with the default (non-cancelled) token
+
+**Test results**: Build succeeds with 0 errors. All 860 tests pass (262 Api + 28 MediaProcessing + 135 Database + 119 Encoder + 277 Queue + 149 Repositories + 421 Providers + 5 Networking) when run sequentially.

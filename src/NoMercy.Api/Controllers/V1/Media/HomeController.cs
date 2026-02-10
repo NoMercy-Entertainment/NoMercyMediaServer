@@ -37,17 +37,17 @@ public class HomeController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
+    public async Task<IActionResult> Index([FromQuery] PageRequestDto request, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view home");
-        
+
         Guid userId = User.UserId();
         string language = Language();
         string country = Country();
-    
+
         List<GenreRowDto<GenreRowItemDto>> result = await _homeService.GetHomePageContent(userId, language, country, request);
-      
+
         List<GenreRowDto<GenreRowItemDto>> newData = result.ToList();
         bool hasMore = newData.Count() >= request.Take;
 
@@ -62,14 +62,14 @@ public class HomeController : BaseController
 
         if (request.Page != 0) return Ok(response);
 
-        LibraryRepository libraryRepository = new(await _contextFactory.CreateDbContextAsync());
+        LibraryRepository libraryRepository = new(await _contextFactory.CreateDbContextAsync(ct));
         List<Library> libraries = await libraryRepository.GetLibraries(userId);
 
         // Fetch all library data in parallel - each task needs its own MediaContext for thread safety
         Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = libraries
             .Select(async library =>
             {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
                 List<Movie> libraryMovies = [];
                 await foreach (Movie movie in libraryRepository
                                    .GetLibraryMovies(context, userId, library.Id, language, request.Take, request.Page, m => m.CreatedAt, "desc"))
@@ -103,9 +103,9 @@ public class HomeController : BaseController
 
         return Ok(response);
     }
-    
+
     [HttpGet("home")]
-    public async Task<IActionResult> Home()
+    public async Task<IActionResult> Home(CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view continue watching");
@@ -116,7 +116,7 @@ public class HomeController : BaseController
     }
 
     [HttpPost("home/card")]
-    public async Task<IActionResult> HomeCard([FromBody] CardRequestDto request)
+    public async Task<IActionResult> HomeCard([FromBody] CardRequestDto request, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view home card");
@@ -127,7 +127,7 @@ public class HomeController : BaseController
     }
 
     [HttpGet("home/tv")]
-    public async Task<IActionResult> HomeTv()
+    public async Task<IActionResult> HomeTv(CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view home tv");
@@ -138,7 +138,7 @@ public class HomeController : BaseController
     }
 
     [HttpPost("home/continue")]
-    public async Task<IActionResult> HomeContinue([FromBody] CardRequestDto request)
+    public async Task<IActionResult> HomeContinue([FromBody] CardRequestDto request, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view continue watching");
@@ -149,21 +149,21 @@ public class HomeController : BaseController
         return Ok(result);
     }
 
-    
-    
+
+
     [HttpHead]
     [Route("trailer/{trailerId}")]
-    public async Task<IActionResult> HasTrailer(int id, string trailerId)
+    public async Task<IActionResult> HasTrailer(int id, string trailerId, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
-        
+
         string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
         string jsonFile = Path.Combine(folder, "info.json");
-        
+
         if(System.IO.File.Exists(jsonFile))
         {
-            string text = await System.IO.File.ReadAllTextAsync(jsonFile);
+            string text = await System.IO.File.ReadAllTextAsync(jsonFile, ct);
             TrailerInfo? trailerInfo = text.FromJson<TrailerInfo>();
             if (trailerInfo is not null)
             {
@@ -178,39 +178,39 @@ public class HomeController : BaseController
         string arg =
             $"-f bestvideo+bestaudio -j https://youtube.com/watch?v={trailerId} --extractor-args \"youtube:player_client=default\" ";
         Shell.ExecResult result = await Shell.ExecAsync(AppFiles.YtdlpPath, arg);
-        
+
         if(!result.Success || string.IsNullOrEmpty(result.StandardOutput))
         {
             Logger.Encoder(result.StandardError, LogEventLevel.Error);
             return NotFoundResponse("Trailer not found");
         }
-        
+
         if (!Directory.Exists(folder))
             Directory.CreateDirectory(folder);
 
-        await System.IO.File.WriteAllTextAsync(jsonFile, result.StandardOutput);
-        
+        await System.IO.File.WriteAllTextAsync(jsonFile, result.StandardOutput, ct);
+
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
             Message = "Trailer found"
         });
     }
-    
+
     [HttpGet]
     [Route("trailer/{trailerId}")]
-    public async Task<IActionResult> Trailer(int id, string trailerId)
+    public async Task<IActionResult> Trailer(int id, string trailerId, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
         string language = Language();
-        
+
         string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
         if (!Directory.Exists(folder))
             Directory.CreateDirectory(folder);
-        
-        string text = await System.IO.File.ReadAllTextAsync(Path.Combine(folder, "info.json"));
+
+        string text = await System.IO.File.ReadAllTextAsync(Path.Combine(folder, "info.json"), ct);
         TrailerInfo? trailerInfo = text.FromJson<TrailerInfo>();
 
         if (trailerInfo is null)
@@ -218,7 +218,7 @@ public class HomeController : BaseController
             Logger.Encoder("Trailer info is null", LogEventLevel.Error);
             return NotFoundResponse("Trailer not found");
         }
-        
+
         if (System.IO.File.Exists(Path.Combine(folder, "video_00002.ts")))
         {
             return Ok(
@@ -240,7 +240,7 @@ public class HomeController : BaseController
                             File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                             Language = t.Key,
                             Kind = "subtitles"
-                        }).ToList(), 
+                        }).ToList(),
                     Sources =
                     [
                         new()
@@ -257,15 +257,15 @@ public class HomeController : BaseController
         _ = Task.Run(async () =>
         {
             StringBuilder sb = new();
-            
+
             sb.Append(AppFiles.YtdlpPath);
             sb.Append(" -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" ");
-            
+
             if (!string.IsNullOrEmpty(language))
                 sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
-            
+
             sb.Append(trailerId);
-            
+
             sb.Append(" -o - ");
             sb.Append($" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast ");
             sb.Append("-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 ");
@@ -296,7 +296,7 @@ public class HomeController : BaseController
         {
             await Task.Delay(1000, timeoutCts.Token);
         }
-        
+
         return Ok(
             new VideoPlaylistResponseDto
             {
@@ -316,7 +316,7 @@ public class HomeController : BaseController
                         File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                         Language = t.Key,
                         Kind = "subtitles"
-                    }).ToList(), 
+                    }).ToList(),
                 Sources =
                 [
                     new()
@@ -332,20 +332,20 @@ public class HomeController : BaseController
 
     [HttpDelete]
     [Route("trailer/{trailerId}")]
-    public async Task<IActionResult> RemoveTrailer(int id, string trailerId)
+    public async Task<IActionResult> RemoveTrailer(int id, string trailerId, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
-        
+
         string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
-        
+
         if (!Directory.Exists(folder))
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok",
                 Message = "Trailer removed"
             });
-        
+
         try
         {
             Directory.Delete(folder, recursive: true);

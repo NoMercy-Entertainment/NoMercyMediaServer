@@ -93,16 +93,16 @@ public class TvShowRepository(MediaContext context)
                     .ThenInclude(ctv => ctv.Company)
                 .FirstOrDefault());
 
-    public Task<bool> GetTvAvailableAsync(Guid userId, int id)
+    public Task<bool> GetTvAvailableAsync(Guid userId, int id, CancellationToken ct = default)
     {
         return context.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Where(tv => tv.Id == id)
-            .AnyAsync(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)));
+            .AnyAsync(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)), ct);
     }
 
-    public async Task<Tv?> GetTvPlaylistAsync(Guid userId, int id, string language, string country)
+    public async Task<Tv?> GetTvPlaylistAsync(Guid userId, int id, string language, string country, CancellationToken ct = default)
     {
         return await context.Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
@@ -152,13 +152,13 @@ public class TvShowRepository(MediaContext context)
                 .Where(certification => certification.Certification.Iso31661 == country ||
                                         certification.Certification.Iso31661 == "US"))
             .ThenInclude(certificationTv => certificationTv.Certification)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<bool> LikeTvAsync(int id, Guid userId, bool like)
+    public async Task<bool> LikeTvAsync(int id, Guid userId, bool like, CancellationToken ct = default)
     {
         TvUser? tvUser = await context.TvUser
-            .FirstOrDefaultAsync(tu => tu.TvId == id && tu.UserId == userId);
+            .FirstOrDefaultAsync(tu => tu.TvId == id && tu.UserId == userId, ct);
 
         if (like)
         {
@@ -174,7 +174,7 @@ public class TvShowRepository(MediaContext context)
         else if (tvUser != null)
         {
             context.TvUser.Remove(tvUser);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(ct);
         }
 
         return true;
@@ -200,14 +200,14 @@ public class TvShowRepository(MediaContext context)
         jobDispatcher.DispatchJob<AddShowJob>(id, tvLibrary);
     }
 
-    public Task DeleteTvAsync(int id)
+    public Task DeleteTvAsync(int id, CancellationToken ct = default)
     {
         return context.Tvs
             .Where(tv => tv.Id == id)
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(ct);
     }
 
-    public async Task<IEnumerable<Episode>> GetMissingLibraryShows(Guid userId, int id, string language)
+    public async Task<IEnumerable<Episode>> GetMissingLibraryShows(Guid userId, int id, string language, CancellationToken ct = default)
     {
         Tv? tv = await context.Tvs
             .AsNoTracking()
@@ -215,35 +215,35 @@ public class TvShowRepository(MediaContext context)
             .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
             .Include(tv => tv.Episodes.Where(e => e.VideoFiles.Count == 0))
                 .ThenInclude(e => e.Translations.Where(t => t.Iso6391 == language))
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         return tv?.Episodes ?? [];
     }
     
-    public async Task<bool> AddToWatchListAsync(int tvId, Guid userId, bool add = true)
+    public async Task<bool> AddToWatchListAsync(int tvId, Guid userId, bool add = true, CancellationToken ct = default)
     {
         Tv? tv = await context.Tvs
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == tvId);
-    
+            .FirstOrDefaultAsync(t => t.Id == tvId, ct);
+
         if (tv is null)
             return false;
-    
+
         if (add)
         {
             // Find season 1, episode 1 with its video file
             Episode? season1Episode1 = await context.Episodes
                 .Include(e => e.VideoFiles)
-                .FirstOrDefaultAsync(e => e.TvId == tvId && e.SeasonNumber == 1 && e.EpisodeNumber == 1);
-    
+                .FirstOrDefaultAsync(e => e.TvId == tvId && e.SeasonNumber == 1 && e.EpisodeNumber == 1, ct);
+
             if (season1Episode1 is not null && season1Episode1.VideoFiles.Any())
             {
                 VideoFile videoFile = season1Episode1.VideoFiles.First();
-                
+
                 // Check if userdata already exists for this video file
                 UserData? existingUserData = await context.UserData
-                    .FirstOrDefaultAsync(ud => ud.UserId == userId && ud.VideoFileId == videoFile.Id);
-    
+                    .FirstOrDefaultAsync(ud => ud.UserId == userId && ud.VideoFileId == videoFile.Id, ct);
+
                 if (existingUserData is null)
                 {
                     context.UserData.Add(new()
@@ -263,12 +263,12 @@ public class TvShowRepository(MediaContext context)
             // Remove all userdata for this tv show
             List<UserData> userDataToRemove = await context.UserData
                 .Where(ud => ud.UserId == userId && ud.TvId == tvId)
-                .ToListAsync();
-    
+                .ToListAsync(ct);
+
             context.UserData.RemoveRange(userDataToRemove);
         }
-    
-        await context.SaveChangesAsync();
+
+        await context.SaveChangesAsync(ct);
         return true;
     }
 }

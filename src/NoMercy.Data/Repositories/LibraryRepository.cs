@@ -45,7 +45,7 @@ public class LibraryRepository(MediaContext context)
 {
     private static readonly string[] Letters = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
-    public Task<List<Library>> GetLibraries(Guid userId)
+    public Task<List<Library>> GetLibraries(Guid userId, CancellationToken ct = default)
     {
         return context.Libraries
             .AsNoTracking()
@@ -59,10 +59,10 @@ public class LibraryRepository(MediaContext context)
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
             .OrderBy(library => library.Order)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<Library?> GetLibraryByIdAsync(Ulid libraryId, Guid userId, string language, string country, int take, int page)
+    public Task<Library?> GetLibraryByIdAsync(Ulid libraryId, Guid userId, string language, string country, int take, int page, CancellationToken ct = default)
     {
         return context.Libraries
             .AsNoTracking()
@@ -103,7 +103,7 @@ public class LibraryRepository(MediaContext context)
                     .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                     .Take(1))
                 .ThenInclude(c => c.Certification)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
     public readonly Func<MediaContext, Guid, Ulid, string, int, int, Expression<Func<Movie, object>>?, string?, IAsyncEnumerable<Movie>> GetLibraryMovies =
@@ -222,7 +222,7 @@ public class LibraryRepository(MediaContext context)
     // }
 
     // Optimized query using projection - only fetches what NmCardDto needs
-    public Task<List<MovieCardDto>> GetLibraryMovieCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip)
+    public Task<List<MovieCardDto>> GetLibraryMovieCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip, CancellationToken ct = default)
     {
         return context.Movies
             .AsNoTracking()
@@ -255,11 +255,11 @@ public class LibraryRepository(MediaContext context)
                     .Select(c => c.Certification.Iso31661)
                     .FirstOrDefault()
             })
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     // Optimized query using projection - only fetches what NmCardDto needs
-    public Task<List<TvCardDto>> GetLibraryTvCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip)
+    public Task<List<TvCardDto>> GetLibraryTvCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip, CancellationToken ct = default)
     {
         return context.Tvs
             .AsNoTracking()
@@ -296,11 +296,11 @@ public class LibraryRepository(MediaContext context)
                     .Select(c => c.Certification.Iso31661)
                     .FirstOrDefault()
             })
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     public Task<List<Movie>> GetPaginatedLibraryMovies(Guid userId, Ulid libraryId, string letter, string language,
-        string country, int take, int page)
+        string country, int take, int page, CancellationToken ct = default)
     {
         return context.Movies
             .AsNoTracking()
@@ -320,11 +320,11 @@ public class LibraryRepository(MediaContext context)
             .OrderBy(movie => movie.TitleSort)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     public Task<List<Tv>> GetPaginatedLibraryShows(Guid userId, Ulid libraryId, string letter, string language,
-        string country, int take, int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null)
+        string country, int take, int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null, CancellationToken ct = default)
     {
         return context.Tvs
             .AsNoTracking()
@@ -345,7 +345,7 @@ public class LibraryRepository(MediaContext context)
             .OrderBy(tv => tv.TitleSort)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     public Task<Library?> GetLibraryByIdAsync(Ulid id)
@@ -415,7 +415,7 @@ public class LibraryRepository(MediaContext context)
                 .OrderBy(tv => EF.Functions.Random())
                 .FirstOrDefault());
     
-    public async Task<Tv?> GetRandomTvShow(Guid userId, string language)
+    public async Task<Tv?> GetRandomTvShow(Guid userId, string language, CancellationToken ct = default)
     {
         return await GetRandomTvShowQuery(context, userId, language);
     }
@@ -438,7 +438,7 @@ public class LibraryRepository(MediaContext context)
                 .OrderBy(movie => EF.Functions.Random())
                 .FirstOrDefault());
 
-    public async Task<Movie?> GetRandomMovie(Guid userId, string language)
+    public async Task<Movie?> GetRandomMovie(Guid userId, string language, CancellationToken ct = default)
     {
         return await GetRandomMovieQuery(context, userId, language);
     }

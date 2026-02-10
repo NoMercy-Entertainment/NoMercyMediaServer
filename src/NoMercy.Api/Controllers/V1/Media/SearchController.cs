@@ -31,9 +31,9 @@ public class SearchController : BaseController
         _musicRepository = musicService;
         _contextFactory = contextFactory;
     }
-    
+
     [HttpGet("music")]
-    public async Task<IActionResult> SearchMusic([FromQuery] SearchQueryRequest request)
+    public async Task<IActionResult> SearchMusic([FromQuery] SearchQueryRequest request, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to perform searches");
@@ -51,19 +51,19 @@ public class SearchController : BaseController
         // Step 2: Query full data using the IDs in parallel - each task needs its own MediaContext for thread safety
         Task<List<Artist>> artistsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Artists
                 .Where(artist => artistIds.Contains(artist.Id))
                 .Include(artist => artist.ArtistTrack)
                 .ThenInclude(artistTrack => artistTrack.Track)
                 .Include(artist => artist.AlbumArtist)
                 .ThenInclude(albumArtist => albumArtist.Album)
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         Task<List<Album>> albumsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Albums
                 .Where(album => albumIds.Contains(album.Id))
                 .Include(album => album.AlbumTrack)
@@ -73,23 +73,23 @@ public class SearchController : BaseController
                 .Include(album => album.AlbumTrack)
                 .ThenInclude(albumTrack => albumTrack.Track)
                 .ThenInclude(song => song.TrackUser)
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         Task<List<Playlist>> playlistsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Playlists
                 .Where(playlist => playlistIds.Contains(playlist.Id))
                 .Include(playlist => playlist.Tracks)
                 .ThenInclude(playlistTrack => playlistTrack.Track)
                 .ThenInclude(song => song.TrackUser)
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         Task<List<Track>> songsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Tracks
                 .Where(track => trackIds.Contains(track.Id))
                 .Include(track => track.ArtistTrack)
@@ -99,7 +99,7 @@ public class SearchController : BaseController
                 .Include(track => track.PlaylistTrack)
                 .ThenInclude(playlistTrack => playlistTrack.Playlist)
                 .Include(track => track.TrackUser)
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         await Task.WhenAll(artistsTask, albumsTask, playlistsTask, songsTask);
@@ -159,7 +159,7 @@ public class SearchController : BaseController
                         .WithId("top-result")
                         .WithTitle("Top Result".Localize())
                         .Build(),
-                    
+
                     Component.List()
                         .WithId("tracks")
                         .WithProperties(new()
@@ -181,7 +181,7 @@ public class SearchController : BaseController
                                     { "paddingEnd", 0 }
                                 })
                                 .WithDisplayList(songResults)))),
-            
+
             Component.Carousel()
                 .WithId("artists")
                 .WithTitle("Artist".Localize())
@@ -207,11 +207,11 @@ public class SearchController : BaseController
     }
 
     [HttpGet("music/tv")]
-    public async Task<IActionResult> SearchTvMusic([FromQuery] SearchQueryRequest request)
+    public async Task<IActionResult> SearchTvMusic([FromQuery] SearchQueryRequest request, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to perform searches");
-        
+
         string normalizedQuery = request.Query.NormalizeSearch();
         string country = Country();
         Guid userId = User.UserId();
@@ -225,19 +225,19 @@ public class SearchController : BaseController
         // Step 2: Query full data using the IDs in parallel - each task needs its own MediaContext for thread safety
         Task<List<Artist>> artistsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Artists
                 .Where(artist => artistIds.Contains(artist.Id))
                 .Include(artist => artist.ArtistTrack)
                 .ThenInclude(artistTrack => artistTrack.Track)
                 .Include(artist => artist.AlbumArtist)
                 .ThenInclude(albumArtist => albumArtist.Album)
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         Task<List<Album>> albumsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Albums
                 .Where(album => albumIds.Contains(album.Id))
                 .Include(album => album.AlbumTrack)
@@ -247,23 +247,23 @@ public class SearchController : BaseController
                 .Include(album => album.AlbumTrack)
                 .ThenInclude(albumTrack => albumTrack.Track)
                 .ThenInclude(song => song.TrackUser)
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         Task<List<Playlist>> playlistsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Playlists
                 .Where(playlist => playlistIds.Contains(playlist.Id))
                 .Include(playlist => playlist.Tracks)
                 .ThenInclude(playlistTrack => playlistTrack.Track)
                 .ThenInclude(song => song.TrackUser)
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         Task<List<Track>> songsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Tracks
                 .Where(track => trackIds.Contains(track.Id))
                 .Include(track => track.ArtistTrack)
@@ -273,7 +273,7 @@ public class SearchController : BaseController
                 .Include(track => track.PlaylistTrack)
                 .ThenInclude(playlistTrack => playlistTrack.Playlist)
                 .Include(track => track.TrackUser)
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         await Task.WhenAll(artistsTask, albumsTask, playlistsTask, songsTask);
@@ -309,7 +309,7 @@ public class SearchController : BaseController
                     artists.AddRange(song.ArtistTrack.Select(artistTrack => artistTrack.Artist));
                 if (song.AlbumTrack.Count > 0) albums.AddRange(song.AlbumTrack.Select(albumTrack => albumTrack.Album));
             }
-        
+
         List<ComponentEnvelope> musicCards =
         [
             ..artists
@@ -337,11 +337,11 @@ public class SearchController : BaseController
     }
 
     [HttpGet("video")]
-    public async Task<IActionResult> SearchVideo([FromQuery] SearchQueryRequest request)
+    public async Task<IActionResult> SearchVideo([FromQuery] SearchQueryRequest request, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to perform searches");
-        
+
         string country = Country();
 
         string normalizedQuery = request.Query.NormalizeSearch();
@@ -349,18 +349,18 @@ public class SearchController : BaseController
         // Run TV and movie queries in parallel
         Task<List<Tv>> tvsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Tvs
                 .Where(tv => tv.Title.ToLower().Contains(normalizedQuery))
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         Task<List<Movie>> moviesTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Movies
                 .Where(movie => movie.Title.ToLower().Contains(normalizedQuery))
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         await Task.WhenAll(tvsTask, moviesTask);
@@ -384,7 +384,7 @@ public class SearchController : BaseController
     }
 
     [HttpGet("video/tv")]
-    public async Task<IActionResult> SearchTvVideo([FromQuery] SearchQueryRequest request)
+    public async Task<IActionResult> SearchTvVideo([FromQuery] SearchQueryRequest request, CancellationToken ct = default)
     {
 
         if (!User.IsAllowed())
@@ -397,18 +397,18 @@ public class SearchController : BaseController
         // Run TV and movie queries in parallel
         Task<List<Tv>> tvsTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Tvs
                 .Where(tv => tv.Title.ToLower().Contains(normalizedQuery))
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         Task<List<Movie>> moviesTask = Task.Run(async () =>
         {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await context.Movies
                 .Where(movie => movie.Title.ToLower().Contains(normalizedQuery))
-                .ToListAsync();
+                .ToListAsync(ct);
         });
 
         await Task.WhenAll(tvsTask, moviesTask);

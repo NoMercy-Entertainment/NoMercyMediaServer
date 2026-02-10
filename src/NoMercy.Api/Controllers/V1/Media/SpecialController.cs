@@ -21,7 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class SpecialController(SpecialRepository specialRepository, MediaContext context, IDbContextFactory<MediaContext> contextFactory) : BaseController
 {
     [HttpGet]
-    public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
+    public async Task<IActionResult> Index([FromQuery] PageRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -30,7 +30,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         string language = Language();
         string country = Country();
 
-        List<Special> specials = await specialRepository.GetSpecialsAsync(userId, language, request.Take, request.Page);
+        List<Special> specials = await specialRepository.GetSpecialsAsync(userId, language, request.Take, request.Page, ct);
 
         if (request.Version != "lolomo")
         {
@@ -74,7 +74,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
     [HttpGet]
     [Route("{id:ulid}")]
-    public async Task<IActionResult> Show(Ulid id)
+    public async Task<IActionResult> Show(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -101,7 +101,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         // Fetch movies and TVs in parallel
         Task<List<SpecialItemsDto>> moviesTask = Task.Run(async () =>
         {
-            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
+            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
             List<SpecialItemsDto> movieItems = [];
             IAsyncEnumerable<Movie> specialMovies =
                 SpecialResponseDto.GetSpecialMovies(mediaContext, userId, movieIds, language, country);
@@ -112,7 +112,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
         Task<List<SpecialItemsDto>> tvsTask = Task.Run(async () =>
         {
-            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
+            await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
             List<SpecialItemsDto> tvItems = [];
             IAsyncEnumerable<Tv> specialTvs =
                 SpecialResponseDto.GetSpecialTvs(mediaContext, userId, tvIds, language, country);
@@ -133,7 +133,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
     [HttpGet]
     [Route("{id:ulid}/available")]
-    public async Task<IActionResult> Available(Ulid id)
+    public async Task<IActionResult> Available(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -175,7 +175,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
     [HttpGet]
     [Route("{id:ulid}/watch")]
-    public async Task<IActionResult> Watch(Ulid id)
+    public async Task<IActionResult> Watch(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -185,7 +185,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         string country = Country();
 
         Special? special = await specialRepository
-            .GetSpecialPlaylistAsync(userId, id, language, country);
+            .GetSpecialPlaylistAsync(userId, id, language, country, ct);
 
         if (special is null)
             return NotFoundResponse("Special not found");
@@ -205,7 +205,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
     [HttpPost]
     [Route("{id:ulid}/like")]
-    public async Task<IActionResult> Like(Ulid id, [FromBody] LikeRequestDto request)
+    public async Task<IActionResult> Like(Ulid id, [FromBody] LikeRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -214,7 +214,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         Special? collection = await context.Specials
             .AsNoTracking()
             .Where(collection => collection.Id == id)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         if (collection is null)
             return NotFoundResponse("Special not found");
@@ -235,11 +235,11 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
             SpecialUser? collectionUser = await context.SpecialUser
                 .Where(collectionUser =>
                     collectionUser.SpecialId == collection.Id && collectionUser.UserId.Equals(userId))
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(ct);
 
             if (collectionUser is not null) context.SpecialUser.Remove(collectionUser);
 
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(ct);
         }
 
         return Ok(new StatusResponseDto<string>
@@ -256,13 +256,13 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
     [HttpPost]
     [Route("{id:ulid}/watch-list")]
-    public async Task<IActionResult> AddToWatchList(Ulid id, [FromBody] WatchListRequestDto request)
+    public async Task<IActionResult> AddToWatchList(Ulid id, [FromBody] WatchListRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
-        bool success = await specialRepository.AddToWatchListAsync(id, userId, request.Add);
+        bool success = await specialRepository.AddToWatchListAsync(id, userId, request.Add, ct);
 
         if (!success)
             return UnprocessableEntityResponse("Special not found");

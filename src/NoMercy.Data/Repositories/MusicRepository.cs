@@ -12,7 +12,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     #region Artist Queries
 
-    public Task<Artist?> GetArtistAsync(Guid userId, Guid id)
+    public Task<Artist?> GetArtistAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
         return mediaContext.Artists
             .AsNoTracking()
@@ -44,7 +44,7 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(track => track.TrackUser.Where(tu => tu.UserId == userId))
             .Include(artist => artist.ArtistMusicGenre)
             .ThenInclude(amg => amg.MusicGenre)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
     public IQueryable<Artist> GetArtistsAsync(Guid userId, string letter)
@@ -62,7 +62,7 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(amg => amg.MusicGenre);
     }
 
-    public async Task LikeArtistAsync(Guid userId, Artist artist, bool liked)
+    public async Task LikeArtistAsync(Guid userId, Artist artist, bool liked, CancellationToken ct = default)
     {
         if (liked)
         {
@@ -79,12 +79,12 @@ public class MusicRepository(MediaContext mediaContext)
         else
         {
             ArtistUser? artistUser = await mediaContext.ArtistUser
-                .FirstOrDefaultAsync(au => au.ArtistId == artist.Id && au.UserId == userId);
+                .FirstOrDefaultAsync(au => au.ArtistId == artist.Id && au.UserId == userId, ct);
 
             if (artistUser is not null)
             {
                 mediaContext.ArtistUser.Remove(artistUser);
-                await mediaContext.SaveChangesAsync();
+                await mediaContext.SaveChangesAsync(ct);
             }
         }
     }
@@ -93,7 +93,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     #region Album Queries
 
-    public Task<Album?> GetAlbumAsync(Guid userId, Guid id)
+    public Task<Album?> GetAlbumAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
         return mediaContext.Albums
             .AsNoTracking()
@@ -116,7 +116,7 @@ public class MusicRepository(MediaContext mediaContext)
             .Include(album => album.Translations)
             .Include(album => album.AlbumMusicGenre)
             .ThenInclude(amg => amg.MusicGenre)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
     public IQueryable<Album> GetAlbumsAsync(Guid userId, string letter)
@@ -134,7 +134,7 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(amg => amg.MusicGenre);
     }
 
-    public async Task LikeAlbumAsync(Guid userId, Album album, bool liked)
+    public async Task LikeAlbumAsync(Guid userId, Album album, bool liked, CancellationToken ct = default)
     {
         if (liked)
         {
@@ -151,30 +151,30 @@ public class MusicRepository(MediaContext mediaContext)
         else
         {
             AlbumUser? albumUser = await mediaContext.AlbumUser
-                .FirstOrDefaultAsync(au => au.AlbumId == album.Id && au.UserId == userId);
+                .FirstOrDefaultAsync(au => au.AlbumId == album.Id && au.UserId == userId, ct);
 
             if (albumUser is not null)
             {
                 mediaContext.AlbumUser.Remove(albumUser);
-                await mediaContext.SaveChangesAsync();
+                await mediaContext.SaveChangesAsync(ct);
             }
         }
     }
 
-    public Task<List<AlbumTrack>> GetAlbumTracksForIdsAsync(List<Guid> albumIds)
+    public Task<List<AlbumTrack>> GetAlbumTracksForIdsAsync(List<Guid> albumIds, CancellationToken ct = default)
     {
         return mediaContext.AlbumTrack
             .AsNoTracking()
             .Where(at => albumIds.Contains(at.AlbumId))
             .Include(at => at.Track)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     #endregion
 
     #region Track Queries
 
-    public Task<Track?> GetTrackAsync(Guid id)
+    public Task<Track?> GetTrackAsync(Guid id, CancellationToken ct = default)
     {
         return mediaContext.Tracks
             .AsNoTracking()
@@ -185,7 +185,7 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(albumArtist => albumArtist.Artist)
             .Include(track => track.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Artist)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
     public IQueryable<TrackUser> GetTracksAsync(Guid userId)
@@ -201,7 +201,7 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(artistTrack => artistTrack.Artist);
     }
 
-    public async Task LikeTrackAsync(Guid userId, Track track, bool liked)
+    public async Task LikeTrackAsync(Guid userId, Track track, bool liked, CancellationToken ct = default)
     {
         if (liked)
         {
@@ -218,23 +218,23 @@ public class MusicRepository(MediaContext mediaContext)
         else
         {
             TrackUser? trackUser = await mediaContext.TrackUser
-                .FirstOrDefaultAsync(tu => tu.TrackId == track.Id && tu.UserId == userId);
+                .FirstOrDefaultAsync(tu => tu.TrackId == track.Id && tu.UserId == userId, ct);
 
             if (trackUser is not null)
             {
                 mediaContext.TrackUser.Remove(trackUser);
-                await mediaContext.SaveChangesAsync();
+                await mediaContext.SaveChangesAsync(ct);
             }
         }
     }
 
-    public async Task RecordPlaybackAsync(Guid trackId, Guid userId)
+    public async Task RecordPlaybackAsync(Guid trackId, Guid userId, CancellationToken ct = default)
     {
-        await mediaContext.MusicPlays.AddAsync(new(userId, trackId));
-        await mediaContext.SaveChangesAsync();
+        await mediaContext.MusicPlays.AddAsync(new(userId, trackId), ct);
+        await mediaContext.SaveChangesAsync(ct);
     }
 
-    public Task<Track?> GetTrackWithIncludesAsync(Guid id)
+    public Task<Track?> GetTrackWithIncludesAsync(Guid id, CancellationToken ct = default)
     {
         return mediaContext.Tracks
             .AsNoTracking()
@@ -243,10 +243,10 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(artistTrack => artistTrack.Artist)
             .Include(track => track.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Album)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<Lyric[]?> UpdateTrackLyricsAsync(Track track, string lyricsJson)
+    public async Task<Lyric[]?> UpdateTrackLyricsAsync(Track track, string lyricsJson, CancellationToken ct = default)
     {
         await mediaContext.Upsert(track)
             .On(v => new { v.Id })
@@ -263,7 +263,7 @@ public class MusicRepository(MediaContext mediaContext)
 
     #region Playlist Queries
 
-    public Task<List<CarouselResponseItemDto>> GetCarouselPlaylistsAsync(Guid userId)
+    public Task<List<CarouselResponseItemDto>> GetCarouselPlaylistsAsync(Guid userId, CancellationToken ct = default)
     {
         return mediaContext.Playlists
             .AsNoTracking()
@@ -272,10 +272,10 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(trackUser => trackUser.Track)
             .Select(playlist => new CarouselResponseItemDto(playlist))
             .Take(36)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<Playlist?> GetPlaylistAsync(Guid userId, Guid id)
+    public Task<Playlist?> GetPlaylistAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
         return mediaContext.Playlists
             .AsNoTracking()
@@ -289,7 +289,7 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(trackUser => trackUser.Track)
             .ThenInclude(track => track.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Artist)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
     #endregion
@@ -399,13 +399,13 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(albumTrack => albumTrack.Album);
     }
 
-    public Task<List<ArtistTrack>> GetArtistTracksForCollectionAsync(List<Guid> artistIds)
+    public Task<List<ArtistTrack>> GetArtistTracksForCollectionAsync(List<Guid> artistIds, CancellationToken ct = default)
     {
         return mediaContext.ArtistTrack
             .AsNoTracking()
             .Where(artistTrack => artistIds.Contains(artistTrack.ArtistId))
             .Include(artistTrack => artistTrack.Track)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     #endregion
@@ -456,7 +456,7 @@ public class MusicRepository(MediaContext mediaContext)
             .ToList();
     }
 
-    public Task<List<Artist>> GetArtistsByIdsAsync(List<Guid> artistIds)
+    public Task<List<Artist>> GetArtistsByIdsAsync(List<Guid> artistIds, CancellationToken ct = default)
     {
         return mediaContext.Artists
             .AsNoTracking()
@@ -465,10 +465,10 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(artistTrack => artistTrack.Track)
             .Include(artist => artist.AlbumArtist)
             .ThenInclude(albumArtist => albumArtist.Album)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<List<Album>> GetAlbumsByIdsAsync(List<Guid> albumIds)
+    public Task<List<Album>> GetAlbumsByIdsAsync(List<Guid> albumIds, CancellationToken ct = default)
     {
         return mediaContext.Albums
             .AsNoTracking()
@@ -480,10 +480,10 @@ public class MusicRepository(MediaContext mediaContext)
             .Include(album => album.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Track)
             .ThenInclude(track => track.TrackUser)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<List<Playlist>> GetPlaylistsByIdsAsync(List<Guid> playlistIds)
+    public Task<List<Playlist>> GetPlaylistsByIdsAsync(List<Guid> playlistIds, CancellationToken ct = default)
     {
         return mediaContext.Playlists
             .AsNoTracking()
@@ -491,10 +491,10 @@ public class MusicRepository(MediaContext mediaContext)
             .Include(playlist => playlist.Tracks)
             .ThenInclude(playlistTrack => playlistTrack.Track)
             .ThenInclude(track => track.TrackUser)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<List<Track>> GetTracksByIdsAsync(List<Guid> trackIds)
+    public Task<List<Track>> GetTracksByIdsAsync(List<Guid> trackIds, CancellationToken ct = default)
     {
         return mediaContext.Tracks
             .AsNoTracking()
@@ -506,14 +506,14 @@ public class MusicRepository(MediaContext mediaContext)
             .Include(track => track.PlaylistTrack)
             .ThenInclude(playlistTrack => playlistTrack.Playlist)
             .Include(track => track.TrackUser)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     #endregion
 
     #region Playlist Management
 
-    public Task<PlaylistTrack?> GetPlaylistTrackAsync(Guid userId, Guid playlistId, Guid trackId)
+    public Task<PlaylistTrack?> GetPlaylistTrackAsync(Guid userId, Guid playlistId, Guid trackId, CancellationToken ct = default)
     {
         return mediaContext.PlaylistTrack
             .Include(pt => pt.Track)
@@ -528,10 +528,10 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(playlistTrack => playlistTrack.Track)
             .ThenInclude(track => track.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Album)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
-    public Task<AlbumTrack?> GetAlbumTrackAsync(Guid userId, Guid albumId, Guid trackId)
+    public Task<AlbumTrack?> GetAlbumTrackAsync(Guid userId, Guid albumId, Guid trackId, CancellationToken ct = default)
     {
         return mediaContext.AlbumTrack
             .Where(at => at.AlbumId == albumId && at.TrackId == trackId)
@@ -543,10 +543,10 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(albumTrack => albumTrack.Track)
             .ThenInclude(track => track.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Artist)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
-    public Task<ArtistTrack?> GetArtistTrackAsync(Guid userId, Guid artistId, Guid trackId)
+    public Task<ArtistTrack?> GetArtistTrackAsync(Guid userId, Guid artistId, Guid trackId, CancellationToken ct = default)
     {
         return mediaContext.ArtistTrack
             .Where(at => at.ArtistId == artistId && at.TrackId == trackId)
@@ -559,37 +559,37 @@ public class MusicRepository(MediaContext mediaContext)
             .ThenInclude(album => album.Translations)
             .Include(at => at.Artist)
             .ThenInclude(artist => artist.Images)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
-    public Task<MusicGenreTrack?> GetGenreTrackAsync(Guid userId, Guid genreId, Guid trackId)
+    public Task<MusicGenreTrack?> GetGenreTrackAsync(Guid userId, Guid genreId, Guid trackId, CancellationToken ct = default)
     {
         return mediaContext.MusicGenreTrack
             .Where(genre =>
                 genre.Genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
                 genre.Genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Where(mgt => mgt.GenreId == genreId && mgt.TrackId == trackId)
-            
+
             .Include(mgt => mgt.Track)
-            
+
             .Include(mgt => mgt.Genre)
             .ThenInclude(genre => genre.MusicGenreTracks)
             .ThenInclude(genreTrack => genreTrack.Track)
             .ThenInclude(track => track.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Artist)
-            
+
             .Include(mgt => mgt.Genre)
             .ThenInclude(genre => genre.MusicGenreTracks)
             .ThenInclude(genreTrack => genreTrack.Track)
             .ThenInclude(track => track.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Album)
-            
+
             .Include(mgt => mgt.Genre)
             .ThenInclude(genre => genre.MusicGenreTracks)
             .ThenInclude(genreTrack => genreTrack.Track)
             .ThenInclude(track => track.TrackUser)
-            
-            .FirstOrDefaultAsync();
+
+            .FirstOrDefaultAsync(ct);
     }
 
     #endregion

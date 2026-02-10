@@ -25,13 +25,13 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Authorize]
 [Route("api/v{version:apiVersion}/movie/{id:int}")] // match themoviedb.org API
 public class MoviesController(
-    MovieRepository movieRepository, 
+    MovieRepository movieRepository,
     JobDispatcher jobDispatcher,
     MediaContext mediaContext
     ) : BaseController
 {
     [HttpGet]
-    public async Task<IActionResult> Movie(int id)
+    public async Task<IActionResult> Movie(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -61,12 +61,12 @@ public class MoviesController(
     }
 
     [HttpDelete]
-    public async Task<IActionResult> DeleteMovie(int id)
+    public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to delete movies");
 
-        await movieRepository.DeleteMovieAsync(id);
+        await movieRepository.DeleteMovieAsync(id, ct);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -77,7 +77,7 @@ public class MoviesController(
 
     [HttpGet]
     [Route("available")]
-    public async Task<IActionResult> Available(int id)
+    public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -86,7 +86,7 @@ public class MoviesController(
         string language = Language();
         string country = Country();
 
-        bool available = await movieRepository.GetMovieAvailableAsync(userId, id);
+        bool available = await movieRepository.GetMovieAvailableAsync(userId, id, ct);
 
         if (!available)
             return NotFound(new StatusResponseDto<AvailableResponseDto>
@@ -112,7 +112,7 @@ public class MoviesController(
 
     [HttpGet]
     [Route("watch")]
-    public async Task<IActionResult> Watch(int id)
+    public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -122,7 +122,7 @@ public class MoviesController(
         string country = Country();
 
         IEnumerable<VideoPlaylistResponseDto> playlist =
-            (await movieRepository.GetMoviePlaylistAsync(userId, id, language, country))
+            (await movieRepository.GetMoviePlaylistAsync(userId, id, language, country, ct))
             .Select(movie => new VideoPlaylistResponseDto(movie, Config.MovieMediaType, id, country));
 
         if (!playlist.Any())
@@ -133,13 +133,13 @@ public class MoviesController(
 
     [HttpPost]
     [Route("like")]
-    public async Task<IActionResult> Like(int id, [FromBody] LikeRequestDto request)
+    public async Task<IActionResult> Like(int id, [FromBody] LikeRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like movies");
 
-        bool success = await movieRepository.LikeMovieAsync(id, userId, request.Value);
+        bool success = await movieRepository.LikeMovieAsync(id, userId, request.Value, ct);
 
         if (!success)
             return UnprocessableEntityResponse("Movie not found");
@@ -157,13 +157,13 @@ public class MoviesController(
 
     [HttpPost]
     [Route("watch-list")]
-    public async Task<IActionResult> AddToWatchList(int id, [FromBody] WatchListRequestDto request)
+    public async Task<IActionResult> AddToWatchList(int id, [FromBody] WatchListRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
-        bool success = await movieRepository.AddToWatchListAsync(id, userId, request.Add);
+        bool success = await movieRepository.AddToWatchListAsync(id, userId, request.Add, ct);
 
         if (!success)
             return UnprocessableEntityResponse("Movie not found");
@@ -177,7 +177,7 @@ public class MoviesController(
 
     [HttpPost]
     [Route("rescan")]
-    public async Task<IActionResult> Rescan(int id)
+    public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan movies");
@@ -187,11 +187,11 @@ public class MoviesController(
             .Include(movie => movie.Library)
             .ThenInclude(f => f.FolderLibraries)
             .ThenInclude(f => f.Folder)
-            .FirstOrDefaultAsync(movie => movie.Id == id);
+            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
 
         if (movie is null)
             return UnprocessableEntityResponse("Movie not found");
-        
+
         try
         {
             jobDispatcher.DispatchJob<RescanFilesJob>(id, movie.LibraryId);
@@ -212,7 +212,7 @@ public class MoviesController(
 
     [HttpPost]
     [Route("refresh")]
-    public async Task<IActionResult> Refresh(int id)
+    public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh movies");
@@ -220,7 +220,7 @@ public class MoviesController(
         Movie? movie = await mediaContext.Movies
             .AsNoTracking()
             .Include(movie => movie.Library)
-            .FirstOrDefaultAsync(movie => movie.Id == id);
+            .FirstOrDefaultAsync(movie => movie.Id == id, ct);
 
         if (movie is null)
             return UnprocessableEntityResponse("Movie not found");
@@ -245,18 +245,18 @@ public class MoviesController(
 
     [HttpPost]
     [Route("add")]
-    public async Task<IActionResult> Add(int id)
+    public async Task<IActionResult> Add(int id, CancellationToken ct = default)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add tv shows");
-        
+
         Library? library = await mediaContext.Libraries
             .Where(f => f.Type == Config.MovieMediaType)
-            .FirstOrDefaultAsync();
-        
+            .FirstOrDefaultAsync(ct);
+
         if (library is null)
             return UnprocessableEntityResponse("No movie library found");
-        
+
         try
         {
             jobDispatcher.DispatchJob<AddMovieJob>(id, library.Id);
