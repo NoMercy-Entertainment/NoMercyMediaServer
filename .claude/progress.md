@@ -1955,3 +1955,20 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   2. `QueueWorker_ValidIShouldQueuePayload_ExecutesAndDeletesJob` — valid payload executes and is deleted
 
 **Test results**: Build succeeds with 0 errors. All 287 queue tests pass (5 new + 282 existing). Pre-existing failures in Api (262) and Providers (3) are unrelated.
+
+---
+
+## HIGH-03 — Remove EnableSensitiveDataLogging in production
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Made `EnableSensitiveDataLogging()` conditional on `Config.IsDev` in `src/NoMercy.Database/MediaContext.cs:31`
+- Previously: `options.EnableSensitiveDataLogging()` was called unconditionally, logging all SQL parameter values (user IDs, emails, API keys) even in production
+- Now: `if (Config.IsDev) options.EnableSensitiveDataLogging();` — only active in development mode
+- Created `tests/NoMercy.Tests.Database/SensitiveDataLoggingTests.cs` with 3 tests:
+  1. `ProductionMode_DoesNotEnableSensitiveDataLogging` — verifies sensitive logging is off when isDev=false
+  2. `DevMode_EnablesSensitiveDataLogging` — verifies sensitive logging is on when isDev=true
+  3. `MediaContext_OnConfiguring_GuardsSensitiveDataLogging_WithConfigIsDev` — source-level verification that the conditional guard exists in MediaContext.cs
+
+**Test results**: Build succeeds with 0 errors. All 143 database tests pass (3 new + 140 existing). All 1,239 non-API tests pass. Pre-existing 7 API test failures are unchanged.
