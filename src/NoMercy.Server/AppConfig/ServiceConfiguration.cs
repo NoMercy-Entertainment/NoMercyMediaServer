@@ -418,7 +418,7 @@ public static class ServiceConfiguration
         services.AddSignalR(o =>
             {
                 o.EnableDetailedErrors = Config.IsDev;
-                o.MaximumReceiveMessageSize = 1024 * 1000 * 100;
+                o.MaximumReceiveMessageSize = 2 * 1024 * 1024; // 2MB — realistic max is ~1MB for large playlists
 
                 o.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
                 o.KeepAliveInterval = TimeSpan.FromSeconds(15);

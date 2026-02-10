@@ -2030,3 +2030,16 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   5. `ServerHeader_IsDisabled` — verifies AddServerHeader is false
 
 **Test results**: Build succeeds with 0 errors. All 5 new tests pass (10 total in Networking). All non-API tests pass (Networking 10, Repositories 208, MediaProcessing 28, Database 143, Encoder 147, Queue 287, Providers 421). Pre-existing 12 API test failures are unchanged (verified by stashing changes).
+
+---
+
+## MED-07 — Reduce SignalR message limit from 100MB
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Reduced `MaximumReceiveMessageSize` from `1024 * 1000 * 100` (~100MB) to `2 * 1024 * 1024` (2MB) in `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs:421`
+- Analysis of all SignalR hubs (VideoHub, MusicHub, DashboardHub, CastHub, RipperHub) shows the largest realistic messages are ~1MB (large music playlists with 200+ tracks and full metadata). 2MB provides comfortable headroom while being a 98% reduction from the previous 100MB limit.
+- Added `SignalR_MaximumReceiveMessageSize_IsReasonablyLimited` test to `tests/NoMercy.Tests.Api/SignalRDetailedErrorsTests.cs` that verifies the limit is between 1MB and 10MB
+
+**Test results**: Build succeeds with 0 errors. New test passes (2 total in SignalRDetailedErrorsTests). All non-API test projects pass. Pre-existing 268 API test failures are unchanged (SQLite disk I/O error in factory constructor, verified by stashing changes).
