@@ -1316,3 +1316,39 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
   - `ExternalIp_DefaultFallbackIsNotEmpty`: Static analysis — verifies fallback is "0.0.0.0"
 
 **Test results**: All 5 Networking tests pass. All 1377 tests across all projects pass. Build succeeds with 0 errors.
+
+---
+
+## HIGH-20b — Fix GC.Collect band-aids (60+ calls)
+
+**Date**: 2026-02-10
+
+**What was done**:
+- **Problem**: 60+ `GC.Collect()` / `GC.WaitForFullGCComplete()` / `GC.WaitForPendingFinalizers()` calls scattered across Dispose methods in job classes, repositories, and utilities. Each call freezes ALL threads (stop-the-world pause), causing playback stuttering during library scans. Called hundreds of times per scan (once per job Dispose).
+- **Removed all GC.Collect/WaitForFullGCComplete/WaitForPendingFinalizers calls from 15 files**:
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractMediaJob.cs`
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractEncoderJob.cs`
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractMusicFolderJob.cs`
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractLyricJob.cs`
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractFanArtDataJob.cs`
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractReleaseJob.cs`
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractShowExtraDataJob.cs`
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractMediaExraDataJob.cs`
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractMusicDescriptionJob.cs`
+  - `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AbstractMusicEncoderJob.cs`
+  - `src/NoMercy.MediaProcessing/Images/BaseImageManager.cs`
+  - `src/NoMercy.MediaProcessing/Libraries/LibraryRepository.cs`
+  - `src/NoMercy.Data/Logic/FileLogic.cs`
+  - `src/NoMercy.Data/Logic/LibraryLogic.cs`
+  - `src/NoMercy.Data/Jobs/MusicJob.cs`
+  - `src/NoMercy.NmSystem/MediaScan.cs`
+- **Removed finalizers** (`~LibraryLogic()`, `~MusicJob()`) that just called Dispose() — unnecessary when Dispose is called properly
+- **Preserved actual resource disposal** — `_mediaContext.Dispose()` and `context.Dispose()` calls kept in FileLogic, LibraryLogic, LibraryRepository, MusicJob
+- **Preserved `GC.SuppressFinalize(this)`** calls — these are correct IDisposable pattern usage
+- **Created 4 audit tests** in `tests/NoMercy.Tests.MediaProcessing/Jobs/GcCollectAuditTests.cs`:
+  - `Source_NoGcCollectCalls`: Scans all src/*.cs files for GC.Collect() calls
+  - `Source_NoGcWaitForFullGCComplete`: Scans for GC.WaitForFullGCComplete() calls
+  - `Source_NoGcWaitForPendingFinalizers`: Scans for GC.WaitForPendingFinalizers() calls
+  - `Source_NoFinalizersCallingDispose`: Scans for finalizers that call Dispose()
+
+**Test results**: All 22 MediaProcessing tests pass (4 new + 18 existing). All 1381 tests across all projects pass. Build succeeds with 0 errors.

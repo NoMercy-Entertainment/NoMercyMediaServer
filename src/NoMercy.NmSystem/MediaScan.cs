@@ -354,17 +354,10 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 
     public ValueTask DisposeAsync()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
-
         return ValueTask.CompletedTask;
     }
 

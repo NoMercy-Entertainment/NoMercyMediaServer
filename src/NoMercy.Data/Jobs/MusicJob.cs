@@ -48,24 +48,13 @@ public class MusicJob : IShouldQueue, IDisposable, IAsyncDisposable
         }
     }
 
-    ~MusicJob()
-    {
-        Dispose();
-    }
-
     public void Dispose()
     {
         _mediaContext.Dispose();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 
     public async ValueTask DisposeAsync()
     {
         await _mediaContext.DisposeAsync();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

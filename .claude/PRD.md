@@ -96,6 +96,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] HIGH-17 — Fix missing disposal in provider clients
 - [x] HIGH-18 — Fix ThreadPool.QueueUserWorkItem fire-and-forget
 - [x] HIGH-20 — Fix blocking .Result in ExternalIp property getter
+- [x] HIGH-20b — Fix GC.Collect band-aids (60+ calls)
 - [ ] MED-04 — Fix CancellationToken not propagated
 - [ ] MED-05 — Remove manual GC.Collect calls, fix root disposal
 - [ ] MED-15 — Fix missing using/dispose on streams

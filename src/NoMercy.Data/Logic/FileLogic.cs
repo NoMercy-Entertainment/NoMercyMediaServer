@@ -277,16 +277,10 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
     public void Dispose()
     {
         _mediaContext.Dispose();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 
     public async ValueTask DisposeAsync()
     {
         await _mediaContext.DisposeAsync();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

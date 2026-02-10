@@ -24,8 +24,5 @@ public abstract class AbstractMusicFolderJob : IShouldQueue
 
     public void Dispose()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

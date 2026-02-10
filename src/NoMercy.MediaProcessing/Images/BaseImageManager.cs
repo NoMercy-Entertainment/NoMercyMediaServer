@@ -135,9 +135,6 @@ public class BaseImageManager : IBaseImageManager, IDisposable
 
     public void Dispose()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 
     public static PaletteColors GetColorPaletteColors(Image<Rgba32> image)

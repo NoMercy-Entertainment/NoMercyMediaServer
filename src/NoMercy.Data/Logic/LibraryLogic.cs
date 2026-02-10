@@ -97,22 +97,13 @@ public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAs
         Logger.App("Found " + Titles.Count + " subfolders");
     }
 
-    ~LibraryLogic()
-    {
-        Dispose();
-    }
-
     public void Dispose()
     {
         _mediaContext.Dispose();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
 
     public async ValueTask DisposeAsync()
     {
         await _mediaContext.DisposeAsync();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
 }

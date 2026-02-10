@@ -23,8 +23,5 @@ public abstract class AbstractFanArtDataJob : IShouldQueue
 
     public void Dispose()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

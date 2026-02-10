@@ -51,14 +51,10 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
     public void Dispose()
     {
         context.Dispose();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
 
     public async ValueTask DisposeAsync()
     {
         await context.DisposeAsync();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
 }
