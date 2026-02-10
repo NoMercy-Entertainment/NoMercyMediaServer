@@ -264,10 +264,9 @@ public static class Auth
 
     private static void SetTokens(AuthResponse data)
     {
-        FileStream tmp = File.OpenWrite(AppFiles.TokenFile);
+        using FileStream tmp = File.OpenWrite(AppFiles.TokenFile);
         tmp.SetLength(0);
         tmp.Write(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(data, Formatting.Indented)));
-        tmp.Close();
 
         Logger.Auth("Tokens refreshed");
 
@@ -440,11 +439,11 @@ public static class Auth
     private static void OpenBrowser(string url)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            Process.Start("xdg-open", url);
+            Process.Start("xdg-open", url)?.Dispose();
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            Process.Start("open", url); // Not tested
+            Process.Start("open", url)?.Dispose(); // Not tested
         else
             throw new("Unsupported OS");
     }

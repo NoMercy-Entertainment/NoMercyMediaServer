@@ -494,8 +494,8 @@ public class FfMpeg : Classes
         }
         else
         {
-            Process.Start("kill", $"-STOP {process.Id}");
-            await Task.Delay(0);
+            using Process? killProc = Process.Start("kill", $"-STOP {process.Id}");
+            killProc?.WaitForExit();
         }
 
         return true;
@@ -511,8 +511,8 @@ public class FfMpeg : Classes
             }
             else
             {
-                Process.Start("kill", $"-CONT {process.Id}");
-                await Task.Delay(0);
+                using Process? killProc = Process.Start("kill", $"-CONT {process.Id}");
+                killProc?.WaitForExit();
             }
 
             return true;

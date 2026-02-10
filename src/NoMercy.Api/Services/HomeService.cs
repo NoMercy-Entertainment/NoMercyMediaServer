@@ -185,7 +185,7 @@ public class HomeService
         List<Task<(Library library, List<Movie> movies, List<Tv> shows)>> libraryTasks = libraries
             .Select(async library =>
             {
-                MediaContext context = await _contextFactory.CreateDbContextAsync();
+                await using MediaContext context = await _contextFactory.CreateDbContextAsync();
                 List<Movie> libraryMovies = [];
                 await foreach (Movie movie in _libraryRepository
                     .GetLibraryMovies(context, userId, library.Id, language, 36, 0, m => m.CreatedAt, "desc"))

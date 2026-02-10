@@ -1428,3 +1428,25 @@ TagLib.File implements IDisposable and holds file handles. Three call sites were
 - `Source_TagLibFileCreate_HasUsing`: Scans all `src/*.cs` files for `TagLib.File <var> = TagLib.File.Create(...)` and `FileTag? <var> = FileTag.Create(...)` declarations without `using` keyword. Verifies no future regressions.
 
 **Test results**: All 844 tests pass (262 Api + 26 MediaProcessing + 135 Repositories + 421 Providers). Build succeeds with 0 errors.
+
+---
+
+## DISP-04 — Add missing `using` to MediaContext, FileStream, Process, Stream (cold paths)
+
+**Date**: 2026-02-10
+
+**What was done**:
+Added missing `using`/dispose to 10 resource leak sites across cold paths: MediaContext from factory, FileStream, and Process.Start() calls.
+
+**Files changed**:
+1. `src/NoMercy.Api/Services/HomeService.cs:188` — Added `await using` to `MediaContext` created via `_contextFactory.CreateDbContextAsync()` inside a LINQ `Select` lambda. The context was created per-library for thread-safe parallel queries but never disposed, leaking connections.
+2. `src/NoMercy.Setup/Auth.cs:267` — Changed `FileStream tmp = File.OpenWrite(...)` to `using FileStream tmp = ...` and removed manual `.Close()` call. The `using` ensures disposal even if an exception occurs between open and close.
+3. `src/NoMercy.Setup/Auth.cs:442-447` — Added `?.Dispose()` to all three `Process.Start()` calls in `OpenBrowser()` (Windows, Linux, macOS). Browser processes are fire-and-forget, so `Dispose()` releases the OS handle without waiting.
+4. `src/NoMercy.Setup/DesktopIconCreator.cs:64,71-73,75,100` — Wrapped all four `Process.Start()` calls in `using` blocks with null-conditional `?.WaitForExit()`. These are macOS/Linux desktop shortcut creation (osascript, sh, killall, chmod).
+5. `src/NoMercy.Encoder/FfMpeg.cs:497,514` — Wrapped `Process.Start("kill", ...)` calls in `using` with `?.WaitForExit()` for FFmpeg pause/resume signal sending. Replaced `await Task.Delay(0)` no-ops with proper synchronous wait.
+
+**Audit tests**: Created `tests/NoMercy.Tests.MediaProcessing/Jobs/ColdPathDisposalAuditTests.cs` with 2 tests:
+- `Source_ProcessStart_HasUsingOrDispose`: Scans all `src/*.cs` files for static `Process.Start(` calls (with string/ProcessStartInfo arguments) that lack `using` or `.Dispose()`. Excludes instance `.Start()` calls on managed process objects.
+- `Source_FileOpenWrite_HasUsing`: Scans all `src/*.cs` files for `File.OpenWrite`, `File.OpenRead`, `File.Create` declarations without `using`. Uses negative lookbehind to exclude `TagFile.Create` and `ZipFile.OpenRead`.
+
+**Test results**: Build succeeds with 0 errors. All 846 tests pass across 8 projects (262 Api + 28 MediaProcessing + 135 Database + 119 Encoder + 277 Queue + 135 Repositories + 421 Providers + 5 Networking) when run sequentially.
