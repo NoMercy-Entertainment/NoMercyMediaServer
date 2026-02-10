@@ -525,6 +525,114 @@
   - [ ] Performance test: No playback stuttering during concurrent library scan
   - [ ] Audit: Every `Image.Load`, `new HttpClient`, `Process.Start` has a corresponding `using` or `Dispose`
 
+---
+
+### DISP-01: Add missing `using` to Image<Rgba32> in hot paths (11 instances)
+
+The root cause of memory growth that GC.Collect was masking. Each `Image<Rgba32>` holds 5-50MB of unmanaged memory. During a library scan with thousands of images, these leak and accumulate.
+
+**Problem**: Image objects returned from methods or created in local variables without `using`. Callers may or may not dispose them.
+
+| # | File | Line | Code | Context |
+|---|------|------|------|---------|
+| 1 | `src/NoMercy.MediaProcessing/Files/FileManager.cs` | 587 | `Image image = Image.Load(filePath);` | `GetImageDimensions()` — loads full image just to read Width/Height, never disposes |
+| 2 | `src/NoMercy.Helpers/Images.cs` | 43 | `return Image.Load<Rgba32>(image);` | `ReadFileStream()` — returns image, caller must dispose |
+| 3 | `src/NoMercy.Providers/TMDB/Client/TmdbImageClient.cs` | 43 | `return ... await Image.LoadAsync<Rgba32>(filePath);` | `Download()` — 3 return paths (lines 43, 53, 60) all return unmanaged Image |
+| 4 | `src/NoMercy.Providers/TMDB/Client/TmdbImageClient.cs` | 53 | `Image.Load<Rgba32>(await response.Content.ReadAsStreamAsync())` | Double leak — Stream AND Image |
+| 5 | `src/NoMercy.Providers/TMDB/Client/TmdbImageClient.cs` | 60 | `return ... Image.Load<Rgba32>(filePath);` | Third return path |
+| 6 | `src/NoMercy.Providers/FanArt/Client/FanArtImageClient.cs` | 38 | `return Image.Load<Rgba32>(filePath);` | `Download()` — 2 return paths (38, 50) |
+| 7 | `src/NoMercy.Providers/FanArt/Client/FanArtImageClient.cs` | 50 | `return Image.Load<Rgba32>(bytes);` | Second return path |
+| 8 | `src/NoMercy.Providers/CoverArt/Client/CoverArtCoverArtClient.cs` | 56 | `return Image.Load<Rgba32>(filePath);` | `Download()` — 2 return paths (56, 68) |
+| 9 | `src/NoMercy.Providers/CoverArt/Client/CoverArtCoverArtClient.cs` | 68 | `return Image.Load<Rgba32>(bytes);` | Second return path |
+| 10 | `src/NoMercy.Providers/NoMercy/Client/NoMercyImageClient.cs` | 30 | `return Image.Load<Rgba32>(filePath);` | `Download()` — 2 return paths (30, 44) |
+| 11 | `src/NoMercy.Providers/NoMercy/Client/NoMercyImageClient.cs` | 44 | `return Image.Load<Rgba32>(bytes);` | Second return path |
+
+**Fix approach**:
+- **FileManager.GetImageDimensions()**: Wrap in `using` — only needs Width/Height, image should be disposed immediately
+- **Image download methods** (TMDB, FanArt, CoverArt, NoMercy): These return `Image<Rgba32>?` to callers. The fix is two-fold:
+  1. Ensure every **caller** of these `Download()` methods wraps the result in `using`
+  2. Add `using` to intermediate streams (like `ReadAsStreamAsync()`)
+- **Images.ReadFileStream()**: Caller is responsible — verify all callers use `using`
+
+**Tests Required**:
+- [ ] Audit test: Scan source for `Image.Load` / `Image.LoadAsync` without `using` in the same scope
+- [ ] Audit test: Verify callers of provider `Download()` methods wrap result in `using`
+
+---
+
+### DISP-02: Add missing `using` to HttpResponseMessage (7 instances)
+
+HttpResponseMessage implements IDisposable and holds network buffers. Every API call that doesn't dispose the response leaks memory.
+
+| # | File | Line | Code | Path |
+|---|------|------|------|------|
+| 1 | `src/NoMercy.Providers/TMDB/Client/TmdbImageClient.cs` | 48 | `HttpResponseMessage response = await httpClient.GetAsync(url);` | Hot — every TMDB image |
+| 2 | `src/NoMercy.Providers/FanArt/Client/FanArtImageClient.cs` | 42 | `HttpResponseMessage response = await httpClient.GetAsync(url);` | Hot — every fanart image |
+| 3 | `src/NoMercy.Providers/CoverArt/Client/CoverArtCoverArtClient.cs` | 60 | `HttpResponseMessage response = await httpClient.GetAsync(url);` | Hot — every album art |
+| 4 | `src/NoMercy.Providers/NoMercy/Client/NoMercyImageClient.cs` | 36 | `HttpResponseMessage response = await httpClient.GetAsync(url);` | Hot — internal images |
+| 5 | `src/NoMercy.Providers/Other/KitsuIO.cs` | 17 | `HttpResponseMessage response = await client.GetAsync(...)` | Hot — anime checks |
+| 6 | `src/NoMercy.Setup/Binaries.cs` | 71 | `HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);` | Cold — startup |
+| 7 | `src/NoMercy.Networking/Certificate.cs` | 109 | `HttpResponseMessage response = await client.GetAsync(serverUrl);` | Cold — cert renewal |
+
+**Fix**: Add `using` to every `HttpResponseMessage` declaration:
+```csharp
+// Before:
+HttpResponseMessage response = await httpClient.GetAsync(url);
+// After:
+using HttpResponseMessage response = await httpClient.GetAsync(url);
+```
+
+**Tests Required**:
+- [ ] Audit test: Scan source for `HttpResponseMessage` declarations without `using`
+
+---
+
+### DISP-03: Add missing `using` to TagLib.File / TagFile factory (3 instances + factory)
+
+TagLib.File implements IDisposable and holds file handles. These leak inside `Parallel.ForEach` loops — scanning 1000 songs means 1000 leaked file handles.
+
+| # | File | Line | Code | Context |
+|---|------|------|------|---------|
+| 1 | `src/NoMercy.NmSystem/Dto/TagFile.cs` | 11 | `FileTag? fileTag = FileTag.Create(path);` | Factory method — creates TagLib.File, leaks inside factory |
+| 2 | `src/NoMercy.NmSystem/MediaScan.cs` | 297 | `tagFile = TagFile.Create(file);` | Inside `Parallel.ForEach` — every file scanned |
+| 3 | `src/NoMercy.MediaProcessing/Recordings/RecordingManager.cs` | 78 | `TagLib.File tagFile = TagLib.File.Create(file.Path);` | Inside `Parallel.ForEach` — every recording |
+
+**Fix**:
+- Fix the `TagFile.Create()` factory to properly handle the inner `FileTag.Create()` with `using` or return ownership clearly
+- Wrap `TagFile.Create()` / `TagLib.File.Create()` calls in `using` at all call sites
+- Special care in `Parallel.ForEach` — each iteration must dispose independently
+
+**Tests Required**:
+- [ ] Audit test: Scan source for `TagFile.Create` / `TagLib.File.Create` without `using`
+
+---
+
+### DISP-04: Add missing `using` to MediaContext, FileStream, Process, Stream (cold paths)
+
+Lower-frequency leaks that should still be fixed for correctness.
+
+| # | File | Line | Object | Context |
+|---|------|------|--------|---------|
+| 1 | `src/NoMercy.Api/Services/HomeService.cs` | 188 | `MediaContext` (from factory) | Inside LINQ lambda — never disposed |
+| 2 | `src/NoMercy.Setup/Auth.cs` | 267 | `FileStream` via `File.OpenWrite()` | Uses `.Close()` instead of `using` |
+| 3 | `src/NoMercy.Setup/Auth.cs` | 160 | `HttpResponseMessage` | Token polling loop |
+| 4 | `src/NoMercy.Setup/Auth.cs` | 443,445,447 | `Process.Start()` (3x) | Browser launch |
+| 5 | `src/NoMercy.Setup/DesktopIconCreator.cs` | 64,71,75,100 | `Process.Start()` (4x) | macOS/Linux shortcut creation |
+| 6 | `src/NoMercy.Encoder/FfMpeg.cs` | 497,514 | `Process.Start("kill")` (2x) | Encoding pause/resume |
+| 7 | `src/NoMercy.Providers/TMDB/Client/TmdbImageClient.cs` | 53 | `ReadAsStreamAsync()` | Stream passed to Image.Load without dispose |
+
+**Fix**: Add `using` to each declaration. For `Process.Start()`, use:
+```csharp
+using Process? proc = Process.Start("kill", $"-STOP {process.Id}");
+proc?.WaitForExit();
+```
+
+**Tests Required**:
+- [ ] Audit test: Scan for `Process.Start` without `using`
+- [ ] Audit test: Scan for `File.OpenWrite` / `File.OpenRead` / `File.Create` without `using`
+
+---
+
 ### MED-15: Non-Volatile Static Booleans
 - **File**: `src/NoMercy.Queue/QueueRunner.cs:24,26`
 - **Fix**: Use `volatile` keyword or `Interlocked` operations

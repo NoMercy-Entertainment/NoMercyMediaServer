@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item MED-04
+**Next up**: Phase 1-2, item DISP-01
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -97,9 +97,11 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] HIGH-18 — Fix ThreadPool.QueueUserWorkItem fire-and-forget
 - [x] HIGH-20 — Fix blocking .Result in ExternalIp property getter
 - [x] HIGH-20b — Fix GC.Collect band-aids (60+ calls)
+- [ ] DISP-01 — Add missing `using` to Image<Rgba32> in hot paths (11 instances)
+- [ ] DISP-02 — Add missing `using` to HttpResponseMessage (7 instances)
+- [ ] DISP-03 — Add missing `using` to TagLib.File / TagFile factory (3 instances + factory)
+- [ ] DISP-04 — Add missing `using` to MediaContext, FileStream, Process, Stream (cold paths)
 - [ ] MED-04 — Fix CancellationToken not propagated
-- [ ] MED-05 — Remove manual GC.Collect calls, fix root disposal
-- [ ] MED-15 — Fix missing using/dispose on streams
 - [ ] CRIT-02 — Replace client-side filtering with DB queries
 - [ ] CRIT-03 — Split 55+ Include chains into focused queries
 - [ ] CRIT-12 — Fix unbounded memory growth in media processing
