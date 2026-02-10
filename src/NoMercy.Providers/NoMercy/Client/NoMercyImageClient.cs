@@ -33,7 +33,7 @@ public abstract class NoMercyImageClient : TmdbBaseClient
 
                 string url = path.StartsWith("http") ? path : $"original{path}";
 
-                HttpResponseMessage response = await httpClient.GetAsync(url);
+                using HttpResponseMessage response = await httpClient.GetAsync(url);
                 if (!response.IsSuccessStatusCode) return null;
 
                 byte[] bytes = await response.Content.ReadAsByteArrayAsync();

@@ -142,7 +142,7 @@ public class Networking
         
         GenericHttpClient apiClient = new(Config.ApiBaseUrl);
         apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
-        HttpResponseMessage response = await apiClient.SendAsync(HttpMethod.Get, "v1/ip");
+        using HttpResponseMessage response = await apiClient.SendAsync(HttpMethod.Get, "v1/ip");
         if (!response.IsSuccessStatusCode) throw new("The NoMercy API is not available");
 
         string externalIp = await response.Content.ReadAsStringAsync();

@@ -14,7 +14,7 @@ public static class KitsuIo
 
         HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.KitsuIo);
 
-        HttpResponseMessage response = await client.GetAsync($"anime?filter[text]={title}&filter[year]={year}");
+        using HttpResponseMessage response = await client.GetAsync($"anime?filter[text]={title}&filter[year]={year}");
         string content = await response.Content.ReadAsStringAsync();
 
         try

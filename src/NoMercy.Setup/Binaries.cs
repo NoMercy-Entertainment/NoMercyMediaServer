@@ -68,7 +68,7 @@ public static class Binaries
     {
         try
         {
-            HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
+            using HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
 
             response.EnsureSuccessStatusCode();
 

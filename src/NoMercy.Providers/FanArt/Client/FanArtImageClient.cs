@@ -39,7 +39,7 @@ public class FanArtImageClient : FanArtBaseClient
 
         HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.FanArtImage);
 
-        HttpResponseMessage response = await httpClient.GetAsync(url);
+        using HttpResponseMessage response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return null;
 
         byte[] bytes = await response.Content.ReadAsByteArrayAsync();

@@ -1383,3 +1383,30 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 - `tests/NoMercy.Tests.MediaProcessing/Jobs/ImageDisposalAuditTests.cs` (new)
 
 **Test results**: All 24 MediaProcessing tests pass (2 new + 22 existing). Build succeeds with 0 errors.
+
+---
+
+## DISP-02 — Add missing `using` to HttpResponseMessage (11 instances)
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Added `using` to all `HttpResponseMessage` declarations across the codebase. HttpResponseMessage implements IDisposable and holds network buffers — every undisposed response leaks memory.
+
+**Files modified** (11 instances across 11 files):
+1. `src/NoMercy.Providers/TMDB/Client/TmdbImageClient.cs:48` — TMDB image downloads (hot path)
+2. `src/NoMercy.Providers/FanArt/Client/FanArtImageClient.cs:42` — FanArt image downloads (hot path)
+3. `src/NoMercy.Providers/CoverArt/Client/CoverArtCoverArtClient.cs:60` — album art downloads (hot path)
+4. `src/NoMercy.Providers/NoMercy/Client/NoMercyImageClient.cs:36` — internal image downloads (hot path)
+5. `src/NoMercy.Providers/Other/KitsuIO.cs:17` — anime check API calls (hot path)
+6. `src/NoMercy.Setup/Binaries.cs:71` — GitHub release API calls (cold path, startup)
+7. `src/NoMercy.Networking/Certificate.cs:109` — certificate renewal (cold path)
+8. `src/NoMercy.Networking/Networking.cs:145` — external IP lookup (found by audit test)
+9. `src/NoMercy.Setup/Auth.cs:160` — OAuth token exchange (found by audit test)
+10. `src/NoMercy.NmSystem/Extensions/Url.cs:38` — URL health check (found by audit test)
+11. `src/NoMercy.Providers/TVDB/Client/TvdbBaseClient.cs:92` — TVDB login (found by audit test)
+
+**Audit test**: Created `tests/NoMercy.Tests.MediaProcessing/Jobs/HttpResponseDisposalAuditTests.cs` with 1 test:
+- `Source_HttpResponseMessage_HasUsing`: Scans all `src/*.cs` files for `HttpResponseMessage <var> =` declarations without `using` keyword. Initially caught 4 additional instances beyond the PRD's 7, all of which were fixed.
+
+**Test results**: All 1,120 tests pass (262 Api + 135 Repositories + 277 Queue + 25 MediaProcessing + 421 Providers). Build succeeds with 0 errors.

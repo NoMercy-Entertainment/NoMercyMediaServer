@@ -157,7 +157,7 @@ public static class Auth
             Thread.Sleep(deviceData.Interval * 1000);
             try
             {
-                HttpResponseMessage response = await authClient.SendAsync(HttpMethod.Post,
+                using HttpResponseMessage response = await authClient.SendAsync(HttpMethod.Post,
                     "protocol/openid-connect/token", new FormUrlEncodedContent(tokenBody));
 
                 if (response.IsSuccessStatusCode)

@@ -57,7 +57,7 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
 
         HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.CoverArtImage);
 
-        HttpResponseMessage response = await httpClient.GetAsync(url);
+        using HttpResponseMessage response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return null;
 
         byte[] bytes = await response.Content.ReadAsByteArrayAsync();

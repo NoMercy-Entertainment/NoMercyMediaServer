@@ -106,7 +106,7 @@ public static class Certificate
     private static async Task<bool> FetchCertificate(int maxRetries, int delaySeconds, HttpClient client, string serverUrl,
         int attempt, bool hasExistingCert)
     {
-        HttpResponseMessage response = await client.GetAsync(serverUrl);
+        using HttpResponseMessage response = await client.GetAsync(serverUrl);
         if (response.StatusCode == System.Net.HttpStatusCode.GatewayTimeout)
         {
             if (attempt == maxRetries)

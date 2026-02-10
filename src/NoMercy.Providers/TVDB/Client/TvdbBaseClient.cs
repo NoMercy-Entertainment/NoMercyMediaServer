@@ -89,7 +89,7 @@ public class TvdbBaseClient : IDisposable
             Content = content
         };
 
-        HttpResponseMessage httpResponse = await client.SendAsync(httpRequestMessage);
+        using HttpResponseMessage httpResponse = await client.SendAsync(httpRequestMessage);
         string response = await httpResponse.Content.ReadAsStringAsync();
 
         return response.FromJson<TvdbLoginResponse>();
