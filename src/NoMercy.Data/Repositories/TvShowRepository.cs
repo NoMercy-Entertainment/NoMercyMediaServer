@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Jobs;
@@ -20,8 +21,7 @@ public class TvShowRepository(MediaContext context)
         // Episode cast/crew split to Query 2 to reduce round-trips
         Tv? tv = await mediaContext.Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
-            .Where(tv => tv.Library.LibraryUsers
-                .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+            .ForUser(userId)
             .Include(tv => tv.TvUser)
             .Include(tv => tv.Media
                 .Where(media => media.Type == "Trailer"))
@@ -129,7 +129,7 @@ public class TvShowRepository(MediaContext context)
     {
         return context.Tvs
             .AsNoTracking()
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(tv => tv.Id == id)
             .AnyAsync(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)), ct);
     }
@@ -138,8 +138,7 @@ public class TvShowRepository(MediaContext context)
     {
         return await context.Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
-            .Where(tv => tv.Library.LibraryUsers
-                .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+            .ForUser(userId)
             .Include(tv => tv.Seasons.OrderBy(season => season.SeasonNumber))
                 .ThenInclude(season => season.Episodes.OrderBy(episode => episode.EpisodeNumber))
             .Include(tv => tv.Translations
@@ -244,7 +243,7 @@ public class TvShowRepository(MediaContext context)
         Tv? tv = await context.Tvs
             .AsNoTracking()
             .Where(tv => tv.Id == id)
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(tv => tv.Episodes.Where(e => !e.VideoFiles.Any()))
                 .ThenInclude(e => e.Translations.Where(t => t.Iso6391 == language))
             .FirstOrDefaultAsync(ct);

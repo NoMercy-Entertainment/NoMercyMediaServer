@@ -1804,3 +1804,52 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
 - `TvShowRepository_GetMissingLibraryShows_UsesExistsForEmptyVideoFiles` — Verifies negated existence check uses EXISTS
 
 **Test results**: Build succeeds with 0 errors. All 194 repository tests pass (including 5 new). All 639 non-API tests pass (140 Database + 277 Queue + 194 Repositories + 28 MediaProcessing). Pre-existing API/Provider failures unchanged.
+
+---
+
+## MED-03 — Create `ForUser()` extension to eliminate repeated auth filtering
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Created `IHasLibrary` interface in `src/NoMercy.Database/Models/IHasLibrary.cs` with `Ulid LibraryId` and `Library Library` properties
+- Applied `IHasLibrary` to Movie, Tv, Collection, and Album entity classes (Artist excluded — nullable `LibraryId`)
+- Created `src/NoMercy.Data/Extensions/QueryableExtensions.cs` with three `ForUser()` overloads:
+  - Generic `ForUser<T>(Guid userId)` for any `IHasLibrary` entity (Movie, Tv, Collection, Album)
+  - `ForUser(Guid userId)` for `IQueryable<Library>` (Library has direct `LibraryUsers` nav)
+  - `ForUser(Guid userId)` for `IQueryable<Artist>` (Artist has nullable LibraryId, can't implement IHasLibrary)
+- Replaced 28 occurrences of `.Library.LibraryUsers.Any(u => u.UserId == userId)` and `.Library.LibraryUsers.FirstOrDefault(u => u.UserId.Equals(userId)) != null` patterns across 6 repository files
+
+**Not changed** (by design):
+- Compiled queries (`EF.CompileAsyncQuery`) — extension methods can't be used inside compiled query expressions
+- GenreRepository — access control goes through junction tables (`genre.GenreMovies.Any(g => g.Movie.Library.LibraryUsers.Any(...))`) which doesn't match the ForUser pattern
+- HomeRepository screensaver/genre queries — complex dual-entity checks through indirect navigation
+
+**Files changed**:
+- `src/NoMercy.Database/Models/IHasLibrary.cs` — Created interface
+- `src/NoMercy.Database/Models/Movie.cs` — Added `IHasLibrary` interface
+- `src/NoMercy.Database/Models/Tv.cs` — Added `IHasLibrary` interface
+- `src/NoMercy.Database/Models/Collection.cs` — Added `IHasLibrary` interface
+- `src/NoMercy.Database/Models/Album.cs` — Added `IHasLibrary` interface
+- `src/NoMercy.Data/Extensions/QueryableExtensions.cs` — Created ForUser extension methods
+- `src/NoMercy.Data/Repositories/MovieRepository.cs` — 3 replacements
+- `src/NoMercy.Data/Repositories/LibraryRepository.cs` — 6 replacements
+- `src/NoMercy.Data/Repositories/TvShowRepository.cs` — 4 replacements
+- `src/NoMercy.Data/Repositories/CollectionRepository.cs` — 6 replacements
+- `src/NoMercy.Data/Repositories/HomeRepository.cs` — 5 replacements
+- `src/NoMercy.Data/Repositories/MusicRepository.cs` — 4 replacements
+
+**New tests** (14):
+- `ForUser_Movie_ReturnsOnlyAccessibleMovies` / `ExcludesUnauthorizedUser`
+- `ForUser_Tv_ReturnsOnlyAccessibleShows` / `ExcludesUnauthorizedUser`
+- `ForUser_Library_ReturnsOnlyAccessibleLibraries` / `ExcludesUnauthorizedUser`
+- `ForUser_Collection_ReturnsOnlyAccessibleCollections`
+- `ForUser_Album_ReturnsOnlyAccessibleAlbums`
+- `ForUser_Artist_ReturnsOnlyAccessibleArtists`
+- `ForUser_ChainsWithOtherLinqOperators`
+- `ForUser_WorksWithCountAndAggregates`
+- `ForUser_MultipleLibraryAccess_ReturnsFromAllLibraries`
+- `ForUser_PartialLibraryAccess_OnlyReturnsAccessibleContent`
+- `ForUser_GeneratesExistsClauseInSql`
+
+**Test results**: Build succeeds with 0 errors. All 208 repository tests pass (including 14 new). Pre-existing API/Provider failures unchanged.

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
@@ -149,7 +150,7 @@ public class HomeRepository
     {
         return mediaContext.Libraries
             .AsNoTracking()
-            .Where(library => library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(library => library.LibraryUsers)
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
@@ -166,7 +167,7 @@ public class HomeRepository
     {
         return mediaContext.Tvs
             .AsNoTracking()
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .CountAsync(tv => tv.Library.Type == Config.AnimeMediaType, ct);
     }
 
@@ -174,7 +175,7 @@ public class HomeRepository
     {
         return mediaContext.Movies
             .AsNoTracking()
-            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .CountAsync(movie => movie.Library.Type == Config.MovieMediaType, ct);
     }
 
@@ -182,7 +183,7 @@ public class HomeRepository
     {
         return mediaContext.Tvs
             .AsNoTracking()
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .CountAsync(tv => tv.Library.Type == Config.TvMediaType, ct);
     }
 

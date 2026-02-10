@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item MED-03
+**Next up**: Phase 1-2, item MED-11
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -111,7 +111,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] HIGH-08 — Rate-limit encoder progress updates
 - [x] MED-01 — Fix N+1 queries in library endpoints
 - [x] MED-02 — Replace string concatenation in hot paths
-- [ ] MED-03 — Create `ForUser()` extension to eliminate repeated auth filtering
+- [x] MED-03 — Create `ForUser()` extension to eliminate repeated auth filtering
 - [ ] MED-11 — Fix unnecessary ToList() before LINQ operations
 - [ ] MED-12 — Fix blocking I/O on hot paths
 - [ ] MED-16 — Fix image processing memory allocation

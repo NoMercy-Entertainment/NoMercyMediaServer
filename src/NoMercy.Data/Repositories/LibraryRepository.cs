@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 
@@ -49,7 +50,7 @@ public class LibraryRepository(MediaContext context)
     {
         return context.Libraries
             .AsNoTracking()
-            .Where(library => library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
                 .ThenInclude(f => f.EncoderProfileFolder)
@@ -67,7 +68,7 @@ public class LibraryRepository(MediaContext context)
         return context.Libraries
             .AsNoTracking()
             .Where(library => library.Id == libraryId)
-            .Where(library => library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(library => library.LibraryMovies
                 .Where(lm => lm.Movie.VideoFiles.Any(v => v.Folder != null))
                 .Take(take))
@@ -227,7 +228,7 @@ public class LibraryRepository(MediaContext context)
         return context.Movies
             .AsNoTracking()
             .Where(movie => movie.Library.Id == libraryId)
-            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(movie => movie.VideoFiles.Any(v => v.Folder != null))
             .Include(tv => tv.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en"))
             .OrderByDescending(movie => movie.CreatedAt)
@@ -264,7 +265,7 @@ public class LibraryRepository(MediaContext context)
         return context.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
             .Include(tv => tv.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en"))
             .OrderByDescending(tv => tv.CreatedAt)
@@ -305,7 +306,7 @@ public class LibraryRepository(MediaContext context)
         return context.Movies
             .AsNoTracking()
             .Where(movie => movie.Library.Id == libraryId)
-            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(movie => movie.VideoFiles.Any(v => v.Folder != null))
             .Where(movie => (letter == "_" || letter == "#")
                 ? Letters.Any(p => movie.TitleSort.StartsWith(p.ToLower()))
@@ -329,7 +330,7 @@ public class LibraryRepository(MediaContext context)
         return context.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
             .Where(tv => (letter == "_" || letter == "#")
                 ? Letters.Any(p => tv.TitleSort.StartsWith(p.ToLower()))

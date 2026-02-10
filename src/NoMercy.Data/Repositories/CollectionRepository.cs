@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
@@ -31,7 +32,7 @@ public class CollectionRepository(MediaContext context)
     {
         List<Collection> collections = await context.Collections
             .AsNoTracking()
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)))
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
             .Include(collection => collection.Images.Where(i => i.Type == "logo").Take(1))
@@ -54,7 +55,7 @@ public class CollectionRepository(MediaContext context)
     {
         return await context.Collections
             .AsNoTracking()
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)))
             .OrderBy(collection => collection.TitleSort)
             .Skip(page * take)
@@ -137,8 +138,7 @@ public class CollectionRepository(MediaContext context)
         Collection? collection = await context.Collections
             .AsNoTracking()
             .Where(collection => collection.Id == id)
-            .Where(collection => collection.Library.LibraryUsers
-                .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+            .ForUser(userId)
             .Include(collection => collection.CollectionUser
                 .Where(x => x.UserId.Equals(userId))
             )
@@ -228,7 +228,7 @@ public class CollectionRepository(MediaContext context)
     {
         return context.Collections
             .AsNoTracking()
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)))
             .Include(collection => collection.CollectionUser.Where(x => x.UserId == userId))
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
@@ -259,7 +259,7 @@ public class CollectionRepository(MediaContext context)
         return context.Collections
             .AsNoTracking()
             .Where(collection => collection.Id == id)
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)))
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(cm => cm.Movie)
@@ -277,7 +277,7 @@ public class CollectionRepository(MediaContext context)
         return context.Collections
             .AsNoTracking()
             .Where(collection => collection.Id == id)
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
             .Include(collection => collection.Images.Where(i => i.Type == "logo").Take(1))
             .Include(collection => collection.CollectionMovies)

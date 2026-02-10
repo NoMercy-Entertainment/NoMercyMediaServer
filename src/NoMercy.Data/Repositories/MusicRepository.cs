@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -16,7 +17,7 @@ public class MusicRepository(MediaContext mediaContext)
         return mediaContext.Artists
             .AsNoTracking()
             .Where(artist => artist.Id == id)
-            .Where(artist => artist.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(artist => artist.Library)
             .Include(artist => artist.ArtistUser.Where(au => au.UserId == userId))
             .Include(artist => artist.Translations)
@@ -50,7 +51,7 @@ public class MusicRepository(MediaContext mediaContext)
     {
         return mediaContext.Artists
             .AsNoTracking()
-            .Where(artist => artist.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(artist => (letter == "_" || letter == "#")
                 ? Letters.Any(p => artist.Name.StartsWith(p))
                 : artist.Name.StartsWith(letter))
@@ -97,7 +98,7 @@ public class MusicRepository(MediaContext mediaContext)
         return mediaContext.Albums
             .AsNoTracking()
             .Where(album => album.Id == id)
-            .Where(album => album.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(album => album.Library)
             .Include(album => album.AlbumUser.Where(au => au.UserId == userId))
             .Include(album => album.AlbumTrack)
@@ -122,7 +123,7 @@ public class MusicRepository(MediaContext mediaContext)
     {
         return mediaContext.Albums
             .AsNoTracking()
-            .Where(album => album.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(album => (letter == "_" || letter == "#")
                 ? Letters.Any(p => album.Name.StartsWith(p))
                 : album.Name.StartsWith(letter))

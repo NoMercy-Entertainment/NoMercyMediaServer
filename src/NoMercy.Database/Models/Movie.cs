@@ -13,7 +13,7 @@ namespace NoMercy.Database.Models;
 [Index(nameof(ImdbId))]
 [Index(nameof(ReleaseDate))]
 [Index(nameof(LibraryId), nameof(TitleSort))]
-public class Movie : ColorPaletteTimeStamps
+public class Movie : ColorPaletteTimeStamps, IHasLibrary
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]

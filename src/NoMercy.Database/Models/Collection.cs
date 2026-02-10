@@ -10,7 +10,7 @@ namespace NoMercy.Database.Models;
 [Index(nameof(Title))]
 [Index(nameof(TitleSort))]
 [Index(nameof(LibraryId))]
-public class Collection : ColorPaletteTimeStamps
+public class Collection : ColorPaletteTimeStamps, IHasLibrary
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]

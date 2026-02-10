@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Extensions;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.MediaProcessing.Jobs;
@@ -14,7 +15,7 @@ public class MovieRepository(MediaContext context)
         return context.Movies
             .AsNoTracking()
             .Where(movie => movie.Id == id)
-            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(movie => movie.MovieUser.Where(mu => mu.UserId == userId))
             .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
             .Include(movie => movie.Images.Where(i => i.Type == "logo").Take(1))
@@ -82,7 +83,7 @@ public class MovieRepository(MediaContext context)
     {
         return context.Movies
             .AsNoTracking()
-            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(movie => movie.Id == id)
             .AnyAsync(movie => movie.VideoFiles.Any(v => v.Folder != null), ct);
     }
@@ -91,8 +92,7 @@ public class MovieRepository(MediaContext context)
     {
         return await context.Movies.AsNoTracking()
             .Where(movie => movie.Id == id)
-            .Where(movie => movie.Library.LibraryUsers
-                .FirstOrDefault(libraryUser => libraryUser.UserId.Equals(userId)) != null)
+            .ForUser(userId)
             .Include(movie => movie.Media
                 .Where(media => media.Type == "video" && media.Iso6391 == language))
             .Include(movie => movie.Images

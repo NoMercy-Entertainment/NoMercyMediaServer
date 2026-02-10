@@ -11,7 +11,7 @@ namespace NoMercy.Database.Models;
 [Index(nameof(FolderId))]
 [Index(nameof(Year))]
 [Index(nameof(MetadataId))]
-public class Album : ColorPaletteTimeStamps
+public class Album : ColorPaletteTimeStamps, IHasLibrary
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
