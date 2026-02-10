@@ -21,7 +21,11 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
 
             Context.QueueJobs.Add(queueJob);
 
-            if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
+            if (Context.ChangeTracker.HasChanges())
+            {
+                Context.SaveChanges();
+                Context.ChangeTracker.Clear();
+            }
         }
     }
 
@@ -34,7 +38,11 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
 
             Context.QueueJobs.Remove(job);
 
-            if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
+            if (Context.ChangeTracker.HasChanges())
+            {
+                Context.SaveChanges();
+                Context.ChangeTracker.Clear();
+            }
 
             return job;
         }
@@ -63,7 +71,11 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
                 job.ReservedAt = DateTime.UtcNow;
                 job.Attempts++;
 
-                if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
+                if (Context.ChangeTracker.HasChanges())
+                {
+                    Context.SaveChanges();
+                    Context.ChangeTracker.Clear();
+                }
 
                 return job;
             }
@@ -91,6 +103,9 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         {
             lock (_writeLock)
             {
+                if (Context.Entry(queueJob).State == EntityState.Detached)
+                    Context.QueueJobs.Attach(queueJob);
+
                 queueJob.ReservedAt = null;
 
                 if (queueJob.Attempts >= maxAttempts)
@@ -109,7 +124,11 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
                     Context.QueueJobs.Remove(queueJob);
                 }
 
-                if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
+                if (Context.ChangeTracker.HasChanges())
+                {
+                    Context.SaveChanges();
+                    Context.ChangeTracker.Clear();
+                }
             }
         }
         catch (Exception e)
@@ -133,16 +152,23 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         {
             lock (_writeLock)
             {
+                if (Context.Entry(queueJob).State == EntityState.Detached)
+                    Context.QueueJobs.Attach(queueJob);
+
                 Context.QueueJobs.Remove(queueJob);
 
-                if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
+                if (Context.ChangeTracker.HasChanges())
+                {
+                    Context.SaveChanges();
+                    Context.ChangeTracker.Clear();
+                }
             }
         }
         catch (Exception)
         {
             // if (e.Message.Contains("affected 0 row(s)"))
             // {
-            //     
+            //
             // }
             // else if (attempt < 10)
             // {
@@ -174,11 +200,15 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
                     Attempts = 0
                 });
 
-                if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
+                if (Context.ChangeTracker.HasChanges())
+                {
+                    Context.SaveChanges();
+                    Context.ChangeTracker.Clear();
+                }
             }
         }
         catch (Exception e)
-        {            
+        {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return;
             if (attempt < 10)
             {
@@ -215,7 +245,11 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
                 Context.FailedJobs.Remove(failedJob);
             }
 
-            if (Context.ChangeTracker.HasChanges()) Context.SaveChanges();
+            if (Context.ChangeTracker.HasChanges())
+            {
+                Context.SaveChanges();
+                Context.ChangeTracker.Clear();
+            }
         }
     }
 

@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item HIGH-17
+**Next up**: Phase 1-2, item HIGH-18
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -93,7 +93,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] HIGH-09 — Clean up temp files on encoding failure
 - [x] HIGH-10 — Fix async void in queue processor
 - [x] HIGH-16 — Fix DbContext lifetime in background services
-- [ ] HIGH-17 — Fix missing disposal in provider clients
+- [x] HIGH-17 — Fix missing disposal in provider clients
 - [ ] HIGH-18 — Fix ThreadPool.QueueUserWorkItem fire-and-forget
 - [ ] HIGH-20 — Fix GC.Collect band-aids (60+ calls)
 - [ ] MED-04 — Fix CancellationToken not propagated

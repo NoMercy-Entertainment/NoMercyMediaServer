@@ -1241,3 +1241,30 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 - `MusicPlaybackService`: Creates `new MusicRepository(new())` bypassing DI entirely (long-lived context, resource leak)
 - `JobDispatcher`/`JobQueue`: Uses `new QueueContext()` directly; `JobQueue` is registered both scoped and singleton (duplicate)
 
+---
+
+## HIGH-17 — Fix static JobQueue instance change tracker bloat
+
+**Date**: 2026-02-10
+
+**What was done**:
+- **Problem**: `JobDispatcher` holds `private static readonly JobQueue Queue = new(new());` — a single `QueueContext` that lives for the entire application lifetime. The change tracker accumulates tracked entities on every operation, slowly consuming memory. Three methods (`DeleteJob`, `RequeueFailedJob`, `RetryFailedJobs`) were missing `ChangeTracker.Clear()` after `SaveChanges()`.
+- **Fix** (3 parts):
+  1. Added `ChangeTracker.Clear()` after `SaveChanges()` in `DeleteJob`, `RequeueFailedJob`, and `RetryFailedJobs` — matching the pattern already present in `Enqueue`, `Dequeue`, `ReserveJob`, and `FailJob`
+  2. Added re-attach logic in `FailJob` and `DeleteJob` — after `ChangeTracker.Clear()`, entities returned by prior methods (e.g., `ReserveJob`) become detached. These methods now check `EntityState.Detached` and re-attach before modifying, preventing silent no-ops
+  3. All `SaveChanges()` calls now consistently use the pattern: `if (HasChanges()) { SaveChanges(); ChangeTracker.Clear(); }`
+
+**Files changed**:
+- `src/NoMercy.Queue/JobQueue.cs`: Added `ChangeTracker.Clear()` in `DeleteJob` (line 157), `RequeueFailedJob` (line 200), `RetryFailedJobs` (line 245); added detached-entity re-attach in `FailJob` (line 108) and `DeleteJob` (line 153)
+
+**Tests added**:
+- Created `tests/NoMercy.Tests.Queue/ChangeTrackerBloatTests.cs` with 6 tests:
+  - `Enqueue_ManyJobs_ChangeTrackerDoesNotAccumulate`: 100 enqueues, asserts 0 tracked entities after each
+  - `Dequeue_ManyJobs_ChangeTrackerDoesNotAccumulate`: 50 enqueue+dequeue cycles, asserts 0 tracked entities after each dequeue
+  - `DeleteJob_ChangeTrackerClearedAfterSave`: 20 jobs deleted, asserts 0 tracked entities after each delete
+  - `RetryFailedJobs_ChangeTrackerClearedAfterSave`: 20 failed jobs retried in batch, asserts 0 tracked entities after
+  - `FailJob_ChangeTrackerClearedAfterSave`: 20 jobs failed (exceeding max attempts → moved to FailedJobs), asserts 0 tracked entities after each
+  - `EnqueueAndDequeue_HighVolume_ContextRemainsHealthy`: 10 cycles of 100 enqueue+dequeue (1000 total operations), verifies context stays clean
+
+**Test results**: All 271 Queue tests pass (6 new + 265 existing). Also fixed 3 pre-existing test failures in `QueueBehaviorTests` that were caused by entities becoming detached after `ChangeTracker.Clear()` without re-attach. All other test suites pass. Build succeeds with 0 errors.
+
