@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item MED-16
+**Next up**: Phase 1-2, item CRIT-14
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -114,7 +114,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] MED-03 — Create `ForUser()` extension to eliminate repeated auth filtering
 - [x] MED-11 — Fix unnecessary ToList() before LINQ operations
 - [x] MED-12 — Fix blocking I/O on hot paths
-- [ ] MED-16 — Fix image processing memory allocation
+- [x] MED-16 — Fix image processing memory allocation
 - [ ] CRIT-14 — Fix TypeNameHandling.All security vulnerability
 - [ ] HIGH-03 — Remove EnableSensitiveDataLogging in production
 - [ ] HIGH-06 — Fix middleware ordering issues

@@ -34,34 +34,42 @@ public class Start
 
         await ApiInfo.RequestInfo();
 
-        List<TaskDelegate> startupTasks =
-        [
-            // new (ApiInfo.RequestInfo),
-            AppFiles.CreateAppFolders,
-            Auth.Init,
-            Networking.Networking.Discover,
-            ..tasks,
-            Register.Init,
-            Binaries.DownloadAll,
-            ChromeCast.Init,
-            UpdateChecker.StartPeriodicUpdateCheck,
+        // Phase 1: Create app folders (all other tasks depend on this)
+        await AppFiles.CreateAppFolders();
 
-            delegate
-            {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                    && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
-                    return TrayIcon.Make();
-                return Task.CompletedTask;
-            },
-            delegate
-            {
-                DesktopIconCreator.CreateDesktopIcon(AppFiles.ApplicationName, AppFiles.ServerExePath,
-                    AppFiles.AppIcon);
-                return Task.CompletedTask;
-            }
+        // Phase 2: Auth and binary downloads are independent — run in parallel
+        // Binaries.DownloadAll only hits public GitHub APIs (no auth needed)
+        Task binariesTask = Binaries.DownloadAll();
+        await Auth.Init();
+
+        // Phase 3: After auth, these tasks can all run in parallel:
+        // - Networking.Discover needs AccessToken for GetExternalIp
+        // - Caller tasks (DatabaseSeeder) need AccessToken for UsersSeed
+        // - ChromeCast.Init needs AccessToken
+        // - UpdateChecker, TrayIcon, DesktopIcon are fully independent
+        Task networkingTask = Networking.Networking.Discover();
+
+        List<Task> parallelTasks =
+        [
+            ..tasks.Select(t => t.Invoke()),
+            ChromeCast.Init(),
+            UpdateChecker.StartPeriodicUpdateCheck(),
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362)
+                    ? TrayIcon.Make()
+                    : Task.CompletedTask,
+            Task.Run(() => DesktopIconCreator.CreateDesktopIcon(
+                AppFiles.ApplicationName, AppFiles.ServerExePath, AppFiles.AppIcon))
         ];
 
-        await RunStartup(startupTasks);
+        await Task.WhenAll(parallelTasks);
+
+        // Phase 4: Register needs both Auth (AccessToken) and Networking (InternalIp)
+        await networkingTask;
+        await Register.Init();
+
+        // Wait for binary downloads to finish before server is considered ready
+        await binariesTask;
 
         // Delay heavy initialization tasks to run in the background after server is ready
         _ = Task.Run(async () =>
@@ -79,10 +87,5 @@ public class Start
             await Task.Delay(TimeSpan.FromSeconds(2));
             await QueueRunner.Initialize();
         });
-    }
-
-    private static async Task RunStartup(List<TaskDelegate> startupTasks)
-    {
-        foreach (TaskDelegate task in startupTasks) await task.Invoke();
     }
 }

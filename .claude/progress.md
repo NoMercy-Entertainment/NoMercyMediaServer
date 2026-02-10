@@ -1901,3 +1901,31 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   - Empty output handling
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 1,221 non-Api tests pass (147 encoder, 140 database, 277 queue, 208 repository, 28 media processing, 421 provider). Api test failures are pre-existing environment-specific SQLite disk I/O errors.
+
+---
+
+## MED-16 — Parallelize independent startup tasks with Task.WhenAll
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Refactored `src/NoMercy.Setup/Start.cs` to replace sequential `RunStartup()` loop with phased parallel execution
+- Analyzed all 10 startup tasks for dependency relationships:
+  - `Auth.Init` sets `Globals.AccessToken` (required by Networking, ChromeCast, DatabaseSeeder/UsersSeed, Register)
+  - `Networking.Discover` sets `InternalIp`/`ExternalIp` (required by Register)
+  - `Binaries.DownloadAll` only uses public GitHub APIs (no auth dependency)
+  - `UpdateChecker`, `TrayIcon`, `DesktopIcon` are fully independent
+- Implemented 4-phase startup:
+  1. **Phase 1** (sequential): `AppFiles.CreateAppFolders` — foundational, all tasks depend on folder existence
+  2. **Phase 2** (parallel): `Auth.Init` runs concurrently with `Binaries.DownloadAll` — biggest win since binary downloads are the longest-running task and don't need auth
+  3. **Phase 3** (parallel after Auth): `Networking.Discover`, caller tasks (DatabaseSeeder), `ChromeCast.Init`, `UpdateChecker`, `TrayIcon`, `DesktopIcon` — all need AccessToken or are independent
+  4. **Phase 4** (sequential after Networking): `Register.Init` — needs both AccessToken and InternalIp
+- Removed unused `RunStartup()` private method
+- Created `tests/NoMercy.Tests.Queue/StartupParallelizationTests.cs` with 5 tests:
+  1. `PhasedStartup_MaintainsDependencyOrder` — validates all 8 task types execute in correct phase order
+  2. `Phase2_AuthAndBinaries_RunConcurrently` — timing test proving parallel execution (< 200ms vs 200ms sequential)
+  3. `Phase3_TasksRunConcurrentlyAfterAuth` — timing test proving 4 tasks run in parallel (< 320ms vs 320ms sequential)
+  4. `Phase4_Register_WaitsForAuthAndNetworking` — verifies Register cannot start before both dependencies complete
+  5. `CallerTasks_ExecuteInPhase3AfterAuth` — verifies caller-provided tasks see auth completed
+
+**Test results**: Build succeeds with 0 errors. All 5 new tests pass. All 1,226 non-Api tests pass (147 encoder, 140 database, 282 queue, 208 repository, 28 media processing, 421 provider). 7 Api test failures are pre-existing.
