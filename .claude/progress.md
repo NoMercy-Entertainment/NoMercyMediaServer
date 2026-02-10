@@ -1649,3 +1649,33 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
 - 1 disposed context test verifying browsable queries don't throw when materialized
 
 **Test results**: Build succeeds with 0 errors. All 184 repository tests pass (167 existing + 17 new). All 262 API tests pass. All other test suites pass.
+
+---
+
+## HIGH-04 — Add missing database indexes
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Added explicit `[Index]` attribute annotations for foreign key columns that were missing them on 4 model classes:
+  - `Metadata.cs`: Added `[Index(nameof(AudioTrackId), IsUnique = true)]` — matches the existing unique FK relationship configured in `OnModelCreating`
+  - `Playlist.cs`: Added `[Index(nameof(UserId))]` — indexes user playlist lookups
+  - `ActivityLog.cs`: Added `[Index(nameof(UserId))]` and `[Index(nameof(DeviceId))]` — indexes user activity and device queries
+  - `Collection.cs`: Added `[Index(nameof(LibraryId))]` — indexes library-scoped collection queries
+- These indexes already existed in the database via EF Core's convention-based FK index creation, but were not explicitly declared in the model annotations, making them invisible for code-level auditing and future migration tracking
+
+**Files changed**:
+- `src/NoMercy.Database/Models/Metadata.cs` — added `[Index(nameof(AudioTrackId), IsUnique = true)]`
+- `src/NoMercy.Database/Models/Playlist.cs` — added `[Index(nameof(UserId))]`
+- `src/NoMercy.Database/Models/ActivityLog.cs` — added `[Index(nameof(UserId))]` and `[Index(nameof(DeviceId))]`
+- `src/NoMercy.Database/Models/Collection.cs` — added `[Index(nameof(LibraryId))]`
+- `tests/NoMercy.Tests.Database/ForeignKeyIndexTests.cs` — new test file
+
+**Tests created (5 new)**:
+- `Metadata_HasIndex_OnAudioTrackId` — verifies unique index attribute on AudioTrackId
+- `Playlist_HasIndex_OnUserId` — verifies index attribute on UserId
+- `ActivityLog_HasIndex_OnUserId` — verifies index attribute on UserId
+- `ActivityLog_HasIndex_OnDeviceId` — verifies index attribute on DeviceId
+- `Collection_HasIndex_OnLibraryId` — verifies index attribute on LibraryId
+
+**Test results**: Build succeeds with 0 errors. All 140 database tests pass (135 existing + 5 new). All 262 API tests pass. All other test suites pass.

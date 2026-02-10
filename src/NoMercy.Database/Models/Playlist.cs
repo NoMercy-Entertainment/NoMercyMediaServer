@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
+[Index(nameof(UserId))]
 public class Playlist : ColorPaletteTimeStamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]

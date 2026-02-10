@@ -8,6 +8,7 @@ namespace NoMercy.Database.Models;
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Filename), nameof(HostFolder), IsUnique = true)]
 [Index(nameof(Type))]
+[Index(nameof(AudioTrackId), IsUnique = true)]
 public class Metadata : MetadataTracks
 {
     [DatabaseGenerated(DatabaseGeneratedOption.None)]

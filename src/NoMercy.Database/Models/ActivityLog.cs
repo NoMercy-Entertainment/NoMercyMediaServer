@@ -5,6 +5,8 @@ using Newtonsoft.Json;
 namespace NoMercy.Database.Models;
 
 [PrimaryKey(nameof(Id))]
+[Index(nameof(UserId))]
+[Index(nameof(DeviceId))]
 public class ActivityLog : Timestamps
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
