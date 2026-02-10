@@ -167,6 +167,7 @@ public class FfMpeg : Classes
             bool durationFound = false;
             bool hasOutput = false;
             TimeSpan currentTime;
+            ProgressThrottle progressThrottle = new(500);
 
             Regex durationRegex = new(@"Duration:\s(\d{2}):(\d{2}):(\d{2})\.(\d+)");
 
@@ -227,11 +228,11 @@ public class FfMpeg : Classes
                     string bitrate = parsedData.Bitrate;
                     double remaining = parsedData.Remaining;
                     string remainingHms = TimeSpan.FromSeconds(remaining).ToString(@"d\:hh\:mm\:ss");
-                    string thumbnail = GetThumbnail(meta);
 
-                    // Check if this is the final progress block
+                    // Check if this is the final progress block — always send
                     if (e.Data.Trim() == "progress=end")
                     {
+                        string thumbnail = GetThumbnail(meta);
                         Progress progressData = new()
                         {
                             Percentage = 100.0,
@@ -261,6 +262,14 @@ public class FfMpeg : Classes
                         return;
                     }
 
+                    // Throttle running progress updates to max 2/sec (500ms interval)
+                    if (!progressThrottle.ShouldSend())
+                    {
+                        output2.Clear();
+                        return;
+                    }
+
+                    string runningThumbnail = GetThumbnail(meta);
                     Progress progressDataRunning = new()
                     {
                         Percentage = progress,
@@ -278,7 +287,7 @@ public class FfMpeg : Classes
                         VideoStreams = meta.VideoStreams,
                         AudioStreams = meta.AudioStreams,
                         SubtitleStreams = meta.SubtitleStreams,
-                        Thumbnail = thumbnail,
+                        Thumbnail = runningThumbnail,
                         Title = meta.Title,
                         Id = meta.Id,
                         Message = $"Encoding {meta.Type}",

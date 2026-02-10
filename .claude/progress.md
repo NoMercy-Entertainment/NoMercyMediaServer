@@ -1721,3 +1721,28 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   - 3 tests verifying VaryByQueryKeys are correctly set on paginated endpoints
 
 **Test results**: Build succeeds with 0 errors. 23 new response cache attribute tests pass. All 278 passing API tests continue to pass (7 pre-existing failures in ImageController and auth tests are unchanged).
+
+---
+
+## HIGH-08 — Rate-limit encoder progress updates
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Added throttling to the FFmpeg encoder progress update handler in `src/NoMercy.Encoder/FfMpeg.cs`
+- Created `src/NoMercy.Encoder/Core/ProgressThrottle.cs` — internal helper class that limits updates to a configurable interval (default 500ms = ~2 updates/sec)
+- Modified the `Run()` method's `OutputDataReceived` handler:
+  - Running progress updates (`status=running`) are now throttled to max 2/sec via `ProgressThrottle.ShouldSend()`
+  - Final progress update (`progress=end`) always passes through unthrottled
+  - `GetThumbnail()` disk I/O is only called when an update is actually sent (was previously called on every FFmpeg output line ~100/sec)
+  - Moved thumbnail lookup to after the throttle check, reducing disk I/O ~50x
+- Created `tests/NoMercy.Tests.Encoder/ProgressThrottleTests.cs` with 7 tests:
+  - First call always allowed
+  - Immediate second call throttled
+  - Call after interval elapsed is allowed
+  - Rapid-fire 20 calls only allows 1
+  - Reset allows next send immediately
+  - Multiple intervals allow expected count (~1 per interval)
+  - Default interval is 500ms
+
+**Test results**: Build succeeds with 0 errors. 7 new ProgressThrottle tests pass. All 140 encoder tests pass. All unit tests across all projects pass.
