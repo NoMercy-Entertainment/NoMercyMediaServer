@@ -417,7 +417,7 @@ public static class ServiceConfiguration
         services.AddHttpContextAccessor();
         services.AddSignalR(o =>
             {
-                o.EnableDetailedErrors = true;
+                o.EnableDetailedErrors = Config.IsDev;
                 o.MaximumReceiveMessageSize = 1024 * 1000 * 100;
 
                 o.ClientTimeoutInterval = TimeSpan.FromSeconds(30);

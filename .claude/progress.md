@@ -1994,3 +1994,17 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   4. `CorsPreFlight_NoCorHeaders_ForDisallowedOrigin` — verifies disallowed origins don't get CORS Allow-Origin header
 
 **Test results**: Build succeeds with 0 errors. All 4 new middleware tests pass. All 1,239 non-API tests pass. Pre-existing 12 API test failures are unchanged (verified by stashing changes and running tests on base commit).
+
+---
+
+## HIGH-07 — Fix SignalR detailed errors in production
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Changed `EnableDetailedErrors = true` to `EnableDetailedErrors = Config.IsDev` in `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs:420`
+- This ensures stack traces are only sent to SignalR clients in development mode, preventing information leakage in production
+- Created `tests/NoMercy.Tests.Api/SignalRDetailedErrorsTests.cs` with 1 integration test:
+  1. `ProductionSignalR_DoesNotEnableDetailedErrors` — resolves `IOptions<HubOptions>` from the DI container (which runs without `--dev` flag) and asserts `EnableDetailedErrors` is false
+
+**Test results**: Build succeeds with 0 errors. New test passes. All 666 non-API tests pass (Repositories 208, MediaProcessing 28, Database 143, Queue 287). Pre-existing 12 API test failures are unchanged (verified by stashing changes).
