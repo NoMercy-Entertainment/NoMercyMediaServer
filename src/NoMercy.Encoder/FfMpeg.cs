@@ -13,8 +13,17 @@ using NoMercy.NmSystem.SystemCalls;
 namespace NoMercy.Encoder;
 
 [Serializable]
-public class FfMpeg : Classes
+public partial class FfMpeg : Classes
 {
+    [GeneratedRegex(@"Duration:\s(\d{2}):(\d{2}):(\d{2})\.(\d+)")]
+    private static partial Regex DurationRegex();
+
+    [GeneratedRegex(@"[\r\n]+")]
+    private static partial Regex NewlineSplitRegex();
+
+    [GeneratedRegex(@"(\d{2}):(\d{2}):(\d{2})\.(\d+)")]
+    private static partial Regex TimeRegex();
+
     internal string FfProbePath { get; set; } = AppFiles.FfProbePath;
     internal string FfmpegPath { get; set; } = AppFiles.FfmpegPath;
 
@@ -169,8 +178,6 @@ public class FfMpeg : Classes
             TimeSpan currentTime;
             ProgressThrottle progressThrottle = new(500);
 
-            Regex durationRegex = new(@"Duration:\s(\d{2}):(\d{2}):(\d{2})\.(\d+)");
-
             StringBuilder error = new();
 
             ffmpeg.ErrorDataReceived += (_, e) =>
@@ -178,7 +185,7 @@ public class FfMpeg : Classes
                 if (e.Data != null && !durationFound)
                 {
                     // Extract duration from the log
-                    Match durationMatch = durationRegex.Match(e.Data);
+                    Match durationMatch = DurationRegex().Match(e.Data);
                     if (durationMatch.Success)
                     {
                         int hours = int.Parse(durationMatch.Groups[1].Value);
@@ -332,14 +339,14 @@ public class FfMpeg : Classes
         }
     }
 
-    private static ProgressData? ParseOutputData(string output, TimeSpan totalDuration)
+    internal static ProgressData? ParseOutputData(string output, TimeSpan totalDuration)
     {
         try
         {
             double progressPercentage = 0.0;
             TimeSpan currentTime = TimeSpan.Zero;
 
-            string[] lines = Regex.Split(output, "[\r\n]+");
+            string[] lines = NewlineSplitRegex().Split(output);
             Dictionary<string, string> parsedValues = new();
 
             foreach (string line in lines)
@@ -356,8 +363,7 @@ public class FfMpeg : Classes
 
             parsedValues["totalDuration"] = totalDuration.ToString();
 
-            Regex progressRegex = new(@"(\d{2}):(\d{2}):(\d{2})\.(\d+)");
-            Match progressMatch = progressRegex.Match(parsedValues.GetValueOrDefault("out_time", string.Empty));
+            Match progressMatch = TimeRegex().Match(parsedValues.GetValueOrDefault("out_time", string.Empty));
 
             if (progressMatch.Success)
             {

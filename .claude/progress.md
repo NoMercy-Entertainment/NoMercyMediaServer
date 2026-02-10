@@ -1877,3 +1877,27 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
 - `InvokeAsync_HandlesLanguageWithoutRegion` — verifies "nl" without region code works
 
 **Test results**: Build succeeds with 0 errors. All 7 new localization tests pass. Pre-existing failures unchanged.
+
+---
+
+## MED-12 — Fix Regex Created in Loop in FfMpeg.cs
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Converted 3 runtime-compiled `Regex` instances in `src/NoMercy.Encoder/FfMpeg.cs` to compile-time `[GeneratedRegex]` source generators:
+  1. `DurationRegex()` — matches `Duration: HH:MM:SS.ms` in FFmpeg stderr (was `new Regex(...)` inside `Run()` method, allocated every encoding run)
+  2. `NewlineSplitRegex()` — splits on `\r\n` or `\n` (was `Regex.Split()` static call inside `ParseOutputData()`, compiled on every progress block ~100x/sec)
+  3. `TimeRegex()` — matches `HH:MM:SS.ms` time format (was `new Regex(...)` inside `ParseOutputData()`, allocated on every progress block)
+- Made `FfMpeg` class `partial` to support `[GeneratedRegex]` attribute
+- Changed `ParseOutputData` from `private static` to `internal static` for testability (InternalsVisibleTo already configured)
+- Created `tests/NoMercy.Tests.Encoder/FfMpegRegexTests.cs` with 7 tests covering:
+  - Valid progress block parsing with all fields
+  - Midway progress with remaining time calculation
+  - Zero speed (N/A) handling
+  - Windows `\r\n` line ending support
+  - Missing out_time field
+  - Long duration (1h30m) parsing
+  - Empty output handling
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 1,221 non-Api tests pass (147 encoder, 140 database, 277 queue, 208 repository, 28 media processing, 421 provider). Api test failures are pre-existing environment-specific SQLite disk I/O errors.
