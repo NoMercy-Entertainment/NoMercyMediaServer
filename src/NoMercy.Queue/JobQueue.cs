@@ -9,6 +9,10 @@ namespace NoMercy.Queue;
 
 public class JobQueue(QueueContext context, byte maxAttempts = 3)
 {
+    private const int MaxDbRetryAttempts = 5;
+    private const int BaseRetryDelayMs = 2000;
+    private const int MaxJitterMs = 500;
+
     private static readonly object _writeLock = new();
     private QueueContext Context { get; } = context;
 
@@ -83,15 +87,13 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return null;
-            if (attempt < 10)
+            if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(2000);
+                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
                 return ReserveJob(name, currentJobId, attempt + 1);
             }
-            else
-            {
-                Logger.Queue(e.Message, LogEventLevel.Error);
-            }
+
+            Logger.Queue(e.Message, LogEventLevel.Error);
         }
 
         return null;
@@ -134,9 +136,9 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return;
-            if (attempt < 10)
+            if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(2000);
+                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
                 FailJob(queueJob, exception, attempt + 1);
             }
             else
@@ -210,9 +212,9 @@ public class JobQueue(QueueContext context, byte maxAttempts = 3)
         catch (Exception e)
         {
             if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return;
-            if (attempt < 10)
+            if (attempt < MaxDbRetryAttempts)
             {
-                Thread.Sleep(2000);
+                Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
                 RequeueFailedJob(failedJobId, attempt + 1);
             }
             else

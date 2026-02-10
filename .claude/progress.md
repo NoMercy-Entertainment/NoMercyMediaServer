@@ -1268,3 +1268,30 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 
 **Test results**: All 271 Queue tests pass (6 new + 265 existing). Also fixed 3 pre-existing test failures in `QueueBehaviorTests` that were caused by entities becoming detached after `ChangeTracker.Clear()` without re-attach. All other test suites pass. Build succeeds with 0 errors.
 
+---
+
+## HIGH-18 — Fix Thread.Sleep retry patterns in JobQueue
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Fixed `Thread.Sleep(2000)` retry patterns in `src/NoMercy.Queue/JobQueue.cs` across three methods: `ReserveJob`, `FailJob`, and `RequeueFailedJob`
+- Added three named constants to `JobQueue`:
+  - `MaxDbRetryAttempts = 5` (reduced from hardcoded 10 — max wait drops from 20s to ~12.5s)
+  - `BaseRetryDelayMs = 2000` (base delay per retry)
+  - `MaxJitterMs = 500` (random jitter to prevent thundering herd)
+- Changed all three retry catch blocks from `Thread.Sleep(2000)` to `Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs))` — adds 0-499ms random jitter per retry to prevent multiple workers from retrying in lockstep
+- Updated `ReserveJob` catch block to remove unnecessary `else` (just falls through to `Logger.Queue` call and `return null`)
+- Updated existing test `ReserveJobRetryTests.ReserveJob_ExceedingMaxDbRetryAttempts_ReturnsNull` to pass attempt=5 instead of 10
+
+**Tests added**:
+- Created `tests/NoMercy.Tests.Queue/RetryJitterTests.cs` with 6 tests:
+  - `MaxDbRetryAttempts_IsFive`: Verifies constant via reflection equals 5
+  - `BaseRetryDelayMs_Is2000`: Verifies constant via reflection equals 2000
+  - `MaxJitterMs_Is500`: Verifies constant via reflection equals 500
+  - `RetryDelay_HasJitter_ProducesVariedValues`: Samples 50 delays, asserts multiple distinct values in [2000, 2499] range
+  - `ReserveJob_RetryMethods_UseConstants_NotHardcoded`: Inspects IL of all three retry methods to verify constant value 5 appears
+  - `RetryMethods_DoNotContainOldRetryLimit`: Inspects ReserveJob IL to verify hardcoded 10 with comparison opcode is absent
+
+**Test results**: All 277 Queue tests pass (6 new + 271 existing). All 1113 tests across all projects pass. Build succeeds with 0 errors.
+

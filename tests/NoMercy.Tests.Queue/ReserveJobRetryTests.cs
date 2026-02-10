@@ -93,14 +93,14 @@ public class ReserveJobRetryTests : IDisposable
     [Fact]
     public void ReserveJob_ExceedingMaxDbRetryAttempts_ReturnsNull()
     {
-        // When attempt >= 10 in the catch block, ReserveJob should log the error
-        // and return null. We verify this by calling ReserveJob with attempt=10
-        // directly (which skips the retry path and falls through to return null
-        // if the normal path also fails).
+        // When attempt >= MaxDbRetryAttempts (5) in the catch block, ReserveJob
+        // should log the error and return null. We verify this by calling
+        // ReserveJob with attempt=5 directly (which skips the retry path and
+        // falls through to return null if the normal path also fails).
 
         // With an empty queue, ReserveJob returns null on the happy path too,
         // so we verify the method handles high attempt values gracefully.
-        QueueJob? result = _jobQueue.ReserveJob("nonexistent-queue", null, 10);
+        QueueJob? result = _jobQueue.ReserveJob("nonexistent-queue", null, 5);
         Assert.Null(result);
     }
 
