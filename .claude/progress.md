@@ -1562,3 +1562,38 @@ Added missing `using`/dispose to 10 resource leak sites across cold paths: Media
 - Added `SeedDetailData()` method to TvShowRepositoryTests that seeds Person, Role, Job, Cast (show + episode level), Crew (show + episode level), Creator, Translation, Image, Keyword, Certification, Similar, and Recommendation entities for comprehensive testing.
 
 **Test results**: Build succeeds with 0 errors. All 167 repository tests pass (159 existing + 8 new). All other test suites (Database: 135, Queue: 277, Encoder: 119, MediaProcessing: 28, Networking: 5, Api: 262) pass. Providers: 418/421 pass (3 pre-existing TMDB integration test failures unrelated to this change).
+
+---
+
+## CRIT-12 — Fix synchronous blocking in async HLS playlist generation
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Refactored `HlsPlaylistGenerator.Build()` to replace synchronous `Shell.ExecStdOutSync()` calls with async `Shell.ExecStdOutAsync()` calls
+- Introduced `SemaphoreSlim` with `MaxConcurrentProbes = 3` to bound concurrent ffprobe calls, preventing resource exhaustion with many video variants
+- Converted `GetVideoDuration()` to `GetVideoDurationAsync()` — both ffprobe calls (codec probing and duration probing) now run asynchronously within the semaphore
+- Broke the synchronous LINQ `Select()` chain into `Task.WhenAll()` with async lambdas, enabling parallel probing of video variants instead of sequential blocking
+- Created `VideoVariantInfo` private sealed class to replace the anonymous type (needed for `Task<T>` return type from async lambdas)
+- All existing behavior preserved: HDR/SDR detection, resolution parsing, bandwidth calculation, audio group building, codec mapping, frame rate parsing
+
+**Files changed**:
+- `src/NoMercy.Encoder/Core/HLSPlaylistGenerator.cs` — Async refactor with semaphore-bounded parallel probing
+
+**Tests added** (14 new tests in `tests/NoMercy.Tests.Encoder/HlsPlaylistGeneratorTests.cs`):
+- `Build_EmptyDirectory_CreatesPlaylistWithHeadersOnly` — Empty dir creates headers-only playlist
+- `Build_NonExistentDirectory_DoesNotThrow` — Non-existent dir handled gracefully
+- `Build_WithAudioAndVideo_CreatesPlaylistWithHeaders` — Verifies HLS headers present
+- `Build_AudioGroups_ContainCorrectAttributes` — Audio group TYPE, GROUP-ID, LANGUAGE, DEFAULT
+- `Build_MultipleAudioLanguages_FirstIsDefault` — Priority language ordering (eng=DEFAULT=YES)
+- `Build_VideoVariant_ContainsCodecsAttribute` — CODECS and RESOLUTION attributes present
+- `Build_VideoVariant_ContainsDefaultCodecWhenProbeFails` — Default Main profile avc1.4D0028 when ffprobe unavailable
+- `Build_SdrVideo_ContainsSdrAttributes` — VIDEO-RANGE=SDR, COLOUR-SPACE=BT.709
+- `Build_HdrVideo_ContainsHdrAttributes` — VIDEO-RANGE=PQ, COLOUR-SPACE=BT.2020
+- `Build_MultipleResolutions_AllPresentInPlaylist` — All resolutions appear in output
+- `Build_MultipleAudioCodecs_CreatesSeparateGroups` — Separate audio groups for aac/eac3
+- `Build_EAC3Audio_MapsToCorrectCodecString` — E-AC-3 maps to "ec-3" codec string
+- `Build_NoExplicitSdrHdr_DefaultsToSdr` — No _SDR/_HDR suffixes defaults to SDR
+- `Build_StreamInfContainsBandwidth` — BANDWIDTH and AVERAGE-BANDWIDTH attributes present
+
+**Test results**: Build succeeds with 0 errors. All 133 encoder tests pass (119 existing + 14 new). All other test suites pass. Providers: 419/421 pass (2 pre-existing TMDB integration test failures unrelated to this change).
