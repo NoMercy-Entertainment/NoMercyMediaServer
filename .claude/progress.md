@@ -1776,3 +1776,31 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
 - `GetContinueWatchingAsync_ReturnsEmpty_WhenNoUserData` — Verifies empty result for user with no data
 
 **Test results**: Build succeeds with 0 errors. All 189 repository tests pass (including 5 new). All 449 non-API tests pass. 7 pre-existing API test failures unchanged.
+
+---
+
+## MED-02 — Replace client-side count operations with database-level EXISTS
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Replaced `.Count > 0` and `.Count != 0` with `.Any()` across 6 repository files so EF Core generates SQL `EXISTS` subqueries instead of `COUNT(*) > 0` comparisons
+- Replaced `.Count == 0` with `!.Any()` for the inverse check
+- The PRD-referenced count operations inside `.Select()` projections (LibraryRepository:248,288, CollectionRepository:87, GenreRepository:100-107) were already translating to SQL `COUNT()` via EF Core projections from earlier tasks — no changes needed there
+- The optimization targets existence checks in `.Where()` and `.Include()` filter clauses where `EXISTS` is more efficient than `COUNT`
+
+**Files changed**:
+- `src/NoMercy.Data/Repositories/LibraryRepository.cs` — 3 occurrences: `.VideoFiles.Count > 0` → `.VideoFiles.Any()`, `.VideoFiles.Count != 0` → `.VideoFiles.Any()`
+- `src/NoMercy.Data/Repositories/HomeRepository.cs` — 4 occurrences: `.VideoFiles.Count > 0` → `.VideoFiles.Any()` in WHERE and INCLUDE filters
+- `src/NoMercy.Data/Repositories/MusicRepository.cs` — 3 occurrences: `.AlbumTrack.Count > 0` → `.AlbumTrack.Any()`, `.ArtistTrack.Count > 0` → `.ArtistTrack.Any()`, `.MusicGenreTracks.Count > 0` → `.MusicGenreTracks.Any()` (kept `.Count` in `OrderByDescending` where the actual count value is needed)
+- `src/NoMercy.Data/Repositories/GenreRepository.cs` — 3 occurrences: `.MusicGenreTracks.Count > 0` → `.MusicGenreTracks.Any()`
+- `src/NoMercy.Data/Repositories/TvShowRepository.cs` — 1 occurrence: `.VideoFiles.Count == 0` → `!.VideoFiles.Any()`
+
+**New tests** (5):
+- `HomeRepository_GetHomeTvs_UsesExistsNotCount` — Verifies SQL contains EXISTS and not COUNT(*) > 0
+- `HomeRepository_GetHomeMovies_UsesExistsNotCount` — Same for movies
+- `HomeRepository_GetHomeGenres_UsesExistsForVideoFileCheck` — Verifies genre include filters use EXISTS
+- `GenreRepository_GetMusicGenresAsync_UsesExistsNotCount` — Verifies music genre filters use EXISTS
+- `TvShowRepository_GetMissingLibraryShows_UsesExistsForEmptyVideoFiles` — Verifies negated existence check uses EXISTS
+
+**Test results**: Build succeeds with 0 errors. All 194 repository tests pass (including 5 new). All 639 non-API tests pass (140 Database + 277 Queue + 194 Repositories + 28 MediaProcessing). Pre-existing API/Provider failures unchanged.

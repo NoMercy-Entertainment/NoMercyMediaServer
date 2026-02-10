@@ -917,4 +917,77 @@ public class QueryOutputTests : IDisposable
     }
 
     #endregion
+
+    #region MED-02: Existence checks use EXISTS instead of COUNT
+
+    [Fact]
+    public async Task HomeRepository_GetHomeTvs_UsesExistsNotCount()
+    {
+        HomeRepository repository = new();
+        _interceptor.Clear();
+
+        await repository.GetHomeTvs(_context, [1399], "en", "US");
+
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
+        Assert.DoesNotContain("COUNT(*) > 0", sql);
+    }
+
+    [Fact]
+    public async Task HomeRepository_GetHomeMovies_UsesExistsNotCount()
+    {
+        HomeRepository repository = new();
+        _interceptor.Clear();
+
+        await repository.GetHomeMovies(_context, [550, 680], "en", "US");
+
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
+        Assert.DoesNotContain("COUNT(*) > 0", sql);
+    }
+
+    [Fact]
+    public async Task HomeRepository_GetHomeGenres_UsesExistsForVideoFileCheck()
+    {
+        HomeRepository repository = new();
+        _interceptor.Clear();
+
+        await repository.GetHomeGenresAsync(_context, SeedConstants.UserId, "en", 10, 0);
+
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
+    }
+
+    [Fact]
+    public async Task GenreRepository_GetMusicGenresAsync_UsesExistsNotCount()
+    {
+        GenreRepository repository = new(_context);
+        _interceptor.Clear();
+
+        await repository.GetMusicGenresAsync(SeedConstants.UserId);
+
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
+        Assert.DoesNotContain("COUNT(*) > 0", sql);
+    }
+
+    [Fact]
+    public async Task TvShowRepository_GetMissingLibraryShows_UsesExistsForEmptyVideoFiles()
+    {
+        TvShowRepository repository = new(_context);
+        _interceptor.Clear();
+
+        await repository.GetMissingLibraryShows(SeedConstants.UserId, 1399, "en");
+
+        Assert.NotEmpty(_interceptor.CapturedSql);
+        string sql = string.Join(" ", _interceptor.CapturedSql);
+        Assert.Contains("EXISTS", sql);
+        Assert.DoesNotContain("COUNT(*) > 0", sql);
+    }
+
+    #endregion
 }

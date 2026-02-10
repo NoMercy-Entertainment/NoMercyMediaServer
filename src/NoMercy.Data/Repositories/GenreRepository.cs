@@ -116,7 +116,7 @@ public class GenreRepository(MediaContext context)
             .Where(genre =>
                 genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
                 genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
-            .Where(genre => genre.MusicGenreTracks.Count > 0)
+            .Where(genre => genre.MusicGenreTracks.Any())
             .Include(genre => genre.MusicGenreTracks)
             .OrderBy(genre => genre.Name)
             .ToListAsync(ct);
@@ -130,7 +130,7 @@ public class GenreRepository(MediaContext context)
             .Where(genre =>
                 genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
                 genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
-            .Where(genre => genre.MusicGenreTracks.Count > 0)
+            .Where(genre => genre.MusicGenreTracks.Any())
             .Where(genre => (letter == "_" || letter == "#")
                 ? Letters.Any(p => genre.Name.StartsWith(p.ToLower()))
                 : genre.Name.StartsWith(letter.ToLower()))
@@ -149,7 +149,7 @@ public class GenreRepository(MediaContext context)
                 genre.AlbumMusicGenres.Any(g => g.Album.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
                 genre.ArtistMusicGenres.Any(g => g.Artist.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Where(genre => genre.Id == genreId)
-            .Where(genre => genre.MusicGenreTracks.Count > 0)
+            .Where(genre => genre.MusicGenreTracks.Any())
             .Include(genre => genre.MusicGenreTracks)
                 .ThenInclude(mgt => mgt.Track)
                 .ThenInclude(track => track.TrackUser.Where(tu => tu.UserId == userId))

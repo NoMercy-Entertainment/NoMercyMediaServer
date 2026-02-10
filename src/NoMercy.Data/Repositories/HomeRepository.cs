@@ -12,7 +12,7 @@ public class HomeRepository
         return await mediaContext.Tvs
             .AsNoTracking()
             .Where(tv => tvIds.Contains(tv.Id))
-            .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Count > 0))
+            .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any()))
             .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
             .Include(tv => tv.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1))
             .Include(tv => tv.Media.Where(m => m.Site == "YouTube").Take(3))
@@ -30,7 +30,7 @@ public class HomeRepository
         return await mediaContext.Movies
             .AsNoTracking()
             .Where(movie => movieIds.Contains(movie.Id))
-            .Where(movie => movie.VideoFiles.Count > 0)
+            .Where(movie => movie.VideoFiles.Any())
             .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
             .Include(movie => movie.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1))
             .Include(movie => movie.Media.Where(m => m.Site == "YouTube").Take(3))
@@ -194,8 +194,8 @@ public class HomeRepository
                 genre.GenreMovies.Any(g => g.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
                 genre.GenreTvShows.Any(g => g.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Include(genre => genre.Translations.Where(t => t.Iso6391 == language))
-            .Include(genre => genre.GenreMovies.Where(gm => gm.Movie.VideoFiles.Count > 0))
-            .Include(genre => genre.GenreTvShows.Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Count > 0)))
+            .Include(genre => genre.GenreMovies.Where(gm => gm.Movie.VideoFiles.Any()))
+            .Include(genre => genre.GenreTvShows.Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any())))
             .OrderBy(genre => genre.Name)
             .Skip(page * take)
             .Take(take)

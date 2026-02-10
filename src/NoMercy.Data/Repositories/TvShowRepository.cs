@@ -245,7 +245,7 @@ public class TvShowRepository(MediaContext context)
             .AsNoTracking()
             .Where(tv => tv.Id == id)
             .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Include(tv => tv.Episodes.Where(e => e.VideoFiles.Count == 0))
+            .Include(tv => tv.Episodes.Where(e => !e.VideoFiles.Any()))
                 .ThenInclude(e => e.Translations.Where(t => t.Iso6391 == language))
             .FirstOrDefaultAsync(ct);
 

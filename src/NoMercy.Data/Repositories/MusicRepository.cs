@@ -299,7 +299,7 @@ public class MusicRepository(MediaContext mediaContext)
     {
         return mediaContext.Albums
             .AsNoTracking()
-            .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Count > 0)
+            .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Any())
             .Include(album => album.AlbumTrack)
             .ThenInclude(albumTrack => albumTrack.Track)
             .OrderByDescending(album => album.CreatedAt);
@@ -309,7 +309,7 @@ public class MusicRepository(MediaContext mediaContext)
     {
         return mediaContext.Artists
             .AsNoTracking()
-            .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Count > 0)
+            .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Any())
             .Include(artist => artist.Images.Where(image => image.Type == "thumb"))
             .Include(artist => artist.ArtistTrack)
             .ThenInclude(artistTrack => artistTrack.Track)
@@ -320,7 +320,7 @@ public class MusicRepository(MediaContext mediaContext)
     {
         return mediaContext.MusicGenres
             .AsNoTracking()
-            .Where(genre => genre.MusicGenreTracks.Count > 0)
+            .Where(genre => genre.MusicGenreTracks.Any())
             .Include(genre => genre.MusicGenreTracks)
             .OrderByDescending(genre => genre.MusicGenreTracks.Count);
     }
