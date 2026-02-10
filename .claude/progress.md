@@ -1295,3 +1295,24 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 
 **Test results**: All 277 Queue tests pass (6 new + 271 existing). All 1113 tests across all projects pass. Build succeeds with 0 errors.
 
+---
+
+## HIGH-20 — Fix blocking .Result in ExternalIp property getter
+
+**Date**: 2026-02-10
+
+**What was done**:
+- **Problem**: `Networking.ExternalIp` getter called `GetExternalIp().Result` which blocks the calling thread on an async HTTP call. This causes thread pool starvation and potential deadlocks when accessed from async code paths.
+- **Fix in `src/NoMercy.Networking/Networking.cs`**:
+  1. Replaced `get => _externalIp ?? GetExternalIp().Result` with `get => _externalIp ?? "0.0.0.0"` — the getter now returns a safe fallback instead of blocking
+  2. Modified `Discover()` to always eagerly fetch the external IP via API (regardless of UPnP discovery result), so `_externalIp` is populated before any code accesses the property
+  3. Added try/catch around the API call in `Discover()` so startup doesn't fail if the API is unreachable
+  4. Fixed `GetNatStatus()` to check `_externalIp` backing field directly instead of the property (avoids "0.0.0.0" being treated as a valid IP when checking if UPnP IP should be used)
+- **Created `tests/NoMercy.Tests.Networking/` project** with 5 tests:
+  - `ExternalIp_Getter_NoBlockingResult`: Static analysis — verifies no `.Result` in the ExternalIp getter
+  - `ExternalIp_Getter_ReturnsFallbackWhenNotPopulated`: Static analysis — verifies null-coalescing fallback without async call
+  - `Discover_AlwaysPopulatesExternalIp`: Static analysis — verifies Discover() checks `_externalIp` and awaits `GetExternalIp()`
+  - `ExternalIp_ReturnsCachedValueWithoutBlocking`: Runtime test — sets ExternalIp and verifies cached value returned
+  - `ExternalIp_DefaultFallbackIsNotEmpty`: Static analysis — verifies fallback is "0.0.0.0"
+
+**Test results**: All 5 Networking tests pass. All 1377 tests across all projects pass. Build succeeds with 0 errors.

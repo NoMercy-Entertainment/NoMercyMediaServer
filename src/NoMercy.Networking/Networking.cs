@@ -56,7 +56,18 @@ public class Networking
         if (!HasFoundDevice)
         {
             Logger.Setup("No UPNP device found");
-            ExternalIp = await GetExternalIp();
+        }
+
+        if (string.IsNullOrEmpty(_externalIp))
+        {
+            try
+            {
+                ExternalIp = await GetExternalIp();
+            }
+            catch (Exception e)
+            {
+                Logger.Setup($"Failed to get external IP from API: {e.Message}");
+            }
         }
     }
 
@@ -90,7 +101,7 @@ public class Networking
 
     public static string ExternalIp
     {
-        get => _externalIp ?? GetExternalIp().Result;
+        get => _externalIp ?? "0.0.0.0";
         set
         {
             if (_externalIp == value) return;
@@ -298,8 +309,8 @@ public class Networking
 
             Logger.Setup($"IP address obtained from UPNP: {ip}");
             Logger.Setup($"IP address obtained from API: {ExternalIp}");
-            
-            if(string.IsNullOrEmpty(ExternalIp))
+
+            if(string.IsNullOrEmpty(_externalIp))
             {
                 ExternalIp = ip;
             }
