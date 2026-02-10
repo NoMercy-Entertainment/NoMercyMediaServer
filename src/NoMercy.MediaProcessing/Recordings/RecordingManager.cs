@@ -77,7 +77,7 @@ public partial class RecordingManager(
             {
                 MediaFile? mediaFile = FileMatch(file, releaseAppends, musicBrainzMedia, musicBrainzTrack.Position);
                 if (mediaFile is null) continue;
-                TagLib.File tagFile = TagLib.File.Create(file.Path);
+                using TagLib.File tagFile = TagLib.File.Create(file.Path);
                 if (tagFile == null || mediaFile.FFprobe == null)
                 {
                     Logger.MusicBrainz($"File not found: {file.Name}", LogEventLevel.Error);

@@ -1410,3 +1410,21 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
 - `Source_HttpResponseMessage_HasUsing`: Scans all `src/*.cs` files for `HttpResponseMessage <var> =` declarations without `using` keyword. Initially caught 4 additional instances beyond the PRD's 7, all of which were fixed.
 
 **Test results**: All 1,120 tests pass (262 Api + 135 Repositories + 277 Queue + 25 MediaProcessing + 421 Providers). Build succeeds with 0 errors.
+
+---
+
+## DISP-03 — Add missing `using` to TagLib.File / TagFile factory (3 instances + factory)
+
+**Date**: 2026-02-10
+
+**What was done**:
+TagLib.File implements IDisposable and holds file handles. Three call sites were creating TagLib.File objects without disposing them, leaking file handles — particularly harmful inside `Parallel.ForEach` loops where scanning 1000 songs would leak 1000 file handles.
+
+**Files changed**:
+1. `src/NoMercy.NmSystem/Dto/TagFile.cs:11` — Added `using` to `FileTag.Create(path)` in the factory method. The factory extracts `Tag` and `Properties` from the TagLib.File then discards it, so the underlying file handle is now released immediately. This fixes all callers of `TagFile.Create()` (MediaScan.cs:297 and FileRepository.cs:744).
+2. `src/NoMercy.MediaProcessing/Recordings/RecordingManager.cs:80` — Added `using` to `TagLib.File.Create(file.Path)` which was used directly (not through the TagFile factory). The TagLib.File is only read for `Properties.AudioBitrate` and `Properties.Duration` within the same scope, so `using` disposes it correctly after use.
+
+**Audit test**: Created `tests/NoMercy.Tests.MediaProcessing/Jobs/TagFileDisposalAuditTests.cs` with 1 test:
+- `Source_TagLibFileCreate_HasUsing`: Scans all `src/*.cs` files for `TagLib.File <var> = TagLib.File.Create(...)` and `FileTag? <var> = FileTag.Create(...)` declarations without `using` keyword. Verifies no future regressions.
+
+**Test results**: All 844 tests pass (262 Api + 26 MediaProcessing + 135 Repositories + 421 Providers). Build succeeds with 0 errors.

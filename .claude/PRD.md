@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item DISP-03
+**Next up**: Phase 1-2, item DISP-04
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -99,7 +99,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] HIGH-20b — Fix GC.Collect band-aids (60+ calls)
 - [x] DISP-01 — Add missing `using` to Image<Rgba32> in hot paths (11 instances)
 - [x] DISP-02 — Add missing `using` to HttpResponseMessage (7 instances)
-- [ ] DISP-03 — Add missing `using` to TagLib.File / TagFile factory (3 instances + factory)
+- [x] DISP-03 — Add missing `using` to TagLib.File / TagFile factory (3 instances + factory)
 - [ ] DISP-04 — Add missing `using` to MediaContext, FileStream, Process, Stream (cold paths)
 - [ ] MED-04 — Fix CancellationToken not propagated
 - [ ] CRIT-02 — Replace client-side filtering with DB queries
