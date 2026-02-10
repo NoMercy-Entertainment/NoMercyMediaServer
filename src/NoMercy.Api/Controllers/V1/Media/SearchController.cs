@@ -33,6 +33,7 @@ public class SearchController : BaseController
     }
 
     [HttpGet("music")]
+    [ResponseCache(NoStore = true)]
     public async Task<IActionResult> SearchMusic([FromQuery] SearchQueryRequest request, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
@@ -337,6 +338,7 @@ public class SearchController : BaseController
     }
 
     [HttpGet("video")]
+    [ResponseCache(NoStore = true)]
     public async Task<IActionResult> SearchVideo([FromQuery] SearchQueryRequest request, CancellationToken ct = default)
     {
         if (!User.IsAllowed())

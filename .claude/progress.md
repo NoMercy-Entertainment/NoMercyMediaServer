@@ -1679,3 +1679,45 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
 - `Collection_HasIndex_OnLibraryId` — verifies index attribute on LibraryId
 
 **Test results**: Build succeeds with 0 errors. All 140 database tests pass (135 existing + 5 new). All 262 API tests pass. All other test suites pass.
+
+---
+
+## HIGH-05 — Enable response caching
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Uncommented `services.AddResponseCaching()` in `ServiceConfiguration.cs`
+- Added `app.UseResponseCaching()` to the middleware pipeline in `ApplicationConfiguration.cs` (after response compression, before localization)
+- Added per-endpoint `[ResponseCache]` attributes following the PRD guidance (no global caching):
+
+  **Cacheable endpoints (static-ish data)**:
+  - `GenresController.Genres` — 300s, varies by `take`, `page`
+  - `GenresController.Genre` — 300s, varies by `take`, `page`, `version`
+  - `PeopleController.Index` — 300s, varies by `take`, `page`
+  - `PeopleController.Show` — 300s
+  - `CollectionsController.Collections` — 300s, varies by `take`, `page`, `version`
+  - `CollectionsController.Collection` — 300s
+  - `LibrariesController.Libraries` (Media) — 300s
+  - `MoviesController.Movie` — 120s
+  - `TvShowsController.Tv` — 120s
+  - `ConfigurationController.Languages` — 3600s
+  - `ConfigurationController.Countries` — 3600s
+  - `ServerController.ServerInfo` — 3600s
+  - `ServerController.ServerPaths` — 3600s
+  - `SetupController.ServerInfo` — 3600s
+  - `SetupController.Status` — 30s
+
+  **Real-time endpoints (NoStore = true)**:
+  - `UserDataController.ContinueWatching`
+  - `HomeController.Home`
+  - `SearchController.SearchMusic`
+  - `SearchController.SearchVideo`
+  - `ServerController.Resources`
+
+- Created `ResponseCacheAttributeTests.cs` with 23 tests:
+  - 15 tests verifying cacheable endpoints have correct Duration values
+  - 5 tests verifying real-time endpoints have NoStore=true
+  - 3 tests verifying VaryByQueryKeys are correctly set on paginated endpoints
+
+**Test results**: Build succeeds with 0 errors. 23 new response cache attribute tests pass. All 278 passing API tests continue to pass (7 pre-existing failures in ImageController and auth tests are unchanged).

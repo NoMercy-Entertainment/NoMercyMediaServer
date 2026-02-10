@@ -33,6 +33,7 @@ public class TvShowsController(
     ) : BaseController
 {
     [HttpGet]
+    [ResponseCache(Duration = 120)]
     public async Task<IActionResult> Tv(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();

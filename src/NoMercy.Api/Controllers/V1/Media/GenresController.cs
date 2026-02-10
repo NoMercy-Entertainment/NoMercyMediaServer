@@ -24,6 +24,7 @@ public class GenresController : BaseController
     }
 
     [HttpGet]
+    [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page"])]
     public async Task<IActionResult> Genres([FromQuery] PageRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
@@ -53,6 +54,7 @@ public class GenresController : BaseController
 
     [HttpGet]
     [Route("{genreId}")]
+    [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page", "version"])]
     public async Task<IActionResult> Genre(int genreId, [FromQuery] PageRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();

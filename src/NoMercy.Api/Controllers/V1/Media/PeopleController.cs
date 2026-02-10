@@ -18,6 +18,7 @@ public class PeopleController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     [Route("api/v{version:apiVersion}/person")] // match themoviedb.org API
+    [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page"])]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
@@ -34,6 +35,7 @@ public class PeopleController(MediaContext mediaContext) : BaseController
 
     [HttpGet]
     [Route("/api/v{version:apiVersion}/person/{id:int}")] // match themoviedb.org API
+    [ResponseCache(Duration = 300)]
     public async Task<IActionResult> Show(int id)
     {
         if (!User.IsAllowed())

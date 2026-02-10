@@ -21,6 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 public class CollectionsController(CollectionRepository collectionRepository) : BaseController
 {
     [HttpGet]
+    [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page", "version"])]
     public async Task<IActionResult> Collections([FromQuery] PageRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
@@ -80,6 +81,7 @@ public class CollectionsController(CollectionRepository collectionRepository) : 
 
     [HttpGet]
     [Route("{id:int}")]
+    [ResponseCache(Duration = 300)]
     public async Task<IActionResult> Collection(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();

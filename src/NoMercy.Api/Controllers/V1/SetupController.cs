@@ -49,6 +49,7 @@ public class SetupController(
     
     [HttpGet]
     [Route("server-info")]
+    [ResponseCache(Duration = 3600)]
     public IActionResult ServerInfo()
     {
         if (!User.IsAllowed())
@@ -125,6 +126,7 @@ public class SetupController(
     [HttpGet]
     [AllowAnonymous]
     [Route("/status")]
+    [ResponseCache(Duration = 30)]
     public IActionResult Status()
     {
         return Ok(new

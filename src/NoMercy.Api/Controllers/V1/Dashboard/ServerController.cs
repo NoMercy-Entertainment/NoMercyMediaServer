@@ -315,6 +315,7 @@ public class ServerController(
 
     [HttpGet]
     [Route("info")]
+    [ResponseCache(Duration = 3600)]
     public IActionResult ServerInfo()
     {
         if (!User.IsAllowed())
@@ -418,6 +419,7 @@ public class ServerController(
 
     [HttpGet]
     [Route("resources")]
+    [ResponseCache(NoStore = true)]
     public IActionResult Resources()
     {
         if (!User.IsModerator())
@@ -446,6 +448,7 @@ public class ServerController(
 
     [HttpGet]
     [Route("paths")]
+    [ResponseCache(Duration = 3600)]
     public IActionResult ServerPaths()
     {
         if (!User.IsModerator())

@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item HIGH-05
+**Next up**: Phase 1-2, item HIGH-08
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -107,7 +107,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] CRIT-12 — Fix unbounded memory growth in media processing
 - [x] HIGH-01 — Fix IQueryable returns (premature materialization)
 - [x] HIGH-04 — Add missing database indexes
-- [ ] HIGH-05 — Enable response caching
+- [x] HIGH-05 — Enable response caching
 - [ ] HIGH-08 — Rate-limit encoder progress updates
 - [ ] MED-01 — Fix N+1 queries in library endpoints
 - [ ] MED-02 — Replace string concatenation in hot paths

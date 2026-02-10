@@ -410,7 +410,7 @@ public static class ServiceConfiguration
 
         // Add Other Services
         services.AddDirectoryBrowser();
-        // services.AddResponseCaching();
+        services.AddResponseCaching();
         services.AddMvc(option => option.EnableEndpointRouting = false);
         services.AddEndpointsApiExplorer();
 

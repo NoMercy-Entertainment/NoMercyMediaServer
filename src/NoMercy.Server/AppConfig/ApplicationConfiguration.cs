@@ -74,6 +74,7 @@ public static class ApplicationConfiguration
         app.UseHsts();
         app.UseHttpsRedirection();
         app.UseResponseCompression();
+        app.UseResponseCaching();
         app.UseRequestLocalization();
 
         app.UseMiddleware<LocalizationMiddleware>();

@@ -105,6 +105,7 @@ public class HomeController : BaseController
     }
 
     [HttpGet("home")]
+    [ResponseCache(NoStore = true)]
     public async Task<IActionResult> Home(CancellationToken ct = default)
     {
         if (!User.IsAllowed())

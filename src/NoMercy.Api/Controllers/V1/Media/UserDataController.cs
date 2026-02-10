@@ -39,6 +39,7 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
 
     [HttpGet]
     [Route("continue")]
+    [ResponseCache(NoStore = true)]
     public async Task<IActionResult> ContinueWatching()
     {
         Guid userId = User.UserId();

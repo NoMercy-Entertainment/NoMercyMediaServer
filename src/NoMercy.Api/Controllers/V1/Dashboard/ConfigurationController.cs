@@ -188,6 +188,7 @@ public class ConfigurationController(MediaContext mediaContext) : BaseController
 
     [HttpGet]
     [Route("languages")]
+    [ResponseCache(Duration = 3600)]
     public async Task<IActionResult> Languages()
     {
         if (!User.IsAllowed())
@@ -207,6 +208,7 @@ public class ConfigurationController(MediaContext mediaContext) : BaseController
 
     [HttpGet]
     [Route("countries")]
+    [ResponseCache(Duration = 3600)]
     public async Task<IActionResult> Countries()
     {
         if (!User.IsAllowed())
