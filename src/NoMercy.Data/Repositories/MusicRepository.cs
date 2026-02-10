@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
-using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Data.Repositories;
@@ -412,48 +411,40 @@ public class MusicRepository(MediaContext mediaContext)
 
     #region Search Operations
 
-    public List<Guid> SearchArtistIds(string normalizedQuery)
+    public Task<List<Guid>> SearchArtistIdsAsync(string normalizedQuery, CancellationToken ct = default)
     {
         return mediaContext.Artists
             .AsNoTracking()
-            .Select(artist => new { artist.Id, artist.Name })
-            .ToList()
-            .Where(artist => artist.Name.NormalizeSearch().Contains(normalizedQuery))
+            .Where(artist => MediaContext.NormalizeSearch(artist.Name).Contains(normalizedQuery))
             .Select(artist => artist.Id)
-            .ToList();
+            .ToListAsync(ct);
     }
 
-    public List<Guid> SearchAlbumIds(string normalizedQuery)
+    public Task<List<Guid>> SearchAlbumIdsAsync(string normalizedQuery, CancellationToken ct = default)
     {
         return mediaContext.Albums
             .AsNoTracking()
-            .Select(album => new { album.Id, album.Name })
-            .ToList()
-            .Where(album => album.Name.NormalizeSearch().Contains(normalizedQuery))
+            .Where(album => MediaContext.NormalizeSearch(album.Name).Contains(normalizedQuery))
             .Select(album => album.Id)
-            .ToList();
+            .ToListAsync(ct);
     }
 
-    public List<Guid> SearchPlaylistIds(string normalizedQuery)
+    public Task<List<Guid>> SearchPlaylistIdsAsync(string normalizedQuery, CancellationToken ct = default)
     {
         return mediaContext.Playlists
             .AsNoTracking()
-            .Select(playlist => new { playlist.Id, playlist.Name })
-            .ToList()
-            .Where(playlist => playlist.Name.NormalizeSearch().Contains(normalizedQuery))
+            .Where(playlist => MediaContext.NormalizeSearch(playlist.Name).Contains(normalizedQuery))
             .Select(playlist => playlist.Id)
-            .ToList();
+            .ToListAsync(ct);
     }
 
-    public List<Guid> SearchTrackIds(string normalizedQuery)
+    public Task<List<Guid>> SearchTrackIdsAsync(string normalizedQuery, CancellationToken ct = default)
     {
         return mediaContext.Tracks
             .AsNoTracking()
-            .Select(track => new { track.Id, track.Name })
-            .ToList()
-            .Where(track => track.Name.NormalizeSearch().Contains(normalizedQuery))
+            .Where(track => MediaContext.NormalizeSearch(track.Name).Contains(normalizedQuery))
             .Select(track => track.Id)
-            .ToList();
+            .ToListAsync(ct);
     }
 
     public Task<List<Artist>> GetArtistsByIdsAsync(List<Guid> artistIds, CancellationToken ct = default)

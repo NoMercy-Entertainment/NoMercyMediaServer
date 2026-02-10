@@ -16,17 +16,23 @@ public class MediaContext : DbContext
 
     public MediaContext()
     {
-        
+
     }
+
+    [DbFunction("normalize_search", IsBuiltIn = true)]
+    public static string NormalizeSearch(string? input)
+        => throw new NotSupportedException("This method is for EF Core query translation only.");
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         options.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
             o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
-        
+
         options.EnableSensitiveDataLogging();
-        
-        options.AddInterceptors(new EntityBaseUpdatedAtInterceptor());
+
+        options.AddInterceptors(
+            new EntityBaseUpdatedAtInterceptor(),
+            new SqliteNormalizeSearchInterceptor());
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -43,6 +49,9 @@ public class MediaContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDbFunction(
+            typeof(MediaContext).GetMethod(nameof(NormalizeSearch), [typeof(string)])!);
+
         modelBuilder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.ClrType == typeof(Ulid))

@@ -43,10 +43,10 @@ public class SearchController : BaseController
         string normalizedQuery = request.Query.NormalizeSearch();
 
         // Step 1: Get IDs sequentially (MusicRepository uses a single scoped DbContext, not thread-safe)
-        List<Guid> artistIds = _musicRepository.SearchArtistIds(normalizedQuery);
-        List<Guid> albumIds = _musicRepository.SearchAlbumIds(normalizedQuery);
-        List<Guid> playlistIds = _musicRepository.SearchPlaylistIds(normalizedQuery);
-        List<Guid> trackIds = _musicRepository.SearchTrackIds(normalizedQuery);
+        List<Guid> artistIds = await _musicRepository.SearchArtistIdsAsync(normalizedQuery, ct);
+        List<Guid> albumIds = await _musicRepository.SearchAlbumIdsAsync(normalizedQuery, ct);
+        List<Guid> playlistIds = await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery, ct);
+        List<Guid> trackIds = await _musicRepository.SearchTrackIdsAsync(normalizedQuery, ct);
 
         // Step 2: Query full data using the IDs in parallel - each task needs its own MediaContext for thread safety
         Task<List<Artist>> artistsTask = Task.Run(async () =>
@@ -217,10 +217,10 @@ public class SearchController : BaseController
         Guid userId = User.UserId();
 
         // Step 1: Get IDs sequentially (MusicRepository uses a single scoped DbContext, not thread-safe)
-        List<Guid> artistIds = _musicRepository.SearchArtistIds(normalizedQuery);
-        List<Guid> albumIds = _musicRepository.SearchAlbumIds(normalizedQuery);
-        List<Guid> playlistIds = _musicRepository.SearchPlaylistIds(normalizedQuery);
-        List<Guid> trackIds = _musicRepository.SearchTrackIds(normalizedQuery);
+        List<Guid> artistIds = await _musicRepository.SearchArtistIdsAsync(normalizedQuery, ct);
+        List<Guid> albumIds = await _musicRepository.SearchAlbumIdsAsync(normalizedQuery, ct);
+        List<Guid> playlistIds = await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery, ct);
+        List<Guid> trackIds = await _musicRepository.SearchTrackIdsAsync(normalizedQuery, ct);
 
         // Step 2: Query full data using the IDs in parallel - each task needs its own MediaContext for thread safety
         Task<List<Artist>> artistsTask = Task.Run(async () =>

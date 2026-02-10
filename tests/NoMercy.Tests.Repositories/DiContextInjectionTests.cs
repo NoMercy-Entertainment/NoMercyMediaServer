@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Tests.Repositories.Infrastructure;
 
 namespace NoMercy.Tests.Repositories;
@@ -17,6 +18,8 @@ public class DiContextInjectionTests : IDisposable
     {
         _keepAliveConnection = new SqliteConnection($"DataSource={_dbName};Mode=Memory;Cache=Shared");
         _keepAliveConnection.Open();
+        _keepAliveConnection.CreateFunction("normalize_search", (string? input) =>
+            input?.NormalizeSearch() ?? string.Empty);
 
         using MediaContext seedContext = CreateContext();
         seedContext.Database.EnsureCreated();
@@ -27,9 +30,12 @@ public class DiContextInjectionTests : IDisposable
     {
         SqliteConnection connection = new($"DataSource={_dbName};Mode=Memory;Cache=Shared");
         connection.Open();
+        connection.CreateFunction("normalize_search", (string? input) =>
+            input?.NormalizeSearch() ?? string.Empty);
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(connection, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
 
         TestMediaContext context = new(options);
@@ -155,46 +161,46 @@ public class DiContextInjectionTests : IDisposable
     }
 
     [Fact]
-    public void MusicRepository_UsesInjectedContext_NotNewInstance()
+    public async Task MusicRepository_UsesInjectedContext_NotNewInstance()
     {
         // Verify MusicRepository queries use the injected context by checking data is accessible
         using MediaContext context = CreateContext();
         MusicRepository repository = new(context);
 
-        List<Guid> artistIds = repository.SearchArtistIds("test");
+        List<Guid> artistIds = await repository.SearchArtistIdsAsync("test");
         Assert.Single(artistIds);
         Assert.Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"), artistIds[0]);
     }
 
     [Fact]
-    public void MusicRepository_SearchAlbumIds_UsesInjectedContext()
+    public async Task MusicRepository_SearchAlbumIds_UsesInjectedContext()
     {
         using MediaContext context = CreateContext();
         MusicRepository repository = new(context);
 
-        List<Guid> albumIds = repository.SearchAlbumIds("test");
+        List<Guid> albumIds = await repository.SearchAlbumIdsAsync("test");
         Assert.Single(albumIds);
         Assert.Equal(Guid.Parse("22222222-2222-2222-2222-222222222222"), albumIds[0]);
     }
 
     [Fact]
-    public void MusicRepository_SearchTrackIds_UsesInjectedContext()
+    public async Task MusicRepository_SearchTrackIds_UsesInjectedContext()
     {
         using MediaContext context = CreateContext();
         MusicRepository repository = new(context);
 
-        List<Guid> trackIds = repository.SearchTrackIds("test");
+        List<Guid> trackIds = await repository.SearchTrackIdsAsync("test");
         Assert.Single(trackIds);
         Assert.Equal(Guid.Parse("33333333-3333-3333-3333-333333333333"), trackIds[0]);
     }
 
     [Fact]
-    public void MusicRepository_SearchPlaylistIds_UsesInjectedContext()
+    public async Task MusicRepository_SearchPlaylistIds_UsesInjectedContext()
     {
         using MediaContext context = CreateContext();
         MusicRepository repository = new(context);
 
-        List<Guid> playlistIds = repository.SearchPlaylistIds("test");
+        List<Guid> playlistIds = await repository.SearchPlaylistIdsAsync("test");
         Assert.Single(playlistIds);
         Assert.Equal(Guid.Parse("44444444-4444-4444-4444-444444444444"), playlistIds[0]);
     }
@@ -244,26 +250,29 @@ public class DiContextInjectionTests : IDisposable
     }
 
     [Fact]
-    public void MusicRepository_EmptyContext_ReturnsNoResults()
+    public async Task MusicRepository_EmptyContext_ReturnsNoResults()
     {
         // Verify that a repository with no data returns empty results
         // (proves it reads from the injected context, not a global/static one)
         string isolatedDb = Guid.NewGuid().ToString();
         using SqliteConnection isolatedConn = new($"DataSource={isolatedDb};Mode=Memory;Cache=Shared");
         isolatedConn.Open();
+        isolatedConn.CreateFunction("normalize_search", (string? input) =>
+            input?.NormalizeSearch() ?? string.Empty);
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(isolatedConn, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
         using TestMediaContext emptyContext = new(options);
         emptyContext.Database.EnsureCreated();
 
         MusicRepository repository = new(emptyContext);
 
-        List<Guid> artistIds = repository.SearchArtistIds("test");
-        List<Guid> albumIds = repository.SearchAlbumIds("test");
-        List<Guid> trackIds = repository.SearchTrackIds("test");
-        List<Guid> playlistIds = repository.SearchPlaylistIds("test");
+        List<Guid> artistIds = await repository.SearchArtistIdsAsync("test");
+        List<Guid> albumIds = await repository.SearchAlbumIdsAsync("test");
+        List<Guid> trackIds = await repository.SearchTrackIdsAsync("test");
+        List<Guid> playlistIds = await repository.SearchPlaylistIdsAsync("test");
 
         Assert.Empty(artistIds);
         Assert.Empty(albumIds);

@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.Repositories.Infrastructure;
 
@@ -12,9 +13,12 @@ public static class TestMediaContextFactory
         string dbName = databaseName ?? Guid.NewGuid().ToString();
         SqliteConnection connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         connection.Open();
+        connection.CreateFunction("normalize_search", (string? input) =>
+            input?.NormalizeSearch() ?? string.Empty);
 
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(connection, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
 
         TestMediaContext context = new(options);
@@ -35,11 +39,13 @@ public static class TestMediaContextFactory
         string dbName = databaseName ?? Guid.NewGuid().ToString();
         SqliteConnection connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         connection.Open();
+        connection.CreateFunction("normalize_search", (string? input) =>
+            input?.NormalizeSearch() ?? string.Empty);
 
         SqlCaptureInterceptor interceptor = new();
         DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
             .UseSqlite(connection, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
-            .AddInterceptors(interceptor)
+            .AddInterceptors(interceptor, new SqliteNormalizeSearchInterceptor())
             .Options;
 
         TestMediaContext context = new(options);

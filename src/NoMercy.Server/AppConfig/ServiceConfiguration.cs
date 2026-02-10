@@ -259,12 +259,14 @@ public static class ServiceConfiguration
         {
             optionsAction.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+            optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
         });
 
         services.AddDbContextFactory<MediaContext>(optionsAction =>
         {
             optionsAction.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
                 o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+            optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
         }, ServiceLifetime.Scoped);
 
         // Add Repositories

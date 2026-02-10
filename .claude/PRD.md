@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item CRIT-02
+**Next up**: Phase 1-2, item CRIT-03
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -102,7 +102,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] DISP-03 — Add missing `using` to TagLib.File / TagFile factory (3 instances + factory)
 - [x] DISP-04 — Add missing `using` to MediaContext, FileStream, Process, Stream (cold paths)
 - [x] MED-04 — Fix CancellationToken not propagated
-- [ ] CRIT-02 — Replace client-side filtering with DB queries
+- [x] CRIT-02 — Replace client-side filtering with DB queries
 - [ ] CRIT-03 — Split 55+ Include chains into focused queries
 - [ ] CRIT-12 — Fix unbounded memory growth in media processing
 - [ ] HIGH-01 — Fix IQueryable returns (premature materialization)

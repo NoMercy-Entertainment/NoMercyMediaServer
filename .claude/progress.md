@@ -1484,3 +1484,41 @@ Added missing `using`/dispose to 10 resource leak sites across cold paths: Media
 - 2 tests verify backward compatibility: methods still work with the default (non-cancelled) token
 
 **Test results**: Build succeeds with 0 errors. All 860 tests pass (262 Api + 28 MediaProcessing + 135 Database + 119 Encoder + 277 Queue + 149 Repositories + 421 Providers + 5 Networking) when run sequentially.
+
+---
+
+## CRIT-02 — Replace client-side filtering with DB queries
+
+**Date**: 2026-02-10
+
+**What was done**:
+- **Problem**: `MusicRepository` search methods (`SearchArtistIds`, `SearchAlbumIds`, `SearchPlaylistIds`, `SearchTrackIds`) loaded ALL entities into memory with `.ToList()` then filtered client-side with `NormalizeSearch()`. This caused O(n) full table scans for every search query.
+- **Challenge**: `NormalizeSearch()` performs complex normalization (Unicode FormD decomposition, diacritics removal, dash normalization, lowercase, non-alphanumeric stripping) that SQLite's built-in `LIKE` or `COLLATE NOCASE` cannot replicate. Moving filtering to DB required the exact same normalization logic to run server-side.
+- **Solution**: Registered a custom SQLite scalar function `normalize_search` that calls the same C# `NormalizeSearch()` method, enabling identical normalization to run inside SQLite WHERE clauses.
+
+**Files changed**:
+1. `src/NoMercy.Database/SqliteNormalizeSearchInterceptor.cs` (new) — `DbConnectionInterceptor` that registers `normalize_search` as a custom SQLite function on every connection open (both sync and async).
+2. `src/NoMercy.Database/MediaContext.cs` — Added `[DbFunction("normalize_search")]` static method mapping so EF Core translates `MediaContext.NormalizeSearch()` calls in LINQ to SQL `normalize_search()`. Added `HasDbFunction()` in `OnModelCreating`. Registered `SqliteNormalizeSearchInterceptor` alongside existing interceptor.
+3. `src/NoMercy.Data/Repositories/MusicRepository.cs` — Replaced all 4 search methods:
+   - Changed from sync `List<Guid>` to async `Task<List<Guid>>` (renamed with `Async` suffix)
+   - Removed `.ToList()` materialization before filtering
+   - Changed `.Where(x => x.Name.NormalizeSearch().Contains(query))` (client-side) to `.Where(x => MediaContext.NormalizeSearch(x.Name).Contains(query))` (DB-side)
+   - Added `CancellationToken` parameter
+4. `src/NoMercy.Api/Controllers/V1/Media/SearchController.cs` — Updated 2 call sites (SearchMusic, SearchTvMusic) to use `await ...Async()` methods.
+5. `src/NoMercy.Api/Controllers/V1/Music/MusicController.cs` — Updated 1 call site (Search) to use `await ...Async()` methods.
+6. `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs` — Registered `SqliteNormalizeSearchInterceptor` on both `AddDbContext` and `AddDbContextFactory` configurations.
+7. `tests/NoMercy.Tests.Repositories/DiContextInjectionTests.cs` — Updated 5 existing tests to use new async method names; registered custom function on test SQLite connections.
+8. `tests/NoMercy.Tests.Repositories/Infrastructure/TestMediaContextFactory.cs` — Registered `normalize_search` function and interceptor on all test context factory methods.
+9. `tests/NoMercy.Tests.Repositories/MusicSearchDbFilterTests.cs` (new) — 10 new tests verifying:
+   - Accent normalization: "beyonce" finds "Beyoncé"
+   - Umlaut normalization: "motley crue" finds "Mötley Crüe"
+   - Em dash normalization: "twenty-one" finds "Twenty—One Pilots"
+   - Case insensitivity: "rolling stones" finds "The Rolling Stones"
+   - No match returns empty
+   - Accented album search: "resume" finds "Résumé"
+   - Accented track search: "deja vu" finds "Déjà Vu"
+   - Accented playlist search: "cafe" finds "Café Vibes"
+   - SQL verification: captured SQL contains `normalize_search` in WHERE clause (proves DB-side filtering)
+   - Partial match: "e" matches multiple artists
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 159 repository tests pass (149 existing + 10 new). All other test suites (Database, Queue, Encoder, MediaProcessing, Providers, Networking) pass unchanged.
