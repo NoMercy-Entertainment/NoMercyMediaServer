@@ -11,6 +11,8 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.MediaProcessing.Artists;
 
@@ -209,8 +211,10 @@ public class ArtistManager(
     {
         CoverArtImageManagerManager.CoverPalette? coverPalette = await FanArtImageManager.Add(artistCredit.Id, true);
         
-        if (coverPalette is not null) 
-            await FanArtImageClient.Download(coverPalette.Url!);
+        if (coverPalette is not null)
+        {
+            using Image<Rgba32>? downloadedImage = await FanArtImageClient.Download(coverPalette.Url!);
+        }
         
         return coverPalette;
     }

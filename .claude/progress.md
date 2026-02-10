@@ -1352,3 +1352,34 @@ Verified that CRIT-08 was already fully implemented in the previous CRIT-07 comm
   - `Source_NoFinalizersCallingDispose`: Scans for finalizers that call Dispose()
 
 **Test results**: All 22 MediaProcessing tests pass (4 new + 18 existing). All 1381 tests across all projects pass. Build succeeds with 0 errors.
+
+---
+
+## DISP-01 — Add missing `using` to Image<Rgba32> in hot paths (11 instances)
+
+**Date**: 2026-02-10
+
+**What was done**:
+- **FileManager.GetImageDimensions()**: Added `using` to `Image.Load(filePath)` — image was loaded just to read Width/Height and never disposed, leaking 5-50MB per call
+- **TmdbImageClient.Download()**: Wrapped `ReadAsStreamAsync()` in `await using Stream` — the stream was passed to `Image.Load<Rgba32>()` without disposal (double leak: stream + image)
+- **ImageController.Image()**: Wrapped discarded `TmdbImageClient.Download()` result in `using` — caller only needed the file-saving side effect, but the returned `Image<Rgba32>` was never disposed
+- **RecordingManager**: Wrapped discarded `FanArtImageClient.Download()` result in `using` — same pattern, only needed side effect
+- **ArtistManager.GetCoverArtForArtist()**: Wrapped discarded `FanArtImageClient.Download()` result in `using`
+- **ReleaseManager.Add()**: Wrapped discarded `CoverArtCoverArtClient.Download()` result in `using`
+- **AudioImportJob.AddSingleOrRelease()**: Wrapped discarded `CoverArtCoverArtClient.Download()` result in `using`
+- Added `SixLabors.ImageSharp` and `SixLabors.ImageSharp.PixelFormats` using directives to ImageController, RecordingManager, ArtistManager, ReleaseManager, and AudioImportJob
+- **Created 2 audit tests** in `tests/NoMercy.Tests.MediaProcessing/Jobs/ImageDisposalAuditTests.cs`:
+  - `Source_ImageLoadInLocalScope_HasUsing`: Scans all src/*.cs for `Image.Load`/`Image.LoadAsync` without `using` or `return` in the same scope
+  - `Source_DownloadCallers_DisposeReturnedImage`: Scans all caller sites of provider `Download()` methods to verify they wrap results in `using`
+
+**Files modified**: 7 source files + 1 new test file
+- `src/NoMercy.MediaProcessing/Files/FileManager.cs`
+- `src/NoMercy.Providers/TMDB/Client/TmdbImageClient.cs`
+- `src/NoMercy.Api/Controllers/File/ImageController.cs`
+- `src/NoMercy.MediaProcessing/Recordings/RecordingManager.cs`
+- `src/NoMercy.MediaProcessing/Artists/ArtistManager.cs`
+- `src/NoMercy.MediaProcessing/Releases/ReleaseManager.cs`
+- `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AudioImportJob.cs`
+- `tests/NoMercy.Tests.MediaProcessing/Jobs/ImageDisposalAuditTests.cs` (new)
+
+**Test results**: All 24 MediaProcessing tests pass (2 new + 22 existing). Build succeeds with 0 errors.

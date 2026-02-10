@@ -584,7 +584,7 @@ public partial class FileManager(
 
     private static (int Width, int Height) GetImageDimensions(string filePath)
     {
-        Image image = Image.Load(filePath);
+        using Image image = Image.Load(filePath);
 
         return (image.Width, image.Height);
     }

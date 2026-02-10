@@ -50,7 +50,10 @@ public abstract class TmdbImageClient : TmdbBaseClient
                 if (!response.IsSuccessStatusCode) return null;
 
                 if (download is false)
-                    return isSvg ? null : Image.Load<Rgba32>(await response.Content.ReadAsStreamAsync());
+                {
+                    await using Stream contentStream = await response.Content.ReadAsStreamAsync();
+                    return isSvg ? null : Image.Load<Rgba32>(contentStream);
+                }
 
                 if (!File.Exists(filePath))
                     await File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());

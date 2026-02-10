@@ -17,6 +17,8 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -200,8 +202,10 @@ public class AudioImportJob : AbstractMusicFolderJob
         RecordingManager recordingManager)
     {
         CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(release.MusicBrainzReleaseGroup.Id, true);
-        if (coverPalette is not null) 
-            await CoverArtCoverArtClient.Download(coverPalette.Url);
+        if (coverPalette is not null)
+        {
+            using Image<Rgba32>? downloadedImage = await CoverArtCoverArtClient.Download(coverPalette.Url);
+        }
             
         await AddGenres(release.Genres, musicGenreManager);
         
