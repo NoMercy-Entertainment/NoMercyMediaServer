@@ -37,3 +37,12 @@ public class AnotherTestJob : IShouldQueue
         Value *= 2;
     }
 }
+
+/// <summary>
+/// A type that does NOT implement IShouldQueue — used to test the safety gate
+/// that prevents non-job types from executing in the queue worker.
+/// </summary>
+public class NotAJob
+{
+    public string Data { get; set; } = string.Empty;
+}

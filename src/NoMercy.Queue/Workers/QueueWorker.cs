@@ -44,6 +44,17 @@ public class QueueWorker(JobQueue queue, string name = "default")
                             $"QueueWorker {name} - {CurrentIndex}: Job {job.Id} of Type {classInstance} processed successfully.",
                             LogEventLevel.Verbose);
                     }
+                    else
+                    {
+                        string typeName = jobWithArguments?.GetType().FullName ?? "null";
+                        Logger.Queue(
+                            $"QueueWorker {name} - {CurrentIndex}: Job {job.Id} deserialized to {typeName} which does not implement IShouldQueue — rejecting.",
+                            LogEventLevel.Error);
+
+                        queue.FailJob(job, new InvalidOperationException(
+                            $"Job payload deserialized to {typeName} which does not implement IShouldQueue"));
+                        _currentJobId = null;
+                    }
                 }
                 catch (Exception ex)
                 {

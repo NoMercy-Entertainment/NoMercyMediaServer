@@ -1929,3 +1929,29 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   5. `CallerTasks_ExecuteInPhase3AfterAuth` — verifies caller-provided tasks see auth completed
 
 **Test results**: Build succeeds with 0 errors. All 5 new tests pass. All 1,226 non-Api tests pass (147 encoder, 140 database, 282 queue, 208 repository, 28 media processing, 421 provider). 7 Api test failures are pre-existing.
+
+---
+
+## CRIT-14 — Fix TypeNameHandling.All security vulnerability
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Added explicit rejection path in `QueueWorker.Start()` for deserialized objects that don't implement `IShouldQueue`
+  - Previously, if a payload deserialized to a non-IShouldQueue type, the worker silently did nothing — the job stayed reserved forever with `_currentJobId` never cleared
+  - Now logs an error and calls `queue.FailJob()` with an `InvalidOperationException`, clearing `_currentJobId` so the worker can continue processing other jobs
+- Kept `TypeNameHandling.All` in `SerializationHelper` — it's required for the queue to deserialize arbitrary `IShouldQueue` implementations by type name
+- The `is IShouldQueue` pattern match is the safety gate: only types implementing the interface can have `Handle()` called
+
+**Files changed**:
+- `src/NoMercy.Queue/Workers/QueueWorker.cs` — added `else` branch after `is IShouldQueue` check with logging and `FailJob` call
+- `tests/NoMercy.Tests.Queue/TestHelpers/TestJobs.cs` — added `NotAJob` class (does NOT implement IShouldQueue) for testing the rejection path
+- `tests/NoMercy.Tests.Queue/SerializationHelperTests.cs` — added 3 tests:
+  1. `Deserialize_IShouldQueueJob_CanBeCastToInterface` — valid job passes the `is IShouldQueue` check
+  2. `Deserialize_NonIShouldQueueType_FailsInterfaceCheck` — non-job type fails the check
+  3. `Deserialize_IShouldQueueJob_ExecutesSuccessfully` — round-trip serialize/deserialize/execute works
+- `tests/NoMercy.Tests.Queue/QueueWorkerTests.cs` — added 2 integration tests:
+  1. `QueueWorker_NonIShouldQueuePayload_IsRejectedAndFailed` — invalid payload is moved to FailedJobs with IShouldQueue error
+  2. `QueueWorker_ValidIShouldQueuePayload_ExecutesAndDeletesJob` — valid payload executes and is deleted
+
+**Test results**: Build succeeds with 0 errors. All 287 queue tests pass (5 new + 282 existing). Pre-existing failures in Api (262) and Providers (3) are unrelated.

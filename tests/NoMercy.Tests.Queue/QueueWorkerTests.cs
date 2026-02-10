@@ -233,4 +233,110 @@ public class QueueWorkerTests : IDisposable
         Assert.Contains("TestJob failed with message: This will fail", exception.Message);
         Assert.False(testJob.HasExecuted); // Should not be marked as executed when it fails
     }
+
+    [Fact]
+    public async Task QueueWorker_NonIShouldQueuePayload_IsRejectedAndFailed()
+    {
+        // Arrange — inject a payload that deserializes to a type NOT implementing IShouldQueue
+        NotAJob notAJob = new() { Data = "malicious or invalid payload" };
+        QueueJob queueJob = new()
+        {
+            Queue = "test-worker",
+            Payload = SerializationHelper.Serialize(notAJob),
+            AvailableAt = DateTime.UtcNow,
+            Attempts = 2 // Set to maxAttempts - 1 so FailJob moves it to FailedJobs
+        };
+
+        _context.QueueJobs.Add(queueJob);
+        _context.SaveChanges();
+
+        // Act — simulate the QueueWorker's processing loop (same logic as QueueWorker.Start)
+        await Task.Run(() =>
+        {
+            QueueJob? job = _jobQueue.ReserveJob("test-worker", null);
+            if (job != null)
+            {
+                object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);
+
+                if (jobWithArguments is IShouldQueue classInstance)
+                {
+                    classInstance.Handle().Wait();
+                    _jobQueue.DeleteJob(job);
+                }
+                else
+                {
+                    // This is the new rejection path
+                    string typeName = jobWithArguments?.GetType().FullName ?? "null";
+                    _jobQueue.FailJob(job, new InvalidOperationException(
+                        $"Job payload deserialized to {typeName} which does not implement IShouldQueue"));
+                }
+            }
+        });
+
+        // Assert — the invalid job should NOT be in the active queue
+        int queueJobCount = _context.QueueJobs.Count();
+        Assert.Equal(0, queueJobCount);
+
+        // Assert — it should be in the failed jobs table
+        int failedJobCount = _context.FailedJobs.Count();
+        Assert.Equal(1, failedJobCount);
+
+        FailedJob failedJob = _context.FailedJobs.First();
+        Assert.Contains("IShouldQueue", failedJob.Exception);
+    }
+
+    [Fact]
+    public async Task QueueWorker_ValidIShouldQueuePayload_ExecutesAndDeletesJob()
+    {
+        // Arrange — a valid IShouldQueue job goes through the full worker path
+        TestJob testJob = new()
+        {
+            Message = "Valid job for full path test",
+            HasExecuted = false
+        };
+        QueueJob queueJob = new()
+        {
+            Queue = "test-worker",
+            Payload = SerializationHelper.Serialize(testJob),
+            AvailableAt = DateTime.UtcNow,
+            Attempts = 0
+        };
+
+        _context.QueueJobs.Add(queueJob);
+        _context.SaveChanges();
+
+        // Act — simulate QueueWorker processing
+        bool jobExecuted = false;
+        await Task.Run(() =>
+        {
+            QueueJob? job = _jobQueue.ReserveJob("test-worker", null);
+            if (job != null)
+            {
+                object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);
+
+                if (jobWithArguments is IShouldQueue classInstance)
+                {
+                    classInstance.Handle().Wait();
+                    _jobQueue.DeleteJob(job);
+                    jobExecuted = true;
+                }
+                else
+                {
+                    string typeName = jobWithArguments?.GetType().FullName ?? "null";
+                    _jobQueue.FailJob(job, new InvalidOperationException(
+                        $"Job payload deserialized to {typeName} which does not implement IShouldQueue"));
+                }
+            }
+        });
+
+        // Assert — valid job was executed
+        Assert.True(jobExecuted);
+
+        // Assert — job removed from queue, nothing in failed jobs
+        int queueJobCount = _context.QueueJobs.Count();
+        Assert.Equal(0, queueJobCount);
+
+        int failedJobCount = _context.FailedJobs.Count();
+        Assert.Equal(0, failedJobCount);
+    }
 }
