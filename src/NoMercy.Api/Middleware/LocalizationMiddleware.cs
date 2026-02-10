@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using I18N.DotNet;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,8 @@ namespace NoMercy.Api.Middleware;
 public class LocalizationMiddleware
 {
     private readonly RequestDelegate _next;
+    private static readonly ConcurrentDictionary<string, Localizer> LocalizerCache = new();
+    private static readonly Assembly ResourceAssembly = typeof(LocalizationMiddleware).Assembly;
 
     public LocalizationMiddleware(RequestDelegate next)
     {
@@ -28,10 +31,16 @@ public class LocalizationMiddleware
         else
             context.Request.Headers.AcceptLanguage = "en-US".Split('-');
 
-        Localizer reportLocalize = new();
-        reportLocalize.LoadXML(Assembly.GetExecutingAssembly(), "Resources.I18N.xml",
-            firstLang?.FirstOrDefault() ?? "en");
-        LocalizationHelper.GlobalLocalizer = reportLocalize;
+        string language = firstLang?.FirstOrDefault() ?? "en";
+
+        Localizer localizer = LocalizerCache.GetOrAdd(language, lang =>
+        {
+            Localizer newLocalizer = new();
+            newLocalizer.LoadXML(ResourceAssembly, "Resources.I18N.xml", lang);
+            return newLocalizer;
+        });
+
+        LocalizationHelper.GlobalLocalizer = localizer;
 
         await _next(context);
     }

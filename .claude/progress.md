@@ -1853,3 +1853,27 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
 - `ForUser_GeneratesExistsClauseInSql`
 
 **Test results**: Build succeeds with 0 errors. All 208 repository tests pass (including 14 new). Pre-existing API/Provider failures unchanged.
+
+---
+
+## MED-11 — Fix Localizer Created Per Request
+
+**Date**: 2026-02-10
+
+**Problem**: `LocalizationMiddleware.InvokeAsync()` created a new `Localizer` instance and re-parsed the embedded `I18N.xml` resource on every HTTP request. This caused unnecessary memory allocation and XML parsing overhead on every request.
+
+**Fix**: Cache `Localizer` instances per language in a `ConcurrentDictionary<string, Localizer>`. The XML resource is loaded only once per language via `GetOrAdd`. The `Assembly` reference is also cached as a static field to avoid repeated reflection.
+
+**Files changed**:
+- `src/NoMercy.Api/Middleware/LocalizationMiddleware.cs` — Added `ConcurrentDictionary<string, Localizer>` cache and `ResourceAssembly` static field. Replaced per-request `new Localizer()` + `LoadXML()` with `LocalizerCache.GetOrAdd()`.
+
+**New tests** (7):
+- `InvokeAsync_SetsGlobalLocalizer_ForRequestLanguage` — verifies localizer is set for nl-NL
+- `InvokeAsync_SetsLocalizer_WhenNoAcceptLanguageHeader` — verifies middleware handles missing header
+- `InvokeAsync_ReusesCachedLocalizer_ForSameLanguage` — verifies same instance returned for de-DE twice (core caching test)
+- `InvokeAsync_CreatesDifferentLocalizer_ForDifferentLanguage` — verifies fr-FR and es-ES get distinct instances
+- `InvokeAsync_CallsNextMiddleware` — verifies pipeline continues
+- `InvokeAsync_SetsAcceptLanguageHeader_WithLanguageParts` — verifies Accept-Language header rewriting
+- `InvokeAsync_HandlesLanguageWithoutRegion` — verifies "nl" without region code works
+
+**Test results**: Build succeeds with 0 errors. All 7 new localization tests pass. Pre-existing failures unchanged.
