@@ -1746,3 +1746,33 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   - Default interval is 500ms
 
 **Test results**: Build succeeds with 0 errors. 7 new ProgressThrottle tests pass. All 140 encoder tests pass. All unit tests across all projects pass.
+
+---
+
+## MED-01 — Fix N+1 queries in library endpoints
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Optimized `GetContinueWatchingAsync` in `HomeRepository.cs` to use a two-step query pattern:
+  1. **Step 1**: Lightweight projection query fetches only composite keys (`Id`, `MovieId`, `CollectionId`, `TvId`, `SpecialId`), deduplicates client-side, and extracts unique `Id` values. This avoids loading full entity trees for duplicate rows.
+  2. **Step 2**: Hydrates only the unique entries with all Include chains (Movie, Tv, Collection, Special with their sub-includes).
+- Early return on empty unique IDs avoids the expensive hydration query entirely.
+- Added `UserData` seed data to `TestMediaContextFactory` with 3 rows: 2 for the same movie (duplicate scenario) and 1 for a TV show.
+- Added fixed VideoFile IDs (`MovieVideoFile1Id`, `MovieVideoFile2Id`, `TvVideoFile1Id`, `TvVideoFile2Id`) to `SeedConstants` for deterministic test data.
+- Updated existing seed to use the fixed VideoFile IDs.
+
+**Files changed**:
+1. `src/NoMercy.Data/Repositories/HomeRepository.cs` — Split `GetContinueWatchingAsync` into two-step query pattern.
+2. `tests/NoMercy.Tests.Repositories/Infrastructure/SeedConstants.cs` — Added fixed VideoFile ID constants.
+3. `tests/NoMercy.Tests.Repositories/Infrastructure/TestMediaContextFactory.cs` — Used fixed VideoFile IDs, added UserData seed rows.
+4. `tests/NoMercy.Tests.Repositories/HomeRepositoryTests.cs` — Added 5 tests for `GetContinueWatchingAsync`.
+
+**New tests** (5):
+- `GetContinueWatchingAsync_ReturnsDeduplicated` — Verifies 3 seed rows deduplicate to 2 unique entries
+- `GetContinueWatchingAsync_KeepsMostRecentPerGroup` — Verifies the most recent entry per composite key is kept
+- `GetContinueWatchingAsync_IncludesVideoFile` — Verifies VideoFile navigation is populated
+- `GetContinueWatchingAsync_IncludesMovieData` — Verifies Movie and Movie.VideoFiles navigations are populated
+- `GetContinueWatchingAsync_ReturnsEmpty_WhenNoUserData` — Verifies empty result for user with no data
+
+**Test results**: Build succeeds with 0 errors. All 189 repository tests pass (including 5 new). All 449 non-API tests pass. 7 pre-existing API test failures unchanged.

@@ -109,6 +109,61 @@ public class HomeRepositoryTests : IDisposable
         Assert.Single(genres);
     }
 
+    [Fact]
+    public async Task GetContinueWatchingAsync_ReturnsDeduplicated()
+    {
+        // Seed has 3 UserData rows: 2 for movie 550 (duplicate), 1 for tv 1399
+        // DistinctBy on { MovieId, CollectionId, TvId, SpecialId } should yield 2 unique entries
+        HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
+            _context, SeedConstants.UserId, "en", "US");
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, ud => ud.MovieId == 550);
+        Assert.Contains(result, ud => ud.TvId == 1399);
+    }
+
+    [Fact]
+    public async Task GetContinueWatchingAsync_KeepsMostRecentPerGroup()
+    {
+        // The most recent entry for movie 550 has LastPlayedDate 2026-02-01
+        HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
+            _context, SeedConstants.UserId, "en", "US");
+
+        UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 550);
+        Assert.NotNull(movieEntry);
+        Assert.Equal("2026-02-01T10:00:00Z", movieEntry.LastPlayedDate);
+    }
+
+    [Fact]
+    public async Task GetContinueWatchingAsync_IncludesVideoFile()
+    {
+        HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
+            _context, SeedConstants.UserId, "en", "US");
+
+        Assert.All(result, ud => Assert.NotNull(ud.VideoFile));
+    }
+
+    [Fact]
+    public async Task GetContinueWatchingAsync_IncludesMovieData()
+    {
+        HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
+            _context, SeedConstants.UserId, "en", "US");
+
+        UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 550);
+        Assert.NotNull(movieEntry);
+        Assert.NotNull(movieEntry.Movie);
+        Assert.NotEmpty(movieEntry.Movie.VideoFiles);
+    }
+
+    [Fact]
+    public async Task GetContinueWatchingAsync_ReturnsEmpty_WhenNoUserData()
+    {
+        HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
+            _context, SeedConstants.OtherUserId, "en", "US");
+
+        Assert.Empty(result);
+    }
+
     public void Dispose()
     {
         _context.Database.EnsureDeleted();

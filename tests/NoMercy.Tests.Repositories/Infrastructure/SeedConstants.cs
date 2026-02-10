@@ -9,4 +9,9 @@ public static class SeedConstants
     public static readonly Ulid MovieFolderId = Ulid.NewUlid();
     public static readonly Ulid MusicLibraryId = Ulid.NewUlid();
     public static readonly Ulid MusicFolderId = Ulid.NewUlid();
+
+    public static readonly Ulid MovieVideoFile1Id = Ulid.NewUlid();
+    public static readonly Ulid MovieVideoFile2Id = Ulid.NewUlid();
+    public static readonly Ulid TvVideoFile1Id = Ulid.NewUlid();
+    public static readonly Ulid TvVideoFile2Id = Ulid.NewUlid();
 }

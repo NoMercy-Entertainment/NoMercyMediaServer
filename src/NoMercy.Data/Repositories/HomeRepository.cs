@@ -44,10 +44,27 @@ public class HomeRepository
 
     public async Task<HashSet<UserData>> GetContinueWatchingAsync(MediaContext mediaContext, Guid userId, string language, string country, CancellationToken ct = default)
     {
-        List<UserData> userData = await mediaContext.UserData
+        // Step 1: Project to minimal keys, deduplicate, and get unique UserData IDs
+        // This avoids loading full entity trees for duplicates that get thrown away
+        List<Ulid> uniqueIds = await mediaContext.UserData
             .AsNoTracking()
             .Where(ud => ud.UserId == userId)
             .Where(ud => ud.MovieId != null || ud.TvId != null || ud.CollectionId != null || ud.SpecialId != null)
+            .OrderByDescending(ud => ud.LastPlayedDate)
+            .Select(ud => new { ud.Id, ud.MovieId, ud.CollectionId, ud.TvId, ud.SpecialId })
+            .ToListAsync(ct)
+            .ContinueWith(t => t.Result
+                .DistinctBy(ud => new { ud.MovieId, ud.CollectionId, ud.TvId, ud.SpecialId })
+                .Select(ud => ud.Id)
+                .ToList(), ct);
+
+        if (uniqueIds.Count == 0)
+            return [];
+
+        // Step 2: Hydrate only the unique entries with all includes
+        List<UserData> userData = await mediaContext.UserData
+            .AsNoTracking()
+            .Where(ud => uniqueIds.Contains(ud.Id))
             .Include(ud => ud.VideoFile)
             // Movie includes - only what CardData needs
             .Include(ud => ud.Movie)
@@ -111,9 +128,7 @@ public class HomeRepository
             .OrderByDescending(ud => ud.LastPlayedDate)
             .ToListAsync(ct);
 
-        return userData
-            .DistinctBy(ud => new { ud.MovieId, ud.CollectionId, ud.TvId, ud.SpecialId })
-            .ToHashSet();
+        return userData.ToHashSet();
     }
 
     public Task<HashSet<Image>> GetScreensaverImagesAsync(MediaContext mediaContext, Guid userId, CancellationToken ct = default)

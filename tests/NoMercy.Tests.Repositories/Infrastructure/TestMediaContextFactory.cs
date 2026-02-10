@@ -141,7 +141,7 @@ public static class TestMediaContextFactory
 
         VideoFile movieVideoFile1 = new()
         {
-            Id = Ulid.NewUlid(),
+            Id = SeedConstants.MovieVideoFile1Id,
             Filename = "Fight.Club.1999.1080p.mkv",
             Folder = "/media/movies/Fight Club (1999)",
             HostFolder = "/media/movies/Fight Club (1999)",
@@ -152,7 +152,7 @@ public static class TestMediaContextFactory
         };
         VideoFile movieVideoFile2 = new()
         {
-            Id = Ulid.NewUlid(),
+            Id = SeedConstants.MovieVideoFile2Id,
             Filename = "Pulp.Fiction.1994.1080p.mkv",
             Folder = "/media/movies/Pulp Fiction (1994)",
             HostFolder = "/media/movies/Pulp Fiction (1994)",
@@ -220,7 +220,7 @@ public static class TestMediaContextFactory
 
         VideoFile tvVideoFile1 = new()
         {
-            Id = Ulid.NewUlid(),
+            Id = SeedConstants.TvVideoFile1Id,
             Filename = "Breaking.Bad.S01E01.mkv",
             Folder = "/media/tv/Breaking Bad (2008)/Season 01",
             HostFolder = "/media/tv/Breaking Bad (2008)/Season 01",
@@ -231,7 +231,7 @@ public static class TestMediaContextFactory
         };
         VideoFile tvVideoFile2 = new()
         {
-            Id = Ulid.NewUlid(),
+            Id = SeedConstants.TvVideoFile2Id,
             Filename = "Breaking.Bad.S01E02.mkv",
             Folder = "/media/tv/Breaking Bad (2008)/Season 01",
             HostFolder = "/media/tv/Breaking Bad (2008)/Season 01",
@@ -244,6 +244,41 @@ public static class TestMediaContextFactory
 
         context.GenreTv.AddRange(
             new GenreTv { GenreId = 18, TvId = 1399 });
+
+        // UserData for continue watching tests
+        context.UserData.AddRange(
+            new UserData
+            {
+                Id = Ulid.Parse("01JABC0000000000000000MOVI"),
+                UserId = SeedConstants.UserId,
+                MovieId = 550,
+                VideoFileId = SeedConstants.MovieVideoFile1Id,
+                Type = "movie",
+                Time = 3600,
+                LastPlayedDate = "2026-02-01T10:00:00Z"
+            },
+            // Duplicate entry for same movie (different video file)
+            new UserData
+            {
+                Id = Ulid.Parse("01JDBC0000000000000000MDUP"),
+                UserId = SeedConstants.UserId,
+                MovieId = 550,
+                VideoFileId = SeedConstants.MovieVideoFile2Id,
+                Type = "movie",
+                Time = 1800,
+                LastPlayedDate = "2026-01-15T08:00:00Z"
+            },
+            new UserData
+            {
+                Id = Ulid.Parse("01JBBC0000000000000000TVSH"),
+                UserId = SeedConstants.UserId,
+                TvId = 1399,
+                VideoFileId = SeedConstants.TvVideoFile1Id,
+                Type = "tv",
+                Time = 2400,
+                LastPlayedDate = "2026-02-02T14:00:00Z"
+            }
+        );
 
         context.SaveChanges();
     }
