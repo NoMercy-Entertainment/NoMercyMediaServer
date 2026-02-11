@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 3, item REORG-06
+**Next up**: Phase 3, item REORG-07
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -140,7 +140,7 @@ Details: [09-code-organization.md](prd/09-code-organization.md)
 - [x] REORG-03 — Rename `Socket/video/` → same pattern
 - [x] REORG-04 — Consolidate all DTOs into `NoMercy.Api/DTOs/`
 - [x] REORG-05 — Remove duplicate FolderDto
-- [ ] REORG-06 — Organize 96 database models into domain subfolders
+- [x] REORG-06 — Organize 96 database models into domain subfolders
 - [ ] REORG-07 — Remove or complete NoMercy.EncoderV2
 - [ ] REORG-09 — Rename `AppConfig/` to `Configuration/`
 - [ ] REORG-10 — Create centralized `Extensions/` per project

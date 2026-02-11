@@ -1,13 +1,21 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.People;
+using NoMercy.Database.Models.Queue;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using NoMercy.Queue;
 using NoMercy.Queue.Interfaces;
-using Image = NoMercy.Database.Models.Image;
+using Image = NoMercy.Database.Models.Media.Image;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 

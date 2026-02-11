@@ -1,4 +1,12 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.People;
+using NoMercy.Database.Models.Queue;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -13,7 +21,7 @@ using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 using Serilog.Events;
-using TmdbGender = NoMercy.Database.Models.TmdbGender;
+using TmdbGender = NoMercy.Database.Models.People.TmdbGender;
 
 namespace NoMercy.MediaProcessing.People;
 

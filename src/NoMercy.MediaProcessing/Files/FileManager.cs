@@ -5,7 +5,15 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.People;
+using NoMercy.Database.Models.Queue;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Database.Models.Users;
 using NoMercy.Encoder;
 using NoMercy.Encoder.Dto;
 using NoMercy.Encoder.Format.Rules;
@@ -327,8 +335,8 @@ public partial class FileManager(
             FolderSize = GetDirectorySize(hostFolder),
 
             Type = Movie?.Id is not null
-                ? Database.Models.MediaType.Movie
-                : Database.Models.MediaType.Tv,
+                ? Database.Models.Media.MediaType.Movie
+                : Database.Models.Media.MediaType.Tv,
 
             Audio = audio,
             Previews = previews,

@@ -12,7 +12,7 @@ public record VideoDto
     [JsonProperty("site")] public string? Site { get; set; }
     [JsonProperty("size")] public int Size { get; set; }
 
-    public VideoDto(Database.Models.Media media)
+    public VideoDto(Database.Models.Media.Media media)
     {
         Src = media.Src;
         Type = media.Type;

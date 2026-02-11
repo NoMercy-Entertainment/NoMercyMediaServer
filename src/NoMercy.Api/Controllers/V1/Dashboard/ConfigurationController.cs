@@ -7,11 +7,19 @@ using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.People;
+using NoMercy.Database.Models.Queue;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Database.Models.Users;
 using NoMercy.Helpers;
 using NoMercy.NmSystem.Information;
 using NoMercy.Queue;
-using Configuration = NoMercy.Database.Models.Configuration;
+using Configuration = NoMercy.Database.Models.Common.Configuration;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 

@@ -1,7 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.People;
+using NoMercy.Database.Models.Queue;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Database.Models.Users;
 using NoMercy.Providers.TMDB.Models.People;
 using TmdbGender = NoMercy.Providers.TMDB.Models.People.TmdbGender;
 
@@ -31,7 +39,7 @@ public record PersonResponseItemDto
 
     [JsonProperty("combined_credits")] public Credits CombinedCredits { get; set; } = new();
 
-    [JsonProperty("external_ids")] public Database.Models.TmdbPersonExternalIds? ExternalIds { get; set; }
+    [JsonProperty("external_ids")] public Database.Models.People.TmdbPersonExternalIds? ExternalIds { get; set; }
     [JsonProperty("translations")] public TranslationsDto TranslationsDto { get; set; } = new();
     [JsonProperty("known_for")] public KnownForDto[] KnownFor { get; set; } = [];
     [JsonProperty("images")] public ImagesDto ImagesDto { get; set; } = new();

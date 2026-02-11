@@ -2450,3 +2450,34 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - Updated `LibrarySeedDto` and `LibrariesSeed.cs` to reference `FolderSeedDto`
 
 **Test results**: Build succeeds with 0 errors. All 667 non-Api tests pass (212 repository + 28 media processing + 427 provider). Api test failures (283) are pre-existing infrastructure issues unchanged from baseline.
+
+---
+
+## REORG-06 — Organize 97 database models into domain subfolders
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Created 9 domain subfolders under `src/NoMercy.Database/Models/`: Movies/, TvShows/, Music/, Users/, Libraries/, Media/, People/, Queue/, Common/
+- Moved all 97 model files from the flat `Models/` directory into their domain subfolders using `git mv` (preserves history):
+  - **Movies/** (15 files): Movie, MovieUser, Collection, CollectionLibrary, CollectionMovie, CollectionUser, CertificationMovie, CompanyMovie, GenreMovie, KeywordMovie, LibraryMovie, Recommendation, Similar, WatchProvider, WatchProviderMedia
+  - **TvShows/** (16 files): Tv, TvUser, Season, Episode, CertificationTv, CompanyTv, GenreTv, KeywordTv, NetworkTv, LibraryTv, Network, Creator, GuestStar, Special, SpecialItem, SpecialUser
+  - **Music/** (24 files): Album, AlbumArtist, AlbumLibrary, AlbumMusicGenre, AlbumReleaseGroup, AlbumTrack, AlbumUser, Artist, ArtistLibrary, ArtistMusicGenre, ArtistReleaseGroup, ArtistTrack, ArtistUser, LibraryTrack, Lyric, MusicGenre, MusicGenreReleaseGroup, MusicGenreTrack, MusicPlay, Playlist, PlaylistTrack, ReleaseGroup, Track, TrackUser
+  - **Users/** (8 files): User, UserData, Notification, NotificationUser, ActivityLog, Device, PlaybackPreference, Message
+  - **Libraries/** (6 files): Library, LibraryUser, Folder, FolderLibrary, Language, LanguageLibrary
+  - **Media/** (10 files): Media, MediaAttachment, MediaStream, VideoFile, Image, EncoderProfile, EncoderProfileFolder, AlternativeTitle, Translation, Metadata
+  - **People/** (7 files): Person, Cast, Crew, Role, Job, TmdbGender, TmdbPersonExternalIds
+  - **Queue/** (4 files): QueueJob, FailedJob, CronJob, RunningTask
+  - **Common/** (7 files): Genre, Keyword, Certification, Company, Country, Configuration, IHasLibrary
+- Updated namespace declarations in all 97 model files to match their new subfolder (e.g., `namespace NoMercy.Database.Models.Movies;`)
+- Created `src/NoMercy.Database/GlobalUsings.cs` with global using directives for all 9 sub-namespaces, so model files and Database-internal code can cross-reference types across domains seamlessly
+- Updated 280 external files (across Api, Data, MediaProcessing, Queue, Server, Setup, Helpers, Networking, Providers, and test projects) to replace `using NoMercy.Database.Models;` with the 9 new sub-namespace usings
+- Fixed fully-qualified type references throughout the codebase:
+  - `Database.Models.TmdbPersonExternalIds` → `Database.Models.People.TmdbPersonExternalIds` (TmdbPerson.cs, PersonResponseItemDto.cs)
+  - `Database.Models.MediaType` → `Database.Models.Media.MediaType` (FileManager.cs)
+  - `Database.Models.User` → `Database.Models.Users.User` (DbContextRegistrationTests.cs)
+  - Using aliases: `Image =`, `TmdbGender =`, `Configuration =`, `VideoFile =`, `SpecialItem =`, `Special =` all updated to new sub-namespace paths
+  - `Database.Models.Media` → `Database.Models.Media.Media` for the Media class type (VideoDto.cs, Movie.cs, Tv.cs, Season.cs, Episode.cs)
+- Resolved `Media` namespace/type ambiguity by using `Models.Media.Media` qualified name in 4 model files and 1 DTO file
+
+**Test results**: Build succeeds with 0 errors, 0 new warnings. All 1,270 non-Api tests pass (143 database + 18 networking + 150 encoder + 292 queue + 212 repository + 28 media processing + 427 provider). Api test failures are pre-existing infrastructure issues (SQLite disk I/O under parallel test execution), unchanged from baseline.
