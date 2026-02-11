@@ -19,5 +19,5 @@ public class LibrarySeedDto
 
     [JsonProperty("extractChapters")] public bool ExtractChapters { get; set; }
     [JsonProperty("perfectSubtitleMatch")] public bool PerfectSubtitleMatch { get; set; }
-    [JsonProperty("folders")] public FolderDto[] Folders { get; set; } = [];
+    [JsonProperty("folders")] public FolderSeedDto[] Folders { get; set; } = [];
 }

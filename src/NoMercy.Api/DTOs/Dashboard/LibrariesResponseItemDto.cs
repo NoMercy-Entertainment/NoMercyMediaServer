@@ -1,6 +1,8 @@
 using Newtonsoft.Json;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;
+using DataEncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
 
 namespace NoMercy.Api.DTOs.Dashboard;
 
@@ -42,7 +44,6 @@ public record LibrariesResponseItemDto
         Link = library.LibraryMovies.Count + library.LibraryTvs.Count > 500
             ? new($"/libraries/{Id}/letter/A", UriKind.Relative)
             : new($"/libraries/{Id}", UriKind.Relative);
-        // Link = new($"/libraries/{Id}", UriKind.Relative);
         Subtitles = library.LanguageLibraries
             .Select(languageLibrary => languageLibrary.Language.Iso6391)
             .ToArray();
@@ -57,7 +58,7 @@ public record LibrariesResponseItemDto
                     Id = folderLibrary.Folder.Id,
                     Path = folderLibrary.Folder.Path,
                     EncoderProfiles = folderLibrary.Folder.EncoderProfileFolder
-                        .Select(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
+                        .Select(epf => new DataEncoderProfileDto(epf.EncoderProfile))
                         .ToArray()
                 }
             })

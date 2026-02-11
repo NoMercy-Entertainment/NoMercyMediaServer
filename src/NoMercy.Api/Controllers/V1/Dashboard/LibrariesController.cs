@@ -16,7 +16,6 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
-using FolderLibraryDto = NoMercy.Data.Repositories.FolderLibraryDto;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 

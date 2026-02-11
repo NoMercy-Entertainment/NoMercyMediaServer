@@ -2428,3 +2428,25 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - Removed empty old DTO directories and a leftover README.md
 
 **Test results**: Build succeeds with 0 errors (76 warnings, all pre-existing). All 1,270 non-Api tests pass. Api test project: 312 passed, 12 failed (pre-existing failures unchanged from baseline).
+
+---
+
+## REORG-05 — Remove duplicate FolderDto
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Identified 3 duplicate `FolderDto` classes and 2 duplicate `FolderLibraryDto` classes across the codebase:
+  1. `NoMercy.Server.Seeds.Dto.FolderDto` — minimal seed DTO (only `Id`)
+  2. `NoMercy.Data.Repositories.FolderDto` — canonical version with `Id`, `Path`, `EncoderProfileDto[]` and model constructor
+  3. `NoMercy.Api.DTOs.Dashboard.FolderDto` — duplicate with `EncoderProfile[]` (raw model instead of DTO)
+  4. `NoMercy.Data.Repositories.FolderLibraryDto` — canonical version with model constructor
+  5. `NoMercy.Api.DTOs.Dashboard.FolderLibraryDto` — duplicate record type
+- Kept `NoMercy.Data.Repositories.FolderDto` as the canonical version (has constructor from model, proper `EncoderProfileDto[]` type)
+- Deleted `NoMercy.Api.DTOs.Dashboard.FolderDto` and `NoMercy.Api.DTOs.Dashboard.FolderLibraryDto`
+- Updated `LibrariesResponseItemDto` to use `NoMercy.Data.Repositories.FolderLibraryDto` and `NoMercy.Data.Logic.EncoderProfileDto` (via alias to avoid ambiguity with Dashboard `EncoderProfileDto`)
+- Removed using aliases in Dashboard `LibrariesController` that were needed to disambiguate between the now-deleted DTOs and the canonical ones
+- Renamed `NoMercy.Server.Seeds.Dto.FolderDto` to `FolderSeedDto` to avoid name collision with the canonical type
+- Updated `LibrarySeedDto` and `LibrariesSeed.cs` to reference `FolderSeedDto`
+
+**Test results**: Build succeeds with 0 errors. All 667 non-Api tests pass (212 repository + 28 media processing + 427 provider). Api test failures (283) are pre-existing infrastructure issues unchanged from baseline.

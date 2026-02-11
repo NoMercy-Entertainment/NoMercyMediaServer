@@ -88,7 +88,7 @@ public static class LibrariesSeed
         List<FolderLibrary> libraryFolders = [];
 
         foreach (LibrarySeedDto library in librarySeed)
-            foreach (FolderDto folder in library.Folders)
+            foreach (FolderSeedDto folder in library.Folders)
                 libraryFolders.Add(new(folder.Id, library.Id));
 
         try
