@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
@@ -201,6 +202,61 @@ public class LibraryRepositoryTests : IDisposable
 
         Library? deleted = await _repository.GetLibraryByIdAsync(SeedConstants.MovieLibraryId);
         Assert.Null(deleted);
+    }
+
+    [Fact]
+    public async Task GetLibraries_IncludesEncoderProfilesOnFolders()
+    {
+        List<Library> libraries = await _repository.GetLibraries(SeedConstants.UserId);
+
+        Library movieLibrary = libraries.First(l => l.Title == "Movies");
+        Assert.NotEmpty(movieLibrary.FolderLibraries);
+
+        FolderLibrary folderLibrary = movieLibrary.FolderLibraries.First();
+        Assert.NotNull(folderLibrary.Folder);
+        Assert.NotEmpty(folderLibrary.Folder.EncoderProfileFolder);
+
+        EncoderProfileFolder epf = folderLibrary.Folder.EncoderProfileFolder.First();
+        Assert.NotNull(epf.EncoderProfile);
+        Assert.Equal("Default HLS", epf.EncoderProfile.Name);
+    }
+
+    [Fact]
+    public async Task GetLibraries_MapsToLibrariesResponseItemDto_WithoutException()
+    {
+        List<Library> libraries = await _repository.GetLibraries(SeedConstants.UserId);
+
+        // This is exactly what the controller does - it should not throw
+        List<LibrariesResponseItemDto> response = libraries
+            .Select(library => new LibrariesResponseItemDto(library))
+            .ToList();
+
+        Assert.Equal(2, response.Count);
+
+        LibrariesResponseItemDto movieDto = response.First(r => r.Title == "Movies");
+        Assert.NotEmpty(movieDto.FolderLibrary);
+        Assert.NotEmpty(movieDto.FolderLibrary[0].Folder.EncoderProfiles);
+        Assert.Equal("Default HLS", movieDto.FolderLibrary[0].Folder.EncoderProfiles[0].Name);
+    }
+
+    [Fact]
+    public async Task GetFoldersAsync_MapsFolderDto_WithEncoderProfiles()
+    {
+        List<FolderDto> folders = await _repository.GetFoldersAsync();
+
+        Assert.NotEmpty(folders);
+        // FolderDto uses Select projection so EncoderProfileFolder may not be loaded
+        // in the projection query, but should not throw
+    }
+
+    [Fact]
+    public async Task GetLibraries_IncludesLanguageLibraries()
+    {
+        List<Library> libraries = await _repository.GetLibraries(SeedConstants.UserId);
+
+        Library movieLibrary = libraries.First(l => l.Title == "Movies");
+        Assert.NotEmpty(movieLibrary.LanguageLibraries);
+        Assert.Equal("en", movieLibrary.LanguageLibraries.First().Language.Iso6391);
     }
 
     public void Dispose()

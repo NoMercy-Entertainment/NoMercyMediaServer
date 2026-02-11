@@ -28,7 +28,13 @@ public class FolderDto
         Id = folder.Id;
         Path = folder.Path;
         EncoderProfiles = folder.EncoderProfileFolder
-            .Select(f => new EncoderProfileDto(f.EncoderProfile))
+            .Where(f => f.EncoderProfile is not null)
+            .Select(f => new EncoderProfileDto
+            {
+                Id = f.EncoderProfile.Id,
+                Name = f.EncoderProfile.Name,
+                Container = f.EncoderProfile.Container ?? string.Empty
+            })
             .ToArray();
     }
 }

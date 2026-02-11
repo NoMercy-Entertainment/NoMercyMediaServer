@@ -10,7 +10,6 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
-using DataEncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
 
 namespace NoMercy.Api.DTOs.Dashboard;
 
@@ -66,7 +65,13 @@ public record LibrariesResponseItemDto
                     Id = folderLibrary.Folder.Id,
                     Path = folderLibrary.Folder.Path,
                     EncoderProfiles = folderLibrary.Folder.EncoderProfileFolder
-                        .Select(epf => new DataEncoderProfileDto(epf.EncoderProfile))
+                        .Where(epf => epf.EncoderProfile is not null)
+                        .Select(epf => new Data.Logic.EncoderProfileDto
+                        {
+                            Id = epf.EncoderProfile.Id,
+                            Name = epf.EncoderProfile.Name,
+                            Container = epf.EncoderProfile.Container ?? string.Empty
+                        })
                         .ToArray()
                 }
             })
