@@ -18,6 +18,9 @@ curl -fsSL https://claude.ai/install.sh | bash
 # Add Claude CLI to PATH for current session
 export PATH="${HOME}/.local/bin:${PATH}"
 
+chmod +x ./.claude/ralph-once.sh
+chmod +x ./.claude/afk-ralph.sh
+
 # Check if there's an exported config to import
 if [ -d ".devcontainer/config" ]; then
     echo "Found exported configuration, importing..."
