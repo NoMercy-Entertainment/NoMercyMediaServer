@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 3, item REORG-11
+**Next up**: Phase 4, item EVT-01
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -144,7 +144,7 @@ Details: [09-code-organization.md](prd/09-code-organization.md)
 - [x] REORG-07 — Remove or complete NoMercy.EncoderV2
 - [x] REORG-09 — Rename `AppConfig/` to `Configuration/`
 - [x] REORG-10 — Create centralized `Extensions/` per project
-- [ ] REORG-11 — Move Swagger config to dedicated folder
+- [x] REORG-11 — Move Swagger config to dedicated folder
 
 ### Phase 4-6: Architecture
 Details: [10-event-driven.md](prd/10-event-driven.md) | [11-plugin-system.md](prd/11-plugin-system.md) | [12-queue-decoupling.md](prd/12-queue-decoupling.md)

@@ -4,7 +4,7 @@ using Microsoft.OpenApi.Models;
 using NoMercy.NmSystem.Information;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace NoMercy.Server.Swagger;
+namespace NoMercy.Server.Configuration.Swagger;
 
 public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
 {

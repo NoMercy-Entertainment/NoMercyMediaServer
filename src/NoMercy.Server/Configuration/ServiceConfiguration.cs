@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -46,8 +45,7 @@ using NoMercy.Queue.Extensions;
 using NoMercy.Queue.Jobs;
 using NoMercy.Server.Extensions;
 using NoMercy.Server.Services;
-using NoMercy.Server.Swagger;
-using Swashbuckle.AspNetCore.SwaggerGen;
+using NoMercy.Server.Configuration.Swagger;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
@@ -423,14 +421,7 @@ public static class ServiceConfiguration
 
         services.AddResponseCompression(options => { options.EnableForHttps = true; });
 
-        ConfigureSwagger(services);
-    }
-
-    private static void ConfigureSwagger(IServiceCollection services)
-    {
-        services.AddSwaggerGen(options => options.OperationFilter<SwaggerDefaultValues>());
-        services.AddSwaggerGenNewtonsoftSupport();
-        services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
+        SwaggerConfiguration.AddSwagger(services);
     }
 
     private static void ConfigureApiVersioning(IServiceCollection services)

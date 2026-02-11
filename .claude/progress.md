@@ -2542,3 +2542,29 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - `NoMercy.Queue/Extensions/` — ServiceCollectionExtensions (already existed)
 
 **Test results**: Build succeeds with 0 errors. All unit tests pass (285 total). Api integration test failures (283) are pre-existing SQLite disk I/O errors in dev container environment.
+
+---
+
+## REORG-11 — Move Swagger config to dedicated folder
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Moved `src/NoMercy.Server/Swagger/ConfigureSwaggerOptions.cs` and `SwaggerDefaultValues.cs` into `src/NoMercy.Server/Configuration/Swagger/`
+- Updated namespaces from `NoMercy.Server.Swagger` to `NoMercy.Server.Configuration.Swagger`
+- Created `SwaggerConfiguration.cs` as a centralized static class with two methods:
+  - `AddSwagger(IServiceCollection)` — consolidates Swagger service registration (previously `ConfigureSwagger` private method in `ServiceConfiguration.cs`)
+  - `UseSwaggerUi(IApplicationBuilder, IApiVersionDescriptionProvider)` — consolidates Swagger UI middleware setup (previously `ConfigureSwaggerUi` private method in `ApplicationConfiguration.cs`)
+- Updated `ServiceConfiguration.cs`: replaced `ConfigureSwagger(services)` call with `SwaggerConfiguration.AddSwagger(services)`, removed the private `ConfigureSwagger` method, updated `using` from `NoMercy.Server.Swagger` to `NoMercy.Server.Configuration.Swagger`, removed unused `Microsoft.Extensions.Options` import
+- Updated `ApplicationConfiguration.cs`: replaced `ConfigureSwaggerUi(app, provider)` call with `SwaggerConfiguration.UseSwaggerUi(app, provider)`, removed the private `ConfigureSwaggerUi` method, removed unused `AspNetCore.Swagger.Themes` import, added `using NoMercy.Server.Configuration.Swagger`
+- Deleted the old `src/NoMercy.Server/Swagger/` directory
+
+**Files changed**:
+- `src/NoMercy.Server/Configuration/Swagger/ConfigureSwaggerOptions.cs` — new (moved from Swagger/)
+- `src/NoMercy.Server/Configuration/Swagger/SwaggerDefaultValues.cs` — new (moved from Swagger/)
+- `src/NoMercy.Server/Configuration/Swagger/SwaggerConfiguration.cs` — new (consolidates service + UI config)
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — updated imports and method call
+- `src/NoMercy.Server/Configuration/ApplicationConfiguration.cs` — updated imports and method call
+- `src/NoMercy.Server/Swagger/` — deleted
+
+**Test results**: Build succeeds with 0 errors. All 673 non-Api tests pass (218 repository + 28 media processing + 427 provider). Api test failures are pre-existing infrastructure issues, unchanged from baseline.

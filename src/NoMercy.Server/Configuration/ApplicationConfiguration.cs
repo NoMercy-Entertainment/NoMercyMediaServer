@@ -1,5 +1,4 @@
 using Asp.Versioning.ApiExplorer;
-using AspNetCore.Swagger.Themes;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;
@@ -19,6 +18,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.Helpers;
+using NoMercy.Server.Configuration.Swagger;
 using NoMercy.Queue.Jobs;
 using NoMercy.Queue.Workers;
 
@@ -35,7 +35,7 @@ public static class ApplicationConfiguration
         ConfigureStaticFiles(app);
         ConfigureDynamicStaticFiles(app);
         ConfigureEndpoints(app);
-        ConfigureSwaggerUi(app, provider);
+        SwaggerConfiguration.UseSwaggerUi(app, provider);
         ConfigureCronJobs(app);
     }
 
@@ -109,29 +109,6 @@ public static class ApplicationConfiguration
             }
 
             await next();
-        });
-    }
-
-    private static void ConfigureSwaggerUi(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI(ModernStyle.Dark, options =>
-        {
-            options.RoutePrefix = string.Empty;
-            options.DocumentTitle = "NoMercy MediaServer API";
-            options.OAuthClientId(Config.TokenClientId);
-            options.OAuthScopes("openid");
-            options.EnablePersistAuthorization();
-            options.EnableTryItOutByDefault();
-
-            IReadOnlyList<ApiVersionDescription> descriptions = provider.ApiVersionDescriptions;
-            foreach (ApiVersionDescription description in descriptions)
-            {
-                string groupName = $"v{description.ApiVersion.MajorVersion}";
-                string url = $"/swagger/{groupName}/swagger.json";
-                string name = groupName.ToUpperInvariant();
-                options.SwaggerEndpoint(url, name);
-            }
         });
     }
 
