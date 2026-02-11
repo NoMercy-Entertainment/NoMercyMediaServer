@@ -2213,3 +2213,22 @@ Fixed two cron job registration issues:
 - `SystemTextJson_IsNotConfigured_AsDuplicateSerializer` — verifies no `JsonStringEnumConverter` in System.Text.Json options (guards against reintroducing dual serializer)
 
 **Test results**: Build succeeds with 0 errors. All 5 new tests pass. Pre-existing API test failures unchanged (12 flaky vs 14 before — improved by 2).
+
+---
+
+## MED-19 — Fix duplicate RequestLocalization call
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Verified the duplicate `UseRequestLocalization()` call was already removed in commit `cbbcf3f` (HIGH-06). The original code had `UseRequestLocalization(localizationOptions)` in `ConfigureLocalization()` AND a bare `UseRequestLocalization()` in `ConfigureMiddleware()`. The HIGH-06 fix removed the second call.
+- Current state: only one `UseRequestLocalization` call exists (line 65, inside `ConfigureLocalization`). The custom `LocalizationMiddleware` at line 83 handles a separate concern (I18N.DotNet XML resource loading) and is not a duplicate.
+- Added a regression test to prevent reintroduction.
+
+**Files changed**:
+- `tests/NoMercy.Tests.Api/LocalizationMiddlewareTests.cs` — Added 1 new test
+
+**Tests added**:
+- `ApplicationConfiguration_HasSingleUseRequestLocalizationCall` — reads `ApplicationConfiguration.cs` source and asserts `UseRequestLocalization(` appears exactly once, guarding against reintroduction of the duplicate
+
+**Test results**: Build succeeds with 0 errors. New test passes. Pre-existing test failures unchanged.

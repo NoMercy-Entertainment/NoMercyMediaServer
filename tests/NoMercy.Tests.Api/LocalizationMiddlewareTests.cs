@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using NoMercy.Api.Middleware;
 using NoMercy.NmSystem;
@@ -8,6 +9,20 @@ namespace NoMercy.Tests.Api;
 [Trait("Category", "Unit")]
 public class LocalizationMiddlewareTests
 {
+    [Fact]
+    public void ApplicationConfiguration_HasSingleUseRequestLocalizationCall()
+    {
+        string sourceFile = Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+            "src", "NoMercy.Server", "AppConfig", "ApplicationConfiguration.cs");
+
+        string source = File.ReadAllText(Path.GetFullPath(sourceFile));
+
+        int count = Regex.Matches(source, @"UseRequestLocalization\s*\(").Count;
+
+        Assert.Equal(1, count);
+    }
+
     [Fact]
     public async Task InvokeAsync_SetsGlobalLocalizer_ForRequestLanguage()
     {
