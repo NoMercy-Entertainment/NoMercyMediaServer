@@ -14,6 +14,21 @@ using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Tests.Repositories.Infrastructure;
 
+public class TestDbContextFactory : IDbContextFactory<MediaContext>
+{
+    private readonly DbContextOptions<MediaContext> _options;
+
+    public TestDbContextFactory(DbContextOptions<MediaContext> options)
+    {
+        _options = options;
+    }
+
+    public MediaContext CreateDbContext()
+    {
+        return new TestMediaContext(_options);
+    }
+}
+
 public static class TestMediaContextFactory
 {
     public static MediaContext CreateContext(string? databaseName = null)
@@ -70,6 +85,38 @@ public static class TestMediaContextFactory
         return (context, interceptor);
     }
 
+    public static (IDbContextFactory<MediaContext> Factory, SqliteConnection Connection) CreateFactory(string? databaseName = null)
+    {
+        string dbName = databaseName ?? Guid.NewGuid().ToString();
+        string connectionString = $"DataSource={dbName};Mode=Memory;Cache=Shared";
+
+        // Keep a connection open to prevent the in-memory database from being destroyed
+        SqliteConnection keepAliveConnection = new(connectionString);
+        keepAliveConnection.Open();
+        keepAliveConnection.CreateFunction("normalize_search", (string? input) =>
+            input?.NormalizeSearch() ?? string.Empty);
+
+        // Enable WAL mode so concurrent connections don't block on CreateFunction
+        using (SqliteCommand walCmd = keepAliveConnection.CreateCommand())
+        {
+            walCmd.CommandText = "PRAGMA journal_mode=WAL;";
+            walCmd.ExecuteNonQuery();
+        }
+
+        DbContextOptions<MediaContext> options = new DbContextOptionsBuilder<MediaContext>()
+            .UseSqlite(connectionString, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .AddInterceptors(new SqliteNormalizeSearchInterceptor())
+            .Options;
+
+        // Ensure the schema is created
+        using (TestMediaContext initContext = new(options))
+        {
+            initContext.Database.EnsureCreated();
+        }
+
+        return (new TestDbContextFactory(options), keepAliveConnection);
+    }
+
     public static void SeedData(MediaContext context)
     {
         User testUser = new()
@@ -111,6 +158,25 @@ public static class TestMediaContextFactory
         };
         context.Folders.Add(movieFolder);
         context.FolderLibrary.Add(new FolderLibrary(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
+
+        EncoderProfile encoderProfile = new()
+        {
+            Id = SeedConstants.EncoderProfileId,
+            Name = "Default HLS",
+            Container = "hls"
+        };
+        context.EncoderProfiles.Add(encoderProfile);
+        context.EncoderProfileFolder.Add(new EncoderProfileFolder(SeedConstants.EncoderProfileId, SeedConstants.MovieFolderId));
+
+        Language english = new()
+        {
+            Id = 1,
+            Iso6391 = "en",
+            EnglishName = "English",
+            Name = "English"
+        };
+        context.Languages.Add(english);
+        context.LanguageLibrary.Add(new LanguageLibrary(1, SeedConstants.MovieLibraryId));
 
         Genre actionGenre = new() { Id = 28, Name = "Action" };
         Genre dramaGenre = new() { Id = 18, Name = "Drama" };

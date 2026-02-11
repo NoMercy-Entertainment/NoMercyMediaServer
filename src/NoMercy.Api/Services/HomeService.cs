@@ -113,16 +113,37 @@ public class HomeService
 
     public async Task<ComponentResponse> GetHomeData(Guid userId, string language, string country)
     {
-        // Run initial independent queries in parallel
-        Task<HashSet<UserData>> continueWatchingTask = _homeRepository
-            .GetContinueWatchingAsync(_mediaContext, userId, language, country);
-        Task<List<Genre>> genreItemsTask = _homeRepository
-            .GetHomeGenresAsync(_mediaContext, userId, language, Config.MaximumItemsPerPage);
-        Task<List<Library>> librariesTask = _homeRepository
-            .GetLibrariesAsync(_mediaContext, userId);
-        Task<int> animeCountTask = _homeRepository.GetAnimeCountAsync(_mediaContext, userId);
-        Task<int> movieCountTask = _homeRepository.GetMovieCountAsync(_mediaContext, userId);
-        Task<int> tvCountTask = _homeRepository.GetTvCountAsync(_mediaContext, userId);
+        // Run initial independent queries in parallel - each task gets its own DbContext for thread safety
+        Task<HashSet<UserData>> continueWatchingTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            return await _homeRepository.GetContinueWatchingAsync(context, userId, language, country);
+        });
+        Task<List<Genre>> genreItemsTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            return await _homeRepository.GetHomeGenresAsync(context, userId, language, Config.MaximumItemsPerPage);
+        });
+        Task<List<Library>> librariesTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            return await _homeRepository.GetLibrariesAsync(context, userId);
+        });
+        Task<int> animeCountTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            return await _homeRepository.GetAnimeCountAsync(context, userId);
+        });
+        Task<int> movieCountTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            return await _homeRepository.GetMovieCountAsync(context, userId);
+        });
+        Task<int> tvCountTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            return await _homeRepository.GetTvCountAsync(context, userId);
+        });
 
         await Task.WhenAll(continueWatchingTask, genreItemsTask, librariesTask, animeCountTask, movieCountTask, tvCountTask);
 
@@ -155,9 +176,17 @@ public class HomeService
                 new($"/genre/{genre.Id}", UriKind.Relative), source));
         }
 
-        // Fetch media data in parallel
-        Task<List<Tv>> tvDataTask = _homeRepository.GetHomeTvs(_mediaContext, tvIds, language, country);
-        Task<List<Movie>> movieDataTask = _homeRepository.GetHomeMovies(_mediaContext, movieIds, language, country);
+        // Fetch media data in parallel - each task gets its own DbContext for thread safety
+        Task<List<Tv>> tvDataTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            return await _homeRepository.GetHomeTvs(context, tvIds, language, country);
+        });
+        Task<List<Movie>> movieDataTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync();
+            return await _homeRepository.GetHomeMovies(context, movieIds, language, country);
+        });
 
         await Task.WhenAll(tvDataTask, movieDataTask);
 
