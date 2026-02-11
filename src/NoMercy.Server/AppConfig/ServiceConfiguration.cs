@@ -35,7 +35,7 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Queue;
 using NoMercy.Queue.Extensions;
 using NoMercy.Queue.Jobs;
-using NoMercy.Server.services;
+using NoMercy.Server.Services;
 using NoMercy.Server.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;

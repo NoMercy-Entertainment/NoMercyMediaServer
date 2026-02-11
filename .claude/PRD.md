@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 3, item REORG-01
+**Next up**: Phase 3, item REORG-02
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -135,7 +135,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 ### Phase 3: Restructure
 Details: [09-code-organization.md](prd/09-code-organization.md)
 
-- [ ] REORG-01 — Rename `services/` to `Services/` in NoMercy.Server
+- [x] REORG-01 — Rename `services/` to `Services/` in NoMercy.Server
 - [ ] REORG-02 — Rename `Socket/music/` → `Hubs/` + move services
 - [ ] REORG-03 — Rename `Socket/video/` → same pattern
 - [ ] REORG-04 — Consolidate all DTOs into `NoMercy.Api/DTOs/`

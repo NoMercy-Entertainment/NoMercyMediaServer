@@ -4,7 +4,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup;
 using Serilog.Events;
 
-namespace NoMercy.Server.services;
+namespace NoMercy.Server.Services;
 
 public class ServerRegistrationService : IHostedService, IDisposable
 {

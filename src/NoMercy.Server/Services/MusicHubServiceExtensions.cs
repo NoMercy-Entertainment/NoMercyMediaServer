@@ -1,7 +1,7 @@
 using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Controllers.Socket.music;
 
-namespace NoMercy.Server.services;
+namespace NoMercy.Server.Services;
 
 public static class MusicHubServiceExtensions
 {

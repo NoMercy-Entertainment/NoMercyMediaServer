@@ -2297,3 +2297,34 @@ Fixed two cron job registration issues:
 - `tests/NoMercy.Tests.Repositories/GenreRepositoryTests.cs` — Updated method names
 
 **Test results**: Build succeeds with 0 errors. All 843 non-flaky tests pass (143 Database + 212 Repositories + 292 Queue + 150 Encoder + 18 Networking + 28 MediaProcessing). Pre-existing API (SQLite disk I/O) and Provider (TMDB language) failures unchanged.
+
+---
+
+## REORG-01 — Rename `services/` to `Services/` in NoMercy.Server
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Renamed `src/NoMercy.Server/services/` directory to `src/NoMercy.Server/Services/` (PascalCase) via `git mv`
+- Updated namespace in all 4 files from `NoMercy.Server.services` to `NoMercy.Server.Services`:
+  - `CloudflareTunnelService.cs`
+  - `MusicHubServiceExtensions.cs`
+  - `ServerRegistrationService.cs`
+  - `VideoHubServiceExtensions.cs`
+- Updated the `using` statement in `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs` from `NoMercy.Server.services` to `NoMercy.Server.Services`
+- Added `tests/NoMercy.Tests.Api/ServerServicesNamespaceTests.cs` — 5 tests verifying:
+  - All 4 types are in the `NoMercy.Server.Services` namespace (PascalCase)
+  - `CloudflareTunnelService` implements `IHostedService`
+  - `ServerRegistrationService` implements `IHostedService` and `IDisposable`
+  - `MusicHubServiceExtensions` has `AddMusicHubServices` static method
+  - `VideoHubServiceExtensions` has `AddVideoHubServices` static method
+
+**Files changed**:
+- `src/NoMercy.Server/Services/CloudflareTunnelService.cs` — namespace rename
+- `src/NoMercy.Server/Services/MusicHubServiceExtensions.cs` — namespace rename
+- `src/NoMercy.Server/Services/ServerRegistrationService.cs` — namespace rename
+- `src/NoMercy.Server/Services/VideoHubServiceExtensions.cs` — namespace rename
+- `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs` — using statement update
+- `tests/NoMercy.Tests.Api/ServerServicesNamespaceTests.cs` — new test file
+
+**Test results**: Build succeeds with 0 errors. All 848 non-flaky tests pass (143 Database + 212 Repositories + 292 Queue + 150 Encoder + 18 Networking + 28 MediaProcessing + 5 new namespace tests). Pre-existing API and Provider failures unchanged.

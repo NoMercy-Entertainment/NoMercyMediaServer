@@ -4,7 +4,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
-namespace NoMercy.Server.services;
+namespace NoMercy.Server.Services;
 
 public sealed class CloudflareTunnelService : IHostedService
 {
