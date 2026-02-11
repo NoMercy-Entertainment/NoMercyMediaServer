@@ -118,6 +118,52 @@ public class LibraryRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLibraryMovieCardsAsync_TakeMatchesCarouselSize()
+    {
+        // Verify that Take limits results to the requested carousel size
+        List<MovieCardDto> allCards = await _repository.GetLibraryMovieCardsAsync(
+            SeedConstants.UserId, SeedConstants.MovieLibraryId, "US", 100, 0);
+        Assert.Equal(2, allCards.Count);
+
+        List<MovieCardDto> limitedCards = await _repository.GetLibraryMovieCardsAsync(
+            SeedConstants.UserId, SeedConstants.MovieLibraryId, "US", 1, 0);
+        Assert.Single(limitedCards);
+    }
+
+    [Fact]
+    public async Task GetLibraryTvCardsAsync_TakeMatchesCarouselSize()
+    {
+        List<TvCardDto> allCards = await _repository.GetLibraryTvCardsAsync(
+            SeedConstants.UserId, SeedConstants.TvLibraryId, "US", 100, 0);
+        Assert.Single(allCards);
+
+        List<TvCardDto> limitedCards = await _repository.GetLibraryTvCardsAsync(
+            SeedConstants.UserId, SeedConstants.TvLibraryId, "US", 1, 0);
+        Assert.Single(limitedCards);
+    }
+
+    [Fact]
+    public async Task GetLibraryByIdAsync_Paginated_TakeLimitsMoviesPerCarousel()
+    {
+        // The .Take(take) inside Include() limits movies per-carousel
+        Library? library = await _repository.GetLibraryByIdAsync(
+            SeedConstants.MovieLibraryId, SeedConstants.UserId, "en", "US", 1, 0);
+
+        Assert.NotNull(library);
+        Assert.Single(library.LibraryMovies);
+    }
+
+    [Fact]
+    public async Task GetLibraryByIdAsync_Paginated_TakeReturnsAllWhenHigherThanCount()
+    {
+        Library? library = await _repository.GetLibraryByIdAsync(
+            SeedConstants.MovieLibraryId, SeedConstants.UserId, "en", "US", 100, 0);
+
+        Assert.NotNull(library);
+        Assert.Equal(2, library.LibraryMovies.Count);
+    }
+
+    [Fact]
     public async Task AddLibraryAsync_CreatesLibrary()
     {
         Ulid newLibraryId = Ulid.NewUlid();

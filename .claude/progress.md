@@ -2092,3 +2092,29 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
   - `MemoryCache_AcceptsEntries_WithSize` — verifies entries with explicit Size are accepted and retrievable
 
 **Test results**: Build succeeds with 0 errors. All 4 new MemoryCacheConfigurationTests pass. All non-API test projects pass (208 Repositories, 28 MediaProcessing, 421 Providers). Pre-existing API test failures unchanged.
+
+---
+
+## HIGH-02 — Fix pagination inside Include()
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Investigated `GetLibraryByIdAsync` paginated overload (lines 66-108) in `LibraryRepository.cs` which uses `.Take(take)` inside `Include()` for `LibraryMovies` and `LibraryTvs`
+- Confirmed this is **intentional carousel behavior** — limits items per-carousel (e.g. 10 for mobile, 6 for TV) to prevent loading entire library into memory
+- Discovered the paginated overload is **no longer called from production code** — all endpoints now use the optimized projection-based `GetLibraryMovieCardsAsync`/`GetLibraryTvCardsAsync` which use proper `Skip()`/`Take()` at the query root level
+- The `page` parameter in the paginated overload is accepted but never applied in the query — confirming it's dead/incomplete code
+
+**Changes**:
+1. `src/NoMercy.Data/Repositories/LibraryRepository.cs` — Added XML doc comment to the paginated `GetLibraryByIdAsync` overload documenting:
+   - The `.Take(take)` inside `Include()` is intentional per-carousel limiting
+   - The `page` parameter is currently unused
+   - New code should prefer `GetLibraryMovieCardsAsync`/`GetLibraryTvCardsAsync` which use projection and proper pagination
+
+2. `tests/NoMercy.Tests.Repositories/LibraryRepositoryTests.cs` — Added 4 new tests:
+   - `GetLibraryMovieCardsAsync_TakeMatchesCarouselSize` — verifies Take limits results correctly (100 returns all 2, 1 returns 1)
+   - `GetLibraryTvCardsAsync_TakeMatchesCarouselSize` — verifies Take limits TV results correctly
+   - `GetLibraryByIdAsync_Paginated_TakeLimitsMoviesPerCarousel` — verifies `.Take(1)` inside Include() limits LibraryMovies to 1
+   - `GetLibraryByIdAsync_Paginated_TakeReturnsAllWhenHigherThanCount` — verifies `.Take(100)` returns all 2 movies
+
+**Test results**: Build succeeds with 0 errors. All 4 new tests pass. All 212 repository tests pass. Pre-existing API test failures unchanged.

@@ -63,6 +63,13 @@ public class LibraryRepository(MediaContext context)
             .ToListAsync(ct);
     }
 
+    /// <summary>
+    /// Gets a library with its movies and TV shows limited to <paramref name="take"/> items each.
+    /// The .Take(take) inside Include() is intentional: it limits items per-carousel (e.g. 10 for mobile, 6 for TV)
+    /// to prevent loading the entire library into memory. The <paramref name="page"/> parameter is currently unused.
+    /// Prefer <see cref="GetLibraryMovieCardsAsync"/> and <see cref="GetLibraryTvCardsAsync"/> for new code —
+    /// they use projection and proper Skip/Take pagination.
+    /// </summary>
     public Task<Library?> GetLibraryByIdAsync(Ulid libraryId, Guid userId, string language, string country, int take, int page, CancellationToken ct = default)
     {
         return context.Libraries
