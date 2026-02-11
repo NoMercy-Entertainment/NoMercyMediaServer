@@ -2598,3 +2598,36 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - `NoMercy.Server.sln` — updated (added both projects)
 
 **Test results**: Build succeeds with 0 errors. All 10 new events tests pass. All 673 non-Api tests pass. Api test failures (12) are pre-existing, unchanged from baseline.
+
+---
+
+## EVT-02 — Implement InMemoryEventBus
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Created `src/NoMercy.Events/InMemoryEventBus.cs` — thread-safe in-process event bus implementing `IEventBus`
+  - Uses `ConcurrentDictionary<Type, List<Delegate>>` for handler storage
+  - Lock-protected list mutations and snapshot-based iteration during publish
+  - Supports both delegate and `IEventHandler<T>` subscription
+  - Returns `IDisposable` subscription tokens with idempotent dispose
+  - Cancellation token support — stops processing on cancellation
+  - Exception propagation — handler errors bubble up to publisher
+- Created `tests/NoMercy.Tests.Events/InMemoryEventBusTests.cs` — 11 tests:
+  - No subscribers doesn't throw
+  - Delegate subscriber receives events
+  - IEventHandler subscriber receives events
+  - Multiple subscribers all invoked in order
+  - Different event types only reach matching handlers
+  - Dispose unsubscribes handler
+  - Double dispose is safe
+  - Cancellation stops handler chain
+  - Handler exceptions propagate
+  - IEventHandler dispose stops delivery
+  - Concurrent publish delivers all events
+
+**Files changed**:
+- `src/NoMercy.Events/InMemoryEventBus.cs` — new
+- `tests/NoMercy.Tests.Events/InMemoryEventBusTests.cs` — new (11 tests)
+
+**Test results**: Build succeeds with 0 errors. All 21 events tests pass. All non-Api tests pass. Api and Provider test failures are pre-existing (auth infrastructure / network flakes).
