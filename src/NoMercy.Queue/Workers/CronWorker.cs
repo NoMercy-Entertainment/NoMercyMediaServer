@@ -90,6 +90,12 @@ public class CronWorker : BackgroundService
 
     private void StartJobWorker(CronJob job)
     {
+        if (_jobCancellationTokens.TryGetValue(job.JobType, out CancellationTokenSource? existingCts))
+        {
+            _logger.LogDebug("Worker already running for job: {JobName}, skipping duplicate registration", job.Name);
+            return;
+        }
+
         CancellationTokenSource cts = new();
         _jobCancellationTokens[job.JobType] = cts;
 

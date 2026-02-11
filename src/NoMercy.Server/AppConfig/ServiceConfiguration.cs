@@ -202,35 +202,20 @@ public static class ServiceConfiguration
 
     private static void ConfigureCronJobs(IServiceCollection services)
     {
-        services.AddScoped<CertificateRenewalJob>();
         services.RegisterCronJob<CertificateRenewalJob>("certificate-renewal");
-        
-        services.AddScoped<TvPaletteCronJob>();
+
         services.RegisterCronJob<TvPaletteCronJob>("tv-palette-job");
-        services.AddScoped<SeasonPaletteCronJob>();
         services.RegisterCronJob<SeasonPaletteCronJob>("season-palette-job");
-        services.AddScoped<EpisodePaletteCronJob>();
         services.RegisterCronJob<EpisodePaletteCronJob>("episode-palette-job");
-        services.AddScoped<MoviePaletteCronJob>();
         services.RegisterCronJob<MoviePaletteCronJob>("movie-palette-job");
-        services.AddScoped<CollectionPaletteCronJob>();
         services.RegisterCronJob<CollectionPaletteCronJob>("collection-palette-job");
-        services.AddScoped<PersonPaletteCronJob>();
         services.RegisterCronJob<PersonPaletteCronJob>("person-palette-job");
-        
-        services.AddScoped<ImagePaletteCronJob>();
+
         services.RegisterCronJob<ImagePaletteCronJob>("image-palette-job");
-        services.AddScoped<RecommendationPaletteCronJob>();
         services.RegisterCronJob<RecommendationPaletteCronJob>("recommendation-palette-job");
-        services.AddScoped<SimilarPaletteCronJob>();
         services.RegisterCronJob<SimilarPaletteCronJob>("similar-palette-job");
-        
-        services.AddScoped<FanartArtistImagesCronJob>();
+
         services.RegisterCronJob<FanartArtistImagesCronJob>("fanart-images-job");
-        // services.AddScoped<ArtistPaletteCronJob>();
-        // services.RegisterCronJob<ArtistPaletteCronJob>("artist-palette-job");
-        // services.AddScoped<AlbumPaletteCronJob>();
-        // services.RegisterCronJob<AlbumPaletteCronJob>("album-palette-job");
     }
     
 

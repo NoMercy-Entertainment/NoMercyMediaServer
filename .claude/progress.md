@@ -2141,3 +2141,29 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
    - `GenerateFileName_ReturnsDifferentHashForDifferentUrls` — verifies different URLs produce different hashes
 
 **Test results**: Build succeeds with 0 errors. All 6 new tests pass. All 427 provider tests pass (5 pre-existing TMDB API integration failures unchanged). Pre-existing API test failures unchanged.
+
+---
+
+## HIGH-13 — Fix cron jobs double registration
+
+**Date**: 2026-02-11
+
+**What was done**:
+Fixed two cron job registration issues:
+
+1. **Duplicate DI registration in `ServiceConfiguration.ConfigureCronJobs()`**: Each cron job was registered twice — once via explicit `services.AddScoped<T>()` and again via `services.RegisterCronJob<T>()` (which internally calls `AddScoped<T>()`). Removed the redundant explicit `AddScoped<T>()` calls, leaving only the `RegisterCronJob<T>()` calls.
+
+2. **Worker duplication guard in `CronWorker.StartJobWorker()`**: `StartJobWorker()` could be called multiple times for the same job type — once from `ApplicationConfiguration.ConfigureCronJobs()` and again from `CronWorker.StartDatabaseJobWorkers()` when the same job exists in the database. The second call would overwrite the task/CTS references in the dictionaries, orphaning the first worker (which would keep running untracked). Added a guard that skips `StartJobWorker` if a worker for that job type already exists.
+
+**Files changed**:
+- `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs` — Removed 11 duplicate `services.AddScoped<T>()` calls from `ConfigureCronJobs()`
+- `src/NoMercy.Queue/Workers/CronWorker.cs` — Added duplicate-guard in `StartJobWorker()` to skip if a worker already exists for the given job type
+
+**Tests added**: `tests/NoMercy.Tests.Queue/CronWorkerRegistrationTests.cs` — 5 new tests:
+- `RegisterCronJob_RegistersTypeOnceInDI` — verifies DI resolves registered types
+- `RegisterJob_CalledTwiceWithSameType_StartsOnlyOneWorker` — verifies duplicate `RegisterJob` is safely skipped
+- `RegisterJobWithSchedule_CalledTwiceWithSameType_StartsOnlyOneWorker` — verifies duplicate `RegisterJobWithSchedule` is safely skipped
+- `RegisterJob_DifferentJobTypes_StartsOneWorkerEach` — verifies distinct job types both register successfully
+- `StopAsync_AfterDuplicateRegistration_CleansUpWithoutOrphanedTasks` — verifies clean shutdown after duplicate attempts
+
+**Test results**: Build succeeds with 0 errors. All 5 new tests pass. All 292 queue tests pass. Pre-existing API test failures unchanged.
