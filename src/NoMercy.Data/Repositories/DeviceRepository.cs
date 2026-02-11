@@ -7,7 +7,7 @@ namespace NoMercy.Data.Repositories;
 
 public class DeviceRepository(MediaContext context)
 {
-    public IIncludableQueryable<Device, ICollection<ActivityLog>> GetDevicesAsync()
+    public IIncludableQueryable<Device, ICollection<ActivityLog>> GetDevices()
     {
         return context.Devices
             .Include(device => device.ActivityLogs);

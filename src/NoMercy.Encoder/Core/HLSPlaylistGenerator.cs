@@ -112,7 +112,7 @@ public static class HlsPlaylistGenerator
                         isSdr = false;
                 }
             }
-            catch { }
+            catch (Exception ex) { Logger.App($"Failed to parse resolution from folder {folderName}: {ex.Message}"); }
 
             // Simple folder name convention for HDR detection:
             // If NO folders have _SDR or _HDR suffix at all, treat everything as SDR (preventive measure)
@@ -142,11 +142,11 @@ public static class HlsPlaylistGenerator
             if (detectedHdr)
             {
                 isSdr = false;
-                try { Logger.App($"HDR: {folderName} - {detectedReason}"); } catch { }
+                Logger.App($"HDR: {folderName} - {detectedReason}");
             }
             else
             {
-                try { Logger.App($"SDR: {folderName} - {detectedReason}"); } catch { }
+                Logger.App($"SDR: {folderName} - {detectedReason}");
             }
 
             // Get codec info for CODECS attribute (simplified - probe one file)
@@ -169,7 +169,7 @@ public static class HlsPlaylistGenerator
                         string? firstTs = Directory.EnumerateFiles(folderPath, "*.ts").FirstOrDefault();
                         if (!string.IsNullOrEmpty(firstTs)) probeTarget = firstTs;
                     }
-                    catch { }
+                    catch (Exception ex) { Logger.App($"Failed to enumerate .ts files in {folderPath}: {ex.Message}"); }
 
                     string probeResult = (await Shell.ExecStdOutAsync(AppFiles.FfProbePath,
                         $"-v error -select_streams v:0 -show_entries stream=profile,level,r_frame_rate -of default=noprint_wrappers=1:nokey=1 \"{probeTarget}\"")).Trim();
@@ -182,7 +182,7 @@ public static class HlsPlaylistGenerator
                         if (parts.Length > 2) frameRateStr = parts[2].Trim();
                     }
                 }
-                catch { }
+                catch (Exception ex) { Logger.App($"Failed to probe codec info for {videoFile}: {ex.Message}"); }
 
                 duration = await GetVideoDurationAsync(videoFile);
             }
@@ -302,12 +302,12 @@ public static class HlsPlaylistGenerator
             foreach (string segmentFile in segmentFiles)
             {
                 try { totalSize += new FileInfo(segmentFile).Length; }
-                catch { }
+                catch (Exception) { /* File may have been deleted between enumeration and access */ }
             }
 
             return totalSize;
         }
-        catch { return 0; }
+        catch (Exception) { return 0; }
     }
 
     private static async Task<double> GetVideoDurationAsync(string videoPath)
@@ -382,7 +382,7 @@ public static class HlsPlaylistGenerator
                 return rate;
             }
         }
-        catch { }
+        catch (Exception ex) { Logger.App($"Failed to parse frame rate '{frameRateStr}': {ex.Message}"); }
 
         return 0.0;
     }

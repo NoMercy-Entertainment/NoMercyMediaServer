@@ -162,11 +162,11 @@ public class QueryOutputTests : IDisposable
     #region GenreRepository
 
     [Fact]
-    public void GenreRepository_GetGenresAsync_ToQueryString_ContainsExpectedClauses()
+    public void GenreRepository_GetGenres_ToQueryString_ContainsExpectedClauses()
     {
         GenreRepository repository = new(_context);
 
-        IQueryable<Genre> query = repository.GetGenresAsync(SeedConstants.UserId, "en", 10, 0);
+        IQueryable<Genre> query = repository.GetGenres(SeedConstants.UserId, "en", 10, 0);
         string sql = query.ToQueryString();
 
         Assert.NotEmpty(sql);
@@ -718,13 +718,13 @@ public class QueryOutputTests : IDisposable
     #region DeviceRepository
 
     [Fact]
-    public async Task DeviceRepository_GetDevicesAsync_GeneratesExpectedSql()
+    public async Task DeviceRepository_GetDevices_GeneratesExpectedSql()
     {
         DeviceRepository repository = new(_context);
         _interceptor.Clear();
 
         // Execute the query to capture all split queries
-        await repository.GetDevicesAsync().ToListAsync();
+        await repository.GetDevices().ToListAsync();
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);

@@ -349,12 +349,12 @@ public static class Binaries
         
         await Downloader.DeleteSourceDownload(destinationPath);
         
-        IEnumerable<Uri> downloadUrls = releaseInfo.Assets
+        List<Uri> downloadUrls = releaseInfo.Assets
             .Where(a => a.Name.Contains(modelName, StringComparison.OrdinalIgnoreCase))
             .Select(a => a.BrowserDownloadUrl)
             .ToList();
 
-        if (!downloadUrls.Any())
+        if (downloadUrls.Count == 0)
         {
             Logger.Setup($"No assets found for model {modelName} in WhisperGmmlModels release.", LogEventLevel.Error);
             return;
@@ -366,7 +366,7 @@ public static class Binaries
             paths.Add(await Downloader.DownloadFile("WhisperGmmlModels", downloadUrl));
         }
 
-        if (downloadUrls.Count() > 1)
+        if (downloadUrls.Count > 1)
         {
             string outputPath = await ConcatenateModelParts(modelName, downloadUrls);
             

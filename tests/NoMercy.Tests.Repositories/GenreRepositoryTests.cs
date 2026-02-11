@@ -58,9 +58,9 @@ public class GenreRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetGenresAsync_ReturnsGenresForUser()
+    public async Task GetGenres_ReturnsGenresForUser()
     {
-        List<Genre> genres = await _repository.GetGenresAsync(
+        List<Genre> genres = await _repository.GetGenres(
             SeedConstants.UserId, "en", 10, 0).ToListAsync();
 
         Assert.Equal(2, genres.Count);
@@ -69,9 +69,9 @@ public class GenreRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetGenresAsync_ReturnsEmpty_WhenUserHasNoAccess()
+    public async Task GetGenres_ReturnsEmpty_WhenUserHasNoAccess()
     {
-        List<Genre> genres = await _repository.GetGenresAsync(
+        List<Genre> genres = await _repository.GetGenres(
             SeedConstants.OtherUserId, "en", 10, 0).ToListAsync();
 
         Assert.Empty(genres);
@@ -97,9 +97,9 @@ public class GenreRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetGenresAsync_RespectsPageAndTake()
+    public async Task GetGenres_RespectsPageAndTake()
     {
-        List<Genre> genres = await _repository.GetGenresAsync(
+        List<Genre> genres = await _repository.GetGenres(
             SeedConstants.UserId, "en", 1, 0).ToListAsync();
 
         Assert.Single(genres);

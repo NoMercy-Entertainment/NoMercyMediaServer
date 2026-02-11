@@ -64,7 +64,7 @@ public class GenreRepository(MediaContext context)
             .FirstOrDefaultAsync(ct);
     }
 
-    public IQueryable<Genre> GetGenresAsync(Guid userId, string language, int take, int page)
+    public IQueryable<Genre> GetGenres(Guid userId, string language, int take, int page)
     {
         return context.Genres
             .AsNoTracking()

@@ -232,7 +232,7 @@ public class BaseController : Controller
     protected IActionResult GetPaginatedResponse<T>(IEnumerable<T> data, [FromQuery] PageRequestDto request)
     {
         List<T> newData = data.ToList();
-        bool hasMore = newData.Count() >= request.Take;
+        bool hasMore = newData.Count >= request.Take;
 
         newData = newData.Take(request.Take).ToList();
 

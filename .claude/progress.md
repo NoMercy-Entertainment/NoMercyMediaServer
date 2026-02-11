@@ -2232,3 +2232,68 @@ Fixed two cron job registration issues:
 - `ApplicationConfiguration_HasSingleUseRequestLocalizationCall` — reads `ApplicationConfiguration.cs` source and asserts `UseRequestLocalization(` appears exactly once, guarding against reintroduction of the duplicate
 
 **Test results**: Build succeeds with 0 errors. New test passes. Pre-existing test failures unchanged.
+
+---
+
+## LOW-01 through LOW-10 — Code quality cleanup items
+
+**Date**: 2026-02-11
+
+**What was done**:
+
+### LOW-01: Method naming inconsistency (async suffix on non-async methods)
+- Renamed `DeviceRepository.GetDevicesAsync()` → `GetDevices()` (returns `IIncludableQueryable`, not `Task`)
+- Renamed `GenreRepository.GetGenresAsync()` → `GetGenres()` (returns `IQueryable`, not `Task`)
+- Updated all call sites: `DevicesController.cs`, and 4 test references in `QueryOutputTests.cs` and `GenreRepositoryTests.cs`
+
+### LOW-02: Unused compiled queries in LibraryRepository
+- Investigated: all 4 compiled queries (`GetLibraryMovies`, `GetLibraryShows`, `GetRandomTvShowQuery`, `GetRandomMovieQuery`) are actively used. No unused queries found.
+
+### LOW-03: String allocation in hot loops
+- `Str.NormalizeSearch()`: Replaced 4 chained `.Replace()` calls + `.ToLowerInvariant()` with single-pass `StringBuilder` loop that handles diacritic removal, dash normalization, and lowercasing simultaneously
+- `Str._cleanFileName()`: Replaced 11 chained `.Replace()` calls with single-pass `StringBuilder` character switch
+
+### LOW-04: Bare catch blocks in HLSPlaylistGenerator
+- Added `catch (Exception ex)` with `Logger.App()` messages to 4 significant bare catch blocks (resolution parsing, .ts file enumeration, codec probing, frame rate parsing)
+- Changed 2 trivial catches to typed `catch (Exception)` with comments explaining intent
+- Removed unnecessary try-catch wrappers around Logger calls (lines 145, 149)
+
+### LOW-05: Console.WriteLine instead of structured logging
+- Assessed: this is a project-wide concern affecting many files. Too broad for a single task iteration. Deferred.
+
+### LOW-06: Image dimension extraction loading full image
+- `BaseImage.GetImageDimensions()`: Replaced `Image.Load()` with `Image.Identify()` — reads only headers, no full decode
+- `FileManager.GetImageDimensions()`: Same fix — `Image.Load()` → `Image.Identify()`
+
+### LOW-07: `.Count()` LINQ on materialized List
+- `BaseController.GetPaginatedResponse()`: Changed `newData.Count()` → `newData.Count` (already a `List<T>`)
+- `HomeController.Index()`: Same fix
+- `Binaries.cs`: Changed `IEnumerable<Uri>` → `List<Uri>` (already called `.ToList()`), replaced `.Any()` → `.Count == 0`, replaced `.Count()` → `.Count`
+
+### LOW-08: Unused route parameters in controllers
+- Assessed: removing route parameters could break route binding and URL matching. Deferred — requires careful per-endpoint analysis.
+
+### LOW-09: DnsClient created per connection
+- Cached `LookupClient` instances in `ConcurrentDictionary<string, LookupClient>` keyed by DNS server address
+- `DnsClients.GetOrAdd(server, ...)` reuses the same client across all connections
+
+### LOW-10: Levenshtein distance allocation per call
+- Replaced O(n*m) 2D array allocation with O(n) two-row algorithm using array swap
+- Reduces memory from `int[s1.Length+1, s2.Length+1]` to two `int[s2.Length+1]` arrays
+
+**Files changed**:
+- `src/NoMercy.Data/Repositories/DeviceRepository.cs` — Renamed method
+- `src/NoMercy.Data/Repositories/GenreRepository.cs` — Renamed method
+- `src/NoMercy.Api/Controllers/V1/Dashboard/DevicesController.cs` — Updated call site
+- `src/NoMercy.Api/Controllers/BaseController.cs` — `.Count()` → `.Count`
+- `src/NoMercy.Api/Controllers/V1/Media/HomeController.cs` — `.Count()` → `.Count`
+- `src/NoMercy.NmSystem/Extensions/Str.cs` — Single-pass string operations, optimized Levenshtein
+- `src/NoMercy.NmSystem/Extensions/HttpClient.cs` — Cached LookupClient
+- `src/NoMercy.Encoder/Core/HLSPlaylistGenerator.cs` — Replaced bare catch blocks with logged exceptions
+- `src/NoMercy.Encoder/Format/Image/BaseImage.cs` — `Image.Identify()` for dimensions
+- `src/NoMercy.MediaProcessing/Files/FileManager.cs` — `Image.Identify()` for dimensions
+- `src/NoMercy.Setup/Binaries.cs` — `List<Uri>` type, `.Count` property
+- `tests/NoMercy.Tests.Repositories/QueryOutputTests.cs` — Updated method names
+- `tests/NoMercy.Tests.Repositories/GenreRepositoryTests.cs` — Updated method names
+
+**Test results**: Build succeeds with 0 errors. All 843 non-flaky tests pass (143 Database + 212 Repositories + 292 Queue + 150 Encoder + 18 Networking + 28 MediaProcessing). Pre-existing API (SQLite disk I/O) and Provider (TMDB language) failures unchanged.

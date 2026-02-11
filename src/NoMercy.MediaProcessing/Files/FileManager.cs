@@ -584,9 +584,9 @@ public partial class FileManager(
 
     private static (int Width, int Height) GetImageDimensions(string filePath)
     {
-        using Image image = Image.Load(filePath);
+        SixLabors.ImageSharp.ImageInfo info = Image.Identify(filePath);
 
-        return (image.Width, image.Height);
+        return (info.Width, info.Height);
     }
 
     private static (int Width, int Height) GetImageDimensionsFromVtt(string filePath)

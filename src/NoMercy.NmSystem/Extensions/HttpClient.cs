@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using DnsClient;
@@ -6,6 +7,8 @@ namespace NoMercy.NmSystem.Extensions;
 
 public static class HttpClient
 {
+    private static readonly ConcurrentDictionary<string, LookupClient> DnsClients = new();
+
     public static System.Net.Http.HttpClient WithDns(string? dnsServer = null)
     {
         string server = dnsServer ?? Information.Config.DnsServer;
@@ -16,7 +19,7 @@ public static class HttpClient
                 IPHostEntry hostEntry;
                 if (!string.IsNullOrEmpty(server))
                 {
-                    LookupClient dnsClient = new(IPAddress.Parse(server));
+                    LookupClient dnsClient = DnsClients.GetOrAdd(server, s => new LookupClient(IPAddress.Parse(s)));
                     IDnsQueryResponse? result = await dnsClient.QueryAsync(context.DnsEndPoint.Host, QueryType.A,
                         cancellationToken: token);
                     IPAddress? address = result.Answers.ARecords().FirstOrDefault()?.Address;

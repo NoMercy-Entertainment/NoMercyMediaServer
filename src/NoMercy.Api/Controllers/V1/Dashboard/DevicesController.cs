@@ -33,7 +33,7 @@ public class DevicesController : BaseController
         if (!User.IsModerator())
             return Task.FromResult(UnauthorizedResponse("You do not have permission to view devices"));
 
-        IIncludableQueryable<Device, ICollection<ActivityLog>> devices = _deviceRepository.GetDevicesAsync();
+        IIncludableQueryable<Device, ICollection<ActivityLog>> devices = _deviceRepository.GetDevices();
 
         DevicesDto[] devicesDtos = devices
             .Select(x => new DevicesDto

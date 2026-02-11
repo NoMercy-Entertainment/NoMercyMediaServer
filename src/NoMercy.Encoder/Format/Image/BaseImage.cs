@@ -157,8 +157,8 @@ public class BaseImage : Classes
 
     public (int width, int height) GetImageDimensions(string imagePath)
     {
-        using SixLabors.ImageSharp.Image image = SixLabors.ImageSharp.Image.Load(imagePath);
-        return (image.Width, image.Height);
+        SixLabors.ImageSharp.ImageInfo info = SixLabors.ImageSharp.Image.Identify(imagePath);
+        return (info.Width, info.Height);
     }
 
     public async Task BuildSprite(ProgressMeta progressMeta)

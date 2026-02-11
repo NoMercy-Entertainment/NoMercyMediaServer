@@ -49,7 +49,7 @@ public class HomeController : BaseController
         List<GenreRowDto<GenreRowItemDto>> result = await _homeService.GetHomePageContent(userId, language, country, request);
 
         List<GenreRowDto<GenreRowItemDto>> newData = result.ToList();
-        bool hasMore = newData.Count() >= request.Take;
+        bool hasMore = newData.Count >= request.Take;
 
         newData = newData.Take(request.Take).ToList();
 
