@@ -2568,3 +2568,33 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - `src/NoMercy.Server/Swagger/` — deleted
 
 **Test results**: Build succeeds with 0 errors. All 673 non-Api tests pass (218 repository + 28 media processing + 427 provider). Api test failures are pre-existing infrastructure issues, unchanged from baseline.
+
+---
+
+## EVT-01 — Create NoMercy.Events project with IEventBus, IEvent, IEventHandler
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Created `src/NoMercy.Events/` project (net9.0 class library) with the core event-driven infrastructure interfaces and base class
+- Created `IEvent.cs` — interface defining the contract for all domain events (EventId, Timestamp, Source)
+- Created `IEventHandler<TEvent>.cs` — contravariant generic interface for typed event handlers
+- Created `IEventBus.cs` — interface with PublishAsync and two Subscribe overloads (delegate and IEventHandler)
+- Created `EventBase.cs` — abstract base class implementing IEvent with auto-generated EventId and Timestamp
+- Added project to solution under Src folder
+- Created `tests/NoMercy.Tests.Events/` test project with FluentAssertions
+- Created `EventBaseTests.cs` — 4 tests verifying unique IDs, timestamp assignment, IEvent implementation, and derived class properties
+- Created `InterfaceContractTests.cs` — 6 tests verifying IEvent properties, IEventBus method signatures, Subscribe return types, IEventHandler contravariance, and handler implementation
+
+**Files changed**:
+- `src/NoMercy.Events/NoMercy.Events.csproj` — new project
+- `src/NoMercy.Events/IEvent.cs` — new
+- `src/NoMercy.Events/IEventHandler.cs` — new
+- `src/NoMercy.Events/IEventBus.cs` — new
+- `src/NoMercy.Events/EventBase.cs` — new
+- `tests/NoMercy.Tests.Events/NoMercy.Tests.Events.csproj` — new test project
+- `tests/NoMercy.Tests.Events/EventBaseTests.cs` — new (4 tests)
+- `tests/NoMercy.Tests.Events/InterfaceContractTests.cs` — new (6 tests)
+- `NoMercy.Server.sln` — updated (added both projects)
+
+**Test results**: Build succeeds with 0 errors. All 10 new events tests pass. All 673 non-Api tests pass. Api test failures (12) are pre-existing, unchanged from baseline.

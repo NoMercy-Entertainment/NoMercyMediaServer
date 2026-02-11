@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 4, item EVT-01
+**Next up**: Phase 4, item EVT-02
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -149,7 +149,7 @@ Details: [09-code-organization.md](prd/09-code-organization.md)
 ### Phase 4-6: Architecture
 Details: [10-event-driven.md](prd/10-event-driven.md) | [11-plugin-system.md](prd/11-plugin-system.md) | [12-queue-decoupling.md](prd/12-queue-decoupling.md)
 
-- [ ] EVT-01 — Create NoMercy.Events project
+- [x] EVT-01 — Create NoMercy.Events project
 - [ ] EVT-02 — Implement InMemoryEventBus
 - [ ] EVT-04 — Define all domain event classes
 - [ ] EVT-05 — Add events to media scan pipeline
