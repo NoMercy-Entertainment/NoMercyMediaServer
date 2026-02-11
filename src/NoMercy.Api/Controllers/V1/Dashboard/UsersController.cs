@@ -36,6 +36,7 @@ public class UsersController(MediaContext mediaContext) : BaseController
 
         List<User> users = await mediaContext.Users
             .Include(user => user.LibraryUser)
+            .ThenInclude(libraryUser => libraryUser.Library)
             .ToListAsync();
 
         return Ok(new DataResponseDto<IEnumerable<PermissionsResponseItemDto>>

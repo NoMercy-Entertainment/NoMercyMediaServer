@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Use default.runsettings to serialize test assembly execution (prevents SQLite contention) -->
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)default.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
+</Project>

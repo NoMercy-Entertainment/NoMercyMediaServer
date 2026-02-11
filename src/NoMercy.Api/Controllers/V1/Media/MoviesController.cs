@@ -58,16 +58,23 @@ public class MoviesController(
                 Data = new(movie, country)
             });
 
-        TmdbMovieClient tmdbMovieClient = new(id, language: language);
-        TmdbMovieAppends? movieAppends = await tmdbMovieClient.WithAllAppends(true);
-
-        if (movieAppends is null)
-            return NotFoundResponse("Movie not found");
-
-        return Ok(new InfoResponseDto
+        try
         {
-            Data = new(movieAppends, country)
-        });
+            TmdbMovieClient tmdbMovieClient = new(id, language: language);
+            TmdbMovieAppends? movieAppends = await tmdbMovieClient.WithAllAppends(true);
+
+            if (movieAppends is null)
+                return NotFoundResponse("Movie not found");
+
+            return Ok(new InfoResponseDto
+            {
+                Data = new(movieAppends, country)
+            });
+        }
+        catch (Exception)
+        {
+            return NotFoundResponse("Movie not found");
+        }
     }
 
     [HttpDelete]

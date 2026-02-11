@@ -19,7 +19,16 @@ public static class HttpClientProvider
     public static HttpClient CreateClient(string name)
     {
         if (_factory is not null)
-            return _factory.CreateClient(name);
+        {
+            try
+            {
+                return _factory.CreateClient(name);
+            }
+            catch (ObjectDisposedException)
+            {
+                _factory = null;
+            }
+        }
 
         return new HttpClient();
     }

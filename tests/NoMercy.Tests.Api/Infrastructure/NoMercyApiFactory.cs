@@ -94,8 +94,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         }
 
         string mediaDbPath = Path.Combine(AppFiles.DataPath, "media.db");
-        if (File.Exists(mediaDbPath))
-            File.Delete(mediaDbPath);
+        foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
+        {
+            string file = mediaDbPath + suffix;
+            if (File.Exists(file))
+                File.Delete(file);
+        }
 
         using MediaContext mediaContext = new();
         mediaContext.Database.EnsureCreated();
@@ -120,8 +124,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         ClaimsPrincipleExtensions.Initialize(mediaContext);
 
         string queueDbPath = Path.Combine(AppFiles.DataPath, "queue.db");
-        if (File.Exists(queueDbPath))
-            File.Delete(queueDbPath);
+        foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
+        {
+            string file = queueDbPath + suffix;
+            if (File.Exists(file))
+                File.Delete(file);
+        }
 
         using QueueContext queueContext = new();
         queueContext.Database.EnsureCreated();
@@ -268,7 +276,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Filename = "Fight.Club.1999.1080p.mkv",
             Folder = "/media/movies/Fight Club (1999)",
             HostFolder = "/media/movies/Fight Club (1999)",
-            Languages = "en",
+            Languages = "[\"en\"]",
             Quality = "1080p",
             Share = "movies",
             MovieId = 550
@@ -279,7 +287,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Filename = "Pulp.Fiction.1994.1080p.mkv",
             Folder = "/media/movies/Pulp Fiction (1994)",
             HostFolder = "/media/movies/Pulp Fiction (1994)",
-            Languages = "en",
+            Languages = "[\"en\"]",
             Quality = "1080p",
             Share = "movies",
             MovieId = 680
@@ -295,7 +303,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Filename = "Breaking.Bad.S01E01.mkv",
             Folder = "/media/tv/Breaking Bad/Season 01",
             HostFolder = "/media/tv/Breaking Bad/Season 01",
-            Languages = "en",
+            Languages = "[\"en\"]",
             Quality = "1080p",
             Share = "tv",
             EpisodeId = 62085
@@ -306,7 +314,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Filename = "Breaking.Bad.S01E02.mkv",
             Folder = "/media/tv/Breaking Bad/Season 01",
             HostFolder = "/media/tv/Breaking Bad/Season 01",
-            Languages = "en",
+            Languages = "[\"en\"]",
             Quality = "1080p",
             Share = "tv",
             EpisodeId = 62086

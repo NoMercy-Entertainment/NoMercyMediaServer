@@ -123,7 +123,7 @@ public class GenresController : BaseController
                         index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
                         index == Letters.Length - 1 ? null : Letters.ElementAtOrDefault(index + 1) ?? null)
                     .WithItems(carouselItems.Select(card => Component.Card().WithData(card)))
-                    ;
+                    .Build();
             })
             .Where(c => c != null)
             .Cast<ComponentEnvelope>()

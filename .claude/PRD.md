@@ -29,7 +29,10 @@ Each iteration you must:
    - For query changes: verify SQL output via `ToQueryString()`
    - For async/concurrency changes: verify no race conditions introduced
    - **NO SHORTCUTS**: No `Assert.True(true)`, no empty test bodies, no mocking everything to avoid real assertions, no skipping failing tests, no catching exceptions to force green. Tests must assert real behavior against real code.
-5. Run `dotnet build && dotnet test` — both must pass with zero failures
+5. Run `dotnet build && dotnet test --settings tests/default.runsettings` — both must pass with **ZERO failures across ALL test projects**
+   - **ABSOLUTE RULE**: You MUST NOT continue to the next step if ANY test fails — even if you believe the failure is "pre-existing" or "unrelated to your changes". ALL failures are your responsibility to fix before proceeding.
+   - If a test fails, investigate and fix the root cause. Do not dismiss failures as pre-existing, flaky, or caused by something else.
+   - If a test is genuinely wrong or outdated, fix the test to match correct behavior — but never weaken assertions just to make tests pass.
 6. Mark the task `[x]` in this file and update the `Next up` line
 7. Append what you did to `progress.md`
 8. Commit your changes

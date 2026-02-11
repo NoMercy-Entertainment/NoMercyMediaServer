@@ -14,17 +14,25 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
 {
     private readonly HttpClient _client;
     private readonly string _testTypeFolder;
-    private readonly string _testImageName = "testimage.png";
-    private readonly string _testSvgName = "testimage.svg";
+    private readonly string _testId = Guid.NewGuid().ToString("N")[..8];
+    private readonly string _testImageName;
+    private readonly string _testSvgName;
 
     public ImageControllerTests(NoMercyApiFactory factory)
     {
         _client = factory.CreateClient();
         _client.AsAuthenticated();
 
+        _testImageName = $"testimage_{_testId}.png";
+        _testSvgName = $"testimage_{_testId}.svg";
+
         _testTypeFolder = Path.Join(AppFiles.ImagesPath, "testtype");
         if (!Directory.Exists(_testTypeFolder))
             Directory.CreateDirectory(_testTypeFolder);
+
+        // Ensure temp images directory exists
+        if (!Directory.Exists(AppFiles.TempImagesPath))
+            Directory.CreateDirectory(AppFiles.TempImagesPath);
 
         // Create a real 200x100 PNG test image
         using (Image<Rgba32> image = new(200, 100, new Rgba32(255, 0, 0)))
@@ -35,17 +43,18 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
         // Create a minimal SVG test file
         File.WriteAllText(Path.Join(_testTypeFolder, _testSvgName),
             "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\"><rect fill=\"red\" width=\"100\" height=\"100\"/></svg>");
-
-        // Ensure temp images directory exists
-        if (!Directory.Exists(AppFiles.TempImagesPath))
-            Directory.CreateDirectory(AppFiles.TempImagesPath);
     }
 
     public void Dispose()
     {
+        // Clean up test-specific files
+        string imagePath = Path.Join(_testTypeFolder, _testImageName);
+        string svgPath = Path.Join(_testTypeFolder, _testSvgName);
+        try { if (File.Exists(imagePath)) File.Delete(imagePath); } catch { }
+        try { if (File.Exists(svgPath)) File.Delete(svgPath); } catch { }
+
         // Clean up cached images created during tests
-        string[] tempFiles = Directory.GetFiles(AppFiles.TempImagesPath);
-        foreach (string file in tempFiles)
+        foreach (string file in Directory.GetFiles(AppFiles.TempImagesPath))
         {
             try { File.Delete(file); }
             catch { /* best effort */ }
@@ -149,7 +158,7 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
     [Fact]
     public async Task Image_NonExistentFile_Returns404()
     {
-        HttpResponseMessage response = await _client.GetAsync("/images/testtype/doesnotexist.png");
+        HttpResponseMessage response = await _client.GetAsync($"/images/testtype/doesnotexist_{_testId}.png");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
