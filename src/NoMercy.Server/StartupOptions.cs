@@ -1,6 +1,7 @@
 using CommandLine;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using ConfigurationModel = global::NoMercy.Database.Models.Common.Configuration;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
@@ -89,7 +90,7 @@ public class StartupOptions
             try
             {
                 MediaContext mediaContext = new();
-                Configuration? internalPortConfig = mediaContext.Configuration
+                ConfigurationModel? internalPortConfig = mediaContext.Configuration
                     .FirstOrDefault(c => c.Key == "internalPort");
                 if (internalPortConfig != null)
                 {
@@ -118,7 +119,7 @@ public class StartupOptions
             try
             {
                 MediaContext mediaContext = new();
-                Configuration? externalPortConfig = mediaContext.Configuration
+                ConfigurationModel? externalPortConfig = mediaContext.Configuration
                     .FirstOrDefault(c => c.Key == "externalPort");
                 if (externalPortConfig != null)
                 {

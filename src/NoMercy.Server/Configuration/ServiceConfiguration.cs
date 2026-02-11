@@ -50,7 +50,7 @@ using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
 
-namespace NoMercy.Server.AppConfig;
+namespace NoMercy.Server.Configuration;
 
 public static class ServiceConfiguration
 {

@@ -2497,3 +2497,21 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - Decision: **Remove** the empty stubs. The complete EncoderV2 implementation lives on the `encoder-v2` branch and can be merged when ready. Keeping empty directories on the main development branch serves no purpose.
 
 **Test results**: Build succeeds with 0 errors. All 1,270 non-Api tests pass (143 database + 18 networking + 150 encoder + 292 queue + 212 repository + 28 media processing + 427 provider). Api test failures are pre-existing infrastructure issues, unchanged from baseline.
+
+---
+
+## REORG-09 — Rename `AppConfig/` to `Configuration/`
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Renamed `src/NoMercy.Server/AppConfig/` directory to `src/NoMercy.Server/Configuration/` via `git mv`
+- Updated namespace in `ApplicationConfiguration.cs` from `NoMercy.Server.AppConfig` to `NoMercy.Server.Configuration`
+- Updated namespace in `ServiceConfiguration.cs` from `NoMercy.Server.AppConfig` to `NoMercy.Server.Configuration`
+- Updated `using` directive in `Startup.cs` to reference `NoMercy.Server.Configuration`
+- Resolved namespace conflict: the new `Configuration` namespace collided with the existing `NoMercy.Database.Models.Common.Configuration` model class. Added `using ConfigurationModel = global::NoMercy.Database.Models.Common.Configuration;` aliases in:
+  - `StartupOptions.cs` — 2 usages of `Configuration?` variable type changed to `ConfigurationModel?`
+  - `Seeds/ConfigSeed.cs` — 1 usage of `Configuration[]` changed to `ConfigurationModel[]`
+- Updated `LocalizationMiddlewareTests.cs` path reference from `"AppConfig"` to `"Configuration"`
+
+**Test results**: Build succeeds with 0 errors. All non-Api tests pass. Api test failures (283) are pre-existing and identical to baseline count before changes.

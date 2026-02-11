@@ -14,7 +14,7 @@ public class LocalizationMiddlewareTests
     {
         string sourceFile = Path.Combine(
             AppContext.BaseDirectory, "..", "..", "..", "..", "..",
-            "src", "NoMercy.Server", "AppConfig", "ApplicationConfiguration.cs");
+            "src", "NoMercy.Server", "Configuration", "ApplicationConfiguration.cs");
 
         string source = File.ReadAllText(Path.GetFullPath(sourceFile));
 

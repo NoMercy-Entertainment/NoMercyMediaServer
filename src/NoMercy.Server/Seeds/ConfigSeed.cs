@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using ConfigurationModel = global::NoMercy.Database.Models.Common.Configuration;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
@@ -20,7 +21,7 @@ public static class ConfigSeed
     public static async Task Init(this MediaContext dbContext)
     {
         Logger.Setup("Adding Configurations", LogEventLevel.Verbose);
-        Configuration[] configs =
+        ConfigurationModel[] configs =
         [
             new()
             {

@@ -1,5 +1,5 @@
 ﻿using Asp.Versioning.ApiExplorer;
-using NoMercy.Server.AppConfig;
+using NoMercy.Server.Configuration;
 
 namespace NoMercy.Server;
 

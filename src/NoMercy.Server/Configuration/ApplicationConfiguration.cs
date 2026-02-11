@@ -22,7 +22,7 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Queue.Jobs;
 using NoMercy.Queue.Workers;
 
-namespace NoMercy.Server.AppConfig;
+namespace NoMercy.Server.Configuration;
 
 public static class ApplicationConfiguration
 {
