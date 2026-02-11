@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.Media;
-using NoMercy.Api.Controllers.V1.Media.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO.Components;
+using NoMercy.Api.DTOs.Media;
+using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;

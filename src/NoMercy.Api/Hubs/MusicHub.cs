@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Controllers.V1.Music;
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
 using NoMercy.Database;
 using NoMercy.Database.Models;

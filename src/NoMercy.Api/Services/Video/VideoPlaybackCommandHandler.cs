@@ -2,7 +2,7 @@ using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Networking;

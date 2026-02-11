@@ -1,4 +1,4 @@
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 

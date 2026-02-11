@@ -1,5 +1,5 @@
 
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;

@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Api.Hubs.Shared;
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Database.Models;
 
 namespace NoMercy.Api.Services.Video;

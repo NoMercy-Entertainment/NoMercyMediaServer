@@ -4,7 +4,7 @@ using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Services.Video;
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 using NoMercy.Helpers;

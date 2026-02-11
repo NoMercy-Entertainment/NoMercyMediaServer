@@ -2398,3 +2398,33 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - No changes needed to `ApplicationConfiguration.cs` — `VideoHub` resolves from existing `using NoMercy.Api.Hubs;` import; `using NoMercy.Api.Controllers.Socket;` retained for CastHub/DashboardHub/RipperHub
 
 **Test results**: Build succeeds with 0 errors. All new/updated tests pass (5 targeted tests: 4 Api, 1 Queue). Pre-existing failures unchanged.
+
+---
+
+## REORG-04 — Consolidate all DTOs into `NoMercy.Api/DTOs/`
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Moved 164 API DTO files from scattered locations into a centralized `NoMercy.Api/DTOs/` directory structure:
+  - `Controllers/V1/DTO/` (14 files) → `DTOs/Common/`
+  - `Controllers/V1/Dashboard/DTO/` (35 files) → `DTOs/Dashboard/`
+  - `Controllers/V1/Media/DTO/` (63 files) → `DTOs/Media/`
+  - `Controllers/V1/Media/DTO/Components/` (22 files) → `DTOs/Media/Components/`
+  - `Controllers/V1/Music/DTO/` (29 files) → `DTOs/Music/`
+  - `Controllers/V1/Media/PageRequestDto.cs` (1 file) → `DTOs/Media/`
+- Updated all namespace declarations in moved files:
+  - `NoMercy.Api.Controllers.V1.DTO` → `NoMercy.Api.DTOs.Common`
+  - `NoMercy.Api.Controllers.V1.Dashboard.DTO` → `NoMercy.Api.DTOs.Dashboard`
+  - `NoMercy.Api.Controllers.V1.Media.DTO` → `NoMercy.Api.DTOs.Media`
+  - `NoMercy.Api.Controllers.V1.Media.DTO.Components` → `NoMercy.Api.DTOs.Media.Components`
+  - `NoMercy.Api.Controllers.V1.Music.DTO` → `NoMercy.Api.DTOs.Music`
+  - `NoMercy.Api.Controllers.V1.Media` (PageRequestDto) → `NoMercy.Api.DTOs.Media`
+- Updated all `using` statements across the entire codebase (src/ and tests/) referencing old DTO namespaces
+- Fixed duplicate `using` directives in 3 files that had both old and new imports after sed replacement
+- Added `using NoMercy.Api.DTOs.Media;` to `Controllers/V1/Media/GenresController.cs` for PageRequestDto access
+- Replaced `using NoMercy.Api.Controllers.V1.Media;` with `using NoMercy.Api.DTOs.Media;` in 4 files that only used PageRequestDto from that namespace
+- DTOs in other projects (NoMercy.Data, NoMercy.Encoder, NoMercy.NmSystem, etc.) left in place — they are domain-specific and moving them to Api would create circular dependencies
+- Removed empty old DTO directories and a leftover README.md
+
+**Test results**: Build succeeds with 0 errors (76 warnings, all pre-existing). All 1,270 non-Api tests pass. Api test project: 312 passed, 12 failed (pre-existing failures unchanged from baseline).

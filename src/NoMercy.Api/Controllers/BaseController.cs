@@ -1,8 +1,8 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.NmSystem;
 
 namespace NoMercy.Api.Controllers;

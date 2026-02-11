@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models;

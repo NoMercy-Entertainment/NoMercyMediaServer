@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Api.Hubs.Shared;
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.DTOs.Music;
 
 namespace NoMercy.Api.Services.Music;
 
