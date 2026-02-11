@@ -19,6 +19,7 @@ using NoMercy.Encoder.Format.Container;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.Encoder.Format.Video;
 using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 

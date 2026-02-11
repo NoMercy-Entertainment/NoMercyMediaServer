@@ -17,8 +17,10 @@ using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.NoMercy.Client;
 
 namespace NoMercy.Api.Controllers.V1.Music;

@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.NmSystem;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.DTOs.Common;
 

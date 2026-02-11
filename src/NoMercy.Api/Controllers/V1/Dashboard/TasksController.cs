@@ -21,6 +21,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Encoder;
 using NoMercy.Encoder.Core;
 using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;

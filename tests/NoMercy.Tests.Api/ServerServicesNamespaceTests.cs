@@ -4,6 +4,7 @@ using NoMercy.Api.Hubs;
 using NoMercy.Api.Hubs.Shared;
 using NoMercy.Api.Services.Music;
 using NoMercy.Api.Services.Video;
+using NoMercy.Server.Extensions;
 using NoMercy.Server.Services;
 using Xunit;
 
@@ -23,8 +24,8 @@ public class ServerServicesNamespaceTests
 
         Assert.Equal("NoMercy.Server.Services", cloudflareType.Namespace);
         Assert.Equal("NoMercy.Server.Services", registrationType.Namespace);
-        Assert.Equal("NoMercy.Server.Services", musicExtType.Namespace);
-        Assert.Equal("NoMercy.Server.Services", videoExtType.Namespace);
+        Assert.Equal("NoMercy.Server.Extensions", musicExtType.Namespace);
+        Assert.Equal("NoMercy.Server.Extensions", videoExtType.Namespace);
     }
 
     [Fact]

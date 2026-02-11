@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 

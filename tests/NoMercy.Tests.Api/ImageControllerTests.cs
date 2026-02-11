@@ -1,5 +1,6 @@
 using System.Net;
 using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Tests.Api.Infrastructure;
 using SixLabors.ImageSharp;

@@ -1,7 +1,7 @@
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Services.Music;
 
-namespace NoMercy.Server.Services;
+namespace NoMercy.Server.Extensions;
 
 public static class MusicHubServiceExtensions
 {

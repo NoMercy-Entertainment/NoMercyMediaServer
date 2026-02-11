@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.NmSystem;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers;
 

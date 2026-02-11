@@ -2515,3 +2515,30 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - Updated `LocalizationMiddlewareTests.cs` path reference from `"AppConfig"` to `"Configuration"`
 
 **Test results**: Build succeeds with 0 errors. All non-Api tests pass. Api test failures (283) are pre-existing and identical to baseline count before changes.
+
+---
+
+## REORG-10 — Create centralized `Extensions/` per project
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Moved `VideoHubServiceExtensions.cs` and `MusicHubServiceExtensions.cs` from `NoMercy.Server/Services/` to `NoMercy.Server/Extensions/` with namespace `NoMercy.Server.Extensions`
+- Moved `ClaimsPrincipleExtensions.cs` and `Mutators.cs` from `NoMercy.Helpers/` root to `NoMercy.Helpers/Extensions/` with namespace `NoMercy.Helpers.Extensions`
+- Moved `LocalizationHelper.cs` from `NoMercy.NmSystem/` root to `NoMercy.NmSystem/Extensions/` with namespace `NoMercy.NmSystem.Extensions`
+- Removed duplicate `NoMercy.NmSystem/XmlHelper.cs` (identical copy already existed in `NoMercy.NmSystem/Extensions/XmlHelper.cs`)
+- Deleted empty `NoMercy.Database/Extensions.cs` (contained only commented-out code)
+- Updated `using` directives in 43+ source files to add `using NoMercy.Helpers.Extensions;` for ClaimsPrincipleExtensions/Mutators access
+- Updated `using` directives in 5 files to add/change `using NoMercy.NmSystem.Extensions;` for LocalizationHelper access
+- Updated `ServiceConfiguration.cs` to use `using NoMercy.Server.Extensions;` for hub service extensions
+- Updated `ServerServicesNamespaceTests.cs` to verify new `NoMercy.Server.Extensions` namespace for extension classes
+- Updated `LocalizationMiddlewareTests.cs` and `ClaimsPrincipleExtensionsTests.cs` with correct namespace imports
+
+**Extensions folder summary after changes**:
+- `NoMercy.NmSystem/Extensions/` — ConcurrentBag, ConditionalSet, Culture, Date, HttpClient, LocalizationHelper, NumberConverter, Str, Url, XmlHelper
+- `NoMercy.Helpers/Extensions/` — ClaimsPrincipleExtensions, Mutators
+- `NoMercy.Server/Extensions/` — MusicHubServiceExtensions, VideoHubServiceExtensions
+- `NoMercy.Data/Extensions/` — QueryableExtensions (already existed)
+- `NoMercy.Queue/Extensions/` — ServiceCollectionExtensions (already existed)
+
+**Test results**: Build succeeds with 0 errors. All unit tests pass (285 total). Api integration test failures (283) are pre-existing SQLite disk I/O errors in dev container environment.

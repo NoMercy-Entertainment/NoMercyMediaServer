@@ -11,7 +11,7 @@ using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 
-namespace NoMercy.Helpers;
+namespace NoMercy.Helpers.Extensions;
 
 public static class ClaimsPrincipleExtensions
 {

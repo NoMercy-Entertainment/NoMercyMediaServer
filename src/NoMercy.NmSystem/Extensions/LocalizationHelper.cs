@@ -3,7 +3,7 @@ using System.Xml.Linq;
 using I18N.DotNet;
 using NoMercy.NmSystem.Information;
 
-namespace NoMercy.NmSystem;
+namespace NoMercy.NmSystem.Extensions;
 
 public static class LocalizationHelper
 {

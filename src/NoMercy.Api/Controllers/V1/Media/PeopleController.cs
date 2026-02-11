@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
 using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.People;
 

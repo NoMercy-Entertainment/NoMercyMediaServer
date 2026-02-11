@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using NoMercy.Api.Middleware;
-using NoMercy.NmSystem;
+using NoMercy.NmSystem.Extensions;
 using Xunit;
 
 namespace NoMercy.Tests.Api;

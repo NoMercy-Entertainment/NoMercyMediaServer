@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using I18N.DotNet;
 using Microsoft.AspNetCore.Http;
-using NoMercy.NmSystem;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Middleware;
 
