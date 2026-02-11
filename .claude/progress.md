@@ -2481,3 +2481,19 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - Resolved `Media` namespace/type ambiguity by using `Models.Media.Media` qualified name in 4 model files and 1 DTO file
 
 **Test results**: Build succeeds with 0 errors, 0 new warnings. All 1,270 non-Api tests pass (143 database + 18 networking + 150 encoder + 292 queue + 212 repository + 28 media processing + 427 provider). Api test failures are pre-existing infrastructure issues (SQLite disk I/O under parallel test execution), unchanged from baseline.
+
+---
+
+## REORG-07 — Remove or complete NoMercy.EncoderV2
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Investigated the state of `src/NoMercy.EncoderV2/` and `tests/NoMercy.Tests.EncoderV2/` on the current branch
+- Found both directories contain only empty subdirectories (Configuration/, Validation/Rules/) with zero files — no .csproj, no .cs files
+- Verified no references to `EncoderV2` exist in the solution file, any .csproj, or any .cs source file
+- The full EncoderV2 implementation (122+ source files, 22 test files) exists on the separate `encoder-v2` feature branch and is not affected by this cleanup
+- Removed both empty stub directories: `src/NoMercy.EncoderV2/` and `tests/NoMercy.Tests.EncoderV2/`
+- Decision: **Remove** the empty stubs. The complete EncoderV2 implementation lives on the `encoder-v2` branch and can be merged when ready. Keeping empty directories on the main development branch serves no purpose.
+
+**Test results**: Build succeeds with 0 errors. All 1,270 non-Api tests pass (143 database + 18 networking + 150 encoder + 292 queue + 212 repository + 28 media processing + 427 provider). Api test failures are pre-existing infrastructure issues, unchanged from baseline.
