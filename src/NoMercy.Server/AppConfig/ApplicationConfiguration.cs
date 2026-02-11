@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;
 using NoMercy.Api.Controllers.Socket;
+using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models;

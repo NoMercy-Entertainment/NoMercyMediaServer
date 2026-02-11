@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace NoMercy.Api.Controllers.Socket.shared;
+namespace NoMercy.Api.Hubs.Shared;
 
 public class Actions
 {

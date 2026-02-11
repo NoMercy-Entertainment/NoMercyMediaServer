@@ -2,7 +2,7 @@ using NoMercy.Api.Controllers.V1.Music.DTO;
 using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 
-namespace NoMercy.Api.Controllers.Socket.music;
+namespace NoMercy.Api.Services.Music;
 
 public class MusicPlayerStateFactory
 {

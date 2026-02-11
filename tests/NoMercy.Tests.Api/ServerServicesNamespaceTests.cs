@@ -1,5 +1,8 @@
 using System.Reflection;
 using Microsoft.Extensions.Hosting;
+using NoMercy.Api.Hubs;
+using NoMercy.Api.Hubs.Shared;
+using NoMercy.Api.Services.Music;
 using NoMercy.Server.Services;
 using Xunit;
 
@@ -52,5 +55,32 @@ public class ServerServicesNamespaceTests
             .GetMethod("AddVideoHubServices", BindingFlags.Public | BindingFlags.Static);
 
         Assert.NotNull(method);
+    }
+
+    [Fact]
+    public void MusicHub_UsesHubsNamespace()
+    {
+        Assert.Equal("NoMercy.Api.Hubs", typeof(MusicHub).Namespace);
+    }
+
+    [Fact]
+    public void MusicServices_UsePascalCaseNamespace()
+    {
+        Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicDeviceManager).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicPlaybackService).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicPlayerStateManager).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicPlaybackCommandHandler).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicPlaylistManager).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicPlayerStateFactory).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicPlayerState).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicLikeEventDto).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicEventType).Namespace);
+    }
+
+    [Fact]
+    public void SharedActions_UsesHubsSharedNamespace()
+    {
+        Assert.Equal("NoMercy.Api.Hubs.Shared", typeof(Actions).Namespace);
+        Assert.Equal("NoMercy.Api.Hubs.Shared", typeof(Disallows).Namespace);
     }
 }

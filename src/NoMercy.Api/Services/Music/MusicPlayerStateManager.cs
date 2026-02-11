@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
-namespace NoMercy.Api.Controllers.Socket.music;
+namespace NoMercy.Api.Services.Music;
 
 public class MusicPlayerStateManager
 {

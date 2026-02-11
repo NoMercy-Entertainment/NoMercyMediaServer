@@ -1,5 +1,5 @@
-using NoMercy.Api.Controllers.Socket;
-using NoMercy.Api.Controllers.Socket.music;
+using NoMercy.Api.Hubs;
+using NoMercy.Api.Services.Music;
 
 namespace NoMercy.Server.Services;
 

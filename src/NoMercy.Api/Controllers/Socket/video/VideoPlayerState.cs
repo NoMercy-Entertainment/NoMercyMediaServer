@@ -1,5 +1,5 @@
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.Socket.shared;
+using NoMercy.Api.Hubs.Shared;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database.Models;
 

@@ -1,6 +1,6 @@
 using NoMercy.Database.Models;
 
-namespace NoMercy.Api.Controllers.Socket.music;
+namespace NoMercy.Api.Services.Music;
 
 public class MusicLikeEventDto
 {

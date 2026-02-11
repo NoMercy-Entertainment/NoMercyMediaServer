@@ -2328,3 +2328,49 @@ Fixed two cron job registration issues:
 - `tests/NoMercy.Tests.Api/ServerServicesNamespaceTests.cs` — new test file
 
 **Test results**: Build succeeds with 0 errors. All 848 non-flaky tests pass (143 Database + 212 Repositories + 292 Queue + 150 Encoder + 18 Networking + 28 MediaProcessing + 5 new namespace tests). Pre-existing API and Provider failures unchanged.
+
+---
+
+## REORG-02 — Rename `Socket/music/` → `Hubs/` + move services
+
+**Date**: 2026-02-11
+
+**What was done**:
+Restructured the music SignalR hub and its supporting services out of the `Controllers/Socket/music/` directory into proper PascalCase-namespaced locations:
+
+1. **MusicHub.cs** moved from `Controllers/Socket/` → `Hubs/`
+   - Namespace: `NoMercy.Api.Controllers.Socket` → `NoMercy.Api.Hubs`
+
+2. **9 music service files** moved from `Controllers/Socket/music/` → `Services/Music/`
+   - Namespace: `NoMercy.Api.Controllers.Socket.music` → `NoMercy.Api.Services.Music`
+   - Files: MusicDeviceManager, MusicLikeEventDto, MusicPlaybackCommandHandler, MusicPlaybackService, MusicPlayerEvents, MusicPlayerState, MusicPlayerStateFactory, MusicPlayerStateManager, MusicPlaylistManager
+
+3. **shared/Actions.cs** moved from `Controllers/Socket/shared/` → `Hubs/Shared/`
+   - Namespace: `NoMercy.Api.Controllers.Socket.shared` → `NoMercy.Api.Hubs.Shared`
+   - Also updated the video `VideoPlayerState.cs` reference to the new namespace
+
+4. **External references updated**:
+   - `TracksController.cs`, `AlbumsController.cs`, `ArtistsController.cs` — updated using statements
+   - `ApplicationConfiguration.cs` — added `NoMercy.Api.Hubs` using for hub mapping
+   - `MusicHubServiceExtensions.cs` — updated both using statements
+   - `BlockingPatternTests.cs` — updated source file path
+
+5. **3 new namespace tests** added to `ServerServicesNamespaceTests.cs`:
+   - `MusicHub_UsesHubsNamespace` — verifies MusicHub is in `NoMercy.Api.Hubs`
+   - `MusicServices_UsePascalCaseNamespace` — verifies all 9 service types are in `NoMercy.Api.Services.Music`
+   - `SharedActions_UsesHubsSharedNamespace` — verifies Actions/Disallows are in `NoMercy.Api.Hubs.Shared`
+
+**Files changed**:
+- `src/NoMercy.Api/Hubs/MusicHub.cs` — moved + namespace update
+- `src/NoMercy.Api/Hubs/Shared/Actions.cs` — moved + namespace update
+- `src/NoMercy.Api/Services/Music/*.cs` (9 files) — moved + namespace update
+- `src/NoMercy.Api/Controllers/Socket/video/VideoPlayerState.cs` — using update
+- `src/NoMercy.Api/Controllers/V1/Music/TracksController.cs` — using update
+- `src/NoMercy.Api/Controllers/V1/Music/AlbumsController.cs` — using update
+- `src/NoMercy.Api/Controllers/V1/Music/ArtistsController.cs` — using update
+- `src/NoMercy.Server/AppConfig/ApplicationConfiguration.cs` — using update
+- `src/NoMercy.Server/Services/MusicHubServiceExtensions.cs` — using update
+- `tests/NoMercy.Tests.Queue/BlockingPatternTests.cs` — path update
+- `tests/NoMercy.Tests.Api/ServerServicesNamespaceTests.cs` — 3 new tests
+
+**Test results**: Build succeeds with 0 errors. All tests pass: Queue (292), Repositories (212), MediaProcessing (28), API namespace tests (8/8). Pre-existing API snapshot failures (12) and Provider network failures (4) unchanged.

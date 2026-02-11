@@ -1,8 +1,8 @@
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.Socket.shared;
+using NoMercy.Api.Hubs.Shared;
 using NoMercy.Api.Controllers.V1.Music.DTO;
 
-namespace NoMercy.Api.Controllers.Socket.music;
+namespace NoMercy.Api.Services.Music;
 
 public class MusicPlayerState
 {

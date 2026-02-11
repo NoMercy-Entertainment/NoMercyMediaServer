@@ -174,7 +174,7 @@ public class BlockingPatternTests : IDisposable
     {
         // Static analysis: Verify MusicPlaybackService.cs has no .Wait() calls.
         string sourceFile = FindSourceFile(
-            "src/NoMercy.Api/Controllers/Socket/music/MusicPlaybackService.cs");
+            "src/NoMercy.Api/Services/Music/MusicPlaybackService.cs");
         string source = File.ReadAllText(sourceFile);
 
         string[] lines = source.Split('\n');
