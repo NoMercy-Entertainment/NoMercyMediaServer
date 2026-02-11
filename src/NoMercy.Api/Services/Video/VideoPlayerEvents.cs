@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database.Models;
 
-namespace NoMercy.Api.Controllers.Socket.video;
+namespace NoMercy.Api.Services.Video;
 
 public enum VideoEventType
 {

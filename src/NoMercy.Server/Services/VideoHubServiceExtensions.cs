@@ -1,5 +1,5 @@
-using NoMercy.Api.Controllers.Socket;
-using NoMercy.Api.Controllers.Socket.video;
+using NoMercy.Api.Hubs;
+using NoMercy.Api.Services.Video;
 
 namespace NoMercy.Server.Services;
 

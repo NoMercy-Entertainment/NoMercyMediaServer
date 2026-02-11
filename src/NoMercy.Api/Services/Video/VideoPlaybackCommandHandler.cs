@@ -9,7 +9,7 @@ using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 
-namespace NoMercy.Api.Controllers.Socket.video;
+namespace NoMercy.Api.Services.Video;
 
 public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackService, IServiceScopeFactory scopeFactory)
 {

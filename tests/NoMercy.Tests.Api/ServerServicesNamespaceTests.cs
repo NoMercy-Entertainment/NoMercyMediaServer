@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Hubs.Shared;
 using NoMercy.Api.Services.Music;
+using NoMercy.Api.Services.Video;
 using NoMercy.Server.Services;
 using Xunit;
 
@@ -75,6 +76,26 @@ public class ServerServicesNamespaceTests
         Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicPlayerState).Namespace);
         Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicLikeEventDto).Namespace);
         Assert.Equal("NoMercy.Api.Services.Music", typeof(MusicEventType).Namespace);
+    }
+
+    [Fact]
+    public void VideoHub_UsesHubsNamespace()
+    {
+        Assert.Equal("NoMercy.Api.Hubs", typeof(VideoHub).Namespace);
+    }
+
+    [Fact]
+    public void VideoServices_UsePascalCaseNamespace()
+    {
+        Assert.Equal("NoMercy.Api.Services.Video", typeof(VideoDeviceManager).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Video", typeof(VideoPlaybackService).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Video", typeof(VideoPlayerStateManager).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Video", typeof(VideoPlaybackCommandHandler).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Video", typeof(VideoPlaylistManager).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Video", typeof(VideoPlayerStateFactory).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Video", typeof(VideoPlayerState).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Video", typeof(VideoProgressRequest).Namespace);
+        Assert.Equal("NoMercy.Api.Services.Video", typeof(VideoEventType).Namespace);
     }
 
     [Fact]

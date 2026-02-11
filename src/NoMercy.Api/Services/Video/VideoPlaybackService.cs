@@ -7,7 +7,7 @@ using NoMercy.Database.Models;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
-namespace NoMercy.Api.Controllers.Socket.video;
+namespace NoMercy.Api.Services.Video;
 
 public class VideoPlaybackService
 {

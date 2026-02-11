@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models;
 
-namespace NoMercy.Api.Controllers.Socket.video;
+namespace NoMercy.Api.Services.Video;
 
 public class VideoDeviceManager
 {

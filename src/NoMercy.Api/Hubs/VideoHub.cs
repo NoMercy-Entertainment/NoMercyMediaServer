@@ -3,7 +3,7 @@ using System.Security.Claims;
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.Socket.video;
+using NoMercy.Api.Services.Video;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database;
 using NoMercy.Database.Models;
@@ -13,7 +13,7 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
-namespace NoMercy.Api.Controllers.Socket;
+namespace NoMercy.Api.Hubs;
 
 public class VideoHub : ConnectionHub
 {

@@ -3,7 +3,7 @@ using NoMercy.Api.Hubs.Shared;
 using NoMercy.Api.Controllers.V1.Media.DTO;
 using NoMercy.Database.Models;
 
-namespace NoMercy.Api.Controllers.Socket.video;
+namespace NoMercy.Api.Services.Video;
 
 public class VideoPlayerState
 {

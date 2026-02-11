@@ -2374,3 +2374,27 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - `tests/NoMercy.Tests.Api/ServerServicesNamespaceTests.cs` — 3 new tests
 
 **Test results**: Build succeeds with 0 errors. All tests pass: Queue (292), Repositories (212), MediaProcessing (28), API namespace tests (8/8). Pre-existing API snapshot failures (12) and Provider network failures (4) unchanged.
+
+---
+
+## REORG-03 — Rename `Socket/video/` → same pattern as music
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Moved `VideoHub.cs` from `Controllers/Socket/` to `Hubs/` (namespace: `NoMercy.Api.Hubs`)
+- Moved 9 video service files from `Controllers/Socket/video/` to `Services/Video/` (namespace: `NoMercy.Api.Services.Video`):
+  - `VideoDeviceManager.cs`, `VideoPlaybackCommandHandler.cs`, `VideoPlaybackService.cs`
+  - `VideoPlayerEvents.cs`, `VideoPlayerState.cs`, `VideoPlayerStateFactory.cs`
+  - `VideoPlayerStateManager.cs`, `VideoPlaylistManager.cs`, `VideoProgressRequest.cs`
+- Updated namespace declarations in all 10 moved files
+- Updated using statements in:
+  - `src/NoMercy.Server/Services/VideoHubServiceExtensions.cs` — changed to `NoMercy.Api.Hubs` + `NoMercy.Api.Services.Video`
+- Updated test file path reference:
+  - `tests/NoMercy.Tests.Queue/BlockingPatternTests.cs` — updated `VideoPlaybackService.cs` path
+- Added 2 new test methods to `tests/NoMercy.Tests.Api/ServerServicesNamespaceTests.cs`:
+  - `VideoHub_UsesHubsNamespace` — verifies VideoHub is in `NoMercy.Api.Hubs`
+  - `VideoServices_UsePascalCaseNamespace` — verifies all 9 video service types are in `NoMercy.Api.Services.Video`
+- No changes needed to `ApplicationConfiguration.cs` — `VideoHub` resolves from existing `using NoMercy.Api.Hubs;` import; `using NoMercy.Api.Controllers.Socket;` retained for CastHub/DashboardHub/RipperHub
+
+**Test results**: Build succeeds with 0 errors. All new/updated tests pass (5 targeted tests: 4 Api, 1 Queue). Pre-existing failures unchanged.

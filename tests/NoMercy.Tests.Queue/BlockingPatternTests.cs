@@ -192,7 +192,7 @@ public class BlockingPatternTests : IDisposable
     {
         // Static analysis: Verify VideoPlaybackService.cs has no .Wait() calls.
         string sourceFile = FindSourceFile(
-            "src/NoMercy.Api/Controllers/Socket/video/VideoPlaybackService.cs");
+            "src/NoMercy.Api/Services/Video/VideoPlaybackService.cs");
         string source = File.ReadAllText(sourceFile);
 
         string[] lines = source.Split('\n');
