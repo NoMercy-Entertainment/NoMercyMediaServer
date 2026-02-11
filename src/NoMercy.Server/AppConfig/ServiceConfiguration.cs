@@ -236,8 +236,12 @@ public static class ServiceConfiguration
 
     private static void ConfigureCoreServices(IServiceCollection services)
     {
-        // Add Memory Cache
-        services.AddMemoryCache();
+        // Add Memory Cache with size limit to prevent unbounded growth
+        services.AddMemoryCache(options =>
+        {
+            options.SizeLimit = 1024;
+            options.CompactionPercentage = 0.25;
+        });
         services.AddCronWorker();
 
         // Add Singleton Services

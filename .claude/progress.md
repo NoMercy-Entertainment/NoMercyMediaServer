@@ -2076,3 +2076,19 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
 - Added 6 new test cases (Theory with InlineData) in `tests/NoMercy.Tests.Api/MiddlewareOrderingTests.cs` verifying that each dev-only origin is rejected when `Config.IsDev` is false
 
 **Test results**: Build succeeds with 0 errors. All 10 MiddlewareOrderingTests pass (4 existing + 6 new). All non-API test projects pass. Pre-existing API test failures unchanged.
+
+---
+
+## MED-20 — Fix memory cache configuration
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Modified `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs:240` — replaced bare `services.AddMemoryCache()` with configured options: `SizeLimit = 1024` (entry count) and `CompactionPercentage = 0.25` (25% eviction when limit reached)
+- Added 4 tests in `tests/NoMercy.Tests.Api/MemoryCacheConfigurationTests.cs`:
+  - `MemoryCache_HasSizeLimit_Configured` — verifies SizeLimit is set to 1024
+  - `MemoryCache_HasCompactionPercentage_Configured` — verifies CompactionPercentage is 0.25
+  - `MemoryCache_IsResolvable_FromDI` — verifies IMemoryCache resolves from DI
+  - `MemoryCache_AcceptsEntries_WithSize` — verifies entries with explicit Size are accepted and retrievable
+
+**Test results**: Build succeeds with 0 errors. All 4 new MemoryCacheConfigurationTests pass. All non-API test projects pass (208 Repositories, 28 MediaProcessing, 421 Providers). Pre-existing API test failures unchanged.
