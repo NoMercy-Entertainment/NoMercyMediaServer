@@ -2061,3 +2061,18 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
 - Added 8 tests in `tests/NoMercy.Tests.Networking/ConfigEnvironmentVariableTests.cs`: verifies empty default, no hardcoded secret, URL defaults present, ApiServerBaseUrl derivation, AuthBaseDevUrl removal, and settable property
 
 **Test results**: Build succeeds with 0 errors. All 8 new tests pass. All non-API test projects pass (18 Networking, 143 Database, 147 Encoder, 287 Queue, 208 Repositories, 28 MediaProcessing, 421 Providers). Pre-existing API test failures unchanged.
+
+---
+
+## MED-18 — Fix CORS configuration
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Modified `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs:ConfigureCors()` to make development-only origins conditional on `Config.IsDev`
+- Production CORS policy now only allows: `https://nomercy.tv`, `https://*.nomercy.tv`, `https://cast.nomercy.tv`, `https://hlsjs.video-dev.org`
+- Dev mode additionally allows: `http://192.168.2.201:5501-5503`, `http://localhost`, `http://localhost:7625`, `https://localhost`
+- Refactored from chained `.WithOrigins()` calls (one per origin) to a single `List<string>` built conditionally, then passed as array — cleaner and easier to extend
+- Added 6 new test cases (Theory with InlineData) in `tests/NoMercy.Tests.Api/MiddlewareOrderingTests.cs` verifying that each dev-only origin is rejected when `Config.IsDev` is false
+
+**Test results**: Build succeeds with 0 errors. All 10 MiddlewareOrderingTests pass (4 existing + 6 new). All non-API test projects pass. Pre-existing API test failures unchanged.

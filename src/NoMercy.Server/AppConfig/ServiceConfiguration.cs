@@ -466,17 +466,26 @@ public static class ServiceConfiguration
             options.AddPolicy("AllowNoMercyOrigins",
                 builder =>
                 {
+                    List<string> origins =
+                    [
+                        "https://nomercy.tv",
+                        "https://*.nomercy.tv",
+                        "https://cast.nomercy.tv",
+                        "https://hlsjs.video-dev.org"
+                    ];
+
+                    if (Config.IsDev)
+                    {
+                        origins.Add("http://192.168.2.201:5501");
+                        origins.Add("http://192.168.2.201:5502");
+                        origins.Add("http://192.168.2.201:5503");
+                        origins.Add("http://localhost");
+                        origins.Add("http://localhost:7625");
+                        origins.Add("https://localhost");
+                    }
+
                     builder
-                        .WithOrigins("https://nomercy.tv")
-                        .WithOrigins("https://*.nomercy.tv")
-                        .WithOrigins("https://cast.nomercy.tv")
-                        .WithOrigins("https://hlsjs.video-dev.org")
-                        .WithOrigins("http://192.168.2.201:5501")
-                        .WithOrigins("http://192.168.2.201:5502")
-                        .WithOrigins("http://192.168.2.201:5503")
-                        .WithOrigins("http://localhost")
-                        .WithOrigins("http://localhost:7625")
-                        .WithOrigins("https://localhost")
+                        .WithOrigins(origins.ToArray())
                         .AllowAnyMethod()
                         .AllowCredentials()
                         .SetIsOriginAllowedToAllowWildcardSubdomains()

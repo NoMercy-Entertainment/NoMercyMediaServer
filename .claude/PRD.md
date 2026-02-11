@@ -41,7 +41,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 1-2, item MED-18
+**Next up**: Phase 1-2, item MED-20
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -122,7 +122,7 @@ Details: [04-bugs.md](prd/04-bugs.md) | [05-stability.md](prd/05-stability.md) |
 - [x] HIGH-14 — Set Kestrel limits (currently unlimited)
 - [x] MED-07 — Reduce SignalR message limit from 100MB
 - [x] MED-17 — Remove hardcoded configuration in static properties
-- [ ] MED-18 — Fix CORS configuration
+- [x] MED-18 — Fix CORS configuration
 - [ ] MED-20 — Fix memory cache configuration
 - [ ] HIGH-02 — Fix pagination inside Include()
 - [ ] HIGH-11 — Fix unbounded cache growth

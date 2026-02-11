@@ -103,6 +103,31 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
             Assert.DoesNotContain("malicious-site.example.com", values);
         }
     }
+
+    [Theory]
+    [InlineData("http://192.168.2.201:5501")]
+    [InlineData("http://192.168.2.201:5502")]
+    [InlineData("http://192.168.2.201:5503")]
+    [InlineData("http://localhost")]
+    [InlineData("http://localhost:7625")]
+    [InlineData("https://localhost")]
+    public async Task CorsPreFlight_DevOrigins_NotAllowed_InNonDevMode(string devOrigin)
+    {
+        // Config.IsDev is false in tests — dev-only origins should be rejected
+        HttpClient client = _factory.CreateClient();
+
+        HttpRequestMessage request = new(HttpMethod.Options, "/api/v1/setup/permissions");
+        request.Headers.Add("Origin", devOrigin);
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+
+        HttpResponseMessage response = await client.SendAsync(request);
+
+        // Should not include the dev origin in Access-Control-Allow-Origin
+        if (response.Headers.TryGetValues("Access-Control-Allow-Origin", out IEnumerable<string>? values))
+        {
+            Assert.DoesNotContain(devOrigin, values);
+        }
+    }
 }
 
 internal static class HttpRequestMessageExtensions
