@@ -13,6 +13,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests response times and efficiency under various conditions
 /// </summary>
 [Trait("Category", "Performance")]
+[Collection("TmdbApi")]
 public class TmdbSearchPerformanceTests : TmdbTestBase
 {
     #region Single Operation Performance Tests

@@ -7,6 +7,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 [Trait("Category", "Integration")]
 [Trait("Provider", "TMDB")]
 [Trait("Client", "TmdbSeasonClient")]
+[Collection("TmdbApi")]
 public class TmdbSeasonClientIntegrationTests : TmdbTestBase
 {
     public TmdbSeasonClientIntegrationTests()
