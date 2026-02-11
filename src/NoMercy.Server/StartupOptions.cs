@@ -63,8 +63,6 @@ public class StartupOptions
             Config.ApiServerBaseUrl = $"{Config.ApiBaseUrl}v1/server/";
 
             Config.AuthBaseUrl = "https://auth-dev.nomercy.tv/realms/NoMercyTV/";
-            Config.TokenClientSecret =
-                Environment.GetEnvironmentVariable("NOMERCY_CLIENT_SECRET") ?? string.Empty;
 
             Logger.App("Running in development mode.");
         }

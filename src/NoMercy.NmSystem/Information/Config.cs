@@ -11,9 +11,6 @@ public static class Config
     public static string AuthBaseUrl { get; set; } =
         Environment.GetEnvironmentVariable("NOMERCY_AUTH_URL") ?? DefaultAuthBaseUrl;
 
-    public static string TokenClientSecret { get; set; } =
-        Environment.GetEnvironmentVariable("NOMERCY_CLIENT_SECRET") ?? string.Empty;
-
     public static readonly string TokenClientId = "nomercy-server";
 
     public static string AppBaseUrl { get; set; } =

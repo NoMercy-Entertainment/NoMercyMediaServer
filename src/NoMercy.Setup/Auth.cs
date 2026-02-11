@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Web;
 using Microsoft.AspNetCore.Hosting;
@@ -23,6 +24,7 @@ public static class Auth
     private static int? NotBefore { get; set; }
 
     private static JwtSecurityToken? _jwtSecurityToken;
+    private static string? _codeVerifier;
 
     private static IWebHost? TempServerInstance { get; set; }
 
@@ -124,11 +126,7 @@ public static class Auth
 
         Logger.Auth("Authenticating via device grant", LogEventLevel.Verbose);
 
-        List<KeyValuePair<string, string>> deviceCodeBody =
-        [
-            new("client_id", Config.TokenClientId),
-            new("scope", "openid offline_access email profile")
-        ];
+        List<KeyValuePair<string, string>> deviceCodeBody = BuildDeviceCodeRequestBody(Config.TokenClientId);
 
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent);
@@ -142,12 +140,7 @@ public static class Auth
 
         ConsoleQrCode.Display(deviceData.VerificationUriComplete);
 
-        List<KeyValuePair<string, string>> tokenBody =
-        [
-            new("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-            new("client_id", Config.TokenClientId),
-            new("device_code", deviceData.DeviceCode)
-        ];
+        List<KeyValuePair<string, string>> tokenBody = BuildDeviceTokenBody(Config.TokenClientId, deviceData.DeviceCode);
 
         DateTime expiresAt = DateTime.Now.AddSeconds(deviceData.ExpiresIn);
         bool authenticated = false;
@@ -227,12 +220,17 @@ public static class Auth
         string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
         string scope = "openid offline_access email profile";
 
+        _codeVerifier = GenerateCodeVerifier();
+        string codeChallenge = GenerateCodeChallenge(_codeVerifier);
+
         Dictionary<string, string> queryParams = new()
         {
             ["client_id"] = Config.TokenClientId,
             ["redirect_uri"] = redirectUri,
             ["response_type"] = "code",
-            ["scope"] = scope
+            ["scope"] = scope,
+            ["code_challenge"] = codeChallenge,
+            ["code_challenge_method"] = "S256"
         };
 
         string queryString = string.Join("&", queryParams.Select(kvp =>
@@ -355,20 +353,10 @@ public static class Auth
 
     private static async Task TokenByPasswordGrant(string username, string password, string? otp = "")
     {
-        if (string.IsNullOrEmpty(Config.TokenClientId) || string.IsNullOrEmpty(Config.TokenClientSecret))
-            throw new("Auth keys not initialized. Set the NOMERCY_CLIENT_SECRET environment variable.");
+        if (string.IsNullOrEmpty(Config.TokenClientId))
+            throw new("Auth keys not initialized.");
 
-        List<KeyValuePair<string, string>> body =
-        [
-            new("grant_type", "password"),
-            new("client_id", Config.TokenClientId),
-            new("client_secret", Config.TokenClientSecret),
-            new("username", username),
-            new("password", password)
-        ];
-
-        if (!string.IsNullOrEmpty(otp))
-            body.Add(new("totp", otp));
+        List<KeyValuePair<string, string>> body = BuildPasswordGrantBody(Config.TokenClientId, username, password, otp);
 
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent);
@@ -383,20 +371,13 @@ public static class Auth
 
     private static async Task TokenByRefreshGrand()
     {
-        if (string.IsNullOrEmpty(Config.TokenClientId) || string.IsNullOrEmpty(Config.TokenClientSecret) ||
+        if (string.IsNullOrEmpty(Config.TokenClientId) ||
             RefreshToken == null || _jwtSecurityToken == null)
-            throw new("Auth keys not initialized. Set the NOMERCY_CLIENT_SECRET environment variable.");
+            throw new("Auth keys not initialized.");
 
         Logger.Auth("Refreshing token");
 
-        List<KeyValuePair<string, string>> body =
-        [
-            new("grant_type", "refresh_token"),
-            new("client_id", Config.TokenClientId),
-            new("client_secret", Config.TokenClientSecret),
-            new("refresh_token", RefreshToken),
-            new("scope", "openid offline_access email profile")
-        ];
+        List<KeyValuePair<string, string>> body = BuildRefreshTokenBody(Config.TokenClientId, RefreshToken);
 
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent);
@@ -412,18 +393,15 @@ public static class Auth
     public static async Task TokenByAuthorizationCode(string code)
     {
         Logger.Auth("Getting token by authorization code", LogEventLevel.Verbose);
-        if (string.IsNullOrEmpty(Config.TokenClientId) || string.IsNullOrEmpty(Config.TokenClientSecret))
-            throw new("Auth keys not initialized. Set the NOMERCY_CLIENT_SECRET environment variable.");
+        if (string.IsNullOrEmpty(Config.TokenClientId))
+            throw new("Auth keys not initialized.");
 
-        List<KeyValuePair<string, string>> body =
-        [
-            new("grant_type", "authorization_code"),
-            new("client_id", Config.TokenClientId),
-            new("client_secret", Config.TokenClientSecret),
-            new("scope", "openid offline_access email profile"),
-            new("redirect_uri", $"http://localhost:{Config.InternalServerPort}/sso-callback"),
-            new("code", code)
-        ];
+        if (string.IsNullOrEmpty(_codeVerifier))
+            throw new("PKCE code verifier is missing. Authorization must be initiated via TokenByBrowser first.");
+
+        List<KeyValuePair<string, string>> body = BuildAuthorizationCodeBody(
+            Config.TokenClientId, code,
+            $"http://localhost:{Config.InternalServerPort}/sso-callback", _codeVerifier);
 
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent);
@@ -458,5 +436,87 @@ public static class Auth
         if (string.IsNullOrEmpty(Info.GpuVendors.FirstOrDefault())) return false;
 
         return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY"));
+    }
+
+    internal static string GenerateCodeVerifier()
+    {
+        byte[] bytes = new byte[32];
+        RandomNumberGenerator.Fill(bytes);
+        return Convert.ToBase64String(bytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+    }
+
+    internal static string GenerateCodeChallenge(string codeVerifier)
+    {
+        byte[] hash = SHA256.HashData(Encoding.ASCII.GetBytes(codeVerifier));
+        return Convert.ToBase64String(hash)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildAuthorizationCodeBody(
+        string clientId, string code, string redirectUri, string codeVerifier)
+    {
+        return
+        [
+            new("grant_type", "authorization_code"),
+            new("client_id", clientId),
+            new("scope", "openid offline_access email profile"),
+            new("redirect_uri", redirectUri),
+            new("code", code),
+            new("code_verifier", codeVerifier)
+        ];
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildPasswordGrantBody(
+        string clientId, string username, string password, string? otp = "")
+    {
+        List<KeyValuePair<string, string>> body =
+        [
+            new("grant_type", "password"),
+            new("client_id", clientId),
+            new("username", username),
+            new("password", password)
+        ];
+
+        if (!string.IsNullOrEmpty(otp))
+            body.Add(new("totp", otp));
+
+        return body;
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildRefreshTokenBody(
+        string clientId, string refreshToken)
+    {
+        return
+        [
+            new("grant_type", "refresh_token"),
+            new("client_id", clientId),
+            new("refresh_token", refreshToken),
+            new("scope", "openid offline_access email profile")
+        ];
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildDeviceCodeRequestBody(string clientId)
+    {
+        return
+        [
+            new("client_id", clientId),
+            new("scope", "openid offline_access email profile")
+        ];
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildDeviceTokenBody(
+        string clientId, string deviceCode)
+    {
+        return
+        [
+            new("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+            new("client_id", clientId),
+            new("device_code", deviceCode)
+        ];
     }
 }

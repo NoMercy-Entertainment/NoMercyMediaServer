@@ -20,6 +20,7 @@ public class TempServer
 
                     context.Response.Headers.Append("Content-Type", "text/html");
                     await context.Response.WriteAsync("<script>window.close();</script>");
+                    await context.Response.CompleteAsync();
 
                     await Auth.TokenByAuthorizationCode(code);
                 });
