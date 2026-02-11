@@ -2118,3 +2118,26 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
    - `GetLibraryByIdAsync_Paginated_TakeReturnsAllWhenHigherThanCount` — verifies `.Take(100)` returns all 2 movies
 
 **Test results**: Build succeeds with 0 errors. All 4 new tests pass. All 212 repository tests pass. Pre-existing API test failures unchanged.
+
+---
+
+## HIGH-11 — Fix unbounded cache growth
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Fixed two unbounded growth issues in `src/NoMercy.Providers/Helpers/CacheController.cs`:
+
+1. **SemaphoreSlim dictionary growth**: Added `MaxLockEntries` constant (10,000) and `PruneLocks()` method that removes unused SemaphoreSlim entries (those with CurrentCount == 1, meaning not held) when the dictionary exceeds the limit. Properly disposes removed semaphores.
+
+2. **Disk cache growth**: Added `PruneCache()` method that enforces a 500MB size limit (`MaxCacheSizeBytes`) by deleting the oldest cache files first (ordered by CreationTime). Called after every successful write. Made an `internal` overload accepting path and size limit for testability.
+
+3. `tests/NoMercy.Tests.Providers/Helpers/CacheControllerTests.cs` — 6 new tests:
+   - `PruneCache_DeletesOldestFiles_WhenExceedingSizeLimit` — creates 5x200-byte files, prunes at 500-byte limit, verifies oldest 3 deleted and newest 2 kept
+   - `PruneCache_DoesNothing_WhenUnderSizeLimit` — verifies no files deleted when total < limit
+   - `PruneCache_HandlesEmptyDirectory` — verifies no exception on empty dir
+   - `PruneCache_HandlesNonExistentDirectory` — verifies no exception on missing dir
+   - `GenerateFileName_ReturnsDeterministicHash` — verifies same URL produces same hash
+   - `GenerateFileName_ReturnsDifferentHashForDifferentUrls` — verifies different URLs produce different hashes
+
+**Test results**: Build succeeds with 0 errors. All 6 new tests pass. All 427 provider tests pass (5 pre-existing TMDB API integration failures unchanged). Pre-existing API test failures unchanged.
