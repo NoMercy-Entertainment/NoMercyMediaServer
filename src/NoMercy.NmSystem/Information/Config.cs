@@ -4,14 +4,25 @@ namespace NoMercy.NmSystem.Information;
 
 public static class Config
 {
-    public static string AuthBaseUrl { get; set; } = "https://auth.nomercy.tv/realms/NoMercyTV/";
-    public static string AuthBaseDevUrl { get; set; } = "https://auth-dev.nomercy.tv/realms/NoMercyTV/";
-    public static string TokenClientSecret = "1lHWBazSTHfBpuIzjAI6xnNjmwUnryai";
+    private const string DefaultAuthBaseUrl = "https://auth.nomercy.tv/realms/NoMercyTV/";
+    private const string DefaultAppBaseUrl = "https://app.nomercy.tv/";
+    private const string DefaultApiBaseUrl = "https://api.nomercy.tv/";
+
+    public static string AuthBaseUrl { get; set; } =
+        Environment.GetEnvironmentVariable("NOMERCY_AUTH_URL") ?? DefaultAuthBaseUrl;
+
+    public static string TokenClientSecret { get; set; } =
+        Environment.GetEnvironmentVariable("NOMERCY_CLIENT_SECRET") ?? string.Empty;
+
     public static readonly string TokenClientId = "nomercy-server";
 
-    public static string AppBaseUrl = "https://app.nomercy.tv/";
-    public static string ApiBaseUrl = "https://api.nomercy.tv/";
-    public static string ApiServerBaseUrl = $"{ApiBaseUrl}v1/server/";
+    public static string AppBaseUrl { get; set; } =
+        Environment.GetEnvironmentVariable("NOMERCY_APP_URL") ?? DefaultAppBaseUrl;
+
+    public static string ApiBaseUrl { get; set; } =
+        Environment.GetEnvironmentVariable("NOMERCY_API_URL") ?? DefaultApiBaseUrl;
+
+    public static string ApiServerBaseUrl { get; set; } = $"{ApiBaseUrl}v1/server/";
 
     public static readonly string DnsServer = "1.1.1.1";
 

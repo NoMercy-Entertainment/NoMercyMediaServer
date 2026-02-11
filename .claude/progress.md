@@ -2043,3 +2043,21 @@ Audited all 12 IQueryable-returning methods in `MusicRepository.cs` and classifi
 - Added `SignalR_MaximumReceiveMessageSize_IsReasonablyLimited` test to `tests/NoMercy.Tests.Api/SignalRDetailedErrorsTests.cs` that verifies the limit is between 1MB and 10MB
 
 **Test results**: Build succeeds with 0 errors. New test passes (2 total in SignalRDetailedErrorsTests). All non-API test projects pass. Pre-existing 268 API test failures are unchanged (SQLite disk I/O error in factory constructor, verified by stashing changes).
+
+---
+
+## MED-17 — Remove hardcoded configuration in static properties
+
+**Date**: 2026-02-10
+
+**What was done**:
+- Removed hardcoded OAuth client secret `"1lHWBazSTHfBpuIzjAI6xnNjmwUnryai"` from `src/NoMercy.NmSystem/Information/Config.cs:9` — now loaded from `NOMERCY_CLIENT_SECRET` environment variable with `string.Empty` fallback
+- Removed unused `AuthBaseDevUrl` property (dead code — defined but never referenced anywhere)
+- Made URL properties (`AuthBaseUrl`, `AppBaseUrl`, `ApiBaseUrl`) overridable via environment variables (`NOMERCY_AUTH_URL`, `NOMERCY_APP_URL`, `NOMERCY_API_URL`) with existing defaults preserved
+- Changed `AppBaseUrl`, `ApiBaseUrl`, `ApiServerBaseUrl` from public fields to auto-properties with `{ get; set; }` for consistency
+- Extracted URL defaults into `private const string` fields for clarity
+- Updated `src/NoMercy.Server/StartupOptions.cs:57` — dev mode now also reads from env var instead of hardcoding secret
+- Updated `src/NoMercy.Setup/Auth.cs` — changed 3 null checks (`TokenClientSecret == null`) to `string.IsNullOrEmpty()` since default is now empty string, and improved error messages to mention the environment variable
+- Added 8 tests in `tests/NoMercy.Tests.Networking/ConfigEnvironmentVariableTests.cs`: verifies empty default, no hardcoded secret, URL defaults present, ApiServerBaseUrl derivation, AuthBaseDevUrl removal, and settable property
+
+**Test results**: Build succeeds with 0 errors. All 8 new tests pass. All non-API test projects pass (18 Networking, 143 Database, 147 Encoder, 287 Queue, 208 Repositories, 28 MediaProcessing, 421 Providers). Pre-existing API test failures unchanged.

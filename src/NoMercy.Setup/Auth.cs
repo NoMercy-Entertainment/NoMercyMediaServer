@@ -355,8 +355,8 @@ public static class Auth
 
     private static async Task TokenByPasswordGrant(string username, string password, string? otp = "")
     {
-        if (Config.TokenClientId == null || Config.TokenClientSecret == null)
-            throw new("Auth keys not initialized");
+        if (string.IsNullOrEmpty(Config.TokenClientId) || string.IsNullOrEmpty(Config.TokenClientSecret))
+            throw new("Auth keys not initialized. Set the NOMERCY_CLIENT_SECRET environment variable.");
 
         List<KeyValuePair<string, string>> body =
         [
@@ -383,9 +383,9 @@ public static class Auth
 
     private static async Task TokenByRefreshGrand()
     {
-        if (Config.TokenClientId == null || Config.TokenClientSecret == null || RefreshToken == null ||
-            _jwtSecurityToken == null)
-            throw new("Auth keys not initialized");
+        if (string.IsNullOrEmpty(Config.TokenClientId) || string.IsNullOrEmpty(Config.TokenClientSecret) ||
+            RefreshToken == null || _jwtSecurityToken == null)
+            throw new("Auth keys not initialized. Set the NOMERCY_CLIENT_SECRET environment variable.");
 
         Logger.Auth("Refreshing token");
 
@@ -412,8 +412,8 @@ public static class Auth
     public static async Task TokenByAuthorizationCode(string code)
     {
         Logger.Auth("Getting token by authorization code", LogEventLevel.Verbose);
-        if (Config.TokenClientId == null || Config.TokenClientSecret == null)
-            throw new("Auth keys not initialized");
+        if (string.IsNullOrEmpty(Config.TokenClientId) || string.IsNullOrEmpty(Config.TokenClientSecret))
+            throw new("Auth keys not initialized. Set the NOMERCY_CLIENT_SECRET environment variable.");
 
         List<KeyValuePair<string, string>> body =
         [
