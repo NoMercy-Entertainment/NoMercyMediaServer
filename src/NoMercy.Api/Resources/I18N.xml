@@ -427,27 +427,27 @@
   </Entry>
   <Entry>
     <Key>Movie is available</Key>
-    <Value lang="nl">Movie is available</Value>
+    <Value lang="nl">Film is beschikbaar</Value>
   </Entry>
   <Entry>
     <Key>Special is available</Key>
-    <Value lang="nl">Special is available</Value>
+    <Value lang="nl">Special is beschikbaar</Value>
   </Entry>
   <Entry>
     <Key>Top Result</Key>
-    <Value lang="nl">Top Result</Value>
+    <Value lang="nl">Beste Resultaat</Value>
   </Entry>
   <Entry>
     <Key>Tracks</Key>
-    <Value lang="nl">Tracks</Value>
+    <Value lang="nl">Nummers</Value>
   </Entry>
   <Entry>
     <Key>Artist</Key>
-    <Value lang="nl">Artist</Value>
+    <Value lang="nl">Artiest</Value>
   </Entry>
   <Entry>
     <Key>Movie deleted</Key>
-    <Value lang="nl">Movie verwijderd</Value>
+    <Value lang="nl">Film verwijderd</Value>
   </Entry>
   <Entry>
     <Key>Movie is available</Key>
@@ -455,35 +455,35 @@
   </Entry>
   <Entry>
     <Key>Movie added to watch list</Key>
-    <Value lang="nl">Movie added to watch list</Value>
+    <Value lang="nl">Film toegevoegd aan kijklijst</Value>
   </Entry>
   <Entry>
     <Key>Movie removed from watch list</Key>
-    <Value lang="nl">Movie removed from watch list</Value>
+    <Value lang="nl">Film verwijderd van kijklijst</Value>
   </Entry>
   <Entry>
     <Key>Artist cover updated</Key>
-    <Value lang="nl">Artist cover updated</Value>
+    <Value lang="nl">Artiestcover bijgewerkt</Value>
   </Entry>
   <Entry>
     <Key>Album cover updated</Key>
-    <Value lang="nl">Album cover updated</Value>
+    <Value lang="nl">Albumcover bijgewerkt</Value>
   </Entry>
   <Entry>
     <Key>Playlist cover updated</Key>
-    <Value lang="nl">Playlist cover updated</Value>
+    <Value lang="nl">Afspeellijstcover bijgewerkt</Value>
   </Entry>
   <Entry>
     <Key>Playlist updated successfully</Key>
-    <Value lang="nl">Playlist updated successfully</Value>
+    <Value lang="nl">Afspeellijst succesvol bijgewerkt</Value>
   </Entry>
   <Entry>
     <Key>Most listened playlist</Key>
-    <Value lang="nl">Most listened playlist</Value>
+    <Value lang="nl">Meest beluisterde afspeellijst</Value>
   </Entry>
   <Entry>
     <Key>Track not found in playlist</Key>
-    <Value lang="nl">Track not found in playlist</Value>
+    <Value lang="nl">Nummer niet gevonden in afspeellijst</Value>
   </Entry>
   <Entry>
     <Key>Genres</Key>
@@ -491,18 +491,22 @@
   </Entry>
   <Entry>
     <Key>Album metadata updated</Key>
-    <Value lang="nl">Album metadata updated</Value>
+    <Value lang="nl">Albummetadata bijgewerkt</Value>
   </Entry>
   <Entry>
     <Key>Playlist deleted successfully</Key>
-    <Value lang="nl">Playlist deleted successfully</Value>
+    <Value lang="nl">Afspeellijst succesvol verwijderd</Value>
   </Entry>
   <Entry>
     <Key>You already have a playlist with that name</Key>
-    <Value lang="nl">You already have a playlist with that name</Value>
+    <Value lang="nl">Je hebt al een afspeellijst met die naam</Value>
   </Entry>
   <Entry>
     <Key>Artist updated successfully</Key>
-    <Value lang="nl">Artist updated successfully</Value>
+    <Value lang="nl">Artiest succesvol bijgewerkt</Value>
+  </Entry>
+  <Entry>
+    <Key>Response status code does not indicate success: 400 (Bad Request).</Key>
+    <Value lang="nl">Responsstatuscode geeft geen succes aan: 400 (Ongeldig verzoek).</Value>
   </Entry>
 </I18N>
