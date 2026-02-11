@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.Json.Serialization;
 using I18N.DotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -9,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using NoMercy.Api.Constraints;
 using NoMercy.Api.Middleware;
 using NoMercy.Api.Services;
@@ -381,15 +381,9 @@ public static class ServiceConfiguration
             .AddNewtonsoftJson(options =>
             {
                 options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                // options.SerializerSettings.Culture = System.Globalization.CultureInfo.InvariantCulture;
                 options.SerializerSettings.DateFormatHandling = DateFormatHandling.IsoDateFormat;
                 options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
-            })
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                // options.JsonSerializerOptions.Encoder =
-                //     System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+                options.SerializerSettings.Converters.Add(new StringEnumConverter());
             });
 
         services.Configure<RouteOptions>(options =>

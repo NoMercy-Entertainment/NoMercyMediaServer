@@ -2187,3 +2187,29 @@ Fixed two cron job registration issues:
 - `ProcessDispose_SucceedsAfterKillOnExitedProcess` — verifies Dispose succeeds after Kill, matching the finally block behavior
 
 **Test results**: Build succeeds with 0 errors. All 150 encoder tests pass (147 existing + 3 new). All 1109 non-API tests pass. Pre-existing API test failures unchanged.
+
+---
+
+## MED-08 — Fix dual JSON serializer configuration
+
+**Date**: 2026-02-11
+
+**What was done**:
+- Removed dead `AddJsonOptions` block from `ServiceConfiguration.cs` that configured `System.Text.Json.JsonStringEnumConverter` — this was a no-op because `AddNewtonsoftJson` takes over as the controller serializer, making System.Text.Json configuration unreachable
+- Added Newtonsoft's `StringEnumConverter` to the `AddNewtonsoftJson` controller configuration so enums serialize as strings in API responses (matching the behavior already present in SignalR via `JsonHelper.Settings`)
+- Removed unused `using System.Text.Json.Serialization` import
+- Added `using Newtonsoft.Json.Converters` import for `StringEnumConverter`
+
+**Context**: The codebase uses Newtonsoft.Json exclusively — 4,772 `[JsonProperty]` attributes vs only 4 `[JsonPropertyName]` attributes. The `AddJsonOptions` block was dead code since `AddNewtonsoftJson` takes priority for controller serialization.
+
+**Files changed**:
+- `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs` — Consolidated to single Newtonsoft serializer with `StringEnumConverter`
+
+**Tests added**: `tests/NoMercy.Tests.Api/JsonSerializerConfigurationTests.cs` — 5 new tests:
+- `NewtonsoftJson_HasStringEnumConverter_Configured` — verifies `StringEnumConverter` is registered in controller Newtonsoft settings
+- `NewtonsoftJson_HasReferenceLoopHandling_Ignore` — verifies reference loop handling preserved
+- `NewtonsoftJson_HasUtcDateTimeZoneHandling` — verifies UTC date handling preserved
+- `NewtonsoftJson_HasIsoDateFormatHandling` — verifies ISO date format preserved
+- `SystemTextJson_IsNotConfigured_AsDuplicateSerializer` — verifies no `JsonStringEnumConverter` in System.Text.Json options (guards against reintroducing dual serializer)
+
+**Test results**: Build succeeds with 0 errors. All 5 new tests pass. Pre-existing API test failures unchanged (12 flaky vs 14 before — improved by 2).
