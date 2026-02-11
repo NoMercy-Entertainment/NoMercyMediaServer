@@ -181,7 +181,14 @@ public class Ffprobe
             bool exited = ffprobe.WaitForExit(ExecutionTimeoutMs);
             if (!exited)
             {
-                ffprobe.Kill(entireProcessTree: true);
+                try
+                {
+                    ffprobe.Kill(entireProcessTree: true);
+                }
+                catch (InvalidOperationException)
+                {
+                    // Process already exited between WaitForExit and Kill — safe to ignore
+                }
                 throw new OperationCanceledException("ffprobe process did not exit within timeout period");
             }
 

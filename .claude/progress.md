@@ -2167,3 +2167,23 @@ Fixed two cron job registration issues:
 - `StopAsync_AfterDuplicateRegistration_CleansUpWithoutOrphanedTasks` — verifies clean shutdown after duplicate attempts
 
 **Test results**: Build succeeds with 0 errors. All 5 new tests pass. All 292 queue tests pass. Pre-existing API test failures unchanged.
+
+---
+
+## HIGH-19 — Fix FFmpeg process termination without exception handling
+
+**Date**: 2026-02-11
+
+**What was done**:
+- **Problem**: In `src/NoMercy.Encoder/Ffprobe.cs:184`, `Kill(entireProcessTree: true)` was called without exception handling in the timeout path. If the process exited between the `WaitForExit` check and the `Kill` call, `Kill` could throw `InvalidOperationException` (on Windows) or other exceptions, preventing the `OperationCanceledException` from being thrown and disrupting the retry logic.
+- **Fix**: Wrapped the `Kill(entireProcessTree: true)` call in a try-catch for `InvalidOperationException` in the timeout path of `ExecStdErrOut()`. The catch block safely ignores the exception since the process already exited, and execution continues to throw `OperationCanceledException` which triggers the retry logic in `ExecStdErrOutWithRetry()`.
+
+**Files changed**:
+- `src/NoMercy.Encoder/Ffprobe.cs` — Added try-catch around `ffprobe.Kill(entireProcessTree: true)` at line 184
+
+**Tests added**: `tests/NoMercy.Tests.Encoder/FfprobeProcessCleanupTests.cs` — 3 new tests:
+- `Kill_OnAlreadyExitedProcess_DoesNotPropagateException` — verifies the exact try-catch pattern from the fix handles Kill on an exited process without propagating exceptions
+- `Kill_OnDisposedProcess_ThrowsObjectDisposedException` — verifies Kill after Dispose throws, confirming the importance of the code ordering (Kill before Dispose in finally block)
+- `ProcessDispose_SucceedsAfterKillOnExitedProcess` — verifies Dispose succeeds after Kill, matching the finally block behavior
+
+**Test results**: Build succeeds with 0 errors. All 150 encoder tests pass (147 existing + 3 new). All 1109 non-API tests pass. Pre-existing API test failures unchanged.
