@@ -3937,3 +3937,53 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `tests/NoMercy.Tests.Tray/ServerStatusResponseTests.cs` — Updated existing deserialization tests to cover new Platform, Architecture, Os fields
 
 **Test results**: Build succeeds with 0 errors. All tests pass across all projects (27 Tray, 424 Queue, 86 Events, 218 Repositories, 42 Setup, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
+
+---
+
+## HEAD-13 — CLI tool
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created `src/NoMercy.Cli/` project — a cross-platform console application that communicates with the NoMercy server via IPC (named pipes on Windows, Unix sockets on Linux/macOS)
+- Uses `System.CommandLine` 2.0.3 for argument parsing (modern API with `SetAction`, `ParseResult.GetValue`)
+- References `NoMercy.Networking` (for `IpcClient`) and `NoMercy.NmSystem` (for `Config` constants)
+- Added `System.CommandLine` 2.0.3 to `Directory.Packages.props`
+- Added project to solution under Src folder
+
+**CLI commands implemented** (matching PRD spec section 13.4):
+- `nomercy status` — Shows server status (status, name, version, platform, OS, uptime, start time, dev mode)
+- `nomercy logs [--tail N] [--follow] [--level X] [--type X]` — View/stream server logs with filtering
+- `nomercy stop` — Graceful server shutdown via management API
+- `nomercy restart` — Server restart request
+- `nomercy config get` — Show current configuration (ports, worker counts, swagger)
+- `nomercy config set <key> <value>` — Update configuration (auto-converts camelCase/kebab-case keys to snake_case)
+- `nomercy plugin list` — List installed plugins with formatted table output
+- `nomercy queue status` — Queue statistics (pending/failed jobs, worker thread counts)
+- Global `--pipe`/`-p` option to specify custom pipe name or socket path
+
+**Files created**:
+- `src/NoMercy.Cli/NoMercy.Cli.csproj` — Console app targeting net9.0, assembly name `nomercy`
+- `src/NoMercy.Cli/Program.cs` — Entry point, root command with all subcommands
+- `src/NoMercy.Cli/CliClient.cs` — HTTP-over-IPC client wrapper (GET/POST/PUT with error handling)
+- `src/NoMercy.Cli/Commands/StatusCommand.cs` — Status command + FormatUptime helper
+- `src/NoMercy.Cli/Commands/LogsCommand.cs` — Logs command with follow mode, level/type filtering
+- `src/NoMercy.Cli/Commands/StopCommand.cs` — Stop command
+- `src/NoMercy.Cli/Commands/RestartCommand.cs` — Restart command
+- `src/NoMercy.Cli/Commands/ConfigCommand.cs` — Config get/set commands + ToSnakeCase helper
+- `src/NoMercy.Cli/Commands/PluginCommand.cs` — Plugin list command
+- `src/NoMercy.Cli/Commands/QueueCommand.cs` — Queue status command
+- `src/NoMercy.Cli/Models/StatusResponse.cs` — Status response DTO
+- `src/NoMercy.Cli/Models/ConfigResponse.cs` — Config response DTO
+- `src/NoMercy.Cli/Models/QueueStatusResponse.cs` — Queue status response DTO
+- `src/NoMercy.Cli/Models/LogEntryResponse.cs` — Log entry response DTO
+- `src/NoMercy.Cli/Models/PluginResponse.cs` — Plugin response DTO
+- `tests/NoMercy.Tests.Cli/NoMercy.Tests.Cli.csproj` — Test project
+- `tests/NoMercy.Tests.Cli/CommandStructureTests.cs` — 16 tests verifying command parsing (all commands, options, aliases, subcommands, error cases)
+- `tests/NoMercy.Tests.Cli/FormatHelperTests.cs` — 13 tests for FormatUptime and ToSnakeCase helpers
+
+**Files modified**:
+- `Directory.Packages.props` — Added `System.CommandLine` 2.0.3
+- `NoMercy.Server.sln` — Added NoMercy.Cli and NoMercy.Tests.Cli projects
+
+**Test results**: Build succeeds with 0 errors. All 29 new CLI tests pass. All existing tests pass across all projects (424 Queue, 143 Database, 150 Encoder, 16 Networking, 27 Tray, 157 Plugins, 86 Events, 218 Repositories, 42 Setup, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
