@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -305,6 +307,20 @@ public partial class FfMpeg : Classes
                     if (progressDataRunning.Speed > 0)
                     {
                         Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progressDataRunning);
+
+                        if (EventBusProvider.IsConfigured)
+                        {
+                            int jobId = meta.Id is int intId
+                                ? intId
+                                : int.TryParse(meta.Id?.ToString(), out int parsed) ? parsed : 0;
+                            _ = EventBusProvider.Current.PublishAsync(new EncodingProgressEvent
+                            {
+                                JobId = jobId,
+                                Percentage = progress,
+                                Elapsed = currentTime,
+                                Estimated = remaining > 0 ? TimeSpan.FromSeconds(remaining) : null
+                            });
+                        }
                     }
                     output2.Clear();
                 }

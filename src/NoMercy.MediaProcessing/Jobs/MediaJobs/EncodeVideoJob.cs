@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
@@ -13,6 +14,8 @@ using NoMercy.Encoder;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Audio;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
 using NoMercy.Encoder.Format.Container;
 using NoMercy.Encoder.Format.Image;
 using NoMercy.Encoder.Format.Rules;
@@ -53,10 +56,23 @@ public class EncodeVideoJob : AbstractEncoderJob
         FileMetadata fileMetadata = await GetFileMetaData(folder, context);
         if (!fileMetadata.Success) return;
 
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
         try
         {
             foreach (EncoderProfile profile in profiles)
             {
+                if (EventBusProvider.IsConfigured)
+                {
+                    await EventBusProvider.Current.PublishAsync(new EncodingStartedEvent
+                    {
+                        JobId = fileMetadata.Id,
+                        InputPath = InputFile,
+                        OutputPath = fileMetadata.Path,
+                        ProfileName = profile.Name
+                    });
+                }
+
                 BaseContainer container = BaseContainer.Create(profile.Container);
 
                 Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
@@ -258,6 +274,17 @@ public class EncodeVideoJob : AbstractEncoderJob
                     HasGpu = progressMeta.HasGpu,
                     IsHdr = progressMeta.IsHdr,
                 });
+
+                if (EventBusProvider.IsConfigured)
+                {
+                    stopwatch.Stop();
+                    await EventBusProvider.Current.PublishAsync(new EncodingCompletedEvent
+                    {
+                        JobId = fileMetadata.Id,
+                        OutputPath = fileMetadata.Path,
+                        Duration = stopwatch.Elapsed
+                    });
+                }
             }
         }
         catch (Exception e)
@@ -273,6 +300,17 @@ public class EncodeVideoJob : AbstractEncoderJob
                 Title = fileMetadata.Title,
                 Message = e.Message,
             });
+
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new EncodingFailedEvent
+                {
+                    JobId = fileMetadata.Id,
+                    InputPath = InputFile,
+                    ErrorMessage = e.Message,
+                    ExceptionType = e.GetType().Name
+                });
+            }
 
             throw;
         }

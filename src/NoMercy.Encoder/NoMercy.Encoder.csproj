@@ -16,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj"/>
         <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
         <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>

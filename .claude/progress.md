@@ -2797,3 +2797,41 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
   - `ProcessLibrary_StartedEvent_HasCorrectEventMetadata` — EventId, Timestamp, Source are correct
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (48), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427).
+
+---
+
+## EVT-06 — Add events to encoding pipeline
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Added event publishing to the video encoding pipeline (`EncodeVideoJob`):
+  - `EncodingStartedEvent` — published before each encoder profile begins processing
+  - `EncodingCompletedEvent` — published after successful encoding with elapsed duration
+  - `EncodingFailedEvent` — published in catch block with error message and exception type
+- Added event publishing to the music encoding pipeline (`EncodeMusicJob`):
+  - Same three events as video encoding
+  - Uses `Guid.GetHashCode()` for JobId since music track IDs are Guids (event class defines JobId as int)
+- Added `EncodingProgressEvent` publishing to `FfMpeg.Run()`:
+  - Published alongside existing SignalR progress broadcasts (throttled to max 2/sec)
+  - Uses fire-and-forget pattern (`_ = PublishAsync(...)`) since it's inside a synchronous `OutputDataReceived` handler
+  - Converts `dynamic` ProgressMeta.Id to int safely
+- Added `NoMercy.Events` project reference to `NoMercy.Encoder.csproj`
+- Follows the same `EventBusProvider.IsConfigured` guard pattern established in EVT-05
+
+**Files modified**:
+- `src/NoMercy.MediaProcessing/Jobs/MediaJobs/EncodeVideoJob.cs` — added EncodingStartedEvent, EncodingCompletedEvent, EncodingFailedEvent publishing
+- `src/NoMercy.MediaProcessing/Jobs/MediaJobs/EncodeMusicJob.cs` — added same three events for music encoding
+- `src/NoMercy.Encoder/FfMpeg.cs` — added EncodingProgressEvent publishing in Run() method
+- `src/NoMercy.Encoder/NoMercy.Encoder.csproj` — added NoMercy.Events project reference
+
+**Tests added**:
+- `tests/NoMercy.Tests.Events/EncodingPipelineEventTests.cs` (6 tests):
+  - `EncodingPipeline_PublishesStartedProgressCompleted_InOrder` — verifies full encoding lifecycle event flow
+  - `EncodingPipeline_PublishesStartedThenFailed_OnError` — verifies failure path event flow
+  - `EncodingProgressEvent_WorksWithGuidHashCodeAsJobId` — verifies Guid-to-int conversion for music tracks
+  - `EventBusProvider_CanPublishEncodingEvents_WhenConfigured` — verifies encoding events work through EventBusProvider
+  - `EncodingEvents_HaveUniqueEventIds` — verifies all encoding events get unique EventIds
+  - `EncodingEvents_AllHaveEncoderSource` — verifies all four encoding event types have "Encoder" source
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (54), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427).

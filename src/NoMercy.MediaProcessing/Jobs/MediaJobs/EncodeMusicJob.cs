@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
@@ -22,6 +23,8 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
 
@@ -58,8 +61,21 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                 TrackNumber = FoundTrack.Position
             };
 
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
             try
             {
+                if (EventBusProvider.IsConfigured)
+                {
+                    await EventBusProvider.Current.PublishAsync(new EncodingStartedEvent
+                    {
+                        JobId = track.Id.GetHashCode(),
+                        InputPath = MediaFile.Path,
+                        OutputPath = FolderMetaData.BasePath,
+                        ProfileName = profile.Name
+                    });
+                }
+
                 BaseContainer container = BaseContainer.Create(profile.Container);
 
                 BuildAudioStreams(profile, ref container, FoundTrack, FolderMetaData.MusicBrainzRelease);
@@ -99,6 +115,17 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                     Title = FoundTrack.Title,
                     Message = "Done"
                 });
+
+                if (EventBusProvider.IsConfigured)
+                {
+                    stopwatch.Stop();
+                    await EventBusProvider.Current.PublishAsync(new EncodingCompletedEvent
+                    {
+                        JobId = track.Id.GetHashCode(),
+                        OutputPath = FolderMetaData.BasePath,
+                        Duration = stopwatch.Elapsed
+                    });
+                }
             }
             catch (Exception e)
             {
@@ -111,6 +138,17 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
                     Title = FoundTrack.Title,
                     Message = e.Message
                 });
+
+                if (EventBusProvider.IsConfigured)
+                {
+                    await EventBusProvider.Current.PublishAsync(new EncodingFailedEvent
+                    {
+                        JobId = track.Id.GetHashCode(),
+                        InputPath = MediaFile.Path,
+                        ErrorMessage = e.Message,
+                        ExceptionType = e.GetType().Name
+                    });
+                }
             }
         }
     }
