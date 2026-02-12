@@ -316,7 +316,7 @@ public partial class MusicLogic : IAsyncDisposable
                 await LinkGenreToReleaseGroup(musicBrainzRelease.MusicBrainzReleaseGroup, genre);
 
             MusicDescriptionJob musicDescriptionJob = new(musicBrainzRelease.MusicBrainzReleaseGroup);
-            QueueRunner.Dispatcher.Dispatch(musicDescriptionJob);
+            QueueRunner.Current!.Dispatcher.Dispatch(musicDescriptionJob);
         }
         catch (Exception e)
         {
@@ -388,10 +388,10 @@ public partial class MusicLogic : IAsyncDisposable
                 await LinkGenreToRelease(musicBrainzRelease, genre);
 
             CoverArtImageJob coverArtImageJob = new(musicBrainzRelease);
-            QueueRunner.Dispatcher.Dispatch(coverArtImageJob);
+            QueueRunner.Current!.Dispatcher.Dispatch(coverArtImageJob);
 
             FanArtImagesJob fanartImagesJob = new(musicBrainzRelease);
-            QueueRunner.Dispatcher.Dispatch(fanartImagesJob);
+            QueueRunner.Current!.Dispatcher.Dispatch(fanartImagesJob);
 
             Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
             {
@@ -470,11 +470,11 @@ public partial class MusicLogic : IAsyncDisposable
             Logger.App(e.Message, LogEventLevel.Error);
         }
 
-        MediaProcessing.Jobs.JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<MusicDescriptionJob>(musicBrainzArtist);
+        MusicDescriptionJob musicDescriptionJob = new() { MusicBrainzArtist = musicBrainzArtist };
+        QueueRunner.Current!.Dispatcher.Dispatch(musicDescriptionJob);
 
         FanArtImagesJob fanartImagesJob = new(musicBrainzArtist);
-        QueueRunner.Dispatcher.Dispatch(fanartImagesJob);
+        QueueRunner.Current!.Dispatcher.Dispatch(fanartImagesJob);
 
         Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
         {

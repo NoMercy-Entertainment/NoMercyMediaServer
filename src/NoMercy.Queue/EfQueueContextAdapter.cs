@@ -100,6 +100,15 @@ public class EfQueueContextAdapter : IQueueContext
         SaveAndClear();
     }
 
+    public void ResetAllReservedJobs()
+    {
+        foreach (QueueJob job in _context.QueueJobs)
+        {
+            job.ReservedAt = null;
+        }
+        SaveAndClear();
+    }
+
     public void AddFailedJob(FailedJobModel failedJob)
     {
         FailedJob entity = new()

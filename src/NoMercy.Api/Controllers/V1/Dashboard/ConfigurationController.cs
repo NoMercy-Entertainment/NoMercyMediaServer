@@ -29,7 +29,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/configuration", Order = 10)]
-public class ConfigurationController(MediaContext mediaContext) : BaseController
+public class ConfigurationController(MediaContext mediaContext, QueueRunner queueRunner) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -121,37 +121,37 @@ public class ConfigurationController(MediaContext mediaContext) : BaseController
         if (request.QueueWorkers is not null)
         {
             Config.QueueWorkers = new(Config.QueueWorkers.Key, (int)request.QueueWorkers);
-            await QueueRunner.SetWorkerCount(Config.QueueWorkers.Key, (int)request.QueueWorkers, userId);
+            await queueRunner.SetWorkerCount(Config.QueueWorkers.Key, (int)request.QueueWorkers, userId);
         }
 
         if (request.EncoderWorkers is not null)
         {
             Config.EncoderWorkers = new(Config.EncoderWorkers.Key, (int)request.EncoderWorkers);
-            await QueueRunner.SetWorkerCount(Config.EncoderWorkers.Key, (int)request.EncoderWorkers, userId);
+            await queueRunner.SetWorkerCount(Config.EncoderWorkers.Key, (int)request.EncoderWorkers, userId);
         }
 
         if (request.CronWorkers is not null)
         {
             Config.CronWorkers = new(Config.CronWorkers.Key, (int)request.CronWorkers);
-            await QueueRunner.SetWorkerCount(Config.CronWorkers.Key, (int)request.CronWorkers, userId);
+            await queueRunner.SetWorkerCount(Config.CronWorkers.Key, (int)request.CronWorkers, userId);
         }
 
         if (request.DataWorkers is not null)
         {
             Config.DataWorkers = new(Config.DataWorkers.Key, (int)request.DataWorkers);
-            await QueueRunner.SetWorkerCount(Config.DataWorkers.Key, (int)request.DataWorkers, userId);
+            await queueRunner.SetWorkerCount(Config.DataWorkers.Key, (int)request.DataWorkers, userId);
         }
 
         if (request.ImageWorkers is not null)
         {
             Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
-            await QueueRunner.SetWorkerCount(Config.ImageWorkers.Key, (int)request.ImageWorkers, userId);
+            await queueRunner.SetWorkerCount(Config.ImageWorkers.Key, (int)request.ImageWorkers, userId);
         }
 
         if (request.RequestWorkers is not null)
         {
             Config.RequestWorkers = new(Config.RequestWorkers.Key, (int)request.RequestWorkers);
-            await QueueRunner.SetWorkerCount(Config.RequestWorkers.Key, (int)request.RequestWorkers, userId);
+            await queueRunner.SetWorkerCount(Config.RequestWorkers.Key, (int)request.RequestWorkers, userId);
         }
 
         if (request.Swagger is not null)

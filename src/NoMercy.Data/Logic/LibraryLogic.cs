@@ -99,7 +99,7 @@ public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAs
             Logger.App($"Processing {rootFolder.Path}", LogEventLevel.Verbose);
 
             MusicJob musicJob = new(rootFolder.Path, Library);
-            QueueRunner.Dispatcher.Dispatch(musicJob);
+            QueueRunner.Current!.Dispatcher.Dispatch(musicJob);
         }
 
         Logger.App("Found " + Titles.Count + " subfolders");

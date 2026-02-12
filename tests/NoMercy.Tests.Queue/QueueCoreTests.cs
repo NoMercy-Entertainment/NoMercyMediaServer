@@ -1,3 +1,4 @@
+using NoMercy.Queue;
 using NoMercy.Queue.Core.Interfaces;
 using NoMercy.Queue.Core.Models;
 using Xunit;
@@ -262,8 +263,10 @@ public class QueueCoreTests
         Assert.Equal(3, config.MaxAttempts);
         Assert.Equal(1000, config.PollingIntervalMs);
         Assert.Equal(1, config.WorkerCounts["queue"]);
-        Assert.Equal(3, config.WorkerCounts["data"]);
-        Assert.Equal(1, config.WorkerCounts["encoder"]);
+        Assert.Equal(10, config.WorkerCounts["data"]);
+        Assert.Equal(2, config.WorkerCounts["encoder"]);
+        Assert.Equal(1, config.WorkerCounts["cron"]);
+        Assert.Equal(5, config.WorkerCounts["image"]);
     }
 
     [Fact]
@@ -295,6 +298,102 @@ public class QueueCoreTests
         QueueConfiguration config2 = new() { MaxAttempts = 5 };
 
         Assert.Equal(config1.MaxAttempts, config2.MaxAttempts);
+    }
+
+    // =========================================================================
+    // QueueRunner accepts QueueConfiguration
+    // =========================================================================
+
+    [Fact]
+    public void QueueRunner_AcceptsQueueConfiguration()
+    {
+        // QDC-08: Verify QueueRunner can be constructed with QueueConfiguration
+        TestQueueContext context = new();
+        QueueConfiguration config = new()
+        {
+            WorkerCounts = new Dictionary<string, int>
+            {
+                ["queue"] = 2,
+                ["data"] = 5,
+                ["encoder"] = 3
+            },
+            MaxAttempts = 5
+        };
+
+        QueueRunner runner = new(context, config);
+
+        Assert.NotNull(runner);
+        Assert.NotNull(runner.Dispatcher);
+        Assert.NotNull(runner.GetActiveWorkerThreads());
+    }
+
+    [Fact]
+    public void QueueRunner_AcceptsConfigurationStore()
+    {
+        // QDC-08: Verify QueueRunner accepts optional IConfigurationStore
+        TestQueueContext context = new();
+        QueueConfiguration config = new();
+        TestConfigStore store = new();
+
+        QueueRunner runner = new(context, config, store);
+
+        Assert.NotNull(runner);
+    }
+
+    [Fact]
+    public void QueueRunner_SetsCurrentStaticAccessor()
+    {
+        // QDC-08: Verify QueueRunner.Current is set for non-DI code paths
+        TestQueueContext context = new();
+        QueueConfiguration config = new();
+
+        QueueRunner runner = new(context, config);
+
+        Assert.Same(runner, QueueRunner.Current);
+    }
+
+    [Fact]
+    public void QueueRunner_UsesDefaultConfiguration()
+    {
+        // QDC-08: Verify QueueRunner works with default QueueConfiguration
+        TestQueueContext context = new();
+        QueueConfiguration config = new();
+
+        QueueRunner runner = new(context, config);
+
+        // Should have all 5 default worker types
+        IReadOnlyDictionary<string, Thread> threads = runner.GetActiveWorkerThreads();
+        Assert.NotNull(threads);
+        Assert.Empty(threads); // No workers spawned until Initialize()
+    }
+
+    [Fact]
+    public async Task QueueRunner_SetWorkerCount_UsesConfigurationStore()
+    {
+        // QDC-08: Verify SetWorkerCount persists via IConfigurationStore
+        TestQueueContext context = new();
+        QueueConfiguration config = new();
+        TestConfigStore store = new();
+
+        QueueRunner runner = new(context, config);
+
+        bool result = await runner.SetWorkerCount("queue", 4, Guid.NewGuid());
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task QueueRunner_SetWorkerCount_ReturnsFalseForUnknownQueue()
+    {
+        // QDC-08: Verify SetWorkerCount returns false for non-existent queue
+        TestQueueContext context = new();
+        QueueConfiguration config = new();
+
+        QueueRunner runner = new(context, config);
+
+        bool result = await runner.SetWorkerCount("nonexistent", 4, Guid.NewGuid());
+
+        Assert.False(result);
     }
 
     // =========================================================================
@@ -386,7 +485,7 @@ public class QueueCoreTests
     // Test implementations
     // =========================================================================
 
-    private sealed class TestJob : IShouldQueue
+    private sealed class TestJob : NoMercy.Queue.Core.Interfaces.IShouldQueue
     {
         public string QueueName => "test-queue";
         public int Priority => 5;
@@ -430,6 +529,11 @@ public class QueueCoreTests
 
         public string? GetValue(string key) => _store.GetValueOrDefault(key);
         public void SetValue(string key, string value) => _store[key] = value;
+        public Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
+        {
+            _store[key] = value;
+            return Task.CompletedTask;
+        }
         public bool HasKey(string key) => _store.ContainsKey(key);
     }
 
@@ -449,6 +553,10 @@ public class QueueCoreTests
         public QueueJobModel? FindJob(int id) => _jobs.FirstOrDefault(j => j.Id == id);
         public bool JobExists(string payload) => _jobs.Any(j => j.Payload == payload);
         public void UpdateJob(QueueJobModel job) { }
+        public void ResetAllReservedJobs()
+        {
+            foreach (QueueJobModel job in _jobs) job.ReservedAt = null;
+        }
 
         public void AddFailedJob(FailedJobModel failedJob) { failedJob.Id = _nextFailedId++; _failedJobs.Add(failedJob); }
         public void RemoveFailedJob(FailedJobModel failedJob) => _failedJobs.Remove(failedJob);

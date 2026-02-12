@@ -145,21 +145,17 @@ public class QueueWorkerTests : IDisposable
     [Fact]
     public void QueueWorker_Stop_StopsProcessing()
     {
-        // This test just verifies that Stop() doesn't throw exceptions
-        // In a real scenario, the worker would be managed by QueueRunner
+        // This test verifies that Stop() doesn't throw exceptions
+        // QueueWorker now accepts an optional QueueRunner reference,
+        // so calling Stop() without a QueueRunner is safe (returns -1 for index)
 
         // Arrange
         QueueWorker worker = new(_jobQueue, "test-worker");
 
         // Act & Assert - Should not throw
-        // Note: We can't easily test the actual stopping behavior without
-        // integrating with QueueRunner, but we can verify the method exists
-        // and doesn't throw when called
         Exception? exception = Record.Exception(() => worker.Stop());
 
-        // The current implementation tries to get worker index which fails in isolation
-        // This is expected behavior - the test confirms the API exists
-        Assert.IsType<KeyNotFoundException>(exception);
+        Assert.Null(exception);
     }
 
     [Fact]

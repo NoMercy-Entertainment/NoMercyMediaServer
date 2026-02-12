@@ -14,6 +14,14 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3)
 
     private static readonly object _writeLock = new();
 
+    public void ResetAllReservedJobs()
+    {
+        lock (_writeLock)
+        {
+            context.ResetAllReservedJobs();
+        }
+    }
+
     public void Enqueue(QueueJobModel queueJob)
     {
         lock (_writeLock)

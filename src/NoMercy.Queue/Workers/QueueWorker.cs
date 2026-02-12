@@ -5,12 +5,12 @@ using Exception = System.Exception;
 
 namespace NoMercy.Queue.Workers;
 
-public class QueueWorker(JobQueue queue, string name = "default")
+public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? runner = null)
 {
     private long? _currentJobId;
     private bool _isRunning = true;
 
-    private int CurrentIndex => QueueRunner.GetWorkerIndex(name, this);
+    private int CurrentIndex => runner?.GetWorkerIndex(name, this) ?? -1;
 
     public event WorkCompletedEventHandler WorkCompleted = delegate { };
 

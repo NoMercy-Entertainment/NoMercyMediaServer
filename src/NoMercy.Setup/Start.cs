@@ -85,7 +85,7 @@ public class Start
 
             // Start queue workers after a short delay
             await Task.Delay(TimeSpan.FromSeconds(2));
-            await QueueRunner.Initialize();
+            await QueueRunner.Current!.Initialize();
         });
     }
 }

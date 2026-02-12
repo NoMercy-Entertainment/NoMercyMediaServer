@@ -10,6 +10,7 @@ public interface IQueueContext : IDisposable
     QueueJobModel? FindJob(int id);
     bool JobExists(string payload);
     void UpdateJob(QueueJobModel job);
+    void ResetAllReservedJobs();
 
     void AddFailedJob(FailedJobModel failedJob);
     void RemoveFailedJob(FailedJobModel failedJob);

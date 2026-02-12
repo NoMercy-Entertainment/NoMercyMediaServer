@@ -3494,3 +3494,58 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `tests/NoMercy.Tests.Queue/JobDispatcherTests.cs` — Changed: 9 tests exercising instance-based dispatcher
 
 **Test results**: Build succeeds with 0 errors. All tests pass with 0 failures across all test projects (including 321 queue tests with 6 new dispatcher tests).
+
+---
+
+## QDC-08 — Refactor QueueRunner to accept QueueConfiguration
+
+**Task**: Refactor `QueueRunner` from a static class to an instance class that accepts `QueueConfiguration` and `IConfigurationStore`, enabling dependency injection and testability.
+
+**What was done**:
+
+1. **QueueRunner refactored from static to instance class**: Constructor accepts `IQueueContext`, `QueueConfiguration`, and optional `IConfigurationStore`. Creates its own `JobQueue` and `JobDispatcher` internally. Worker dictionary initialized from `QueueConfiguration.WorkerCounts` instead of `Config.*Workers` statics. Added `static QueueRunner? Current` property for non-DI code paths (set in constructor).
+
+2. **QueueConfiguration updated**: Added all 5 worker types as defaults (`queue=1`, `encoder=2`, `cron=1`, `data=10`, `image=5`).
+
+3. **IConfigurationStore extended**: Added `Task SetValueAsync(string key, string value, Guid? modifiedBy = null)` for async persistent config storage.
+
+4. **IQueueContext extended**: Added `void ResetAllReservedJobs()` method.
+
+5. **MediaConfigurationStore created**: New `IConfigurationStore` implementation using `MediaContext` for persisting worker count changes.
+
+6. **DI registration updated** in `ServiceConfiguration.cs`: `QueueRunner` registered as singleton with factory that reads `Config.*Workers`, plus `IConfigurationStore` → `MediaConfigurationStore`.
+
+7. **All consumers updated**:
+   - Controllers (`ServerController`, `ConfigurationController`) inject `QueueRunner` instance
+   - Logic classes (`LibraryLogic`, `MusicLogic`) use `QueueRunner.Current!.Dispatcher`
+   - `Start.cs` uses `QueueRunner.Current!.Initialize()`
+   - `MediaProcessing.Jobs.JobDispatcher` dual-constructor pattern: DI constructor + parameterless fallback using `QueueRunner.Current`
+
+8. **JobDispatcher methods made virtual**: All `DispatchJob` overloads marked `virtual` for Moq testability. Added `InternalsVisibleTo("DynamicProxyGenAssembly2")` for internal method mocking.
+
+9. **QueueWorker updated**: Accepts optional `QueueRunner?` parameter instead of static access.
+
+**Files changed**:
+- `src/NoMercy.Queue/QueueRunner.cs` — Static → instance class with DI constructor
+- `src/NoMercy.Queue/Workers/QueueWorker.cs` — Optional `QueueRunner?` parameter
+- `src/NoMercy.Queue/JobQueue.cs` — Added `ResetAllReservedJobs()`
+- `src/NoMercy.Queue/EfQueueContextAdapter.cs` — Added `ResetAllReservedJobs()` implementation
+- `src/NoMercy.Queue/MediaConfigurationStore.cs` — New: `IConfigurationStore` implementation
+- `src/NoMercy.Queue.Core/Models/QueueConfiguration.cs` — Updated defaults for all 5 worker types
+- `src/NoMercy.Queue.Core/Interfaces/IConfigurationStore.cs` — Added `SetValueAsync`
+- `src/NoMercy.Queue.Core/Interfaces/IQueueContext.cs` — Added `ResetAllReservedJobs()`
+- `src/NoMercy.MediaProcessing/Jobs/JobDispatcher.cs` — Dual constructors, virtual methods, nullable dispatcher
+- `src/NoMercy.MediaProcessing/NoMercy.MediaProcessing.csproj` — Added `InternalsVisibleTo` for DynamicProxyGenAssembly2
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — DI registration for QueueRunner, IConfigurationStore
+- `src/NoMercy.Api/Controllers/V1/Dashboard/ServerController.cs` — Inject QueueRunner instance
+- `src/NoMercy.Api/Controllers/V1/Dashboard/ConfigurationController.cs` — Inject QueueRunner instance
+- `src/NoMercy.Data/Logic/LibraryLogic.cs` — Use `QueueRunner.Current!.Dispatcher`
+- `src/NoMercy.Data/Logic/MusicLogic.cs` — Use `QueueRunner.Current!.Dispatcher`
+- `src/NoMercy.Setup/Start.cs` — Use `QueueRunner.Current!.Initialize()`
+- `tests/NoMercy.Tests.Queue/QueueCoreTests.cs` — 6 new QueueRunner tests, updated defaults test
+- `tests/NoMercy.Tests.Queue/QueueRunnerFireAndForgetTests.cs` — Updated for instance-based reflection
+- `tests/NoMercy.Tests.Queue/QueueWorkerTests.cs` — Updated Stop test for nullable runner
+- `tests/NoMercy.Tests.Queue/WorkerCountRaceConditionTests.cs` — Updated reflection and source analysis
+- `tests/NoMercy.Tests.Queue/TestHelpers/TestQueueContextAdapter.cs` — Added `ResetAllReservedJobs()`
+
+**Test results**: Build succeeds with 0 errors. All 1415 tests pass with 0 failures across all test projects (327 queue, 33 media processing, 324 API, 218 repositories, 86 events, 427 providers).

@@ -5,8 +5,10 @@ public record QueueConfiguration
     public Dictionary<string, int> WorkerCounts { get; init; } = new()
     {
         ["queue"] = 1,
-        ["data"] = 3,
-        ["encoder"] = 1
+        ["encoder"] = 2,
+        ["cron"] = 1,
+        ["data"] = 10,
+        ["image"] = 5
     };
 
     public byte MaxAttempts { get; init; } = 3;

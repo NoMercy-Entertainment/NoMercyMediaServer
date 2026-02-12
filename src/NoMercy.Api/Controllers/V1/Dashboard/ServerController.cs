@@ -53,7 +53,8 @@ public class ServerController(
     IHostApplicationLifetime appLifetime,
     MediaContext context,
     FileRepository fileRepository,
-    JobDispatcher jobDispatcher) : BaseController
+    JobDispatcher jobDispatcher,
+    QueueRunner queueRunner) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -515,7 +516,7 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update workers");
 
-        if (await QueueRunner.SetWorkerCount(worker, count, User.UserId()))
+        if (await queueRunner.SetWorkerCount(worker, count, User.UserId()))
             return Ok($"{worker} worker count set to {count}");
 
         return BadRequestResponse($"{worker} worker count could not be set to {count}");

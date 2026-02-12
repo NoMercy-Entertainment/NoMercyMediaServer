@@ -49,6 +49,14 @@ public class TestQueueContextAdapter : IQueueContext
         if (index >= 0) Jobs[index] = job;
     }
 
+    public void ResetAllReservedJobs()
+    {
+        foreach (QueueJobModel job in Jobs)
+        {
+            job.ReservedAt = null;
+        }
+    }
+
     public void AddFailedJob(FailedJobModel failedJob)
     {
         failedJob.Id = _nextFailedJobId++;

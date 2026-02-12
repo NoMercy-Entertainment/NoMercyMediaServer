@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="NoMercy.Tests.MediaProcessing"/>
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
     </ItemGroup>
 
     <ItemGroup>

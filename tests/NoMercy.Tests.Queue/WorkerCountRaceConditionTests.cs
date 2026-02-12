@@ -17,7 +17,7 @@ public class WorkerCountRaceConditionTests
         // HIGH-16: Verify a dedicated lock object exists for synchronizing Workers access
         FieldInfo? lockField = typeof(QueueRunner).GetField(
             "_workersLock",
-            BindingFlags.NonPublic | BindingFlags.Static);
+            BindingFlags.NonPublic | BindingFlags.Instance);
 
         Assert.NotNull(lockField);
         Assert.Equal(typeof(object), lockField.FieldType);
@@ -31,7 +31,7 @@ public class WorkerCountRaceConditionTests
         string source = File.ReadAllText(sourceFile);
 
         // Extract SpawnWorker method body (not SpawnWorkerThread)
-        string spawnWorkerBody = ExtractMethodBody(source, "static void SpawnWorker(");
+        string spawnWorkerBody = ExtractMethodBody(source, "void SpawnWorker(");
 
         Assert.Contains("lock (_workersLock)", spawnWorkerBody);
         Assert.Contains("workerInstances.Add(", spawnWorkerBody);
@@ -45,7 +45,7 @@ public class WorkerCountRaceConditionTests
         string source = File.ReadAllText(sourceFile);
 
         string methodBody = ExtractMethodBody(
-            source, "static WorkCompletedEventHandler QueueWorkerCompleted(");
+            source, "WorkCompletedEventHandler QueueWorkerCompleted(");
 
         Assert.Contains("lock (_workersLock)", methodBody);
         Assert.Contains("workerInstances.Remove(", methodBody);
@@ -111,11 +111,11 @@ public class WorkerCountRaceConditionTests
         string source = File.ReadAllText(sourceFile);
 
         // Start method should snapshot under lock
-        string startBody = ExtractMethodBody(source, "public static Task Start");
+        string startBody = ExtractMethodBody(source, "public Task Start(");
         Assert.Contains("lock (_workersLock)", startBody);
 
         // Stop method should snapshot under lock
-        string stopBody = ExtractMethodBody(source, "public static Task Stop");
+        string stopBody = ExtractMethodBody(source, "public Task Stop(");
         Assert.Contains("lock (_workersLock)", stopBody);
     }
 

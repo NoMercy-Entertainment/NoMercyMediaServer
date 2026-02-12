@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using NoMercy.Queue;
+using NoMercy.Queue.Core.Interfaces;
+using NoMercy.Queue.Core.Models;
+using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -78,22 +81,27 @@ public class QueueRunnerFireAndForgetTests
     public void QueueRunner_HasActiveWorkerTracking()
     {
         // CRIT-08: Verify that a ConcurrentDictionary tracks active worker threads
+        // (now instance field since QueueRunner is no longer static)
         FieldInfo? field = typeof(QueueRunner).GetField(
-            "ActiveWorkerThreads",
-            BindingFlags.NonPublic | BindingFlags.Static);
+            "_activeWorkerThreads",
+            BindingFlags.NonPublic | BindingFlags.Instance);
 
         Assert.NotNull(field);
         Assert.True(
             field.FieldType.IsGenericType &&
             field.FieldType.GetGenericTypeDefinition() == typeof(ConcurrentDictionary<,>),
-            "ActiveWorkerThreads should be a ConcurrentDictionary for thread-safe tracking");
+            "_activeWorkerThreads should be a ConcurrentDictionary for thread-safe tracking");
     }
 
     [Fact]
     public void QueueRunner_GetActiveWorkerThreads_ReturnsReadOnlyView()
     {
         // CRIT-08: Verify active workers are queryable via public method
-        IReadOnlyDictionary<string, Thread> workers = QueueRunner.GetActiveWorkerThreads();
+        TestQueueContextAdapter context = new();
+        QueueConfiguration config = new();
+        QueueRunner runner = new(context, config);
+
+        IReadOnlyDictionary<string, Thread> workers = runner.GetActiveWorkerThreads();
         Assert.NotNull(workers);
     }
 
@@ -101,12 +109,13 @@ public class QueueRunnerFireAndForgetTests
     public void QueueRunner_VolatileFlags_AreMarkedVolatile()
     {
         // CRIT-08: Verify _isInitialized and _isUpdating are volatile for cross-thread visibility
+        // (now instance fields since QueueRunner is no longer static)
         FieldInfo? isInitialized = typeof(QueueRunner).GetField(
             "_isInitialized",
-            BindingFlags.NonPublic | BindingFlags.Static);
+            BindingFlags.NonPublic | BindingFlags.Instance);
         FieldInfo? isUpdating = typeof(QueueRunner).GetField(
             "_isUpdating",
-            BindingFlags.NonPublic | BindingFlags.Static);
+            BindingFlags.NonPublic | BindingFlags.Instance);
 
         Assert.NotNull(isInitialized);
         Assert.NotNull(isUpdating);
