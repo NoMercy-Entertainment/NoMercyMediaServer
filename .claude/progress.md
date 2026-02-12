@@ -4029,3 +4029,36 @@ Implemented comprehensive platform packaging for all NoMercy components (Server,
 - `src/NoMercy.Cli/NoMercy.Cli.csproj` — Added single-file publish properties
 
 **Test results**: Build succeeds with 0 errors. All 2,099 tests pass (157 Plugins, 143 Database, 16 Networking, 150 Encoder, 27 Tray, 29 Cli, 424 Queue, 86 Events, 42 Setup, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
+
+---
+
+## SETUP-01 — Create SetupState state machine
+
+**What was done**:
+
+Created `SetupState` class in `src/NoMercy.Setup/SetupState.cs` with:
+
+1. **`SetupPhase` enum** — Tracks the server's setup lifecycle: `Unauthenticated → Authenticating → Authenticated → Registering → Registered → CertificateAcquired → Complete`.
+
+2. **`TokenState` enum** — Classifies token file status: `Valid`, `Expired`, `Missing`, `Corrupt`, `NoRefreshToken`. Used to determine whether the server should enter setup mode or proceed to normal startup.
+
+3. **`SetupState` class** — Thread-safe state machine with:
+   - `TransitionTo(SetupPhase)` — Validates transitions against an explicit allow-list of valid state transitions (forward transitions + error recovery paths).
+   - `SetError(string)` / `Reset()` — Error tracking and full reset.
+   - `IsSetupRequired` / `IsAuthenticated` — Derived state properties.
+   - `DetermineInitialPhase(TokenState)` — Maps token validation result to initial setup phase (Valid/NoRefreshToken → Complete, everything else → Unauthenticated).
+   - `ValidateTokenFile(string)` — Defensive token file validation following the PRD spec: checks file existence, JSON validity, JWT format (3-part structure), JWT expiration (5-day buffer), and refresh token presence.
+   - `IsValidTransition(from, to)` — Internal method exposed for testing, defines the valid state transition graph including error recovery paths (Authenticating → Unauthenticated, Registering → Authenticated).
+
+4. **49 tests** in `tests/NoMercy.Tests.Setup/SetupStateTests.cs`:
+   - `SetupStateTests` (31 tests): Initial state, all forward transitions, invalid transitions, error recovery paths, error handling, reset, `IsValidTransition` theory tests, `DetermineInitialPhase` for each `TokenState`.
+   - `TokenValidationTests` (18 tests): Missing file, empty file, empty JSON, invalid JSON, null access token, malformed JWT, wrong part count, expired JWT, valid JWT without refresh token, valid JWT with refresh token, boundary expiration tests (4 days = expired, 6 days = valid), whitespace-only file.
+
+**Files created**:
+- `src/NoMercy.Setup/SetupState.cs`
+- `tests/NoMercy.Tests.Setup/SetupStateTests.cs`
+
+**Files modified**:
+- `.claude/PRD.md` — Marked SETUP-01 complete, updated Next up to SETUP-02
+
+**Test results**: Build succeeds with 0 errors. All tests pass (91 Setup, 424 Queue, 86 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
