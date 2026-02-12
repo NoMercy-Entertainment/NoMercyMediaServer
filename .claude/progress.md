@@ -4062,3 +4062,38 @@ Created `SetupState` class in `src/NoMercy.Setup/SetupState.cs` with:
 - `.claude/PRD.md` — Marked SETUP-01 complete, updated Next up to SETUP-02
 
 **Test results**: Build succeeds with 0 errors. All tests pass (91 Setup, 424 Queue, 86 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
+
+---
+
+## SETUP-02 — Create SetupServer (minimal HTTP Kestrel)
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created `src/NoMercy.Setup/SetupServer.cs` — a minimal HTTP-only Kestrel server for setup mode:
+  - Listens on `http://0.0.0.0:{port}` using plain HTTP (no TLS — no certs exist yet)
+  - Takes `SetupState` as a dependency to reflect current setup phase
+  - Routes `/setup` → returns JSON with current setup status, phase, error, and server port
+  - Routes `/sso-callback?code={code}` → validates code parameter, returns HTML that closes the browser, fires `Auth.TokenByAuthorizationCode()` asynchronously, transitions state machine
+  - Routes `/setup/status` → returns JSON with phase, is_setup_required, is_authenticated, error
+  - All other routes → 503 Service Unavailable with `setup_url: "/setup"` pointer
+  - Method validation: GET-only endpoints return 405 for other methods
+  - Trailing slash normalization via `TrimEnd('/')`
+  - Start/stop lifecycle with `IsRunning` property and idempotent `StartAsync`/`StopAsync`
+- Created `tests/NoMercy.Tests.Setup/SetupServerTests.cs` with 19 integration tests:
+  - Lifecycle: start, stop, double-start idempotent, double-stop idempotent
+  - `/setup`: returns 200 with JSON, reflects current phase, reflects error message, rejects POST
+  - `/setup/status`: returns 200 with phase info, reflects authenticated state, rejects POST
+  - `/sso-callback`: returns 400 without code, rejects POST
+  - 503 for unknown routes: `/api/v1/libraries`, `/`, `/some/random/path`
+  - Trailing slash handling for `/setup/` and `/setup/status/`
+  - Constructor tests: custom port, default port
+
+**Files created**:
+- `src/NoMercy.Setup/SetupServer.cs`
+- `tests/NoMercy.Tests.Setup/SetupServerTests.cs`
+
+**Files modified**:
+- `.claude/PRD.md` — Marked SETUP-02 complete, updated Next up to SETUP-03
+
+**Test results**: Build succeeds with 0 errors. All tests pass (111 Setup, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
