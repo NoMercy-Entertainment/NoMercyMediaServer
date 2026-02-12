@@ -4150,3 +4150,51 @@ Created `SetupState` class in `src/NoMercy.Setup/SetupState.cs` with:
 - `.claude/PRD.md` — Marked SETUP-03 complete, updated Next up to SETUP-04
 
 **Test results**: Build succeeds with 0 errors. All tests pass (130 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
+
+---
+
+## SETUP-04 — Implement `/setup` page with OAuth + QR fallback
+
+**Date**: 2026-02-12
+
+**What was done**:
+
+Fixed the OAuth PKCE flow for the setup web UI so the `/setup` page OAuth login actually works end-to-end:
+
+**Problem**: The setup UI's OAuth flow was broken because:
+1. The browser generated a PKCE `code_verifier` in JavaScript and stored it in `sessionStorage`, but after the OAuth redirect to `/sso-callback`, the server called `Auth.TokenByAuthorizationCode(code)` which required `_codeVerifier` to be set via `TokenByBrowser()` (the desktop flow). The setup server flow never set this, so token exchange would fail with "PKCE code verifier is missing."
+2. The redirect URI was hardcoded to `http://localhost:{port}/sso-callback` but the setup UI builds it from the actual browser host (could be a LAN IP like `192.168.1.100`), causing an OAuth redirect_uri mismatch.
+3. After auth code exchange failure/success, the PKCE verifier was stale — no way to retry.
+
+**Fix**:
+
+- **Server-side PKCE generation** — `SetupServer` now generates the PKCE `code_verifier` and `code_challenge` at construction time. The `code_challenge` is exposed via `/setup/config` so the browser uses it when building the OAuth URL.
+- **Removed client-side PKCE** — Removed `generateCodeVerifier()`, `generateCodeChallenge()`, and `sessionStorage` usage from `setup.html`. The browser now reads `config.code_challenge` from the server.
+- **New `Auth.TokenByAuthorizationCode(code, codeVerifier, redirectUri)` overload** — Accepts explicit code verifier and redirect URI, used by the setup server. The original no-args overload still works for the desktop `TokenByBrowser()` flow.
+- **Dynamic redirect URI** — `SetupServer.BuildRedirectUri(request)` constructs the redirect URI from the actual HTTP request host/scheme, matching what the browser sent to Keycloak.
+- **PKCE regeneration on use** — After the code verifier is consumed (success or failure), a new verifier/challenge pair is generated, enabling retry without stale PKCE state.
+- **Callback redirects to `/setup`** — The `/sso-callback` now returns HTML that redirects the user back to `/setup` after 1 second, where the status polling picks up the authentication progress.
+
+**Tests added/updated**:
+
+- `SetupServerPkceTests` (4 new tests):
+  - `SetupConfig_ContainsCodeChallenge` — Config endpoint includes non-empty code_challenge
+  - `SetupConfig_CodeChallengeIsConsistentAcrossRequests` — Same challenge across multiple config requests
+  - `SsoCallback_WithCode_TransitionsToAuthenticating` — Callback with code returns 200
+  - `SsoCallback_WithCode_ReturnsRedirectHtml` — Callback HTML redirects to /setup
+- `SetupServerRedirectUriTests` (3 new tests):
+  - `BuildRedirectUri_ConstructsCorrectUri` — LAN IP with port
+  - `BuildRedirectUri_HandlesLocalhostWithPort` — Localhost with port
+  - `BuildRedirectUri_HandlesHostWithoutPort` — Host without port
+- `SetupServerHtmlTests` updated:
+  - `LoadSetupHtml_UsesServerSidePkce` — Verifies HTML uses `config.code_challenge`, no client-side PKCE generation
+- `SetupConfig_ReturnsOk_WithConfigJson` updated — Now also asserts `code_challenge` field present
+
+**Files modified**:
+- `src/NoMercy.Setup/SetupServer.cs` — Added server-side PKCE fields, updated `/setup/config` and `/sso-callback`, added `BuildRedirectUri()`
+- `src/NoMercy.Setup/Auth.cs` — Added `TokenByAuthorizationCode(code, codeVerifier, redirectUri)` overload
+- `src/NoMercy.Setup/Resources/setup.html` — Removed client-side PKCE, use server-provided `code_challenge`, retry re-fetches config
+- `tests/NoMercy.Tests.Setup/SetupServerTests.cs` — Added 7 new tests, updated 2 existing tests
+- `.claude/PRD.md` — Marked SETUP-04 complete, updated Next up to SETUP-05
+
+**Test results**: Build succeeds with 0 errors. All tests pass (137 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.

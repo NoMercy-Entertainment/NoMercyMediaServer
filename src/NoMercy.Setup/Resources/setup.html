@@ -286,22 +286,6 @@
         box.classList.remove("visible");
     }
 
-    function generateCodeVerifier() {
-        var bytes = new Uint8Array(32);
-        crypto.getRandomValues(bytes);
-        return btoa(String.fromCharCode.apply(null, bytes))
-            .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    }
-
-    function generateCodeChallenge(verifier) {
-        var encoder = new TextEncoder();
-        var data = encoder.encode(verifier);
-        return crypto.subtle.digest("SHA-256", data).then(function(hash) {
-            return btoa(String.fromCharCode.apply(null, new Uint8Array(hash)))
-                .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-        });
-    }
-
     function drawQrCode(container, text) {
         // Minimal QR code rendering using the server-side endpoint
         var img = document.createElement("img");
@@ -315,7 +299,7 @@
         container.style.display = "inline-block";
     }
 
-    function buildAuthUrl(codeChallenge) {
+    function buildAuthUrl() {
         var baseUrl = config.auth_base_url.replace(/\/+$/, "")
             + "/protocol/openid-connect/auth";
         var redirectUri = window.location.protocol + "//" +
@@ -325,7 +309,7 @@
             "redirect_uri=" + encodeURIComponent(redirectUri),
             "response_type=code",
             "scope=" + encodeURIComponent("openid offline_access email profile"),
-            "code_challenge=" + encodeURIComponent(codeChallenge),
+            "code_challenge=" + encodeURIComponent(config.code_challenge),
             "code_challenge_method=S256"
         ];
         return baseUrl + "?" + params.join("&");
@@ -434,14 +418,9 @@
                     return;
                 }
 
-                // Setup login button with PKCE
-                var codeVerifier = generateCodeVerifier();
-                sessionStorage.setItem("pkce_verifier", codeVerifier);
-
-                generateCodeChallenge(codeVerifier).then(function(challenge) {
-                    var loginBtn = document.getElementById("btn-login");
-                    loginBtn.href = buildAuthUrl(challenge);
-                });
+                // Setup login button with server-side PKCE
+                var loginBtn = document.getElementById("btn-login");
+                loginBtn.href = buildAuthUrl();
 
                 // Device grant button
                 document.getElementById("btn-device-grant").addEventListener("click", function() {
@@ -452,10 +431,20 @@
                 showError("Failed to load setup configuration");
             });
 
-        // Retry button
+        // Retry button — re-fetch config to get a fresh code challenge
         document.getElementById("btn-retry").addEventListener("click", function() {
             hideError();
-            show("step-login");
+            fetch("/setup/config")
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    config = data;
+                    var loginBtn = document.getElementById("btn-login");
+                    loginBtn.href = buildAuthUrl();
+                    show("step-login");
+                })
+                .catch(function() {
+                    show("step-login");
+                });
         });
     }
 

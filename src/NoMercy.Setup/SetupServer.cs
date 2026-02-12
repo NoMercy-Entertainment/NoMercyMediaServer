@@ -24,12 +24,17 @@ public class SetupServer
 
     private static string? _cachedSetupHtml;
 
+    private string _codeVerifier;
+    private string _codeChallenge;
+
     public bool IsRunning { get; private set; }
 
     public SetupServer(SetupState state, int? port = null)
     {
         _state = state;
         _port = port ?? Config.InternalServerPort;
+        _codeVerifier = Auth.GenerateCodeVerifier();
+        _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -146,7 +151,8 @@ public class SetupServer
             error = _state.ErrorMessage,
             server_port = _port,
             auth_base_url = Config.AuthBaseUrl ?? "",
-            client_id = Config.TokenClientId ?? ""
+            client_id = Config.TokenClientId ?? "",
+            code_challenge = _codeChallenge
         };
 
         await WriteJsonResponse(context.Response, response);
@@ -176,26 +182,44 @@ public class SetupServer
 
         _state.TransitionTo(SetupPhase.Authenticating);
 
+        string redirectUri = BuildRedirectUri(context.Request);
+
         context.Response.ContentType = "text/html";
         context.Response.StatusCode = StatusCodes.Status200OK;
         await context.Response.WriteAsync(
-            "<html><body><p>Authentication received. You can close this window.</p>" +
-            "<script>window.close();</script></body></html>");
+            "<html><body><p>Authentication received. Redirecting to setup...</p>" +
+            "<script>setTimeout(function(){ window.location.href='/setup'; }, 1000);</script>" +
+            "</body></html>");
         await context.Response.CompleteAsync();
+
+        string codeVerifier = _codeVerifier;
 
         _ = Task.Run(async () =>
         {
             try
             {
-                await Auth.TokenByAuthorizationCode(code);
+                await Auth.TokenByAuthorizationCode(code, codeVerifier, redirectUri);
                 _state.TransitionTo(SetupPhase.Authenticated);
+
+                _codeVerifier = Auth.GenerateCodeVerifier();
+                _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
             }
             catch (Exception ex)
             {
                 _state.SetError($"Authentication failed: {ex.Message}");
                 _state.TransitionTo(SetupPhase.Unauthenticated);
+
+                _codeVerifier = Auth.GenerateCodeVerifier();
+                _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
             }
         });
+    }
+
+    internal static string BuildRedirectUri(HttpRequest request)
+    {
+        string scheme = request.Scheme;
+        string host = request.Host.ToString();
+        return $"{scheme}://{host}/sso-callback";
     }
 
     private async Task HandleSetupStatus(HttpContext context)

@@ -150,6 +150,8 @@ public class SetupServerTests : IAsyncLifetime
         Assert.Equal("Unauthenticated", (string)data.phase);
         Assert.NotNull((string)data.auth_base_url);
         Assert.NotNull((string)data.client_id);
+        Assert.NotNull((string)data.code_challenge);
+        Assert.NotEmpty((string)data.code_challenge);
     }
 
     [Fact]
@@ -390,6 +392,124 @@ public class SetupServerConstructorTests
     }
 }
 
+public class SetupServerPkceTests : IAsyncLifetime
+{
+    private SetupState _state = null!;
+    private SetupServer _server = null!;
+    private HttpClient _client = null!;
+    private int _port;
+
+    public async Task InitializeAsync()
+    {
+        _state = new SetupState();
+        _port = GetAvailablePort();
+        _server = new SetupServer(_state, _port);
+        await _server.StartAsync();
+        _client = new HttpClient { BaseAddress = new Uri($"http://localhost:{_port}") };
+    }
+
+    public async Task DisposeAsync()
+    {
+        _client.Dispose();
+        await _server.StopAsync();
+    }
+
+    private static int GetAvailablePort()
+    {
+        using System.Net.Sockets.TcpListener listener = new(IPAddress.Loopback, 0);
+        listener.Start();
+        int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
+    }
+
+    [Fact]
+    public async Task SetupConfig_ContainsCodeChallenge()
+    {
+        using HttpResponseMessage response = await _client.GetAsync("/setup/config");
+        string body = await response.Content.ReadAsStringAsync();
+        dynamic? data = JsonConvert.DeserializeObject<dynamic>(body);
+
+        string codeChallenge = (string)data!.code_challenge;
+        Assert.NotNull(codeChallenge);
+        Assert.NotEmpty(codeChallenge);
+        Assert.True(codeChallenge.Length >= 32, "Code challenge should be at least 32 chars");
+    }
+
+    [Fact]
+    public async Task SetupConfig_CodeChallengeIsConsistentAcrossRequests()
+    {
+        using HttpResponseMessage response1 = await _client.GetAsync("/setup/config");
+        string body1 = await response1.Content.ReadAsStringAsync();
+        dynamic? data1 = JsonConvert.DeserializeObject<dynamic>(body1);
+
+        using HttpResponseMessage response2 = await _client.GetAsync("/setup/config");
+        string body2 = await response2.Content.ReadAsStringAsync();
+        dynamic? data2 = JsonConvert.DeserializeObject<dynamic>(body2);
+
+        Assert.Equal((string)data1!.code_challenge, (string)data2!.code_challenge);
+    }
+
+    [Fact]
+    public async Task SsoCallback_WithCode_TransitionsToAuthenticating()
+    {
+        using HttpResponseMessage response = await _client.GetAsync("/sso-callback?code=test-auth-code");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Authentication received", body);
+        Assert.Contains("/setup", body);
+    }
+
+    [Fact]
+    public async Task SsoCallback_WithCode_ReturnsRedirectHtml()
+    {
+        using HttpResponseMessage response = await _client.GetAsync("/sso-callback?code=test-code");
+
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("window.location.href='/setup'", body);
+    }
+}
+
+public class SetupServerRedirectUriTests
+{
+    [Fact]
+    public void BuildRedirectUri_ConstructsCorrectUri()
+    {
+        DefaultHttpContext context = new();
+        context.Request.Scheme = "http";
+        context.Request.Host = new HostString("192.168.1.100", 7626);
+
+        string result = SetupServer.BuildRedirectUri(context.Request);
+
+        Assert.Equal("http://192.168.1.100:7626/sso-callback", result);
+    }
+
+    [Fact]
+    public void BuildRedirectUri_HandlesLocalhostWithPort()
+    {
+        DefaultHttpContext context = new();
+        context.Request.Scheme = "http";
+        context.Request.Host = new HostString("localhost", 8080);
+
+        string result = SetupServer.BuildRedirectUri(context.Request);
+
+        Assert.Equal("http://localhost:8080/sso-callback", result);
+    }
+
+    [Fact]
+    public void BuildRedirectUri_HandlesHostWithoutPort()
+    {
+        DefaultHttpContext context = new();
+        context.Request.Scheme = "https";
+        context.Request.Host = new HostString("example.com");
+
+        string result = SetupServer.BuildRedirectUri(context.Request);
+
+        Assert.Equal("https://example.com/sso-callback", result);
+    }
+}
+
 public class SetupServerHtmlTests
 {
     [Fact]
@@ -418,15 +538,16 @@ public class SetupServerHtmlTests
     }
 
     [Fact]
-    public void LoadSetupHtml_ContainsPKCE()
+    public void LoadSetupHtml_UsesServerSidePkce()
     {
         SetupServer.ClearHtmlCache();
         string html = SetupServer.LoadSetupHtml();
 
-        Assert.Contains("generateCodeVerifier", html);
-        Assert.Contains("generateCodeChallenge", html);
-        Assert.Contains("code_challenge", html);
-        Assert.Contains("S256", html);
+        Assert.Contains("config.code_challenge", html);
+        Assert.Contains("code_challenge_method=S256", html);
+        Assert.Contains("buildAuthUrl()", html);
+        Assert.DoesNotContain("generateCodeVerifier", html);
+        Assert.DoesNotContain("sessionStorage.setItem", html);
     }
 
     [Fact]

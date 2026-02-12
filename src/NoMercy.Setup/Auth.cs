@@ -397,22 +397,30 @@ public static class Auth
 
     public static async Task TokenByAuthorizationCode(string code)
     {
+        if (string.IsNullOrEmpty(_codeVerifier))
+            throw new("PKCE code verifier is missing. Authorization must be initiated via TokenByBrowser first.");
+
+        string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
+        await TokenByAuthorizationCode(code, _codeVerifier, redirectUri);
+    }
+
+    public static async Task TokenByAuthorizationCode(string code, string codeVerifier, string redirectUri)
+    {
         Logger.Auth("Getting token by authorization code", LogEventLevel.Verbose);
         if (string.IsNullOrEmpty(Config.TokenClientId))
             throw new("Auth keys not initialized.");
 
-        if (string.IsNullOrEmpty(_codeVerifier))
-            throw new("PKCE code verifier is missing. Authorization must be initiated via TokenByBrowser first.");
+        if (string.IsNullOrEmpty(codeVerifier))
+            throw new("PKCE code verifier is missing.");
 
         List<KeyValuePair<string, string>> body = BuildAuthorizationCodeBody(
-            Config.TokenClientId, code,
-            $"http://localhost:{Config.InternalServerPort}/sso-callback", _codeVerifier);
+            Config.TokenClientId, code, redirectUri, codeVerifier);
 
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent);
         string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token",
             new FormUrlEncodedContent(body));
-        
+
         AuthResponse data = response.FromJson<AuthResponse>()
                             ?? throw new("Failed to deserialize JSON");
 

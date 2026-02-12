@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 7, item SETUP-04
+**Next up**: Phase 7, item SETUP-05
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -192,7 +192,7 @@ Details: [13-headless-server.md](prd/13-headless-server.md) | [14-server-setup.m
 - [x] SETUP-01 — Create SetupState state machine
 - [x] SETUP-02 — Create SetupServer (minimal HTTP Kestrel)
 - [x] SETUP-03 — Build setup web UI
-- [ ] SETUP-04 — Implement `/setup` page with OAuth + QR fallback
+- [x] SETUP-04 — Implement `/setup` page with OAuth + QR fallback
 - [ ] SETUP-05 — Implement `/sso-callback` token exchange
 - [ ] SETUP-06 — Implement `/setup/status` progress endpoint
 - [ ] SETUP-07 — Add 503 middleware for non-setup routes
