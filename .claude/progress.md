@@ -3411,3 +3411,39 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `QueueConfiguration` is a `record` for immutability and value equality
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. Queue tests: 314 (up from 292). Full test suite: 1,890 tests pass with 0 failures across all 11 test projects.
+
+## QDC-05 — Refactor JobQueue to accept IQueueContext
+
+**What was done**: Refactored `JobQueue` to depend on `IQueueContext` instead of `QueueContext`, fully decoupling it from Entity Framework Core. Created `EfQueueContextAdapter` implementing `IQueueContext` that wraps `QueueContext` and handles all EF-specific operations including compiled queries and entity-to-model mapping.
+
+**Files created**:
+- `src/NoMercy.Queue/EfQueueContextAdapter.cs` — Adapter implementing `IQueueContext` wrapping `QueueContext`. Contains compiled EF queries (`ReserveJobQuery`, `ExistsQuery`) moved from `JobQueue`. Maps between EF entities (`QueueJob`/`FailedJob`/`CronJob`) and POCO models (`QueueJobModel`/`FailedJobModel`/`CronJobModel`). Propagates auto-generated IDs back to models after save.
+
+**Files modified**:
+- `src/NoMercy.Queue/JobQueue.cs` — Changed constructor from `QueueContext` to `IQueueContext`. All methods now use `QueueJobModel`/`FailedJobModel` instead of EF entities. Removed compiled queries (moved to adapter). Delegates all persistence to `IQueueContext` methods.
+- `src/NoMercy.Queue/QueueRunner.cs` — Updated `new JobQueue(new())` to `new JobQueue(new EfQueueContextAdapter(new()))`.
+- `src/NoMercy.Queue/JobDispatcher.cs` — Updated to use `EfQueueContextAdapter` and `QueueJobModel`.
+- `src/NoMercy.Queue/Workers/QueueWorker.cs` — Changed `QueueJob?` to `QueueJobModel?` for `ReserveJob()` return type.
+- `src/NoMercy.Queue/NoMercy.Queue.csproj` — Added project reference to `NoMercy.Queue.Core`.
+- `src/NoMercy.Api/Controllers/V1/Dashboard/TasksController.cs` — Updated `RetryFailedJobs` to use `EfQueueContextAdapter`.
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — Removed duplicate `JobQueue` registration. Added `IQueueContext` singleton registration.
+- `tests/NoMercy.Tests.Queue/TestHelpers/TestQueueContext.cs` — Added `CreateInMemoryContextWithAdapter()` factory method.
+- `tests/NoMercy.Tests.Queue/JobQueueTests.cs` — Updated to use adapter and `QueueJobModel`.
+- `tests/NoMercy.Tests.Queue/QueueIntegrationTests.cs` — Updated with adapter, fixed `IShouldQueue` ambiguity.
+- `tests/NoMercy.Tests.Queue/QueueBehaviorTests.cs` — Updated with adapter and fully qualified `IShouldQueue`.
+- `tests/NoMercy.Tests.Queue/WriteLockTests.cs` — Updated removed `Context` property assertion.
+- `tests/NoMercy.Tests.Queue/ChangeTrackerBloatTests.cs` — Updated `DeleteJob`/`FailJob` calls to use `QueueJobModel`.
+- `tests/NoMercy.Tests.Queue/QueueWorkerTests.cs` — Changed `QueueJob?` to `QueueJobModel?`.
+- `tests/NoMercy.Tests.Queue/BlockingPatternTests.cs` — Changed reflection targets to `EfQueueContextAdapter`.
+- `tests/NoMercy.Tests.Queue/RetryJitterTests.cs` — Updated reflection for `QueueJobModel` parameter.
+- `tests/NoMercy.Tests.Queue/ReserveJobRetryTests.cs` — Added adapter, updated constructor.
+
+**Design decisions**:
+- Used adapter pattern to wrap `QueueContext` rather than modifying it directly, preserving backward compatibility
+- Compiled EF queries moved to `EfQueueContextAdapter` since they are EF-specific implementation details
+- `AddJob` propagates `entity.Id` back to `job.Id` after save to maintain auto-generated ID behavior
+- `GetNextJob` with empty `queueName` returns the first available job (for `Dequeue()` semantics) without queue name filtering
+- `SaveAndClear()` helper checks `HasChanges()` before saving and clears the change tracker after each operation
+- DI registers `IQueueContext` as singleton wrapping a single `QueueContext` instance, consistent with the existing queue's single-writer model
+
+**Test results**: Build succeeds with 0 errors. All 1,890 tests pass with 0 failures across all 11 test projects.

@@ -1,16 +1,10 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
 using NoMercy.Database;
-using NoMercy.Database.Models.Common;
-using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.Music;
-using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.Database.Models.Users;
 using NoMercy.Queue;
+using NoMercy.Queue.Core.Interfaces;
+using NoMercy.Queue.Core.Models;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
@@ -24,16 +18,18 @@ namespace NoMercy.Tests.Queue;
 public class BlockingPatternTests : IDisposable
 {
     private readonly QueueContext _context;
+    private readonly IQueueContext _adapter;
     private readonly JobQueue _jobQueue;
 
     public BlockingPatternTests()
     {
-        _context = TestQueueContextFactory.CreateInMemoryContext();
-        _jobQueue = new(_context);
+        (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
     {
+        _adapter.Dispose();
         _context.Dispose();
     }
 
@@ -42,7 +38,8 @@ public class BlockingPatternTests : IDisposable
     {
         // CRIT-04: ReserveJobQuery must be a synchronous compiled query (not async)
         // so that .Result is not needed inside the lock-protected ReserveJob method.
-        FieldInfo? field = typeof(JobQueue).GetField(
+        // ReserveJobQuery has been moved to EfQueueContextAdapter.
+        FieldInfo? field = typeof(EfQueueContextAdapter).GetField(
             "ReserveJobQuery",
             BindingFlags.Public | BindingFlags.Static);
 
@@ -67,9 +64,10 @@ public class BlockingPatternTests : IDisposable
     {
         // CRIT-04: ExistsQuery must be a synchronous compiled query (not async)
         // so that .Result is not needed inside the Exists method.
-        FieldInfo? field = typeof(JobQueue).GetField(
+        // ExistsQuery has been moved to EfQueueContextAdapter.
+        FieldInfo? field = typeof(EfQueueContextAdapter).GetField(
             "ExistsQuery",
-            BindingFlags.NonPublic | BindingFlags.Static);
+            BindingFlags.Public | BindingFlags.Static);
 
         Assert.NotNull(field);
 
@@ -100,7 +98,7 @@ public class BlockingPatternTests : IDisposable
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        QueueJob? reserved = _jobQueue.ReserveJob("sync-test", null);
+        QueueJobModel? reserved = _jobQueue.ReserveJob("sync-test", null);
 
         Assert.NotNull(reserved);
         Assert.Equal("sync-test-payload", reserved.Payload);
@@ -112,13 +110,13 @@ public class BlockingPatternTests : IDisposable
     public void JobQueue_Enqueue_DuplicateCheckWorksSynchronously()
     {
         // Verify that the synchronous ExistsQuery correctly prevents duplicate enqueue.
-        QueueJob job1 = new()
+        QueueJobModel job1 = new()
         {
             Queue = "dup-test",
             Payload = "dup-payload",
             AvailableAt = DateTime.UtcNow
         };
-        QueueJob job2 = new()
+        QueueJobModel job2 = new()
         {
             Queue = "dup-test",
             Payload = "dup-payload",

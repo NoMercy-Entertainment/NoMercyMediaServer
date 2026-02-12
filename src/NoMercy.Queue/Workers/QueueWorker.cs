@@ -1,13 +1,5 @@
-using NoMercy.Database.Models.Common;
-using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.Music;
-using NoMercy.Database.Models.People;
-using NoMercy.Database.Models.Queue;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Queue.Core.Models;
 using Serilog.Events;
 using Exception = System.Exception;
 
@@ -30,7 +22,7 @@ public class QueueWorker(JobQueue queue, string name = "default")
 
         while (_isRunning)
         {
-            QueueJob? job = queue.ReserveJob(name, _currentJobId);
+            QueueJobModel? job = queue.ReserveJob(name, _currentJobId);
 
             if (job != null)
             {

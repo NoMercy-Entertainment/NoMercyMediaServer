@@ -1,33 +1,29 @@
 using NoMercy.Database;
-using NoMercy.Database.Models.Common;
-using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.Music;
-using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.Database.Models.Users;
 using NoMercy.Queue;
+using NoMercy.Queue.Core.Models;
 using NoMercy.Queue.Workers;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
+using IQueueContext = NoMercy.Queue.Core.Interfaces.IQueueContext;
 
 namespace NoMercy.Tests.Queue;
 
 public class QueueWorkerTests : IDisposable
 {
     private readonly QueueContext _context;
+    private readonly IQueueContext _adapter;
     private readonly JobQueue _jobQueue;
 
     public QueueWorkerTests()
     {
-        _context = TestQueueContextFactory.CreateInMemoryContext();
-        _jobQueue = new(_context);
+        (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
     {
+        _adapter.Dispose();
         _context.Dispose();
     }
 
@@ -61,7 +57,7 @@ public class QueueWorkerTests : IDisposable
             try
             {
                 // Let the worker process one job
-                QueueJob? job = _jobQueue.ReserveJob("test-worker", null);
+                QueueJobModel? job = _jobQueue.ReserveJob("test-worker", null);
                 if (job != null)
                 {
                     object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);
@@ -112,7 +108,7 @@ public class QueueWorkerTests : IDisposable
         {
             try
             {
-                QueueJob? job = _jobQueue.ReserveJob("test-worker", null);
+                QueueJobModel? job = _jobQueue.ReserveJob("test-worker", null);
                 if (job != null)
                 {
                     try
@@ -151,16 +147,16 @@ public class QueueWorkerTests : IDisposable
     {
         // This test just verifies that Stop() doesn't throw exceptions
         // In a real scenario, the worker would be managed by QueueRunner
-        
+
         // Arrange
         QueueWorker worker = new(_jobQueue, "test-worker");
-        
+
         // Act & Assert - Should not throw
-        // Note: We can't easily test the actual stopping behavior without 
+        // Note: We can't easily test the actual stopping behavior without
         // integrating with QueueRunner, but we can verify the method exists
         // and doesn't throw when called
         Exception? exception = Record.Exception(() => worker.Stop());
-        
+
         // The current implementation tries to get worker index which fails in isolation
         // This is expected behavior - the test confirms the API exists
         Assert.IsType<KeyNotFoundException>(exception);
@@ -202,7 +198,7 @@ public class QueueWorkerTests : IDisposable
         // Assert
         DateTime endTime = DateTime.UtcNow;
         TimeSpan duration = endTime - startTime;
-        
+
         Assert.True(testJob.HasExecuted);
         Assert.True(duration.TotalMilliseconds >= 45); // Allow for some timing variation
     }
@@ -261,7 +257,7 @@ public class QueueWorkerTests : IDisposable
         // Act — simulate the QueueWorker's processing loop (same logic as QueueWorker.Start)
         await Task.Run(() =>
         {
-            QueueJob? job = _jobQueue.ReserveJob("test-worker", null);
+            QueueJobModel? job = _jobQueue.ReserveJob("test-worker", null);
             if (job != null)
             {
                 object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);
@@ -317,7 +313,7 @@ public class QueueWorkerTests : IDisposable
         bool jobExecuted = false;
         await Task.Run(() =>
         {
-            QueueJob? job = _jobQueue.ReserveJob("test-worker", null);
+            QueueJobModel? job = _jobQueue.ReserveJob("test-worker", null);
             if (job != null)
             {
                 object jobWithArguments = SerializationHelper.Deserialize<object>(job.Payload);

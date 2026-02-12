@@ -14,6 +14,7 @@
         <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
         <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
+        <ProjectReference Include="..\NoMercy.Queue.Core\NoMercy.Queue.Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>

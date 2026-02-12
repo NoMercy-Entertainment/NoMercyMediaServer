@@ -1,14 +1,6 @@
 using System.Reflection;
-using NoMercy.Database.Models.Common;
-using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.Music;
-using NoMercy.Database.Models.People;
-using NoMercy.Database.Models.Queue;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.Database.Models.Users;
 using NoMercy.Queue;
+using NoMercy.Queue.Core.Models;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -105,7 +97,7 @@ public class RetryJitterTests
         MethodInfo? failJob = typeof(JobQueue).GetMethod(
             "FailJob",
             BindingFlags.Public | BindingFlags.Instance,
-            [typeof(QueueJob), typeof(Exception), typeof(int)]);
+            [typeof(QueueJobModel), typeof(Exception), typeof(int)]);
         Assert.NotNull(failJob);
 
         MethodInfo? requeueFailedJob = typeof(JobQueue).GetMethod(

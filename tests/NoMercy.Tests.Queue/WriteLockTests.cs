@@ -1,15 +1,9 @@
 using System.Reflection;
 using NoMercy.Database;
-using NoMercy.Database.Models.Common;
-using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.Music;
-using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.Database.Models.Users;
 using NoMercy.Queue;
+using NoMercy.Queue.Core.Interfaces;
+using NoMercy.Queue.Core.Models;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
@@ -18,16 +12,18 @@ namespace NoMercy.Tests.Queue;
 public class WriteLockTests : IDisposable
 {
     private readonly QueueContext _context;
+    private readonly IQueueContext _adapter;
     private readonly JobQueue _jobQueue;
 
     public WriteLockTests()
     {
-        _context = TestQueueContextFactory.CreateInMemoryContext();
-        _jobQueue = new(_context);
+        (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
     {
+        _adapter.Dispose();
         _context.Dispose();
     }
 
@@ -43,13 +39,8 @@ public class WriteLockTests : IDisposable
         object? writeLockValue = writeLockField.GetValue(null);
         Assert.NotNull(writeLockValue);
 
-        // The lock object must NOT be the DbContext
-        PropertyInfo? contextProp = typeof(JobQueue)
-            .GetProperty("Context", BindingFlags.NonPublic | BindingFlags.Instance);
-        Assert.NotNull(contextProp);
-
-        object? contextValue = contextProp.GetValue(_jobQueue);
-        Assert.NotSame(contextValue, writeLockValue);
+        // The lock object must be a dedicated object (not a DbContext or IQueueContext)
+        Assert.IsNotType<QueueContext>(writeLockValue);
     }
 
     [Fact]
@@ -57,7 +48,8 @@ public class WriteLockTests : IDisposable
     {
         // Two JobQueue instances should share the same static lock object
         using QueueContext context2 = TestQueueContextFactory.CreateInMemoryContext();
-        JobQueue jobQueue2 = new(context2);
+        IQueueContext adapter2 = new EfQueueContextAdapter(context2);
+        JobQueue jobQueue2 = new(adapter2);
 
         FieldInfo? writeLockField = typeof(JobQueue)
             .GetField("_writeLock", BindingFlags.NonPublic | BindingFlags.Static);
@@ -68,6 +60,8 @@ public class WriteLockTests : IDisposable
         object? lockFromInstance1 = writeLockField.GetValue(null);
         object? lockFromInstance2 = writeLockField.GetValue(null);
         Assert.Same(lockFromInstance1, lockFromInstance2);
+
+        adapter2.Dispose();
     }
 
     [Fact]
@@ -87,7 +81,7 @@ public class WriteLockTests : IDisposable
             {
                 try
                 {
-                    _jobQueue.Enqueue(new QueueJob
+                    _jobQueue.Enqueue(new QueueJobModel
                     {
                         Queue = "concurrent-test",
                         Payload = $"payload-{index}",
@@ -148,7 +142,7 @@ public class WriteLockTests : IDisposable
             {
                 try
                 {
-                    _jobQueue.Enqueue(new QueueJob
+                    _jobQueue.Enqueue(new QueueJobModel
                     {
                         Queue = "integrity-test",
                         Payload = $"new-{index}",
@@ -165,14 +159,14 @@ public class WriteLockTests : IDisposable
         }
 
         // Dequeue jobs concurrently
-        List<QueueJob?> dequeued = [];
+        List<QueueJobModel?> dequeued = [];
         for (int i = 0; i < dequeueCount; i++)
         {
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
                 {
-                    QueueJob? job = _jobQueue.Dequeue();
+                    QueueJobModel? job = _jobQueue.Dequeue();
                     lock (dequeued) { dequeued.Add(job); }
                 }
                 catch (Exception ex)

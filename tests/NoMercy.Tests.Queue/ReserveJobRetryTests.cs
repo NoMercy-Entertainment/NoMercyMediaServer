@@ -1,15 +1,9 @@
 using System.Reflection;
 using NoMercy.Database;
-using NoMercy.Database.Models.Common;
-using NoMercy.Database.Models.Libraries;
-using NoMercy.Database.Models.Media;
-using NoMercy.Database.Models.Movies;
-using NoMercy.Database.Models.Music;
-using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Database.Models.TvShows;
-using NoMercy.Database.Models.Users;
 using NoMercy.Queue;
+using NoMercy.Queue.Core.Interfaces;
+using NoMercy.Queue.Core.Models;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
@@ -24,16 +18,18 @@ namespace NoMercy.Tests.Queue;
 public class ReserveJobRetryTests : IDisposable
 {
     private readonly QueueContext _context;
+    private readonly IQueueContext _adapter;
     private readonly JobQueue _jobQueue;
 
     public ReserveJobRetryTests()
     {
-        _context = TestQueueContextFactory.CreateInMemoryContext();
-        _jobQueue = new(_context);
+        (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
+        _jobQueue = new(_adapter);
     }
 
     public void Dispose()
     {
+        _adapter.Dispose();
         _context.Dispose();
     }
 
@@ -108,7 +104,7 @@ public class ReserveJobRetryTests : IDisposable
 
         // With an empty queue, ReserveJob returns null on the happy path too,
         // so we verify the method handles high attempt values gracefully.
-        QueueJob? result = _jobQueue.ReserveJob("nonexistent-queue", null, 5);
+        QueueJobModel? result = _jobQueue.ReserveJob("nonexistent-queue", null, 5);
         Assert.Null(result);
     }
 
@@ -127,7 +123,7 @@ public class ReserveJobRetryTests : IDisposable
         _context.QueueJobs.Add(job);
         _context.SaveChanges();
 
-        QueueJob? reserved = _jobQueue.ReserveJob("normal-path", null);
+        QueueJobModel? reserved = _jobQueue.ReserveJob("normal-path", null);
 
         Assert.NotNull(reserved);
         Assert.Equal("normal-payload", reserved.Payload);
@@ -139,7 +135,7 @@ public class ReserveJobRetryTests : IDisposable
     public void ReserveJob_NormalPathNoJob_ReturnsNull()
     {
         // Verify the method returns null when no jobs match (empty queue).
-        QueueJob? reserved = _jobQueue.ReserveJob("empty-queue", null);
+        QueueJobModel? reserved = _jobQueue.ReserveJob("empty-queue", null);
         Assert.Null(reserved);
     }
 }

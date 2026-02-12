@@ -43,6 +43,7 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Events;
 using NoMercy.Plugins;
 using NoMercy.Queue;
+using NoMercy.Queue.Core.Interfaces;
 using NoMercy.Queue.Extensions;
 using NoMercy.Queue.Jobs;
 using NoMercy.Server.Extensions;
@@ -246,8 +247,6 @@ public static class ServiceConfiguration
         EventBusProvider.Configure(eventBus);
 
         // Add Singleton Services
-        services.AddScoped<JobQueue>();
-        
         services.AddSingleton<ResourceMonitor>();
         services.AddSingleton<Networking.Networking>();
         services.AddSingleton<StorageMonitor>();
@@ -301,6 +300,7 @@ public static class ServiceConfiguration
         services.AddScoped<HomeService>();
         services.AddScoped<SetupService>();
 
+        services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter(new QueueContext()));
         services.AddSingleton<JobQueue>();
         services.AddSingleton<JobDispatcher>();
         services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();

@@ -294,7 +294,8 @@ public class TasksController(MediaContext mediaContext) : BaseController
             return UnauthorizedResponse("You do not have permission to retry failed jobs");
 
         await using QueueContext queueContext = new();
-        JobQueue jobQueue = new(queueContext);
+        using EfQueueContextAdapter adapter = new(queueContext);
+        JobQueue jobQueue = new(adapter);
 
         if (id.HasValue)
         {

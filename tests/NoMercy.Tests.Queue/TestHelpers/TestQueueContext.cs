@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
+using NoMercy.Queue;
+using NoMercy.Queue.Core.Interfaces;
 
 namespace NoMercy.Tests.Queue.TestHelpers;
 
@@ -30,5 +32,12 @@ public static class TestQueueContextFactory
         TestQueueContext context = new(options);
         context.Database.EnsureCreated();
         return context;
+    }
+
+    public static (QueueContext context, IQueueContext adapter) CreateInMemoryContextWithAdapter(string databaseName = "TestDatabase")
+    {
+        QueueContext context = CreateInMemoryContext(databaseName);
+        EfQueueContextAdapter adapter = new(context);
+        return (context, adapter);
     }
 }
