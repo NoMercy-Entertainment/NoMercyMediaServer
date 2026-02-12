@@ -89,6 +89,11 @@
     <PackageVersion Include="Microsoft.AspNetCore.Hosting.WindowsServices" Version="9.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.10" />
 
+    <!-- Avalonia (Tray App) -->
+    <PackageVersion Include="Avalonia" Version="11.2.7" />
+    <PackageVersion Include="Avalonia.Desktop" Version="11.2.7" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.2.7" />
+
     <!-- System & Infrastructure -->
     <PackageVersion Include="Castle.Core" Version="5.2.1" />
     <PackageVersion Include="DeviceId" Version="6.9.0" />

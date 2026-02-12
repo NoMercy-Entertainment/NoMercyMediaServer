@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 7, item HEAD-08
+**Next up**: Phase 7, item HEAD-09
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -183,7 +183,7 @@ Details: [13-headless-server.md](prd/13-headless-server.md) | [14-server-setup.m
 - [x] HEAD-04 — Implement IPC (named pipes)
 - [x] HEAD-05 — Windows Service host
 - [x] HEAD-06 — Verify macOS/Linux service
-- [ ] HEAD-08 — Create Tray app (Avalonia)
+- [x] HEAD-08 — Create Tray app (Avalonia)
 - [ ] HEAD-09 — Tray icon + status
 - [ ] HEAD-10 — Log viewer
 - [ ] HEAD-11 — Server control UI

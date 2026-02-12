@@ -3802,3 +3802,36 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `src/NoMercy.Server/StartupOptions.cs` — Updated --service help text
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: 150 encoder, 424 queue, 86 events, 42 setup (15 new), 218 repositories, 33 media processing, 347 API, 427 providers = 1,727 total, 0 failures.
+
+---
+
+## HEAD-08 — Create NoMercy.Tray Avalonia project
+
+**Task**: Create the `NoMercy.Tray` project using Avalonia UI as a cross-platform tray application that connects to the server via IPC.
+
+**What was done**:
+- Created `src/NoMercy.Tray/` project using Avalonia 11.2.7 targeting net9.0
+- Added Avalonia packages (`Avalonia`, `Avalonia.Desktop`, `Avalonia.Themes.Fluent`) to `Directory.Packages.props`
+- Created `NoMercy.Tray.csproj` with references to `NoMercy.Networking` (for IPC) and `NoMercy.NmSystem` (for config)
+- Created `Program.cs` — Avalonia entry point with classic desktop lifetime
+- Created `App.axaml` / `App.axaml.cs` — Avalonia application with Fluent dark theme, initializes tray icon manager on startup, uses `ShutdownMode.OnExplicitShutdown`
+- Created `Services/ServerConnection.cs` — wraps `IpcClient` for tray↔server communication with `ConnectAsync`, `GetAsync<T>`, and `PostAsync` methods. All `HttpResponseMessage` objects properly disposed with `using`
+- Created `Services/TrayIconManager.cs` — sets up native system tray icon with context menu (Open Dashboard, Stop Server, Quit Tray), polls server status every 10 seconds to update tooltip
+- Created `ViewModels/MainViewModel.cs` — MVVM view model with `INotifyPropertyChanged` for server status, version, and uptime
+- Added project to solution under `Src` folder
+- Fixed `HttpResponseMessage` disposal violations caught by `HttpResponseDisposalAuditTests`
+
+**Files created**:
+- `src/NoMercy.Tray/NoMercy.Tray.csproj`
+- `src/NoMercy.Tray/Program.cs`
+- `src/NoMercy.Tray/App.axaml`
+- `src/NoMercy.Tray/App.axaml.cs`
+- `src/NoMercy.Tray/Services/ServerConnection.cs`
+- `src/NoMercy.Tray/Services/TrayIconManager.cs`
+- `src/NoMercy.Tray/ViewModels/MainViewModel.cs`
+
+**Files modified**:
+- `Directory.Packages.props` — Added Avalonia 11.2.7 package versions
+- `NoMercy.Server.sln` — Added NoMercy.Tray project
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 2,043 tests pass across 11 projects: 157 plugins, 143 database, 16 networking, 150 encoder, 424 queue, 86 events, 42 setup, 218 repositories, 33 media processing, 347 API, 427 providers = 0 failures.
