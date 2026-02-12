@@ -63,7 +63,7 @@ public static class HlsPlaylistGenerator
         for (int index = 0; index < audioFiles.Count; index++)
         {
             string audioFile = audioFiles[index];
-            string folderName = Path.GetFileName(Path.GetDirectoryName(audioFile) ?? string.Empty) ?? string.Empty;
+            string folderName = Path.GetFileName(Path.GetDirectoryName(audioFile) ?? string.Empty);
             string[] parts = folderName.Split('_');
             string language = parts.Length > 1 ? parts[1] : "und";
             string codecName = parts.Length > 2 ? parts[2] : "aac";
@@ -96,7 +96,7 @@ public static class HlsPlaylistGenerator
         SemaphoreSlim semaphore = new(MaxConcurrentProbes);
         List<Task<VideoVariantInfo>> probeTasks = videoFileList.Select(async videoFile =>
         {
-            string folderName = Path.GetFileName(Path.GetDirectoryName(videoFile) ?? string.Empty);
+            string folderName = Path.GetFileName(Path.GetDirectoryName(videoFile) ?? string.Empty) ?? string.Empty;
 
             // folder name expected like: video_1920x1080[_TAG]
             string resolution = "";
@@ -211,7 +211,7 @@ public static class HlsPlaylistGenerator
             return new VideoVariantInfo
             {
                 Resolution = resolution,
-                FolderName = folderName,
+                FolderName = folderName!,
                 VideoFile = videoFile,
                 VCodecProfile = vCodecProfile,
                 Bandwidth = (long)bandwidth,

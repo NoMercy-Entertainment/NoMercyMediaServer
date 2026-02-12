@@ -96,7 +96,7 @@ public record LibraryResponseDto
 
     public static readonly Func<MediaContext, Guid, Ulid, string, int, int, Task<Library>> GetLibrary =
         EF.CompileAsyncQuery((MediaContext mediaContext, Guid userId, Ulid id, string language, int take,
-                int page = 0) =>
+                int page) =>
             mediaContext.Libraries.AsNoTracking()
                 .Where(library => library.Id == id)
                 .Where(library => library.LibraryUsers

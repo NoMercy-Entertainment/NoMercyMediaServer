@@ -238,10 +238,10 @@ public class HomeController : BaseController
                     Title =  trailerInfo.Title,
                     Description = trailerInfo.Description,
                     Duration = trailerInfo.Duration.ToHis(),
-                    Image =  trailerInfo.Thumbnail.ToString(),
+                    Image =  trailerInfo.Thumbnail?.ToString(),
                     File = $"/transcodes/{trailerId}/video.m3u8",
                     Origin = Info.DeviceId,
-                    PlaylistId = trailerInfo.Id,
+                    PlaylistId = trailerInfo.Id!,
                     Tracks = trailerInfo.Subtitles
                         .Where(t => t.Value.Any(s => s.Ext == "vtt"))
                         .Select(t => new IVideoTrack
@@ -314,10 +314,10 @@ public class HomeController : BaseController
                 Title =  trailerInfo.Title,
                 Description = trailerInfo.Description,
                 Duration = trailerInfo.Duration.ToHis(),
-                Image =  trailerInfo.Thumbnail.ToString(),
+                Image =  trailerInfo.Thumbnail?.ToString(),
                 File = $"/transcodes/{trailerId}/video.m3u8",
                 Origin = Info.DeviceId,
-                PlaylistId = trailerInfo.Id,
+                PlaylistId = trailerInfo.Id!,
                 Tracks = trailerInfo.Subtitles
                     .Where(t => t.Value.Any(s => s.Ext == "vtt"))
                     .Select(t => new IVideoTrack

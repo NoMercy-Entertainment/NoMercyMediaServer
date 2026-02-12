@@ -483,9 +483,9 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     private sealed class NoOpSunsetPolicyManager : ISunsetPolicyManager
     {
-        public bool TryGetPolicy(string? name, ApiVersion apiVersion, out SunsetPolicy sunsetPolicy)
+        public bool TryGetPolicy(string? name, ApiVersion? apiVersion, out SunsetPolicy sunsetPolicy)
         {
-            sunsetPolicy = default;
+            sunsetPolicy = default!;
             return false;
         }
     }

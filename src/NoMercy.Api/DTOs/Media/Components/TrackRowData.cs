@@ -45,7 +45,7 @@ public record TrackRowData
         Id = track.Id.ToString();
         Name = track.Name;
         Cover = track.Cover;
-        Path = track.Filename;
+        Path = track.Filename ?? string.Empty;
         Link = $"/music/tracks/{track.Id}";
         ColorPalette = track.ColorPalette;
         Date = track.Date?.ToString("yyyy-MM-dd");

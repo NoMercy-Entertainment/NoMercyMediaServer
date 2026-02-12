@@ -40,10 +40,10 @@ public class VideoPlayerStateFactory
         User? userPreference = await context.Users
             .Include(u => u.PlaybackPreferences)
                 .ThenInclude(playbackPreference => playbackPreference.Library)
-                    .ThenInclude(library => library.LibraryTvs)
+                    .ThenInclude(library => library!.LibraryTvs)
             .Include(u => u.PlaybackPreferences)
                 .ThenInclude(playbackPreference => playbackPreference.Library)
-                    .ThenInclude(library => library.LibraryMovies)
+                    .ThenInclude(library => library!.LibraryMovies)
             .FirstOrDefaultAsync(u => u.Id == user.Id);
 
         if (userPreference is null)

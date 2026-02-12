@@ -82,8 +82,8 @@ public record ArtistResponseItemDto
         Featured = artist.ArtistTrack
             .Select(artistTrack => artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album)
             .Where(album => album != null)
-            .GroupBy(album => album.Name.RemoveNonAlphaNumericCharacters())
-            .Select(album => album.First())
+            .GroupBy(album => album!.Name.RemoveNonAlphaNumericCharacters())
+            .Select(album => album.First()!)
             .OrderBy(album => album.Year)
             .Where(album => Albums.All(albumDto => albumDto.Id != album.Id))
             .Select(album => new AlbumDto(album, country!))

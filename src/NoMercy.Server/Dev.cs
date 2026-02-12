@@ -279,7 +279,7 @@ public static class Dev
                         continue;
 
                     // Find next non-empty, non-comment line for the variant URI
-                    string variantUri = null;
+                    string? variantUri = null;
                     for (int j = i + 1; j < lines.Length; j++)
                     {
                         string nxt = lines[j].Trim();

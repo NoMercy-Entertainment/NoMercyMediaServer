@@ -176,7 +176,7 @@ public class ContainerComponentBuilder : IComponentBuilder
 
     public ContainerComponentBuilder WithTitle(string? title)
     {
-        _props.Title = title;
+        _props.Title = title ?? string.Empty;
         return this;
     }
 
@@ -298,7 +298,7 @@ public class LeafComponentBuilder<TData> : IComponentBuilder
 
     public LeafComponentBuilder<TData> WithTitle(string? title)
     {
-        _props.Title = title;
+        _props.Title = title ?? string.Empty;
         return this;
     }
 
@@ -396,7 +396,7 @@ public class TrackRowComponentBuilder : IComponentBuilder
 
     public TrackRowComponentBuilder WithTitle(string? title)
     {
-        _props.Title = title;
+        _props.Title = title ?? string.Empty;
         return this;
     }
 

@@ -32,11 +32,7 @@ namespace NoMercy.Api.Controllers.V1;
 public class SetupController(
     MediaContext context,
     SetupService setupService,
-    LibraryRepository libraryRepository,
-    MusicRepository musicRepository,
-    HomeService homeService, 
-    CollectionRepository collectionRepository,
-    SpecialRepository specialRepository
+    HomeService homeService
 ) : BaseController
 {
     [HttpGet("libraries")]

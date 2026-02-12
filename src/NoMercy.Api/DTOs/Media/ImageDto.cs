@@ -55,7 +55,7 @@ public record ImageDto
 
     public ImageDto(TmdbProfile image)
     {
-        Id = long.Parse(image.FilePath.GetHashCode().ToString().Replace("-", "1").TrimStart('0'));
+        Id = long.Parse(image.FilePath!.GetHashCode().ToString().Replace("-", "1").TrimStart('0'));
         Src = image.FilePath;
         Width = image.Width;
         Height = image.Height;

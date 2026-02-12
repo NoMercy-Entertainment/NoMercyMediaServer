@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Suppress NETSDK1206: MediaInfo.Core.Native uses version-specific RIDs (third-party, not fixable) -->
+    <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
+  </PropertyGroup>
+</Project>

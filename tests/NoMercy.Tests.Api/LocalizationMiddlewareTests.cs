@@ -109,7 +109,7 @@ public class LocalizationMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        string[] acceptLanguage = context.Request.Headers.AcceptLanguage.ToArray();
+        string?[] acceptLanguage = context.Request.Headers.AcceptLanguage.ToArray();
         Assert.Contains("nl", acceptLanguage);
         Assert.Contains("NL", acceptLanguage);
     }

@@ -54,12 +54,12 @@ public class InterfaceContractTests
     }
 
     [Fact]
-    public void IEventHandler_CanBeImplemented()
+    public async Task IEventHandler_CanBeImplemented()
     {
         TestEventHandler handler = new();
         TestEvent testEvent = new();
 
-        handler.HandleAsync(testEvent).Wait();
+        await handler.HandleAsync(testEvent);
 
         handler.ReceivedEvents.Should().ContainSingle()
             .Which.Should().BeSameAs(testEvent);

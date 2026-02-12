@@ -263,7 +263,7 @@ public class VideoPlaylistResponseDto
     private record Subs
     {
         public List<IVideoTrack> TextTracks { get; set; } = [];
-        public List<FontDto>? Fonts { get; set; } = [];
+        public List<FontDto> Fonts { get; set; } = [];
         public string FontsFile { get; set; } = string.Empty;
     }
 
@@ -303,7 +303,7 @@ public class VideoPlaylistResponseDto
             });
         }
 
-        List<FontDto?>? fonts = [];
+        List<FontDto> fonts = [];
         string fontsFile = "";
 
         if (!search || videoFile?.HostFolder == null || !System.IO.File.Exists($"{videoFile.HostFolder}fonts.json"))
@@ -315,8 +315,9 @@ public class VideoPlaylistResponseDto
             };
 
         fontsFile = $"/{videoFile.Share}/{videoFile.Folder}fonts.json";
-        fonts = JsonConvert.DeserializeObject<List<FontDto?>?>(
+        List<FontDto?>? deserializedFonts = JsonConvert.DeserializeObject<List<FontDto?>?>(
             System.IO.File.ReadAllText($"{videoFile.HostFolder}fonts.json"));
+        fonts = deserializedFonts?.Where(f => f != null).Select(f => f!).ToList() ?? [];
 
         return new()
         {

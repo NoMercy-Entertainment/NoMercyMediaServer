@@ -130,7 +130,6 @@ public class HubErrorLoggingFilter : IHubFilter
 
             throw new HubException($"An error occurred calling '{methodName}': {ex.Message}");
         }
-        return await next(invocationContext);
     }
 }
 
