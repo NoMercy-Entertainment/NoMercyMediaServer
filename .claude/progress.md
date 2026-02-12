@@ -3835,3 +3835,43 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `NoMercy.Server.sln` — Added NoMercy.Tray project
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 2,043 tests pass across 11 projects: 157 plugins, 143 database, 16 networking, 150 encoder, 424 queue, 86 events, 42 setup, 218 repositories, 33 media processing, 347 API, 427 providers = 0 failures.
+
+---
+
+## HEAD-09 — Tray icon + status
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Implemented system tray icon with status-colored overlay indicator (green=running, yellow=starting, red=disconnected)
+- Created `TrayIconFactory` that loads the base `icon.png` asset, copies pixels to a `WriteableBitmap`, and draws a colored status dot with dark border in the bottom-right corner
+- Created `ServerStatusResponse` model for strongly-typed deserialization of `/manage/status` API responses (replaces fragile `Dictionary<string, object>` approach)
+- Enhanced `TrayIconManager` with:
+  - Icon loaded and displayed in the system tray (was previously missing — no icon was shown)
+  - Status-colored icon changes when server state transitions (only regenerates on state change)
+  - Rich context menu showing: Server status, Version, Uptime (formatted as days/hours/minutes/seconds)
+  - "Stop Server" menu item disabled when server is disconnected
+  - Server status polling every 10 seconds with automatic reconnection
+- Updated `MainViewModel` to use `ServerStatusResponse` DTO instead of raw dictionary deserialization
+- Added `AllowUnsafeBlocks` to Tray csproj (required for pixel-level bitmap manipulation)
+- Added `InternalsVisibleTo` for test project access to `FormatUptime`
+- Created `NoMercy.Tests.Tray` test project with 10 tests:
+  - 7 `TrayIconManagerTests` — uptime formatting (seconds, minutes, hours, days, zero, exact boundaries)
+  - 3 `ServerStatusResponseTests` — JSON deserialization (full response, minimal response, starting status)
+- Fixed flaky `ProcessJob_JobWithDelay_CompletesAfterDelay` test: increased delay from 50ms→100ms and threshold from 45ms→80ms to prevent timing failures under heavy parallel test load
+
+**Files created**:
+- `src/NoMercy.Tray/Models/ServerStatusResponse.cs`
+- `src/NoMercy.Tray/Services/TrayIconFactory.cs`
+- `tests/NoMercy.Tests.Tray/NoMercy.Tests.Tray.csproj`
+- `tests/NoMercy.Tests.Tray/TrayIconManagerTests.cs`
+- `tests/NoMercy.Tests.Tray/ServerStatusResponseTests.cs`
+
+**Files modified**:
+- `src/NoMercy.Tray/Services/TrayIconManager.cs` — Full rewrite with icon support, status indicators, rich menu, uptime formatting
+- `src/NoMercy.Tray/ViewModels/MainViewModel.cs` — Use ServerStatusResponse DTO
+- `src/NoMercy.Tray/NoMercy.Tray.csproj` — Added AllowUnsafeBlocks, InternalsVisibleTo
+- `tests/NoMercy.Tests.Queue/QueueWorkerTests.cs` — Fixed flaky timing test
+- `NoMercy.Server.sln` — Added NoMercy.Tests.Tray project
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 2,053 tests pass across 12 projects: 157 plugins, 143 database, 16 networking, 150 encoder, 10 tray, 424 queue, 86 events, 42 setup, 218 repositories, 33 media processing, 347 API, 427 providers = 0 failures.

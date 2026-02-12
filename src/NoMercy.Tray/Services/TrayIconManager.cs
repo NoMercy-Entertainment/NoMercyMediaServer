@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using NoMercy.Tray.Models;
 
 namespace NoMercy.Tray.Services;
 
@@ -8,6 +9,11 @@ public class TrayIconManager
     private readonly ServerConnection _serverConnection;
     private readonly IClassicDesktopStyleApplicationLifetime _lifetime;
     private TrayIcon? _trayIcon;
+    private NativeMenuItem? _statusItem;
+    private NativeMenuItem? _versionItem;
+    private NativeMenuItem? _uptimeItem;
+    private NativeMenuItem? _stopServerItem;
+    private ServerState _currentState = ServerState.Disconnected;
 
     public TrayIconManager(
         ServerConnection serverConnection,
@@ -21,34 +27,53 @@ public class TrayIconManager
     {
         NativeMenu menu = new();
 
-        NativeMenuItem statusItem = new("NoMercy MediaServer")
+        _statusItem = new NativeMenuItem("Server: Disconnected")
         {
             IsEnabled = false
         };
 
-        NativeMenuItem openDashboardItem = new("Open Dashboard");
-        openDashboardItem.Click += OnOpenDashboard;
+        _versionItem = new NativeMenuItem("Version: --")
+        {
+            IsEnabled = false
+        };
+
+        _uptimeItem = new NativeMenuItem("Uptime: --")
+        {
+            IsEnabled = false
+        };
 
         NativeMenuItemSeparator separator1 = new();
 
-        NativeMenuItem stopServerItem = new("Stop Server");
-        stopServerItem.Click += OnStopServer;
+        NativeMenuItem openDashboardItem = new("Open Dashboard");
+        openDashboardItem.Click += OnOpenDashboard;
 
         NativeMenuItemSeparator separator2 = new();
+
+        _stopServerItem = new NativeMenuItem("Stop Server");
+        _stopServerItem.Click += OnStopServer;
+
+        NativeMenuItemSeparator separator3 = new();
 
         NativeMenuItem quitItem = new("Quit Tray");
         quitItem.Click += OnQuit;
 
-        menu.Items.Add(statusItem);
-        menu.Items.Add(openDashboardItem);
+        menu.Items.Add(_statusItem);
+        menu.Items.Add(_versionItem);
+        menu.Items.Add(_uptimeItem);
         menu.Items.Add(separator1);
-        menu.Items.Add(stopServerItem);
+        menu.Items.Add(openDashboardItem);
         menu.Items.Add(separator2);
+        menu.Items.Add(_stopServerItem);
+        menu.Items.Add(separator3);
         menu.Items.Add(quitItem);
+
+        WindowIcon initialIcon =
+            TrayIconFactory.CreateIcon(ServerState.Disconnected);
 
         _trayIcon = new TrayIcon
         {
-            ToolTipText = "NoMercy MediaServer",
+            Icon = initialIcon,
+            ToolTipText = "NoMercy MediaServer - Disconnected",
             Menu = menu,
             IsVisible = true
         };
@@ -60,19 +85,115 @@ public class TrayIconManager
     {
         while (_trayIcon?.IsVisible == true)
         {
-            bool connected = await _serverConnection.ConnectAsync();
-
-            string tooltip = connected
-                ? "NoMercy MediaServer - Running"
-                : "NoMercy MediaServer - Disconnected";
-
-            if (_trayIcon is not null)
-            {
-                _trayIcon.ToolTipText = tooltip;
-            }
-
+            await UpdateStatusAsync();
             await Task.Delay(TimeSpan.FromSeconds(10));
         }
+    }
+
+    private async Task UpdateStatusAsync()
+    {
+        ServerStatusResponse? status =
+            await _serverConnection.GetAsync<ServerStatusResponse>(
+                "/manage/status");
+
+        if (status is null)
+        {
+            bool wasConnected =
+                await _serverConnection.ConnectAsync();
+
+            if (!wasConnected)
+            {
+                SetState(
+                    ServerState.Disconnected,
+                    "Disconnected",
+                    null,
+                    null);
+                return;
+            }
+
+            status = await _serverConnection
+                .GetAsync<ServerStatusResponse>("/manage/status");
+        }
+
+        if (status is null)
+        {
+            SetState(
+                ServerState.Disconnected,
+                "Disconnected",
+                null,
+                null);
+            return;
+        }
+
+        ServerState state = status.Status switch
+        {
+            "running" => ServerState.Running,
+            "starting" => ServerState.Starting,
+            _ => ServerState.Running
+        };
+
+        string uptimeText = FormatUptime(status.UptimeSeconds);
+        string versionText = string.IsNullOrEmpty(status.Version)
+            ? null!
+            : status.Version;
+
+        SetState(state, status.Status, versionText, uptimeText);
+    }
+
+    private void SetState(
+        ServerState state,
+        string statusText,
+        string? version,
+        string? uptime)
+    {
+        if (_trayIcon is null) return;
+
+        if (state != _currentState)
+        {
+            _currentState = state;
+            _trayIcon.Icon = TrayIconFactory.CreateIcon(state);
+        }
+
+        string stateLabel = state switch
+        {
+            ServerState.Running => "Running",
+            ServerState.Starting => "Starting",
+            ServerState.Disconnected => "Disconnected",
+            _ => "Unknown"
+        };
+
+        _trayIcon.ToolTipText =
+            $"NoMercy MediaServer - {stateLabel}";
+
+        if (_statusItem is not null)
+            _statusItem.Header = $"Server: {stateLabel}";
+
+        if (_versionItem is not null)
+            _versionItem.Header = version is not null
+                ? $"Version: {version}"
+                : "Version: --";
+
+        if (_uptimeItem is not null)
+            _uptimeItem.Header = uptime is not null
+                ? $"Uptime: {uptime}"
+                : "Uptime: --";
+
+        if (_stopServerItem is not null)
+            _stopServerItem.IsEnabled =
+                state != ServerState.Disconnected;
+    }
+
+    internal static string FormatUptime(long totalSeconds)
+    {
+        TimeSpan span = TimeSpan.FromSeconds(totalSeconds);
+
+        if (span.TotalDays >= 1)
+            return $"{(int)span.TotalDays}d {span.Hours}h {span.Minutes}m";
+
+        if (span.TotalHours >= 1)
+            return $"{span.Hours}h {span.Minutes}m";
+
+        return $"{span.Minutes}m {span.Seconds}s";
     }
 
     private void OnOpenDashboard(object? sender, EventArgs e)

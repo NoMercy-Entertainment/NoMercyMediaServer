@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using NoMercy.Tray.Models;
 using NoMercy.Tray.Services;
 
 namespace NoMercy.Tray.ViewModels;
@@ -38,25 +39,23 @@ public class MainViewModel : INotifyPropertyChanged
     public async Task RefreshStatusAsync(
         CancellationToken cancellationToken = default)
     {
-        Dictionary<string, object>? status =
-            await _serverConnection.GetAsync<Dictionary<string, object>>(
+        ServerStatusResponse? status =
+            await _serverConnection.GetAsync<ServerStatusResponse>(
                 "/manage/status", cancellationToken);
 
         if (status is null)
         {
             ServerStatus = "Disconnected";
+            ServerVersion = "Unknown";
+            UptimeSeconds = 0;
             return;
         }
 
-        if (status.TryGetValue("status", out object? s))
-            ServerStatus = s?.ToString() ?? "Unknown";
-
-        if (status.TryGetValue("version", out object? v))
-            ServerVersion = v?.ToString() ?? "Unknown";
-
-        if (status.TryGetValue("uptimeSeconds", out object? u)
-            && long.TryParse(u?.ToString(), out long uptime))
-            UptimeSeconds = uptime;
+        ServerStatus = status.Status;
+        ServerVersion = string.IsNullOrEmpty(status.Version)
+            ? "Unknown"
+            : status.Version;
+        UptimeSeconds = status.UptimeSeconds;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

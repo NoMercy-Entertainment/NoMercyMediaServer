@@ -13,11 +13,16 @@
         <Product>NoMercy Tray</Product>
         <AssemblyName>NoMercyTray</AssemblyName>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <PropertyGroup>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="NoMercy.Tests.Tray" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Avalonia" />

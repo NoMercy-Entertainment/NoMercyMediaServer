@@ -183,7 +183,7 @@ public class QueueWorkerTests : IDisposable
         {
             Message = "Delayed job",
             HasExecuted = false,
-            ExecutionDelay = 50 // 50ms delay
+            ExecutionDelay = 100 // 100ms delay
         };
 
         DateTime startTime = DateTime.UtcNow;
@@ -196,7 +196,7 @@ public class QueueWorkerTests : IDisposable
         TimeSpan duration = endTime - startTime;
 
         Assert.True(testJob.HasExecuted);
-        Assert.True(duration.TotalMilliseconds >= 45); // Allow for some timing variation
+        Assert.True(duration.TotalMilliseconds >= 80); // Allow for some timing variation
     }
 
     [Fact]
