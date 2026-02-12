@@ -289,6 +289,126 @@ public class PluginManagerTests : IDisposable
         plugins.Should().BeAssignableTo<IReadOnlyList<PluginInfo>>();
     }
 
+    [Fact]
+    public async Task LoadPluginFromManifestAsync_MissingAssembly_PublishesErrorEvent()
+    {
+        Guid pluginId = Guid.NewGuid();
+        string pluginDir = Path.Combine(_tempPluginsDir, "TestPlugin");
+        Directory.CreateDirectory(pluginDir);
+
+        string manifestJson = $@"{{
+            ""id"": ""{pluginId}"",
+            ""name"": ""TestPlugin"",
+            ""description"": ""A test"",
+            ""version"": ""1.0.0"",
+            ""assembly"": ""NonExistent.dll""
+        }}";
+        string manifestPath = Path.Combine(pluginDir, "plugin.json");
+        await File.WriteAllTextAsync(manifestPath, manifestJson);
+
+        List<PluginErrorEvent> errors = [];
+        _eventBus.Subscribe<PluginErrorEvent>((evt, _) =>
+        {
+            errors.Add(evt);
+            return Task.CompletedTask;
+        });
+
+        await _manager.LoadPluginFromManifestAsync(manifestPath);
+
+        errors.Should().ContainSingle();
+        errors[0].PluginName.Should().Be("TestPlugin");
+        errors[0].ErrorMessage.Should().Contain("NonExistent.dll");
+    }
+
+    [Fact]
+    public async Task LoadPluginFromManifestAsync_InvalidManifest_PublishesErrorEvent()
+    {
+        string pluginDir = Path.Combine(_tempPluginsDir, "BadManifest");
+        Directory.CreateDirectory(pluginDir);
+
+        string manifestPath = Path.Combine(pluginDir, "plugin.json");
+        await File.WriteAllTextAsync(manifestPath, "not valid json");
+
+        List<PluginErrorEvent> errors = [];
+        _eventBus.Subscribe<PluginErrorEvent>((evt, _) =>
+        {
+            errors.Add(evt);
+            return Task.CompletedTask;
+        });
+
+        await _manager.LoadPluginFromManifestAsync(manifestPath);
+
+        errors.Should().ContainSingle();
+        errors[0].PluginName.Should().Be("BadManifest");
+        errors[0].ErrorMessage.Should().Contain("Invalid plugin manifest");
+    }
+
+    [Fact]
+    public async Task LoadPluginFromManifestAsync_InvalidDll_PublishesErrorEvent()
+    {
+        Guid pluginId = Guid.NewGuid();
+        string pluginDir = Path.Combine(_tempPluginsDir, "BadDll");
+        Directory.CreateDirectory(pluginDir);
+
+        string dllPath = Path.Combine(pluginDir, "BadDll.dll");
+        await File.WriteAllTextAsync(dllPath, "not a valid dll");
+
+        string manifestJson = $@"{{
+            ""id"": ""{pluginId}"",
+            ""name"": ""BadDll"",
+            ""description"": ""A test"",
+            ""version"": ""1.0.0"",
+            ""assembly"": ""BadDll.dll""
+        }}";
+        string manifestPath = Path.Combine(pluginDir, "plugin.json");
+        await File.WriteAllTextAsync(manifestPath, manifestJson);
+
+        List<PluginErrorEvent> errors = [];
+        _eventBus.Subscribe<PluginErrorEvent>((evt, _) =>
+        {
+            errors.Add(evt);
+            return Task.CompletedTask;
+        });
+
+        await _manager.LoadPluginFromManifestAsync(manifestPath);
+
+        errors.Should().ContainSingle();
+        errors[0].PluginName.Should().Be("BadDll");
+    }
+
+    [Fact]
+    public async Task LoadPluginsFromDirectoryAsync_PrefersManifestOverDllScan()
+    {
+        Guid pluginId = Guid.NewGuid();
+        string pluginDir = Path.Combine(_tempPluginsDir, "ManifestPlugin");
+        Directory.CreateDirectory(pluginDir);
+
+        string dllPath = Path.Combine(pluginDir, "ManifestPlugin.dll");
+        await File.WriteAllTextAsync(dllPath, "garbage data");
+
+        string manifestJson = $@"{{
+            ""id"": ""{pluginId}"",
+            ""name"": ""ManifestPlugin"",
+            ""description"": ""Uses manifest"",
+            ""version"": ""1.0.0"",
+            ""assembly"": ""ManifestPlugin.dll""
+        }}";
+        string manifestPath = Path.Combine(pluginDir, "plugin.json");
+        await File.WriteAllTextAsync(manifestPath, manifestJson);
+
+        List<PluginErrorEvent> errors = [];
+        _eventBus.Subscribe<PluginErrorEvent>((evt, _) =>
+        {
+            errors.Add(evt);
+            return Task.CompletedTask;
+        });
+
+        await _manager.LoadPluginsFromDirectoryAsync();
+
+        errors.Should().ContainSingle();
+        errors[0].PluginName.Should().Be("ManifestPlugin");
+    }
+
     private sealed class MinimalServiceProvider : IServiceProvider
     {
         public object? GetService(Type serviceType) => null;

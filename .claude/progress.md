@@ -3106,3 +3106,60 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
 - `GetInstalledPlugins_ReturnsReadOnlyList` — verifies return type
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 46 plugin tests pass (20 abstractions + 26 manager).
+
+---
+
+## PLG-03 — Plugin manifest + lifecycle
+
+**Date**: 2026-02-12
+
+**What was done**:
+
+### Plugin Manifest (`plugin.json`)
+- Created `src/NoMercy.Plugins.Abstractions/PluginManifest.cs` — data model for `plugin.json` with fields: `id`, `name`, `description`, `version`, `targetAbi`, `author`, `projectUrl`, `assembly`, `autoEnabled`
+- Created `src/NoMercy.Plugins/PluginManifestParser.cs` — static parser with:
+  - `Parse(string json)` — deserializes and validates manifest JSON (supports comments, trailing commas)
+  - `ParseFileAsync(string filePath)` — reads and parses a manifest file
+  - `ToPluginInfo(manifest, assemblyPath, status, manifestPath)` — converts manifest to `PluginInfo`
+  - Validation: checks for empty GUID, missing/invalid version, missing assembly name
+
+### Plugin Lifecycle State Machine
+- Created `src/NoMercy.Plugins.Abstractions/PluginLifecycle.cs` — enforces valid status transitions:
+  - `Active` → `Disabled`, `Malfunctioned`, `Deleted`
+  - `Disabled` → `Active`, `Deleted`
+  - `Malfunctioned` → `Active`, `Disabled`, `Deleted`
+  - `Deleted` → (terminal, no transitions allowed)
+  - `CanTransition(from, to)` — checks if transition is valid
+  - `Transition(info, newStatus)` — applies transition or throws `InvalidOperationException`
+
+### PluginInfo Extensions
+- Added `TargetAbi` and `ManifestPath` properties to `PluginInfo`
+
+### PluginManager Updates
+- `LoadPluginsFromDirectoryAsync` now checks for `plugin.json` in each plugin directory first
+  - If manifest found: uses `LoadPluginFromManifestAsync` (manifest-based loading)
+  - If no manifest: falls back to existing DLL-scanning behavior
+- New `LoadPluginFromManifestAsync` method: parses manifest, resolves assembly path, loads via `PluginLoadContext`, respects `autoEnabled` flag
+- `EnablePluginAsync`, `DisablePluginAsync`, `UninstallPluginAsync` now use `PluginLifecycle.Transition` for validated state changes
+
+### Tests (25 new tests)
+- `PluginManifestParserTests.cs` (18 tests):
+  - `Parse_ValidJson_ReturnsManifest`, `Parse_WithOptionalFields_PopulatesAll`, `Parse_AutoEnabledFalse_SetsCorrectly`
+  - `Parse_NullJson_ThrowsArgumentException`, `Parse_EmptyJson_ThrowsArgumentException`, `Parse_InvalidJson_ThrowsJsonException`
+  - `Parse_EmptyGuid_ThrowsInvalidOperation`, `Parse_MissingVersion_ThrowsJsonException`, `Parse_InvalidVersion_ThrowsInvalidOperation`
+  - `Parse_EmptyAssembly_ThrowsInvalidOperation`, `Parse_WithJsonComments_Succeeds`, `Parse_WithTrailingCommas_Succeeds`
+  - `ParseFileAsync_ValidFile_ReturnsManifest`, `ParseFileAsync_FileNotFound_ThrowsFileNotFoundException`, `ParseFileAsync_NullPath_ThrowsArgumentException`
+  - `ToPluginInfo_CreatesCorrectInfo`, `ToPluginInfo_NullManifest_ThrowsArgumentNullException`, `ToPluginInfo_DisabledStatus_SetsCorrectly`
+- `PluginLifecycleTests.cs` (11 tests):
+  - `CanTransition_AllowedTransitions_ReturnsTrue` (8 data rows)
+  - `CanTransition_ForbiddenTransitions_ReturnsFalse` (6 data rows)
+  - `Transition_ValidTransition_UpdatesStatus`, `Transition_InvalidTransition_ThrowsInvalidOperation`, `Transition_NullInfo_ThrowsArgumentNullException`
+  - `Transition_ActiveToMalfunctioned_Succeeds`, `Transition_MalfunctionedToActive_Succeeds`, `Transition_MalfunctionedToDisabled_Succeeds`
+  - `Transition_DisabledToMalfunctioned_Fails`, `Transition_FullLifecycle_ActiveToDisabledToActiveToDeleted`, `Transition_DeletedIsTerminal_CannotTransitionToAnything`
+- `PluginManagerTests.cs` (4 new tests):
+  - `LoadPluginFromManifestAsync_MissingAssembly_PublishesErrorEvent`
+  - `LoadPluginFromManifestAsync_InvalidManifest_PublishesErrorEvent`
+  - `LoadPluginFromManifestAsync_InvalidDll_PublishesErrorEvent`
+  - `LoadPluginsFromDirectoryAsync_PrefersManifestOverDllScan`
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 91 plugin tests pass (20 abstractions + 38 manager + 18 manifest parser + 15 lifecycle). Full test suite: 0 failures across all projects.

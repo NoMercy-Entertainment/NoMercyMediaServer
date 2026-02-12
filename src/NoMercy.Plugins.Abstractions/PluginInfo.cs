@@ -10,4 +10,6 @@ public class PluginInfo
     public string? Author { get; init; }
     public string? ProjectUrl { get; init; }
     public string? AssemblyPath { get; init; }
+    public string? TargetAbi { get; init; }
+    public string? ManifestPath { get; init; }
 }

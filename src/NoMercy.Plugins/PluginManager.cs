@@ -85,7 +85,7 @@ public class PluginManager : IPluginManager, IDisposable
 
                 PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder);
                 loaded.Instance.Initialize(context);
-                loaded.Info.Status = PluginStatus.Active;
+                PluginLifecycle.Transition(loaded.Info, PluginStatus.Active);
 
                 await _eventBus.PublishAsync(new PluginLoadedEvent
                 {
@@ -94,9 +94,13 @@ public class PluginManager : IPluginManager, IDisposable
                     Version = loaded.Info.Version.ToString()
                 }, ct);
             }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                loaded.Info.Status = PluginStatus.Malfunctioned;
+                PluginLifecycle.Transition(loaded.Info, PluginStatus.Malfunctioned);
 
                 await _eventBus.PublishAsync(new PluginErrorEvent
                 {
@@ -122,7 +126,7 @@ public class PluginManager : IPluginManager, IDisposable
         }
 
         loaded.Instance?.Dispose();
-        loaded.Info.Status = PluginStatus.Disabled;
+        PluginLifecycle.Transition(loaded.Info, PluginStatus.Disabled);
 
         return Task.CompletedTask;
     }
@@ -136,7 +140,7 @@ public class PluginManager : IPluginManager, IDisposable
 
         loaded.Instance?.Dispose();
         loaded.LoadContext?.Unload();
-        loaded.Info.Status = PluginStatus.Deleted;
+        PluginLifecycle.Transition(loaded.Info, PluginStatus.Deleted);
 
         if (loaded.Info.AssemblyPath is not null)
         {
@@ -172,11 +176,174 @@ public class PluginManager : IPluginManager, IDisposable
                 continue;
             }
 
+            string manifestPath = Path.Combine(pluginDir, "plugin.json");
+            if (File.Exists(manifestPath))
+            {
+                await LoadPluginFromManifestAsync(manifestPath, ct);
+                continue;
+            }
+
             string[] dllFiles = Directory.GetFiles(pluginDir, "*.dll");
             foreach (string dllPath in dllFiles)
             {
                 await LoadPluginAssemblyAsync(dllPath, ct);
             }
+        }
+    }
+
+    internal async Task LoadPluginFromManifestAsync(string manifestPath, CancellationToken ct = default)
+    {
+        string pluginDir = Path.GetDirectoryName(manifestPath)!;
+
+        try
+        {
+            PluginManifest manifest = await PluginManifestParser.ParseFileAsync(manifestPath, ct);
+            string assemblyPath = Path.Combine(pluginDir, manifest.Assembly);
+
+            if (!File.Exists(assemblyPath))
+            {
+                _logger.LogWarning(
+                    "Plugin manifest {ManifestPath} references assembly '{Assembly}' which was not found.",
+                    manifestPath, manifest.Assembly);
+
+                await _eventBus.PublishAsync(new PluginErrorEvent
+                {
+                    PluginId = manifest.Id.ToString(),
+                    PluginName = manifest.Name,
+                    ErrorMessage = $"Assembly '{manifest.Assembly}' not found in plugin directory.",
+                    ExceptionType = nameof(FileNotFoundException)
+                }, ct);
+
+                return;
+            }
+
+            PluginLoadContext loadContext = new(assemblyPath);
+
+            try
+            {
+                Assembly assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
+                List<Type> pluginTypes = assembly.GetTypes()
+                    .Where(t => typeof(IPlugin).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false })
+                    .ToList();
+
+                bool foundPlugin = false;
+
+                foreach (Type pluginType in pluginTypes)
+                {
+                    IPlugin? instance = Activator.CreateInstance(pluginType) as IPlugin;
+                    if (instance is null)
+                    {
+                        continue;
+                    }
+
+                    PluginStatus initialStatus = manifest.AutoEnabled ? PluginStatus.Active : PluginStatus.Disabled;
+
+                    if (manifest.AutoEnabled)
+                    {
+                        string dataFolder = Path.Combine(_pluginsPath, "data", instance.Id.ToString("N"));
+                        if (!Directory.Exists(dataFolder))
+                        {
+                            Directory.CreateDirectory(dataFolder);
+                        }
+
+                        PluginContext context = new(_eventBus, _serviceProvider, _logger, dataFolder);
+
+                        try
+                        {
+                            instance.Initialize(context);
+                        }
+                        catch (Exception ex)
+                        {
+                            initialStatus = PluginStatus.Malfunctioned;
+                            instance.Dispose();
+
+                            PluginInfo errorInfo = PluginManifestParser.ToPluginInfo(manifest, assemblyPath, initialStatus, manifestPath);
+
+                            LoadedPlugin errorLoaded = new(errorInfo, null, loadContext);
+                            _loadedPlugins[manifest.Id] = errorLoaded;
+                            foundPlugin = true;
+
+                            await _eventBus.PublishAsync(new PluginErrorEvent
+                            {
+                                PluginId = manifest.Id.ToString(),
+                                PluginName = manifest.Name,
+                                ErrorMessage = ex.Message,
+                                ExceptionType = ex.GetType().Name
+                            }, ct);
+
+                            continue;
+                        }
+                    }
+
+                    PluginInfo info = PluginManifestParser.ToPluginInfo(manifest, assemblyPath, initialStatus, manifestPath);
+
+                    IPlugin? storedInstance = initialStatus == PluginStatus.Active ? instance : null;
+                    LoadedPlugin loaded = new(info, storedInstance, loadContext);
+                    _loadedPlugins[manifest.Id] = loaded;
+                    foundPlugin = true;
+
+                    if (initialStatus == PluginStatus.Active)
+                    {
+                        await _eventBus.PublishAsync(new PluginLoadedEvent
+                        {
+                            PluginId = manifest.Id.ToString(),
+                            PluginName = manifest.Name,
+                            Version = manifest.Version
+                        }, ct);
+                    }
+                }
+
+                if (!foundPlugin)
+                {
+                    loadContext.Unload();
+                }
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                string errorMessage = string.Join("; ", ex.LoaderExceptions
+                    .Where(e => e is not null)
+                    .Select(e => e!.Message));
+
+                _logger.LogWarning("Failed to load plugin assembly {AssemblyPath}: {Error}", assemblyPath, errorMessage);
+
+                await _eventBus.PublishAsync(new PluginErrorEvent
+                {
+                    PluginId = manifest.Id.ToString(),
+                    PluginName = manifest.Name,
+                    ErrorMessage = errorMessage,
+                    ExceptionType = nameof(ReflectionTypeLoadException)
+                }, ct);
+
+                loadContext.Unload();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to load plugin assembly {AssemblyPath}: {Error}", assemblyPath, ex.Message);
+
+                await _eventBus.PublishAsync(new PluginErrorEvent
+                {
+                    PluginId = manifest.Id.ToString(),
+                    PluginName = manifest.Name,
+                    ErrorMessage = ex.Message,
+                    ExceptionType = ex.GetType().Name
+                }, ct);
+
+                loadContext.Unload();
+            }
+        }
+        catch (Exception ex)
+        {
+            string pluginName = Path.GetFileName(pluginDir);
+
+            _logger.LogWarning("Failed to parse plugin manifest {ManifestPath}: {Error}", manifestPath, ex.Message);
+
+            await _eventBus.PublishAsync(new PluginErrorEvent
+            {
+                PluginId = Guid.Empty.ToString(),
+                PluginName = pluginName,
+                ErrorMessage = $"Invalid plugin manifest: {ex.Message}",
+                ExceptionType = ex.GetType().Name
+            }, ct);
         }
     }
 
