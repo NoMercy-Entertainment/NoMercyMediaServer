@@ -4278,3 +4278,38 @@ Enhanced the `/sso-callback` OAuth callback handler in `SetupServer.cs` with thr
 - `.claude/PRD.md` — Marked SETUP-06 complete, updated Next up to SETUP-07
 
 **Test results**: Build succeeds with 0 errors. All 1,185 tests pass (160 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
+
+---
+
+## SETUP-07 — Add 503 middleware for non-setup routes
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created `src/NoMercy.Api/Middleware/SetupModeMiddleware.cs` — ASP.NET Core middleware that intercepts all requests when `SetupState.IsSetupRequired` is true:
+  - Returns 503 Service Unavailable with JSON body `{"status":"setup_required","message":"Server is in setup mode","setup_url":"/setup"}` for all non-setup routes
+  - Allows `/setup`, `/setup/*`, `/sso-callback`, and `/health` routes to pass through during setup mode
+  - Case-insensitive and trailing-slash-tolerant path matching
+  - Once setup is complete (`SetupState.IsSetupRequired == false`), all requests pass through normally
+- Registered `SetupState` as singleton in `ServiceConfiguration.ConfigureCoreServices()` — shared between middleware and setup flow
+- Added `SetupModeMiddleware` to the pipeline in `ApplicationConfiguration.ConfigureMiddleware()` — placed after routing/CORS but before auth, so CORS preflight works but API requests are blocked during setup
+- Updated `NoMercyApiFactory` test infrastructure to replace `SetupState` with a completed instance (`TokenState.Valid` → `SetupPhase.Complete`) so existing API tests aren't blocked by the middleware
+- Created `tests/NoMercy.Tests.Setup/SetupModeMiddlewareTests.cs` — 17 tests covering:
+  - Non-setup routes return 503 during setup (API, root, random paths, SignalR hubs, Swagger)
+  - Setup routes pass through during setup (`/setup`, `/setup/status`, `/setup/config`, `/sso-callback`, `/health`)
+  - All routes pass through when setup is complete
+  - 503 response format (JSON body, content type, correct fields)
+  - Next middleware is not called for blocked routes
+  - Trailing slash and case-insensitive handling
+
+**Files created**:
+- `src/NoMercy.Api/Middleware/SetupModeMiddleware.cs`
+- `tests/NoMercy.Tests.Setup/SetupModeMiddlewareTests.cs`
+
+**Files modified**:
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — Added `SetupState` singleton registration and `using NoMercy.Setup`
+- `src/NoMercy.Server/Configuration/ApplicationConfiguration.cs` — Added `SetupModeMiddleware` to pipeline and `using NoMercy.Setup`
+- `tests/NoMercy.Tests.Api/Infrastructure/NoMercyApiFactory.cs` — Added `ReplaceSetupState()` to set setup phase to Complete for API tests
+- `.claude/PRD.md` — Marked SETUP-07 complete, updated Next up to SETUP-08
+
+**Test results**: Build succeeds with 0 errors. All 2,253 tests pass (177 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers, 157 Plugins, 143 Database, 150 Encoder, 29 Cli, 27 Tray, 16 Networking) = 0 failures.

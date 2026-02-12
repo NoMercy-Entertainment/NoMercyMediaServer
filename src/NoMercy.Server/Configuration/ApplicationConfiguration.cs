@@ -7,6 +7,7 @@ using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Setup;
 using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.Helpers;
@@ -83,6 +84,7 @@ public static class ApplicationConfiguration
         app.UseCors("AllowNoMercyOrigins");
         app.UseRouting();
 
+        app.UseMiddleware<SetupModeMiddleware>();
         app.UseMiddleware<LocalizationMiddleware>();
         app.UseMiddleware<TokenParamAuthMiddleware>();
         app.UseAuthentication();

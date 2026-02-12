@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 7, item SETUP-07
+**Next up**: Phase 7, item SETUP-08
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -195,7 +195,7 @@ Details: [13-headless-server.md](prd/13-headless-server.md) | [14-server-setup.m
 - [x] SETUP-04 — Implement `/setup` page with OAuth + QR fallback
 - [x] SETUP-05 — Implement `/sso-callback` token exchange
 - [x] SETUP-06 — Implement `/setup/status` progress endpoint
-- [ ] SETUP-07 — Add 503 middleware for non-setup routes
+- [x] SETUP-07 — Add 503 middleware for non-setup routes
 - [ ] SETUP-08 — Refactor Auth.cs — remove Console.* calls
 - [ ] SETUP-09 — Add retry logic to Register + Certificate
 - [ ] SETUP-11 — Implement HTTP → HTTPS restart after cert

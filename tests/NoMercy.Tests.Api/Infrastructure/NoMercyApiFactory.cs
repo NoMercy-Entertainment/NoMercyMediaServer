@@ -21,6 +21,7 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Server;
+using NoMercy.Setup;
 
 namespace NoMercy.Tests.Api.Infrastructure;
 
@@ -50,6 +51,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             RemoveHostedServices(services);
             ReplaceAuth(services);
             ReplacePluginManager(services);
+            ReplaceSetupState(services);
         });
     }
 
@@ -459,6 +461,14 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         foreach (ServiceDescriptor descriptor in hostedServices)
             services.Remove(descriptor);
+    }
+
+    private static void ReplaceSetupState(IServiceCollection services)
+    {
+        services.RemoveAll<SetupState>();
+        SetupState completedState = new();
+        completedState.DetermineInitialPhase(TokenState.Valid);
+        services.AddSingleton(completedState);
     }
 
     private static void ReplacePluginManager(IServiceCollection services)

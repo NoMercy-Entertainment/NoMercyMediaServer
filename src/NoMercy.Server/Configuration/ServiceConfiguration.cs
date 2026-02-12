@@ -40,6 +40,7 @@ using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Server.Extensions;
 using NoMercy.Server.Services;
 using NoMercy.Server.Configuration.Swagger;
+using NoMercy.Setup;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
@@ -223,6 +224,9 @@ public static class ServiceConfiguration
 
     private static void ConfigureCoreServices(IServiceCollection services)
     {
+        // Setup state — singleton shared between middleware and setup flow
+        services.AddSingleton<SetupState>();
+
         // Add Memory Cache with size limit to prevent unbounded growth
         services.AddMemoryCache(options =>
         {
