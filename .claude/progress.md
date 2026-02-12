@@ -3628,3 +3628,31 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `NoMercy.Server.sln` — Added NoMercy.Queue.MediaServer project
 
 **Test results**: Build succeeds with 0 errors. All 1460 tests pass with 0 failures across all test projects.
+
+---
+
+## QDC-17 — Comprehensive queue testing
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created `tests/NoMercy.Tests.Queue/ComprehensiveQueueTests.cs` with 74 new tests covering:
+  - **EfQueueContextAdapter dedicated tests** (28 tests): Full CRUD for jobs, failed jobs, and cron jobs through the EF Core adapter, including edge cases (nonexistent IDs, detached entities, change tracker clearing)
+  - **Cross-provider behavioral parity** (8 tests): Verify SqliteQueueContext and EfQueueContextAdapter produce identical results for the same operations (add/find, exists, priority ordering, currentJobId guard, reset reservations, cron lifecycle, failed job lifecycle)
+  - **End-to-end dispatch tests** (5 tests): Full pipeline from JobDispatcher → JobQueue → SerializationHelper → IShouldQueue.Handle() → DeleteJob, including multi-queue routing, priority override, duplicate prevention, and retry exhaustion
+  - **QueueRunner lifecycle tests** (7 tests): Constructor behavior, static accessor, worker thread spawning before/after Initialize, SetWorkerCount with/without IConfigurationStore, unknown queue handling
+  - **SQLite provider end-to-end** (6 tests): Full JobQueue API against real SQLite via SqliteQueueContextFactory — enqueue/reserve, duplicate prevention, retry under/at maxAttempts, RetryFailedJobs, priority ordering
+  - **Serialization edge cases** (5 tests): Type preservation via TypeNameHandling.All, polymorphic deserialization to IShouldQueue, NullValueHandling.Ignore, camelCase naming strategy
+  - **JobQueue dequeue tests** (5 tests): Empty queue, removal, multiple dequeue, complete enqueue→reserve→delete lifecycle, RequeueFailedJob
+  - **IJobDispatcher interface compliance** (3 tests): Verify JobDispatcher implements IJobDispatcher, single-arg and three-arg dispatch
+  - **QueueConfiguration model tests** (4 tests): Default queue names, MaxAttempts, PollingIntervalMs, custom override
+  - **Additional test jobs**: HighPriorityJob (queue="critical", priority=100) and TestConfigStore for testing
+- **Fixed bug**: `EfQueueContextAdapter.FindFailedJob(int id)` was passing `int` directly to `_context.FailedJobs.Find(id)`, but `FailedJob.Id` is `long`, causing `ArgumentException`. Added `(long)` cast to match the fix already present in `SqliteQueueContext.FindFailedJob`.
+- **Updated test**: `JobQueueTests.RequeueFailedJob_WithTypeMismatchBug_HandlesGracefully` was documenting the int/long bug behavior — updated to `RequeueFailedJob_MovesFailedJobBackToQueue` to reflect the correct (now fixed) behavior.
+
+**Files changed**:
+- `tests/NoMercy.Tests.Queue/ComprehensiveQueueTests.cs` — New file: 74 comprehensive queue tests
+- `tests/NoMercy.Tests.Queue/JobQueueTests.cs` — Updated RequeueFailedJob test to match fixed behavior
+- `src/NoMercy.Queue.MediaServer/EfQueueContextAdapter.cs` — Fixed int→long cast in FindFailedJob
+
+**Test results**: Build succeeds with 0 errors. All tests pass with 0 failures across all test projects (424 queue tests, total ~2080+ tests).

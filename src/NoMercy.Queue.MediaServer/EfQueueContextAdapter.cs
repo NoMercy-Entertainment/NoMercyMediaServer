@@ -134,7 +134,7 @@ public class EfQueueContextAdapter : IQueueContext
 
     public FailedJobModel? FindFailedJob(int id)
     {
-        FailedJob? entity = _context.FailedJobs.Find(id);
+        FailedJob? entity = _context.FailedJobs.Find((long)id);
         return entity == null ? null : ToFailedModel(entity);
     }
 

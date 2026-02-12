@@ -341,12 +341,8 @@ public class JobQueueTests : IDisposable
     }
 
     [Fact]
-    public void RequeueFailedJob_WithTypeMismatchBug_HandlesGracefully()
+    public void RequeueFailedJob_MovesFailedJobBackToQueue()
     {
-        // This test documents a known bug in RequeueFailedJob method:
-        // The method parameter is int but FailedJob.Id is long, causing Find() to fail
-        // The method catches the exception internally and silently fails
-
         // Arrange
         FailedJob failedJob = new()
         {
@@ -363,15 +359,21 @@ public class JobQueueTests : IDisposable
         FailedJob? savedFailedJob = _context.FailedJobs.FirstOrDefault();
         Assert.NotNull(savedFailedJob);
 
-        // Act - The method will silently fail due to the type mismatch bug
+        // Act
         _jobQueue.RequeueFailedJob((int)savedFailedJob.Id);
 
-        // Assert - The job should still exist because the requeue failed silently
+        // Assert - The failed job should be removed and a new queue job created
         int failedJobCount = _context.FailedJobs.Count();
-        Assert.Equal(1, failedJobCount); // Job was not removed due to the bug
+        Assert.Equal(0, failedJobCount);
 
         int queueJobCount = _context.QueueJobs.Count();
-        Assert.Equal(0, queueJobCount); // No queue job was created
+        Assert.Equal(1, queueJobCount);
+
+        QueueJob? requeuedJob = _context.QueueJobs.FirstOrDefault();
+        Assert.NotNull(requeuedJob);
+        Assert.Equal("test-queue", requeuedJob.Queue);
+        Assert.Equal("test payload", requeuedJob.Payload);
+        Assert.Equal(0, requeuedJob.Attempts);
     }
 
     [Fact]
