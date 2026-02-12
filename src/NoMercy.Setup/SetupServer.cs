@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Newtonsoft.Json;
+using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -229,6 +230,8 @@ public class SetupServer
 
                 _state.TransitionTo(SetupPhase.Authenticated);
                 Logger.Setup("OAuth token exchange completed successfully");
+
+                await RunPostAuthRegistration();
             }
             catch (Exception ex)
             {
@@ -468,6 +471,8 @@ public class SetupServer
                                             ?? throw new("Failed to deserialize token response");
                     Auth.SetTokensFromSetup(data);
                     _state.TransitionTo(SetupPhase.Authenticated);
+
+                    await RunPostAuthRegistration();
                     return;
                 }
 
@@ -490,6 +495,40 @@ public class SetupServer
 
         _state.SetError("Device authorization timed out");
         _state.TransitionTo(SetupPhase.Unauthenticated);
+    }
+
+    internal async Task RunPostAuthRegistration()
+    {
+        if (_state.CurrentPhase != SetupPhase.Authenticated)
+            return;
+
+        try
+        {
+            _state.TransitionTo(SetupPhase.Registering);
+
+            await Networking.Networking.Discover();
+            await Register.Init();
+
+            _state.TransitionTo(SetupPhase.Registered);
+
+            if (Certificate.HasValidCertificate())
+            {
+                _state.TransitionTo(SetupPhase.CertificateAcquired);
+                _state.TransitionTo(SetupPhase.Complete);
+                Logger.Setup("Setup complete — server will restart with HTTPS");
+            }
+            else
+            {
+                _state.SetError("Registration completed but certificate was not acquired");
+            }
+        }
+        catch (Exception ex)
+        {
+            _state.SetError($"Registration failed: {ex.Message}");
+            _state.TransitionTo(SetupPhase.Authenticated);
+            Logger.Setup($"Post-auth registration failed: {ex.Message}",
+                LogEventLevel.Error);
+        }
     }
 
     private static async Task HandleServiceUnavailable(HttpContext context)

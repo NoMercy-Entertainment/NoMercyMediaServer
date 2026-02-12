@@ -4374,3 +4374,55 @@ Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All 2,262 tests pass (186 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers, 157 Plugins, 143 Database, 16 Networking, 29 Cli, 27 Tray, 150 Encoder) = 0 failures.
+
+---
+
+## SETUP-11 — Implement HTTP → HTTPS restart after cert
+
+**Date**: 2026-02-12
+
+**Problem**: When the server starts for the first time without SSL certificates (setup mode), it needs to run on plain HTTP so users can access the setup UI. After authentication and certificate acquisition through the setup flow, the server must gracefully restart Kestrel to switch from HTTP to HTTPS.
+
+**Changes made**:
+
+1. **`src/NoMercy.Networking/Certificate.cs`**:
+   - Added `HasValidCertificate()` public method that checks if cert.pem and key.pem files exist
+   - Made `KestrelConfig()` conditional — only configures HTTPS endpoints when certificates are available, allowing HTTP-only startup during setup mode
+
+2. **`src/NoMercy.Server/Program.cs`**:
+   - `CreateWebHostBuilder()` now dynamically selects HTTP or HTTPS scheme based on `Certificate.HasValidCertificate()`
+   - Extracted `RegisterLifetimeEvents()` and `RunHost()` helper methods from the monolithic `Start()` method
+   - Added `RunWithHttpsRestart()` — when starting without certificates, the HTTP host starts, waits for `SetupState.WaitForSetupCompleteAsync()`, then gracefully stops the HTTP host, builds a new host with HTTPS, and starts it
+   - Handles edge cases: shutdown during setup, cert not found after setup completion
+
+3. **`src/NoMercy.Setup/SetupState.cs`**:
+   - Added `_setupCompletedSignal` (TaskCompletionSource) that fires when phase reaches `Complete`
+   - Added `WaitForSetupCompleteAsync()` — allows Program.cs to await setup completion with cancellation support
+   - `TransitionTo()` now triggers the completion signal when transitioning to `SetupPhase.Complete`
+   - Returns immediately if already in `Complete` phase
+
+4. **`src/NoMercy.Setup/SetupServer.cs`**:
+   - Added `using NoMercy.Networking` for `Certificate.HasValidCertificate()`
+   - Added `RunPostAuthRegistration()` — after successful authentication (SSO or device grant), automatically runs networking discovery, server registration, and certificate acquisition, transitioning through `Registering → Registered → CertificateAcquired → Complete`
+   - Wired `RunPostAuthRegistration()` into both the SSO callback flow and the device grant polling flow
+   - Handles registration failures gracefully — sets error and falls back to `Authenticated` state for retry
+
+5. **`tests/NoMercy.Tests.Setup/HttpsRestartTests.cs`** (new):
+   - `CertificateAvailabilityTests`: Verifies `HasValidCertificate()` is callable and returns bool
+   - `SetupCompleteSignalTests`: 4 tests for `WaitForSetupCompleteAsync()` — completion on transition, immediate return when already complete, cancellation support, multiple waiters
+   - `HttpToHttpsTransitionTests`: 4 tests — `KestrelConfig` no-throw without cert, valid transition chain, full setup flow, future waiters after completion
+
+6. **`tests/NoMercy.Tests.Setup/SetupStateTests.cs`**:
+   - Added 5 new tests for `WaitForSetupCompleteAsync`: completes on transition to Complete, immediate return when already Complete, cancellation, multiple waiters, does not complete on intermediate phases
+
+**Files modified**:
+- `src/NoMercy.Networking/Certificate.cs` — Added HasValidCertificate(), made KestrelConfig conditional
+- `src/NoMercy.Server/Program.cs` — HTTP→HTTPS restart logic, extracted helpers
+- `src/NoMercy.Setup/SetupState.cs` — Added WaitForSetupCompleteAsync with completion signal
+- `src/NoMercy.Setup/SetupServer.cs` — Added RunPostAuthRegistration, wired into auth flows
+- `tests/NoMercy.Tests.Setup/HttpsRestartTests.cs` — New: 9 tests for HTTPS restart
+- `tests/NoMercy.Tests.Setup/SetupStateTests.cs` — 5 new WaitForSetupCompleteAsync tests
+- `.claude/PRD.md` — Marked SETUP-11 complete, updated Next up to SETUP-12
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All tests pass: 200 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers = 0 failures.

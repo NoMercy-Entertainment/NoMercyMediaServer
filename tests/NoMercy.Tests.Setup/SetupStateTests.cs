@@ -329,6 +329,94 @@ public class SetupStateTests
             () => waitTask.WaitAsync(TimeSpan.FromSeconds(1)));
     }
 
+    // --- WaitForSetupCompleteAsync ---
+
+    [Fact]
+    public async Task WaitForSetupCompleteAsync_CompletesWhenTransitionedToComplete()
+    {
+        SetupState state = new();
+        Task waitTask = state.WaitForSetupCompleteAsync();
+
+        Assert.False(waitTask.IsCompleted);
+
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+
+        Assert.False(waitTask.IsCompleted);
+
+        state.TransitionTo(SetupPhase.Complete);
+
+        await waitTask.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(waitTask.IsCompleted);
+    }
+
+    [Fact]
+    public async Task WaitForSetupCompleteAsync_CompletesImmediatelyWhenAlreadyComplete()
+    {
+        SetupState state = new();
+        state.DetermineInitialPhase(TokenState.Valid);
+
+        Task waitTask = state.WaitForSetupCompleteAsync();
+
+        await waitTask.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(waitTask.IsCompleted);
+    }
+
+    [Fact]
+    public async Task WaitForSetupCompleteAsync_RespectsCancellation()
+    {
+        SetupState state = new();
+        using CancellationTokenSource cts = new();
+
+        Task waitTask = state.WaitForSetupCompleteAsync(cts.Token);
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => waitTask.WaitAsync(TimeSpan.FromSeconds(1)));
+    }
+
+    [Fact]
+    public async Task WaitForSetupCompleteAsync_SupportsMultipleWaiters()
+    {
+        SetupState state = new();
+        Task wait1 = state.WaitForSetupCompleteAsync();
+        Task wait2 = state.WaitForSetupCompleteAsync();
+
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+        state.TransitionTo(SetupPhase.Complete);
+
+        await Task.WhenAll(
+            wait1.WaitAsync(TimeSpan.FromSeconds(1)),
+            wait2.WaitAsync(TimeSpan.FromSeconds(1)));
+
+        Assert.True(wait1.IsCompleted);
+        Assert.True(wait2.IsCompleted);
+    }
+
+    [Fact]
+    public async Task WaitForSetupCompleteAsync_DoesNotCompleteOnIntermediatePhases()
+    {
+        SetupState state = new();
+        Task waitTask = state.WaitForSetupCompleteAsync();
+
+        state.TransitionTo(SetupPhase.Authenticating);
+        state.TransitionTo(SetupPhase.Authenticated);
+        state.TransitionTo(SetupPhase.Registering);
+        state.TransitionTo(SetupPhase.Registered);
+        state.TransitionTo(SetupPhase.CertificateAcquired);
+
+        // Give it a moment to ensure it doesn't complete prematurely
+        await Task.Delay(50);
+        Assert.False(waitTask.IsCompleted);
+    }
+
     // --- DetermineInitialPhase ---
 
     [Fact]

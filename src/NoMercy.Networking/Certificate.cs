@@ -13,11 +13,19 @@ namespace NoMercy.Networking;
 
 public static class Certificate
 {
+    public static bool HasValidCertificate()
+    {
+        return File.Exists(AppFiles.CertFile) && File.Exists(AppFiles.KeyFile);
+    }
+
     public static void KestrelConfig(KestrelServerOptions options)
     {
-        options.ConfigureEndpointDefaults(listenOptions => 
-            listenOptions.UseHttps(HttpsConnectionAdapterOptions()));
-        
+        if (HasValidCertificate())
+        {
+            options.ConfigureEndpointDefaults(listenOptions =>
+                listenOptions.UseHttps(HttpsConnectionAdapterOptions()));
+        }
+
         options.AddServerHeader = false;
         options.Limits.MaxRequestBodySize = 100L * 1024 * 1024 * 1024; // 100GB — 4K remux support
         options.Limits.MaxRequestBufferSize = null; // Kestrel manages adaptively

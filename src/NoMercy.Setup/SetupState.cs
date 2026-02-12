@@ -34,6 +34,7 @@ public class SetupState
     private SetupPhase _currentPhase = SetupPhase.Unauthenticated;
     private string? _errorMessage;
     private TaskCompletionSource _changeSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private TaskCompletionSource _setupCompletedSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public SetupPhase CurrentPhase
     {
@@ -60,6 +61,19 @@ public class SetupState
         return signal.Task.WaitAsync(cancellationToken);
     }
 
+    public Task WaitForSetupCompleteAsync(CancellationToken cancellationToken = default)
+    {
+        TaskCompletionSource signal;
+        lock (_lock)
+        {
+            if (_currentPhase >= SetupPhase.Complete)
+                return Task.CompletedTask;
+            signal = _setupCompletedSignal;
+        }
+
+        return signal.Task.WaitAsync(cancellationToken);
+    }
+
     public bool TransitionTo(SetupPhase targetPhase)
     {
         lock (_lock)
@@ -78,6 +92,10 @@ public class SetupState
 
             Logger.Setup($"Setup phase: {previousPhase} → {targetPhase}");
             NotifyChange();
+
+            if (targetPhase == SetupPhase.Complete)
+                _setupCompletedSignal.TrySetResult();
+
             return true;
         }
     }

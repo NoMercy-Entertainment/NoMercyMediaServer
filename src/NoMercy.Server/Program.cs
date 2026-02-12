@@ -116,8 +116,24 @@ public static class Program
         await Setup.Start.Init(startupTasks);
 
         _applicationShutdownCts = new CancellationTokenSource();
+        bool startedWithoutCert = !Certificate.HasValidCertificate();
         IWebHost app = CreateWebHostBuilder(options).Build();
 
+        RegisterLifetimeEvents(app, stopWatch);
+
+        if (startedWithoutCert)
+        {
+            Logger.App("Starting in HTTP mode — waiting for certificate acquisition...");
+            await RunWithHttpsRestart(app, options);
+        }
+        else
+        {
+            await RunHost(app);
+        }
+    }
+
+    private static void RegisterLifetimeEvents(IWebHost app, Stopwatch stopWatch)
+    {
         app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStarted.Register(() =>
         {
             Config.Started = true;
@@ -136,8 +152,6 @@ public static class Program
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
 
                 await Dev.Run();
-                // await DriveMonitor.Start();
-                // LibraryFileWatcher.Start();
 
                 if (!IsRunningAsService &&
                     RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
@@ -156,21 +170,67 @@ public static class Program
         {
             Logger.App("Application is shutting down...");
         });
+    }
 
+    private static async Task RunWithHttpsRestart(IWebHost httpHost, StartupOptions options)
+    {
+        SetupState setupState = httpHost.Services.GetRequiredService<SetupState>();
+
+        // Start the HTTP host
+        await httpHost.StartAsync(_applicationShutdownCts!.Token);
+
+        // Wait for either setup completion or shutdown
+        Task shutdownTask = Task.Delay(Timeout.Infinite, _applicationShutdownCts!.Token);
+        Task setupCompleteTask = setupState.WaitForSetupCompleteAsync(_applicationShutdownCts.Token);
+
+        Task completedTask = await Task.WhenAny(setupCompleteTask, shutdownTask);
+
+        if (completedTask == shutdownTask || _applicationShutdownCts.IsCancellationRequested)
+        {
+            await httpHost.StopAsync(TimeSpan.FromSeconds(10));
+            httpHost.Dispose();
+            return;
+        }
+
+        // Setup completed — certificate should now be available
+        if (!Certificate.HasValidCertificate())
+        {
+            Logger.App("Setup completed but certificate not found — continuing on HTTP");
+            await httpHost.WaitForShutdownAsync(_applicationShutdownCts.Token);
+            httpHost.Dispose();
+            return;
+        }
+
+        Logger.App("Certificate acquired — restarting with HTTPS...");
+
+        // Gracefully stop the HTTP host
+        Config.Started = false;
+        await httpHost.StopAsync(TimeSpan.FromSeconds(10));
+        httpHost.Dispose();
+
+        // Build and start a new host with HTTPS
+        _applicationShutdownCts = new CancellationTokenSource();
+        Stopwatch restartStopWatch = new();
+        restartStopWatch.Start();
+
+        IWebHost httpsHost = CreateWebHostBuilder(options).Build();
+        RegisterLifetimeEvents(httpsHost, restartStopWatch);
+
+        Logger.App("HTTPS server starting...");
+        await RunHost(httpsHost);
+    }
+
+    private static async Task RunHost(IWebHost host)
+    {
         try
         {
             if (IsRunningAsService && OperatingSystem.IsWindows())
             {
-                // RunAsService blocks until the Windows SCM stops the service
-                app.RunAsService();
+                host.RunAsService();
             }
             else
             {
-                // On Linux (systemd) and macOS (launchd), RunAsync handles the
-                // service lifecycle correctly — systemd sends SIGTERM for shutdown,
-                // launchd uses SIGTERM as well. The UseSystemd() call in
-                // CreateWebHostBuilder hooks into systemd's notification protocol.
-                await app.RunAsync(_applicationShutdownCts.Token);
+                await host.RunAsync(_applicationShutdownCts!.Token);
             }
         }
         catch (OperationCanceledException)
@@ -191,17 +251,20 @@ public static class Program
 
     private static IWebHostBuilder CreateWebHostBuilder(StartupOptions options)
     {
+        bool hasCert = Certificate.HasValidCertificate();
+        string scheme = hasCert ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
+
         UriBuilder localhostIPv4Url = new()
         {
             Host = IPAddress.Any.ToString(),
             Port = Config.InternalServerPort,
-            Scheme = Uri.UriSchemeHttps
+            Scheme = scheme
         };
         UriBuilder localhostIPv6Url = new()
         {
             Host = IPAddress.IPv6Any.ToString(),
             Port = Config.InternalServerPort,
-            Scheme = Uri.UriSchemeHttps
+            Scheme = scheme
         };
 
         List<string> urls = [
