@@ -12,6 +12,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="NoMercy.Tests.Events" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Asp.Versioning.Http"/>
         <PackageReference Include="Asp.Versioning.Mvc"/>
         <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer"/>

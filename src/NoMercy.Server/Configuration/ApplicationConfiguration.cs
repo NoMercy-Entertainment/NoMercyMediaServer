@@ -21,6 +21,7 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Server.Configuration.Swagger;
 using NoMercy.Queue.Jobs;
 using NoMercy.Queue.Workers;
+using NoMercy.Server.Extensions;
 
 namespace NoMercy.Server.Configuration;
 
@@ -29,6 +30,7 @@ public static class ApplicationConfiguration
     public static void ConfigureApp(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
     {
         HttpClientProvider.Initialize(app.ApplicationServices.GetRequiredService<IHttpClientFactory>());
+        app.ApplicationServices.InitializeSignalREventHandlers();
 
         ConfigureLocalization(app);
         ConfigureMiddleware(app);

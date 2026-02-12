@@ -28,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NoMercy.Events\NoMercy.Events.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Api\NoMercy.Api.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2878,3 +2878,50 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
   - `PlaybackEvents_HaveTimestampsSetAutomatically` — verifies timestamps are set on construction
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (61), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427).
+
+---
+
+## EVT-09 — Migrate SignalR broadcasting to event handlers
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created three SignalR event handler classes in `src/NoMercy.Api/EventHandlers/` that subscribe to domain events and forward them as SignalR broadcasts:
+  - `SignalRPlaybackEventHandler` — subscribes to `PlaybackStartedEvent`, `PlaybackProgressEvent`, `PlaybackCompletedEvent` and logs playback activity via SignalR
+  - `SignalREncodingEventHandler` — subscribes to `EncodingStartedEvent`, `EncodingProgressEvent`, `EncodingCompletedEvent`, `EncodingFailedEvent` and broadcasts to dashboard clients via `Networking.SendToAll("dashboardHub")`
+  - `SignalRLibraryScanEventHandler` — subscribes to `LibraryScanStartedEvent`, `LibraryScanCompletedEvent`, `MediaAddedEvent`, `MediaRemovedEvent` and broadcasts to dashboard clients via `Networking.SendToAll("dashboardHub")`
+- Each handler implements `IDisposable` and properly cleans up event subscriptions on dispose
+- Created `src/NoMercy.Server/Extensions/EventHandlerExtensions.cs` with:
+  - `AddSignalREventHandlers()` — registers all three handlers as singletons in DI
+  - `InitializeSignalREventHandlers()` — resolves handlers at startup to activate event subscriptions
+- Wired registration in `ServiceConfiguration.ConfigureCoreServices()` and initialization in `ApplicationConfiguration.ConfigureApp()`
+- Added `InternalsVisibleTo` for `NoMercy.Tests.Events` in `NoMercy.Api.csproj`
+- Added `NoMercy.Api` project reference to `NoMercy.Tests.Events.csproj`
+
+**Files created**:
+- `src/NoMercy.Api/EventHandlers/SignalRPlaybackEventHandler.cs`
+- `src/NoMercy.Api/EventHandlers/SignalREncodingEventHandler.cs`
+- `src/NoMercy.Api/EventHandlers/SignalRLibraryScanEventHandler.cs`
+- `src/NoMercy.Server/Extensions/EventHandlerExtensions.cs`
+- `tests/NoMercy.Tests.Events/SignalREventHandlerTests.cs`
+
+**Files modified**:
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — added `services.AddSignalREventHandlers()`
+- `src/NoMercy.Server/Configuration/ApplicationConfiguration.cs` — added `app.ApplicationServices.InitializeSignalREventHandlers()`
+- `src/NoMercy.Api/NoMercy.Api.csproj` — added `InternalsVisibleTo` for test project
+- `tests/NoMercy.Tests.Events/NoMercy.Tests.Events.csproj` — added `NoMercy.Api` project reference
+
+**Tests added** (11 tests in `SignalREventHandlerTests.cs`):
+- `PlaybackHandler_SubscribesToAllPlaybackEvents` — verifies handler subscribes to started/progress/completed events
+- `PlaybackHandler_Dispose_UnsubscribesFromEvents` — verifies dispose removes subscriptions
+- `EncodingHandler_SubscribesToAllEncodingEvents` — verifies handler subscribes to all 4 encoding events
+- `EncodingHandler_BroadcastsToSignalR_WithoutException` — verifies broadcasting with no clients doesn't throw
+- `LibraryScanHandler_SubscribesToAllLibraryEvents` — verifies handler subscribes to scan + media events
+- `LibraryScanHandler_BroadcastsToSignalR_WithoutException` — verifies broadcasting with no clients doesn't throw
+- `EncodingHandler_Dispose_UnsubscribesFromEvents` — verifies dispose removes subscriptions
+- `AllHandlers_CanCoexistOnSameBus` — verifies all handlers work on the same event bus without cross-talk
+- `PlaybackHandler_OnPlaybackStarted_DoesNotThrow` — verifies direct handler method invocation
+- `PlaybackHandler_OnPlaybackCompleted_DoesNotThrow` — verifies direct handler method invocation
+- `EncodingHandler_OnEncodingProgress_DoesNotThrow` — verifies direct handler method invocation
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (72), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427), Database (143), Encoder (150), Networking (16), Setup (22).
