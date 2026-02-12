@@ -2703,3 +2703,54 @@ Restructured the music SignalR hub and its supporting services out of the `Contr
 - `.claude/PRD.md` — updated Ralph Loop rules
 
 **Test results**: Build succeeds with 0 errors. All 1,641 tests pass across all 10 test projects with zero failures.
+
+---
+
+## EVT-04 — Define all domain event classes
+
+**Date**: 2026-02-12
+
+**What was done**:
+Created 17 domain event classes across 7 domain subfolders in `src/NoMercy.Events/`, matching the event table in PRD section 10.3:
+
+- **Media** (3 events): `MediaDiscoveredEvent`, `MediaAddedEvent`, `MediaRemovedEvent`
+- **Encoding** (4 events): `EncodingStartedEvent`, `EncodingProgressEvent`, `EncodingCompletedEvent`, `EncodingFailedEvent`
+- **Users** (2 events): `UserAuthenticatedEvent`, `UserDisconnectedEvent`
+- **Playback** (3 events): `PlaybackStartedEvent`, `PlaybackProgressEvent`, `PlaybackCompletedEvent`
+- **Library** (2 events): `LibraryScanStartedEvent`, `LibraryScanCompletedEvent`
+- **Plugins** (2 events): `PluginLoadedEvent`, `PluginErrorEvent`
+- **Configuration** (1 event): `ConfigurationChangedEvent`
+
+All events extend `EventBase` (inheriting `EventId`, `Timestamp`, `Source`), are `sealed`, and use `required init` properties for mandatory fields and nullable for optional fields. Property types match actual domain model types (`int` for TMDB/TVDB IDs, `Ulid` for library IDs, `Guid` for user IDs).
+
+Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory.Packages.props`).
+
+**Files created** (17 event classes):
+- `src/NoMercy.Events/Media/MediaDiscoveredEvent.cs`
+- `src/NoMercy.Events/Media/MediaAddedEvent.cs`
+- `src/NoMercy.Events/Media/MediaRemovedEvent.cs`
+- `src/NoMercy.Events/Encoding/EncodingStartedEvent.cs`
+- `src/NoMercy.Events/Encoding/EncodingProgressEvent.cs`
+- `src/NoMercy.Events/Encoding/EncodingCompletedEvent.cs`
+- `src/NoMercy.Events/Encoding/EncodingFailedEvent.cs`
+- `src/NoMercy.Events/Users/UserAuthenticatedEvent.cs`
+- `src/NoMercy.Events/Users/UserDisconnectedEvent.cs`
+- `src/NoMercy.Events/Playback/PlaybackStartedEvent.cs`
+- `src/NoMercy.Events/Playback/PlaybackProgressEvent.cs`
+- `src/NoMercy.Events/Playback/PlaybackCompletedEvent.cs`
+- `src/NoMercy.Events/Library/LibraryScanStartedEvent.cs`
+- `src/NoMercy.Events/Library/LibraryScanCompletedEvent.cs`
+- `src/NoMercy.Events/Plugins/PluginLoadedEvent.cs`
+- `src/NoMercy.Events/Plugins/PluginErrorEvent.cs`
+- `src/NoMercy.Events/Configuration/ConfigurationChangedEvent.cs`
+
+**Files changed**:
+- `src/NoMercy.Events/NoMercy.Events.csproj` — added `Ulid` package reference
+
+**Tests added** (26 new tests in `tests/NoMercy.Tests.Events/DomainEventTests.cs`):
+- Property assertion tests for all 17 event types (verify Source, required/optional properties)
+- Optional property null tests for `DetectedType`, `Estimated`, `ExceptionType`, `DeviceId`, `ChangedByUserId`
+- `AllDomainEvents_ImplementIEvent` — verifies all 17 events implement IEvent correctly
+- `AllDomainEvents_CanBePublishedViaEventBus` — verifies events can be published/received via InMemoryEventBus
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 46 Events tests pass (26 new + 20 existing). All test suites pass.
