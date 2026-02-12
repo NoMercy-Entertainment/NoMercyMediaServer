@@ -3323,3 +3323,55 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
 - `PluginInfoDto` maps `PluginInfo.Version` (Version type) to string and `PluginInfo.Status` (enum) to lowercase string for JSON serialization
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. Full test suite: 1,855 tests pass with 0 failures across all 11 test projects.
+
+---
+
+## PLG-09 — Plugin template/NuGet
+
+**What was done**: Created a `dotnet new` project template for NoMercy MediaServer plugins, including a NuGet template package definition.
+
+**Files created**:
+- `templates/NoMercy.Plugin.Template/.template.config/template.json` — Template engine metadata:
+  - Identity: `NoMercy.Plugin.Template`, shortName: `nomercy-plugin`
+  - `sourceName`: `NoMercy.Plugin.Template` (auto-replaces with project name)
+  - Generated symbol `pluginId` for unique GUID per plugin
+  - Parameters: `authorName`, `pluginDescription` with placeholder substitution
+- `templates/NoMercy.Plugin.Template/NoMercy.Plugin.Template.csproj` — Plugin project file:
+  - Targets net9.0, references `NoMercy.Plugins.Abstractions` NuGet package
+  - Copies `plugin.json` to output directory
+- `templates/NoMercy.Plugin.Template/plugin.json` — Plugin manifest with substitution placeholders:
+  - `PLUGIN-GUID-PLACEHOLDER` (replaced by template engine), `AUTHOR-NAME-PLACEHOLDER`, `PLUGIN-DESCRIPTION-PLACEHOLDER`
+  - `targetAbi: "9.0"`, `autoEnabled: true`
+- `templates/NoMercy.Plugin.Template/Plugin.cs` — Sample plugin class:
+  - Implements `IPlugin` with `Name`, `Description`, `Id`, `Version`, `Initialize`, `Dispose`
+  - Uses `IPluginContext.Logger` in `Initialize` to log startup
+  - Placeholder substitution for GUID and description
+- `templates/NoMercy.Plugin.Templates.csproj` — NuGet template package project:
+  - `PackageType: Template`, includes all template content
+  - Can be packed with `dotnet pack` for distribution
+- `tests/NoMercy.Tests.Plugins/PluginTemplateTests.cs` — 13 tests:
+  - `TemplateDirectory_Exists`
+  - `TemplateConfig_Exists_AndIsValidJson` — validates identity, shortName, sourceName, symbols
+  - `PluginManifest_Exists_AndMatchesSchema` — validates id, name, description, version, assembly fields
+  - `PluginManifest_AssemblyName_MatchesCsprojName` — ensures assembly filename matches csproj
+  - `PluginManifest_ContainsPlaceholders` — verifies GUID, description, author placeholders
+  - `PluginManifest_HasTargetAbi`, `PluginManifest_HasAutoEnabled`
+  - `PluginClass_Exists_AndContainsPlaceholders` — verifies IPlugin, GUID, Initialize, Dispose
+  - `PluginClass_ImplementsIPluginInterface` — verifies Name, Description, Id, Version, Initialize
+  - `Csproj_References_PluginAbstractions`, `Csproj_CopiesPluginManifest`
+  - `TemplatePackageCsproj_Exists` — validates template package type
+  - `AllRequiredTemplateFiles_Exist` — checks all 4 required files
+
+**Usage**:
+```bash
+# Install template locally
+dotnet new install templates/NoMercy.Plugin.Template
+
+# Create a new plugin project
+dotnet new nomercy-plugin -n MyAwesomePlugin --authorName "John Doe" --pluginDescription "Does awesome things"
+
+# Or pack and distribute as NuGet
+dotnet pack templates/NoMercy.Plugin.Templates.csproj
+```
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 157 plugin tests pass. Full test suite: 1,868 tests pass with 0 failures across all 11 test projects.
