@@ -52,12 +52,13 @@ public static class UserSettings
         }
     }
 
-    public static void ApplySettings(Dictionary<string, string> settings)
+    public static void ApplySettings(Dictionary<string, string> settings, bool silent = false)
     {
         using MediaContext mediaContext = new();
         foreach (KeyValuePair<string, string> setting in settings)
         {
-            Logger.App($"Configuration: {setting.Key} = {setting.Value}");
+            if (!silent)
+                Logger.App($"Configuration: {setting.Key} = {setting.Value}");
             
             switch (setting.Key)
             {
