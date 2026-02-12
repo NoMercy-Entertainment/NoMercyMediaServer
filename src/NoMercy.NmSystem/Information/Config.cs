@@ -55,6 +55,17 @@ public static class Config
         set => _managementPort = value;
     }
 
+    private static string? _managementPipeName = null;
+
+    public static string ManagementPipeName
+    {
+        get => _managementPipeName ?? "NoMercyManagement";
+        set => _managementPipeName = value;
+    }
+
+    public static string ManagementSocketPath =>
+        Path.Combine(AppFiles.AppPath, "nomercy-management.sock");
+
     public static bool Swagger { get; set; } = true;
 
     public static bool Sentry { get; set; }

@@ -46,6 +46,9 @@ public class StartupOptions
     [Option('m', "management-port", Required = false, HelpText = "Management API port (localhost only).")]
     public int ManagementPort { get; set; }
 
+    [Option("pipe-name", Required = false, HelpText = "Named pipe name for IPC (Windows) or Unix socket filename.")]
+    public string? PipeName { get; set; }
+
     [Option("sentry", Required = false, HelpText = "Enable Sentry.")]
     public bool Sentry { get; set; }
 
@@ -141,6 +144,12 @@ public class StartupOptions
         {
             Logger.App("Setting management port to " + ManagementPort);
             Config.ManagementPort = ManagementPort;
+        }
+
+        if (!string.IsNullOrEmpty(PipeName))
+        {
+            Logger.App("Setting IPC pipe name to " + PipeName);
+            Config.ManagementPipeName = PipeName;
         }
 
         if (!string.IsNullOrEmpty(InternalIp))

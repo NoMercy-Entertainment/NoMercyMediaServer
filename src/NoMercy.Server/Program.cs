@@ -209,6 +209,36 @@ public static class Program
 
                 Logger.App(
                     $"Management API listening on http://127.0.0.1:{Config.ManagementPort}");
+
+                // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS)
+                if (Software.IsWindows)
+                {
+                    kestrelOptions.ListenNamedPipe(Config.ManagementPipeName, listenOptions =>
+                    {
+                        listenOptions.Protocols =
+                            Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+                    });
+
+                    Logger.App(
+                        $"IPC listening on named pipe: {Config.ManagementPipeName}");
+                }
+                else
+                {
+                    string socketPath = Config.ManagementSocketPath;
+
+                    // Remove stale socket file from previous run
+                    if (File.Exists(socketPath))
+                        File.Delete(socketPath);
+
+                    kestrelOptions.ListenUnixSocket(socketPath, listenOptions =>
+                    {
+                        listenOptions.Protocols =
+                            Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+                    });
+
+                    Logger.App(
+                        $"IPC listening on Unix socket: {socketPath}");
+                }
             })
             .UseUrls(urls.ToArray())
             .UseQuic()

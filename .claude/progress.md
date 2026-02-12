@@ -3699,3 +3699,31 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `src/NoMercy.Server/StartupOptions.cs` — Added `--management-port` CLI option
 
 **Test results**: Build succeeds with 0 errors. All tests pass with 0 failures across all test projects (337 API tests, 218 repository tests, 86 event tests, 33 media processing tests, 427 provider tests).
+
+---
+
+## HEAD-04 — Implement named pipe IPC for local communication
+
+**What**: Added named pipe (Windows) and Unix domain socket (Linux/macOS) IPC transport to the server for local inter-process communication. Created `IpcClient` helper class for CLI/Tray apps to connect to the server over IPC.
+
+**Why**: The Management API already listens on a localhost-only HTTP port, but IPC via named pipes/Unix sockets provides faster, more secure local communication without requiring a TCP port. This is the foundation for CLI tools and tray applications to control the server.
+
+**Implementation**:
+- **Config**: Added `ManagementPipeName` (default: `NoMercyManagement`) and `ManagementSocketPath` (under AppPath) to `Config.cs`
+- **Kestrel**: Added platform-specific IPC listener in `Program.cs`:
+  - Windows: `ListenNamedPipe()` with configurable pipe name
+  - Linux/macOS: `ListenUnixSocket()` with stale socket cleanup on startup
+- **IpcClient**: Created `NoMercy.Networking.IpcClient` — a disposable HTTP client that communicates over named pipes (Windows) or Unix domain sockets (Linux/macOS) using `SocketsHttpHandler.ConnectCallback`
+- **CLI option**: Added `--pipe-name` to `StartupOptions` for custom pipe/socket name
+- **Security**: `LocalhostOnlyAttribute` already handles null `RemoteIpAddress` (which named pipes produce), so all management endpoints work over IPC with no changes
+
+**Files created**:
+- `src/NoMercy.Networking/IpcClient.cs`
+- `tests/NoMercy.Tests.Api/IpcTests.cs`
+
+**Files modified**:
+- `src/NoMercy.NmSystem/Information/Config.cs` — Added `ManagementPipeName` and `ManagementSocketPath`
+- `src/NoMercy.Server/Program.cs` — Added named pipe/Unix socket Kestrel listener
+- `src/NoMercy.Server/StartupOptions.cs` — Added `--pipe-name` CLI option
+
+**Test results**: Build succeeds with 0 errors. All tests pass with 0 failures across all test projects (347 API tests, 218 repository tests, 86 event tests, 33 media processing tests, 424 queue tests, 427 provider tests).
