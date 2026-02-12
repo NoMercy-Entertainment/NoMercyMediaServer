@@ -22,7 +22,8 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -40,11 +41,13 @@ public class PlaylistsController : BaseController
 {
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
+    private readonly IEventBus _eventBus;
 
-    public PlaylistsController(MusicRepository musicService, MediaContext mediaContext)
+    public PlaylistsController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
+        _eventBus = eventBus;
     }
 
     [HttpGet]
@@ -194,8 +197,8 @@ public class PlaylistsController : BaseController
         playlist._colorPalette = colorPalette;
 
         int result = await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "playlists", id]
         });
@@ -213,12 +216,12 @@ public class PlaylistsController : BaseController
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to delete a playlist");
-        
+
         int result = await _mediaContext.Playlists
             .Where(p => p.Id == id && p.UserId == User.UserId())
             .ExecuteDeleteAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music-playlists"]
         });
@@ -260,12 +263,12 @@ public class PlaylistsController : BaseController
             .ColorPalette("cover", new(filePath2));
 
         await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "playlists", playlist.Id]
         });
-        
+
         return Ok(new StatusResponseDto<ImageUploadResponseDto>
         {
             Status = "ok",
@@ -293,8 +296,8 @@ public class PlaylistsController : BaseController
 
         _mediaContext.PlaylistTrack.Add(playlistTrack);
         int result = await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "playlists", id]
         });
@@ -323,8 +326,8 @@ public class PlaylistsController : BaseController
         _mediaContext.PlaylistTrack.Remove(playlistTrack);
         
         int result = await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "playlists", id]
         });

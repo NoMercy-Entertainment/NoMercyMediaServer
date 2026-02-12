@@ -13,9 +13,10 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Movies;
-using NoMercy.Networking.Dto;
 using NoMercy.Providers.TMDB.Models.Collections;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -51,19 +52,22 @@ public class AddCollectionJob : AbstractMediaJob
 
         await collectionManager.AddCollectionMovies(collectionAppends, collectionLibrary);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        if (EventBusProvider.IsConfigured)
         {
-            QueryKey = ["libraries", LibraryId.ToString()]
-        });
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["collection"]
-        });
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["collection", Id.ToString()]
-        });
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["libraries", LibraryId.ToString()]
+            });
+
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["collection"]
+            });
+
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["collection", Id.ToString()]
+            });
+        }
     }
 }

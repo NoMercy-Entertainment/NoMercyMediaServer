@@ -22,7 +22,8 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -39,11 +40,13 @@ public class ArtistsController : BaseController
 {
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
+    private readonly IEventBus _eventBus;
 
-    public ArtistsController(MusicRepository musicService, MediaContext mediaContext)
+    public ArtistsController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
+        _eventBus = eventBus;
     }
 
     public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
@@ -126,7 +129,7 @@ public class ArtistsController : BaseController
 
         await _musicRepository.LikeArtistAsync(userId, artist, request.Value);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist", artist.Id]
         });
@@ -178,8 +181,8 @@ public class ArtistsController : BaseController
         int result = await _mediaContext.Artists
             .Where(p => p.Id == id)
             .ExecuteDeleteAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist"]
         });
@@ -229,8 +232,8 @@ public class ArtistsController : BaseController
         artist._colorPalette = colorPalette;
 
         int result = await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist", id]
         });
@@ -284,12 +287,12 @@ public class ArtistsController : BaseController
             .ColorPalette("cover", new(filePath2));
 
         await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist", artist.Id]
         });
-        
+
         return Ok(new StatusResponseDto<ImageUploadResponseDto>
         {
             Status = "ok",

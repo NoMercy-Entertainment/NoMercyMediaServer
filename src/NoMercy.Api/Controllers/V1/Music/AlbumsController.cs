@@ -21,7 +21,8 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
@@ -38,11 +39,13 @@ public class AlbumsController : BaseController
     public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
+    private readonly IEventBus _eventBus;
 
-    public AlbumsController(MusicRepository musicService, MediaContext mediaContext)
+    public AlbumsController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
+        _eventBus = eventBus;
     }
 
     [HttpGet]
@@ -117,7 +120,7 @@ public class AlbumsController : BaseController
 
         await _musicRepository.LikeAlbumAsync(userId, album, request.Value);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "album", album.Id]
         });
@@ -131,11 +134,6 @@ public class AlbumsController : BaseController
         };
 
         OnLikeEvent?.Invoke(this, musicLikeEventDto);
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["music", "album", album.Id]
-        });
 
         return Ok(new StatusResponseDto<string>
         {
@@ -203,8 +201,8 @@ public class AlbumsController : BaseController
         album._colorPalette = colorPalette;
 
         int result = await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "album", id]
         });

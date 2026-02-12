@@ -12,8 +12,9 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -393,10 +394,11 @@ public partial class MusicLogic : IAsyncDisposable
             FanArtImagesJob fanartImagesJob = new(musicBrainzRelease);
             QueueRunner.Current!.Dispatcher.Dispatch(fanartImagesJob);
 
-            Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-            {
-                QueryKey = ["music", "album", musicBrainzRelease.Id.ToString()]
-            });
+            if (EventBusProvider.IsConfigured)
+                await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                {
+                    QueryKey = ["music", "album", musicBrainzRelease.Id.ToString()]
+                });
         }
         catch (Exception e)
         {
@@ -476,10 +478,11 @@ public partial class MusicLogic : IAsyncDisposable
         FanArtImagesJob fanartImagesJob = new(musicBrainzArtist);
         QueueRunner.Current!.Dispatcher.Dispatch(fanartImagesJob);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["music", "artist", musicBrainzArtist.Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "artist", musicBrainzArtist.Id.ToString()]
+            });
     }
 
     private async Task<MusicBrainzTrack?> StoreTrack(MusicBrainzReleaseAppends musicBrainzRelease,

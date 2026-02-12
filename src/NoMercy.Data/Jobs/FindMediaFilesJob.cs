@@ -10,7 +10,8 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue;
@@ -87,15 +88,17 @@ public class FindMediaFilesJob : IShouldQueue
                 await context.SaveChangesAsync();
             }
 
-            Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-            {
-                QueryKey = ["libraries", library.Id.ToString()]
-            });
+            if (EventBusProvider.IsConfigured)
+                await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                {
+                    QueryKey = ["libraries", library.Id.ToString()]
+                });
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = [library.Type == Config.MovieMediaType ? Config.MovieMediaType : Config.TvMediaType, Id]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = [library.Type == Config.MovieMediaType ? Config.MovieMediaType : Config.TvMediaType, Id]
+            });
     }
 }

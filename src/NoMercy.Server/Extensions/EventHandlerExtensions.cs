@@ -25,6 +25,12 @@ public static class EventHandlerExtensions
             return new SignalRLibraryScanEventHandler(eventBus);
         });
 
+        services.AddSingleton<SignalRLibraryRefreshEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            return new SignalRLibraryRefreshEventHandler(eventBus);
+        });
+
         return services;
     }
 
@@ -34,6 +40,7 @@ public static class EventHandlerExtensions
         serviceProvider.GetRequiredService<SignalRPlaybackEventHandler>();
         serviceProvider.GetRequiredService<SignalREncodingEventHandler>();
         serviceProvider.GetRequiredService<SignalRLibraryScanEventHandler>();
+        serviceProvider.GetRequiredService<SignalRLibraryRefreshEventHandler>();
 
         return serviceProvider;
     }

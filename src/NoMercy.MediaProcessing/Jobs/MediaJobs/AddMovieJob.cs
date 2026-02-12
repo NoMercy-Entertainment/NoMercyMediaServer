@@ -14,10 +14,10 @@ using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Movies;
-using NoMercy.Networking.Dto;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Models.Movies;
 
@@ -70,9 +70,10 @@ public class AddMovieJob : AbstractMediaJob
 
         Logger.App($"Movie {Id} added to library, extra data will be added in the background");
         
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["base","info", Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["base", "info", Id.ToString()]
+            });
     }
 }

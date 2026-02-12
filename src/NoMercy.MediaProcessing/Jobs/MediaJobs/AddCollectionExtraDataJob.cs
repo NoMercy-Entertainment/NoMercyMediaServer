@@ -3,9 +3,10 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using NoMercy.Database;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Movies;
-using NoMercy.Networking.Dto;
 using NoMercy.Providers.TMDB.Models.Collections;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -32,9 +33,10 @@ public class AddCollectionExtraDataJob : AbstractMediaExraDataJob<TmdbCollection
 
         await collectionManager.StoreImages(Storage);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["collection", Storage.Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["collection", Storage.Id.ToString()]
+            });
     }
 }

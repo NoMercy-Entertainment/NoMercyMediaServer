@@ -17,7 +17,8 @@ using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.MediaProcessing.Recordings;
 using NoMercy.MediaProcessing.ReleaseGroups;
 using NoMercy.MediaProcessing.Releases;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -104,7 +105,7 @@ public class AudioImportJob : AbstractMusicFolderJob
                     recordingManager);
 
                 jobDispatcher.DispatchJob<MusicDescriptionJob>(singleRelease.MusicBrainzReleaseGroup);
-                SendRefresh(["music", "start"]);
+                await SendRefresh(["music", "start"]);
             }
         }
         try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
@@ -183,7 +184,7 @@ public class AudioImportJob : AbstractMusicFolderJob
                 recordingManager);
 
             jobDispatcher.DispatchJob<MusicDescriptionJob>(release.MusicBrainzReleaseGroup);
-            SendRefresh(["music", "start"]);
+            await SendRefresh(["music", "start"]);
         }
         try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
         try { musicBrainzArtistClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
@@ -195,12 +196,13 @@ public class AudioImportJob : AbstractMusicFolderJob
         _mediaContext = null;
     }
 
-    private static void SendRefresh(dynamic[] query)
+    private static async Task SendRefresh(dynamic[] query)
     {
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = query
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = query
+            });
     }
 
     private async Task AddSingleOrRelease(MusicBrainzReleaseAppends release, MusicGenreManager musicGenreManager,
@@ -226,7 +228,7 @@ public class AudioImportJob : AbstractMusicFolderJob
             if (artistDetails is null) continue;
             await artistManager.Store(artistDetails, release, albumLibrary, folderLibrary);
             jobDispatcher.DispatchJob<MusicDescriptionJob>(artistDetails);
-            SendRefresh(["music","artist", artistDetails.Id]);
+            await SendRefresh(["music", "artist", artistDetails.Id]);
         }
         
         List<MusicBrainzTrack> allTracks = release.Media
@@ -276,11 +278,11 @@ public class AudioImportJob : AbstractMusicFolderJob
                 if (artistDetails is null) continue;
                 await artistManager.Store(artistDetails, albumLibrary, folderLibrary, _rootFolder!, musicBrainzTrack);
                 jobDispatcher.DispatchJob<MusicDescriptionJob>(artistDetails);
-                SendRefresh(["music","artist", artistDetails.Id]);
+                await SendRefresh(["music", "artist", artistDetails.Id]);
             }
         }
         
-        SendRefresh(["music", "album", release.Id]);
+        await SendRefresh(["music", "album", release.Id]);
     }
 
     private static async Task AddGenres(MusicBrainzGenreDetails[] genres, MusicGenreManager musicGenreManager)

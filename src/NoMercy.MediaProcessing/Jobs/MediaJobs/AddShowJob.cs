@@ -15,11 +15,11 @@ using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
-using NoMercy.Networking.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
@@ -87,9 +87,10 @@ public class AddShowJob : AbstractMediaJob
 
         jobDispatcher.DispatchJob<RescanFilesJob>(Id, tvLibrary);
         
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["base","info", Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["base", "info", Id.ToString()]
+            });
     }
 }

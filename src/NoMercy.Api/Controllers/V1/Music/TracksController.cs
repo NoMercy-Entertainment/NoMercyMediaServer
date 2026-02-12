@@ -18,7 +18,8 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.NoMercy.Client;
@@ -34,11 +35,13 @@ public class TracksController : BaseController
     public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
+    private readonly IEventBus _eventBus;
 
-    public TracksController(MusicRepository musicService, MediaContext mediaContext)
+    public TracksController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
+        _eventBus = eventBus;
     }
 
     [HttpGet]
@@ -86,18 +89,17 @@ public class TracksController : BaseController
 
         await _musicRepository.LikeTrackAsync(userId, track, request.Value);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "album", track.AlbumTrack.FirstOrDefault()?.Album.Id]
         });
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist", track.ArtistTrack.FirstOrDefault()?.Artist.Id]
         });
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
-            QueryKey = ["music","tracks"]
-
+            QueryKey = ["music", "tracks"]
         });
         
         MusicLikeEventDto musicLikeEventDto = new()

@@ -352,4 +352,162 @@ public class SignalREventHandlerTests
 
         await act.Should().NotThrowAsync();
     }
+
+    [Fact]
+    public async Task LibraryRefreshHandler_SubscribesToLibraryRefreshEvents()
+    {
+        InMemoryEventBus bus = new();
+        List<IEvent> received = [];
+
+        bus.Subscribe<LibraryRefreshEvent>((evt, _) => { received.Add(evt); return Task.CompletedTask; });
+
+        using SignalRLibraryRefreshEventHandler handler = new(bus);
+
+        await bus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music", "album", Guid.NewGuid()]
+        });
+
+        await bus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["libraries", Ulid.NewUlid().ToString()]
+        });
+
+        await bus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["home"]
+        });
+
+        received.Should().HaveCount(3);
+        received.Should().AllBeOfType<LibraryRefreshEvent>();
+    }
+
+    [Fact]
+    public async Task LibraryRefreshHandler_BroadcastsToSignalR_WithoutException()
+    {
+        InMemoryEventBus bus = new();
+        using SignalRLibraryRefreshEventHandler handler = new(bus);
+
+        Func<Task> act = () => bus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music", "tracks"]
+        });
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task LibraryRefreshHandler_Dispose_UnsubscribesFromEvents()
+    {
+        InMemoryEventBus bus = new();
+        int externalCount = 0;
+
+        bus.Subscribe<LibraryRefreshEvent>((_, _) =>
+        {
+            Interlocked.Increment(ref externalCount);
+            return Task.CompletedTask;
+        });
+
+        SignalRLibraryRefreshEventHandler handler = new(bus);
+
+        await bus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music", "album", Guid.NewGuid()]
+        });
+
+        int countBefore = externalCount;
+        handler.Dispose();
+
+        await bus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music", "artist", Guid.NewGuid()]
+        });
+
+        // External subscriber still fires
+        externalCount.Should().Be(countBefore + 1);
+    }
+
+    [Fact]
+    public async Task LibraryRefreshHandler_OnLibraryRefresh_DoesNotThrow()
+    {
+        InMemoryEventBus bus = new();
+        using SignalRLibraryRefreshEventHandler handler = new(bus);
+
+        Func<Task> act = () => handler.OnLibraryRefresh(
+            new LibraryRefreshEvent
+            {
+                QueryKey = ["base", "info", "123"]
+            },
+            CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task AllHandlers_IncludingRefresh_CanCoexistOnSameBus()
+    {
+        InMemoryEventBus bus = new();
+
+        using SignalRPlaybackEventHandler playbackHandler = new(bus);
+        using SignalREncodingEventHandler encodingHandler = new(bus);
+        using SignalRLibraryScanEventHandler libraryScanHandler = new(bus);
+        using SignalRLibraryRefreshEventHandler libraryRefreshHandler = new(bus);
+
+        Func<Task> act = async () =>
+        {
+            await bus.PublishAsync(new PlaybackStartedEvent
+            {
+                UserId = Guid.NewGuid(),
+                MediaId = 1,
+                MediaType = "movie"
+            });
+
+            await bus.PublishAsync(new EncodingStartedEvent
+            {
+                JobId = 1,
+                InputPath = "/a.mkv",
+                OutputPath = "/out/",
+                ProfileName = "x264"
+            });
+
+            await bus.PublishAsync(new LibraryScanStartedEvent
+            {
+                LibraryId = Ulid.NewUlid(),
+                LibraryName = "Movies"
+            });
+
+            await bus.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "playlists", Guid.NewGuid()]
+            });
+        };
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task LibraryRefreshEvent_PreservesQueryKey()
+    {
+        InMemoryEventBus bus = new();
+        LibraryRefreshEvent? capturedEvent = null;
+
+        bus.Subscribe<LibraryRefreshEvent>((evt, _) =>
+        {
+            capturedEvent = evt;
+            return Task.CompletedTask;
+        });
+
+        dynamic?[] queryKey = ["music", "album", Guid.NewGuid()];
+
+        await bus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = queryKey
+        });
+
+        capturedEvent.Should().NotBeNull();
+        capturedEvent!.QueryKey.Should().BeEquivalentTo(queryKey);
+        capturedEvent.Source.Should().Be("LibraryRefresh");
+        capturedEvent.EventId.Should().NotBeEmpty();
+        capturedEvent.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
 }

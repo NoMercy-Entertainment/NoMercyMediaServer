@@ -17,7 +17,8 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Encoder;
 using NoMercy.Encoder.Dto;
 using NoMercy.Encoder.Format.Rules;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
@@ -61,25 +62,28 @@ public partial class FileManager(
         {
             case Config.MovieMediaType:
                 await StoreMovie();
-                Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-                {
-                    QueryKey = ["libraries", library.Id.ToString()]
-                });
+                if (EventBusProvider.IsConfigured)
+                    await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                    {
+                        QueryKey = ["libraries", library.Id.ToString()]
+                    });
                 break;
             case Config.TvMediaType:
             case Config.AnimeMediaType:
                 await StoreTvShow();
-                Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-                {
-                    QueryKey = ["libraries", library.Id.ToString()]
-                });
+                if (EventBusProvider.IsConfigured)
+                    await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                    {
+                        QueryKey = ["libraries", library.Id.ToString()]
+                    });
                 break;
             case Config.MusicMediaType:
                 await StoreMusic();
-                Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-                {
-                    QueryKey = ["music"]
-                });
+                if (EventBusProvider.IsConfigured)
+                    await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                    {
+                        QueryKey = ["music"]
+                    });
                 break;
             default:
                 Logger.App("Unknown library type");

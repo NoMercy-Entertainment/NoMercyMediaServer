@@ -24,7 +24,8 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -54,7 +55,8 @@ public class ServerController(
     MediaContext context,
     FileRepository fileRepository,
     JobDispatcher jobDispatcher,
-    QueueRunner queueRunner) : BaseController
+    QueueRunner queueRunner,
+    IEventBus eventBus) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -145,16 +147,16 @@ public class ServerController(
 
     [HttpPost]
     [Route("invalidate")]
-    public IActionResult Invalidate([FromBody] InvalidateRequest request)
+    public async Task<IActionResult> Invalidate([FromBody] InvalidateRequest request)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to invalidate the library cache");
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = request.QueryKey
         });
-        
+
         return Content("Done");
     }
 

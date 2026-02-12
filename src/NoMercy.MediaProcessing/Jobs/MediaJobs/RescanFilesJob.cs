@@ -3,8 +3,9 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using NoMercy.Database;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Libraries;
-using NoMercy.Networking.Dto;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -26,25 +27,23 @@ public class RescanFilesJob : AbstractMediaJob
         LibraryManager libraryManager = new(libraryRepository, jobDispatcher, context);
         
         await libraryManager.RescanFiles(LibraryId, Id);
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["base","info", Id.ToString()]
-        });
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        if (EventBusProvider.IsConfigured)
         {
-            QueryKey = ["libraries", LibraryId.ToString()]
-        });
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["base", "info", Id.ToString()]
+            });
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["home"]
-        });
-        
-        // Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        // {
-        //     QueryKey = ["base","collection", movieAppends.BelongsToCollection?.Id.ToString()]
-        // });
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["libraries", LibraryId.ToString()]
+            });
+
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["home"]
+            });
+        }
     }
 }

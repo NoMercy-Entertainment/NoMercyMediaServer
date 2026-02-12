@@ -12,7 +12,8 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.MusicGenres;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -76,10 +77,11 @@ public class ArtistManager(
             Logger.MusicBrainz(e.Message, LogEventLevel.Error);
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["music", "artist", artistCredit.MusicBrainzArtist.Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "artist", artistCredit.MusicBrainzArtist.Id.ToString()]
+            });
     }
 
     /** this is the store for a Release artist */
@@ -142,10 +144,11 @@ public class ArtistManager(
             Logger.MusicBrainz(e.Message, LogEventLevel.Error);
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["music", "artist", artistCredit.Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "artist", artistCredit.Id.ToString()]
+            });
     }
 
     /** this is the store for a Recording artist */
@@ -208,10 +211,11 @@ public class ArtistManager(
             Logger.MusicBrainz(e.Message, LogEventLevel.Error);
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["music", "artist", artistCredit.Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "artist", artistCredit.Id.ToString()]
+            });
 
     }
 
