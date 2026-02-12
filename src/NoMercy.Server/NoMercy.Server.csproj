@@ -85,6 +85,7 @@
         <ProjectReference Include="..\NoMercy.Plugins\NoMercy.Plugins.csproj" />
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
         <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj" />
+        <ProjectReference Include="..\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj" />
     </ItemGroup>
 
     <ItemGroup>

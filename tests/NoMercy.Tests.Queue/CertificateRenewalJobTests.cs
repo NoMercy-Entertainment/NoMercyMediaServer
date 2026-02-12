@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Moq;
-using NoMercy.Queue.Jobs;
+using NoMercy.Queue.MediaServer.Jobs;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;

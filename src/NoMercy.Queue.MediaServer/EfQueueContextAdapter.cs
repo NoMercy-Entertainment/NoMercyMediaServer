@@ -4,7 +4,7 @@ using NoMercy.Database.Models.Queue;
 using NoMercy.Queue.Core.Interfaces;
 using NoMercy.Queue.Core.Models;
 
-namespace NoMercy.Queue;
+namespace NoMercy.Queue.MediaServer;
 
 public class EfQueueContextAdapter : IQueueContext
 {

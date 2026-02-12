@@ -43,9 +43,9 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Events;
 using NoMercy.Plugins;
 using NoMercy.Queue;
-using NoMercy.Queue.Core.Interfaces;
 using NoMercy.Queue.Extensions;
-using NoMercy.Queue.Jobs;
+using NoMercy.Queue.MediaServer;
+using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Server.Extensions;
 using NoMercy.Server.Services;
 using NoMercy.Server.Configuration.Swagger;
@@ -300,26 +300,7 @@ public static class ServiceConfiguration
         services.AddScoped<HomeService>();
         services.AddScoped<SetupService>();
 
-        services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter(new QueueContext()));
-        services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
-        services.AddSingleton<QueueRunner>(sp =>
-        {
-            IQueueContext queueContext = sp.GetRequiredService<IQueueContext>();
-            IConfigurationStore configStore = sp.GetRequiredService<IConfigurationStore>();
-            Queue.Core.Models.QueueConfiguration configuration = new()
-            {
-                WorkerCounts = new Dictionary<string, int>
-                {
-                    [Config.QueueWorkers.Key] = Config.QueueWorkers.Value,
-                    [Config.EncoderWorkers.Key] = Config.EncoderWorkers.Value,
-                    [Config.CronWorkers.Key] = Config.CronWorkers.Value,
-                    [Config.DataWorkers.Key] = Config.DataWorkers.Value,
-                    [Config.ImageWorkers.Key] = Config.ImageWorkers.Value
-                }
-            };
-            return new QueueRunner(queueContext, configuration, configStore);
-        });
-        services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
+        services.AddMediaServerQueue();
         services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
 
         services.AddPluginSystem(AppFiles.PluginsPath);

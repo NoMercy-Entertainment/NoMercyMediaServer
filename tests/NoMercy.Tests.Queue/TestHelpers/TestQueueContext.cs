@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Queue;
 using NoMercy.Queue.Core.Interfaces;
+using NoMercy.Queue.MediaServer;
 
 namespace NoMercy.Tests.Queue.TestHelpers;
 

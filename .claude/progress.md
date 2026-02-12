@@ -3581,3 +3581,50 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `NoMercy.Server.sln` — Added NoMercy.Queue.Sqlite project
 
 **Test results**: Build succeeds with 0 errors. All 1438 tests pass with 0 failures across all test projects (350 queue [+23 new], 33 media processing, 324 API, 218 repositories, 86 events, 427 providers).
+
+---
+
+## QDC-13 — Move job implementations to MediaServer project
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created `src/NoMercy.Queue.MediaServer/` project — media-server-specific queue infrastructure layer between `NoMercy.Queue` (generic) and the application
+- Moved `EfQueueContextAdapter` from `NoMercy.Queue` to `NoMercy.Queue.MediaServer` — the `IQueueContext` implementation using EF Core and `QueueContext`
+- Moved `MediaConfigurationStore` from `NoMercy.Queue` to `NoMercy.Queue.MediaServer/Configuration/` — the `IConfigurationStore` implementation using `MediaContext`
+- Moved `CertificateRenewalJob` from `NoMercy.Queue/Jobs/` to `NoMercy.Queue.MediaServer/Jobs/` — the `ICronJobExecutor` implementation that depends on `NoMercy.Networking`
+- Created `ServiceRegistration.cs` with `AddMediaServerQueue()` extension method — centralizes all queue DI setup (IQueueContext, IConfigurationStore, QueueRunner, JobDispatcher)
+- Replaced 15-line inline DI setup in `ServiceConfiguration.cs` with single `services.AddMediaServerQueue()` call
+- Removed `NoMercy.Networking` dependency from `NoMercy.Queue.csproj` (now only in Queue.MediaServer)
+- Fixed broken `<Reference>` HintPath for `Microsoft.Extensions.Hosting.Abstractions` in `NoMercy.Queue.csproj` — replaced with proper `<PackageReference>` and added version to `Directory.Packages.props`
+- Fixed namespace conflict: `NoMercy.Queue.MediaServer.Configuration` namespace vs `NoMercy.Database.Models.Common.Configuration` type — resolved with type alias
+- Note: The 54 domain-specific job implementations remain in their domain projects (NoMercy.MediaProcessing, NoMercy.Data) to avoid circular dependencies. Only queue infrastructure was moved.
+
+**Files created**:
+- `src/NoMercy.Queue.MediaServer/NoMercy.Queue.MediaServer.csproj`
+- `src/NoMercy.Queue.MediaServer/EfQueueContextAdapter.cs`
+- `src/NoMercy.Queue.MediaServer/Configuration/MediaConfigurationStore.cs`
+- `src/NoMercy.Queue.MediaServer/Jobs/CertificateRenewalJob.cs`
+- `src/NoMercy.Queue.MediaServer/ServiceRegistration.cs`
+
+**Files deleted**:
+- `src/NoMercy.Queue/EfQueueContextAdapter.cs`
+- `src/NoMercy.Queue/MediaConfigurationStore.cs`
+- `src/NoMercy.Queue/Jobs/CertificateRenewalJob.cs`
+
+**Files modified**:
+- `src/NoMercy.Queue/NoMercy.Queue.csproj` — Removed NoMercy.Networking reference, fixed Hosting.Abstractions reference
+- `Directory.Packages.props` — Added Microsoft.Extensions.Hosting.Abstractions 9.0.10
+- `src/NoMercy.Server/NoMercy.Server.csproj` — Added Queue.MediaServer reference
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — Updated usings, replaced inline DI with AddMediaServerQueue()
+- `src/NoMercy.Server/Configuration/ApplicationConfiguration.cs` — Updated using for CertificateRenewalJob
+- `src/NoMercy.Api/NoMercy.Api.csproj` — Added Queue.MediaServer reference
+- `src/NoMercy.Api/Controllers/V1/Dashboard/TasksController.cs` — Updated using for EfQueueContextAdapter
+- `tests/NoMercy.Tests.Queue/NoMercy.Tests.Queue.csproj` — Added Queue.MediaServer reference
+- `tests/NoMercy.Tests.Queue/CertificateRenewalJobTests.cs` — Updated using
+- `tests/NoMercy.Tests.Queue/TestHelpers/TestQueueContext.cs` — Updated using
+- `tests/NoMercy.Tests.Queue/WriteLockTests.cs` — Updated using
+- `tests/NoMercy.Tests.Queue/BlockingPatternTests.cs` — Updated using
+- `NoMercy.Server.sln` — Added NoMercy.Queue.MediaServer project
+
+**Test results**: Build succeeds with 0 errors. All 1460 tests pass with 0 failures across all test projects.

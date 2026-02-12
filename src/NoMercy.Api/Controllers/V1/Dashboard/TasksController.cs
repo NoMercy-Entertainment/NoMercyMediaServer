@@ -26,6 +26,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.Queue;
+using NoMercy.Queue.MediaServer;
 
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;

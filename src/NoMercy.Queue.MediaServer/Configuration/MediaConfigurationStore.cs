@@ -1,30 +1,30 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models.Common;
 using NoMercy.Queue.Core.Interfaces;
+using DbConfiguration = NoMercy.Database.Models.Common.Configuration;
 
-namespace NoMercy.Queue;
+namespace NoMercy.Queue.MediaServer.Configuration;
 
 public class MediaConfigurationStore : IConfigurationStore
 {
     public string? GetValue(string key)
     {
         using MediaContext context = new();
-        Configuration? config = context.Configuration.FirstOrDefault(c => c.Key == key);
+        DbConfiguration? config = context.Configuration.FirstOrDefault(c => c.Key == key);
         return config?.Value;
     }
 
     public void SetValue(string key, string value)
     {
         using MediaContext context = new();
-        Configuration? existing = context.Configuration.FirstOrDefault(c => c.Key == key);
+        DbConfiguration? existing = context.Configuration.FirstOrDefault(c => c.Key == key);
         if (existing is not null)
         {
             existing.Value = value;
         }
         else
         {
-            context.Configuration.Add(new Configuration { Key = key, Value = value });
+            context.Configuration.Add(new DbConfiguration { Key = key, Value = value });
         }
         context.SaveChanges();
     }
@@ -32,7 +32,7 @@ public class MediaConfigurationStore : IConfigurationStore
     public async Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
     {
         await using MediaContext context = new();
-        Configuration? existing = await context.Configuration.FirstOrDefaultAsync(c => c.Key == key);
+        DbConfiguration? existing = await context.Configuration.FirstOrDefaultAsync(c => c.Key == key);
         if (existing is not null)
         {
             existing.Value = value;
@@ -40,7 +40,7 @@ public class MediaConfigurationStore : IConfigurationStore
         }
         else
         {
-            context.Configuration.Add(new Configuration { Key = key, Value = value, ModifiedBy = modifiedBy });
+            context.Configuration.Add(new DbConfiguration { Key = key, Value = value, ModifiedBy = modifiedBy });
         }
         await context.SaveChangesAsync();
     }

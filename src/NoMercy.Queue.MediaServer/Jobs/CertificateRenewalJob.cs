@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Networking;
 using NoMercy.Queue.Interfaces;
 
-namespace NoMercy.Queue.Jobs;
+namespace NoMercy.Queue.MediaServer.Jobs;
 
 public class CertificateRenewalJob : ICronJobExecutor
 {
@@ -19,9 +19,9 @@ public class CertificateRenewalJob : ICronJobExecutor
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting certificate renewal job");
-            
+
         await Certificate.RenewSslCertificate();
-            
+
         _logger.LogInformation("Certificate renewal job completed");
     }
 }
