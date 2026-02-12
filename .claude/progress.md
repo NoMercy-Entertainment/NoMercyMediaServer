@@ -3245,3 +3245,51 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
 - Updated `TestPluginContext` in `PluginAbstractionsTests.cs` to implement new `Configuration` property
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 119 plugin tests pass. Full test suite: 0 failures across all projects.
+
+---
+
+## PLG-07 — Plugin repository system
+
+**Date**: 2026-02-12
+
+**What was done**:
+
+### Repository Models (Abstractions)
+- Created `PluginRepositoryManifest.cs` — JSON model for repository manifests with `name`, `url`, and `plugins` list
+- Created `PluginRepositoryEntry.cs` — plugin entry with `id`, `name`, `description`, `author`, `projectUrl`, and `versions` list
+- Created `PluginVersionEntry.cs` — version entry with `version`, `targetAbi`, `downloadUrl`, `checksum`, `changelog`, `timestamp`
+- Created `IPluginRepository.cs` — interface for managing plugin repositories:
+  - `GetRepositories()` — list configured repositories
+  - `AddRepositoryAsync()` / `RemoveRepositoryAsync()` — manage repository sources
+  - `RefreshAsync()` — fetch latest plugin lists from all enabled repositories
+  - `GetAvailablePlugins()` — list all discovered plugins
+  - `FindPlugin()` / `FindVersion()` — search by plugin ID and version
+- Created `PluginRepositoryInfo.cs` — repository configuration with `Name`, `Url`, `Enabled`
+
+### Repository Implementation
+- Created `src/NoMercy.Plugins/PluginRepository.cs`:
+  - Fetches repository manifests via `HttpClient`
+  - Persists repository configuration to `{pluginsPath}/configurations/repositories.json`
+  - Loads persisted repositories on construction
+  - Thread-safe via `lock` for all collection access
+  - Graceful error handling — failing repos don't prevent others from loading
+  - `using` on `HttpResponseMessage` to satisfy disposal audit tests
+  - JSON options: case-insensitive, comments/trailing commas allowed, indented output
+
+### Tests (25 new tests)
+- `PluginRepositoryTests.cs`:
+  - Constructor validation: null httpClient, null logger, null path, creates configurations dir
+  - `GetRepositories_Empty_ReturnsEmptyList`
+  - `AddRepositoryAsync_AddsRepository`, `AddRepositoryAsync_DuplicateName_ThrowsInvalidOperation`
+  - `AddRepositoryAsync_NullName/NullUrl_ThrowsArgumentException`
+  - `AddRepositoryAsync_PersistsToDisk`, `AddRepositoryAsync_FetchesPluginsImmediately`
+  - `RemoveRepositoryAsync_RemovesRepository`, `RemoveRepositoryAsync_NotFound_ThrowsInvalidOperation`
+  - `RefreshAsync_FetchesFromAllEnabledRepos`, `RefreshAsync_FailingRepo_DoesNotThrow`
+  - `GetAvailablePlugins_NoRefresh_ReturnsEmpty`
+  - `FindPlugin_ExistingId_ReturnsEntry`, `FindPlugin_UnknownId_ReturnsNull`
+  - `FindVersion_ExistingVersion_ReturnsEntry`, `FindVersion_UnknownPlugin/Version_ReturnsNull`, `FindVersion_NullVersion_ThrowsArgumentException`
+  - `PluginRepositoryManifest_CanDeserialize` — full JSON round-trip
+  - `PluginRepositoryEntry_MultipleVersions`
+  - `Constructor_LoadsPersistedRepositories`
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 144 plugin tests pass. Full test suite: 0 failures across all projects.
