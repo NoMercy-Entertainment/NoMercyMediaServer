@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 7, item SETUP-12
+**Next up**: Phase 7, item SETUP-17
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -199,7 +199,7 @@ Details: [13-headless-server.md](prd/13-headless-server.md) | [14-server-setup.m
 - [x] SETUP-08 — Refactor Auth.cs — remove Console.* calls
 - [x] SETUP-09 — Add retry logic to Register + Certificate
 - [x] SETUP-11 — Implement HTTP → HTTPS restart after cert
-- [ ] SETUP-12 — Remove Environment.Exit(1) from ApiInfo
+- [x] SETUP-12 — Remove Environment.Exit(1) from ApiInfo
 - [ ] SETUP-17 — End-to-end setup flow testing
 
 ### Phase 8: Platform Features

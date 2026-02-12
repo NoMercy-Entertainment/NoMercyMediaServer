@@ -4426,3 +4426,42 @@ Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All tests pass: 200 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers = 0 failures.
+
+---
+
+## SETUP-12 — Remove Environment.Exit(1) from ApiInfo
+
+**Date**: 2026-02-12
+
+**Problem**: `ApiInfo.RequestInfo()` called `Environment.Exit(1)` when the NoMercy API was unreachable, killing the entire server process. This prevents headless/service mode operation and makes the server fragile against transient network issues. The API keys (TMDB, TVDB, FanArt, etc.) rarely change, so a cached copy works for months.
+
+**Changes made**:
+
+1. **`src/NoMercy.Setup/ApiInfo.cs`** — Complete rewrite with network-first cache pattern:
+   - `TryFetchFromNetwork()` — Tries to fetch API keys from the network, returns null on failure instead of throwing
+   - `WriteCacheFile()` — Writes API response to `{ConfigPath}/api_keys.json` with `_cached_at` timestamp
+   - `TryReadCacheFile()` — Reads cached keys from disk, returns null on missing/corrupt file
+   - `ApplyKeys()` — Extracted key assignment to a reusable internal method, sets `KeysLoaded` flag
+   - `StartBackgroundRefresh()` — Exponential backoff retry (30s, 1m, 5m, 15m, 30m cap) when using cached keys
+   - `RequestInfo()` — Network-first → cache fallback → log error (no more `Environment.Exit(1)`)
+   - Added `KeysLoaded` property to check if keys have been applied
+   - Added `CacheFilePath` internal property for testability
+   - Staleness warning when cache is >30 days old
+
+2. **`src/NoMercy.Setup/Dto/ApiInfoResponse.cs`**:
+   - Added `[JsonProperty("_cached_at")] public string? CachedAt` property for cache metadata
+
+3. **`tests/NoMercy.Tests.Setup/ApiInfoTests.cs`** (new, 12 tests):
+   - `ApiInfoApplyKeysTests`: Verifies all 11 API keys + Quote + Colors are set, KeysLoaded flag
+   - `ApiInfoCacheTests`: Write/read round-trip, missing file returns null, CachedAt timestamp
+   - `ApiInfoCacheFileParsingTests`: JSON deserialization with/without _cached_at, serialization includes _cached_at
+   - `ApiInfoNoEnvironmentExitTests`: RequestInfo returns Task (not void), KeysLoaded exists, CacheFilePath ends with api_keys.json, TryFetchFromNetwork returns null on failure
+
+**Files modified**:
+- `src/NoMercy.Setup/ApiInfo.cs` — Replaced Environment.Exit(1) with network-first cache pattern
+- `src/NoMercy.Setup/Dto/ApiInfoResponse.cs` — Added CachedAt property
+- `tests/NoMercy.Tests.Setup/ApiInfoTests.cs` — New: 12 tests
+- `.claude/PRD.md` — Marked SETUP-12 complete, updated Next up to SETUP-17
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All tests pass: 212 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers = 0 failures.
