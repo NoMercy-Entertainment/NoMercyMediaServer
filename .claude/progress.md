@@ -2835,3 +2835,46 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
   - `EncodingEvents_AllHaveEncoderSource` — verifies all four encoding event types have "Encoder" source
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (54), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427).
+
+---
+
+## EVT-07 — Add event publishing to playback services
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Added `NoMercy.Events` project reference to `NoMercy.Api.csproj`
+- Injected `IEventBus?` (optional) into `VideoPlaybackService` and `MusicPlaybackService` via constructor DI
+- Added `PlaybackStartedEvent` publishing in both video and music hubs at all playback start entry points:
+  - `VideoHub.HandleNewPlayerState()`, `HandleExistingPlaylistState()`, `HandlePlaylistChange()`
+  - `MusicHub.HandleNewPlayerState()`, `HandleExistingPlaylistState()` (only when playing), `HandlePlaylistChange()`
+- Added `PlaybackProgressEvent` publishing:
+  - In `VideoPlaybackService` timer tick every ~1 second (alongside existing DB persistence)
+  - In `MusicPlaybackService` at track midpoint (alongside existing scrobble recording)
+- Added `PlaybackCompletedEvent` publishing:
+  - In `VideoPlaybackService.HandleTrackCompletion()` when playlist ends (last track completes)
+  - In `MusicPlaybackService.HandleTrackCompletion()` when last track in non-repeating playlist completes
+- Added `string? MediaIdentifier` optional property to all three playback event classes to support music tracks (which use `Guid` IDs instead of `int` TMDB IDs)
+- Follows the `EventBusProvider.IsConfigured` guard + DI fallback pattern from EVT-05/EVT-06
+
+**Files modified**:
+- `src/NoMercy.Api/NoMercy.Api.csproj` — added NoMercy.Events project reference
+- `src/NoMercy.Api/Services/Video/VideoPlaybackService.cs` — injected IEventBus, added PublishStartedEventAsync, PublishProgressEventAsync, PublishCompletedEventAsync
+- `src/NoMercy.Api/Services/Music/MusicPlaybackService.cs` — injected IEventBus, added same three publish methods
+- `src/NoMercy.Api/Hubs/VideoHub.cs` — added PublishStartedEventAsync calls in all three playback start paths
+- `src/NoMercy.Api/Hubs/MusicHub.cs` — added PublishStartedEventAsync calls in all three playback start paths
+- `src/NoMercy.Events/Playback/PlaybackStartedEvent.cs` — added optional MediaIdentifier property
+- `src/NoMercy.Events/Playback/PlaybackProgressEvent.cs` — added optional MediaIdentifier property
+- `src/NoMercy.Events/Playback/PlaybackCompletedEvent.cs` — added optional MediaIdentifier property
+
+**Tests added**:
+- `tests/NoMercy.Tests.Events/PlaybackPipelineEventTests.cs` (7 tests):
+  - `PlaybackPipeline_PublishesStartedProgressCompleted_InOrder` — verifies full video playback lifecycle event flow
+  - `PlaybackPipeline_MusicTrack_UsesMediaIdentifier` — verifies music tracks use MediaIdentifier with Guid-based IDs
+  - `PlaybackEvents_HaveUniqueEventIds` — verifies all playback events get unique EventIds
+  - `PlaybackEvents_AllHavePlaybackSource` — verifies all three event types have "Playback" source
+  - `PlaybackStartedEvent_MediaIdentifier_IsOptional` — verifies MediaIdentifier defaults to null for video
+  - `EventBusProvider_CanPublishPlaybackEvents_WhenConfigured` — verifies playback events work through EventBusProvider
+  - `PlaybackEvents_HaveTimestampsSetAutomatically` — verifies timestamps are set on construction
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (61), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427).

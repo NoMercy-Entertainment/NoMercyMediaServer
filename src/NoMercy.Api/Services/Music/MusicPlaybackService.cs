@@ -9,6 +9,8 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Playback;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Services.Music;
@@ -17,13 +19,15 @@ public class MusicPlaybackService
 {
     private readonly MusicPlayerStateManager _stateManager;
     private readonly MusicRepository _musicRepository;
+    private readonly IEventBus? _eventBus;
     private readonly string[] _repeatStates = ["off", "one", "all"];
     private static int _playerStateEventId;
     private static int PlayerStateEventId => ++_playerStateEventId;
 
-    public MusicPlaybackService(MusicPlayerStateManager stateManager)
+    public MusicPlaybackService(MusicPlayerStateManager stateManager, IEventBus? eventBus = null)
     {
         _stateManager = stateManager;
+        _eventBus = eventBus;
         _musicRepository = new(new());
     }
 
@@ -48,6 +52,7 @@ public class MusicPlaybackService
             if (playerState.Time >= (duration / 2) && playerState.Time < (duration / 2) + TimerInterval)
             {
                 await _musicRepository.RecordPlaybackAsync(playerState.CurrentItem.Id, user.Id);
+                await PublishProgressEventAsync(user.Id, playerState);
             }
 
             if (playerState.Time >= duration) await HandleTrackCompletion(user, playerState);
@@ -67,6 +72,13 @@ public class MusicPlaybackService
         RemoveTimer(user.Id);
 
         int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
+
+        bool wasLastTrack = state.Repeat == "off" && currentIndex + 1 >= state.Playlist.Count;
+        if (wasLastTrack)
+        {
+            await PublishCompletedEventAsync(user.Id, state);
+        }
+
         UpdateStateBasedOnRepeatMode(state, currentIndex);
 
         await UpdatePlaybackState(user, state);
@@ -96,6 +108,52 @@ public class MusicPlaybackService
         };
 
         await Networking.Networking.SendTo("MusicPlayerState", "musicHub", user.Id, payload);
+    }
+
+    internal async Task PublishStartedEventAsync(Guid userId, MusicPlayerState state)
+    {
+        IEventBus? bus = _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+        if (bus is null || state.CurrentItem is null) return;
+
+        await bus.PublishAsync(new PlaybackStartedEvent
+        {
+            UserId = userId,
+            MediaId = 0,
+            MediaIdentifier = state.CurrentItem.Id.ToString(),
+            MediaType = "music",
+            DeviceId = state.DeviceId
+        });
+    }
+
+    private async Task PublishProgressEventAsync(Guid userId, MusicPlayerState state)
+    {
+        IEventBus? bus = _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+        if (bus is null || state.CurrentItem is null) return;
+
+        int duration = state.CurrentItem.Duration.ToMilliSeconds();
+
+        await bus.PublishAsync(new PlaybackProgressEvent
+        {
+            UserId = userId,
+            MediaId = 0,
+            MediaIdentifier = state.CurrentItem.Id.ToString(),
+            Position = TimeSpan.FromMilliseconds(state.Time),
+            Duration = TimeSpan.FromMilliseconds(duration)
+        });
+    }
+
+    private async Task PublishCompletedEventAsync(Guid userId, MusicPlayerState state)
+    {
+        IEventBus? bus = _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+        if (bus is null || state.CurrentItem is null) return;
+
+        await bus.PublishAsync(new PlaybackCompletedEvent
+        {
+            UserId = userId,
+            MediaId = 0,
+            MediaIdentifier = state.CurrentItem.Id.ToString(),
+            MediaType = "music"
+        });
     }
 
     private void UpdateStateBasedOnRepeatMode(MusicPlayerState state, int currentIndex)

@@ -12,6 +12,8 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Playback;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
@@ -21,13 +23,15 @@ public class VideoPlaybackService
 {
     private readonly VideoPlayerStateManager _stateManager;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IEventBus? _eventBus;
     private static int _playerStateEventId;
     private static int PlayerStateEventId => ++_playerStateEventId;
 
-    public VideoPlaybackService(VideoPlayerStateManager stateManager, IServiceScopeFactory scopeFactory)
+    public VideoPlaybackService(VideoPlayerStateManager stateManager, IServiceScopeFactory scopeFactory, IEventBus? eventBus = null)
     {
         _stateManager = stateManager;
         _scopeFactory = scopeFactory;
+        _eventBus = eventBus;
     }
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
@@ -51,6 +55,7 @@ public class VideoPlaybackService
             {
                 _lastTimes[user.Id] = 0;
                 await StoreWatchProgression(playerState, user);
+                await PublishProgressEventAsync(user.Id, playerState);
             }
             else
             {
@@ -80,22 +85,24 @@ public class VideoPlaybackService
         RemoveTimer(user.Id);
 
         int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
-        
+
         if(currentIndex + 1 == state.Playlist.Count)
         {
+            await PublishCompletedEventAsync(user.Id, state);
+
             UpdateState(state, -1);
 
             await UpdatePlaybackState(user, state);
-        
+
             _stateManager.RemoveState(user.Id);
 
             return;
         }
-        
+
         UpdateState(state, currentIndex + 1);
 
         await UpdatePlaybackState(user, state);
-        
+
         StartPlaybackTimer(user);
     }
 
@@ -161,6 +168,49 @@ public class VideoPlaybackService
         }
     }
     
+    internal async Task PublishStartedEventAsync(Guid userId, VideoPlayerState state)
+    {
+        IEventBus? bus = _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+        if (bus is null || state.CurrentItem is null) return;
+
+        await bus.PublishAsync(new PlaybackStartedEvent
+        {
+            UserId = userId,
+            MediaId = state.CurrentItem.TmdbId,
+            MediaType = state.CurrentItem.PlaylistType,
+            DeviceId = state.DeviceId
+        });
+    }
+
+    private async Task PublishProgressEventAsync(Guid userId, VideoPlayerState state)
+    {
+        IEventBus? bus = _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+        if (bus is null || state.CurrentItem is null) return;
+
+        int duration = state.CurrentItem.Duration.ToMilliSeconds();
+
+        await bus.PublishAsync(new PlaybackProgressEvent
+        {
+            UserId = userId,
+            MediaId = state.CurrentItem.TmdbId,
+            Position = TimeSpan.FromMilliseconds(state.Time),
+            Duration = TimeSpan.FromMilliseconds(duration)
+        });
+    }
+
+    private async Task PublishCompletedEventAsync(Guid userId, VideoPlayerState state)
+    {
+        IEventBus? bus = _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+        if (bus is null || state.CurrentItem is null) return;
+
+        await bus.PublishAsync(new PlaybackCompletedEvent
+        {
+            UserId = userId,
+            MediaId = state.CurrentItem.TmdbId,
+            MediaType = state.CurrentItem.PlaylistType
+        });
+    }
+
     internal async Task StoreWatchProgression(VideoPlayerState state, User user)
     {
         if (state.CurrentItem is null || state.Time <= 0) return;

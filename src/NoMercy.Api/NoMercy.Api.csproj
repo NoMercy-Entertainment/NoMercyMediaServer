@@ -38,6 +38,7 @@
         <ProjectReference Include="..\NoMercy.Data\NoMercy.Data.csproj"/>
         <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj"/>
         <ProjectReference Include="..\NoMercy.MediaSources\NoMercy.MediaSources.csproj"/>
+        <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj"/>
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
         <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj"/>
     </ItemGroup>

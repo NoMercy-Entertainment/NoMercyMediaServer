@@ -110,6 +110,7 @@ public class MusicHub : ConnectionHub
         _musicPlayerStateManager.UpdateState(user.Id, musicPlayerState);
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, musicPlayerState);
+        await _musicPlaybackService.PublishStartedEventAsync(user.Id, musicPlayerState);
     }
 
     private Device GetCurrentDevice(User user)
@@ -134,6 +135,10 @@ public class MusicHub : ConnectionHub
         UpdateActionsDisallows(state);
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, state);
+        if (state.PlayState)
+        {
+            await _musicPlaybackService.PublishStartedEventAsync(user.Id, state);
+        }
     }
 
     private async Task HandleTrackReorder(User user, MusicPlayerState state, PlaylistTrackDto item)
@@ -223,6 +228,7 @@ public class MusicHub : ConnectionHub
 
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, state);
+        await _musicPlaybackService.PublishStartedEventAsync(user.Id, state);
     }
 
     private void UpdateDeviceInfo(MusicPlayerState state)

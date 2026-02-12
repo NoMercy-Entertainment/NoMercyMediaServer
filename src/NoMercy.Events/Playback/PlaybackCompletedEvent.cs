@@ -6,5 +6,6 @@ public sealed class PlaybackCompletedEvent : EventBase
 
     public required Guid UserId { get; init; }
     public required int MediaId { get; init; }
+    public string? MediaIdentifier { get; init; }
     public required string MediaType { get; init; }
 }

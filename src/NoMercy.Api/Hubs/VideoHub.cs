@@ -190,6 +190,7 @@ public class VideoHub : ConnectionHub
         _videoPlayerStateManager.UpdateState(user.Id, videoPlayerState);
         _videoPlaybackService.StartPlaybackTimer(user);
         await _videoPlaybackService.UpdatePlaybackState(user, videoPlayerState);
+        await _videoPlaybackService.PublishStartedEventAsync(user.Id, videoPlayerState);
     }
 
     private Device GetCurrentDevice(User user)
@@ -213,9 +214,9 @@ public class VideoHub : ConnectionHub
     private async Task HandleExistingPlaylistState(User user, VideoPlayerState state)
     {
         state.PlayState = true;
-        
+
         state.Time = state.CurrentItem?.Progress?.Time * 1000 ?? 0;
-            
+
         state.Actions.Disallows.Resuming = state.PlayState;
         state.Actions.Disallows.Pausing = !state.PlayState;
         state.Actions.Disallows.Stopping = false;
@@ -223,10 +224,11 @@ public class VideoHub : ConnectionHub
         state.Actions.Disallows.Muting = false;
         state.Actions.Disallows.Previous = state.CurrentItem is null || state.Playlist.IndexOf(state.CurrentItem) == 0;
         state.Actions.Disallows.Next = state.CurrentItem is null || state.Playlist.IndexOf(state.CurrentItem) == state.Playlist.Count - 1;
-        
+
         _videoPlaybackService.StartPlaybackTimer(user);
         UpdateDeviceInfo(state);
         await _videoPlaybackService.UpdatePlaybackState(user, state);
+        await _videoPlaybackService.PublishStartedEventAsync(user.Id, state);
     }
 
     private async Task HandlePlaylistChange(User user, VideoPlayerState state, string type, dynamic listId,
@@ -237,6 +239,7 @@ public class VideoHub : ConnectionHub
 
         _videoPlaybackService.StartPlaybackTimer(user);
         await _videoPlaybackService.UpdatePlaybackState(user, state);
+        await _videoPlaybackService.PublishStartedEventAsync(user.Id, state);
     }
 
     private void UpdateDeviceInfo(VideoPlayerState state)
