@@ -485,6 +485,14 @@ public class PluginManager : IPluginManager, IDisposable
             .ToList();
     }
 
+    public IEnumerable<IPluginServiceRegistrator> GetServiceRegistrators()
+    {
+        return _loadedPlugins.Values
+            .Where(lp => lp.Instance is IPluginServiceRegistrator && lp.Info.Status == PluginStatus.Active)
+            .Select(lp => (IPluginServiceRegistrator)lp.Instance!)
+            .ToList();
+    }
+
     public void Dispose()
     {
         foreach (LoadedPlugin loaded in _loadedPlugins.Values)

@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 4, item PLG-05
+**Next up**: Phase 4, item PLG-06
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -163,7 +163,7 @@ Details: [10-event-driven.md](prd/10-event-driven.md) | [11-plugin-system.md](pr
 - [x] PLG-01 — Create NoMercy.Plugins.Abstractions
 - [x] PLG-02 — Implement PluginManager
 - [x] PLG-03 — Plugin manifest + lifecycle
-- [ ] PLG-05 — Plugin DI integration
+- [x] PLG-05 — Plugin DI integration
 - [ ] PLG-06 — Plugin configuration system
 - [ ] PLG-07 — Plugin repository system
 - [ ] PLG-08 — Plugin management API

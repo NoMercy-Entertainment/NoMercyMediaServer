@@ -79,7 +79,9 @@
     <PackageVersion Include="MusixmatchClientLib" Version="1.1.9" />
 
     <!-- Plugin System -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
 
     <!-- System & Infrastructure -->

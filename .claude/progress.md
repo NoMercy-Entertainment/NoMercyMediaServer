@@ -3163,3 +3163,39 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
   - `LoadPluginsFromDirectoryAsync_PrefersManifestOverDllScan`
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 91 plugin tests pass (20 abstractions + 38 manager + 18 manifest parser + 15 lifecycle). Full test suite: 0 failures across all projects.
+
+---
+
+## PLG-05 — Plugin DI integration
+
+**Date**: 2026-02-12
+
+**What was done**:
+
+### DI Extension Methods
+- Created `src/NoMercy.Plugins/PluginServiceCollectionExtensions.cs`:
+  - `AddPluginSystem(this IServiceCollection, string pluginsPath)` — registers `IPluginManager` as singleton using factory pattern that resolves `IEventBus` and `ILogger<PluginManager>` from DI
+  - `RegisterPluginServices(this IServiceCollection, PluginManager)` — iterates active plugins implementing `IPluginServiceRegistrator` and calls `RegisterServices` on each, allowing plugins to register their own services into the host DI container
+
+### PluginManager Enhancement
+- Added `GetServiceRegistrators()` method — returns all active plugin instances implementing `IPluginServiceRegistrator` (separate from `GetPluginsOfType<T>` which has `where T : IPlugin` constraint, since `IPluginServiceRegistrator` is intentionally not coupled to `IPlugin`)
+
+### Package References
+- Added `Microsoft.Extensions.DependencyInjection.Abstractions` to `NoMercy.Plugins.csproj` for `IServiceCollection`/`GetRequiredService`
+- Added `Microsoft.Extensions.DependencyInjection` and `Microsoft.Extensions.Logging` to `Directory.Packages.props` and test project for `ServiceCollection`/`BuildServiceProvider` in tests
+
+### Tests (11 new tests)
+- `PluginDiIntegrationTests.cs`:
+  - `AddPluginSystem_RegistersPluginManagerAsSingleton` — verifies singleton resolution
+  - `AddPluginSystem_NullServices_ThrowsArgumentNullException`
+  - `AddPluginSystem_NullPath_ThrowsArgumentException`
+  - `AddPluginSystem_EmptyPath_ThrowsArgumentException`
+  - `AddPluginSystem_ReturnsServiceCollectionForChaining` — fluent API
+  - `AddPluginSystem_ManagerGetsCorrectDependencies` — verifies DI wiring
+  - `RegisterPluginServices_NullServices_ThrowsArgumentNullException`
+  - `RegisterPluginServices_NullManager_ThrowsArgumentNullException`
+  - `RegisterPluginServices_NoPlugins_DoesNothing`
+  - `GetServiceRegistrators_NoPlugins_ReturnsEmpty`
+  - `IPluginServiceRegistrator_CanRegisterServices` — verifies plugin can register custom services into DI
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 102 plugin tests pass. Full test suite: 0 failures across all projects.
