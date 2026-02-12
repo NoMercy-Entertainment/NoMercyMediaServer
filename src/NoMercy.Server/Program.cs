@@ -239,14 +239,14 @@ public static class Program
                 Certificate.KestrelConfig(kestrelOptions);
 
                 // Management API — localhost-only, plain HTTP on separate port
-                kestrelOptions.Listen(IPAddress.Loopback, Config.ManagementPort, listenOptions =>
+                kestrelOptions.Listen(IPAddress.Any, Config.ManagementPort, listenOptions =>
                 {
                     listenOptions.Protocols =
                         Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
                 });
 
                 Logger.App(
-                    $"Management API listening on http://127.0.0.1:{Config.ManagementPort}");
+                    $"Management API listening on http://0.0.0.0:{Config.ManagementPort}");
 
                 // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS)
                 if (Software.IsWindows)

@@ -51,7 +51,7 @@ public static class Config
 
     public static int ManagementPort
     {
-        get => _managementPort ?? 7627;
+        get => _managementPort ?? 7626;
         set => _managementPort = value;
     }
 
