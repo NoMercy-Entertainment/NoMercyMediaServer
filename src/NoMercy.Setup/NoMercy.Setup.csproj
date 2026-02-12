@@ -55,6 +55,7 @@
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="..\..\assets\icons\icon.ico" Link="Assets\icon.ico"/>
+        <EmbeddedResource Include="Resources\setup.html"/>
     </ItemGroup>
 
 </Project>

@@ -4097,3 +4097,56 @@ Created `SetupState` class in `src/NoMercy.Setup/SetupState.cs` with:
 - `.claude/PRD.md` — Marked SETUP-02 complete, updated Next up to SETUP-03
 
 **Test results**: Build succeeds with 0 errors. All tests pass (111 Setup, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
+
+---
+
+## SETUP-03 — Build setup web UI
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created `src/NoMercy.Setup/Resources/setup.html` — embedded HTML/CSS/JS setup wizard:
+  - Dark theme UI matching NoMercy branding (purple gradient, #8f00fc / #CBAFFF)
+  - Three-step wizard: Login → Progress → Complete
+  - OAuth login button with PKCE (code verifier/challenge generated client-side via Web Crypto API)
+  - Device grant fallback: "Show device login code" button fetches device code from server, displays QR code + user code
+  - Progress polling: fetches `/setup/status` every 2 seconds, updates phase label
+  - Error display with retry capability
+  - Responsive, mobile-friendly layout (max-width 440px card)
+
+- Updated `src/NoMercy.Setup/SetupServer.cs` with new endpoints:
+  - `GET /setup` → now serves embedded HTML page (was JSON)
+  - `GET /setup/config` → new JSON endpoint returning setup configuration (phase, auth_base_url, client_id, server_port, error)
+  - `GET /setup/qr?data={url}` → generates QR code as PNG image using QRCoder library
+  - `POST /setup/device-code` → initiates device grant flow, returns device code + verification URI, starts background polling
+  - `GET /setup/status` → unchanged, returns JSON phase/auth status
+  - `GET /sso-callback` → unchanged
+  - `*` other routes → 503 unchanged
+  - Added `LoadSetupHtml()` — loads HTML from embedded resource, caches in static field
+  - Added `GenerateQrCodePng()` — generates QR code PNG bytes using PngByteQRCode
+  - Added `PollDeviceGrant()` — background polling for device grant completion with proper error/timeout handling
+
+- Added `internal static void SetTokensFromSetup(AuthResponse)` to `Auth.cs` — allows SetupServer to store tokens from device grant flow without accessing private `SetTokens()`
+
+- Updated `NoMercy.Setup.csproj` — added `setup.html` as `<EmbeddedResource>`
+
+- Updated `tests/NoMercy.Tests.Setup/SetupServerTests.cs` with 38 tests (was 19):
+  - Existing lifecycle tests preserved
+  - `/setup` tests: returns HTML with DOCTYPE, contains login button, device grant section, progress section, complete section, POST returns 405
+  - `/setup/config` tests: returns JSON with config, reflects phase/error, includes server port, POST returns 405, trailing slash
+  - `/setup/qr` tests: returns valid PNG with magic bytes, returns 400 without data, POST returns 405
+  - `/setup/device-code` tests: GET returns 405
+  - New `SetupServerHtmlTests` class (4 tests): valid HTML structure, contains UI elements, contains PKCE code, caching works
+  - New `SetupServerQrCodeTests` class (3 tests): valid PNG output, different data produces different output, handles long URLs
+
+**Files created**:
+- `src/NoMercy.Setup/Resources/setup.html`
+
+**Files modified**:
+- `src/NoMercy.Setup/SetupServer.cs` — Rewrote to serve HTML UI + added config/qr/device-code endpoints
+- `src/NoMercy.Setup/NoMercy.Setup.csproj` — Added embedded resource for setup.html
+- `src/NoMercy.Setup/Auth.cs` — Added `SetTokensFromSetup()` internal method
+- `tests/NoMercy.Tests.Setup/SetupServerTests.cs` — Updated and expanded tests (19 → 38)
+- `.claude/PRD.md` — Marked SETUP-03 complete, updated Next up to SETUP-04
+
+**Test results**: Build succeeds with 0 errors. All tests pass (130 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.

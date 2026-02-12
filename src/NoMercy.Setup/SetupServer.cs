@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -6,8 +7,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Newtonsoft.Json;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using QRCoder;
 using Serilog.Events;
 
 namespace NoMercy.Setup;
@@ -17,6 +21,8 @@ public class SetupServer
     private readonly SetupState _state;
     private IWebHost? _host;
     private readonly int _port;
+
+    private static string? _cachedSetupHtml;
 
     public bool IsRunning { get; private set; }
 
@@ -81,12 +87,24 @@ public class SetupServer
                 await HandleSetupPage(context);
                 break;
 
-            case "/sso-callback":
-                await HandleSsoCallback(context);
+            case "/setup/config":
+                await HandleSetupConfig(context);
                 break;
 
             case "/setup/status":
                 await HandleSetupStatus(context);
+                break;
+
+            case "/setup/qr":
+                await HandleQrCode(context);
+                break;
+
+            case "/setup/device-code":
+                await HandleDeviceCode(context);
+                break;
+
+            case "/sso-callback":
+                await HandleSsoCallback(context);
                 break;
 
             default:
@@ -103,6 +121,21 @@ public class SetupServer
             return;
         }
 
+        string html = LoadSetupHtml();
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        await context.Response.WriteAsync(html, Encoding.UTF8);
+    }
+
+    private async Task HandleSetupConfig(HttpContext context)
+    {
+        if (context.Request.Method != HttpMethods.Get)
+        {
+            context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+            return;
+        }
+
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = StatusCodes.Status200OK;
 
@@ -111,7 +144,9 @@ public class SetupServer
             status = "setup_required",
             phase = _state.CurrentPhase.ToString(),
             error = _state.ErrorMessage,
-            server_port = _port
+            server_port = _port,
+            auth_base_url = Config.AuthBaseUrl ?? "",
+            client_id = Config.TokenClientId ?? ""
         };
 
         await WriteJsonResponse(context.Response, response);
@@ -185,6 +220,149 @@ public class SetupServer
         await WriteJsonResponse(context.Response, response);
     }
 
+    internal async Task HandleQrCode(HttpContext context)
+    {
+        if (context.Request.Method != HttpMethods.Get)
+        {
+            context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+            return;
+        }
+
+        string data = context.Request.Query["data"].ToString();
+
+        if (string.IsNullOrEmpty(data))
+        {
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            return;
+        }
+
+        byte[] pngBytes = GenerateQrCodePng(data);
+
+        context.Response.ContentType = "image/png";
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        context.Response.ContentLength = pngBytes.Length;
+        await context.Response.Body.WriteAsync(pngBytes);
+    }
+
+    internal async Task HandleDeviceCode(HttpContext context)
+    {
+        if (context.Request.Method != HttpMethods.Post)
+        {
+            context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+            return;
+        }
+
+        context.Response.ContentType = "application/json";
+
+        if (string.IsNullOrEmpty(Config.TokenClientId))
+        {
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            await WriteJsonResponse(context.Response, new
+            {
+                error = true,
+                message = "Auth configuration not available"
+            });
+            return;
+        }
+
+        try
+        {
+            List<KeyValuePair<string, string>> deviceCodeBody =
+                Auth.BuildDeviceCodeRequestBody(Config.TokenClientId);
+
+            GenericHttpClient authClient = new(Config.AuthBaseUrl);
+            authClient.SetDefaultHeaders(Config.UserAgent);
+            string deviceCodeResponse = await authClient.SendAndReadAsync(
+                HttpMethod.Post,
+                "protocol/openid-connect/auth/device",
+                new FormUrlEncodedContent(deviceCodeBody));
+
+            Dto.DeviceAuthResponse deviceData =
+                deviceCodeResponse.FromJson<Dto.DeviceAuthResponse>()
+                ?? throw new("Failed to get device code");
+
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await WriteJsonResponse(context.Response, new
+            {
+                user_code = deviceData.UserCode,
+                verification_uri = deviceData.VerificationUri,
+                verification_uri_complete = deviceData.VerificationUriComplete,
+                expires_in = deviceData.ExpiresIn,
+                interval = deviceData.Interval
+            });
+
+            _ = Task.Run(async () =>
+            {
+                await PollDeviceGrant(deviceData);
+            });
+        }
+        catch (Exception ex)
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await WriteJsonResponse(context.Response, new
+            {
+                error = true,
+                message = $"Failed to initiate device login: {ex.Message}"
+            });
+        }
+    }
+
+    private async Task PollDeviceGrant(Dto.DeviceAuthResponse deviceData)
+    {
+        if (string.IsNullOrEmpty(Config.TokenClientId))
+            return;
+
+        _state.TransitionTo(SetupPhase.Authenticating);
+
+        List<KeyValuePair<string, string>> tokenBody =
+            Auth.BuildDeviceTokenBody(Config.TokenClientId, deviceData.DeviceCode);
+
+        DateTime expiresAt = DateTime.Now.AddSeconds(deviceData.ExpiresIn);
+        GenericHttpClient authClient = new(Config.AuthBaseUrl);
+        authClient.SetDefaultHeaders(Config.UserAgent);
+
+        while (DateTime.Now < expiresAt)
+        {
+            await Task.Delay(deviceData.Interval * 1000);
+
+            try
+            {
+                using HttpResponseMessage response = await authClient.SendAsync(
+                    HttpMethod.Post,
+                    "protocol/openid-connect/token",
+                    new FormUrlEncodedContent(tokenBody));
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string content = await response.Content.ReadAsStringAsync();
+                    Dto.AuthResponse data = content.FromJson<Dto.AuthResponse>()
+                                            ?? throw new("Failed to deserialize token response");
+                    Auth.SetTokensFromSetup(data);
+                    _state.TransitionTo(SetupPhase.Authenticated);
+                    return;
+                }
+
+                string errorContent = await response.Content.ReadAsStringAsync();
+                dynamic? error = JsonConvert.DeserializeObject<dynamic>(errorContent);
+                if (error?.error?.ToString() != "authorization_pending")
+                {
+                    _state.SetError($"Device login failed: {error?.error_description}");
+                    _state.TransitionTo(SetupPhase.Unauthenticated);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _state.SetError($"Device login error: {ex.Message}");
+                _state.TransitionTo(SetupPhase.Unauthenticated);
+                return;
+            }
+        }
+
+        _state.SetError("Device authorization timed out");
+        _state.TransitionTo(SetupPhase.Unauthenticated);
+    }
+
     private static async Task HandleServiceUnavailable(HttpContext context)
     {
         context.Response.ContentType = "application/json";
@@ -204,5 +382,37 @@ public class SetupServer
     {
         string json = JsonConvert.SerializeObject(data, Formatting.Indented);
         await response.WriteAsync(json, Encoding.UTF8);
+    }
+
+    internal static string LoadSetupHtml()
+    {
+        if (_cachedSetupHtml != null)
+            return _cachedSetupHtml;
+
+        Assembly assembly = typeof(SetupServer).Assembly;
+        string resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("setup.html", StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException("Embedded setup.html resource not found");
+
+        using Stream stream = assembly.GetManifestResourceStream(resourceName)
+                              ?? throw new InvalidOperationException(
+                                  $"Failed to load embedded resource: {resourceName}");
+        using StreamReader reader = new(stream, Encoding.UTF8);
+        _cachedSetupHtml = reader.ReadToEnd();
+
+        return _cachedSetupHtml;
+    }
+
+    internal static byte[] GenerateQrCodePng(string data)
+    {
+        using QRCodeGenerator generator = new();
+        using QRCodeData qrData = generator.CreateQrCode(data, QRCodeGenerator.ECCLevel.L);
+        using PngByteQRCode qrCode = new(qrData);
+        return qrCode.GetGraphic(8);
+    }
+
+    internal static void ClearHtmlCache()
+    {
+        _cachedSetupHtml = null;
     }
 }

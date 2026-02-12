@@ -274,6 +274,11 @@ public static class Auth
         NotBefore = data.NotBeforePolicy;
     }
 
+    internal static void SetTokensFromSetup(AuthResponse data)
+    {
+        SetTokens(data);
+    }
+
     private static AuthResponse TokenData()
     {
         string fileContents = File.ReadAllText(AppFiles.TokenFile);
