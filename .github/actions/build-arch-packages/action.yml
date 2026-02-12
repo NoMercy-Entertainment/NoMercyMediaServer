@@ -122,6 +122,8 @@ runs:
         # Build packages
         create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
         create_arch_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
+        create_arch_package "nomercytray" "NoMercy-Tray" "NoMercyTray-linux-x64" "NoMercy-Tray.desktop"
+        create_arch_package "nomercy-cli" "NoMercy-CLI" "nomercy-linux-x64" "NoMercy-MediaServer.desktop"
 
         # Create a simple database (since we can't use repo-add in Ubuntu)
         cd packages/arch/pool/x86_64

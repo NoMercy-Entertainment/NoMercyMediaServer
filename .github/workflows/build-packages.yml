@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package-type: [deb, rpm, arch]
+        package-type: [deb, rpm, arch, windows-installer]
 
     steps:
       - uses: actions/checkout@v5
@@ -34,7 +34,7 @@ jobs:
       - name: Prepare executables
         run: |
           mkdir -p ./output
-          
+
           # Copy all artifacts to output directory
           find ./artifacts -name "*.tar.gz" -exec cp {} ./output/ \;
           find ./artifacts -name "*.dmg" -exec cp {} ./output/ \;
@@ -46,6 +46,8 @@ jobs:
         run: |
           chmod +x ./output/NoMercyMediaServer-linux-x64 2>/dev/null || true
           chmod +x ./output/NoMercyApp-linux-x64 2>/dev/null || true
+          chmod +x ./output/NoMercyTray-linux-x64 2>/dev/null || true
+          chmod +x ./output/nomercy-linux-x64 2>/dev/null || true
 
       - name: Build DEB packages
         if: matrix.package-type == 'deb'
@@ -65,6 +67,13 @@ jobs:
       - name: Build Arch packages
         if: matrix.package-type == 'arch'
         uses: ./.github/actions/build-arch-packages
+        with:
+          version: ${{ inputs.version }}
+          artifacts-path: './output'
+
+      - name: Build Windows installer
+        if: matrix.package-type == 'windows-installer'
+        uses: ./.github/actions/build-windows-installer
         with:
           version: ${{ inputs.version }}
           artifacts-path: './output'

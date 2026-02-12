@@ -188,6 +188,8 @@ runs:
         # Build packages
         create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
         create_deb_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
+        create_deb_package "nomercytray" "NoMercy-Tray" "NoMercyTray-linux-x64" "NoMercy-Tray.desktop"
+        create_deb_package "nomercy-cli" "NoMercy-CLI" "nomercy-linux-x64" "NoMercy-MediaServer.desktop"
     
         # Update package index
         mkdir -p packages/apt/dists/stable/main/binary-amd64

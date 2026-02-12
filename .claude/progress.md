@@ -3987,3 +3987,45 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `NoMercy.Server.sln` — Added NoMercy.Cli and NoMercy.Tests.Cli projects
 
 **Test results**: Build succeeds with 0 errors. All 29 new CLI tests pass. All existing tests pass across all projects (424 Queue, 143 Database, 150 Encoder, 16 Networking, 27 Tray, 157 Plugins, 86 Events, 218 Repositories, 42 Setup, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
+
+---
+
+## HEAD-15 — Platform packaging
+
+**Date**: 2026-02-12
+
+**What was done**:
+Implemented comprehensive platform packaging for all NoMercy components (Server, App, Tray, CLI) across Windows, macOS, and Linux.
+
+**Key changes**:
+
+1. **Build pipeline** — Extended `build-dotnet-project` action to support Tray and CLI projects alongside Server and App. Added proper project name resolution for `NoMercyTray` (WinExe) and `nomercy` (CLI exe). CLI skips macOS app bundle and DMG creation (standalone binary only).
+
+2. **Windows installer** — Modernized `NoMercyMediaServer.iss` (InnoSetup) with dynamic version injection (`#define Version`), component-based installation (Server, Tray, CLI), Windows Service registration task, PATH registration for CLI, desktop shortcut for Tray, and proper uninstall hooks. Created `build-windows-installer` GitHub Action to compile the installer via wine+InnoSetup in CI.
+
+3. **Linux packages** — Added Tray and CLI to all three Linux package actions (DEB, RPM, Arch). Created `NoMercy-Tray.desktop` file for Linux desktop integration with autostart support.
+
+4. **macOS** — Created `Info.plist.tray` for the Tray app bundle with `LSUIElement=true` (agent app, no dock icon) and proper bundle identifiers. Updated the build action to use the correct plist per project type.
+
+5. **Project configuration** — Added `PublishSingleFile`, `IncludeAllContentForSelfExtract`, and `EnableCompressionInSingleFile` properties to both `NoMercy.Tray.csproj` and `NoMercy.Cli.csproj` for proper single-file deployment.
+
+6. **CI/CD workflow** — Updated `build-executables.yml` to build all 4 projects (Server, App, Tray, Cli) in parallel matrix. Added `windows-installer` to `build-packages.yml` matrix. Updated `create-release.yml` to include Tray executables, CLI binaries, and Windows installer in release artifacts with improved download section documentation.
+
+**Files created**:
+- `.github/actions/build-windows-installer/action.yml` — Windows installer build action
+- `assets/linux/NoMercy-Tray.desktop` — Linux desktop entry for Tray app
+- `assets/macos/Info.plist.tray` — macOS Info.plist for Tray app bundle
+
+**Files modified**:
+- `.github/actions/build-dotnet-project/action.yml` — Support for Tray/CLI projects
+- `.github/actions/build-deb-packages/action.yml` — Added Tray and CLI packages
+- `.github/actions/build-rpm-packages/action.yml` — Added Tray and CLI packages
+- `.github/actions/build-arch-packages/action.yml` — Added Tray and CLI packages
+- `.github/workflows/build-executables.yml` — Build matrix includes Tray and Cli
+- `.github/workflows/build-packages.yml` — Added windows-installer to matrix
+- `.github/workflows/create-release.yml` — Include all new artifacts in release
+- `src/NoMercy.Server/NoMercyMediaServer.iss` — Modernized InnoSetup script
+- `src/NoMercy.Tray/NoMercy.Tray.csproj` — Added single-file publish properties
+- `src/NoMercy.Cli/NoMercy.Cli.csproj` — Added single-file publish properties
+
+**Test results**: Build succeeds with 0 errors. All 2,099 tests pass (157 Plugins, 143 Database, 16 Networking, 150 Encoder, 27 Tray, 29 Cli, 424 Queue, 86 Events, 42 Setup, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.

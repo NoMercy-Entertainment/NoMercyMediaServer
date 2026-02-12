@@ -4,7 +4,7 @@ author: 'NoMercy Entertainment'
 
 inputs:
   project:
-    description: 'Project name (Server, App)'
+    description: 'Project name (Server, App, Tray, Cli)'
     required: true
   dotnet-version:
     description: '.NET version to use'
@@ -90,13 +90,15 @@ runs:
         # Set correct project names based on actual target names
         if [ "${{ inputs.project }}" == "Server" ]; then
           PROJECT_NAME="NoMercyMediaServer"
+        elif [ "${{ inputs.project }}" == "Cli" ]; then
+          PROJECT_NAME="nomercy"
         else
           PROJECT_NAME="NoMercy${{ inputs.project }}"
         fi
-        
+
         # Note: PublishTrimmed is disabled for App to avoid issues with InfiniFrame native dependencies
         TRIMMED_FLAG=""
-        
+
         echo "Building $PROJECT_NAME for all platforms..."
         
         # Linux Build
@@ -155,6 +157,7 @@ runs:
         echo "Build completed for all platforms!"
 
     - name: Create macOS App Bundle
+      if: inputs.project != 'Cli'
       shell: bash
       run: |
         # Set correct project names based on actual target names
@@ -163,31 +166,42 @@ runs:
         else
           PROJECT_NAME="NoMercy${{ inputs.project }}"
         fi
-        
+
         echo "Creating macOS App Bundle for $PROJECT_NAME..."
         mkdir -p "./output/$PROJECT_NAME.app/Contents/MacOS"
         mkdir -p "./output/$PROJECT_NAME.app/Contents/Resources"
         cp "./output/$PROJECT_NAME" "./output/$PROJECT_NAME.app/Contents/MacOS/"
-        
+
         # Copy appropriate Info.plist based on project
         if [ "${{ inputs.project }}" == "Server" ]; then
           cp ./assets/macos/Info.plist "./output/$PROJECT_NAME.app/Contents/"
+        elif [ "${{ inputs.project }}" == "Tray" ]; then
+          cp ./assets/macos/Info.plist.tray "./output/$PROJECT_NAME.app/Contents/Info.plist"
         else
           cp ./assets/macos/Info.plist.app "./output/$PROJECT_NAME.app/Contents/Info.plist"
         fi
-        
+
         cp ./assets/icons/icon.icns "./output/$PROJECT_NAME.app/Contents/Resources/AppIcon.icns"
         chmod +x "./output/$PROJECT_NAME.app/Contents/MacOS/$PROJECT_NAME"
-        
+
         # Create tar.gz for the app bundle
         tar -czf "./output/$PROJECT_NAME-macos-x64.tar.gz" -C ./output "$PROJECT_NAME.app"
-        
+
         # Keep the raw binary for other uses
         mv "./output/$PROJECT_NAME" "./output/$PROJECT_NAME-macos-x64"
-        
+
         echo "macOS App Bundle created successfully!"
 
+    - name: Rename macOS CLI binary
+      if: inputs.project == 'Cli'
+      shell: bash
+      run: |
+        PROJECT_NAME="nomercy"
+        mv "./output/$PROJECT_NAME" "./output/$PROJECT_NAME-macos-x64"
+        echo "Renamed CLI binary for macOS."
+
     - name: Create DMG (macOS Installer)
+      if: inputs.project != 'Cli'
       shell: bash
       continue-on-error: true
       run: |

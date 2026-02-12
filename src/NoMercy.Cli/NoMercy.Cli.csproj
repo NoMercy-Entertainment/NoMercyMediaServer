@@ -11,6 +11,9 @@
         <Company>NoMercy Entertainment</Company>
         <Product>NoMercy CLI</Product>
         <AssemblyName>nomercy</AssemblyName>
+        <PublishSingleFile>true</PublishSingleFile>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     </PropertyGroup>
 
     <PropertyGroup>

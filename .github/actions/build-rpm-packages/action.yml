@@ -191,6 +191,8 @@ runs:
         # Build packages
         create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
         create_rpm_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
+        create_rpm_package "nomercytray" "NoMercy-Tray" "NoMercyTray-linux-x64" "NoMercy-Tray.desktop"
+        create_rpm_package "nomercy-cli" "NoMercy-CLI" "nomercy-linux-x64" "NoMercy-MediaServer.desktop"
         
         # Generate repo metadata
         createrepo_c packages/rpm

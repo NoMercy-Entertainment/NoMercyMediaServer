@@ -18,7 +18,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        project: [Server, App]
+        project: [Server, App, Tray, Cli]
     outputs:
       artifact-names: ${{ steps.set-names.outputs.names }}
 

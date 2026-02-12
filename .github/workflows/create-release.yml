@@ -11,7 +11,7 @@ on:
 jobs:
   create_release:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v5
@@ -34,13 +34,16 @@ jobs:
           find ./artifacts -path "*/rpm-packages/*" -name "*.rpm" -exec cp {} ./output/ \;
           find ./artifacts -path "*/arch-packages/*" -name "*.pkg.tar.zst" -exec cp {} ./output/ \;
 
+          # Copy Windows installer to release
+          find ./artifacts -path "*/windows-installer/*" -name "*-setup.exe" -exec cp {} ./output/ \;
+
           echo "=== Release artifacts ==="
           ls -la ./output/
 
       - name: Get Short SHA
         id: get_short_sha
         run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-        
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -52,12 +55,16 @@ jobs:
 
             ## Downloads
 
-            ### Binary Executables
-            - **Windows** (x64): `.exe` files
-            - **macOS** (x64): `.tar.gz` and `.dmg` files
-            - **Linux** (x64): Binary executables
+            ### Windows
+            - **Installer** (x64): `NoMercyMediaServer-*-windows-x64-setup.exe` — includes Server, Tray, and CLI
+            - **Standalone executables** (x64): individual `.exe` files
 
-            ### Linux Packages
+            ### macOS
+            - **App bundles** (x64): `.tar.gz` and `.dmg` files
+            - **CLI**: `nomercy-macos-x64` binary
+
+            ### Linux
+            - **Binary executables** (x64): standalone binaries
             - **Debian/Ubuntu**: `.deb` packages
             - **Fedora/RHEL/CentOS**: `.rpm` packages
             - **Arch Linux**: `.pkg.tar.zst` packages
@@ -77,6 +84,8 @@ jobs:
           files: |
             ./output/NoMercyMediaServer-*
             ./output/NoMercyApp-*
+            ./output/NoMercyTray-*
+            ./output/nomercy-*
             ./output/*.deb
             ./output/*.rpm
             ./output/*.pkg.tar.zst

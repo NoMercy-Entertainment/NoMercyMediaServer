@@ -1,0 +1,68 @@
+name: 'Build Windows Installer'
+description: 'Build Windows installer using Inno Setup'
+inputs:
+  version:
+    description: 'Package version'
+    required: true
+  artifacts-path:
+    description: 'Path to build artifacts'
+    required: true
+    default: './output'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Inno Setup
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y innoextract wine64
+
+        # Download and install Inno Setup via wine
+        INNO_URL="https://files.jrsoftware.org/is/6/innosetup-6.3.3.exe"
+        wget -q "$INNO_URL" -O /tmp/innosetup.exe
+
+        # Install Inno Setup silently via wine
+        WINEPREFIX="$HOME/.wine" wine64 /tmp/innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /DIR="C:\\InnoSetup" 2>/dev/null || true
+
+        echo "Inno Setup installed"
+
+    - name: Prepare installer artifacts
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
+        ISS_DIR="./src/NoMercy.Server"
+
+        # Create artifacts directory next to the .iss file
+        mkdir -p "${ISS_DIR}/artifacts"
+
+        # Copy Windows executables
+        cp "${ARTIFACTS_PATH}/NoMercyMediaServer-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: Server exe not found"
+        cp "${ARTIFACTS_PATH}/NoMercyTray-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: Tray exe not found"
+        cp "${ARTIFACTS_PATH}/nomercy-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: CLI exe not found"
+
+        echo "Prepared installer artifacts:"
+        ls -la "${ISS_DIR}/artifacts/"
+
+    - name: Build Windows Installer
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        ISS_FILE="./src/NoMercy.Server/NoMercyMediaServer.iss"
+        INNO_COMPILER="$HOME/.wine/drive_c/InnoSetup/ISCC.exe"
+
+        # Build installer with version parameter
+        WINEPREFIX="$HOME/.wine" wine64 "$INNO_COMPILER" \
+          "/DVersion=${VERSION}" \
+          "/O./packages/windows" \
+          "$ISS_FILE" 2>/dev/null
+
+        echo "Windows installer created:"
+        ls -la ./packages/windows/
+
+    - name: Upload Windows installer artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-installer
+        path: packages/windows/

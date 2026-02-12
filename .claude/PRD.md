@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 7, item HEAD-15
+**Next up**: Phase 7, item SETUP-01
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -188,7 +188,7 @@ Details: [13-headless-server.md](prd/13-headless-server.md) | [14-server-setup.m
 - [x] HEAD-10 — Log viewer
 - [x] HEAD-11 — Server control UI
 - [x] HEAD-13 — CLI tool
-- [ ] HEAD-15 — Platform packaging
+- [x] HEAD-15 — Platform packaging
 - [ ] SETUP-01 — Create SetupState state machine
 - [ ] SETUP-02 — Create SetupServer (minimal HTTP Kestrel)
 - [ ] SETUP-03 — Build setup web UI
