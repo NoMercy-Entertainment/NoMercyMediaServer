@@ -14,7 +14,11 @@ public class ServerStatusResponseTests
             "status": "running",
             "server_name": "TestServer",
             "version": "1.2.3",
+            "platform": "Linux",
+            "architecture": "X64",
+            "os": "Linux 6.1",
             "uptime_seconds": 3600,
+            "start_time": "2026-01-01T00:00:00Z",
             "is_dev": true
         }
         """;
@@ -26,6 +30,9 @@ public class ServerStatusResponseTests
         Assert.Equal("running", result.Status);
         Assert.Equal("TestServer", result.ServerName);
         Assert.Equal("1.2.3", result.Version);
+        Assert.Equal("Linux", result.Platform);
+        Assert.Equal("X64", result.Architecture);
+        Assert.Equal("Linux 6.1", result.Os);
         Assert.Equal(3600, result.UptimeSeconds);
         Assert.True(result.IsDev);
     }
@@ -42,6 +49,9 @@ public class ServerStatusResponseTests
         Assert.Equal("running", result.Status);
         Assert.Equal(string.Empty, result.ServerName);
         Assert.Equal(string.Empty, result.Version);
+        Assert.Equal(string.Empty, result.Platform);
+        Assert.Equal(string.Empty, result.Architecture);
+        Assert.Equal(string.Empty, result.Os);
         Assert.Equal(0, result.UptimeSeconds);
         Assert.False(result.IsDev);
     }

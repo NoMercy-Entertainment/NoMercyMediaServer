@@ -18,6 +18,7 @@ public class TrayIconManager
     private NativeMenuItem? _stopServerItem;
     private ServerState _currentState = ServerState.Disconnected;
     private LogViewerWindow? _logViewerWindow;
+    private ServerControlWindow? _serverControlWindow;
 
     public TrayIconManager(
         ServerConnection serverConnection,
@@ -54,6 +55,9 @@ public class TrayIconManager
         NativeMenuItem viewLogsItem = new("View Logs");
         viewLogsItem.Click += OnViewLogs;
 
+        NativeMenuItem serverControlItem = new("Server Control");
+        serverControlItem.Click += OnServerControl;
+
         NativeMenuItemSeparator separator2 = new();
 
         _stopServerItem = new NativeMenuItem("Stop Server");
@@ -70,6 +74,7 @@ public class TrayIconManager
         menu.Items.Add(separator1);
         menu.Items.Add(openDashboardItem);
         menu.Items.Add(viewLogsItem);
+        menu.Items.Add(serverControlItem);
         menu.Items.Add(separator2);
         menu.Items.Add(_stopServerItem);
         menu.Items.Add(separator3);
@@ -224,6 +229,24 @@ public class TrayIconManager
             _logViewerWindow = new LogViewerWindow(viewModel);
             _logViewerWindow.Closed += (_, _) => _logViewerWindow = null;
             _logViewerWindow.Show();
+        });
+    }
+
+    private void OnServerControl(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_serverControlWindow is { IsVisible: true })
+            {
+                _serverControlWindow.Activate();
+                return;
+            }
+
+            ServerControlViewModel viewModel = new(_serverConnection);
+            _serverControlWindow = new ServerControlWindow(viewModel);
+            _serverControlWindow.Closed += (_, _) =>
+                _serverControlWindow = null;
+            _serverControlWindow.Show();
         });
     }
 

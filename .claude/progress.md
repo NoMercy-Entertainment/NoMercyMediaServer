@@ -3917,3 +3917,23 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `src/NoMercy.Tray/Services/TrayIconManager.cs` — Added "View Logs" menu item and OnViewLogs handler
 
 **Test results**: Build succeeds with 0 errors, 1 warning (AVLN3001 — no public constructor for XAML runtime loader, expected since window is parameterized). All 2,053 tests pass across 12 projects = 0 failures.
+
+---
+
+## HEAD-11 — Server control UI (start/stop/restart)
+**Date**: 2026-02-12
+
+**What was done**: Implemented a dedicated Server Control window in the NoMercy.Tray application. The window shows real-time server status (status indicator with colored dot, server name, version, platform/architecture, uptime) and provides Stop Server, Restart Server, and Refresh buttons. The window polls server status every 5 seconds via the existing IPC connection to the management API.
+
+**Files created**:
+- `src/NoMercy.Tray/ViewModels/ServerControlViewModel.cs` — ViewModel with status polling, stop/restart actions, property change notifications, and helper methods for status display formatting
+- `src/NoMercy.Tray/Views/ServerControlWindow.axaml` — Avalonia XAML UI with dark theme, status panel (status dot, server name, version, platform, uptime), control buttons (Stop/Restart/Refresh), and action status feedback
+- `src/NoMercy.Tray/Views/ServerControlWindow.axaml.cs` — Code-behind with window lifecycle (open/close), button click handlers wired to ViewModel
+- `tests/NoMercy.Tests.Tray/ServerControlViewModelTests.cs` — 10 tests covering: FormatStatusDisplay mapping, GetStatusColor mapping, constructor defaults, PropertyChanged events for all properties, RefreshStatusAsync when disconnected, and StartPolling/StopPolling lifecycle safety
+
+**Files modified**:
+- `src/NoMercy.Tray/Services/TrayIconManager.cs` — Added "Server Control" menu item between "View Logs" and separator, added OnServerControl handler that opens/reactivates the ServerControlWindow, added _serverControlWindow field
+- `src/NoMercy.Tray/Models/ServerStatusResponse.cs` — Added Platform, Architecture, Os, and StartTime properties to match full ManagementStatusDto response shape
+- `tests/NoMercy.Tests.Tray/ServerStatusResponseTests.cs` — Updated existing deserialization tests to cover new Platform, Architecture, Os fields
+
+**Test results**: Build succeeds with 0 errors. All tests pass across all projects (27 Tray, 424 Queue, 86 Events, 218 Repositories, 42 Setup, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
