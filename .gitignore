@@ -592,6 +592,8 @@ arch-packages/
 *.sqlite
 *.sqlite3
 *.db
+!src/NoMercy.Queue.Sqlite/
+!src/NoMercy.Queue.Sqlite/**
 
 # Environment and configuration with sensitive data
 .env

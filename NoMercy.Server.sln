@@ -67,6 +67,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Plugins", "src\NoMe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Queue.Core", "src\NoMercy.Queue.Core\NoMercy.Queue.Core.csproj", "{C195CE41-4430-48F0-A80E-C867E2118283}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Queue.Sqlite", "src\NoMercy.Queue.Sqlite\NoMercy.Queue.Sqlite.csproj", "{7E2789CE-36F8-4F55-B75B-AD7446CA8497}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -437,6 +439,18 @@ Global
 		{C195CE41-4430-48F0-A80E-C867E2118283}.Release|x64.Build.0 = Release|Any CPU
 		{C195CE41-4430-48F0-A80E-C867E2118283}.Release|x86.ActiveCfg = Release|Any CPU
 		{C195CE41-4430-48F0-A80E-C867E2118283}.Release|x86.Build.0 = Release|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Debug|x64.Build.0 = Debug|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Debug|x86.Build.0 = Debug|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Release|x64.ActiveCfg = Release|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Release|x64.Build.0 = Release|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Release|x86.ActiveCfg = Release|Any CPU
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -472,6 +486,7 @@ Global
 		{824479DA-084F-4847-8D12-ED9F87C48032} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
 		{370DD02C-CE94-466D-917F-2FCD3A47C5D5} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
 		{C195CE41-4430-48F0-A80E-C867E2118283} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
+		{7E2789CE-36F8-4F55-B75B-AD7446CA8497} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {22D7A0A2-2627-4892-8844-22A1F8DFF0C3}

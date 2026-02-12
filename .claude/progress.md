@@ -3549,3 +3549,35 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `tests/NoMercy.Tests.Queue/TestHelpers/TestQueueContextAdapter.cs` — Added `ResetAllReservedJobs()`
 
 **Test results**: Build succeeds with 0 errors. All 1415 tests pass with 0 failures across all test projects (327 queue, 33 media processing, 324 API, 218 repositories, 86 events, 427 providers).
+
+---
+
+## QDC-10 — Create SQLite queue provider
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created `src/NoMercy.Queue.Sqlite/` project — a standalone SQLite-backed `IQueueContext` provider that depends only on `NoMercy.Queue.Core` (no dependency on `NoMercy.Database`)
+- Project contains its own EF Core entity types (`QueueJobEntity`, `FailedJobEntity`, `CronJobEntity`) in `Entities/` folder, matching the schema from `NoMercy.Database.Models.Queue` but fully decoupled
+- Created `QueueDbContext` (internal) — standalone EF Core DbContext with the same schema configuration as the original `QueueContext` (timestamp defaults, cascade delete, payload max length 4096)
+- Created `SqliteQueueContext` — public class implementing `IQueueContext` with compiled EF queries (`ReserveJobQuery`, `ExistsQuery`), change tracker clearing after saves, and full CRUD for jobs, failed jobs, and cron jobs — mirrors behavior of `EfQueueContextAdapter`
+- Created `SqliteQueueContextFactory` — static factory with `Create(string databasePath)` that builds a `QueueDbContext` from a path, calls `EnsureCreated()`, and returns an `IQueueContext`
+- Added project to solution under `Src` folder
+- Added `NoMercy.Queue.Sqlite` reference and `Microsoft.EntityFrameworkCore.Sqlite` package to `NoMercy.Tests.Queue`
+- Fixed `int` → `long` cast in `FindFailedJob` (the `FailedJobEntity.Id` is `long` but the interface parameter is `int`)
+
+**Files created**:
+- `src/NoMercy.Queue.Sqlite/NoMercy.Queue.Sqlite.csproj`
+- `src/NoMercy.Queue.Sqlite/Entities/QueueJobEntity.cs`
+- `src/NoMercy.Queue.Sqlite/Entities/FailedJobEntity.cs`
+- `src/NoMercy.Queue.Sqlite/Entities/CronJobEntity.cs`
+- `src/NoMercy.Queue.Sqlite/QueueDbContext.cs`
+- `src/NoMercy.Queue.Sqlite/SqliteQueueContext.cs`
+- `src/NoMercy.Queue.Sqlite/SqliteQueueContextFactory.cs`
+- `tests/NoMercy.Tests.Queue/SqliteQueueContextTests.cs`
+
+**Files modified**:
+- `tests/NoMercy.Tests.Queue/NoMercy.Tests.Queue.csproj` — Added project reference and SQLite package
+- `NoMercy.Server.sln` — Added NoMercy.Queue.Sqlite project
+
+**Test results**: Build succeeds with 0 errors. All 1438 tests pass with 0 failures across all test projects (350 queue [+23 new], 33 media processing, 324 API, 218 repositories, 86 events, 427 providers).
