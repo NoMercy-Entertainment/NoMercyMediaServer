@@ -289,18 +289,64 @@ public class SetupServer
             return;
         }
 
+        string accept = context.Request.Headers.Accept.ToString();
+
+        if (accept.Contains("text/event-stream"))
+        {
+            await HandleSetupStatusSse(context);
+            return;
+        }
+
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = StatusCodes.Status200OK;
 
-        object response = new
+        await WriteJsonResponse(context.Response, BuildStatusSnapshot());
+    }
+
+    private async Task HandleSetupStatusSse(HttpContext context)
+    {
+        context.Response.ContentType = "text/event-stream";
+        context.Response.Headers.CacheControl = "no-cache";
+        context.Response.Headers.Connection = "keep-alive";
+        context.Response.StatusCode = StatusCodes.Status200OK;
+
+        CancellationToken cancellationToken = context.RequestAborted;
+
+        string json = JsonConvert.SerializeObject(BuildStatusSnapshot());
+        await WriteSseEvent(context.Response, json, cancellationToken);
+
+        while (!cancellationToken.IsCancellationRequested && _state.IsSetupRequired)
+        {
+            try
+            {
+                await _state.WaitForChangeAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+
+            json = JsonConvert.SerializeObject(BuildStatusSnapshot());
+            await WriteSseEvent(context.Response, json, cancellationToken);
+        }
+    }
+
+    private object BuildStatusSnapshot()
+    {
+        return new
         {
             phase = _state.CurrentPhase.ToString(),
             is_setup_required = _state.IsSetupRequired,
             is_authenticated = _state.IsAuthenticated,
             error = _state.ErrorMessage
         };
+    }
 
-        await WriteJsonResponse(context.Response, response);
+    private static async Task WriteSseEvent(
+        HttpResponse response, string data, CancellationToken cancellationToken)
+    {
+        await response.WriteAsync($"data: {data}\n\n", Encoding.UTF8, cancellationToken);
+        await response.Body.FlushAsync(cancellationToken);
     }
 
     internal async Task HandleQrCode(HttpContext context)

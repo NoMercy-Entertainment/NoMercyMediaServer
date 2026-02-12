@@ -4237,3 +4237,44 @@ Enhanced the `/sso-callback` OAuth callback handler in `SetupServer.cs` with thr
 - `.claude/PRD.md` — Marked SETUP-05 complete, updated Next up to SETUP-06
 
 **Test results**: Build succeeds with 0 errors. All tests pass (149 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers, 143 Database) = 0 failures.
+
+---
+
+## SETUP-06 — Implement `/setup/status` progress endpoint (SSE + polling)
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Enhanced `/setup/status` to support **Server-Sent Events (SSE)** when the client sends `Accept: text/event-stream`, while keeping the existing JSON polling endpoint as fallback
+- Added `WaitForChangeAsync()` to `SetupState` — uses `TaskCompletionSource` with `RunContinuationsAsynchronously` to notify SSE connections when state changes occur (phase transitions, errors, or resets)
+- Added `NotifyChange()` private method that creates a new `TaskCompletionSource` and completes the previous one, allowing multiple SSE connections to be notified simultaneously
+- Enhanced `HandleSetupStatus()` to detect `Accept: text/event-stream` header and route to SSE handler
+- Implemented `HandleSetupStatusSse()` — sends initial state immediately, then awaits `WaitForChangeAsync()` in a loop, pushing each state change as an SSE `data:` event until setup completes or client disconnects
+- Added `BuildStatusSnapshot()` helper to eliminate duplication between SSE and JSON response paths
+- Added `WriteSseEvent()` static helper that writes SSE-formatted data lines and flushes the response stream
+- Updated `setup.html` frontend to use `EventSource` API with automatic fallback to polling if SSE fails or `EventSource` is unavailable
+- Added `startStatusStream()` / `stopStatusStream()` functions to manage SSE lifecycle
+- Refactored `handleStatusData()` to be shared between SSE and polling code paths
+
+**New tests added** (11 tests):
+- `SetupState.WaitForChangeAsync_CompletesOnTransition` — Signal fires on phase transition
+- `SetupState.WaitForChangeAsync_CompletesOnSetError` — Signal fires on error
+- `SetupState.WaitForChangeAsync_CompletesOnReset` — Signal fires on reset
+- `SetupState.WaitForChangeAsync_SupportsMultipleWaiters` — Multiple concurrent awaiters all get notified
+- `SetupState.WaitForChangeAsync_CanBeCalledAgainAfterChange` — Sequential wait-change-wait cycles work
+- `SetupState.WaitForChangeAsync_RespectsCancellation` — CancellationToken properly cancels the wait
+- `SetupServer.SetupStatus_WithEventStreamAccept_ReturnsSseContentType` — SSE content type returned
+- `SetupServer.SetupStatus_Sse_SendsInitialState` — Initial state sent immediately on connect
+- `SetupServer.SetupStatus_Sse_PushesStateChanges` — State changes pushed in real-time
+- `SetupServer.SetupStatus_WithoutEventStreamAccept_ReturnsJson` — JSON fallback still works
+- `SetupServer.SetupStatus_Sse_ReflectsErrorMessages` — Errors pushed via SSE
+
+**Files modified**:
+- `src/NoMercy.Setup/SetupState.cs` — Added `WaitForChangeAsync()`, `NotifyChange()`, `_changeSignal` field
+- `src/NoMercy.Setup/SetupServer.cs` — Added SSE support to `HandleSetupStatus()`, new `HandleSetupStatusSse()`, `BuildStatusSnapshot()`, `WriteSseEvent()` methods
+- `src/NoMercy.Setup/Resources/setup.html` — Replaced polling with EventSource + polling fallback
+- `tests/NoMercy.Tests.Setup/SetupStateTests.cs` — Added 6 WaitForChangeAsync tests
+- `tests/NoMercy.Tests.Setup/SetupServerTests.cs` — Added 5 SSE endpoint tests
+- `.claude/PRD.md` — Marked SETUP-06 complete, updated Next up to SETUP-07
+
+**Test results**: Build succeeds with 0 errors. All 1,185 tests pass (160 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.

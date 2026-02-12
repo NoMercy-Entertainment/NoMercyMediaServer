@@ -315,25 +315,63 @@
         return baseUrl + "?" + params.join("&");
     }
 
+    function handleStatusData(data) {
+        updateProgress(data);
+        if (data.phase === "Complete") {
+            stopStatusStream();
+            show("step-complete");
+        } else if (data.error) {
+            document.getElementById("progress-error").textContent = data.error;
+            document.getElementById("progress-error").classList.add("visible");
+            document.getElementById("btn-retry").style.display = "block";
+            document.querySelector(".spinner").style.display = "none";
+        } else {
+            document.getElementById("progress-error").classList.remove("visible");
+            document.getElementById("btn-retry").style.display = "none";
+            document.querySelector("#step-progress .spinner").style.display = "inline-block";
+        }
+    }
+
+    var statusSource = null;
+
+    function startStatusStream() {
+        stopStatusStream();
+
+        if (typeof EventSource !== "undefined") {
+            statusSource = new EventSource("/setup/status");
+            statusSource.onmessage = function(e) {
+                try {
+                    var data = JSON.parse(e.data);
+                    handleStatusData(data);
+                } catch (err) { /* ignore parse errors */ }
+            };
+            statusSource.onerror = function() {
+                statusSource.close();
+                statusSource = null;
+                pollTimer = setInterval(pollStatus, 2000);
+                pollStatus();
+            };
+        } else {
+            pollTimer = setInterval(pollStatus, 2000);
+            pollStatus();
+        }
+    }
+
+    function stopStatusStream() {
+        if (statusSource) {
+            statusSource.close();
+            statusSource = null;
+        }
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+    }
+
     function pollStatus() {
         fetch("/setup/status")
             .then(function(r) { return r.json(); })
-            .then(function(data) {
-                updateProgress(data);
-                if (data.phase === "Complete") {
-                    clearInterval(pollTimer);
-                    show("step-complete");
-                } else if (data.error) {
-                    document.getElementById("progress-error").textContent = data.error;
-                    document.getElementById("progress-error").classList.add("visible");
-                    document.getElementById("btn-retry").style.display = "block";
-                    document.querySelector(".spinner").style.display = "none";
-                } else {
-                    document.getElementById("progress-error").classList.remove("visible");
-                    document.getElementById("btn-retry").style.display = "none";
-                    document.querySelector("#step-progress .spinner").style.display = "inline-block";
-                }
-            })
+            .then(function(data) { handleStatusData(data); })
             .catch(function() { /* network error, keep polling */ });
     }
 
@@ -388,8 +426,7 @@
                             if (status.is_authenticated || status.phase !== "Unauthenticated") {
                                 clearInterval(devicePollTimer);
                                 show("step-progress");
-                                pollTimer = setInterval(pollStatus, 2000);
-                                pollStatus();
+                                startStatusStream();
                             }
                         })
                         .catch(function() {});
@@ -412,8 +449,7 @@
                         show("step-complete");
                     } else {
                         show("step-progress");
-                        pollTimer = setInterval(pollStatus, 2000);
-                        pollStatus();
+                        startStatusStream();
                     }
                     return;
                 }

@@ -237,6 +237,98 @@ public class SetupStateTests
         Assert.Equal(expected, SetupState.IsValidTransition(from, to));
     }
 
+    // --- WaitForChangeAsync ---
+
+    [Fact]
+    public async Task WaitForChangeAsync_CompletesOnTransition()
+    {
+        SetupState state = new();
+        Task waitTask = state.WaitForChangeAsync();
+
+        Assert.False(waitTask.IsCompleted);
+
+        state.TransitionTo(SetupPhase.Authenticating);
+
+        await waitTask.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(waitTask.IsCompleted);
+    }
+
+    [Fact]
+    public async Task WaitForChangeAsync_CompletesOnSetError()
+    {
+        SetupState state = new();
+        Task waitTask = state.WaitForChangeAsync();
+
+        Assert.False(waitTask.IsCompleted);
+
+        state.SetError("test error");
+
+        await waitTask.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(waitTask.IsCompleted);
+    }
+
+    [Fact]
+    public async Task WaitForChangeAsync_CompletesOnReset()
+    {
+        SetupState state = new();
+        state.TransitionTo(SetupPhase.Authenticating);
+
+        Task waitTask = state.WaitForChangeAsync();
+        Assert.False(waitTask.IsCompleted);
+
+        state.Reset();
+
+        await waitTask.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(waitTask.IsCompleted);
+    }
+
+    [Fact]
+    public async Task WaitForChangeAsync_SupportsMultipleWaiters()
+    {
+        SetupState state = new();
+        Task wait1 = state.WaitForChangeAsync();
+        Task wait2 = state.WaitForChangeAsync();
+
+        state.TransitionTo(SetupPhase.Authenticating);
+
+        await Task.WhenAll(
+            wait1.WaitAsync(TimeSpan.FromSeconds(1)),
+            wait2.WaitAsync(TimeSpan.FromSeconds(1)));
+
+        Assert.True(wait1.IsCompleted);
+        Assert.True(wait2.IsCompleted);
+    }
+
+    [Fact]
+    public async Task WaitForChangeAsync_CanBeCalledAgainAfterChange()
+    {
+        SetupState state = new();
+
+        Task wait1 = state.WaitForChangeAsync();
+        state.TransitionTo(SetupPhase.Authenticating);
+        await wait1.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Task wait2 = state.WaitForChangeAsync();
+        Assert.False(wait2.IsCompleted);
+
+        state.TransitionTo(SetupPhase.Authenticated);
+        await wait2.WaitAsync(TimeSpan.FromSeconds(1));
+        Assert.True(wait2.IsCompleted);
+    }
+
+    [Fact]
+    public async Task WaitForChangeAsync_RespectsCancellation()
+    {
+        SetupState state = new();
+        using CancellationTokenSource cts = new();
+
+        Task waitTask = state.WaitForChangeAsync(cts.Token);
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => waitTask.WaitAsync(TimeSpan.FromSeconds(1)));
+    }
+
     // --- DetermineInitialPhase ---
 
     [Fact]

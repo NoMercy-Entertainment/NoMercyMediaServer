@@ -240,6 +240,116 @@ public class SetupServerTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
     }
 
+    // --- /setup/status SSE endpoint ---
+
+    [Fact]
+    public async Task SetupStatus_WithEventStreamAccept_ReturnsSseContentType()
+    {
+        using HttpRequestMessage request = new(HttpMethod.Get, "/setup/status");
+        request.Headers.Accept.ParseAdd("text/event-stream");
+
+        using HttpResponseMessage response = await _client.SendAsync(
+            request, HttpCompletionOption.ResponseHeadersRead);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/event-stream",
+            response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task SetupStatus_Sse_SendsInitialState()
+    {
+        using HttpRequestMessage request = new(HttpMethod.Get, "/setup/status");
+        request.Headers.Accept.ParseAdd("text/event-stream");
+
+        using HttpResponseMessage response = await _client.SendAsync(
+            request, HttpCompletionOption.ResponseHeadersRead);
+
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader reader = new(stream);
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        string? line = await reader.ReadLineAsync(cts.Token);
+
+        Assert.NotNull(line);
+        Assert.StartsWith("data: ", line);
+
+        string json = line.Substring("data: ".Length);
+        dynamic? data = JsonConvert.DeserializeObject<dynamic>(json);
+        Assert.Equal("Unauthenticated", (string)data!.phase);
+    }
+
+    [Fact]
+    public async Task SetupStatus_Sse_PushesStateChanges()
+    {
+        using HttpRequestMessage request = new(HttpMethod.Get, "/setup/status");
+        request.Headers.Accept.ParseAdd("text/event-stream");
+
+        using HttpResponseMessage response = await _client.SendAsync(
+            request, HttpCompletionOption.ResponseHeadersRead);
+
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader reader = new(stream);
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+
+        // Read initial state
+        string? line1 = await reader.ReadLineAsync(cts.Token);
+        await reader.ReadLineAsync(cts.Token); // blank line after data
+
+        // Trigger state change
+        _state.TransitionTo(SetupPhase.Authenticating);
+
+        // Read pushed update
+        string? line2 = await reader.ReadLineAsync(cts.Token);
+        Assert.NotNull(line2);
+        Assert.StartsWith("data: ", line2);
+
+        string json = line2.Substring("data: ".Length);
+        dynamic? data = JsonConvert.DeserializeObject<dynamic>(json);
+        Assert.Equal("Authenticating", (string)data!.phase);
+    }
+
+    [Fact]
+    public async Task SetupStatus_WithoutEventStreamAccept_ReturnsJson()
+    {
+        using HttpResponseMessage response = await _client.GetAsync("/setup/status");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json",
+            response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task SetupStatus_Sse_ReflectsErrorMessages()
+    {
+        using HttpRequestMessage request = new(HttpMethod.Get, "/setup/status");
+        request.Headers.Accept.ParseAdd("text/event-stream");
+
+        using HttpResponseMessage response = await _client.SendAsync(
+            request, HttpCompletionOption.ResponseHeadersRead);
+
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader reader = new(stream);
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+
+        // Read initial state
+        await reader.ReadLineAsync(cts.Token); // data line
+        await reader.ReadLineAsync(cts.Token); // blank line
+
+        // Set error
+        _state.SetError("Network timeout");
+
+        // Read error update
+        string? line = await reader.ReadLineAsync(cts.Token);
+        Assert.NotNull(line);
+
+        string json = line.Substring("data: ".Length);
+        dynamic? data = JsonConvert.DeserializeObject<dynamic>(json);
+        Assert.Equal("Network timeout", (string)data!.error);
+    }
+
     // --- /setup/qr endpoint ---
 
     [Fact]
