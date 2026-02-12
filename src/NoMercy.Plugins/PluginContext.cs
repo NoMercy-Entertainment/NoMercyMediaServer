@@ -10,6 +10,7 @@ public class PluginContext : IPluginContext
     public IServiceProvider Services { get; }
     public ILogger Logger { get; }
     public string DataFolderPath { get; }
+    public IPluginConfiguration Configuration { get; }
 
     public PluginContext(IEventBus eventBus, IServiceProvider services, ILogger logger, string dataFolderPath)
     {
@@ -17,5 +18,6 @@ public class PluginContext : IPluginContext
         Services = services ?? throw new ArgumentNullException(nameof(services));
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         DataFolderPath = dataFolderPath ?? throw new ArgumentNullException(nameof(dataFolderPath));
+        Configuration = new PluginConfiguration(dataFolderPath);
     }
 }

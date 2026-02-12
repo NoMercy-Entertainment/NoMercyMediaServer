@@ -140,6 +140,7 @@ public class PluginAbstractionsTests
         public IServiceProvider Services { get; }
         public ILogger Logger { get; }
         public string DataFolderPath { get; }
+        public IPluginConfiguration Configuration { get; }
 
         public TestPluginContext(IEventBus eventBus, string dataFolder = "/tmp/plugin-test")
         {
@@ -147,11 +148,22 @@ public class PluginAbstractionsTests
             Services = new MinimalServiceProvider();
             Logger = NullLogger.Instance;
             DataFolderPath = dataFolder;
+            Configuration = new NullPluginConfiguration();
         }
 
         private sealed class MinimalServiceProvider : IServiceProvider
         {
             public object? GetService(Type serviceType) => null;
+        }
+
+        private sealed class NullPluginConfiguration : IPluginConfiguration
+        {
+            public T? GetConfiguration<T>() where T : class, new() => null;
+            public Task<T?> GetConfigurationAsync<T>(CancellationToken ct = default) where T : class, new() => Task.FromResult<T?>(null);
+            public void SaveConfiguration<T>(T configuration) where T : class { }
+            public Task SaveConfigurationAsync<T>(T configuration, CancellationToken ct = default) where T : class => Task.CompletedTask;
+            public bool HasConfiguration() => false;
+            public void DeleteConfiguration() { }
         }
     }
 

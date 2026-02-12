@@ -3199,3 +3199,49 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
   - `IPluginServiceRegistrator_CanRegisterServices` — verifies plugin can register custom services into DI
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 102 plugin tests pass. Full test suite: 0 failures across all projects.
+
+---
+
+## PLG-06 — Plugin configuration system
+
+**Date**: 2026-02-12
+
+**What was done**:
+
+### Configuration Interface
+- Created `src/NoMercy.Plugins.Abstractions/IPluginConfiguration.cs`:
+  - `GetConfiguration<T>()` / `GetConfigurationAsync<T>()` — deserialize typed config from JSON
+  - `SaveConfiguration<T>()` / `SaveConfigurationAsync<T>()` — serialize typed config to JSON
+  - `HasConfiguration()` — check if config file exists
+  - `DeleteConfiguration()` — remove config file
+
+### Configuration Implementation
+- Created `src/NoMercy.Plugins/PluginConfiguration.cs`:
+  - Reads/writes `config.json` in the plugin's data folder
+  - Thread-safe sync operations via `lock`
+  - JSON options: indented output, case-insensitive, supports comments and trailing commas
+  - Auto-creates directories if needed
+  - Null checks on all public methods
+
+### IPluginContext Integration
+- Added `IPluginConfiguration Configuration { get; }` to `IPluginContext` interface
+- Updated `PluginContext` to create `PluginConfiguration` from the data folder path
+- Plugins can now access their configuration via `context.Configuration.GetConfiguration<MyConfig>()`
+
+### Tests (17 new tests)
+- `PluginConfigurationTests.cs`:
+  - `Constructor_NullPath_ThrowsArgumentException`, `Constructor_EmptyPath_ThrowsArgumentException`
+  - `HasConfiguration_NoFile_ReturnsFalse`, `GetConfiguration_NoFile_ReturnsNull`
+  - `SaveConfiguration_ThenGet_RoundTrips` — full round-trip with complex types
+  - `SaveConfiguration_CreatesFile`, `SaveConfiguration_WritesFormattedJson`
+  - `SaveConfiguration_NullConfig_ThrowsArgumentNullException`
+  - `SaveConfiguration_Overwrites_ExistingConfig`
+  - `DeleteConfiguration_RemovesFile`, `DeleteConfiguration_NoFile_DoesNotThrow`
+  - `GetConfigurationAsync_NoFile_ReturnsNull`
+  - `SaveConfigurationAsync_ThenGetAsync_RoundTrips`, `SaveConfigurationAsync_NullConfig_ThrowsArgumentNullException`
+  - `SaveConfiguration_CreatesDirectoryIfNeeded`
+  - `GetConfiguration_DifferentType_DeserializesCorrectly`
+  - `IPluginConfiguration_Interface_IsImplemented`
+- Updated `TestPluginContext` in `PluginAbstractionsTests.cs` to implement new `Configuration` property
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 119 plugin tests pass. Full test suite: 0 failures across all projects.

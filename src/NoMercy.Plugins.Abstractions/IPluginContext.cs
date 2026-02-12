@@ -9,4 +9,5 @@ public interface IPluginContext
     IServiceProvider Services { get; }
     ILogger Logger { get; }
     string DataFolderPath { get; }
+    IPluginConfiguration Configuration { get; }
 }
