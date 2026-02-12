@@ -2965,3 +2965,76 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
 - `PublishAsync_AllDomainEvents_AreLogged` — verifies all 11 domain event types produce audit log entries
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (86), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427).
+
+---
+
+## PLG-01 — Create NoMercy.Plugins.Abstractions
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created new class library project `src/NoMercy.Plugins.Abstractions/` targeting `net9.0`
+- Added project to solution under `Src` folder
+- Added `Microsoft.Extensions.DependencyInjection.Abstractions` and `Microsoft.Extensions.Logging.Abstractions` package versions to `Directory.Packages.props`
+- Implemented all plugin interfaces per PRD section 11:
+  - `IPlugin` — Core plugin contract: Name, Description, Id, Version, Initialize(IPluginContext), IDisposable
+  - `IPluginContext` — Runtime context: IEventBus EventBus, IServiceProvider Services, ILogger Logger, string DataFolderPath
+  - `IMetadataPlugin` — Metadata provider: GetMetadataAsync(title, type, ct)
+  - `IMediaSourcePlugin` — Media scanner: ScanAsync(path, ct)
+  - `IEncoderPlugin` — Encoding profiles: GetProfile(MediaInfo)
+  - `IAuthPlugin` — Authentication: AuthenticateAsync(token, ct)
+  - `IScheduledTaskPlugin` — Cron tasks: CronExpression, ExecuteAsync(ct)
+  - `IPluginServiceRegistrator` — DI registration: RegisterServices(IServiceCollection)
+  - `IPluginManager` — Lifecycle management: GetInstalledPlugins, Install/Enable/Disable/Uninstall
+- Created supporting types: MediaMetadata, MediaType (enum), MediaFile, MediaInfo, EncodingProfile, AuthResult, PluginInfo, PluginStatus (enum)
+- Created test project `tests/NoMercy.Tests.Plugins/` with 20 comprehensive tests
+
+**Files created**:
+- `src/NoMercy.Plugins.Abstractions/NoMercy.Plugins.Abstractions.csproj`
+- `src/NoMercy.Plugins.Abstractions/IPlugin.cs`
+- `src/NoMercy.Plugins.Abstractions/IPluginContext.cs`
+- `src/NoMercy.Plugins.Abstractions/IMetadataPlugin.cs`
+- `src/NoMercy.Plugins.Abstractions/IMediaSourcePlugin.cs`
+- `src/NoMercy.Plugins.Abstractions/IEncoderPlugin.cs`
+- `src/NoMercy.Plugins.Abstractions/IAuthPlugin.cs`
+- `src/NoMercy.Plugins.Abstractions/IScheduledTaskPlugin.cs`
+- `src/NoMercy.Plugins.Abstractions/IPluginServiceRegistrator.cs`
+- `src/NoMercy.Plugins.Abstractions/IPluginManager.cs`
+- `src/NoMercy.Plugins.Abstractions/MediaMetadata.cs`
+- `src/NoMercy.Plugins.Abstractions/MediaType.cs`
+- `src/NoMercy.Plugins.Abstractions/MediaFile.cs`
+- `src/NoMercy.Plugins.Abstractions/MediaInfo.cs`
+- `src/NoMercy.Plugins.Abstractions/EncodingProfile.cs`
+- `src/NoMercy.Plugins.Abstractions/AuthResult.cs`
+- `src/NoMercy.Plugins.Abstractions/PluginInfo.cs`
+- `src/NoMercy.Plugins.Abstractions/PluginStatus.cs`
+- `tests/NoMercy.Tests.Plugins/NoMercy.Tests.Plugins.csproj`
+- `tests/NoMercy.Tests.Plugins/PluginAbstractionsTests.cs`
+
+**Files modified**:
+- `Directory.Packages.props` — added `Microsoft.Extensions.DependencyInjection.Abstractions` and `Microsoft.Extensions.Logging.Abstractions` versions
+- `NoMercy.Server.sln` — added both new projects
+
+**Tests added** (20 tests in `PluginAbstractionsTests.cs`):
+- `IPlugin_CanBeImplemented_WithRequiredProperties` — verifies plugin interface properties
+- `IPlugin_Initialize_ReceivesPluginContext` — verifies initialization with context
+- `IPluginContext_ProvidesEventBus` — verifies event bus access
+- `IPluginContext_ProvidesLogger` — verifies logger access
+- `IPluginContext_ProvidesDataFolderPath` — verifies data folder path
+- `IMetadataPlugin_GetMetadataAsync_ReturnsMetadata` — verifies metadata retrieval
+- `IMediaSourcePlugin_ScanAsync_ReturnsFiles` — verifies media file scanning
+- `IEncoderPlugin_GetProfile_ReturnsEncodingProfile` — verifies encoding profile creation
+- `IScheduledTaskPlugin_ExecuteAsync_RunsTask` — verifies scheduled task execution
+- `IAuthPlugin_AuthenticateAsync_ValidToken_ReturnsAuthenticated` — verifies valid auth
+- `IAuthPlugin_AuthenticateAsync_InvalidToken_ReturnsNotAuthenticated` — verifies invalid auth
+- `PluginInfo_HoldsPluginMetadata` — verifies plugin info record
+- `PluginStatus_HasAllExpectedValues` — verifies all 4 plugin status values
+- `MediaType_HasAllExpectedValues` — verifies all 5 media type values
+- `EncodingProfile_HasDefaults` — verifies encoding profile default values
+- `MediaMetadata_HasDefaults` — verifies metadata default values
+- `AuthResult_HasDefaults` — verifies auth result default values
+- `MediaFile_HasDefaults` — verifies media file default values
+- `MediaInfo_HasDefaults` — verifies media info default values
+- `Plugin_CanSubscribeToEventsViaContext` — verifies event bus integration via plugin context
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 20 plugin tests pass.

@@ -78,6 +78,10 @@
     <PackageVersion Include="ExtendedNumerics.BigRational" Version="3000.0.2.132" />
     <PackageVersion Include="MusixmatchClientLib" Version="1.1.9" />
 
+    <!-- Plugin System -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+
     <!-- System & Infrastructure -->
     <PackageVersion Include="Castle.Core" Version="5.2.1" />
     <PackageVersion Include="DeviceId" Version="6.9.0" />
