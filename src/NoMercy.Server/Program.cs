@@ -205,11 +205,19 @@ public static class Program
         };
 
         List<string> urls = [
-            localhostIPv4Url.ToString()
+            localhostIPv4Url.ToString(),
         ];
 
         if(Software.IsWindows || Software.IsMac)
             urls.Add(localhostIPv6Url.ToString());
+
+        List<IPAddress> localAddresses =
+        [
+            IPAddress.Any
+        ];
+
+        if(Software.IsWindows || Software.IsMac)
+            localAddresses.Add(IPAddress.IPv6Any);
 
         IWebHostBuilder builder = WebHost.CreateDefaultBuilder([])
             .ConfigureServices(services =>
@@ -238,12 +246,15 @@ public static class Program
             {
                 Certificate.KestrelConfig(kestrelOptions);
 
-                // Management API — localhost-only, plain HTTP on separate port
-                kestrelOptions.Listen(IPAddress.Any, Config.ManagementPort, listenOptions =>
+                // Management API — plain HTTP on separate port
+                foreach (IPAddress localAddress in localAddresses)
                 {
-                    listenOptions.Protocols =
-                        Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-                });
+                    kestrelOptions.Listen(localAddress, Config.ManagementPort, listenOptions =>
+                    {
+                        listenOptions.Protocols =
+                            Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+                    });
+                }
 
                 Logger.App(
                     $"Management API listening on http://0.0.0.0:{Config.ManagementPort}");
