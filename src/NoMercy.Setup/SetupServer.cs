@@ -166,6 +166,28 @@ public class SetupServer
             return;
         }
 
+        string error = context.Request.Query["error"].ToString();
+        if (!string.IsNullOrEmpty(error))
+        {
+            string errorDescription = context.Request.Query["error_description"].ToString();
+            string message = string.IsNullOrEmpty(errorDescription)
+                ? $"Authorization failed: {error}"
+                : $"Authorization failed: {errorDescription}";
+
+            Logger.Setup($"OAuth callback error: {error} — {errorDescription}",
+                LogEventLevel.Warning);
+
+            _state.SetError(message);
+
+            context.Response.ContentType = "text/html; charset=utf-8";
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await context.Response.WriteAsync(BuildCallbackHtml(
+                "Authorization Failed",
+                message,
+                isError: true));
+            return;
+        }
+
         string code = context.Request.Query["code"].ToString();
 
         if (string.IsNullOrEmpty(code))
@@ -184,12 +206,11 @@ public class SetupServer
 
         string redirectUri = BuildRedirectUri(context.Request);
 
-        context.Response.ContentType = "text/html";
+        context.Response.ContentType = "text/html; charset=utf-8";
         context.Response.StatusCode = StatusCodes.Status200OK;
-        await context.Response.WriteAsync(
-            "<html><body><p>Authentication received. Redirecting to setup...</p>" +
-            "<script>setTimeout(function(){ window.location.href='/setup'; }, 1000);</script>" +
-            "</body></html>");
+        await context.Response.WriteAsync(BuildCallbackHtml(
+            "Authentication Received",
+            "Exchanging authorization code for tokens..."));
         await context.Response.CompleteAsync();
 
         string codeVerifier = _codeVerifier;
@@ -199,20 +220,58 @@ public class SetupServer
             try
             {
                 await Auth.TokenByAuthorizationCode(code, codeVerifier, redirectUri);
-                _state.TransitionTo(SetupPhase.Authenticated);
 
-                _codeVerifier = Auth.GenerateCodeVerifier();
-                _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
+                if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
+                    throw new("Token exchange succeeded but access token was not stored");
+
+                if (!File.Exists(AppFiles.TokenFile))
+                    throw new("Token exchange succeeded but token file was not written");
+
+                _state.TransitionTo(SetupPhase.Authenticated);
+                Logger.Setup("OAuth token exchange completed successfully");
             }
             catch (Exception ex)
             {
                 _state.SetError($"Authentication failed: {ex.Message}");
                 _state.TransitionTo(SetupPhase.Unauthenticated);
-
+                Logger.Setup($"OAuth token exchange failed: {ex.Message}",
+                    LogEventLevel.Error);
+            }
+            finally
+            {
                 _codeVerifier = Auth.GenerateCodeVerifier();
                 _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
             }
         });
+    }
+
+    internal static string BuildCallbackHtml(string title, string message,
+        bool isError = false)
+    {
+        string color = isError ? "#f08080" : "#CBAFFF";
+        string redirect = isError
+            ? "window.location.href='/setup';"
+            : "window.location.href='/setup';";
+        return "<!DOCTYPE html><html><head>"
+               + "<meta charset=\"UTF-8\">"
+               + "<style>"
+               + "body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,"
+               + "BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;"
+               + "display:flex;align-items:center;justify-content:center;"
+               + "min-height:100vh;margin:0;}"
+               + ".card{background:#16161e;border:1px solid #2a2a3a;"
+               + "border-radius:12px;padding:32px 24px;text-align:center;"
+               + "max-width:440px;width:100%;}"
+               + $"h2{{color:{color};margin-bottom:12px;}}"
+               + "p{color:#999;font-size:14px;}"
+               + "</style></head><body>"
+               + "<div class=\"card\">"
+               + $"<h2>{System.Net.WebUtility.HtmlEncode(title)}</h2>"
+               + $"<p>{System.Net.WebUtility.HtmlEncode(message)}</p>"
+               + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
+               + "</div>"
+               + $"<script>setTimeout(function(){{{redirect}}}, 1500);</script>"
+               + "</body></html>";
     }
 
     internal static string BuildRedirectUri(HttpRequest request)

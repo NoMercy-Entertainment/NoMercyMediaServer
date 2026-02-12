@@ -4198,3 +4198,42 @@ Fixed the OAuth PKCE flow for the setup web UI so the `/setup` page OAuth login 
 - `.claude/PRD.md` — Marked SETUP-04 complete, updated Next up to SETUP-05
 
 **Test results**: Build succeeds with 0 errors. All tests pass (137 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
+
+---
+
+## SETUP-05 — Implement `/sso-callback` token exchange
+
+**Date**: 2026-02-12
+
+**What was done**:
+Enhanced the `/sso-callback` OAuth callback handler in `SetupServer.cs` with three key improvements:
+
+1. **OAuth error handling**: The handler now checks for `error` and `error_description` query parameters before checking for the authorization `code`. When Keycloak redirects back with an error (e.g., user denied access, server error), the handler sets the error on SetupState, logs the issue, and returns a styled error page that redirects back to `/setup` — instead of returning a 400 for missing code.
+
+2. **Token verification after exchange**: After `Auth.TokenByAuthorizationCode()` succeeds, the handler now verifies that `Globals.AccessToken` was actually set and that `AppFiles.TokenFile` was written to disk. If either check fails, it throws with a descriptive message, transitioning back to `Unauthenticated`.
+
+3. **Styled callback HTML**: Replaced the bare-bones HTML response with a `BuildCallbackHtml()` static method that produces themed HTML matching the setup UI (dark background `#0a0a0f`, card styling, proper fonts). The method HTML-encodes all user-visible content to prevent XSS. Both success and error variants redirect to `/setup` after 1.5 seconds.
+
+4. **PKCE regeneration in finally block**: Moved the code verifier/challenge regeneration from duplicate try/catch blocks into a single `finally` block to avoid code duplication.
+
+**Tests added** (12 new tests):
+- `SsoCallback_WithOAuthError_ReturnsErrorHtml` — Error parameter returns styled error HTML
+- `SsoCallback_WithOAuthError_SetsStateError` — Error message is set on state
+- `SsoCallback_WithOAuthErrorNoDescription_UsesErrorCode` — Falls back to error code when no description
+- `SsoCallback_WithOAuthError_DoesNotTransitionToAuthenticating` — State stays at Unauthenticated
+- `SsoCallback_WithCode_ReturnsStyledHtml` — Success response includes themed HTML with DOCTYPE
+- `SsoCallback_WithOnlyError_IgnoresMissingCode` — Error takes priority over missing code (returns 200, not 400)
+- `BuildCallbackHtml_Success_ContainsTitleAndMessage` — Static method returns correct content
+- `BuildCallbackHtml_Success_UsesAccentColor` — Uses #CBAFFF for success
+- `BuildCallbackHtml_Error_UsesErrorColor` — Uses #f08080 for errors
+- `BuildCallbackHtml_ContainsRedirectScript` — JavaScript redirect is present
+- `BuildCallbackHtml_MatchesSetupTheme` — Theme colors match setup UI
+- `BuildCallbackHtml_HtmlEncodesContent` — XSS prevention via HTML encoding
+- Updated existing `SsoCallback_WithCode_TransitionsToAuthenticating` to match new casing
+
+**Files modified**:
+- `src/NoMercy.Setup/SetupServer.cs` — Enhanced `HandleSsoCallback()` with OAuth error handling, token verification, styled HTML; added `BuildCallbackHtml()` static method
+- `tests/NoMercy.Tests.Setup/SetupServerTests.cs` — Added 12 new tests, updated 1 existing test
+- `.claude/PRD.md` — Marked SETUP-05 complete, updated Next up to SETUP-06
+
+**Test results**: Build succeeds with 0 errors. All tests pass (149 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers, 143 Database) = 0 failures.

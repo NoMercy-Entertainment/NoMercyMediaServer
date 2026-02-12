@@ -313,6 +313,74 @@ public class SetupServerTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
     }
 
+    [Fact]
+    public async Task SsoCallback_WithOAuthError_ReturnsErrorHtml()
+    {
+        using HttpResponseMessage response = await _client.GetAsync(
+            "/sso-callback?error=access_denied&error_description=User+denied+access");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Authorization Failed", body);
+        Assert.Contains("User denied access", body);
+        Assert.Contains("/setup", body);
+    }
+
+    [Fact]
+    public async Task SsoCallback_WithOAuthError_SetsStateError()
+    {
+        await _client.GetAsync(
+            "/sso-callback?error=access_denied&error_description=User+denied+access");
+
+        Assert.Equal("Authorization failed: User denied access", _state.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task SsoCallback_WithOAuthErrorNoDescription_UsesErrorCode()
+    {
+        using HttpResponseMessage response = await _client.GetAsync(
+            "/sso-callback?error=server_error");
+
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Authorization failed: server_error", body);
+    }
+
+    [Fact]
+    public async Task SsoCallback_WithOAuthError_DoesNotTransitionToAuthenticating()
+    {
+        await _client.GetAsync("/sso-callback?error=access_denied");
+
+        Assert.Equal(SetupPhase.Unauthenticated, _state.CurrentPhase);
+    }
+
+    [Fact]
+    public async Task SsoCallback_WithCode_ReturnsStyledHtml()
+    {
+        using HttpResponseMessage response = await _client.GetAsync(
+            "/sso-callback?code=test-auth-code");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("<!DOCTYPE html>", body);
+        Assert.Contains("Authentication Received", body);
+        Assert.Contains("Exchanging authorization code for tokens", body);
+        Assert.Contains("#0a0a0f", body);
+    }
+
+    [Fact]
+    public async Task SsoCallback_WithOnlyError_IgnoresMissingCode()
+    {
+        using HttpResponseMessage response = await _client.GetAsync(
+            "/sso-callback?error=access_denied");
+
+        // Should NOT return 400 for missing code — the error takes priority
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        string body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Authorization Failed", body);
+    }
+
     // --- 503 for unknown routes ---
 
     [Fact]
@@ -457,7 +525,7 @@ public class SetupServerPkceTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         string body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Authentication received", body);
+        Assert.Contains("Authentication Received", body);
         Assert.Contains("/setup", body);
     }
 
@@ -598,5 +666,70 @@ public class SetupServerQrCodeTests
 
         Assert.NotNull(result);
         Assert.True(result.Length > 100);
+    }
+}
+
+public class SetupServerCallbackHtmlTests
+{
+    [Fact]
+    public void BuildCallbackHtml_Success_ContainsTitleAndMessage()
+    {
+        string html = SetupServer.BuildCallbackHtml(
+            "Authentication Received",
+            "Exchanging authorization code for tokens...");
+
+        Assert.Contains("Authentication Received", html);
+        Assert.Contains("Exchanging authorization code for tokens...", html);
+        Assert.Contains("<!DOCTYPE html>", html);
+    }
+
+    [Fact]
+    public void BuildCallbackHtml_Success_UsesAccentColor()
+    {
+        string html = SetupServer.BuildCallbackHtml("Title", "Message");
+
+        Assert.Contains("#CBAFFF", html);
+        Assert.DoesNotContain("#f08080", html);
+    }
+
+    [Fact]
+    public void BuildCallbackHtml_Error_UsesErrorColor()
+    {
+        string html = SetupServer.BuildCallbackHtml("Error", "Something went wrong",
+            isError: true);
+
+        Assert.Contains("#f08080", html);
+    }
+
+    [Fact]
+    public void BuildCallbackHtml_ContainsRedirectScript()
+    {
+        string html = SetupServer.BuildCallbackHtml("Title", "Message");
+
+        Assert.Contains("window.location.href='/setup'", html);
+        Assert.Contains("setTimeout", html);
+    }
+
+    [Fact]
+    public void BuildCallbackHtml_MatchesSetupTheme()
+    {
+        string html = SetupServer.BuildCallbackHtml("Title", "Message");
+
+        Assert.Contains("#0a0a0f", html);
+        Assert.Contains("#16161e", html);
+        Assert.Contains("#2a2a3a", html);
+    }
+
+    [Fact]
+    public void BuildCallbackHtml_HtmlEncodesContent()
+    {
+        string html = SetupServer.BuildCallbackHtml(
+            "<script>alert('xss')</script>",
+            "Message with <b>html</b>");
+
+        Assert.DoesNotContain("<script>alert('xss')</script>", html);
+        Assert.Contains("&lt;script&gt;", html);
+        Assert.DoesNotContain("<b>html</b>", html);
+        Assert.Contains("&lt;b&gt;", html);
     }
 }
