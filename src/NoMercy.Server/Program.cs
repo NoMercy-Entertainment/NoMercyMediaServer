@@ -6,6 +6,7 @@ using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting.WindowsServices;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
@@ -62,15 +63,29 @@ public static class Program
 
     private delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
+    internal static bool IsRunningAsService { get; private set; }
+
     private static async Task Start(StartupOptions options)
     {
-        if (!Console.IsOutputRedirected)
+        IsRunningAsService = options.RunAsService;
+
+        if (IsRunningAsService)
+        {
+            // When running as a Windows service, the working directory is system32.
+            // Set it to the executable's directory so config and data paths resolve correctly.
+            string exeDir = AppContext.BaseDirectory;
+            Directory.SetCurrentDirectory(exeDir);
+            Logger.App($"Running as Windows service, content root: {exeDir}");
+        }
+
+        if (!IsRunningAsService && !Console.IsOutputRedirected)
         {
             Console.Clear();
             Console.Title = AppFiles.ApplicationName;
         }
 
-        ConsoleMessages.Logo();
+        if (!IsRunningAsService)
+            ConsoleMessages.Logo();
 
         options.ApplySettings();
 
@@ -111,15 +126,17 @@ public static class Program
                 Logger.App($"Internal Address: {Networking.Networking.InternalAddress}");
                 Logger.App($"External Address: {Networking.Networking.ExternalAddress}");
 
-                if (!Console.IsOutputRedirected) await ConsoleMessages.ServerRunning();
+                if (!IsRunningAsService && !Console.IsOutputRedirected)
+                    await ConsoleMessages.ServerRunning();
 
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
 
                 await Dev.Run();
                 // await DriveMonitor.Start();
                 // LibraryFileWatcher.Start();
-                
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+
+                if (!IsRunningAsService &&
+                    RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                     OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
                 {
                     Logger.App(
@@ -127,7 +144,7 @@ public static class Program
                     await Task.Delay(10000)
                         .ContinueWith(_ => Setup.Start.VsConsoleWindow(0));
                 }
-                
+
             });
         });
 
@@ -138,7 +155,15 @@ public static class Program
 
         try
         {
-            await app.RunAsync(_applicationShutdownCts.Token);
+            if (IsRunningAsService && OperatingSystem.IsWindows())
+            {
+                // RunAsService blocks until the Windows SCM stops the service
+                app.RunAsService();
+            }
+            else
+            {
+                await app.RunAsync(_applicationShutdownCts.Token);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -178,7 +203,7 @@ public static class Program
         if(Software.IsWindows || Software.IsMac)
             urls.Add(localhostIPv6Url.ToString());
 
-        return WebHost.CreateDefaultBuilder([])
+        IWebHostBuilder builder = WebHost.CreateDefaultBuilder([])
             .ConfigureServices(services =>
             {
                 services.AddSingleton<StartupOptions>(options);
@@ -244,5 +269,11 @@ public static class Program
             .UseQuic()
             .UseSockets()
             .UseStartup<Startup>();
+
+        // Set content root to executable directory when running as a service
+        if (IsRunningAsService)
+            builder.UseContentRoot(AppContext.BaseDirectory);
+
+        return builder;
     }
 }

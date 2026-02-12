@@ -3727,3 +3727,37 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `src/NoMercy.Server/StartupOptions.cs` — Added `--pipe-name` CLI option
 
 **Test results**: Build succeeds with 0 errors. All tests pass with 0 failures across all test projects (347 API tests, 218 repository tests, 86 event tests, 33 media processing tests, 424 queue tests, 427 provider tests).
+
+---
+
+## HEAD-05 — Windows Service host
+
+**What was done**: Added Windows Service hosting support so the server can run as a Windows Service via `sc.exe` or the Services management console.
+
+**Key changes**:
+1. Added `Microsoft.AspNetCore.Hosting.WindowsServices` NuGet package — provides `RunAsService()` extension for `IWebHost`
+2. Added `--service` CLI flag to `StartupOptions` to explicitly opt into service mode
+3. Modified `Program.cs` to detect service mode and:
+   - Set working directory to executable's directory (Windows services start in `system32`)
+   - Set content root to `AppContext.BaseDirectory`
+   - Skip console-specific operations (Clear, Title, Logo, console window hiding)
+   - Use `app.RunAsService()` instead of `app.RunAsync()` to integrate with Windows SCM
+4. Added `IsRunningAsService` property to `Program` for service-mode branching throughout the app
+5. Used `OperatingSystem.IsWindows()` platform guard to satisfy CA1416 static analysis
+
+**Usage**:
+- Install as service: `sc.exe create NoMercyMediaServer binPath= "C:\path\to\NoMercyMediaServer.exe --service"`
+- Start service: `sc.exe start NoMercyMediaServer`
+- Stop service: `sc.exe stop NoMercyMediaServer`
+
+**Files created**:
+- `tests/NoMercy.Tests.Setup/WindowsServiceHostTests.cs` — 5 tests verifying flag parsing and default behavior
+
+**Files modified**:
+- `Directory.Packages.props` — Added `Microsoft.AspNetCore.Hosting.WindowsServices` package version
+- `src/NoMercy.Server/NoMercy.Server.csproj` — Added package reference + InternalsVisibleTo for tests
+- `src/NoMercy.Server/Program.cs` — Service mode detection, content root, RunAsService integration
+- `src/NoMercy.Server/StartupOptions.cs` — Added `--service` CLI option
+- `tests/NoMercy.Tests.Setup/NoMercy.Tests.Setup.csproj` — Added Server project reference
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: 150 encoder, 424 queue, 86 events, 27 setup (5 new), 218 repositories, 33 media processing, 347 API, 427 providers = 1,712 total, 0 failures.

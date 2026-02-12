@@ -26,6 +26,9 @@
     <PropertyGroup>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="NoMercy.Tests.Setup" />
+    </ItemGroup>
     <PropertyGroup>
         <TargetName>NoMercyMediaServer</TargetName>
         <AssemblyName>NoMercyMediaServer</AssemblyName>
@@ -51,6 +54,7 @@
         <PackageReference Include="I18N.DotNet" />
         <PackageReference Include="MediaBrowser.Model.Signed" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <PackageReference Include="Microsoft.AspNetCore.Hosting.WindowsServices" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" />
