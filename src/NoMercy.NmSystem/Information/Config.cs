@@ -47,6 +47,14 @@ public static class Config
         set => _externalServerPort = value;
     }
 
+    private static int? _managementPort = null;
+
+    public static int ManagementPort
+    {
+        get => _managementPort ?? 7627;
+        set => _managementPort = value;
+    }
+
     public static bool Swagger { get; set; } = true;
 
     public static bool Sentry { get; set; }

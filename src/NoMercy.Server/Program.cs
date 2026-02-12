@@ -174,7 +174,7 @@ public static class Program
         List<string> urls = [
             localhostIPv4Url.ToString()
         ];
-        
+
         if(Software.IsWindows || Software.IsMac)
             urls.Add(localhostIPv6Url.ToString());
 
@@ -185,7 +185,7 @@ public static class Program
                 services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
                 services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
                 services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
-                
+
                 // Configure host options with reduced shutdown timeout
                 services.Configure<HostOptions>(hostOptions =>
                 {
@@ -196,7 +196,20 @@ public static class Program
             {
                 logging.ClearProviders();
             })
-            .ConfigureKestrel(Certificate.KestrelConfig)
+            .ConfigureKestrel(kestrelOptions =>
+            {
+                Certificate.KestrelConfig(kestrelOptions);
+
+                // Management API — localhost-only, plain HTTP on separate port
+                kestrelOptions.Listen(IPAddress.Loopback, Config.ManagementPort, listenOptions =>
+                {
+                    listenOptions.Protocols =
+                        Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+                });
+
+                Logger.App(
+                    $"Management API listening on http://127.0.0.1:{Config.ManagementPort}");
+            })
             .UseUrls(urls.ToArray())
             .UseQuic()
             .UseSockets()

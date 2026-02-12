@@ -1,0 +1,245 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.DTOs.Management;
+using NoMercy.Api.Middleware;
+using NoMercy.Database;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.People;
+using NoMercy.Database.Models.Queue;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Database.Models.Users;
+using NoMercy.Helpers.Monitoring;
+using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Plugins.Abstractions;
+using NoMercy.Queue;
+using Microsoft.Extensions.Hosting;
+using Configuration = NoMercy.Database.Models.Common.Configuration;
+
+namespace NoMercy.Api.Controllers;
+
+[ApiController]
+[Route("manage")]
+[AllowAnonymous]
+[LocalhostOnly]
+[Tags("Management")]
+public class ManagementController(
+    IHostApplicationLifetime appLifetime,
+    MediaContext mediaContext,
+    QueueRunner queueRunner,
+    IPluginManager pluginManager) : ControllerBase
+{
+    [HttpGet("status")]
+    [ProducesResponseType(typeof(ManagementStatusDto), StatusCodes.Status200OK)]
+    public IActionResult GetStatus()
+    {
+        Configuration? serverNameConfig = mediaContext.Configuration
+            .FirstOrDefault(c => c.Key == "serverName");
+        string serverName = serverNameConfig?.Value ?? Environment.MachineName;
+
+        return Ok(new ManagementStatusDto
+        {
+            Status = Config.Started ? "running" : "starting",
+            ServerName = serverName,
+            Version = Software.GetReleaseVersion(),
+            Platform = Info.Platform,
+            Architecture = Info.Architecture,
+            Os = $"{Info.Platform} {Info.OsVersion}",
+            UptimeSeconds = (long)(DateTime.UtcNow - Info.StartTime).TotalSeconds,
+            StartTime = Info.StartTime,
+            IsDev = Config.IsDev
+        });
+    }
+
+    [HttpGet("logs")]
+    [ProducesResponseType(typeof(List<LogEntry>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetLogs([FromQuery] int tail = 100,
+        [FromQuery] string? types = null,
+        [FromQuery] string? levels = null)
+    {
+        string[]? typeFilter = types?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        string[]? levelFilter = levels?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        List<LogEntry> logs = await Logger.GetLogs(tail, entry =>
+        {
+            bool typeMatch = typeFilter is null || typeFilter.Length == 0 ||
+                             typeFilter.Any(t => string.Equals(t, entry.Type, StringComparison.OrdinalIgnoreCase));
+            bool levelMatch = levelFilter is null || levelFilter.Length == 0 ||
+                              levelFilter.Contains(entry.Level.ToString(), StringComparer.OrdinalIgnoreCase);
+
+            return typeMatch && levelMatch;
+        });
+
+        return Ok(logs);
+    }
+
+    [HttpPost("stop")]
+    public IActionResult Stop()
+    {
+        appLifetime.StopApplication();
+        return Ok(new { status = "ok", message = "Server is shutting down" });
+    }
+
+    [HttpPost("restart")]
+    public IActionResult Restart()
+    {
+        return Ok(new { status = "ok", message = "Restart is not yet implemented" });
+    }
+
+    [HttpGet("config")]
+    [ProducesResponseType(typeof(ManagementConfigDto), StatusCodes.Status200OK)]
+    public IActionResult GetConfig()
+    {
+        Configuration? serverNameConfig = mediaContext.Configuration
+            .FirstOrDefault(c => c.Key == "serverName");
+
+        return Ok(new ManagementConfigDto
+        {
+            InternalPort = Config.InternalServerPort,
+            ExternalPort = Config.ExternalServerPort,
+            ServerName = serverNameConfig?.Value ?? Environment.MachineName,
+            QueueWorkers = Config.QueueWorkers.Value,
+            EncoderWorkers = Config.EncoderWorkers.Value,
+            CronWorkers = Config.CronWorkers.Value,
+            DataWorkers = Config.DataWorkers.Value,
+            ImageWorkers = Config.ImageWorkers.Value,
+            RequestWorkers = Config.RequestWorkers.Value,
+            Swagger = Config.Swagger
+        });
+    }
+
+    [HttpPut("config")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateConfig([FromBody] ManagementConfigUpdateDto request)
+    {
+        if (request.QueueWorkers is not null)
+        {
+            Config.QueueWorkers = new(Config.QueueWorkers.Key, (int)request.QueueWorkers);
+            await queueRunner.SetWorkerCount(Config.QueueWorkers.Key, (int)request.QueueWorkers, null);
+        }
+
+        if (request.EncoderWorkers is not null)
+        {
+            Config.EncoderWorkers = new(Config.EncoderWorkers.Key, (int)request.EncoderWorkers);
+            await queueRunner.SetWorkerCount(Config.EncoderWorkers.Key, (int)request.EncoderWorkers, null);
+        }
+
+        if (request.CronWorkers is not null)
+        {
+            Config.CronWorkers = new(Config.CronWorkers.Key, (int)request.CronWorkers);
+            await queueRunner.SetWorkerCount(Config.CronWorkers.Key, (int)request.CronWorkers, null);
+        }
+
+        if (request.DataWorkers is not null)
+        {
+            Config.DataWorkers = new(Config.DataWorkers.Key, (int)request.DataWorkers);
+            await queueRunner.SetWorkerCount(Config.DataWorkers.Key, (int)request.DataWorkers, null);
+        }
+
+        if (request.ImageWorkers is not null)
+        {
+            Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
+            await queueRunner.SetWorkerCount(Config.ImageWorkers.Key, (int)request.ImageWorkers, null);
+        }
+
+        if (request.RequestWorkers is not null)
+        {
+            Config.RequestWorkers = new(Config.RequestWorkers.Key, (int)request.RequestWorkers);
+            await queueRunner.SetWorkerCount(Config.RequestWorkers.Key, (int)request.RequestWorkers, null);
+        }
+
+        if (request.ServerName is not null)
+        {
+            await mediaContext.Configuration.Upsert(new Configuration
+                {
+                    Key = "serverName",
+                    Value = request.ServerName
+                })
+                .On(e => e.Key)
+                .WhenMatched((_, n) => new Configuration
+                {
+                    Value = n.Value
+                })
+                .RunAsync();
+        }
+
+        return Ok(new { status = "ok", message = "Configuration updated" });
+    }
+
+    [HttpGet("plugins")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult GetPlugins()
+    {
+        IReadOnlyList<PluginInfo> plugins = pluginManager.GetInstalledPlugins();
+
+        return Ok(plugins.Select(p => new
+        {
+            id = p.Id,
+            name = p.Name,
+            description = p.Description,
+            version = p.Version.ToString(),
+            status = p.Status.ToString().ToLowerInvariant(),
+            author = p.Author,
+            project_url = p.ProjectUrl
+        }));
+    }
+
+    [HttpGet("queue")]
+    [ProducesResponseType(typeof(ManagementQueueStatusDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetQueueStatus()
+    {
+        await using QueueContext queueContext = new();
+
+        int pendingJobs = await queueContext.QueueJobs.CountAsync();
+        int failedJobs = await queueContext.FailedJobs.CountAsync();
+
+        IReadOnlyDictionary<string, Thread> activeThreads = queueRunner.GetActiveWorkerThreads();
+
+        Dictionary<string, ManagementWorkerStatusDto> workers = new();
+        foreach (IGrouping<string, KeyValuePair<string, Thread>> group in activeThreads
+                     .GroupBy(t => t.Key.Split('-')[0]))
+        {
+            workers[group.Key] = new ManagementWorkerStatusDto
+            {
+                ActiveThreads = group.Count()
+            };
+        }
+
+        return Ok(new ManagementQueueStatusDto
+        {
+            Workers = workers,
+            PendingJobs = pendingJobs,
+            FailedJobs = failedJobs
+        });
+    }
+
+    [HttpGet("resources")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult GetResources()
+    {
+        try
+        {
+            Resource? resource = ResourceMonitor.Monitor();
+            List<ResourceMonitorDto> storage = StorageMonitor.Main();
+
+            return Ok(new
+            {
+                cpu = resource.Cpu,
+                gpu = resource.Gpu,
+                memory = resource.Memory,
+                storage
+            });
+        }
+        catch (Exception e)
+        {
+            return StatusCode(500, new { status = "error", message = $"Resource monitor failed: {e.Message}" });
+        }
+    }
+}

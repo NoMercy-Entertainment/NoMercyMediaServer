@@ -3656,3 +3656,46 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `src/NoMercy.Queue.MediaServer/EfQueueContextAdapter.cs` — Fixed int→long cast in FindFailedJob
 
 **Test results**: Build succeeds with 0 errors. All tests pass with 0 failures across all test projects (424 queue tests, total ~2080+ tests).
+
+---
+
+## HEAD-03 — Create management API controller (localhost-only, separate port)
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created `ManagementController` at `/manage/` route with all specified endpoints:
+  - `GET /manage/status` — Server health, uptime, version, platform, architecture
+  - `GET /manage/logs?tail=100&types=app&levels=Error` — Recent log entries with filtering
+  - `POST /manage/stop` — Graceful shutdown via `IHostApplicationLifetime`
+  - `POST /manage/restart` — Restart endpoint (not yet implemented, returns status)
+  - `GET /manage/config` — Current configuration (ports, workers, server name)
+  - `PUT /manage/config` — Update configuration (worker counts, server name)
+  - `GET /manage/plugins` — Plugin status list
+  - `GET /manage/queue` — Queue status (worker threads, pending/failed job counts)
+  - `GET /manage/resources` — CPU, GPU, memory, storage monitoring
+- Created `LocalhostOnlyAttribute` authorization filter that blocks non-loopback IPs (primary security boundary is Kestrel binding to 127.0.0.1)
+- Added `Config.ManagementPort` (default: 7627) to `Config.cs`
+- Added `--management-port` CLI option to `StartupOptions`
+- Configured separate Kestrel listener on localhost-only, plain HTTP for management API in `Program.cs`
+- Created `ManagementStatusDto`, `ManagementConfigDto`, `ManagementConfigUpdateDto`, `ManagementQueueStatusDto`, `ManagementWorkerStatusDto` DTOs
+- Controller uses `[AllowAnonymous]` — no JWT auth required for local management (CLI/tray app access)
+- Controller uses `[LocalhostOnly]` — additional defense-in-depth beyond Kestrel listener binding
+
+**Tests added**:
+- `ManagementControllerTests` (9 tests): Status endpoint shape, logs with type/level filters, config get/put, plugins list, queue status, restart endpoint
+- `LocalhostOnlyAttributeTests` (4 tests): Loopback IPv4 allowed, IPv6 loopback allowed, remote IP blocked with 403, null IP allowed (IPC/test scenarios)
+
+**Files created**:
+- `src/NoMercy.Api/Controllers/ManagementController.cs`
+- `src/NoMercy.Api/Middleware/LocalhostOnlyAttribute.cs`
+- `src/NoMercy.Api/DTOs/Management/ManagementStatusDto.cs`
+- `tests/NoMercy.Tests.Api/ManagementControllerTests.cs`
+- `tests/NoMercy.Tests.Api/LocalhostOnlyAttributeTests.cs`
+
+**Files modified**:
+- `src/NoMercy.NmSystem/Information/Config.cs` — Added `ManagementPort` property
+- `src/NoMercy.Server/Program.cs` — Added Kestrel listener for management port (localhost, HTTP)
+- `src/NoMercy.Server/StartupOptions.cs` — Added `--management-port` CLI option
+
+**Test results**: Build succeeds with 0 errors. All tests pass with 0 failures across all test projects (337 API tests, 218 repository tests, 86 event tests, 33 media processing tests, 427 provider tests).

@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 7, item HEAD-03
+**Next up**: Phase 7, item HEAD-04
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -179,7 +179,7 @@ Details: [10-event-driven.md](prd/10-event-driven.md) | [11-plugin-system.md](pr
 ### Phase 7: Service & Desktop
 Details: [13-headless-server.md](prd/13-headless-server.md) | [14-server-setup.md](prd/14-server-setup.md)
 
-- [ ] HEAD-03 — Create management API
+- [x] HEAD-03 — Create management API
 - [ ] HEAD-04 — Implement IPC (named pipes)
 - [ ] HEAD-05 — Windows Service host
 - [ ] HEAD-06 — Verify macOS/Linux service
