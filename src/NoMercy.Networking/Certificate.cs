@@ -65,7 +65,9 @@ public static class Certificate
         return certificate.NotAfter >= DateTime.Now - TimeSpan.FromDays(30);
     }
 
-    public static async Task RenewSslCertificate(int maxRetries = 3, int delaySeconds = 5)
+    private static readonly int[] CertBackoffSeconds = [2, 5, 15, 30, 60];
+
+    public static async Task RenewSslCertificate(int maxRetries = 5)
     {
         bool hasExistingCert = File.Exists(AppFiles.CertFile);
         if (ValidateSslCertificate())
@@ -91,18 +93,19 @@ public static class Certificate
         for (int attempt = 1; attempt <= maxRetries; attempt++)
             try
             {
-                if (await FetchCertificate(maxRetries, delaySeconds, client, serverUrl, attempt, hasExistingCert))
+                if (await FetchCertificate(maxRetries, client, serverUrl, attempt, hasExistingCert))
                     return;
             }
             catch (HttpRequestException ex) when (attempt < maxRetries)
             {
+                int delay = CertBackoffSeconds[Math.Min(attempt - 1, CertBackoffSeconds.Length - 1)];
                 Logger.Certificate(
-                    $"Request failed: {ex.Message}, retrying in {delaySeconds} seconds (attempt {attempt}/{maxRetries})");
-                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                    $"Request failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})");
+                await Task.Delay(TimeSpan.FromSeconds(delay));
             }
     }
 
-    private static async Task<bool> FetchCertificate(int maxRetries, int delaySeconds, HttpClient client, string serverUrl,
+    private static async Task<bool> FetchCertificate(int maxRetries, HttpClient client, string serverUrl,
         int attempt, bool hasExistingCert)
     {
         using HttpResponseMessage response = await client.GetAsync(serverUrl);
@@ -111,7 +114,8 @@ public static class Certificate
             if (attempt == maxRetries)
                 throw new HttpRequestException("Max retries reached for certificate renewal");
 
-            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+            int delay = CertBackoffSeconds[Math.Min(attempt - 1, CertBackoffSeconds.Length - 1)];
+            await Task.Delay(TimeSpan.FromSeconds(delay));
             return false;
         }
 

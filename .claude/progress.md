@@ -4342,3 +4342,35 @@ Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with 
 - `.claude/PRD.md` — Marked SETUP-08 complete, updated Next up to SETUP-09
 
 **Test results**: Build succeeds with 0 errors. All 1,731 tests pass (177 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.
+
+---
+
+## SETUP-09 — Add retry logic to Register + Certificate
+
+**Date**: 2026-02-12
+
+**What was done**:
+
+1. **Added exponential backoff retry to `Register.Init()`** — Split `Init()` into `RegisterServer(maxRetries)` and `AssignServerWithRetry(maxRetries)`, each with independent retry loops using exponential backoff delays of [2, 5, 15, 30, 60] seconds. On the last attempt, exceptions propagate to the caller. On earlier attempts, transient failures are logged at Warning level and retried after the appropriate delay.
+
+2. **Upgraded `Certificate.RenewSslCertificate()` to use exponential backoff** — Replaced the fixed 5-second delay with the same [2, 5, 15, 30, 60] second exponential backoff array (`CertBackoffSeconds`). Increased default `maxRetries` from 3 to 5. Updated the `FetchCertificate` method signature to remove the now-unused `delaySeconds` parameter. Gateway timeout handling inside `FetchCertificate` also uses exponential backoff.
+
+3. **Created `RegisterRetryTests.cs`** — 8 tests covering retry behavior:
+   - `Retry_SucceedsOnFirstAttempt_NoRetry` — verifies no retry when first attempt succeeds
+   - `Retry_FailsThenSucceeds_RetriesCorrectly` — verifies retry count when failures precede success
+   - `Retry_ExhaustsAllRetries_ThrowsOnLastAttempt` — verifies exception propagation after max retries
+   - `BackoffSeconds_AreExponentiallyIncreasing` — verifies backoff array is strictly increasing
+   - `BackoffSeconds_AreClampedToLastValue` — verifies index clamping for attempts beyond array length
+   - `BackoffSeconds_FirstValueIsSmall` — verifies fast initial retry (<=5s)
+   - `BackoffSeconds_LastValueIsCapped` — verifies max backoff cap (<=120s)
+   - `Retry_DelaysIncreaseBetweenAttempts` — verifies actual delay values match expected backoff
+   - `Retry_NonRetryableException_PropagatesImmediately` — verifies no retry with maxRetries=1
+
+**Files modified**:
+- `src/NoMercy.Setup/Register.cs` — Added exponential backoff retry loops to RegisterServer and AssignServerWithRetry
+- `src/NoMercy.Networking/Certificate.cs` — Upgraded from fixed delay to exponential backoff, increased default maxRetries to 5
+- `tests/NoMercy.Tests.Setup/RegisterRetryTests.cs` — New: 8 tests for retry/backoff behavior
+- `.claude/PRD.md` — Marked SETUP-09 complete, updated Next up to SETUP-11
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All 2,262 tests pass (186 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers, 157 Plugins, 143 Database, 16 Networking, 29 Cli, 27 Tray, 150 Encoder) = 0 failures.

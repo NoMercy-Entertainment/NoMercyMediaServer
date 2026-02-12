@@ -43,26 +43,66 @@ public static class Register
         return serverData;
     }
 
-    public static async Task Init()
+    private const int DefaultMaxRetries = 5;
+    private static readonly int[] BackoffSeconds = [2, 5, 15, 30, 60];
+
+    public static async Task Init(int maxRetries = DefaultMaxRetries)
     {
-        Dictionary<string, string> serverData = GetServerInfo();
-        
+        await RegisterServer(maxRetries);
+        await AssignServerWithRetry(maxRetries);
+        await Certificate.RenewSslCertificate();
+    }
+
+    private static async Task RegisterServer(int maxRetries)
+    {
         Logger.Register("Registering Server, this takes a moment...");
 
-        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
-        string response =
-            await authClient.SendAndReadAsync(HttpMethod.Post, "register", new FormUrlEncodedContent(serverData));
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                Dictionary<string, string> serverData = GetServerInfo();
+                GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+                authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+                string response = await authClient.SendAndReadAsync(
+                    HttpMethod.Post, "register", new FormUrlEncodedContent(serverData));
 
-        object? data = JsonConvert.DeserializeObject(response);
+                object? data = JsonConvert.DeserializeObject(response);
+                if (data == null)
+                    throw new InvalidOperationException("Failed to register Server — empty response");
 
-        if (data == null) throw new("Failed to register Server");
+                Logger.Register("Server registered successfully");
+                return;
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
+                Logger.Register(
+                    $"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning);
+                await Task.Delay(TimeSpan.FromSeconds(delay));
+            }
+        }
+    }
 
-        Logger.Register("Server registered successfully");
-
-        await AssignServer();
-        
-        await Certificate.RenewSslCertificate();
+    private static async Task AssignServerWithRetry(int maxRetries)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                await AssignServer();
+                return;
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
+                Logger.Register(
+                    $"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning);
+                await Task.Delay(TimeSpan.FromSeconds(delay));
+            }
+        }
     }
 
     private static async Task AssignServer()
