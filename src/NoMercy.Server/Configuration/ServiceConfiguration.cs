@@ -238,8 +238,9 @@ public static class ServiceConfiguration
         });
         services.AddCronWorker();
 
-        // Register Event Bus
-        InMemoryEventBus eventBus = new();
+        // Register Event Bus with audit logging
+        InMemoryEventBus innerBus = new();
+        LoggingEventBusDecorator eventBus = new(innerBus, message => Logger.App(message));
         services.AddSingleton<IEventBus>(eventBus);
         EventBusProvider.Configure(eventBus);
 

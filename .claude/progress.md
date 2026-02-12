@@ -2925,3 +2925,43 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
 - `EncodingHandler_OnEncodingProgress_DoesNotThrow` — verifies direct handler method invocation
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (72), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427), Database (143), Encoder (150), Networking (16), Setup (22).
+
+---
+
+## EVT-10 — Add event logging/audit middleware
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created `LoggingEventBusDecorator` in `src/NoMercy.Events/LoggingEventBusDecorator.cs` — a decorator that wraps any `IEventBus` implementation and logs every published event before delegating to the inner bus
+  - Logs event type name, source, event ID, and timestamp in ISO 8601 format for each event
+  - Logging callback is injected via `Action<string>` to keep the Events project free of dependencies on specific logging frameworks
+  - Subscribe calls are passed through to the inner bus unchanged
+  - Guards against null constructor arguments
+- Updated `ServiceConfiguration.ConfigureCoreServices()` to wrap `InMemoryEventBus` with `LoggingEventBusDecorator` using `Logger.App` as the logging callback
+  - All events published through the bus are now automatically logged as audit trail entries
+
+**Files created**:
+- `src/NoMercy.Events/LoggingEventBusDecorator.cs`
+- `tests/NoMercy.Tests.Events/LoggingEventBusDecoratorTests.cs`
+
+**Files modified**:
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — wrap event bus with logging decorator
+
+**Tests added** (14 tests in `LoggingEventBusDecoratorTests.cs`):
+- `PublishAsync_LogsEventTypeName` — verifies event type name appears in log
+- `PublishAsync_LogsEventSource` — verifies Source field appears in log
+- `PublishAsync_LogsEventId` — verifies EventId appears in log
+- `PublishAsync_LogsTimestamp` — verifies Timestamp appears in log
+- `PublishAsync_DelegatesSubscribersToInnerBus` — verifies subscribers still receive events
+- `PublishAsync_LogsEachEventSeparately` — verifies one log per event
+- `PublishAsync_LogsDifferentEventTypes` — verifies playback, encoding, and library events all logged correctly
+- `Subscribe_ReturnsDisposable_UnsubscribesOnDispose` — verifies unsubscribe works through decorator
+- `Subscribe_WithEventHandler_DelegatesToInner` — verifies IEventHandler interface subscriptions work
+- `Constructor_NullInner_Throws` — verifies null guard
+- `Constructor_NullLog_Throws` — verifies null guard
+- `PublishAsync_LogsBeforeHandlersRun` — verifies logging happens before handler execution
+- `PublishAsync_PropagatesCancellation` — verifies cancellation is not swallowed
+- `PublishAsync_AllDomainEvents_AreLogged` — verifies all 11 domain event types produce audit log entries
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (86), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427).
