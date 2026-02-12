@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;

@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using NoMercy.Queue;
-using NoMercy.Queue.Core.Interfaces;
 using NoMercy.Queue.Core.Models;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;

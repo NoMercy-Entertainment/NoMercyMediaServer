@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Tests.Database;
 

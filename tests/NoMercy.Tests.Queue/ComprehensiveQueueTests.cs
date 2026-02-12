@@ -1,10 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Queue;
 using NoMercy.Queue.Core.Interfaces;
 using NoMercy.Queue.Core.Models;
-using NoMercy.Queue.MediaServer;
 using NoMercy.Queue.Sqlite;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;

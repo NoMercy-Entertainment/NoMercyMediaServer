@@ -1,5 +1,4 @@
 using NoMercy.Providers.Helpers;
-using Xunit;
 
 namespace NoMercy.Tests.Providers.Helpers;
 

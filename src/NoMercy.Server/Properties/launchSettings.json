@@ -2,7 +2,7 @@
   "profiles": {
     "https": {
       "commandName": "Project",
-      "commandLineArgs": "--dev --loglevel=verbose --sentry --dsn=https://863b98b35784fbe584f2bac35d30c296@o4509253570592768.ingest.de.sentry.io/4509254211534928",
+      "commandLineArgs": "--dev --loglevel=verbose",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

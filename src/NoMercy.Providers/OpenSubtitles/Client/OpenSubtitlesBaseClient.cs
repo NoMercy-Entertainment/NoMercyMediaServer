@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using HttpClient = System.Net.Http.HttpClient;

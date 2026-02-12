@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Text.RegularExpressions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Queue;

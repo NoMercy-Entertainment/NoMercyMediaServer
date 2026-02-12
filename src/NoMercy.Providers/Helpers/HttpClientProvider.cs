@@ -1,5 +1,3 @@
-using System.Net.Http;
-
 namespace NoMercy.Providers.Helpers;
 
 public static class HttpClientProvider

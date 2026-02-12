@@ -1,6 +1,5 @@
 using System.Text.Json;
 using FluentAssertions;
-using NoMercy.Plugins.Abstractions;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;

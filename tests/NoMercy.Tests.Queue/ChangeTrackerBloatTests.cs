@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Queue;

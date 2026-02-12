@@ -7,8 +7,6 @@ using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting.WindowsServices;
-using Microsoft.Extensions.Hosting.Systemd;
-using NoMercy.MediaProcessing.Files;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;

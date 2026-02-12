@@ -4,11 +4,9 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Library;
-using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
-using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Libraries;
 

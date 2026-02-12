@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Reflection.Emit;
 using NoMercy.Providers.AcoustId.Client;
 
 namespace NoMercy.Tests.Providers.AcoustId.Client;

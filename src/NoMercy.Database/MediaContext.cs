@@ -2,7 +2,6 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Database;

@@ -2,9 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Avalonia.Platform.Storage;
 using NoMercy.Tray.Services;
-using NoMercy.Tray.ViewModels;
 
 namespace NoMercy.Tray;
 
