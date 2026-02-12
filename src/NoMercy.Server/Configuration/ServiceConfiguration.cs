@@ -41,6 +41,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Events;
+using NoMercy.Plugins;
 using NoMercy.Queue;
 using NoMercy.Queue.Extensions;
 using NoMercy.Queue.Jobs;
@@ -303,6 +304,8 @@ public static class ServiceConfiguration
         services.AddSingleton<JobQueue>();
         services.AddSingleton<JobDispatcher>();
         services.AddSingleton<MediaProcessing.Jobs.JobDispatcher>();
+
+        services.AddPluginSystem(AppFiles.PluginsPath);
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();

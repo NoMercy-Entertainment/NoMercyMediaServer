@@ -426,7 +426,7 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     // =========================================================================
 
     [Fact]
-    public async Task Plugins_Index_ReturnsStatusResponse()
+    public async Task Plugins_Index_ReturnsDataResponse()
     {
         HttpResponseMessage response = await _client.GetAsync(
             "/api/v1/dashboard/plugins");
@@ -437,7 +437,7 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
             $"Expected OK, got {(int)response.StatusCode}: {body}");
 
         JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "status");
+        AssertJsonHasProperty(json.RootElement, "data");
     }
 
     [Fact]

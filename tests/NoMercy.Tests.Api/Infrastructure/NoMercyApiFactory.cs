@@ -23,6 +23,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
+using NoMercy.Plugins.Abstractions;
 using NoMercy.Server;
 
 namespace NoMercy.Tests.Api.Infrastructure;
@@ -52,6 +53,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         {
             RemoveHostedServices(services);
             ReplaceAuth(services);
+            ReplacePluginManager(services);
         });
     }
 
@@ -463,6 +465,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             services.Remove(descriptor);
     }
 
+    private static void ReplacePluginManager(IServiceCollection services)
+    {
+        services.RemoveAll<IPluginManager>();
+        services.AddSingleton<IPluginManager>(new StubPluginManager());
+    }
+
     private static void ReplaceAuth(IServiceCollection services)
     {
         services.RemoveAll<IAuthenticationSchemeProvider>();
@@ -488,5 +496,14 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             sunsetPolicy = default!;
             return false;
         }
+    }
+
+    private sealed class StubPluginManager : IPluginManager
+    {
+        public IReadOnlyList<PluginInfo> GetInstalledPlugins() => Array.Empty<PluginInfo>();
+        public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) => Task.CompletedTask;
+        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

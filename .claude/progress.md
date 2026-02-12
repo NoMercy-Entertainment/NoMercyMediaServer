@@ -3293,3 +3293,33 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
   - `Constructor_LoadsPersistedRepositories`
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 144 plugin tests pass. Full test suite: 0 failures across all projects.
+
+---
+
+## PLG-08 — Plugin management API
+
+**What was done**: Implemented real plugin management API endpoints in `PluginController`, replacing the placeholder implementation with functional endpoints backed by `IPluginManager`.
+
+**Files changed**:
+- `src/NoMercy.Api/Controllers/V1/Dashboard/PluginController.cs` — Rewrote with real plugin management endpoints:
+  - `GET /api/v1/dashboard/plugins` — Lists all installed plugins via `DataResponseDto<IEnumerable<PluginInfoDto>>`
+  - `GET /api/v1/dashboard/plugins/{id:guid}` — Shows a single plugin by ID
+  - `POST /api/v1/dashboard/plugins/{id:guid}/enable` — Enables a plugin
+  - `POST /api/v1/dashboard/plugins/{id:guid}/disable` — Disables a plugin
+  - `DELETE /api/v1/dashboard/plugins/{id:guid}` — Uninstalls a plugin
+  - Existing credentials endpoints preserved unchanged
+  - Added `PluginInfoDto` record for response mapping from `PluginInfo`
+- `src/NoMercy.Api/NoMercy.Api.csproj` — Added `ProjectReference` to `NoMercy.Plugins.Abstractions`
+- `src/NoMercy.Server/NoMercy.Server.csproj` — Added `ProjectReference` to `NoMercy.Plugins`
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — Added `services.AddPluginSystem(AppFiles.PluginsPath)` to `ConfigureCoreServices()` to register `IPluginManager` in the server DI container
+- `tests/NoMercy.Tests.Api/Infrastructure/NoMercyApiFactory.cs` — Added `StubPluginManager` implementation and `ReplacePluginManager()` method to provide a test-safe `IPluginManager` in the test factory
+- `tests/NoMercy.Tests.Api/DashboardEndpointSnapshotTests.cs` — Updated `Plugins_Index_ReturnsStatusResponse` → `Plugins_Index_ReturnsDataResponse` to check for `"data"` property (matching the new `DataResponseDto` response shape)
+
+**Design decisions**:
+- Used `IPluginManager` interface via constructor injection (primary constructor pattern)
+- All endpoints require owner authorization via `User.IsOwner()` check
+- Enable/Disable/Uninstall catch `InvalidOperationException` from `PluginManager` and return `NotFoundResponse`
+- Response shapes follow existing codebase conventions: `DataResponseDto<T>` for data, `StatusResponseDto<string>` for status messages
+- `PluginInfoDto` maps `PluginInfo.Version` (Version type) to string and `PluginInfo.Status` (enum) to lowercase string for JSON serialization
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. Full test suite: 1,855 tests pass with 0 failures across all 11 test projects.

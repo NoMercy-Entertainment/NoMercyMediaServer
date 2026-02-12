@@ -6,6 +6,7 @@ using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
+using NoMercy.Plugins.Abstractions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -14,7 +15,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/plugins", Order = 10)]
-public class PluginController : BaseController
+public class PluginController(IPluginManager pluginManager) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -22,13 +23,94 @@ public class PluginController : BaseController
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to view plugins");
 
-        // AniDBAnimeItem randomAnime = await AniDbRandomAnime.GetRandomAnime();
+        IReadOnlyList<PluginInfo> plugins = pluginManager.GetInstalledPlugins();
 
-        return Ok(new StatusResponseDto<string>
+        return Ok(new DataResponseDto<IEnumerable<PluginInfoDto>>
         {
-            Status = "ok",
-            Message = "Plugins loaded successfully"
+            Data = plugins.Select(p => new PluginInfoDto(p))
         });
+    }
+
+    [HttpGet("{id:guid}")]
+    public IActionResult Show(Guid id)
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("You do not have permission to view plugins");
+
+        PluginInfo? plugin = pluginManager.GetInstalledPlugins().FirstOrDefault(p => p.Id == id);
+        if (plugin is null)
+            return NotFoundResponse("Plugin not found");
+
+        return Ok(new DataResponseDto<PluginInfoDto>
+        {
+            Data = new PluginInfoDto(plugin)
+        });
+    }
+
+    [HttpPost("{id:guid}/enable")]
+    public async Task<IActionResult> Enable(Guid id)
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("You do not have permission to manage plugins");
+
+        try
+        {
+            await pluginManager.EnablePluginAsync(id);
+
+            return Ok(new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Plugin enabled successfully"
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFoundResponse(ex.Message);
+        }
+    }
+
+    [HttpPost("{id:guid}/disable")]
+    public async Task<IActionResult> Disable(Guid id)
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("You do not have permission to manage plugins");
+
+        try
+        {
+            await pluginManager.DisablePluginAsync(id);
+
+            return Ok(new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Plugin disabled successfully"
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFoundResponse(ex.Message);
+        }
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Uninstall(Guid id)
+    {
+        if (!User.IsOwner())
+            return UnauthorizedResponse("You do not have permission to manage plugins");
+
+        try
+        {
+            await pluginManager.UninstallPluginAsync(id);
+
+            return Ok(new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Plugin uninstalled successfully"
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFoundResponse(ex.Message);
+        }
     }
 
     [HttpGet]
@@ -73,5 +155,31 @@ public class PluginController : BaseController
             Message = "Credentials set successfully for {0}",
             Args = [requestDto.Key]
         });
+    }
+}
+
+public record PluginInfoDto
+{
+    [Newtonsoft.Json.JsonProperty("id")] public Guid Id { get; init; }
+    [Newtonsoft.Json.JsonProperty("name")] public string Name { get; init; } = null!;
+    [Newtonsoft.Json.JsonProperty("description")] public string Description { get; init; } = null!;
+    [Newtonsoft.Json.JsonProperty("version")] public string Version { get; init; } = null!;
+    [Newtonsoft.Json.JsonProperty("status")] public string Status { get; init; } = null!;
+    [Newtonsoft.Json.JsonProperty("author")] public string? Author { get; init; }
+    [Newtonsoft.Json.JsonProperty("project_url")] public string? ProjectUrl { get; init; }
+
+    public PluginInfoDto()
+    {
+    }
+
+    public PluginInfoDto(PluginInfo info)
+    {
+        Id = info.Id;
+        Name = info.Name;
+        Description = info.Description;
+        Version = info.Version.ToString();
+        Status = info.Status.ToString().ToLowerInvariant();
+        Author = info.Author;
+        ProjectUrl = info.ProjectUrl;
     }
 }
