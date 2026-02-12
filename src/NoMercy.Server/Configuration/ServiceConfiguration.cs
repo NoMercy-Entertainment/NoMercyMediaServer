@@ -41,6 +41,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Events;
+using NoMercy.Events.Audit;
 using NoMercy.Plugins;
 using NoMercy.Queue;
 using NoMercy.Queue.Extensions;
@@ -240,10 +241,19 @@ public static class ServiceConfiguration
         });
         services.AddCronWorker();
 
-        // Register Event Bus with audit logging
+        // Register Event Bus with audit logging and event audit trail
         InMemoryEventBus innerBus = new();
-        LoggingEventBusDecorator eventBus = new(innerBus, message => Logger.App(message));
+        LoggingEventBusDecorator loggingBus = new(innerBus, message => Logger.App(message));
+        EventAuditLog auditLog = new(new EventAuditOptions
+        {
+            Enabled = true,
+            MaxEntries = 10_000,
+            CompactionPercentage = 0.25,
+            ExcludedEventTypes = ["EncodingProgressEvent", "PlaybackProgressEvent"]
+        });
+        AuditingEventBusDecorator eventBus = new(loggingBus, auditLog);
         services.AddSingleton<IEventBus>(eventBus);
+        services.AddSingleton(auditLog);
         EventBusProvider.Configure(eventBus);
 
         // Add Singleton Services
