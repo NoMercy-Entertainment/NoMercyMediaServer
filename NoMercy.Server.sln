@@ -63,6 +63,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Plugins.Abstraction
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tests.Plugins", "tests\NoMercy.Tests.Plugins\NoMercy.Tests.Plugins.csproj", "{824479DA-084F-4847-8D12-ED9F87C48032}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Plugins", "src\NoMercy.Plugins\NoMercy.Plugins.csproj", "{370DD02C-CE94-466D-917F-2FCD3A47C5D5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -409,6 +411,18 @@ Global
 		{824479DA-084F-4847-8D12-ED9F87C48032}.Release|x64.Build.0 = Release|Any CPU
 		{824479DA-084F-4847-8D12-ED9F87C48032}.Release|x86.ActiveCfg = Release|Any CPU
 		{824479DA-084F-4847-8D12-ED9F87C48032}.Release|x86.Build.0 = Release|Any CPU
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Debug|x64.ActiveCfg = Debug|x64
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Debug|x64.Build.0 = Debug|x64
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Debug|x86.ActiveCfg = Debug|x86
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Debug|x86.Build.0 = Debug|x86
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Release|x64.ActiveCfg = Release|x64
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Release|x64.Build.0 = Release|x64
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Release|x86.ActiveCfg = Release|x86
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -442,6 +456,7 @@ Global
 		{7D954187-86C1-4655-BF8C-DAF676F4EFA8} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
 		{DB164453-BA4F-4E2D-8939-7CD99BBB8AA5} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
 		{824479DA-084F-4847-8D12-ED9F87C48032} = {B47BA810-1BCE-4546-B287-A9CE965B1F87}
+		{370DD02C-CE94-466D-917F-2FCD3A47C5D5} = {1A749650-7DB2-4431-93FB-EF950256BC5B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {22D7A0A2-2627-4892-8844-22A1F8DFF0C3}

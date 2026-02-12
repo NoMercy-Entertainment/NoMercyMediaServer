@@ -3038,3 +3038,71 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
 - `Plugin_CanSubscribeToEventsViaContext` — verifies event bus integration via plugin context
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 20 plugin tests pass.
+
+---
+
+## PLG-02 — Implement PluginManager with AssemblyLoadContext loading
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Created new class library project `src/NoMercy.Plugins/` targeting `net9.0`
+- Added project to solution under `Src` folder
+- Implemented `PluginLoadContext` — a collectible `AssemblyLoadContext` subclass for isolated plugin assembly loading
+  - Resolves assembly and unmanaged DLL dependencies via `AssemblyDependencyResolver`
+  - Marked `isCollectible: true` to enable unloading when plugins are disabled/uninstalled
+- Implemented `PluginContext` — concrete `IPluginContext` providing `IEventBus`, `IServiceProvider`, `ILogger`, and per-plugin data folder path to plugins
+  - All constructor arguments validated with null guards
+- Implemented `PluginManager` — the core `IPluginManager` implementation with:
+  - `ConcurrentDictionary<Guid, LoadedPlugin>` for thread-safe plugin tracking
+  - `LoadPluginsFromDirectoryAsync()` — scans plugin directory for DLLs, skips `configurations/` and `data/` subdirectories
+  - `LoadPluginAssemblyAsync()` — loads a DLL in an isolated `PluginLoadContext`, reflects for `IPlugin` implementations, creates instances, initializes with context, publishes `PluginLoadedEvent`
+  - `InstallPluginAsync()` — copies assembly to plugins directory, then loads it
+  - `EnablePluginAsync()` — re-initializes a disabled plugin, publishes `PluginLoadedEvent` on success or `PluginErrorEvent` on failure (sets `Malfunctioned` status)
+  - `DisablePluginAsync()` — disposes plugin instance, sets `Disabled` status
+  - `UninstallPluginAsync()` — disposes instance, unloads `AssemblyLoadContext`, removes plugin directory, sets `Deleted` status
+  - `GetPluginInstance()` — retrieves a specific plugin instance by GUID
+  - `GetPluginsOfType<T>()` — returns all active plugins implementing a specific interface (e.g., `IMetadataPlugin`)
+  - Error handling: catches `ReflectionTypeLoadException` for missing dependencies, publishes `PluginErrorEvent`, unloads context on failure
+  - Implements `IDisposable` — disposes all instances and unloads all contexts
+
+**Files created**:
+- `src/NoMercy.Plugins/NoMercy.Plugins.csproj`
+- `src/NoMercy.Plugins/PluginLoadContext.cs`
+- `src/NoMercy.Plugins/PluginContext.cs`
+- `src/NoMercy.Plugins/PluginManager.cs`
+- `tests/NoMercy.Tests.Plugins/PluginManagerTests.cs`
+
+**Files modified**:
+- `NoMercy.Server.sln` — added `NoMercy.Plugins` project
+- `tests/NoMercy.Tests.Plugins/NoMercy.Tests.Plugins.csproj` — added `NoMercy.Plugins` project reference
+
+**Tests added** (26 tests in `PluginManagerTests.cs`):
+- `Constructor_NullEventBus_Throws` — verifies null guard
+- `Constructor_NullServiceProvider_Throws` — verifies null guard
+- `Constructor_NullLogger_Throws` — verifies null guard
+- `Constructor_NullPluginsPath_Throws` — verifies null guard
+- `GetInstalledPlugins_NoPluginsLoaded_ReturnsEmptyList` — verifies empty state
+- `InstallPluginAsync_FileNotFound_ThrowsFileNotFoundException` — verifies missing file handling
+- `InstallPluginAsync_NullPath_ThrowsArgumentException` — verifies null guard
+- `InstallPluginAsync_EmptyPath_ThrowsArgumentException` — verifies empty string guard
+- `EnablePluginAsync_UnknownPluginId_ThrowsInvalidOperation` — verifies unknown ID handling
+- `DisablePluginAsync_UnknownPluginId_ThrowsInvalidOperation` — verifies unknown ID handling
+- `UninstallPluginAsync_UnknownPluginId_ThrowsInvalidOperation` — verifies unknown ID handling
+- `LoadPluginsFromDirectoryAsync_EmptyDirectory_LoadsNothing` — verifies empty dir handling
+- `LoadPluginsFromDirectoryAsync_NonExistentDirectory_DoesNotThrow` — verifies graceful handling
+- `LoadPluginsFromDirectoryAsync_SkipsConfigurationsAndDataDirs` — verifies directory filtering
+- `LoadPluginAssemblyAsync_InvalidDll_PublishesErrorEvent` — verifies error event on bad assembly
+- `LoadPluginAssemblyAsync_InvalidDll_UnloadsContext` — verifies context cleanup on failure
+- `GetPluginInstance_UnknownId_ReturnsNull` — verifies null return for missing plugin
+- `GetPluginsOfType_NoPlugins_ReturnsEmpty` — verifies empty typed query
+- `Dispose_MultipleTimes_DoesNotThrow` — verifies safe double-dispose
+- `PluginLoadContext_IsCollectible` — verifies AssemblyLoadContext is collectible
+- `PluginContext_StoresAllProperties` — verifies all properties stored correctly
+- `PluginContext_NullEventBus_Throws` — verifies null guard
+- `PluginContext_NullServices_Throws` — verifies null guard
+- `PluginContext_NullLogger_Throws` — verifies null guard
+- `PluginContext_NullDataFolder_Throws` — verifies null guard
+- `GetInstalledPlugins_ReturnsReadOnlyList` — verifies return type
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All 46 plugin tests pass (20 abstractions + 26 manager).
