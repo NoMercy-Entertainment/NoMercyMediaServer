@@ -18,6 +18,9 @@ namespace NoMercy.Data.Jobs;
 [Serializable]
 public class StorageJob : IShouldQueue
 {
+    public string QueueName => "data";
+    public int Priority => 1000;
+
     public List<StorageDto> Storage { get; set; } = [];
 
     public StorageJob()

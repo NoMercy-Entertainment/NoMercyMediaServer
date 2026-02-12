@@ -20,6 +20,9 @@ namespace NoMercy.Data.Jobs;
 [Serializable]
 public class FindMediaFilesJob : IShouldQueue
 {
+    public string QueueName => "queue";
+    public int Priority => 5;
+
     public int Id { get; set; }
     public Library? Library { get; set; }
 

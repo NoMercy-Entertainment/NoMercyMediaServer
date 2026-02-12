@@ -1,14 +1,26 @@
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Queue.Core.Interfaces;
 using NoMercy.Queue.Core.Models;
 using Serilog.Events;
+using CoreIShouldQueue = NoMercy.Queue.Core.Interfaces.IShouldQueue;
 
 namespace NoMercy.Queue;
 
-public class JobDispatcher
+public class JobDispatcher : IJobDispatcher
 {
-    private static readonly JobQueue Queue = new(new EfQueueContextAdapter(new()));
+    private readonly JobQueue _queue;
 
-    public static void Dispatch(IShouldQueue job, string onQueue = "default", int priority = 0)
+    public JobDispatcher(JobQueue queue)
+    {
+        _queue = queue;
+    }
+
+    public void Dispatch(CoreIShouldQueue job)
+    {
+        Dispatch(job, job.QueueName, job.Priority);
+    }
+
+    public void Dispatch(CoreIShouldQueue job, string onQueue, int priority)
     {
         QueueJobModel jobData = new()
         {
@@ -20,7 +32,7 @@ public class JobDispatcher
 
         try
         {
-            Queue.Enqueue(jobData);
+            _queue.Enqueue(jobData);
         }
         catch (Exception e)
         {

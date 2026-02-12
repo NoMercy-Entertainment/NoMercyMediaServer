@@ -7,6 +7,9 @@ namespace NoMercy.Data.Jobs;
 [Serializable]
 public class MusicColorPaletteJob : IShouldQueue
 {
+    public string QueueName => "image";
+    public int Priority => 1;
+
     public string? Id { get; set; }
     public string? Model { get; set; }
     public string? FilePath { get; set; }

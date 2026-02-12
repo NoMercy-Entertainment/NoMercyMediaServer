@@ -23,6 +23,9 @@ namespace NoMercy.Data.Jobs;
 [Serializable]
 public class FanArtImagesJob : IShouldQueue
 {
+    public string QueueName => "image";
+    public int Priority => 2;
+
     public MusicBrainzArtist? MusicBrainzArtist { get; set; }
     public MusicBrainzReleaseAppends? MusicBrainzRelease { get; set; }
 

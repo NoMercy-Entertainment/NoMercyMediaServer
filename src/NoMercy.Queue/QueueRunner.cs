@@ -26,6 +26,7 @@ public static class QueueRunner
 
     private static volatile bool _isInitialized;
     private static readonly JobQueue JobQueue = new(new EfQueueContextAdapter(new()));
+    public static readonly JobDispatcher Dispatcher = new(JobQueue);
     private static volatile bool _isUpdating;
 
     private static readonly ConcurrentDictionary<string, Thread> ActiveWorkerThreads = new();

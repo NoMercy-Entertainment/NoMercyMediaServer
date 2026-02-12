@@ -3447,3 +3447,50 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - DI registers `IQueueContext` as singleton wrapping a single `QueueContext` instance, consistent with the existing queue's single-writer model
 
 **Test results**: Build succeeds with 0 errors. All 1,890 tests pass with 0 failures across all 11 test projects.
+
+---
+
+## QDC-06 — Refactor JobDispatcher from static to instance class
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Refactored `NoMercy.Queue.JobDispatcher` from a static class with a static `Dispatch()` method to an instance class accepting `JobQueue` via constructor, implementing the new `IJobDispatcher` interface
+- Created `IJobDispatcher` interface in `NoMercy.Queue.Core.Interfaces` with two methods: `Dispatch(IShouldQueue job)` (extracts queue/priority from job) and `Dispatch(IShouldQueue job, string onQueue, int priority)` (explicit override)
+- Unified the two `IShouldQueue` interfaces: the old `NoMercy.Queue.IShouldQueue` (only `Handle()`) now extends `NoMercy.Queue.Core.Interfaces.IShouldQueue` (which has `QueueName`, `Priority`, `Handle()`), preserving backward compatibility for all existing consumers
+- Added `QueueName` and `Priority` properties to all 6 `NoMercy.Data.Jobs` classes (`MusicJob`, `CoverArtImageJob`, `FanArtImagesJob`, `StorageJob`, `FindMediaFilesJob`, `MusicColorPaletteJob`) and to `FailingJob` in Queue project
+- Added `QueueName` and `Priority` to test jobs (`TestJob`, `AnotherTestJob`)
+- Exposed `QueueRunner.Dispatcher` as a shared `JobDispatcher` instance backed by the same `JobQueue` that workers use (eliminates the duplicate static `JobQueue` that `JobDispatcher` previously maintained)
+- Updated `MediaProcessing.Jobs.JobDispatcher` (16 overloads) to delegate to `QueueRunner.Dispatcher.Dispatch(job)` instead of the old static `Queue.JobDispatcher.Dispatch(job, queue, priority)`, using the simplified single-argument dispatch
+- Updated all direct call sites in `MusicLogic.cs` (4 calls) and `LibraryLogic.cs` (1 call) to use `QueueRunner.Dispatcher.Dispatch(job)` instead of the old static `JobDispatcher.Dispatch(job, queue, priority)`
+- Created `TestQueueContextAdapter` — a pure in-memory `IQueueContext` implementation for unit testing without any database dependency
+- Rewrote and expanded `JobDispatcherTests` with 9 tests that exercise the actual `JobDispatcher` instance (previously only tested serialization because the static class was untestable):
+  - Serialization roundtrip tests (preserved from original)
+  - `Dispatch_EnqueuesJobWithCorrectQueueAndPriority` — verifies job's QueueName/Priority flow through
+  - `Dispatch_WithExplicitQueueAndPriority_OverridesJobDefaults` — verifies the override method works
+  - `Dispatch_UsesJobQueueNameAndPriority` — verifies a custom job with non-default queue/priority
+  - `Dispatch_DeserializedPayloadMatchesOriginalJob` — full roundtrip including all properties
+  - `Dispatch_MultipleJobs_AllEnqueued` — multiple different jobs all enqueued
+  - `Dispatch_DuplicateJob_NotEnqueued` — deduplication via payload matching
+  - `JobDispatcher_ImplementsIJobDispatcher` — interface contract verification
+
+**Files changed**:
+- `src/NoMercy.Queue.Core/Interfaces/IJobDispatcher.cs` — New: `IJobDispatcher` interface
+- `src/NoMercy.Queue/IShouldQueue.cs` — Changed: now extends `NoMercy.Queue.Core.Interfaces.IShouldQueue`
+- `src/NoMercy.Queue/JobDispatcher.cs` — Changed: static → instance class with `JobQueue` constructor, implements `IJobDispatcher`
+- `src/NoMercy.Queue/QueueRunner.cs` — Changed: exposes `Dispatcher` static property
+- `src/NoMercy.Queue/FailingJob.cs` — Changed: added `QueueName`/`Priority`
+- `src/NoMercy.Data/Jobs/MusicJob.cs` — Changed: added `QueueName`/`Priority`
+- `src/NoMercy.Data/Jobs/CoverArtImageJob.cs` — Changed: added `QueueName`/`Priority`
+- `src/NoMercy.Data/Jobs/FanArtImagesJob.cs` — Changed: added `QueueName`/`Priority`
+- `src/NoMercy.Data/Jobs/StorageJob.cs` — Changed: added `QueueName`/`Priority`
+- `src/NoMercy.Data/Jobs/FindMediaFilesJob.cs` — Changed: added `QueueName`/`Priority`
+- `src/NoMercy.Data/Jobs/MusicColorPaletteJob.cs` — Changed: added `QueueName`/`Priority`
+- `src/NoMercy.Data/Logic/MusicLogic.cs` — Changed: 4 dispatch calls → `QueueRunner.Dispatcher.Dispatch(job)`
+- `src/NoMercy.Data/Logic/LibraryLogic.cs` — Changed: 1 dispatch call → `QueueRunner.Dispatcher.Dispatch(job)`
+- `src/NoMercy.MediaProcessing/Jobs/JobDispatcher.cs` — Changed: 16 overloads → `QueueRunner.Dispatcher.Dispatch(job)`
+- `tests/NoMercy.Tests.Queue/TestHelpers/TestJobs.cs` — Changed: added `QueueName`/`Priority`
+- `tests/NoMercy.Tests.Queue/TestHelpers/TestQueueContextAdapter.cs` — New: in-memory `IQueueContext` for testing
+- `tests/NoMercy.Tests.Queue/JobDispatcherTests.cs` — Changed: 9 tests exercising instance-based dispatcher
+
+**Test results**: Build succeeds with 0 errors. All tests pass with 0 failures across all test projects (including 321 queue tests with 6 new dispatcher tests).

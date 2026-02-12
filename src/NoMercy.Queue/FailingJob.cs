@@ -8,6 +8,9 @@ public class FailingJob : IShouldQueue
 {
     private readonly string _param1;
 
+    public string QueueName => "default";
+    public int Priority => 0;
+
     public FailingJob(string param1)
     {
         _param1 = param1;
