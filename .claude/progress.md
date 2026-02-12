@@ -3761,3 +3761,44 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `tests/NoMercy.Tests.Setup/NoMercy.Tests.Setup.csproj` — Added Server project reference
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: 150 encoder, 424 queue, 86 events, 27 setup (5 new), 218 repositories, 33 media processing, 347 API, 427 providers = 1,712 total, 0 failures.
+
+---
+
+## HEAD-06 — Verify macOS/Linux service
+
+**What was done**: Added Linux systemd and macOS launchd service support so the `--service` flag works on all three platforms, not just Windows.
+
+**Key changes**:
+1. Added `Microsoft.Extensions.Hosting.Systemd` NuGet package — provides `AddSystemd()` extension that registers `SystemdLifetime` for sd_notify integration and journal-compatible logging
+2. Updated `Program.cs`:
+   - Added `using Microsoft.Extensions.Hosting.Systemd`
+   - Added `services.AddSystemd()` in `ConfigureServices` when running as a service on Linux — context-aware, no-ops when not under systemd
+   - Updated service mode log message to identify platform (Windows service / systemd service / launchd service)
+   - Added comment explaining that `RunAsync` handles Linux/macOS service lifecycle correctly (SIGTERM for shutdown)
+3. Rewrote `AutoStartupManager.cs`:
+   - **Linux**: Replaced legacy `.desktop` autostart with proper systemd user service unit generation
+   - `GenerateSystemdUnit()` — generates a complete unit file with `Type=notify` (for sd_notify), `After=network-online.target`, `Restart=on-failure`, journal logging, and `WantedBy=default.target`
+   - `GetSystemdUnitPath()` — respects `XDG_CONFIG_HOME`, defaults to `~/.config/systemd/user/nomercy-mediaserver.service`
+   - **macOS**: Improved LaunchAgent plist with `KeepAlive`, `StandardOutPath`/`StandardErrorPath` for log files, `WorkingDirectory`, and `--service` flag
+   - `GenerateLaunchdPlist()` / `GetLaunchdPlistPath()` — public methods for content generation
+   - Changed plist label from `nomercymediaserver.startup` to `tv.nomercy.mediaserver` (reverse-DNS convention)
+   - Changed plist path from `nomercymediaserver.startup.plist` to `tv.nomercy.mediaserver.plist`
+   - `GetExecutablePath()` — uses `Environment.ProcessPath` first (works with single-file publish), falls back to Assembly.Location
+   - Unregister on Linux also cleans up legacy desktop entry if found
+   - Replaced all `Console.WriteLine` calls with `Logger.App`
+4. Updated `StartupOptions.cs` — changed `--service` help text to reference all three platforms
+
+**Usage**:
+- Linux systemd: `systemctl --user enable --now nomercy-mediaserver.service`
+- macOS launchd: `launchctl load ~/Library/LaunchAgents/tv.nomercy.mediaserver.plist`
+
+**Files created**:
+- `tests/NoMercy.Tests.Setup/LinuxMacServiceHostTests.cs` — 15 tests verifying systemd unit content, paths, and XDG_CONFIG_HOME support
+
+**Files modified**:
+- `src/NoMercy.Server/NoMercy.Server.csproj` — Added `Microsoft.Extensions.Hosting.Systemd` package reference
+- `src/NoMercy.Server/Program.cs` — Systemd integration, platform-aware service logging
+- `src/NoMercy.Server/AutoStartupManager.cs` — Complete rewrite with systemd unit + improved launchd plist
+- `src/NoMercy.Server/StartupOptions.cs` — Updated --service help text
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: 150 encoder, 424 queue, 86 events, 42 setup (15 new), 218 repositories, 33 media processing, 347 API, 427 providers = 1,727 total, 0 failures.

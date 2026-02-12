@@ -87,6 +87,7 @@
 
     <!-- Hosting -->
     <PackageVersion Include="Microsoft.AspNetCore.Hosting.WindowsServices" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.10" />
 
     <!-- System & Infrastructure -->
     <PackageVersion Include="Castle.Core" Version="5.2.1" />

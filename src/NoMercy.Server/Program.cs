@@ -7,6 +7,7 @@ using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting.WindowsServices;
+using Microsoft.Extensions.Hosting.Systemd;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
@@ -71,11 +72,16 @@ public static class Program
 
         if (IsRunningAsService)
         {
-            // When running as a Windows service, the working directory is system32.
+            // When running as a service, the working directory may not be the executable's directory.
+            // Windows services start in system32; systemd services start in /.
             // Set it to the executable's directory so config and data paths resolve correctly.
             string exeDir = AppContext.BaseDirectory;
             Directory.SetCurrentDirectory(exeDir);
-            Logger.App($"Running as Windows service, content root: {exeDir}");
+
+            string platform = Software.IsWindows ? "Windows service" :
+                              Software.IsLinux ? "systemd service" :
+                              Software.IsMac ? "launchd service" : "service";
+            Logger.App($"Running as {platform}, content root: {exeDir}");
         }
 
         if (!IsRunningAsService && !Console.IsOutputRedirected)
@@ -162,6 +168,10 @@ public static class Program
             }
             else
             {
+                // On Linux (systemd) and macOS (launchd), RunAsync handles the
+                // service lifecycle correctly — systemd sends SIGTERM for shutdown,
+                // launchd uses SIGTERM as well. The UseSystemd() call in
+                // CreateWebHostBuilder hooks into systemd's notification protocol.
                 await app.RunAsync(_applicationShutdownCts.Token);
             }
         }
@@ -216,6 +226,11 @@ public static class Program
                 {
                     hostOptions.ShutdownTimeout = TimeSpan.FromSeconds(10);
                 });
+
+                // Systemd integration — context-aware, no-ops when not running under systemd.
+                // Registers SystemdLifetime (sd_notify) and configures console logging for journal.
+                if (IsRunningAsService && Software.IsLinux)
+                    services.AddSystemd();
             })
             .ConfigureLogging(logging =>
             {

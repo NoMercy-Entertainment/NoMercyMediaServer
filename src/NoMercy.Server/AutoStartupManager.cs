@@ -1,5 +1,7 @@
 using System.Runtime.Versioning;
 using Microsoft.Win32;
+using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Server;
 
@@ -25,6 +27,80 @@ public class AutoStartupManager
             UnregisterLinuxStartup();
     }
 
+    /// <summary>
+    /// Generates a systemd user service unit file for Linux.
+    /// Returns the generated unit file content and the path where it would be installed.
+    /// </summary>
+    [SupportedOSPlatform("linux")]
+    public static (string Content, string Path) GenerateSystemdUnit()
+    {
+        string appPath = GetExecutablePath();
+        string unitPath = GetSystemdUnitPath();
+
+        string unitContent = $"""
+                              [Unit]
+                              Description=NoMercy MediaServer
+                              After=network-online.target
+                              Wants=network-online.target
+
+                              [Service]
+                              Type=notify
+                              ExecStart={appPath} --service
+                              WorkingDirectory={System.IO.Path.GetDirectoryName(appPath)}
+                              Restart=on-failure
+                              RestartSec=10
+                              StandardOutput=journal
+                              StandardError=journal
+                              SyslogIdentifier=nomercy-mediaserver
+                              Environment=DOTNET_ROOT=/usr/share/dotnet
+
+                              [Install]
+                              WantedBy=default.target
+                              """;
+
+        return (unitContent, unitPath);
+    }
+
+    /// <summary>
+    /// Generates a macOS LaunchAgent plist file.
+    /// Returns the generated plist content and the path where it would be installed.
+    /// </summary>
+    [SupportedOSPlatform("macos")]
+    public static (string Content, string Path) GenerateLaunchdPlist()
+    {
+        string appPath = GetExecutablePath();
+        string plistPath = GetLaunchdPlistPath();
+        string logPath = AppFiles.LogPath;
+
+        string plistContent = $"""
+                               <?xml version="1.0" encoding="UTF-8"?>
+                               <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                               <plist version="1.0">
+                               <dict>
+                                   <key>Label</key>
+                                   <string>tv.nomercy.mediaserver</string>
+                                   <key>ProgramArguments</key>
+                                   <array>
+                                       <string>{appPath}</string>
+                                       <string>--service</string>
+                                   </array>
+                                   <key>RunAtLoad</key>
+                                   <true/>
+                                   <key>KeepAlive</key>
+                                   <true/>
+                                   <key>StandardOutPath</key>
+                                   <string>{logPath}/nomercy-stdout.log</string>
+                                   <key>StandardErrorPath</key>
+                                   <string>{logPath}/nomercy-stderr.log</string>
+                                   <key>WorkingDirectory</key>
+                                   <string>{System.IO.Path.GetDirectoryName(appPath)}</string>
+                               </dict>
+                               </plist>
+                               """;
+
+        return (plistContent, plistPath);
+    }
+
     [SupportedOSPlatform("windows")]
     private static void RegisterWindowsStartup()
     {
@@ -35,12 +111,12 @@ public class AutoStartupManager
             if (key != null)
             {
                 key.SetValue("NoMercyMediaServer", $"\"{System.Reflection.Assembly.GetExecutingAssembly().Location}\"");
-                Console.WriteLine("Windows startup registration successful.");
+                Logger.App("Windows startup registration successful.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to register Windows startup: {ex.Message}");
+            Logger.App($"Failed to register Windows startup: {ex.Message}");
         }
     }
 
@@ -54,12 +130,12 @@ public class AutoStartupManager
             if (key?.GetValue("NoMercyMediaServer") != null)
             {
                 key.DeleteValue("NoMercyMediaServer");
-                Console.WriteLine("Windows startup unregistration successful.");
+                Logger.App("Windows startup unregistration successful.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to unregister Windows startup: {ex.Message}");
+            Logger.App($"Failed to unregister Windows startup: {ex.Message}");
         }
     }
 
@@ -68,31 +144,18 @@ public class AutoStartupManager
     {
         try
         {
-            string plistPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library/LaunchAgents/nomercymediaserver.startup.plist");
-            string appPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            (string plistContent, string plistPath) = GenerateLaunchdPlist();
 
-            string plistContent = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
-<!DOCTYPE plist PUBLIC ""-//Apple//DTD PLIST 1.0//EN"" ""http://www.apple.com/DTDs/PropertyList-1.0.dtd"">
-<plist version=""1.0"">
-<dict>
-    <key>Label</key>
-    <string>nomercymediaserver.startup</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>{appPath}</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-</dict>
-</plist>";
+            string? directory = Path.GetDirectoryName(plistPath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
 
             File.WriteAllText(plistPath, plistContent);
-            Console.WriteLine("macOS startup registration successful.");
+            Logger.App("macOS LaunchAgent registration successful.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to register macOS startup: {ex.Message}");
+            Logger.App($"Failed to register macOS LaunchAgent: {ex.Message}");
         }
     }
 
@@ -101,18 +164,17 @@ public class AutoStartupManager
     {
         try
         {
-            string plistPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library/LaunchAgents/nomercymediaserver.startup.plist");
+            string plistPath = GetLaunchdPlistPath();
 
             if (File.Exists(plistPath))
             {
                 File.Delete(plistPath);
-                Console.WriteLine("macOS startup unregistration successful.");
+                Logger.App("macOS LaunchAgent unregistration successful.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to unregister macOS startup: {ex.Message}");
+            Logger.App($"Failed to unregister macOS LaunchAgent: {ex.Message}");
         }
     }
 
@@ -121,26 +183,20 @@ public class AutoStartupManager
     {
         try
         {
-            string desktopFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".config/autostart/nomercymediaserver.desktop");
-            string appPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            // Install systemd user service unit
+            (string unitContent, string unitPath) = GenerateSystemdUnit();
 
-            string desktopFileContent = $@"[Desktop Entry]
-Type=Application
-Exec={appPath}
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-Name=NoMercyMediaServer
-Comment=Start NoMercyMediaServer at login";
+            string? directory = Path.GetDirectoryName(unitPath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
 
-            Directory.CreateDirectory(Path.GetDirectoryName(desktopFilePath) ?? string.Empty);
-            File.WriteAllText(desktopFilePath, desktopFileContent);
-            Console.WriteLine("Linux startup registration successful.");
+            File.WriteAllText(unitPath, unitContent);
+            Logger.App($"systemd user service unit written to {unitPath}");
+            Logger.App("To enable: systemctl --user enable --now nomercy-mediaserver.service");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to register Linux startup: {ex.Message}");
+            Logger.App($"Failed to register Linux systemd service: {ex.Message}");
         }
     }
 
@@ -149,18 +205,57 @@ Comment=Start NoMercyMediaServer at login";
     {
         try
         {
-            string desktopFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            string unitPath = GetSystemdUnitPath();
+
+            if (File.Exists(unitPath))
+            {
+                File.Delete(unitPath);
+                Logger.App("Linux systemd service unregistration successful.");
+            }
+
+            // Also remove legacy desktop entry if it exists
+            string desktopFilePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 ".config/autostart/nomercymediaserver.desktop");
 
             if (File.Exists(desktopFilePath))
             {
                 File.Delete(desktopFilePath);
-                Console.WriteLine("Linux startup unregistration successful.");
+                Logger.App("Legacy Linux desktop autostart entry removed.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to unregister Linux startup: {ex.Message}");
+            Logger.App($"Failed to unregister Linux startup: {ex.Message}");
         }
+    }
+
+    internal static string GetExecutablePath()
+    {
+        // For single-file published apps, Assembly.Location returns empty string.
+        // Use Process.MainModule or Environment.ProcessPath instead.
+        string? processPath = Environment.ProcessPath;
+        if (!string.IsNullOrEmpty(processPath))
+            return processPath;
+
+        return System.Reflection.Assembly.GetExecutingAssembly().Location;
+    }
+
+    [SupportedOSPlatform("linux")]
+    internal static string GetSystemdUnitPath()
+    {
+        string configHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME")
+                            ?? Path.Combine(
+                                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                                ".config");
+        return Path.Combine(configHome, "systemd/user/nomercy-mediaserver.service");
+    }
+
+    [SupportedOSPlatform("macos")]
+    internal static string GetLaunchdPlistPath()
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            "Library/LaunchAgents/tv.nomercy.mediaserver.plist");
     }
 }

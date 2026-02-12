@@ -49,7 +49,7 @@ public class StartupOptions
     [Option("pipe-name", Required = false, HelpText = "Named pipe name for IPC (Windows) or Unix socket filename.")]
     public string? PipeName { get; set; }
 
-    [Option("service", Required = false, HelpText = "Run as a Windows service.")]
+    [Option("service", Required = false, HelpText = "Run as a platform service (Windows SCM, Linux systemd, macOS launchd).")]
     public bool RunAsService { get; set; }
 
     [Option("sentry", Required = false, HelpText = "Enable Sentry.")]

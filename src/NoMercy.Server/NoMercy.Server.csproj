@@ -55,6 +55,7 @@
         <PackageReference Include="MediaBrowser.Model.Signed" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
         <PackageReference Include="Microsoft.AspNetCore.Hosting.WindowsServices" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" />
