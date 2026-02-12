@@ -3875,3 +3875,45 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 - `NoMercy.Server.sln` — Added NoMercy.Tests.Tray project
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 2,053 tests pass across 12 projects: 157 plugins, 143 database, 16 networking, 150 encoder, 10 tray, 424 queue, 86 events, 42 setup, 218 repositories, 33 media processing, 347 API, 427 providers = 0 failures.
+
+---
+
+## HEAD-10 — Log viewer window
+
+**Task**: Implement log viewer window in the NoMercy.Tray Avalonia application.
+
+**What was done**:
+- Created `Models/LogEntryResponse.cs` — DTO matching the `/manage/logs` API response (type, message, color, threadId, time, level)
+- Created `ViewModels/LogViewerViewModel.cs` — ViewModel with:
+  - Fetches logs from `/manage/logs?tail={count}&levels={filter}` via IPC
+  - ObservableCollection-based filtering by search text and log level
+  - Auto-refresh polling every 5 seconds (toggleable)
+  - Tail count selection (100, 200, 500, 1000)
+  - Level filtering (All, Verbose, Debug, Information, Warning, Error, Fatal)
+  - Status text showing entry count and last refresh time
+- Created `ViewModels/LevelClassConverter.cs` — Contains `LevelColorConverter` and `LevelWeightConverter` for color-coding log levels (red for Error/Fatal, yellow for Warning, gray for Debug/Verbose, light gray for Information) and bold weight for Error/Fatal
+- Created `Views/LogViewerWindow.axaml` — Avalonia UI with:
+  - Toolbar: search box, level filter combo, tail count combo, auto-refresh checkbox, refresh/clear buttons
+  - Column headers: Time, Level, Type, Message, Thread
+  - ListBox with ItemTemplate for log entries using monospace font, color-coded levels, and text trimming
+  - Status bar showing entry count and last fetch time
+- Created `Views/LogViewerWindow.axaml.cs` — Code-behind with window lifecycle management (start/stop auto-refresh on open/close)
+- Updated `Services/TrayIconManager.cs` — Added "View Logs" menu item between "Open Dashboard" and "Stop Server", opens/activates the log viewer window via Dispatcher.UIThread
+
+**Design decisions**:
+- Used ListBox with Grid-based ItemTemplate instead of DataGrid to avoid adding `Avalonia.Controls.DataGrid` NuGet dependency
+- LogEntryResponse is a standalone DTO in the Tray project (not reusing `NoMercy.NmSystem.Dto.LogEntry` which depends on Serilog)
+- Window is singleton-like: clicking "View Logs" when already open activates the existing window
+- Auto-refresh uses Task.Run with CancellationTokenSource, properly cancelled on window close
+
+**Files created**:
+- `src/NoMercy.Tray/Models/LogEntryResponse.cs`
+- `src/NoMercy.Tray/ViewModels/LogViewerViewModel.cs`
+- `src/NoMercy.Tray/ViewModels/LevelClassConverter.cs`
+- `src/NoMercy.Tray/Views/LogViewerWindow.axaml`
+- `src/NoMercy.Tray/Views/LogViewerWindow.axaml.cs`
+
+**Files modified**:
+- `src/NoMercy.Tray/Services/TrayIconManager.cs` — Added "View Logs" menu item and OnViewLogs handler
+
+**Test results**: Build succeeds with 0 errors, 1 warning (AVLN3001 — no public constructor for XAML runtime loader, expected since window is parameterized). All 2,053 tests pass across 12 projects = 0 failures.

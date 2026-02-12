@@ -1,6 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using NoMercy.Tray.Models;
+using NoMercy.Tray.ViewModels;
+using NoMercy.Tray.Views;
 
 namespace NoMercy.Tray.Services;
 
@@ -14,6 +17,7 @@ public class TrayIconManager
     private NativeMenuItem? _uptimeItem;
     private NativeMenuItem? _stopServerItem;
     private ServerState _currentState = ServerState.Disconnected;
+    private LogViewerWindow? _logViewerWindow;
 
     public TrayIconManager(
         ServerConnection serverConnection,
@@ -47,6 +51,9 @@ public class TrayIconManager
         NativeMenuItem openDashboardItem = new("Open Dashboard");
         openDashboardItem.Click += OnOpenDashboard;
 
+        NativeMenuItem viewLogsItem = new("View Logs");
+        viewLogsItem.Click += OnViewLogs;
+
         NativeMenuItemSeparator separator2 = new();
 
         _stopServerItem = new NativeMenuItem("Stop Server");
@@ -62,6 +69,7 @@ public class TrayIconManager
         menu.Items.Add(_uptimeItem);
         menu.Items.Add(separator1);
         menu.Items.Add(openDashboardItem);
+        menu.Items.Add(viewLogsItem);
         menu.Items.Add(separator2);
         menu.Items.Add(_stopServerItem);
         menu.Items.Add(separator3);
@@ -200,6 +208,23 @@ public class TrayIconManager
     {
         string url = "https://app.nomercy.tv";
         OpenUrl(url);
+    }
+
+    private void OnViewLogs(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_logViewerWindow is { IsVisible: true })
+            {
+                _logViewerWindow.Activate();
+                return;
+            }
+
+            LogViewerViewModel viewModel = new(_serverConnection);
+            _logViewerWindow = new LogViewerWindow(viewModel);
+            _logViewerWindow.Closed += (_, _) => _logViewerWindow = null;
+            _logViewerWindow.Show();
+        });
     }
 
     private async void OnStopServer(object? sender, EventArgs e)
