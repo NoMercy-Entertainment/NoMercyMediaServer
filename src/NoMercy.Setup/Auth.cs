@@ -66,57 +66,26 @@ public static class Auth
             }
             catch (Exception)
             {
-                await TokenByBrowserOrPassword();
+                await TokenByBrowserOrDeviceGrant();
             }
         else
-            await TokenByBrowserOrPassword();
+            await TokenByBrowserOrDeviceGrant();
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
             throw new("Failed to get tokens");
     }
 
-    private static async Task TokenByBrowserOrPassword()
+    private static async Task TokenByBrowserOrDeviceGrant()
     {
-        Logger.Auth("Trying to authenticate by browser, QR code or password", LogEventLevel.Verbose);
+        Logger.Auth("Trying to authenticate by browser or device grant", LogEventLevel.Verbose);
 
-        if (IsDesktopEnvironment() && Environment.OSVersion.Platform != PlatformID.Unix)
+        if (IsDesktopEnvironment())
         {
-            TokenByBrowser();
+            await TokenByBrowser();
             return;
         }
 
-        Console.WriteLine("Select login method:");
-        Console.WriteLine("1. QR code / device login (recommended)");
-        Console.WriteLine("2. Password login");
-        Console.WriteLine("Auto-selecting QR code login in 15 seconds...");
-
-        Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(15));
-        Task<ConsoleKeyInfo> inputTask = Task.Run(() =>
-        {
-            while (!Console.KeyAvailable && !timeoutTask.IsCompleted) Thread.Sleep(100);
-            return Console.KeyAvailable ? Console.ReadKey(true) : default;
-        });
-
-        Task completedTask = Task.WhenAny(timeoutTask, inputTask).Result;
-
-        if (completedTask == timeoutTask || inputTask.Result == default)
-        {
-            await TokenByDeviceGrant();
-            return;
-        }
-
-        ConsoleKeyInfo key = inputTask.Result;
-        Console.WriteLine();
-
-        switch (key.KeyChar)
-        {
-            case '2':
-                await TokenByPassword();
-                break;
-            default:
-                await TokenByDeviceGrant();
-                break;
-        }
+        await TokenByDeviceGrant();
     }
 
     private static async Task TokenByDeviceGrant()
@@ -147,7 +116,7 @@ public static class Auth
 
         while (DateTime.Now < expiresAt && !authenticated)
         {
-            Thread.Sleep(deviceData.Interval * 1000);
+            await Task.Delay(deviceData.Interval * 1000);
             try
             {
                 using HttpResponseMessage response = await authClient.SendAsync(HttpMethod.Post,
@@ -155,17 +124,17 @@ public static class Auth
 
                 if (response.IsSuccessStatusCode)
                 {
-                    string content = response.Content.ReadAsStringAsync().Result;
+                    string content = await response.Content.ReadAsStringAsync();
                     AuthResponse data = content.FromJson<AuthResponse>()
                                         ?? throw new("Failed to deserialize JSON");
                     SetTokens(data);
                     authenticated = true;
-                    Console.Clear();
+                    Logger.Auth("Device grant authentication successful");
                 }
                 else
                 {
-                    dynamic? error =
-                        JsonConvert.DeserializeObject<dynamic>(response.Content.ReadAsStringAsync().Result);
+                    string errorContent = await response.Content.ReadAsStringAsync();
+                    dynamic? error = JsonConvert.DeserializeObject<dynamic>(errorContent);
                     if (error?.error.ToString() != "authorization_pending")
                     {
                         Logger.Auth($"Error: {error?.error_description}", LogEventLevel.Error);
@@ -183,35 +152,7 @@ public static class Auth
         if (!authenticated) throw new("Device authorization timed out");
     }
 
-    private static string ReadPassword()
-    {
-        StringBuilder password = new();
-        ConsoleKeyInfo key;
-
-        do
-        {
-            key = Console.ReadKey(true);
-
-            if (key.Key == ConsoleKey.Backspace)
-            {
-                if (password.Length > 0)
-                {
-                    password.Remove(password.Length - 1, 1);
-                    Console.Write("\b \b");
-                }
-            }
-            else if (key.Key != ConsoleKey.Enter)
-            {
-                password.Append(key.KeyChar);
-                Console.Write('*');
-            }
-        } while (key.Key != ConsoleKey.Enter);
-
-        Console.WriteLine();
-        return password.ToString();
-    }
-
-    private static void TokenByBrowser()
+    private static async Task TokenByBrowser()
     {
         if (string.IsNullOrEmpty(Config.AuthBaseUrl) || string.IsNullOrEmpty(Config.TokenClientId))
             throw new ArgumentException("Auth base URL or client ID is not initialized");
@@ -240,24 +181,22 @@ public static class Auth
         Logger.Setup($"Opening browser for authentication: {url}", LogEventLevel.Verbose);
 
         TempServerInstance = TempServer.Start();
-        TempServerInstance.StartAsync().Wait();
+        await TempServerInstance.StartAsync();
 
         OpenBrowser(url);
 
-        CheckToken();
+        await WaitForToken();
     }
 
-    private static void CheckToken()
+    private static async Task WaitForToken()
     {
-        Task.Run(async () =>
+        while (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
         {
             await Task.Delay(1000);
+        }
 
-            if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
-                CheckToken();
-            else
-                TempServerInstance?.StopAsync().Wait();
-        }).Wait();
+        if (TempServerInstance != null)
+            await TempServerInstance.StopAsync();
     }
 
     private static void SetTokens(AuthResponse data)
@@ -325,55 +264,6 @@ public static class Auth
         PublicKey = data.PublicKey;
     }
 
-    private static async Task TokenByPassword()
-    {
-        while (true)
-        {
-            Console.WriteLine("Enter your email:");
-            string? email = Console.ReadLine();
-
-            if (string.IsNullOrEmpty(email))
-            {
-                Console.WriteLine("Email cannot be empty");
-                continue;
-            }
-
-            Console.WriteLine("Enter your password:");
-            string password = ReadPassword();
-
-            if (string.IsNullOrEmpty(password))
-            {
-                Console.WriteLine("Password cannot be empty");
-                continue;
-            }
-
-            Console.WriteLine(
-                "Enter your 2 factor authentication code (if enabled, hit enter if you don't have it setup):");
-            string? otp = Console.ReadLine();
-
-            await TokenByPasswordGrant(email, password, otp);
-            break;
-        }
-    }
-
-    private static async Task TokenByPasswordGrant(string username, string password, string? otp = "")
-    {
-        if (string.IsNullOrEmpty(Config.TokenClientId))
-            throw new("Auth keys not initialized.");
-
-        List<KeyValuePair<string, string>> body = BuildPasswordGrantBody(Config.TokenClientId, username, password, otp);
-
-        GenericHttpClient authClient = new(Config.AuthBaseUrl);
-        authClient.SetDefaultHeaders(Config.UserAgent);
-        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token",
-            new FormUrlEncodedContent(body));
-        
-        AuthResponse data = response.FromJson<AuthResponse>()
-                            ?? throw new("Failed to deserialize JSON");
-
-        SetTokens(data);
-    }
-
     private static async Task TokenByRefreshGrand()
     {
         if (string.IsNullOrEmpty(Config.TokenClientId) ||
@@ -388,10 +278,10 @@ public static class Auth
         authClient.SetDefaultHeaders(Config.UserAgent);
         string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token",
             new FormUrlEncodedContent(body));
-        
+
         AuthResponse data = response.FromJson<AuthResponse>()
                             ?? throw new("Failed to deserialize JSON");
-        
+
         SetTokens(data);
     }
 
@@ -434,7 +324,7 @@ public static class Auth
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             Process.Start("xdg-open", url)?.Dispose();
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            Process.Start("open", url)?.Dispose(); // Not tested
+            Process.Start("open", url)?.Dispose();
         else
             throw new("Unsupported OS");
     }

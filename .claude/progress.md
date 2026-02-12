@@ -4313,3 +4313,32 @@ Enhanced the `/sso-callback` OAuth callback handler in `SetupServer.cs` with thr
 - `.claude/PRD.md` — Marked SETUP-07 complete, updated Next up to SETUP-08
 
 **Test results**: Build succeeds with 0 errors. All 2,253 tests pass (177 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers, 157 Plugins, 143 Database, 150 Encoder, 29 Cli, 27 Tray, 16 Networking) = 0 failures.
+
+---
+
+## SETUP-08 — Refactor Auth.cs — remove Console.* calls
+
+**Date**: 2026-02-12
+
+**What was done**:
+Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with headless/service mode where no console is available.
+
+**Changes made**:
+
+1. **Removed `TokenByBrowserOrPassword()` console menu** — Replaced with `TokenByBrowserOrDeviceGrant()` that directly routes to browser (desktop) or device grant (headless) without console interaction
+2. **Removed `TokenByPassword()` method** — Console-dependent password input (ReadLine, ReadKey) removed; browser handles auth via Keycloak
+3. **Removed `ReadPassword()` method** — Console char-by-char password masking removed
+4. **Removed `CheckToken()` recursive `.Wait()` pattern** — Replaced with `WaitForToken()` async loop using `await Task.Delay(1000)`
+5. **Fixed `TokenByBrowser()` to be async** — Changed from `void` to `async Task`, replaced `TempServerInstance.StartAsync().Wait()` with `await TempServerInstance.StartAsync()`, replaced recursive `CheckToken()` with `await WaitForToken()`
+6. **Fixed `TokenByDeviceGrant()` blocking calls** — Replaced `Thread.Sleep(interval * 1000)` with `await Task.Delay(interval * 1000)`, replaced `response.Content.ReadAsStringAsync().Result` with `await response.Content.ReadAsStringAsync()`, replaced `Console.Clear()` with `Logger.Auth("Device grant authentication successful")`
+7. **Fixed `ConsoleQrCode.Display()`** — Replaced `Console.WriteLine` with `Logger.Auth()` for each QR code line
+8. **Removed `IsDesktopEnvironment()` platform restriction** — Removed the `&& Environment.OSVersion.Platform != PlatformID.Unix` check that prevented browser flow on Unix desktop environments
+9. **Updated characterization test** — Renamed `ElseBranch_GoesToBrowserOrPassword` to `ElseBranch_GoesToBrowserOrDeviceGrant` to match renamed method
+
+**Files modified**:
+- `src/NoMercy.Setup/Auth.cs` — Removed all Console.* calls, Thread.Sleep, .Result/.Wait() blocking, console-dependent methods; made TokenByBrowser async
+- `src/NoMercy.Setup/ConsoleQrCode.cs` — Replaced Console.WriteLine with Logger.Auth
+- `tests/NoMercy.Tests.Providers/Setup/AuthExpirationTests.cs` — Updated characterization test for renamed method
+- `.claude/PRD.md` — Marked SETUP-08 complete, updated Next up to SETUP-09
+
+**Test results**: Build succeeds with 0 errors. All 1,731 tests pass (177 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers) = 0 failures.

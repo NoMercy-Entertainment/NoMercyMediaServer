@@ -163,15 +163,15 @@ public class AuthExpirationTests
     }
 
     [Fact]
-    public void ElseBranch_GoesToBrowserOrPassword()
+    public void ElseBranch_GoesToBrowserOrDeviceGrant()
     {
-        // Verify the control flow: else → TokenByBrowserOrPassword
+        // Verify the control flow: else → TokenByBrowserOrDeviceGrant
         string source = GetSourceCode();
         string initMethod = ExtractInitMethod(source);
 
-        // The else branch should call TokenByBrowserOrPassword directly
-        Regex elseBranch = new(@"else\s+await\s+TokenByBrowserOrPassword", RegexOptions.Singleline);
+        // The else branch should call TokenByBrowserOrDeviceGrant directly
+        Regex elseBranch = new(@"else\s+await\s+TokenByBrowserOrDeviceGrant", RegexOptions.Singleline);
         Assert.True(elseBranch.IsMatch(initMethod),
-            "Init() should call TokenByBrowserOrPassword in the else branch (expired token)");
+            "Init() should call TokenByBrowserOrDeviceGrant in the else branch (expired token)");
     }
 }
