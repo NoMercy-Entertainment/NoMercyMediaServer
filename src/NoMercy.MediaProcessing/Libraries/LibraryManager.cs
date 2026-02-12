@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
@@ -9,6 +10,9 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
@@ -28,16 +32,32 @@ namespace NoMercy.MediaProcessing.Libraries;
 public class LibraryManager(
     LibraryRepository libraryRepository,
     JobDispatcher jobDispatcher,
-    MediaContext mediaContext
+    MediaContext mediaContext,
+    IEventBus? eventBus = null
 )
     : BaseManager, ILibraryManager
 {
     private Library? _library;
+    private readonly IEventBus? _eventBus = eventBus;
 
     public async Task ProcessLibrary(Ulid id)
     {
         _library = await libraryRepository.GetLibraryWithFolders(id);
         if (_library is null) return;
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        int itemsFound = 0;
+
+        IEventBus? bus = _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+
+        if (bus is not null)
+        {
+            await bus.PublishAsync(new LibraryScanStartedEvent
+            {
+                LibraryId = _library.Id,
+                LibraryName = _library.Title
+            });
+        }
 
         List<string> paths = [];
 
@@ -52,34 +72,65 @@ public class LibraryManager(
             switch (_library.Type)
             {
                 case Config.MusicMediaType:
-                    await ScanAudioFolder(path, depth);
+                    int audioCount = await ScanAudioFolder(path, depth);
+                    Interlocked.Add(ref itemsFound, audioCount);
                     break;
                 case Config.AnimeMediaType:
                 case Config.TvMediaType:
                 case Config.MovieMediaType:
-                    await ScanVideoFolder(path, depth);
+                    int videoCount = await ScanVideoFolder(path, depth);
+                    Interlocked.Add(ref itemsFound, videoCount);
                     break;
             }
         });
 
+        stopwatch.Stop();
+
+        if (bus is not null)
+        {
+            await bus.PublishAsync(new LibraryScanCompletedEvent
+            {
+                LibraryId = _library.Id,
+                LibraryName = _library.Title,
+                ItemsFound = itemsFound,
+                Duration = stopwatch.Elapsed
+            });
+        }
+
         Logger.App("Scanning done");
     }
 
-    private async Task ScanVideoFolder(string path, int depth)
+    private async Task<int> ScanVideoFolder(string path, int depth)
     {
         await using MediaScan mediaScan = new();
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .Process(path, depth);
-        
+
+        IEventBus? bus = _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+
+        if (bus is not null && _library is not null)
+        {
+            foreach (MediaFolderExtend folder in rootFolders)
+            {
+                await bus.PublishAsync(new MediaDiscoveredEvent
+                {
+                    FilePath = folder.Path,
+                    LibraryId = _library.Id,
+                    DetectedType = _library.Type
+                });
+            }
+        }
+
         await Parallel.ForEachAsync(rootFolders.OrderBy(f => f.Path), Config.ParallelOptions, async (rootFolder, _) =>
         {
             await ProcessVideoFolder(rootFolder);
         });
 
         Logger.App("Found " + rootFolders.Count + " subfolders");
+        return rootFolders.Count;
     }
 
-    private async Task ScanAudioFolder(string path, int depth)
+    private async Task<int> ScanAudioFolder(string path, int depth)
     {
         await using MediaScan mediaScan = new();
         List<MediaFolderExtend> rootFolders = (await mediaScan
@@ -88,12 +139,28 @@ public class LibraryManager(
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();
 
+        IEventBus? bus = _eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
+
+        if (bus is not null && _library is not null)
+        {
+            foreach (MediaFolderExtend folder in rootFolders)
+            {
+                await bus.PublishAsync(new MediaDiscoveredEvent
+                {
+                    FilePath = folder.Path,
+                    LibraryId = _library.Id,
+                    DetectedType = _library.Type
+                });
+            }
+        }
+
         Parallel.ForEach(rootFolders.OrderBy(f => f.Path), Config.ParallelOptions, (rootFolder, _) =>
         {
             ProcessMusicFolder(rootFolder);
         });
 
         Logger.App("Found " + rootFolders.Count + " subfolders");
+        return rootFolders.Count;
     }
 
     private async Task ProcessVideoFolder(MediaFolderExtend path)

@@ -13,6 +13,8 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.Networking.Dto;
@@ -50,9 +52,20 @@ public class AddMovieJob : AbstractMediaJob
         TmdbMovieAppends? movieAppends = await movieManager.Add(Id, movieLibrary);
         if (movieAppends == null) return;
 
+        if (EventBusProvider.IsConfigured)
+        {
+            await EventBusProvider.Current.PublishAsync(new MediaAddedEvent
+            {
+                MediaId = Id,
+                MediaType = "movie",
+                Title = movieAppends.Title ?? $"Movie {Id}",
+                LibraryId = LibraryId
+            });
+        }
+
         if (movieAppends.BelongsToCollection != null)
             jobDispatcher.DispatchJob<AddCollectionJob>(movieAppends.BelongsToCollection.Id, LibraryId);
-        
+
         jobDispatcher.DispatchJob<RescanFilesJob>(Id, movieLibrary);
 
         Logger.App($"Movie {Id} added to library, extra data will be added in the background");

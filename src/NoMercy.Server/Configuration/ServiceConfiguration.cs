@@ -40,6 +40,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
+using NoMercy.Events;
 using NoMercy.Queue;
 using NoMercy.Queue.Extensions;
 using NoMercy.Queue.Jobs;
@@ -236,6 +237,11 @@ public static class ServiceConfiguration
             options.CompactionPercentage = 0.25;
         });
         services.AddCronWorker();
+
+        // Register Event Bus
+        InMemoryEventBus eventBus = new();
+        services.AddSingleton<IEventBus>(eventBus);
+        EventBusProvider.Configure(eventBus);
 
         // Add Singleton Services
         services.AddScoped<JobQueue>();

@@ -2754,3 +2754,46 @@ Added `Ulid` package reference to `NoMercy.Events.csproj` (already in `Directory
 - `AllDomainEvents_CanBePublishedViaEventBus` — verifies events can be published/received via InMemoryEventBus
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 46 Events tests pass (26 new + 20 existing). All test suites pass.
+
+---
+
+## EVT-05 — Add events to media scan pipeline
+
+**Date**: 2026-02-12
+
+**What was done**:
+- Added `NoMercy.Events` project reference to `NoMercy.Server` and `NoMercy.MediaProcessing` projects
+- Created `EventBusProvider` static accessor in `NoMercy.Events` — provides access to the event bus singleton from non-DI contexts (job classes that create their own dependencies manually)
+- Registered `IEventBus` as singleton in `ServiceConfiguration.ConfigureCoreServices()` and configured `EventBusProvider.Configure()` at startup
+- Added `IEventBus` injection to `LibraryManager` constructor (optional parameter, backward-compatible)
+- `LibraryManager.ProcessLibrary()` now publishes:
+  - `LibraryScanStartedEvent` at start (with LibraryId, LibraryName)
+  - `LibraryScanCompletedEvent` at end (with LibraryId, LibraryName, ItemsFound, Duration via Stopwatch)
+- `LibraryManager.ScanVideoFolder()` and `ScanAudioFolder()` now publish `MediaDiscoveredEvent` for each discovered folder (with FilePath, LibraryId, DetectedType)
+- `AddMovieJob.Handle()` now publishes `MediaAddedEvent` after movie is added (with MediaId, MediaType="movie", Title, LibraryId)
+- `AddShowJob.Handle()` now publishes `MediaAddedEvent` after show is added (with MediaId, MediaType="tvshow", Title, LibraryId)
+- `RescanLibraryJob.Handle()` now passes event bus to `LibraryManager` constructor
+- All event publishing is conditional — gracefully handles case where event bus is not configured (no exceptions)
+
+**Files changed**:
+- `src/NoMercy.Events/EventBusProvider.cs` — new static accessor for IEventBus singleton
+- `src/NoMercy.Server/NoMercy.Server.csproj` — added NoMercy.Events project reference
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — registered IEventBus singleton + EventBusProvider
+- `src/NoMercy.MediaProcessing/NoMercy.MediaProcessing.csproj` — added NoMercy.Events project reference
+- `src/NoMercy.MediaProcessing/Libraries/LibraryManager.cs` — added IEventBus injection, scan started/completed events, media discovered events
+- `src/NoMercy.MediaProcessing/Jobs/MediaJobs/RescanLibraryJob.cs` — passes event bus to LibraryManager
+- `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AddMovieJob.cs` — publishes MediaAddedEvent
+- `src/NoMercy.MediaProcessing/Jobs/MediaJobs/AddShowJob.cs` — publishes MediaAddedEvent
+
+**Tests added**:
+- `tests/NoMercy.Tests.Events/EventBusProviderTests.cs` (2 tests):
+  - `Configure_SetsInstance` — verifies EventBusProvider correctly stores and exposes the bus
+  - `Configure_NullArg_ThrowsArgumentNullException` — verifies null guard
+- `tests/NoMercy.Tests.MediaProcessing/Libraries/LibraryManagerEventTests.cs` (5 tests):
+  - `ProcessLibrary_NonExistentLibrary_DoesNotPublishEvents` — no events when library not found
+  - `ProcessLibrary_EmptyLibrary_PublishesStartAndCompletedEvents` — verifies both events with correct properties
+  - `ProcessLibrary_WithoutEventBus_DoesNotThrow` — backward compatibility without events
+  - `ProcessLibrary_CompletedEvent_HasValidDuration` — duration is non-negative and reasonable
+  - `ProcessLibrary_StartedEvent_HasCorrectEventMetadata` — EventId, Timestamp, Source are correct
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. All tests pass: Events (48), MediaProcessing (33), Queue (292), Repositories (218), Api (324), Providers (427).

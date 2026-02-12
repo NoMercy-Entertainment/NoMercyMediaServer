@@ -14,6 +14,8 @@ using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
@@ -58,6 +60,17 @@ public class AddShowJob : AbstractMediaJob
         TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary, HighPriority);
         if (show == null) return;
 
+        if (EventBusProvider.IsConfigured)
+        {
+            await EventBusProvider.Current.PublishAsync(new MediaAddedEvent
+            {
+                MediaId = Id,
+                MediaType = "tvshow",
+                Title = show.Name ?? $"Show {Id}",
+                LibraryId = LibraryId
+            });
+        }
+
         IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(show, HighPriority);
 
         ConcurrentBag<Episode> episodes = [];
@@ -67,10 +80,10 @@ public class AddShowJob : AbstractMediaJob
             foreach (Episode episode in eps)
             {
                 episodes.Add(episode);
-            } 
+            }
         });
-        
-        await episodeRepository.StoreEpisodes(episodes); 
+
+        await episodeRepository.StoreEpisodes(episodes);
 
         jobDispatcher.DispatchJob<RescanFilesJob>(Id, tvLibrary);
         
