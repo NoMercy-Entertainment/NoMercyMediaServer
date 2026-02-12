@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 4, item QDC-01
+**Next up**: Phase 4, item QDC-05
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -168,7 +168,7 @@ Details: [10-event-driven.md](prd/10-event-driven.md) | [11-plugin-system.md](pr
 - [x] PLG-07 — Plugin repository system
 - [x] PLG-08 — Plugin management API
 - [x] PLG-09 — Plugin template/NuGet
-- [ ] QDC-01 — Create Queue Core project + interfaces
+- [x] QDC-01 — Create Queue Core project + interfaces
 - [ ] QDC-05 — Refactor JobQueue
 - [ ] QDC-06 — Refactor JobDispatcher
 - [ ] QDC-08 — Refactor QueueRunner

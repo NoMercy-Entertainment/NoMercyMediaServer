@@ -3375,3 +3375,39 @@ dotnet pack templates/NoMercy.Plugin.Templates.csproj
 ```
 
 **Test results**: Build succeeds with 0 errors, 0 warnings. All 157 plugin tests pass. Full test suite: 1,868 tests pass with 0 failures across all 11 test projects.
+
+---
+
+## QDC-01 — Create Queue Core project + interfaces
+
+**What was done**: Created `NoMercy.Queue.Core` project as a standalone, dependency-free library containing all queue system interfaces and POCO models. This project has zero external dependencies — no EF Core, no Newtonsoft.Json, no project references — making it suitable as a standalone NuGet package.
+
+**Files created**:
+- `src/NoMercy.Queue.Core/NoMercy.Queue.Core.csproj` — Standalone project targeting net9.0, no dependencies
+- `src/NoMercy.Queue.Core/Interfaces/IShouldQueue.cs` — Job contract with `QueueName`, `Priority`, and `Handle()` (extends the existing interface with queue/priority metadata per PRD section 12.4)
+- `src/NoMercy.Queue.Core/Interfaces/ICronJobExecutor.cs` — Cron job contract with `CronExpression`, `JobName`, `ExecuteAsync()`
+- `src/NoMercy.Queue.Core/Interfaces/IJobSerializer.cs` — Pluggable serialization with `Serialize(object)` and `Deserialize<T>(string)`
+- `src/NoMercy.Queue.Core/Interfaces/IConfigurationStore.cs` — External config storage with `GetValue`, `SetValue`, `HasKey`
+- `src/NoMercy.Queue.Core/Interfaces/IQueueContext.cs` — Database abstraction with methods for job, failed job, and cron job CRUD operations (replaces direct `QueueContext` dependency)
+- `src/NoMercy.Queue.Core/Models/QueueJobModel.cs` — POCO queue job model (mirrors `QueueJob` without EF attributes)
+- `src/NoMercy.Queue.Core/Models/FailedJobModel.cs` — POCO failed job model (mirrors `FailedJob` without EF attributes)
+- `src/NoMercy.Queue.Core/Models/CronJobModel.cs` — POCO cron job model (mirrors `CronJob` without EF attributes, includes `CreatedAt`/`UpdatedAt`)
+- `src/NoMercy.Queue.Core/Models/QueueConfiguration.cs` — Configuration record with `WorkerCounts` (defaults: queue=1, data=3, encoder=1), `MaxAttempts` (3), `PollingIntervalMs` (1000)
+- `tests/NoMercy.Tests.Queue/QueueCoreTests.cs` — 22 tests covering all interfaces and models:
+  - `IShouldQueue` — implementation, Handle invocation
+  - `ICronJobExecutor` — implementation, execution, cancellation
+  - `IJobSerializer` — implementation, serialization round-trip
+  - `IConfigurationStore` — set/get/has, missing key returns null
+  - `QueueJobModel` — defaults, all properties settable
+  - `FailedJobModel` — defaults, all properties settable
+  - `CronJobModel` — defaults, all properties settable
+  - `QueueConfiguration` — sensible defaults, customization, record equality
+  - `IQueueContext` — full lifecycle tests for jobs, failed jobs, and cron jobs using in-memory test implementation
+
+**Design decisions**:
+- POCO models use `*Model` suffix (e.g., `QueueJobModel`) to avoid naming conflicts with existing EF entities during the migration period
+- `IQueueContext` defines high-level CRUD operations rather than exposing `DbSet<T>` — this keeps the Core project free of EF Core dependencies
+- `IShouldQueue` adds `QueueName` and `Priority` properties per PRD section 12.4, enabling the dispatch simplification in later tasks
+- `QueueConfiguration` is a `record` for immutability and value equality
+
+**Test results**: Build succeeds with 0 errors, 0 warnings. Queue tests: 314 (up from 292). Full test suite: 1,890 tests pass with 0 failures across all 11 test projects.
