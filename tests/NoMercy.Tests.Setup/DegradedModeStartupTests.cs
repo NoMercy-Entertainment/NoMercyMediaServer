@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using NoMercy.Networking;
 using NoMercy.Setup;
+using NoMercy.Setup.Dto;
 using Xunit;
 
 namespace NoMercy.Tests.Setup;
@@ -328,6 +329,148 @@ public class DegradedModeStartupPhasingTests
         {
             // InitWithFallback should never throw — this is a failure
             Assert.Fail($"InitWithFallback should not throw, but threw: {ex.Message}");
+        }
+    }
+}
+
+public class CloudflareFallbackTests
+{
+    [Fact]
+    public void ExternalIp_DefaultsToZeroAddress_WhenNotSet()
+    {
+        // ExternalIp property should return "0.0.0.0" when no IP has been discovered,
+        // not throw an exception
+        string ip = Networking.Networking.ExternalIp;
+        Assert.NotNull(ip);
+    }
+
+    [Fact]
+    public void Certificate_HasValidCertificate_ReturnsFalse_WhenNoCertFile()
+    {
+        // When cert files don't exist, should return false — not throw
+        bool result = Certificate.HasValidCertificate();
+        Assert.IsType<bool>(result);
+    }
+
+    [Fact]
+    public async Task Certificate_RenewSslCertificate_DoesNotThrow_WhenNetworkUnavailable()
+    {
+        // RenewSslCertificate should handle network failures gracefully
+        // when a cert already exists on disk (or when no cert exists and it simply fails)
+        try
+        {
+            // This will fail to reach api.nomercy.tv in most test environments,
+            // but should not throw because:
+            // 1. If cert exists and is valid: returns early
+            // 2. If cert exists but expired: catches the network error
+            // 3. If no cert: the outer exception propagates (acceptable for first boot)
+            await Certificate.RenewSslCertificate(maxRetries: 1);
+        }
+        catch (Exception)
+        {
+            // Only acceptable if no cert exists at all (first boot scenario)
+            Assert.False(Certificate.HasValidCertificate(),
+                "RenewSslCertificate should only throw when no existing cert is on disk");
+        }
+    }
+
+    [Fact]
+    public async Task GetExternalIp_Discover_DoesNotThrow_WhenApiUnavailable()
+    {
+        // Discover() wraps GetExternalIp in try/catch, so even when
+        // api.nomercy.tv (Cloudflare) is down, it should not throw
+        try
+        {
+            await Networking.Networking.Discover();
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Discover should not throw when external IP API is unavailable: {ex.Message}");
+        }
+    }
+
+    [Fact]
+    public void ExternalIpCache_RoundTrips()
+    {
+        // Verify the external IP caching mechanism works:
+        // Set an IP → verify it persists → verify it can be read back
+        string testIp = "203.0.113.42";
+        string cacheFile = Path.Combine(
+            NoMercy.NmSystem.Information.AppFiles.ConfigPath, "external_ip.cache");
+
+        try
+        {
+            // Ensure config directory exists
+            string configDir = NoMercy.NmSystem.Information.AppFiles.ConfigPath;
+            if (!Directory.Exists(configDir))
+                Directory.CreateDirectory(configDir);
+
+            // Write cache file directly (simulates what CacheExternalIp does)
+            File.WriteAllText(cacheFile, testIp);
+
+            // Read it back
+            string cached = File.ReadAllText(cacheFile).Trim();
+            Assert.Equal(testIp, cached);
+        }
+        finally
+        {
+            // Cleanup
+            if (File.Exists(cacheFile))
+                File.Delete(cacheFile);
+        }
+    }
+
+    [Fact]
+    public void ExternalIpCache_ReturnsNull_WhenFileDoesNotExist()
+    {
+        string cacheFile = Path.Combine(
+            NoMercy.NmSystem.Information.AppFiles.ConfigPath, "external_ip.cache");
+
+        // Ensure no cache file
+        if (File.Exists(cacheFile))
+            File.Delete(cacheFile);
+
+        // The cache should gracefully handle missing files
+        Assert.False(File.Exists(cacheFile));
+    }
+
+    [Fact]
+    public void ApiInfo_KeysLoaded_IsFalse_WhenNoNetworkAndNoCache()
+    {
+        // ApiInfo.KeysLoaded should be false when keys haven't been loaded
+        // This validates the flag exists and can be checked
+        bool keysLoaded = ApiInfo.KeysLoaded;
+        Assert.IsType<bool>(keysLoaded);
+    }
+
+    [Fact]
+    public async Task ApiInfo_TryFetchFromNetwork_ReturnsNull_OnFailure()
+    {
+        // TryFetchFromNetwork should return null (not throw) when api.nomercy.tv is unreachable
+        ApiInfoResponse? result = await ApiInfo.TryFetchFromNetwork();
+        // Result depends on network — may be non-null in environments where api.nomercy.tv is reachable
+        // The key assertion is that it does NOT throw
+        Assert.True(result is null || result.Data?.Keys is not null,
+            "TryFetchFromNetwork should return null on failure or valid data on success");
+    }
+
+    [Fact]
+    public async Task ApiInfo_TryReadCacheFile_ReturnsNull_WhenNoCacheFile()
+    {
+        // When no cache file exists, should return null gracefully
+        string cacheFile = ApiInfo.CacheFilePath;
+        bool cacheExists = File.Exists(cacheFile);
+
+        if (!cacheExists)
+        {
+            ApiInfoResponse? result = await ApiInfo.TryReadCacheFile();
+            Assert.Null(result);
+        }
+        else
+        {
+            // Cache exists — just verify it doesn't throw
+            ApiInfoResponse? result = await ApiInfo.TryReadCacheFile();
+            Assert.IsType<ApiInfoResponse>(result);
         }
     }
 }

@@ -56,7 +56,7 @@ public static class GenresSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup($"Genres seed failed: {e.Message}", LogEventLevel.Warning);
         }
 
         try
@@ -116,7 +116,7 @@ public static class GenresSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup($"Genres seed failed: {e.Message}", LogEventLevel.Warning);
         }
     }
 }

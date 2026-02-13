@@ -40,7 +40,7 @@ public static class CountriesSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup($"Countries seed failed: {e.Message}", LogEventLevel.Warning);
         }
     }
 }

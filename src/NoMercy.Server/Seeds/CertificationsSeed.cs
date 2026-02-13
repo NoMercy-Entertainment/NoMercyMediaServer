@@ -59,7 +59,7 @@ public static class CertificationsSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup($"Certifications seed failed: {e.Message}", LogEventLevel.Warning);
         }
     }
 }

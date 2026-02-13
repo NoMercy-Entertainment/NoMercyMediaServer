@@ -17,6 +17,9 @@ public static class UsersSeed
     {
         try
         {
+            bool hasUsers = await dbContext.Users.AnyAsync();
+            if (hasUsers) return;
+
             Logger.Setup("Adding Users", LogEventLevel.Verbose);
 
             Dictionary<string, string> queryParams = new()
@@ -94,7 +97,7 @@ public static class UsersSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup($"Users seed failed: {e.Message}", LogEventLevel.Warning);
         }
         
     }

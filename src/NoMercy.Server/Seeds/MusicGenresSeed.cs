@@ -38,7 +38,7 @@ public static class MusicGenresSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup($"Music genres seed failed: {e.Message}", LogEventLevel.Warning);
         }
     }
 }

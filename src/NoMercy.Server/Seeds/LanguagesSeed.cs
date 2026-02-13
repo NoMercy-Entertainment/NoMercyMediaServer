@@ -40,7 +40,7 @@ public static class LanguagesSeed
         }
         catch (Exception e)
         {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
+            Logger.Setup($"Languages seed failed: {e.Message}", LogEventLevel.Warning);
         }
     }
 }

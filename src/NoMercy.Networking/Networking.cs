@@ -159,18 +159,89 @@ public class Networking
         }
     }
 
+    private static string ExternalIpCacheFile =>
+        Path.Combine(AppFiles.ConfigPath, "external_ip.cache");
+
     private static async Task<string> GetExternalIp()
     {
         Logger.Setup("Getting external IP address");
-        
-        GenericHttpClient apiClient = new(Config.ApiBaseUrl);
-        apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
-        using HttpResponseMessage response = await apiClient.SendAsync(HttpMethod.Get, "v1/ip");
-        if (!response.IsSuccessStatusCode) throw new("The NoMercy API is not available");
 
-        string externalIp = await response.Content.ReadAsStringAsync();
+        // 1. Try API
+        try
+        {
+            GenericHttpClient apiClient = new(Config.ApiBaseUrl);
+            apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+            using HttpResponseMessage response = await apiClient.SendAsync(HttpMethod.Get, "v1/ip");
+            if (response.IsSuccessStatusCode)
+            {
+                string ip = (await response.Content.ReadAsStringAsync()).Replace("\"", "");
+                if (!string.IsNullOrEmpty(ip))
+                {
+                    CacheExternalIp(ip);
+                    return ip;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.Setup($"External IP API unavailable: {e.Message}", LogEventLevel.Warning);
+        }
 
-        return externalIp.Replace("\"", "");
+        // 2. Try UPnP device
+        if (_device is not null)
+        {
+            try
+            {
+                string upnpIp = _device.GetExternalIP().ToString();
+                if (!string.IsNullOrEmpty(upnpIp))
+                {
+                    CacheExternalIp(upnpIp);
+                    return upnpIp;
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Setup($"UPnP external IP unavailable: {e.Message}", LogEventLevel.Warning);
+            }
+        }
+
+        // 3. Try file cache
+        string? cached = LoadCachedExternalIp();
+        if (cached is not null)
+        {
+            Logger.Setup($"Using cached external IP: {cached}");
+            return cached;
+        }
+
+        // 4. No external IP available — remote access won't work, but not fatal
+        Logger.Setup("External IP unavailable — remote access disabled", LogEventLevel.Warning);
+        return "";
+    }
+
+    private static void CacheExternalIp(string ip)
+    {
+        try
+        {
+            File.WriteAllText(ExternalIpCacheFile, ip);
+        }
+        catch (Exception e)
+        {
+            Logger.Setup($"Failed to cache external IP: {e.Message}", LogEventLevel.Warning);
+        }
+    }
+
+    private static string? LoadCachedExternalIp()
+    {
+        try
+        {
+            if (!File.Exists(ExternalIpCacheFile)) return null;
+            string cached = File.ReadAllText(ExternalIpCacheFile).Trim();
+            return string.IsNullOrEmpty(cached) ? null : cached;
+        }
+        catch
+        {
+            return null;
+        }
     }
     
     private static async Task OnIpChanged(string? newIp)

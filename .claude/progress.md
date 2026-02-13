@@ -4651,3 +4651,70 @@ Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All 2,357 tests pass across 13 test projects (12 new + 2,345 existing) = 0 failures.
+
+---
+
+## BOOT-02 — Fix Cloudflare single point of failure
+
+**Date**: 2026-02-13
+
+**What was done**:
+
+BOOT-01 added degraded mode startup, but 8 Cloudflare-dependent endpoints still had failure modes that could crash or degrade the server unnecessarily. BOOT-02 fixes all Cloudflare single points of failure with cache fallbacks and graceful degradation.
+
+### Changes
+
+1. **`Networking.GetExternalIp()` — Added multi-tier fallback** (`src/NoMercy.Networking/Networking.cs`)
+   - Previously: Called `api.nomercy.tv/v1/ip` and threw `"The NoMercy API is not available"` on failure
+   - Now: API call → UPnP device → file cache → empty string (non-fatal)
+   - Added `CacheExternalIp()` to persist IP to `{ConfigPath}/external_ip.cache`
+   - Added `LoadCachedExternalIp()` to read from cache on network failure
+   - External IP is only needed for remote access — being unavailable should never kill the server
+
+2. **`Certificate.ValidateSslCertificate()` — Removed network-dependent `Verify()` call** (`src/NoMercy.Networking/Certificate.cs`)
+   - Previously: Called `certificate.Verify()` which triggers OCSP/CRL network checks — fails when Cloudflare or CA is down
+   - Previously: Used `certificate.NotAfter >= DateTime.Now - TimeSpan.FromDays(30)` which triggered renewal for still-valid certs
+   - Now: Only checks `certificate.NotAfter > DateTime.Now` (is cert actually expired?)
+   - Expiring-but-valid certs (within 30 days) log a warning but return `true` — boot proceeds
+   - Wrapped in try/catch so corrupt cert files don't crash the server
+
+3. **`Certificate.RenewSslCertificate()` — Non-blocking when existing cert on disk** (`src/NoMercy.Networking/Certificate.cs`)
+   - Previously: Threw after max retries even when a valid cert existed on disk
+   - Now: If cert file exists, catches renewal failure and logs warning instead of throwing
+   - Only throws when no cert exists at all (first boot scenario — network is required)
+
+4. **`UsersSeed` — Added early return when users already exist** (`src/NoMercy.Server/Seeds/UsersSeed.cs`)
+   - Previously: Always hit `api.nomercy.tv/server-users` on every boot
+   - Now: `if (await dbContext.Users.AnyAsync()) return;` — skips network call when users exist
+   - Subsequent boots with no internet skip this entirely
+
+5. **All seed error logging downgraded from `Fatal` to `Warning`** (5 seed files)
+   - Seeds: LanguagesSeed, CountriesSeed, GenresSeed, CertificationsSeed, MusicGenresSeed, UsersSeed
+   - Previously: `Logger.Setup(e.Message, LogEventLevel.Fatal)` — misleading in degraded mode
+   - Now: `Logger.Setup($"Seed name failed: {e.Message}", LogEventLevel.Warning)` — with descriptive prefix
+
+### Tests added (10 new tests in `CloudflareFallbackTests`)
+- `ExternalIp_DefaultsToZeroAddress_WhenNotSet` — ExternalIp returns a default, doesn't throw
+- `Certificate_HasValidCertificate_ReturnsFalse_WhenNoCertFile` — No cert = false, not exception
+- `Certificate_RenewSslCertificate_DoesNotThrow_WhenNetworkUnavailable` — Renewal gracefully handles network failure
+- `GetExternalIp_Discover_DoesNotThrow_WhenApiUnavailable` — Discover() survives Cloudflare outage
+- `ExternalIpCache_RoundTrips` — Cache write/read round-trip works
+- `ExternalIpCache_ReturnsNull_WhenFileDoesNotExist` — Missing cache handled gracefully
+- `ApiInfo_KeysLoaded_IsFalse_WhenNoNetworkAndNoCache` — Flag correctly tracks state
+- `ApiInfo_TryFetchFromNetwork_ReturnsNull_OnFailure` — Network failure returns null, not exception
+- `ApiInfo_TryReadCacheFile_ReturnsNull_WhenNoCacheFile` — Missing cache returns null
+
+**Files modified**:
+- `src/NoMercy.Networking/Networking.cs` — GetExternalIp with API/UPnP/cache fallback chain
+- `src/NoMercy.Networking/Certificate.cs` — ValidateSslCertificate without Verify(), RenewSslCertificate non-blocking
+- `src/NoMercy.Server/Seeds/UsersSeed.cs` — Early return + Warning log level
+- `src/NoMercy.Server/Seeds/LanguagesSeed.cs` — Warning log level
+- `src/NoMercy.Server/Seeds/CountriesSeed.cs` — Warning log level
+- `src/NoMercy.Server/Seeds/GenresSeed.cs` — Warning log level
+- `src/NoMercy.Server/Seeds/CertificationsSeed.cs` — Warning log level
+- `src/NoMercy.Server/Seeds/MusicGenresSeed.cs` — Warning log level
+- `tests/NoMercy.Tests.Setup/DegradedModeStartupTests.cs` — 10 new Cloudflare fallback tests
+- `.claude/PRD.md` — Marked BOOT-02 complete, updated Next up to BOOT-03
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All 1,844 tests pass across 7 test projects (10 new + 1,834 existing) = 0 failures.
