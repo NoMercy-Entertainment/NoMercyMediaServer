@@ -4561,3 +4561,23 @@ Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All 2,343 tests pass across 13 test projects: 157 Plugins, 143 Database, 16 Networking, 150 Encoder, 27 Tray, 29 Cli, 105 Events, 234 Setup, 218 Repositories, 33 MediaProcessing, 424 Queue, 380 Api, 427 Providers = 0 failures.
+
+---
+
+## WALL-02 — Fix wallpaper performance issues
+
+**Date**: 2026-02-13
+
+**What was done**:
+- Verified that all WALL-02 performance fixes were already implemented as part of WALL-01:
+  - `GetDominantColor` → `GetDominantColorAsync` with `Task.Run()` to offload image quantization from the request thread (PRD section 15.4.1)
+  - `OrderedDither(1)` removed — dithering with `MaxColors = 1` was wasted work (PRD section 15.4.1)
+  - `ConcurrentDictionary<string, string> DominantColorCache` caches dominant color per image path (PRD section 15.4.2)
+  - Controller uses `await GetDominantColorAsync(path)` — fully async pipeline
+- No additional code changes needed — marking as complete since all items are verified present and tested
+
+**Files modified**:
+- `.claude/PRD.md` — Marked WALL-02 complete, updated Next up to WALL-03
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All 2,343 tests pass across 13 test projects = 0 failures.

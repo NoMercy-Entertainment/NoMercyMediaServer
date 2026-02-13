@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 8, item WALL-02
+**Next up**: Phase 8, item WALL-03
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -206,7 +206,7 @@ Details: [13-headless-server.md](prd/13-headless-server.md) | [14-server-setup.m
 Details: [15-wallpaper.md](prd/15-wallpaper.md) | [16-offline-boot.md](prd/16-offline-boot.md)
 
 - [x] WALL-01 — Implement cross-platform wallpaper strategy
-- [ ] WALL-02 — Fix wallpaper performance issues
+- [x] WALL-02 — Fix wallpaper performance issues
 - [ ] WALL-03 — Update wallpaper controller
 - [ ] BOOT-01 — Implement degraded mode startup
 - [ ] BOOT-02 — Fix Cloudflare single point of failure
