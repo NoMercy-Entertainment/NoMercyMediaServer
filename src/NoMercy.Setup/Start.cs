@@ -29,117 +29,120 @@ public class Start
         ShowWindow(hWnd, i);
     }
 
+    internal static List<StartupTask> BuildStartupTasks(List<TaskDelegate> callerTasks)
+    {
+        bool hasNetwork = false;
+
+        return
+        [
+            // ── PHASE 1: MUST SUCCEED (no network) ─────────────────────
+            new("UserSettings", async () =>
+            {
+                if (UserSettings.TryGetUserSettings(out Dictionary<string, string> settings))
+                    UserSettings.ApplySettings(settings);
+            }, CanDefer: false, Phase: 1),
+
+            new("CreateAppFolders", AppFiles.CreateAppFolders,
+                CanDefer: false, Phase: 1, DependsOn: ["UserSettings"]),
+
+            new("ApiInfo", ApiInfo.RequestInfo,
+                CanDefer: false, Phase: 1, DependsOn: ["CreateAppFolders"]),
+
+            // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
+            new("NetworkProbe", async () =>
+            {
+                hasNetwork = await NetworkProbe.CheckConnectivity();
+            }, CanDefer: false, Phase: 2, DependsOn: ["ApiInfo"]),
+
+            new("Auth", async () =>
+            {
+                if (hasNetwork)
+                {
+                    try
+                    {
+                        await Auth.Init();
+                        if (Globals.Globals.AccessToken is null)
+                            throw new InvalidOperationException("No access token after auth");
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Setup($"Auth failed: {e.Message}. Trying cached tokens.",
+                            LogEventLevel.Warning);
+                        bool result = await Auth.InitWithFallback();
+                        if (!result)
+                            throw new InvalidOperationException("Auth failed and no cached tokens available");
+                    }
+                }
+                else
+                {
+                    bool result = await Auth.InitWithFallback();
+                    if (!result)
+                        throw new InvalidOperationException("No network and no cached tokens available");
+                }
+            }, CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
+
+            new("Binaries", Binaries.DownloadAll,
+                CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
+
+            // ── PHASE 3: NETWORK-DEPENDENT (run if possible, degrade if not) ──
+            new("Networking", Networking.Networking.Discover,
+                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
+
+            new("ChromeCast", ChromeCast.Init,
+                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
+
+            new("UpdateChecker", UpdateChecker.StartPeriodicUpdateCheck,
+                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
+
+            new("TrayIcon", () =>
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362)
+                        ? TrayIcon.Make()
+                        : Task.CompletedTask,
+                CanDefer: true, Phase: 3),
+
+            new("DesktopIcon", () => Task.Run(() =>
+                DesktopIconCreator.CreateDesktopIcon(
+                    AppFiles.ApplicationName, AppFiles.ServerExePath, AppFiles.AppIcon)),
+                CanDefer: true, Phase: 3),
+
+            .. callerTasks.Select((TaskDelegate taskDelegate, int i) =>
+                new StartupTask($"CallerTask_{i}", taskDelegate.Invoke,
+                    CanDefer: true, Phase: 3, DependsOn: ["Auth"])),
+
+            // ── PHASE 4: REGISTRATION (needs Auth + Networking) ────────
+            new("Register", () => Register.Init(),
+                CanDefer: true, Phase: 4, DependsOn: ["Auth", "Networking"]),
+        ];
+    }
+
     public static async Task Init(List<TaskDelegate> tasks)
     {
-        if (UserSettings.TryGetUserSettings(out Dictionary<string, string> settings))
-            UserSettings.ApplySettings(settings);
+        List<StartupTask> startupTasks = BuildStartupTasks(tasks);
+        StartupTaskRunner runner = new(startupTasks);
 
-        // ── PHASE 1: MUST SUCCEED (no network) ─────────────────────
-        await AppFiles.CreateAppFolders();
-        await ApiInfo.RequestInfo();
+        await runner.RunAll();
 
-        // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
-        bool hasNetwork = await NetworkProbe.CheckConnectivity();
-        bool hasAuth;
-
-        Task binariesTask = Binaries.DownloadAll();
-
-        if (hasNetwork)
+        if (runner.DeferredTasks.Count > 0)
         {
-            try
-            {
-                await Auth.Init();
-                hasAuth = Globals.Globals.AccessToken is not null;
-            }
-            catch (Exception e)
-            {
-                Logger.Setup($"Auth failed: {e.Message}. Trying cached tokens.",
-                    LogEventLevel.Warning);
-                hasAuth = await Auth.InitWithFallback();
-            }
-        }
-        else
-        {
-            hasAuth = await Auth.InitWithFallback();
-        }
-
-        // ── PHASE 3: NETWORK-DEPENDENT (run if possible, degrade if not) ──
-        Task networkingTask = Networking.Networking.Discover();
-
-        List<Task> independentTasks =
-        [
-            ChromeCast.Init(),
-            UpdateChecker.StartPeriodicUpdateCheck(),
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362)
-                    ? TrayIcon.Make()
-                    : Task.CompletedTask,
-            Task.Run(() => DesktopIconCreator.CreateDesktopIcon(
-                AppFiles.ApplicationName, AppFiles.ServerExePath, AppFiles.AppIcon))
-        ];
-
-        if (hasNetwork && hasAuth)
-        {
-            // Full mode — run caller tasks (DatabaseSeeder etc.) normally
-            independentTasks.AddRange(tasks.Select(t => t.Invoke()));
-            await Task.WhenAll(independentTasks);
-
-            await networkingTask;
-
-            // Phase 4: Register needs both Auth (AccessToken) and Networking (InternalIp)
-            try
-            {
-                await Register.Init();
-            }
-            catch (Exception e)
-            {
-                Logger.Setup($"Registration failed: {e.Message}. Server will operate in local-only mode.",
-                    LogEventLevel.Warning);
-                IsDegradedMode = true;
-            }
-        }
-        else
-        {
-            // Degraded mode — skip network-dependent tasks, schedule background recovery
             IsDegradedMode = true;
             Logger.Setup("Starting in DEGRADED MODE — some features unavailable",
                 LogEventLevel.Warning);
-            Logger.Setup("  Network-dependent tasks will retry in background",
+            Logger.Setup(
+                $"  Deferred tasks: {string.Join(", ", runner.DeferredTasks.Select(t => t.Name))}",
                 LogEventLevel.Warning);
 
-            // Still run caller tasks — seeds that already have data will return early,
-            // seeds that need network will fail but are wrapped in try/catch
-            foreach (TaskDelegate callerTask in tasks)
-            {
-                try
-                {
-                    await callerTask.Invoke();
-                }
-                catch (Exception e)
-                {
-                    Logger.Setup($"Startup task failed (degraded mode): {e.Message}",
-                        LogEventLevel.Warning);
-                }
-            }
-
-            await Task.WhenAll(independentTasks);
-            await networkingTask;
-
-            // Start background recovery
             DeferredTasks deferred = new()
             {
-                ApiKeysLoaded = ApiInfo.KeysLoaded,
-                Authenticated = hasAuth,
-                NetworkDiscovered = true,
-                SeedsRun = false,
-                Registered = false,
+                ApiKeysLoaded = runner.CompletedTasks.Contains("ApiInfo"),
+                Authenticated = runner.CompletedTasks.Contains("Auth"),
+                NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
+                SeedsRun = runner.DeferredTasks.All(t => !t.Name.StartsWith("CallerTask_")),
+                Registered = runner.CompletedTasks.Contains("Register"),
                 CallerTasks = tasks
             };
             _ = Task.Run(() => DegradedModeRecovery.StartRecoveryLoop(deferred));
         }
-
-        // Wait for binary downloads to finish before server is considered ready
-        await binariesTask;
 
         // Delay heavy initialization tasks to run in the background after server is ready
         _ = Task.Run(async () =>

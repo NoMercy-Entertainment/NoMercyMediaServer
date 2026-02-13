@@ -4760,3 +4760,60 @@ BOOT-01 added degraded mode startup, but 8 Cloudflare-dependent endpoints still 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All 2,380 tests pass across 13 test projects (13 new + 2,367 existing) = 0 failures.
+
+---
+
+## BOOT-04 — Implement startup dependency reordering
+
+**Date**: 2026-02-13
+
+**What was done**:
+
+Replaced the hardcoded if/else startup flow in `Start.Init()` with a declarative task system that uses named tasks with explicit phases, dependencies, and deferability flags.
+
+**Key changes**:
+
+1. **Created `StartupTask` record** (`src/NoMercy.Setup/StartupTask.cs`):
+   - Record with `Name`, `Action` (Func<Task>), `CanDefer`, `Phase`, and optional `DependsOn` array
+   - Provides a declarative way to define startup tasks with their metadata
+
+2. **Created `StartupTaskRunner` class** (`src/NoMercy.Setup/StartupTaskRunner.cs`):
+   - Validates dependencies at construction time (missing deps, circular deps)
+   - Executes tasks grouped by phase, in phase order
+   - Automatically defers deferrable tasks when dependencies aren't met or when they throw
+   - Throws for required (non-deferrable) tasks that fail
+   - Tracks completed and deferred tasks via public readonly properties
+
+3. **Refactored `Start.Init()`** (`src/NoMercy.Setup/Start.cs`):
+   - Extracted `BuildStartupTasks()` method that returns a declarative list of all startup tasks
+   - Phase 1 (required, no network): UserSettings, CreateAppFolders, ApiInfo
+   - Phase 2 (best-effort): NetworkProbe, Auth, Binaries
+   - Phase 3 (network-dependent): Networking, ChromeCast, UpdateChecker, TrayIcon, DesktopIcon, CallerTasks
+   - Phase 4 (registration): Register (depends on Auth + Networking)
+   - `Init()` now creates a `StartupTaskRunner`, calls `RunAll()`, and starts degraded mode recovery if any tasks were deferred
+   - Preserves exact same execution semantics as the original code
+
+4. **Tests** (`tests/NoMercy.Tests.Setup/StartupTaskRunnerTests.cs`): 22 new tests covering:
+   - Phase ordering (tasks execute in phase 1→2→3→4 order)
+   - Deferral of failed deferrable tasks
+   - Throws on required task failure
+   - Dependency chain enforcement (deferred deps cascade to dependents)
+   - Circular dependency detection at construction
+   - Invalid dependency detection at construction
+   - Completed/deferred task tracking
+   - Empty task list handling
+   - Multi-phase with dependency ordering (mirrors real startup)
+   - Degraded mode simulation (Auth fails → CallerTasks + Register deferred)
+   - `AreDependenciesMet()` behavior
+   - `StartupTask` record property storage
+   - `BuildStartupTasks()` validation: expected tasks, phase 1 not deferrable, Register depends on Auth+Networking, CallerTasks depend on Auth, no duplicate names, all dependencies exist, phases exist, passes validation
+
+**Files changed**:
+- `src/NoMercy.Setup/StartupTask.cs` — New file: declarative startup task record
+- `src/NoMercy.Setup/StartupTaskRunner.cs` — New file: phase-ordered task executor with dependency validation and deferral
+- `src/NoMercy.Setup/Start.cs` — Refactored to use declarative task list and StartupTaskRunner
+- `tests/NoMercy.Tests.Setup/StartupTaskRunnerTests.cs` — New file: 22 tests
+- `.claude/PRD.md` — Marked BOOT-04 complete, updated Next up to BOOT-05
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All 1,882 tests pass across 7 test projects (22 new) = 0 failures.
