@@ -44,7 +44,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="..\..\Assets\icons\icon.png" Link="Assets\icon.png">
+        <None Include="..\..\assets\icons\icon.png" Link="Assets\icon.png">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
