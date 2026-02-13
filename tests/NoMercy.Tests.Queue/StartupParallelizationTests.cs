@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -107,28 +108,38 @@ public class StartupParallelizationTests
 
     /// <summary>
     /// Validates that Phase 2 tasks (Auth and Binaries) actually run concurrently,
-    /// not sequentially. If they ran sequentially, total time would be >= sum of both.
+    /// not sequentially. Verified by checking that both tasks' execution windows overlap
+    /// rather than using elapsed time thresholds (which are unreliable on CI runners).
     /// </summary>
     [Fact]
     public async Task Phase2_AuthAndBinaries_RunConcurrently()
     {
-        int authDurationMs = 100;
-        int binariesDurationMs = 100;
-        DateTime startTime = DateTime.UtcNow;
+        long authStart = 0, authEnd = 0;
+        long binariesStart = 0, binariesEnd = 0;
 
-        Task binariesTask = Task.Run(async () => await Task.Delay(binariesDurationMs));
-        await Task.Run(async () => await Task.Delay(authDurationMs));
-        await binariesTask;
+        Task binariesTask = Task.Run(async () =>
+        {
+            binariesStart = Stopwatch.GetTimestamp();
+            await Task.Delay(100);
+            binariesEnd = Stopwatch.GetTimestamp();
+        });
 
-        TimeSpan elapsed = DateTime.UtcNow - startTime;
+        Task authTask = Task.Run(async () =>
+        {
+            authStart = Stopwatch.GetTimestamp();
+            await Task.Delay(100);
+            authEnd = Stopwatch.GetTimestamp();
+        });
 
-        // If running in parallel, elapsed should be close to max(100, 100) = ~100ms
-        // If sequential, it would be ~200ms
-        // Use 3x single-task duration as threshold to tolerate CI runner scheduling jitter
-        int maxExpectedMs = authDurationMs * 3;
-        Assert.True(elapsed.TotalMilliseconds < maxExpectedMs,
-            $"Tasks appear to have run sequentially: elapsed {elapsed.TotalMilliseconds}ms " +
-            $"(expected < {maxExpectedMs}ms for concurrent execution)");
+        await Task.WhenAll(authTask, binariesTask);
+
+        // If concurrent, the execution windows overlap: each task starts before the other ends.
+        // If sequential, one would start after the other finishes — no overlap.
+        bool authStartedBeforeBinariesEnded = authStart < binariesEnd;
+        bool binariesStartedBeforeAuthEnded = binariesStart < authEnd;
+
+        Assert.True(authStartedBeforeBinariesEnded && binariesStartedBeforeAuthEnded,
+            "Tasks should have overlapping execution windows when running concurrently");
     }
 
     /// <summary>
