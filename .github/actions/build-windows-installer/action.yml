@@ -15,8 +15,15 @@ runs:
     - name: Install Inno Setup
       shell: bash
       run: |
+        sudo dpkg --add-architecture i386
         sudo apt-get update
-        sudo apt-get install -y innoextract wine64
+
+        # Wine post-install triggers (gstreamer plugin scan) can fail with exit code 8
+        # on GitHub runners. The packages are still installed correctly, so we recover.
+        sudo apt-get install -y innoextract wine64 || {
+          echo "apt-get exited with $?, attempting to fix broken packages..."
+          sudo dpkg --configure -a || true
+        }
 
         # Download and install Inno Setup via wine
         INNO_URL="https://files.jrsoftware.org/is/6/innosetup-6.3.3.exe"
