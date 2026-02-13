@@ -50,7 +50,8 @@ public class ServerProcessLauncher
 
         return new(exePath)
         {
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
     }
 
@@ -63,7 +64,8 @@ public class ServerProcessLauncher
 
         ProcessStartInfo startInfo = new(serverBinary)
         {
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
 
         startInfo.ArgumentList.Add("--dev");
@@ -80,7 +82,8 @@ public class ServerProcessLauncher
 
         ProcessStartInfo startInfo = new("dotnet")
         {
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
 
         startInfo.ArgumentList.Add("run");
