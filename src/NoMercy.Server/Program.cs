@@ -1,12 +1,15 @@
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting.WindowsServices;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -115,7 +118,7 @@ public static class Program
 
         await Setup.Start.Init(startupTasks);
 
-        _applicationShutdownCts = new CancellationTokenSource();
+        _applicationShutdownCts = new();
         bool startedWithoutCert = !Certificate.HasValidCertificate();
         IWebHost app = CreateWebHostBuilder(options).Build();
 
@@ -177,7 +180,16 @@ public static class Program
         SetupState setupState = httpHost.Services.GetRequiredService<SetupState>();
 
         // Start the HTTP host
-        await httpHost.StartAsync(_applicationShutdownCts!.Token);
+        try
+        {
+            await httpHost.StartAsync(_applicationShutdownCts!.Token);
+        }
+        catch (IOException ex) when (ex.InnerException is SocketException
+                                     || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
+        {
+            await HandlePortInUse(Config.InternalServerPort, ex);
+            return;
+        }
 
         // Wait for either setup completion or shutdown
         Task shutdownTask = Task.Delay(Timeout.Infinite, _applicationShutdownCts!.Token);
@@ -209,7 +221,7 @@ public static class Program
         httpHost.Dispose();
 
         // Build and start a new host with HTTPS
-        _applicationShutdownCts = new CancellationTokenSource();
+        _applicationShutdownCts = new();
         Stopwatch restartStopWatch = new();
         restartStopWatch.Start();
 
@@ -233,10 +245,174 @@ public static class Program
                 await host.RunAsync(_applicationShutdownCts!.Token);
             }
         }
+        catch (IOException ex) when (ex.InnerException is SocketException
+                                     || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
+        {
+            await HandlePortInUse(Config.InternalServerPort, ex);
+        }
         catch (OperationCanceledException)
         {
             Logger.App("Shutdown completed");
         }
+    }
+
+    private static async Task HandlePortInUse(int port, IOException ex)
+    {
+        Logger.Error($"Failed to start: port {port} is already in use.");
+
+        string processInfo = await FindProcessOnPortAsync(port);
+
+        if (!string.IsNullOrEmpty(processInfo))
+            Logger.Error($"Process holding port {port}:\n{processInfo}");
+        else
+            Logger.Warning($"Could not identify the process using port {port}.");
+
+        bool isInteractive = !IsRunningAsService && !Console.IsInputRedirected && !Console.IsOutputRedirected;
+
+        if (!isInteractive)
+        {
+            Logger.Error("Running non-interactively — cannot prompt to kill the blocking process. "
+                        + "Stop the other process manually and restart the server.");
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        int blockingPid = ParsePidFromPortInfo(processInfo);
+
+        if (blockingPid <= 0)
+        {
+            Logger.Error("Could not determine the PID of the blocking process. Please free the port manually.");
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        Console.Write($"\nWould you like to kill process {blockingPid} and retry? [y/N] ");
+        string? answer = Console.ReadLine();
+
+        if (string.IsNullOrEmpty(answer) || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.App("User declined to kill the blocking process. Exiting.");
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        try
+        {
+            Process blockingProcess = Process.GetProcessById(blockingPid);
+            Logger.App($"Killing process {blockingPid} ({blockingProcess.ProcessName})...");
+            blockingProcess.Kill();
+            blockingProcess.WaitForExit(5000);
+            Logger.App($"Process {blockingPid} terminated.");
+        }
+        catch (Exception killEx)
+        {
+            Logger.Error($"Failed to kill process {blockingPid}: {killEx.Message}");
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        // Brief pause so the OS releases the socket
+        await Task.Delay(1000);
+        Logger.App("Port freed — please restart the server.");
+    }
+
+    private static async Task<string> FindProcessOnPortAsync(int port)
+    {
+        try
+        {
+            if (Software.IsWindows)
+            {
+                Shell.ExecResult result = await Shell.ExecAsync("netstat", "-ano");
+                if (!result.Success)
+                    return string.Empty;
+
+                // Filter lines containing the port in LISTENING state
+                string[] lines = result.StandardOutput.Split('\n');
+                List<string> matches = [];
+                foreach (string line in lines)
+                {
+                    if (line.Contains($":{port} ") && line.Contains("LISTENING", StringComparison.OrdinalIgnoreCase))
+                        matches.Add(line.Trim());
+                }
+
+                if (matches.Count == 0)
+                    return string.Empty;
+
+                // Extract PIDs and get process names
+                List<string> output = [];
+                foreach (string match in matches)
+                {
+                    string[] parts = match.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    string pidStr = parts[^1];
+                    if (int.TryParse(pidStr, out int pid))
+                    {
+                        try
+                        {
+                            Process proc = Process.GetProcessById(pid);
+                            output.Add($"  PID {pid} ({proc.ProcessName}) — {match}");
+                        }
+                        catch
+                        {
+                            output.Add($"  PID {pidStr} — {match}");
+                        }
+                    }
+                    else
+                    {
+                        output.Add($"  {match}");
+                    }
+                }
+                return string.Join("\n", output);
+            }
+            else
+            {
+                // Linux / macOS — try ss first, fall back to lsof
+                Shell.ExecResult result = await Shell.ExecAsync("ss", $"-tlnp sport = :{port}");
+                if (result.Success && result.StandardOutput.Contains($":{port}"))
+                    return result.StandardOutput;
+
+                result = await Shell.ExecAsync("lsof", $"-i :{port} -sTCP:LISTEN -P -n");
+                if (result.Success && !string.IsNullOrWhiteSpace(result.StandardOutput))
+                    return result.StandardOutput;
+
+                return string.Empty;
+            }
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    private static int ParsePidFromPortInfo(string processInfo)
+    {
+        if (string.IsNullOrEmpty(processInfo))
+            return -1;
+
+        if (Software.IsWindows)
+        {
+            // Look for "PID <number>" in our formatted output
+            Match match = Regex.Match(processInfo, @"PID\s+(\d+)");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int pid))
+                return pid;
+        }
+        else
+        {
+            // ss output: pid=<number>
+            Match match = Regex.Match(processInfo, @"pid=(\d+)");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int pid))
+                return pid;
+
+            // lsof output: second column is PID (skip header)
+            string[] lines = processInfo.Split('\n');
+            if (lines.Length > 1)
+            {
+                string[] parts = lines[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length > 1 && int.TryParse(parts[1], out pid))
+                    return pid;
+            }
+        }
+
+        return -1;
     }
 
     private static async Task Shutdown()
@@ -314,8 +490,7 @@ public static class Program
                 {
                     kestrelOptions.Listen(localAddress, Config.ManagementPort, listenOptions =>
                     {
-                        listenOptions.Protocols =
-                            Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+                        listenOptions.Protocols = HttpProtocols.Http1;
                     });
                 }
 
@@ -327,8 +502,7 @@ public static class Program
                 {
                     kestrelOptions.ListenNamedPipe(Config.ManagementPipeName, listenOptions =>
                     {
-                        listenOptions.Protocols =
-                            Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+                        listenOptions.Protocols = HttpProtocols.Http1;
                     });
 
                     Logger.App(
@@ -345,7 +519,7 @@ public static class Program
                     kestrelOptions.ListenUnixSocket(socketPath, listenOptions =>
                     {
                         listenOptions.Protocols =
-                            Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+                            HttpProtocols.Http1;
                     });
 
                     Logger.App(
