@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 8, item BOOT-05
+**Next up**: All tasks complete
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -212,7 +212,7 @@ Details: [15-wallpaper.md](prd/15-wallpaper.md) | [16-offline-boot.md](prd/16-of
 - [x] BOOT-02 — Fix Cloudflare single point of failure
 - [x] BOOT-03 — Implement offline token validation
 - [x] BOOT-04 — Implement startup dependency reordering
-- [ ] BOOT-05 — Implement health check endpoints
+- [x] BOOT-05 — Implement health check endpoints
 
 ---
 

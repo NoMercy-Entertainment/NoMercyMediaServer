@@ -4817,3 +4817,33 @@ Replaced the hardcoded if/else startup flow in `Start.Init()` with a declarative
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All 1,882 tests pass across 7 test projects (22 new) = 0 failures.
+
+---
+
+## BOOT-05 — Implement health check endpoints
+
+**Date**: 2026-02-13
+
+**What was done**:
+- Enhanced `HealthController` from a static stub into real health check endpoints with three tiers:
+  - `GET /health` — **Liveness probe**: always returns 200 if the process is running (for container orchestration)
+  - `GET /health/ready` — **Readiness probe**: checks database connectivity and `Config.Started` flag, returns 503 if not ready
+  - `GET /health/detailed` — **Detailed status**: reports component health (database, auth, network, registration), degraded mode flag, uptime, version, and environment
+- `HealthController` now injects `MediaContext` and runs `SELECT 1` to verify database connectivity
+- Uses `Start.IsDegradedMode` (from BOOT-01/04 infrastructure) to report degraded mode status
+- Status determination uses early-return pattern: starting → unhealthy → degraded → healthy
+- Returns 503 for unhealthy (database down), 200 for healthy/degraded/starting
+- All response DTOs use `[JsonProperty]` for consistent snake_case serialization
+- Updated existing tests and added 3 new tests:
+  - `HealthReady_ReturnsReadinessStatus_WithDatabaseCheck` — verifies readiness probe response shape
+  - `HealthDetailed_ReturnsComponentStatus` — verifies components object has all expected fields
+  - `HealthDetailed_ReturnsUptimeAndDegradedFlag` — verifies uptime is non-negative and is_degraded is a boolean
+- `/health` routes already whitelisted in `SetupModeMiddleware` — liveness/readiness probes work during setup mode
+
+**Files changed**:
+- `src/NoMercy.Api/Controllers/HealthController.cs` — Rewritten: 3 endpoints, DB health check, degraded mode integration, typed response DTOs
+- `tests/NoMercy.Tests.Api/HealthControllerTests.cs` — Updated existing 2 tests + added 3 new tests (5 total)
+- `.claude/PRD.md` — Marked BOOT-05 complete, updated Next up to "All tasks complete"
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All 1,885 tests pass across 7 test projects (3 new) = 0 failures.
