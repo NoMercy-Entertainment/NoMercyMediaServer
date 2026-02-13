@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using NoMercy.Encoder.Core;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
@@ -11,23 +10,11 @@ namespace NoMercy.Setup;
 
 public class Start
 {
-    [DllImport("Kernel32.dll")]
-    private static extern IntPtr GetConsoleWindow();
-
-    [DllImport("User32.dll")]
-    private static extern bool ShowWindow(IntPtr hWnd, int cmdShow);
-
-    public static int AppProcessStarted { get; set; }
-    public static int ConsoleVisible { get; set; } = 1;
     public static bool IsDegradedMode { get; internal set; }
 
-    public static void VsConsoleWindow(int i)
-    {
-        IntPtr hWnd = GetConsoleWindow();
-        if (hWnd == IntPtr.Zero) return;
-        ConsoleVisible = i;
-        ShowWindow(hWnd, i);
-    }
+    private static List<StartupTask> _allTasks = [];
+    private static HashSet<string> _phase1Completed = [];
+    private static List<TaskDelegate> _callerTasks = [];
 
     internal static List<StartupTask> BuildStartupTasks(List<TaskDelegate> callerTasks)
     {
@@ -94,13 +81,6 @@ public class Start
             new("UpdateChecker", UpdateChecker.StartPeriodicUpdateCheck,
                 CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
 
-            new("TrayIcon", () =>
-                RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                    && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362)
-                        ? TrayIcon.Make()
-                        : Task.CompletedTask,
-                CanDefer: true, Phase: 3),
-
             new("DesktopIcon", () => Task.Run(() =>
                 DesktopIconCreator.CreateDesktopIcon(
                     AppFiles.ApplicationName, AppFiles.ServerExePath, AppFiles.AppIcon)),
@@ -116,10 +96,23 @@ public class Start
         ];
     }
 
-    public static async Task Init(List<TaskDelegate> tasks)
+    public static async Task InitEssential(List<TaskDelegate> tasks)
     {
-        List<StartupTask> startupTasks = BuildStartupTasks(tasks);
-        StartupTaskRunner runner = new(startupTasks);
+        _callerTasks = tasks;
+        _allTasks = BuildStartupTasks(tasks);
+
+        List<StartupTask> phase1Tasks = _allTasks.Where(t => t.Phase == 1).ToList();
+        StartupTaskRunner runner = new(phase1Tasks);
+
+        await runner.RunAll();
+
+        _phase1Completed = [..runner.CompletedTasks];
+    }
+
+    public static async Task InitRemaining()
+    {
+        List<StartupTask> remainingTasks = _allTasks.Where(t => t.Phase > 1).ToList();
+        StartupTaskRunner runner = new(remainingTasks, _phase1Completed);
 
         await runner.RunAll();
 
@@ -134,12 +127,12 @@ public class Start
 
             DeferredTasks deferred = new()
             {
-                ApiKeysLoaded = runner.CompletedTasks.Contains("ApiInfo"),
+                ApiKeysLoaded = _phase1Completed.Contains("ApiInfo"),
                 Authenticated = runner.CompletedTasks.Contains("Auth"),
                 NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
                 SeedsRun = runner.DeferredTasks.All(t => !t.Name.StartsWith("CallerTask_")),
                 Registered = runner.CompletedTasks.Contains("Register"),
-                CallerTasks = tasks
+                CallerTasks = _callerTasks
             };
             _ = Task.Run(() => DegradedModeRecovery.StartRecoveryLoop(deferred));
         }

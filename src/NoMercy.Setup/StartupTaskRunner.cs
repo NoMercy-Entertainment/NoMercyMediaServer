@@ -18,9 +18,18 @@ public class StartupTaskRunner
         ValidateDependencies();
     }
 
+    public StartupTaskRunner(List<StartupTask> tasks, IEnumerable<string> alreadyCompleted)
+    {
+        _tasks = tasks;
+        foreach (string name in alreadyCompleted)
+            _completedTasks.Add(name);
+        ValidateDependencies();
+    }
+
     private void ValidateDependencies()
     {
         HashSet<string> taskNames = _tasks.Select(t => t.Name).ToHashSet();
+        taskNames.UnionWith(_completedTasks);
 
         foreach (StartupTask task in _tasks)
         {

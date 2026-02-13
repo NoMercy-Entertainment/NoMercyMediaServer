@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
@@ -63,8 +62,6 @@ public static class Program
         }
     }
 
-    private delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-
     internal static bool IsRunningAsService { get; private set; }
 
     private static async Task Start(StartupOptions options)
@@ -116,7 +113,8 @@ public static class Program
             // new(Dev.Run)
         ];
 
-        await Setup.Start.Init(startupTasks);
+        // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
+        await Setup.Start.InitEssential(startupTasks);
 
         _applicationShutdownCts = new();
         bool startedWithoutCert = !Certificate.HasValidCertificate();
@@ -128,6 +126,19 @@ public static class Program
         Logger.App($"Token validation: {tokenState} → setup phase: {initialPhase}");
 
         RegisterLifetimeEvents(app, stopWatch);
+
+        // Run Phase 2-4 in background (auth, networking, registration) while host is starting
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Setup.Start.InitRemaining();
+            }
+            catch (Exception ex)
+            {
+                Logger.App($"Background startup tasks failed: {ex.Message}");
+            }
+        });
 
         if (startedWithoutCert)
         {
@@ -160,17 +171,6 @@ public static class Program
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
 
                 await Dev.Run();
-
-                if (!IsRunningAsService &&
-                    RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                    OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
-                {
-                    Logger.App(
-                        "Your server is ready and we will hide the console window in 10 seconds\n you can show it again by right-clicking the tray icon");
-                    await Task.Delay(10000)
-                        .ContinueWith(_ => Setup.Start.VsConsoleWindow(0));
-                }
-
             });
         });
 

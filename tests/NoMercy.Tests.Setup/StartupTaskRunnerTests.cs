@@ -314,7 +314,7 @@ public class BuildStartupTasksTests
             "UserSettings", "CreateAppFolders", "ApiInfo",
             "NetworkProbe", "Auth", "Binaries",
             "Networking", "ChromeCast", "UpdateChecker",
-            "TrayIcon", "DesktopIcon", "CallerTask_0",
+            "DesktopIcon", "CallerTask_0",
             "Register"
         ];
 
