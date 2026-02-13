@@ -15,10 +15,10 @@ runs:
     - name: Install Inno Setup
       shell: pwsh
       run: |
-        $InnoUrl = "https://files.jrsoftware.org/is/6/innosetup-6.3.3.exe"
+        $InnoUrl = "https://files.jrsoftware.org/is/6/innosetup-6.7.0.exe"
         $InstallerPath = "$env:TEMP\innosetup.exe"
 
-        Write-Host "Downloading Inno Setup..."
+        Write-Host "Downloading Inno Setup 6.7.0..."
         Invoke-WebRequest -Uri $InnoUrl -OutFile $InstallerPath -UseBasicParsing
 
         Write-Host "Installing Inno Setup..."
