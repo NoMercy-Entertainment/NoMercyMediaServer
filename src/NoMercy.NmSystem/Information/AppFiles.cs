@@ -20,6 +20,8 @@ public static class AppFiles
 
     public static string ConfigPath => Path.Combine(AppPath, "config");
     public static string TokenFile => Path.Combine(ConfigPath, "token.json");
+    public static string AuthKeysFile => Path.Combine(ConfigPath, "auth_keys.json");
+    public static string JwksCacheFile => Path.Combine(ConfigPath, "jwks_cache.json");
     public static string FolderRootsSeedFile => Path.Combine(ConfigPath, "folderRootsSeed.jsonc");
     public static string LibrariesSeedFile => Path.Combine(ConfigPath, "librariesSeed.jsonc");
     public static string EncoderProfilesSeedFile => Path.Combine(ConfigPath, "encoderProfilesSeed.jsonc");

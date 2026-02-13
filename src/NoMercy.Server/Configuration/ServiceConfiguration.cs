@@ -3,6 +3,7 @@ using I18N.DotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
@@ -377,6 +378,22 @@ public static class ServiceConfiguration
                 options.RequireHttpsMetadata = true;
                 options.Audience = "nomercy-ui";
                 options.Audience = Config.TokenClientId;
+
+                // Enable offline token validation via cached signing keys
+                options.TokenValidationParameters.ValidateIssuerSigningKey = true;
+                options.TokenValidationParameters.ValidIssuer = Config.AuthBaseUrl;
+                options.TokenValidationParameters.IssuerSigningKeyResolver =
+                    (token, securityToken, kid, parameters) =>
+                    {
+                        // When OIDC metadata fetch fails, the default key resolver returns nothing.
+                        // Fall back to cached public key for offline validation.
+                        RsaSecurityKey? cachedKey = OfflineJwksCache.CachedSigningKey;
+                        if (cachedKey is not null)
+                            return [cachedKey];
+
+                        return [];
+                    };
+
                 options.Events = new()
                 {
                     OnMessageReceived = context =>

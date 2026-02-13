@@ -4718,3 +4718,45 @@ BOOT-01 added degraded mode startup, but 8 Cloudflare-dependent endpoints still 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All 1,844 tests pass across 7 test projects (10 new + 1,834 existing) = 0 failures.
+
+---
+
+## BOOT-03 — Implement offline token validation
+
+**Date**: 2026-02-13
+
+**What was done**:
+- Created `OfflineJwksCache` class in `src/NoMercy.Setup/OfflineJwksCache.cs` that:
+  - Caches the Keycloak RSA public key to disk (`config/auth_keys.json`) as base64-encoded SPKI
+  - Loads cached public key from disk on startup for offline JWT validation
+  - Converts base64 public key to `RsaSecurityKey` for use with ASP.NET Core JWT validation
+  - Thread-safe via lock on the `CachedSigningKey` property
+- Modified `Auth.AuthKeys()` to call `OfflineJwksCache.CachePublicKey()` after fetching the public key from Keycloak — ensures the key is persisted for offline use on subsequent boots
+- Modified `Auth.InitWithFallback()` to call `OfflineJwksCache.LoadCachedPublicKey()` early in the flow — loads cached auth keys before attempting any network operations
+- Modified `ConfigureAuth()` in `ServiceConfiguration.cs` to add an `IssuerSigningKeyResolver` to `TokenValidationParameters` — when the JwtBearer handler cannot reach Keycloak's OIDC metadata endpoint, the resolver falls back to the cached RSA public key for offline JWT signature validation
+- Added `AuthKeysFile` and `JwksCacheFile` path properties to `AppFiles` for the cache file locations
+- Created 13 new tests in `tests/NoMercy.Tests.Setup/OfflineTokenValidationTests.cs`:
+  - `CachePublicKey_WritesFileAndSetsKey` — verifies key is written to disk and loaded into memory
+  - `LoadCachedPublicKey_ReturnsFalse_WhenNoFile` — graceful handling when no cache exists
+  - `LoadCachedPublicKey_ReturnsTrue_WhenValidFile` — loads key from existing cache
+  - `LoadCachedPublicKey_ReturnsFalse_WhenEmptyFile` — handles empty cache file
+  - `LoadCachedPublicKey_ReturnsFalse_WhenCorruptFile` — handles corrupt cache file
+  - `CreateSecurityKeyFromBase64_ProducesValidRsaKey` — RSA key creation from base64
+  - `CachedKey_CanValidateJwtSignature` — end-to-end: signs JWT with private key, validates with cached public key
+  - `CachedKey_RejectsTokenSignedWithDifferentKey` — security: wrong key is rejected
+  - `CacheRoundTrip_PreservesKeyFidelity` — write→load→validate cycle works
+  - `AppFiles_HasAuthKeysFilePath` / `AppFiles_HasJwksCacheFilePath` — path properties exist
+  - `AuthKeysMethod_CachesPublicKey_WhenSourceHasCode` — source code verification
+  - `InitWithFallback_LoadsCachedKeys` — source code verification
+  - `ServiceConfiguration_UsesIssuerSigningKeyResolver` — source code verification
+
+**Files changed**:
+- `src/NoMercy.Setup/OfflineJwksCache.cs` — New file: offline public key caching and loading
+- `src/NoMercy.Setup/Auth.cs` — Added `OfflineJwksCache.CachePublicKey()` in `AuthKeys()`, added `OfflineJwksCache.LoadCachedPublicKey()` in `InitWithFallback()`
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — Added `IssuerSigningKeyResolver` fallback and `ValidIssuer` to JWT bearer config
+- `src/NoMercy.NmSystem/Information/AppFiles.cs` — Added `AuthKeysFile` and `JwksCacheFile` properties
+- `tests/NoMercy.Tests.Setup/OfflineTokenValidationTests.cs` — New file: 13 tests
+- `.claude/PRD.md` — Marked BOOT-03 complete, updated Next up to BOOT-04
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All 2,380 tests pass across 13 test projects (13 new + 2,367 existing) = 0 failures.

@@ -92,6 +92,9 @@ public static class Auth
             // Token file may be empty or invalid
         }
 
+        // Load cached auth keys for offline JWT validation
+        OfflineJwksCache.LoadCachedPublicKey();
+
         if (Globals.Globals.AccessToken is null)
         {
             Logger.Auth("No cached token — authentication requires network",
@@ -332,6 +335,9 @@ public static class Auth
                                 ?? throw new("Failed to deserialize JSON");
 
         PublicKey = data.PublicKey;
+
+        if (!string.IsNullOrEmpty(data.PublicKey))
+            OfflineJwksCache.CachePublicKey(data.PublicKey);
     }
 
     private static async Task TokenByRefreshGrand()
