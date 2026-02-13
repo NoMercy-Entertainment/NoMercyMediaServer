@@ -93,6 +93,29 @@
             </Grid>
         </Border>
 
+        <!-- Update banner -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding UpdateAvailable}"
+                Background="#1E3A5F"
+                CornerRadius="8"
+                Padding="16"
+                Margin="0,0,0,16">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding LatestVersion, StringFormat='Update available: v{0}'}"
+                           Foreground="#93C5FD"
+                           FontSize="13"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Content="Restart to update"
+                        Click="OnApplyUpdate"
+                        Background="#2563EB"
+                        Foreground="White"
+                        Padding="12,6"
+                        CornerRadius="4" />
+            </Grid>
+        </Border>
+
         <!-- Auto-start toggle -->
         <Border DockPanel.Dock="Top"
                 Background="#1F2937"

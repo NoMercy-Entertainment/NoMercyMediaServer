@@ -191,9 +191,46 @@ runs:
         # Build packages
         create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
         create_rpm_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
-        create_rpm_package "nomercytray" "NoMercy-Tray" "NoMercyTray-linux-x64" "NoMercy-Tray.desktop"
+        create_rpm_package "nomercymediaserverservice" "NoMercy-MediaServer-Service" "NoMercyMediaServerService-linux-x64" "NoMercy-MediaServer-Service.desktop"
         create_rpm_package "nomercy-cli" "NoMercy-CLI" "nomercy-linux-x64" "NoMercy-MediaServer.desktop"
-        
+
+        # Build meta-package
+        cat > ~/rpmbuild/SPECS/nomercy.spec << EOF
+        Name: nomercy
+        Version: ${VERSION}
+        Release: 1%{?dist}
+        Summary: NoMercy MediaServer - complete installation
+        License: Proprietary
+        URL: https://nomercy.tv
+        BuildArch: noarch
+
+        Requires: nomercymediaserver = ${VERSION}
+        Requires: nomercymediaserverservice = ${VERSION}
+        Requires: nomercy-cli = ${VERSION}
+
+        %description
+        Meta-package that installs the NoMercy MediaServer, Service application, and CLI tool.
+
+        %prep
+
+        %build
+
+        %install
+        mkdir -p %{buildroot}/usr/share/doc/nomercy
+        echo "NoMercy MediaServer meta-package" > %{buildroot}/usr/share/doc/nomercy/README
+
+        %files
+        %doc /usr/share/doc/nomercy/README
+
+        %changelog
+        * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - ${VERSION}-1
+        - Meta-package for complete NoMercy installation
+        EOF
+
+        rpmbuild -bb ~/rpmbuild/SPECS/nomercy.spec
+        find ~/rpmbuild/RPMS -name "nomercy-*.rpm" -exec cp {} packages/rpm/pool/x86_64/ \;
+        echo "Successfully created nomercy meta-package"
+
         # Generate repo metadata
         createrepo_c packages/rpm
 

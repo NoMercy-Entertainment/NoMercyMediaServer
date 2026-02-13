@@ -22,7 +22,7 @@ public class PlaybackPipelineEventTests
         await bus.PublishAsync(new PlaybackStartedEvent
         {
             UserId = userId,
-            MediaId = 550,
+            MediaId = 129,
             MediaType = "movie",
             DeviceId = "device-1"
         });
@@ -30,7 +30,7 @@ public class PlaybackPipelineEventTests
         await bus.PublishAsync(new PlaybackProgressEvent
         {
             UserId = userId,
-            MediaId = 550,
+            MediaId = 129,
             Position = TimeSpan.FromMinutes(30),
             Duration = TimeSpan.FromMinutes(120)
         });
@@ -38,7 +38,7 @@ public class PlaybackPipelineEventTests
         await bus.PublishAsync(new PlaybackProgressEvent
         {
             UserId = userId,
-            MediaId = 550,
+            MediaId = 129,
             Position = TimeSpan.FromMinutes(90),
             Duration = TimeSpan.FromMinutes(120)
         });
@@ -46,7 +46,7 @@ public class PlaybackPipelineEventTests
         await bus.PublishAsync(new PlaybackCompletedEvent
         {
             UserId = userId,
-            MediaId = 550,
+            MediaId = 129,
             MediaType = "movie"
         });
 
@@ -58,7 +58,7 @@ public class PlaybackPipelineEventTests
 
         PlaybackStartedEvent started = (PlaybackStartedEvent)received[0];
         started.UserId.Should().Be(userId);
-        started.MediaId.Should().Be(550);
+        started.MediaId.Should().Be(129);
         started.MediaType.Should().Be("movie");
         started.DeviceId.Should().Be("device-1");
 
@@ -70,7 +70,7 @@ public class PlaybackPipelineEventTests
         progress2.Position.Should().Be(TimeSpan.FromMinutes(90));
 
         PlaybackCompletedEvent completed = (PlaybackCompletedEvent)received[3];
-        completed.MediaId.Should().Be(550);
+        completed.MediaId.Should().Be(129);
         completed.MediaType.Should().Be("movie");
     }
 
@@ -192,13 +192,13 @@ public class PlaybackPipelineEventTests
         await bus.PublishAsync(new PlaybackStartedEvent
         {
             UserId = Guid.NewGuid(),
-            MediaId = 550,
+            MediaId = 129,
             MediaType = "movie"
         });
 
         receivedEvent.Should().NotBeNull();
         receivedEvent!.MediaIdentifier.Should().BeNull();
-        receivedEvent.MediaId.Should().Be(550);
+        receivedEvent.MediaId.Should().Be(129);
     }
 
     [Fact]

@@ -1,5 +1,5 @@
 using CommandLine;
-using NoMercy.Server;
+using NoMercy.Service;
 
 namespace NoMercy.Tests.Setup;
 

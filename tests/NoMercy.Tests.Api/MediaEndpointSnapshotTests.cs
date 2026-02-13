@@ -54,7 +54,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Movies_GetMovie_ReturnsOk_WithDataProperty()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/movie/550");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/movie/129");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
@@ -89,7 +89,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     {
         HttpClient unauthed = _factory.CreateClient().AsUnauthenticated();
 
-        HttpResponseMessage response = await unauthed.GetAsync("/api/v1/movie/550");
+        HttpResponseMessage response = await unauthed.GetAsync("/api/v1/movie/129");
 
         Assert.True(
             response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden,
@@ -99,7 +99,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Movies_Available_ReturnsExpectedShape()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/movie/550/available");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/movie/129/available");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
@@ -133,7 +133,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Movies_Watch_ReturnsArrayOrNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/movie/550/watch");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/movie/129/watch");
 
         string body = await response.Content.ReadAsStringAsync();
         // 500 can occur if VideoPlaylistResponseDto encounters serialization issues
@@ -154,7 +154,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Movies_Like_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/movie/550/like",
+            "/api/v1/movie/129/like",
             JsonBody(new { value = true }));
 
         string body = await response.Content.ReadAsStringAsync();
@@ -170,7 +170,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     public async Task Movies_WatchList_ReturnsStatusResponse()
     {
         HttpResponseMessage response = await _client.PostAsync(
-            "/api/v1/movie/550/watch-list",
+            "/api/v1/movie/129/watch-list",
             JsonBody(new { add = true }));
 
         string body = await response.Content.ReadAsStringAsync();
@@ -780,7 +780,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     // =========================================================================
 
     [Theory]
-    [InlineData("/api/v1/movie/550")]
+    [InlineData("/api/v1/movie/129")]
     [InlineData("/api/v1/tv/1399")]
     [InlineData("/api/v1/collection")]
     [InlineData("/api/v1/genre")]

@@ -1,0 +1,47 @@
+name: 'Build macOS Installer'
+description: 'Build macOS .pkg installer containing Server, Service, and CLI'
+inputs:
+  version:
+    description: 'Package version'
+    required: true
+  artifacts-path:
+    description: 'Path to build artifacts'
+    required: true
+    default: './output'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Verify macOS artifacts exist
+      shell: bash
+      run: |
+        ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
+        for bin in NoMercyMediaServer-macos-x64 NoMercyMediaServerService-macos-x64 nomercy-macos-x64; do
+          if [ ! -f "${ARTIFACTS_PATH}/${bin}" ]; then
+            echo "ERROR: Required artifact not found: ${ARTIFACTS_PATH}/${bin}"
+            exit 1
+          fi
+        done
+        echo "All required macOS artifacts found."
+
+    - name: Make binaries executable
+      shell: bash
+      run: |
+        chmod +x "${{ inputs.artifacts-path }}/NoMercyMediaServer-macos-x64"
+        chmod +x "${{ inputs.artifacts-path }}/NoMercyMediaServerService-macos-x64"
+        chmod +x "${{ inputs.artifacts-path }}/nomercy-macos-x64"
+
+    - name: Build macOS .pkg installer
+      shell: bash
+      run: |
+        chmod +x ./packaging/macos/build-pkg.sh
+        ./packaging/macos/build-pkg.sh \
+          --version "${{ inputs.version }}" \
+          --artifacts-path "${{ inputs.artifacts-path }}" \
+          --output-path "./packages/macos-installer"
+
+    - name: Upload macOS installer artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-installer
+        path: packages/macos-installer/

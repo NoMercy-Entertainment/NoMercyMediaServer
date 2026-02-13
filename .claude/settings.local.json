@@ -52,7 +52,8 @@
       "Bash(done)",
       "Bash(wc:*)",
       "Bash(cat:*)",
-      "Bash(dotnet run:*)"
+      "Bash(dotnet run:*)",
+      "Bash(fuser:*)"
     ],
     "deny": []
   },

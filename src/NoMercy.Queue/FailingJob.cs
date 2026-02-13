@@ -2,7 +2,7 @@
 
 using NoMercy.Queue;
 
-namespace NoMercy.Server.system;
+namespace NoMercy.Queue;
 
 public class FailingJob : IShouldQueue
 {

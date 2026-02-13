@@ -310,7 +310,7 @@ public class OfflineTokenValidationIntegrationTests
         string dir = AppContext.BaseDirectory;
         while (dir != null!)
         {
-            string candidate = Path.Combine(dir, "src", "NoMercy.Server", "Configuration", "ServiceConfiguration.cs");
+            string candidate = Path.Combine(dir, "src", "NoMercy.Service", "Configuration", "ServiceConfiguration.cs");
             if (File.Exists(candidate))
             {
                 string source = File.ReadAllText(candidate);

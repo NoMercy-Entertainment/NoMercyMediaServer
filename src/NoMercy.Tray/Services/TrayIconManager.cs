@@ -20,6 +20,7 @@ public class TrayIconManager
     private NativeMenuItem? _stopServerItem;
     private ServerState _currentState = ServerState.Disconnected;
     private MainWindow? _mainWindow;
+    private bool _autoStartAttempted;
 
     public TrayIconManager(
         ServerConnection serverConnection,
@@ -72,7 +73,7 @@ public class TrayIconManager
 
         NativeMenuItemSeparator separator3 = new();
 
-        NativeMenuItem quitItem = new("Quit Tray");
+        NativeMenuItem quitItem = new("Quit");
         quitItem.Click += OnQuit;
 
         menu.Items.Add(_statusItem);
@@ -126,6 +127,12 @@ public class TrayIconManager
 
             if (!wasConnected)
             {
+                if (!_autoStartAttempted)
+                {
+                    _autoStartAttempted = true;
+                    await _processLauncher.StartServerAsync();
+                }
+
                 SetState(
                     ServerState.Disconnected,
                     "Disconnected",

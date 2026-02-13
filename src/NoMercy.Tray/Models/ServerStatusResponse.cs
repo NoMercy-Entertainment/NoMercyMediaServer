@@ -14,4 +14,6 @@ public class ServerStatusResponse
     [JsonProperty("start_time")] public DateTime StartTime { get; set; }
     [JsonProperty("is_dev")] public bool IsDev { get; set; }
     [JsonProperty("auto_start")] public bool AutoStart { get; set; }
+    [JsonProperty("update_available")] public bool UpdateAvailable { get; set; }
+    [JsonProperty("latest_version")] public string? LatestVersion { get; set; }
 }

@@ -307,7 +307,7 @@ public class SignalREventHandlerTests
             new()
             {
                 UserId = Guid.NewGuid(),
-                MediaId = 550,
+                MediaId = 129,
                 MediaType = "movie",
                 DeviceId = "dev-1"
             },
@@ -326,7 +326,7 @@ public class SignalREventHandlerTests
             new()
             {
                 UserId = Guid.NewGuid(),
-                MediaId = 550,
+                MediaId = 129,
                 MediaType = "movie"
             },
             CancellationToken.None);

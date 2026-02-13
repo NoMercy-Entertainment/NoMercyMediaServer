@@ -181,15 +181,15 @@ public static class TestMediaContextFactory
 
         Movie movie1 = new()
         {
-            Id = 550,
-            Title = "Fight Club",
-            TitleSort = "fight club",
-            Overview = "An insomniac office worker and a devil-may-care soap maker form an underground fight club.",
-            Poster = "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
-            Backdrop = "/hZkgoQYus5dXo3H8T7Uef6DNknx.jpg",
-            ReleaseDate = new DateTime(1999, 10, 15),
+            Id = 129,
+            Title = "Spirited Away",
+            TitleSort = "spirited away",
+            Overview = "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
+            Poster = "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
+            Backdrop = "/Ab8mkHmkYADjU7wQiOkia9BzGvS.jpg",
+            ReleaseDate = new DateTime(2001, 7, 20),
             LibraryId = SeedConstants.MovieLibraryId,
-            VoteAverage = 8.4
+            VoteAverage = 8.5
         };
 
         Movie movie2 = new()
@@ -207,19 +207,19 @@ public static class TestMediaContextFactory
         context.Movies.AddRange(movie1, movie2);
 
         context.LibraryMovie.AddRange(
-            new LibraryMovie(SeedConstants.MovieLibraryId, 550),
+            new LibraryMovie(SeedConstants.MovieLibraryId, 129),
             new LibraryMovie(SeedConstants.MovieLibraryId, 680));
 
         VideoFile movieVideoFile1 = new()
         {
             Id = SeedConstants.MovieVideoFile1Id,
-            Filename = "Fight.Club.1999.1080p.mkv",
-            Folder = "/media/movies/Fight Club (1999)",
-            HostFolder = "/media/movies/Fight Club (1999)",
+            Filename = "Spirited.Away.2001.1080p.mkv",
+            Folder = "/media/movies/Spirited Away (2001)",
+            HostFolder = "/media/movies/Spirited Away (2001)",
             Languages = "en",
             Quality = "1080p",
             Share = "movies",
-            MovieId = 550
+            MovieId = 129
         };
         VideoFile movieVideoFile2 = new()
         {
@@ -235,8 +235,8 @@ public static class TestMediaContextFactory
         context.VideoFiles.AddRange(movieVideoFile1, movieVideoFile2);
 
         context.GenreMovie.AddRange(
-            new GenreMovie { GenreId = 28, MovieId = 550 },
-            new GenreMovie { GenreId = 18, MovieId = 550 },
+            new GenreMovie { GenreId = 28, MovieId = 129 },
+            new GenreMovie { GenreId = 18, MovieId = 129 },
             new GenreMovie { GenreId = 18, MovieId = 680 });
 
         Tv show1 = new()
@@ -322,7 +322,7 @@ public static class TestMediaContextFactory
             {
                 Id = Ulid.Parse("01JABC0000000000000000MOVI"),
                 UserId = SeedConstants.UserId,
-                MovieId = 550,
+                MovieId = 129,
                 VideoFileId = SeedConstants.MovieVideoFile1Id,
                 Type = "movie",
                 Time = 3600,
@@ -333,7 +333,7 @@ public static class TestMediaContextFactory
             {
                 Id = Ulid.Parse("01JDBC0000000000000000MDUP"),
                 UserId = SeedConstants.UserId,
-                MovieId = 550,
+                MovieId = 129,
                 VideoFileId = SeedConstants.MovieVideoFile2Id,
                 Type = "movie",
                 Time = 1800,

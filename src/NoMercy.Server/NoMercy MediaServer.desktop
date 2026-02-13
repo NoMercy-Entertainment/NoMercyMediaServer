@@ -1,7 +1,0 @@
-
-                [Desktop Entry]
-                Name=NoMercy MediaServer
-                Exec=/home/vscode/.local/share/NoMercy_dev/root/binaries/NoMercyMediaServer
-                Icon=/workspaces/NoMercyMediaServer/src/NoMercy.Server/Assets/icon.png
-                Type=Application
-                Terminal=false

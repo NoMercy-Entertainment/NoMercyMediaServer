@@ -32,14 +32,14 @@ runs:
       run: |
         VERSION="${{ inputs.version }}"
         ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
-        ISS_DIR="./src/NoMercy.Server"
+        ISS_DIR="./src/NoMercy.Service"
 
         # Create artifacts directory next to the .iss file
         mkdir -p "${ISS_DIR}/artifacts"
 
         # Copy Windows executables
         cp "${ARTIFACTS_PATH}/NoMercyMediaServer-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: Server exe not found"
-        cp "${ARTIFACTS_PATH}/NoMercyTray-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: Tray exe not found"
+        cp "${ARTIFACTS_PATH}/NoMercyMediaServerService-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: Service exe not found"
         cp "${ARTIFACTS_PATH}/nomercy-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: CLI exe not found"
 
         echo "Prepared installer artifacts:"
@@ -49,7 +49,7 @@ runs:
       shell: bash
       run: |
         VERSION="${{ inputs.version }}"
-        ISS_FILE="./src/NoMercy.Server/NoMercyMediaServer.iss"
+        ISS_FILE="./src/NoMercy.Service/NoMercyMediaServer.iss"
         INNO_COMPILER="$HOME/.wine/drive_c/InnoSetup/ISCC.exe"
 
         # Build installer with version parameter

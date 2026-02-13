@@ -65,6 +65,7 @@ public static class Config
 
     public static bool IsDev { get; set; }
     public static bool UpdateAvailable { get; set; }
+    public static string? LatestVersion { get; set; }
 
     public static KeyValuePair<string, int> QueueWorkers { get; set; } = new("queue", 1);
     public static KeyValuePair<string, int> EncoderWorkers { get; set; } = new("encoder", 2);

@@ -14,10 +14,10 @@ dotnet restore
 dotnet build
 
 # Run server (default ports: internal 7626, external 7626)
-dotnet run --project src/NoMercy.Server
+dotnet run --project src/NoMercy.Service
 
 # Run with custom options
-dotnet run --project src/NoMercy.Server --dev --seed --loglevel=Debug
+dotnet run --project src/NoMercy.Service --dev --seed --loglevel=Debug
 ```
 
 ### Startup Options
@@ -53,7 +53,8 @@ dotnet test --collect:"XPlat Code Coverage" --settings tests/coverletArgs.runset
 
 ```
 src/
-├── NoMercy.Server/         # ASP.NET Core host, entry point, Kestrel
+├── NoMercy.Service/        # ASP.NET Core host, entry point, Kestrel
+├── NoMercy.Tray/           # System tray UI app
 ├── NoMercy.Api/            # REST controllers (v1, v2), SignalR hubs
 ├── NoMercy.Database/       # EF Core contexts (MediaContext, QueueContext), SQLite
 ├── NoMercy.Encoder/        # FFmpeg abstraction, fluent encoding pipeline
@@ -96,9 +97,9 @@ Encoding inheritance: `BaseVideo` → `X264`/`X265`/`AV1`, `BaseAudio` → forma
 - Located in: `src/NoMercy.Api/Controllers/Socket/`
 
 ### Key Configuration Files
-- `src/NoMercy.Server/Program.cs`: Entry point, command-line parsing
-- `src/NoMercy.Server/AppConfig/ServiceConfiguration.cs`: DI container setup
-- `src/NoMercy.Server/AppConfig/ApplicationConfiguration.cs`: Middleware pipeline
+- `src/NoMercy.Service/Program.cs`: Entry point, command-line parsing
+- `src/NoMercy.Service/Configuration/ServiceConfiguration.cs`: DI container setup
+- `src/NoMercy.Service/Configuration/ApplicationConfiguration.cs`: Middleware pipeline
 - `src/NoMercy.Setup/Start.cs`: Startup sequence initialization
 
 ## Code Style Rules
@@ -283,7 +284,7 @@ All providers implement async patterns with retry logic and rate limiting.
 ### Running in Dev Container
 ```bash
 # Start with host LAN IP so both container and host can access
-dotnet run --project src/NoMercy.Server -- --dev --internal-ip <HOST_LAN_IP>
+dotnet run --project src/NoMercy.Service -- --dev --internal-ip <HOST_LAN_IP>
 ```
 - The `--internal-ip` flag is needed because the container's Docker IP (172.17.x.x) isn't routable from the host
 - Check the log file for the actual Internal/External addresses after startup

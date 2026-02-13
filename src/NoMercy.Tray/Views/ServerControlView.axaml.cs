@@ -42,6 +42,13 @@ public partial class ServerControlView : UserControl
             await ViewModel.RefreshStatusAsync();
     }
 
+    private async void OnApplyUpdate(
+        object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null)
+            await ViewModel.ApplyUpdateAsync();
+    }
+
     private async void OnAutoStartToggle(
         object? sender, RoutedEventArgs e)
     {

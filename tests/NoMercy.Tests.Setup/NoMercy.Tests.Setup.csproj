@@ -20,7 +20,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\NoMercy.Setup\NoMercy.Setup.csproj" />
-        <ProjectReference Include="..\..\src\NoMercy.Server\NoMercy.Server.csproj" />
+        <ProjectReference Include="..\..\src\NoMercy.Service\NoMercy.Service.csproj" />
         <ProjectReference Include="..\..\src\NoMercy.Networking\NoMercy.Networking.csproj" />
     </ItemGroup>
 

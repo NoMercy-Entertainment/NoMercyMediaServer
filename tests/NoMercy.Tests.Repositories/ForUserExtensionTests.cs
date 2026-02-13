@@ -26,7 +26,7 @@ public class ForUserExtensionTests
             .ToListAsync();
 
         Assert.Equal(2, movies.Count);
-        Assert.Contains(movies, m => m.Title == "Fight Club");
+        Assert.Contains(movies, m => m.Title == "Spirited Away");
         Assert.Contains(movies, m => m.Title == "Pulp Fiction");
     }
 
@@ -225,12 +225,12 @@ public class ForUserExtensionTests
 
         Movie? movie = await context.Movies
             .AsNoTracking()
-            .Where(m => m.Id == 550)
+            .Where(m => m.Id == 129)
             .ForUser(_userId)
             .FirstOrDefaultAsync();
 
         Assert.NotNull(movie);
-        Assert.Equal("Fight Club", movie.Title);
+        Assert.Equal("Spirited Away", movie.Title);
     }
 
     [Fact]

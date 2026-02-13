@@ -25,10 +25,10 @@ public class HomeRepositoryTests : IDisposable
     public async Task GetHomeMovies_ReturnsMoviesById()
     {
         List<Movie> movies = await _repository.GetHomeMovies(
-            _context, [550, 680], "en", "US");
+            _context, [129, 680], "en", "US");
 
         Assert.Equal(2, movies.Count);
-        Assert.Contains(movies, m => m.Id == 550);
+        Assert.Contains(movies, m => m.Id == 129);
         Assert.Contains(movies, m => m.Id == 680);
     }
 
@@ -116,24 +116,24 @@ public class HomeRepositoryTests : IDisposable
     [Fact]
     public async Task GetContinueWatchingAsync_ReturnsDeduplicated()
     {
-        // Seed has 3 UserData rows: 2 for movie 550 (duplicate), 1 for tv 1399
+        // Seed has 3 UserData rows: 2 for movie 129 (duplicate), 1 for tv 1399
         // DistinctBy on { MovieId, CollectionId, TvId, SpecialId } should yield 2 unique entries
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
             _context, SeedConstants.UserId, "en", "US");
 
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, ud => ud.MovieId == 550);
+        Assert.Contains(result, ud => ud.MovieId == 129);
         Assert.Contains(result, ud => ud.TvId == 1399);
     }
 
     [Fact]
     public async Task GetContinueWatchingAsync_KeepsMostRecentPerGroup()
     {
-        // The most recent entry for movie 550 has LastPlayedDate 2026-02-01
+        // The most recent entry for movie 129 has LastPlayedDate 2026-02-01
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
             _context, SeedConstants.UserId, "en", "US");
 
-        UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 550);
+        UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 129);
         Assert.NotNull(movieEntry);
         Assert.Equal("2026-02-01T10:00:00Z", movieEntry.LastPlayedDate);
     }
@@ -153,7 +153,7 @@ public class HomeRepositoryTests : IDisposable
         HashSet<UserData> result = await _repository.GetContinueWatchingAsync(
             _context, SeedConstants.UserId, "en", "US");
 
-        UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 550);
+        UserData? movieEntry = result.FirstOrDefault(ud => ud.MovieId == 129);
         Assert.NotNull(movieEntry);
         Assert.NotNull(movieEntry.Movie);
         Assert.NotEmpty(movieEntry.Movie.VideoFiles);

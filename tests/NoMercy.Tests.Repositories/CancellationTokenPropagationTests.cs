@@ -23,7 +23,7 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetMovieAsync(SeedConstants.UserId, 550, "en", "US", cts.Token));
+            repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US", cts.Token));
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetMovieAvailableAsync(SeedConstants.UserId, 550, cts.Token));
+            repository.GetMovieAvailableAsync(SeedConstants.UserId, 129, cts.Token));
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.GetMoviePlaylistAsync(SeedConstants.UserId, 550, "en", "US", cts.Token));
+            repository.GetMoviePlaylistAsync(SeedConstants.UserId, 129, "en", "US", cts.Token));
     }
 
     [Fact]
@@ -153,10 +153,10 @@ public class CancellationTokenPropagationTests : IDisposable
         MovieRepository repository = new(_context);
 
         Movie? movie = await repository.GetMovieAsync(
-            SeedConstants.UserId, 550, "en", "US");
+            SeedConstants.UserId, 129, "en", "US");
 
         Assert.NotNull(movie);
-        Assert.Equal("Fight Club", movie.Title);
+        Assert.Equal("Spirited Away", movie.Title);
     }
 
     [Fact]

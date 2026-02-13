@@ -39,7 +39,7 @@ public class QueryOutputTests : IDisposable
         MovieRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetMovieAsync(SeedConstants.UserId, 550, "en", "US");
+        await repository.GetMovieAsync(SeedConstants.UserId, 129, "en", "US");
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -54,7 +54,7 @@ public class QueryOutputTests : IDisposable
         MovieRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetMovieAvailableAsync(SeedConstants.UserId, 550);
+        await repository.GetMovieAvailableAsync(SeedConstants.UserId, 129);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -69,7 +69,7 @@ public class QueryOutputTests : IDisposable
         MovieRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetMoviePlaylistAsync(SeedConstants.UserId, 550, "en", "US");
+        await repository.GetMoviePlaylistAsync(SeedConstants.UserId, 129, "en", "US");
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -276,7 +276,7 @@ public class QueryOutputTests : IDisposable
         HomeRepository repository = new();
         _interceptor.Clear();
 
-        await repository.GetHomeMovies(_context, [550, 680], "en", "US");
+        await repository.GetHomeMovies(_context, [129, 680], "en", "US");
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -886,7 +886,7 @@ public class QueryOutputTests : IDisposable
         MovieRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetMovieDetailAsync(_context, SeedConstants.UserId, 550, "en", "US");
+        await repository.GetMovieDetailAsync(_context, SeedConstants.UserId, 129, "en", "US");
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -940,7 +940,7 @@ public class QueryOutputTests : IDisposable
         HomeRepository repository = new();
         _interceptor.Clear();
 
-        await repository.GetHomeMovies(_context, [550, 680], "en", "US");
+        await repository.GetHomeMovies(_context, [129, 680], "en", "US");
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);

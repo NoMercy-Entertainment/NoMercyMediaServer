@@ -22,6 +22,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
     private string _actionStatus = string.Empty;
     private string _statusColor = "#EF4444";
     private bool _autoStartEnabled;
+    private bool _updateAvailable;
+    private string _latestVersion = string.Empty;
 
     public string ServerStatus
     {
@@ -89,6 +91,18 @@ public class ServerControlViewModel : INotifyPropertyChanged
         set { _autoStartEnabled = value; OnPropertyChanged(); }
     }
 
+    public bool UpdateAvailable
+    {
+        get => _updateAvailable;
+        set { _updateAvailable = value; OnPropertyChanged(); }
+    }
+
+    public string LatestVersion
+    {
+        get => _latestVersion;
+        set { _latestVersion = value; OnPropertyChanged(); }
+    }
+
     public ServerControlViewModel(
         ServerConnection serverConnection,
         ServerProcessLauncher processLauncher)
@@ -152,6 +166,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
         };
 
         AutoStartEnabled = status.AutoStart;
+        UpdateAvailable = status.UpdateAvailable;
+        LatestVersion = status.LatestVersion ?? string.Empty;
     }
 
     public async Task StopServerAsync()
@@ -212,6 +228,40 @@ public class ServerControlViewModel : INotifyPropertyChanged
             default);
 
         await RefreshStatusAsync();
+    }
+
+    public async Task ApplyUpdateAsync()
+    {
+        if (IsActionInProgress) return;
+
+        IsActionInProgress = true;
+        ActionStatus = "Applying update...";
+
+        try
+        {
+            bool success = await _serverConnection
+                .PostAsync("/manage/update");
+
+            if (success)
+            {
+                ActionStatus = "Update applied. Restarting server...";
+                await Task.Delay(1000);
+
+                await _serverConnection
+                    .PostAsync("/manage/restart");
+
+                await Task.Delay(3000);
+                await RefreshStatusAsync();
+            }
+            else
+            {
+                ActionStatus = "Failed to apply update";
+            }
+        }
+        finally
+        {
+            IsActionInProgress = false;
+        }
     }
 
     public async Task StartServerAsync()

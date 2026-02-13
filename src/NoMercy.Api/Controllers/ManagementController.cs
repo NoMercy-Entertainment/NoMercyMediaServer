@@ -12,6 +12,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Queue;
 using NoMercy.NmSystem;
+using NoMercy.NmSystem.FileSystem;
 using Microsoft.Extensions.Hosting;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
@@ -47,7 +48,9 @@ public class ManagementController(
             UptimeSeconds = (long)(DateTime.UtcNow - Info.StartTime).TotalSeconds,
             StartTime = Info.StartTime,
             IsDev = Config.IsDev,
-            AutoStart = AutoStartupManager.IsEnabled()
+            AutoStart = AutoStartupManager.IsEnabled(),
+            UpdateAvailable = Config.UpdateAvailable,
+            LatestVersion = Config.LatestVersion
         });
     }
 
@@ -84,6 +87,38 @@ public class ManagementController(
     public IActionResult Restart()
     {
         return Ok(new { status = "ok", message = "Restart is not yet implemented" });
+    }
+
+    [HttpPost("update")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult ApplyUpdate()
+    {
+        string tempPath = AppFiles.ServerTempExePath;
+
+        if (!System.IO.File.Exists(tempPath))
+            return NotFound(new { status = "error", message = "No update has been downloaded" });
+
+        try
+        {
+            string currentPath = AppFiles.ServerExePath;
+
+            if (System.IO.File.Exists(currentPath))
+                System.IO.File.Delete(currentPath);
+
+            System.IO.File.Move(tempPath, currentPath);
+
+            FilePermissions.SetExecutionPermissions(currentPath).GetAwaiter().GetResult();
+
+            Logger.Setup("Server update applied. Restart required to use the new version.");
+
+            return Ok(new { status = "ok", message = "Update applied. Restart the server to use the new version." });
+        }
+        catch (Exception e)
+        {
+            Logger.Setup($"Failed to apply update: {e.Message}", Serilog.Events.LogEventLevel.Error);
+            return StatusCode(500, new { status = "error", message = $"Failed to apply update: {e.Message}" });
+        }
     }
 
     [HttpGet("autostart")]

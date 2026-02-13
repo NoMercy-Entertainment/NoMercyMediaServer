@@ -4,7 +4,7 @@ author: 'NoMercy Entertainment'
 
 inputs:
   project:
-    description: 'Project name (Server, App, Tray, Cli)'
+    description: 'Project name (Service, App, Tray, Cli)'
     required: true
   dotnet-version:
     description: '.NET version to use'
@@ -88,10 +88,12 @@ runs:
         PROJECT_PATH="./src/NoMercy.${{ inputs.project }}/NoMercy.${{ inputs.project }}.csproj"
         
         # Set correct project names based on actual target names
-        if [ "${{ inputs.project }}" == "Server" ]; then
+        if [ "${{ inputs.project }}" == "Service" ]; then
           PROJECT_NAME="NoMercyMediaServer"
         elif [ "${{ inputs.project }}" == "Cli" ]; then
           PROJECT_NAME="nomercy"
+        elif [ "${{ inputs.project }}" == "Tray" ]; then
+          PROJECT_NAME="NoMercyMediaServerService"
         else
           PROJECT_NAME="NoMercy${{ inputs.project }}"
         fi
@@ -161,8 +163,10 @@ runs:
       shell: bash
       run: |
         # Set correct project names based on actual target names
-        if [ "${{ inputs.project }}" == "Server" ]; then
+        if [ "${{ inputs.project }}" == "Service" ]; then
           PROJECT_NAME="NoMercyMediaServer"
+        elif [ "${{ inputs.project }}" == "Tray" ]; then
+          PROJECT_NAME="NoMercyMediaServerService"
         else
           PROJECT_NAME="NoMercy${{ inputs.project }}"
         fi
@@ -173,10 +177,10 @@ runs:
         cp "./output/$PROJECT_NAME" "./output/$PROJECT_NAME.app/Contents/MacOS/"
 
         # Copy appropriate Info.plist based on project
-        if [ "${{ inputs.project }}" == "Server" ]; then
+        if [ "${{ inputs.project }}" == "Service" ]; then
           cp ./assets/macos/Info.plist "./output/$PROJECT_NAME.app/Contents/"
         elif [ "${{ inputs.project }}" == "Tray" ]; then
-          cp ./assets/macos/Info.plist.tray "./output/$PROJECT_NAME.app/Contents/Info.plist"
+          cp ./assets/macos/Info.plist.service "./output/$PROJECT_NAME.app/Contents/Info.plist"
         else
           cp ./assets/macos/Info.plist.app "./output/$PROJECT_NAME.app/Contents/Info.plist"
         fi
@@ -206,12 +210,14 @@ runs:
       continue-on-error: true
       run: |
         # Set correct project names based on actual target names
-        if [ "${{ inputs.project }}" == "Server" ]; then
+        if [ "${{ inputs.project }}" == "Service" ]; then
           PROJECT_NAME="NoMercyMediaServer"
+        elif [ "${{ inputs.project }}" == "Tray" ]; then
+          PROJECT_NAME="NoMercyMediaServerService"
         else
           PROJECT_NAME="NoMercy${{ inputs.project }}"
         fi
-        
+
         echo "Creating DMG for $PROJECT_NAME..."
         npm install -g create-dmg
         

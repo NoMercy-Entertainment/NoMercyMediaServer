@@ -122,8 +122,36 @@ runs:
         # Build packages
         create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
         create_arch_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
-        create_arch_package "nomercytray" "NoMercy-Tray" "NoMercyTray-linux-x64" "NoMercy-Tray.desktop"
+        create_arch_package "nomercymediaserverservice" "NoMercy-MediaServer-Service" "NoMercyMediaServerService-linux-x64" "NoMercy-MediaServer-Service.desktop"
         create_arch_package "nomercy-cli" "NoMercy-CLI" "nomercy-linux-x64" "NoMercy-MediaServer.desktop"
+
+        # Build meta-package
+        META_DIR="arch-nomercy"
+        mkdir -p "${META_DIR}/pkg/usr/share/doc/nomercy"
+        echo "NoMercy MediaServer meta-package" > "${META_DIR}/pkg/usr/share/doc/nomercy/README"
+
+        cat > "${META_DIR}/pkg/.PKGINFO" << EOF
+        pkgname = nomercy
+        pkgbase = nomercy
+        pkgver = ${VERSION}-1
+        pkgdesc = NoMercy MediaServer - complete installation
+        url = https://nomercy.tv
+        builddate = $(date +%s)
+        packager = NoMercy Entertainment <support@nomercy.tv>
+        size = $(du -sb "${META_DIR}/pkg" | cut -f1)
+        arch = any
+        license = custom
+        depend = nomercymediaserver
+        depend = nomercymediaserverservice
+        depend = nomercy-cli
+        EOF
+
+        cd "${META_DIR}/pkg"
+        find . -type f -exec stat -c '%n %Y %s' {} \; | sort > .MTREE
+        tar --use-compress-program=zstd -cf "../../packages/arch/pool/x86_64/nomercy-${VERSION}-1-any.pkg.tar.zst" .
+        cd ../..
+        rm -rf "${META_DIR}"
+        echo "Successfully created nomercy meta-package"
 
         # Create a simple database (since we can't use repo-add in Ubuntu)
         cd packages/arch/pool/x86_64

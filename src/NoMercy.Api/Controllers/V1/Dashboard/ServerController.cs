@@ -164,11 +164,11 @@ public class ServerController(
     }
 
     [HttpGet("update/check")]
-    public IActionResult CheckForUpdate()
+    public async Task<IActionResult> CheckForUpdate()
     {
         return Ok(new
         {
-            updateAvailable = UpdateChecker.IsUpdateAvailable()
+            updateAvailable = await UpdateChecker.IsUpdateAvailableAsync()
         });
     }
 

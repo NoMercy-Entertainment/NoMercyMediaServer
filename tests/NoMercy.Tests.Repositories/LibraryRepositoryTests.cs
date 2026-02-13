@@ -87,7 +87,7 @@ public class LibraryRepositoryTests : IDisposable
             SeedConstants.UserId, SeedConstants.MovieLibraryId, "US", 10, 0);
 
         Assert.Equal(2, cards.Count);
-        Assert.Contains(cards, c => c.Title == "Fight Club");
+        Assert.Contains(cards, c => c.Title == "Spirited Away");
         Assert.Contains(cards, c => c.Title == "Pulp Fiction");
     }
 

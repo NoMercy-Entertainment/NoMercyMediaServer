@@ -130,7 +130,7 @@ public class ServerProcessLauncher
         while (directory is not null)
         {
             string candidate = Path.Combine(
-                directory, "src", "NoMercy.Server");
+                directory, "src", "NoMercy.Service");
 
             if (Directory.Exists(candidate))
                 return candidate;

@@ -20,7 +20,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Plugins.Abstractions;
-using NoMercy.Server;
+using NoMercy.Service;
 using NoMercy.Setup;
 
 namespace NoMercy.Tests.Api.Infrastructure;
@@ -179,15 +179,15 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         Movie movie1 = new()
         {
-            Id = 550,
-            Title = "Fight Club",
-            TitleSort = "fight club",
-            Overview = "An insomniac office worker and a devil-may-care soap maker form an underground fight club.",
-            Poster = "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
-            Backdrop = "/hZkgoQYus5dXo3H8T7Uef6DNknx.jpg",
-            ReleaseDate = new DateTime(1999, 10, 15),
+            Id = 129,
+            Title = "Spirited Away",
+            TitleSort = "spirited away",
+            Overview = "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
+            Poster = "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
+            Backdrop = "/Ab8mkHmkYADjU7wQiOkia9BzGvS.jpg",
+            ReleaseDate = new DateTime(2001, 7, 20),
             LibraryId = MovieLibraryId,
-            VoteAverage = 8.4
+            VoteAverage = 8.5
         };
         Movie movie2 = new()
         {
@@ -223,14 +223,14 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         // Step 3: Join tables and child entities (FK to movies/tv/genres)
         context.LibraryMovie.AddRange(
-            new LibraryMovie(MovieLibraryId, 550),
+            new LibraryMovie(MovieLibraryId, 129),
             new LibraryMovie(MovieLibraryId, 680));
 
         context.LibraryTv.Add(new(TvLibraryId, 1399));
 
         context.GenreMovie.AddRange(
-            new GenreMovie { GenreId = 28, MovieId = 550 },
-            new GenreMovie { GenreId = 18, MovieId = 550 },
+            new GenreMovie { GenreId = 28, MovieId = 129 },
+            new GenreMovie { GenreId = 18, MovieId = 129 },
             new GenreMovie { GenreId = 18, MovieId = 680 });
 
         context.GenreTv.Add(new() { GenreId = 18, TvId = 1399 });
@@ -273,13 +273,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         VideoFile movieVideoFile1 = new()
         {
             Id = Ulid.NewUlid(),
-            Filename = "Fight.Club.1999.1080p.mkv",
-            Folder = "/media/movies/Fight Club (1999)",
-            HostFolder = "/media/movies/Fight Club (1999)",
+            Filename = "Spirited.Away.2001.1080p.mkv",
+            Folder = "/media/movies/Spirited Away (2001)",
+            HostFolder = "/media/movies/Spirited Away (2001)",
             Languages = "[\"en\"]",
             Quality = "1080p",
             Share = "movies",
-            MovieId = 550
+            MovieId = 129
         };
         VideoFile movieVideoFile2 = new()
         {

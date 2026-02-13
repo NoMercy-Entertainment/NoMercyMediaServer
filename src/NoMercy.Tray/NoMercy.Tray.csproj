@@ -7,11 +7,11 @@
         <Nullable>enable</Nullable>
         <ApplicationIcon>..\..\assets\icons\icon.ico</ApplicationIcon>
         <Authors>NoMercy Entertainment</Authors>
-        <Description>NoMercy MediaServer Tray Application</Description>
+        <Description>NoMercy MediaServer Service Application</Description>
         <Copyright>2025 NoMercy Entertainment</Copyright>
         <Company>NoMercy Entertainment</Company>
-        <Product>NoMercy Tray</Product>
-        <AssemblyName>NoMercyTray</AssemblyName>
+        <Product>NoMercy MediaServer</Product>
+        <AssemblyName>NoMercyMediaServerService</AssemblyName>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PublishSingleFile>true</PublishSingleFile>
@@ -24,7 +24,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="NoMercy.Tests.Tray" />
+        <InternalsVisibleTo Include="NoMercy.Tests.Service" />
     </ItemGroup>
 
     <ItemGroup>
