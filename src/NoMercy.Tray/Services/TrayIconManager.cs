@@ -19,8 +19,7 @@ public class TrayIconManager
     private NativeMenuItem? _startServerItem;
     private NativeMenuItem? _stopServerItem;
     private ServerState _currentState = ServerState.Disconnected;
-    private LogViewerWindow? _logViewerWindow;
-    private ServerControlWindow? _serverControlWindow;
+    private MainWindow? _mainWindow;
 
     public TrayIconManager(
         ServerConnection serverConnection,
@@ -56,11 +55,11 @@ public class TrayIconManager
         NativeMenuItem openDashboardItem = new("Open Dashboard");
         openDashboardItem.Click += OnOpenDashboard;
 
-        NativeMenuItem viewLogsItem = new("View Logs");
-        viewLogsItem.Click += OnViewLogs;
-
         NativeMenuItem serverControlItem = new("Server Control");
         serverControlItem.Click += OnServerControl;
+
+        NativeMenuItem viewLogsItem = new("View Logs");
+        viewLogsItem.Click += OnViewLogs;
 
         NativeMenuItemSeparator separator2 = new();
 
@@ -81,8 +80,8 @@ public class TrayIconManager
         menu.Items.Add(_uptimeItem);
         menu.Items.Add(separator1);
         menu.Items.Add(openDashboardItem);
-        menu.Items.Add(viewLogsItem);
         menu.Items.Add(serverControlItem);
+        menu.Items.Add(viewLogsItem);
         menu.Items.Add(separator2);
         menu.Items.Add(_startServerItem);
         menu.Items.Add(_stopServerItem);
@@ -99,6 +98,8 @@ public class TrayIconManager
             Menu = menu,
             IsVisible = true
         };
+
+        _trayIcon.Clicked += OnTrayIconClicked;
 
         _ = PollServerStatusAsync();
     }
@@ -222,6 +223,31 @@ public class TrayIconManager
         return $"{span.Minutes}m {span.Seconds}s";
     }
 
+    private void OpenMainWindow(int selectedTab)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_mainWindow is { IsVisible: true })
+            {
+                _mainWindow.SelectTab(selectedTab);
+                _mainWindow.Activate();
+                return;
+            }
+
+            MainViewModel viewModel = new(
+                _serverConnection, _processLauncher);
+            viewModel.SelectedTabIndex = selectedTab;
+            _mainWindow = new(viewModel);
+            _mainWindow.Closed += (_, _) => _mainWindow = null;
+            _mainWindow.Show();
+        });
+    }
+
+    private void OnTrayIconClicked(object? sender, EventArgs e)
+    {
+        OpenMainWindow(0);
+    }
+
     private void OnOpenDashboard(object? sender, EventArgs e)
     {
         string url = "https://app.nomercy.tv";
@@ -230,38 +256,12 @@ public class TrayIconManager
 
     private void OnViewLogs(object? sender, EventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (_logViewerWindow is { IsVisible: true })
-            {
-                _logViewerWindow.Activate();
-                return;
-            }
-
-            LogViewerViewModel viewModel = new(_serverConnection);
-            _logViewerWindow = new(viewModel);
-            _logViewerWindow.Closed += (_, _) => _logViewerWindow = null;
-            _logViewerWindow.Show();
-        });
+        OpenMainWindow(1);
     }
 
     private void OnServerControl(object? sender, EventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (_serverControlWindow is { IsVisible: true })
-            {
-                _serverControlWindow.Activate();
-                return;
-            }
-
-            ServerControlViewModel viewModel = new(
-                _serverConnection, _processLauncher);
-            _serverControlWindow = new(viewModel);
-            _serverControlWindow.Closed += (_, _) =>
-                _serverControlWindow = null;
-            _serverControlWindow.Show();
-        });
+        OpenMainWindow(0);
     }
 
     private async void OnStartServer(object? sender, EventArgs e)
@@ -278,6 +278,7 @@ public class TrayIconManager
     {
         if (_trayIcon is not null)
         {
+            _trayIcon.Clicked -= OnTrayIconClicked;
             _trayIcon.IsVisible = false;
             _trayIcon.Dispose();
             _trayIcon = null;

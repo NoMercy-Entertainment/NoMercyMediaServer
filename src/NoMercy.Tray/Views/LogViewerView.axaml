@@ -1,21 +1,17 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:NoMercy.Tray.ViewModels"
         xmlns:m="using:NoMercy.Tray.Models"
-        x:Class="NoMercy.Tray.Views.LogViewerWindow"
-        x:DataType="vm:LogViewerViewModel"
-        Title="NoMercy - Log Viewer"
-        Width="960" Height="640"
-        MinWidth="640" MinHeight="400"
-        WindowStartupLocation="CenterScreen">
+        x:Class="NoMercy.Tray.Views.LogViewerView"
+        x:DataType="vm:LogViewerViewModel">
 
-    <Window.Styles>
+    <UserControl.Styles>
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="0" />
             <Setter Property="MinHeight" Value="24" />
         </Style>
-    </Window.Styles>
+    </UserControl.Styles>
 
     <DockPanel Margin="8">
         <!-- Toolbar -->
@@ -133,4 +129,4 @@
             </ListBox.ItemTemplate>
         </ListBox>
     </DockPanel>
-</Window>
+</UserControl>

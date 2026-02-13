@@ -1,13 +1,8 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:NoMercy.Tray.ViewModels"
-        x:Class="NoMercy.Tray.Views.ServerControlWindow"
-        x:DataType="vm:ServerControlViewModel"
-        Title="NoMercy - Server Control"
-        Width="480" Height="380"
-        MinWidth="400" MinHeight="320"
-        WindowStartupLocation="CenterScreen"
-        CanResize="False">
+        x:Class="NoMercy.Tray.Views.ServerControlView"
+        x:DataType="vm:ServerControlViewModel">
 
     <DockPanel Margin="16">
         <!-- Title -->
@@ -149,4 +144,4 @@
         <!-- Spacer -->
         <Panel />
     </DockPanel>
-</Window>
+</UserControl>

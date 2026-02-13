@@ -7,45 +7,27 @@ using NoMercy.Tray.ViewModels;
 
 namespace NoMercy.Tray.Views;
 
-public partial class LogViewerWindow : Window
+public partial class LogViewerView : UserControl
 {
-    private readonly LogViewerViewModel _viewModel;
-
-    public LogViewerWindow(LogViewerViewModel viewModel)
+    public LogViewerView()
     {
-        _viewModel = viewModel;
-        DataContext = _viewModel;
         InitializeComponent();
-
-        Opened += OnWindowOpened;
-        Closing += OnWindowClosing;
     }
 
-    private async void OnWindowOpened(
-        object? sender, EventArgs e)
-    {
-        await _viewModel.RefreshLogsAsync();
-
-        if (_viewModel.AutoRefresh)
-            _viewModel.StartAutoRefresh();
-    }
-
-    private void OnWindowClosing(
-        object? sender, WindowClosingEventArgs e)
-    {
-        _viewModel.StopAutoRefresh();
-    }
+    private LogViewerViewModel? ViewModel =>
+        DataContext as LogViewerViewModel;
 
     private async void OnRefreshClick(
         object? sender, RoutedEventArgs e)
     {
-        await _viewModel.RefreshLogsAsync();
+        if (ViewModel is not null)
+            await ViewModel.RefreshLogsAsync();
     }
 
     private void OnClearFiltersClick(
         object? sender, RoutedEventArgs e)
     {
-        _viewModel.ClearFilters();
+        ViewModel?.ClearFilters();
     }
 
     protected override async void OnKeyDown(KeyEventArgs e)
@@ -55,10 +37,10 @@ public partial class LogViewerWindow : Window
         if (e.Key == Key.C
             && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
-            System.Collections.IList selectedItems =
+            System.Collections.IList? selectedItems =
                 LogList.SelectedItems;
 
-            if (selectedItems.Count == 0)
+            if (selectedItems is null || selectedItems.Count == 0)
                 return;
 
             StringBuilder sb = new();
@@ -72,10 +54,16 @@ public partial class LogViewerWindow : Window
                     $"{entry.Time:HH:mm:ss.fff}\t{entry.Level}\t{entry.Type}\t{entry.Message}");
             }
 
-            if (sb.Length > 0 && Clipboard is not null)
+            if (sb.Length > 0)
             {
-                await Clipboard.SetTextAsync(sb.ToString());
-                e.Handled = true;
+                TopLevel? topLevel = TopLevel.GetTopLevel(this);
+
+                if (topLevel?.Clipboard is not null)
+                {
+                    await topLevel.Clipboard.SetTextAsync(
+                        sb.ToString());
+                    e.Handled = true;
+                }
             }
         }
     }
