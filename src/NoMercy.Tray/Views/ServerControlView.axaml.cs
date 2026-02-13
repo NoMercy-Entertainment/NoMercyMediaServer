@@ -41,4 +41,12 @@ public partial class ServerControlView : UserControl
         if (ViewModel is not null)
             await ViewModel.RefreshStatusAsync();
     }
+
+    private async void OnAutoStartToggle(
+        object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null && sender is CheckBox checkBox)
+            await ViewModel.ToggleAutoStartAsync(
+                checkBox.IsChecked == true);
+    }
 }

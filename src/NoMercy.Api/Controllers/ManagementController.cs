@@ -11,6 +11,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Queue;
+using NoMercy.NmSystem;
 using Microsoft.Extensions.Hosting;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
@@ -45,7 +46,8 @@ public class ManagementController(
             Os = $"{Info.Platform} {Info.OsVersion}",
             UptimeSeconds = (long)(DateTime.UtcNow - Info.StartTime).TotalSeconds,
             StartTime = Info.StartTime,
-            IsDev = Config.IsDev
+            IsDev = Config.IsDev,
+            AutoStart = AutoStartupManager.IsEnabled()
         });
     }
 
@@ -82,6 +84,31 @@ public class ManagementController(
     public IActionResult Restart()
     {
         return Ok(new { status = "ok", message = "Restart is not yet implemented" });
+    }
+
+    [HttpGet("autostart")]
+    [ProducesResponseType(typeof(AutoStartDto), StatusCodes.Status200OK)]
+    public IActionResult GetAutoStart()
+    {
+        return Ok(new AutoStartDto
+        {
+            Enabled = AutoStartupManager.IsEnabled()
+        });
+    }
+
+    [HttpPost("autostart")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult SetAutoStart([FromBody] AutoStartDto request)
+    {
+        if (request.Enabled)
+            AutoStartupManager.Initialize();
+        else
+            AutoStartupManager.Remove();
+
+        return Ok(new AutoStartDto
+        {
+            Enabled = AutoStartupManager.IsEnabled()
+        });
     }
 
     [HttpGet("config")]

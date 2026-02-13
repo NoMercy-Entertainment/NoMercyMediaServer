@@ -45,6 +45,7 @@
         <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj"/>
         <ProjectReference Include="..\NoMercy.Plugins.Abstractions\NoMercy.Plugins.Abstractions.csproj"/>
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
+        <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
         <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj"/>
         <ProjectReference Include="..\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj"/>
     </ItemGroup>

@@ -93,6 +93,26 @@
             </Grid>
         </Border>
 
+        <!-- Auto-start toggle -->
+        <Border DockPanel.Dock="Top"
+                Background="#1F2937"
+                CornerRadius="8"
+                Padding="16"
+                Margin="0,0,0,16">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="Start on boot"
+                           Foreground="#D1D5DB"
+                           FontSize="13"
+                           VerticalAlignment="Center" />
+                <CheckBox x:Name="AutoStartCheckBox"
+                          Grid.Column="1"
+                          IsChecked="{Binding AutoStartEnabled}"
+                          Click="OnAutoStartToggle"
+                          VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
         <!-- Action status -->
         <TextBlock DockPanel.Dock="Bottom"
                    Text="{Binding ActionStatus}"

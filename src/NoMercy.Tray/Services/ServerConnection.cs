@@ -1,3 +1,4 @@
+using System.Text;
 using Newtonsoft.Json;
 using NoMercy.Networking;
 
@@ -65,6 +66,29 @@ public sealed class ServerConnection : IDisposable
         {
             using HttpResponseMessage response = await _client.PostAsync(
                 path, null, cancellationToken);
+
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            IsConnected = false;
+            return false;
+        }
+    }
+
+    public async Task<bool> PostAsync<T>(
+        string path,
+        T body,
+        CancellationToken cancellationToken = default)
+    {
+        if (_client is null) return false;
+
+        try
+        {
+            string json = JsonConvert.SerializeObject(body);
+            using StringContent content = new(json, Encoding.UTF8, "application/json");
+            using HttpResponseMessage response = await _client.PostAsync(
+                path, content, cancellationToken);
 
             return response.IsSuccessStatusCode;
         }

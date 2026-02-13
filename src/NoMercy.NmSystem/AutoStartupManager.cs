@@ -3,7 +3,7 @@ using Microsoft.Win32;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
-namespace NoMercy.Server;
+namespace NoMercy.NmSystem;
 
 public class AutoStartupManager
 {
@@ -25,6 +25,66 @@ public class AutoStartupManager
             UnregisterMacStartup();
         else if (OperatingSystem.IsLinux())
             UnregisterLinuxStartup();
+    }
+
+    public static bool IsEnabled()
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+                return IsWindowsStartupEnabled();
+            if (OperatingSystem.IsMacOS())
+                return IsMacStartupEnabled();
+            if (OperatingSystem.IsLinux())
+                return IsLinuxStartupEnabled();
+        }
+        catch
+        {
+            // Fall through to false on any unexpected error
+        }
+
+        return false;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static bool IsWindowsStartupEnabled()
+    {
+        try
+        {
+            using RegistryKey? key =
+                Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", false);
+            return key?.GetValue("NoMercyMediaServer") is not null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    [SupportedOSPlatform("macos")]
+    private static bool IsMacStartupEnabled()
+    {
+        try
+        {
+            return File.Exists(GetLaunchdPlistPath());
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    [SupportedOSPlatform("linux")]
+    private static bool IsLinuxStartupEnabled()
+    {
+        try
+        {
+            return File.Exists(GetSystemdUnitPath());
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>

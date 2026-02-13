@@ -21,6 +21,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
     private bool _isActionInProgress;
     private string _actionStatus = string.Empty;
     private string _statusColor = "#EF4444";
+    private bool _autoStartEnabled;
 
     public string ServerStatus
     {
@@ -80,6 +81,12 @@ public class ServerControlViewModel : INotifyPropertyChanged
     {
         get => _statusColor;
         set { _statusColor = value; OnPropertyChanged(); }
+    }
+
+    public bool AutoStartEnabled
+    {
+        get => _autoStartEnabled;
+        set { _autoStartEnabled = value; OnPropertyChanged(); }
     }
 
     public ServerControlViewModel(
@@ -143,6 +150,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
             "starting" => "#EAB308",
             _ => "#EF4444"
         };
+
+        AutoStartEnabled = status.AutoStart;
     }
 
     public async Task StopServerAsync()
@@ -193,6 +202,16 @@ public class ServerControlViewModel : INotifyPropertyChanged
         {
             IsActionInProgress = false;
         }
+    }
+
+    public async Task ToggleAutoStartAsync(bool enabled)
+    {
+        await _serverConnection.PostAsync(
+            "/manage/autostart",
+            new { enabled },
+            default);
+
+        await RefreshStatusAsync();
     }
 
     public async Task StartServerAsync()

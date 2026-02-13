@@ -13,6 +13,7 @@ public record ManagementStatusDto
     [JsonProperty("uptime_seconds")] public long UptimeSeconds { get; set; }
     [JsonProperty("start_time")] public DateTime StartTime { get; set; }
     [JsonProperty("is_dev")] public bool IsDev { get; set; }
+    [JsonProperty("auto_start")] public bool AutoStart { get; set; }
 }
 
 public record ManagementConfigDto
@@ -50,4 +51,9 @@ public record ManagementQueueStatusDto
 public record ManagementWorkerStatusDto
 {
     [JsonProperty("active_threads")] public int ActiveThreads { get; set; }
+}
+
+public record AutoStartDto
+{
+    [JsonProperty("enabled")] public bool Enabled { get; set; }
 }

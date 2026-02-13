@@ -9,6 +9,9 @@
     <PropertyGroup>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="NoMercy.Tests.Setup" />
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Castle.Core"/>

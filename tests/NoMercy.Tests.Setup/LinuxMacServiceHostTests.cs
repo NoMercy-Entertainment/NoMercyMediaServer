@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using NoMercy.Server;
+using NoMercy.NmSystem;
 
 namespace NoMercy.Tests.Setup;
 
@@ -171,5 +171,21 @@ public class LinuxServiceHostTests
         (string content, string _) = AutoStartupManager.GenerateSystemdUnit();
 
         Assert.Contains("Environment=DOTNET_ROOT=", content);
+    }
+
+    [Fact]
+    public void IsEnabled_ReturnsBool()
+    {
+        // IsEnabled should return a bool without throwing on any platform
+        bool result = AutoStartupManager.IsEnabled();
+        Assert.IsType<bool>(result);
+    }
+
+    [Fact]
+    public void IsEnabled_ReturnsFalse_WhenNotRegistered()
+    {
+        // On a fresh test environment, auto-start should not be registered
+        bool result = AutoStartupManager.IsEnabled();
+        Assert.False(result);
     }
 }
