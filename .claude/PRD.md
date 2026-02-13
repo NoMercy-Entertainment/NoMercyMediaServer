@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: Phase 7, item SETUP-17
+**Next up**: Phase 8, item WALL-01
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -200,7 +200,7 @@ Details: [13-headless-server.md](prd/13-headless-server.md) | [14-server-setup.m
 - [x] SETUP-09 — Add retry logic to Register + Certificate
 - [x] SETUP-11 — Implement HTTP → HTTPS restart after cert
 - [x] SETUP-12 — Remove Environment.Exit(1) from ApiInfo
-- [ ] SETUP-17 — End-to-end setup flow testing
+- [x] SETUP-17 — End-to-end setup flow testing
 
 ### Phase 8: Platform Features
 Details: [15-wallpaper.md](prd/15-wallpaper.md) | [16-offline-boot.md](prd/16-offline-boot.md)

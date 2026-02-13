@@ -4465,3 +4465,52 @@ Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All tests pass: 212 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers = 0 failures.
+
+---
+
+## SETUP-17 — End-to-end setup flow testing
+
+**Date**: 2026-02-12
+
+**Problem**: The setup flow had individual unit tests for each component (SetupState, SetupServer, SetupModeMiddleware, HTTPS restart signal) but no tests that verified the complete end-to-end journey from fresh install through setup completion. Integration gaps could allow regressions where individual components work but the overall flow breaks.
+
+**Changes made**:
+
+1. **`tests/NoMercy.Tests.Setup/EndToEndSetupFlowTests.cs`** (new, 22 tests across 6 classes):
+
+   - `EndToEndSetupFlowTests` (9 tests): Spins up a real `SetupServer` on a random port and verifies:
+     - Fresh install starts in `Unauthenticated` phase
+     - Setup page is accessible and contains login UI
+     - `/setup/config` reflects current phase
+     - Non-setup routes return 503 during setup
+     - Phase transitions (Authenticating → Authenticated → Registering → Registered → CertificateAcquired → Complete) are reflected in config/status endpoints
+     - Complete phase marks `IsSetupRequired = false`
+
+   - `EndToEndSseFlowTests` (2 tests): Connects to `/setup/status` with `Accept: text/event-stream` and verifies:
+     - All phase transitions are pushed as SSE events in real-time
+     - Errors set via `SetError()` appear in the SSE stream
+
+   - `EndToEndHttpsRestartSignalTests` (2 tests): Verifies `WaitForSetupCompleteAsync()` integration:
+     - Full flow completion triggers the restart signal
+     - Retry scenario (registration fails, then succeeds) eventually triggers the signal
+
+   - `EndToEndMiddlewareFlowTests` (2 tests): Verifies `SetupModeMiddleware` through the lifecycle:
+     - API routes are blocked during setup, then allowed after completion
+     - Health routes are always allowed regardless of setup phase
+
+   - `EndToEndTokenValidationFlowTests` (3 tests): Verifies token → initial phase determination:
+     - Missing token enters setup mode, then full flow can proceed
+     - Corrupt token enters setup mode
+     - Valid token skips setup entirely
+
+   - `EndToEndErrorRecoveryTests` (3 tests): Verifies error handling and recovery:
+     - Auth failure: error is visible in status, transition clears it, retry succeeds
+     - Registration failure: falls back to Authenticated, can retry and complete
+     - SSO callback with OAuth error: state stays Unauthenticated, error message is set
+
+**Files modified**:
+- `tests/NoMercy.Tests.Setup/EndToEndSetupFlowTests.cs` — New: 22 end-to-end tests
+- `.claude/PRD.md` — Marked SETUP-17 complete, updated Next up to WALL-01
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All tests pass: 234 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers = 0 failures.
