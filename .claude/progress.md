@@ -4514,3 +4514,50 @@ Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All tests pass: 234 Setup, 424 Queue, 105 Events, 218 Repositories, 33 MediaProcessing, 347 Api, 427 Providers = 0 failures.
+
+---
+
+## WALL-01 — Implement cross-platform wallpaper strategy
+
+**Date**: 2026-02-13
+
+**What was done**:
+- Replaced monolithic Windows-only `Wallpaper.cs` (242 lines, `[SupportedOSPlatform("windows10.0.18362")]`) with Strategy pattern using `IWallpaperService` interface
+- Created `src/NoMercy.Helpers/Wallpaper/` directory with 6 files:
+  - `IWallpaperService.cs` — Interface with `IsSupported`, `Set`, `SetSilent`, `Restore`
+  - `WindowsWallpaperService.cs` — Refactored from old `Wallpaper.cs`; fixed WALL-05 (static mutable state → instance fields), WALL-06 (replaced `System.Drawing.ColorTranslator` with manual hex→Win32 color conversion), WALL-07 (added `using` on all `RegistryKey` handles)
+  - `LinuxWallpaperService.cs` — Desktop environment detection (GNOME/KDE/XFCE/fallback via `$XDG_CURRENT_DESKTOP`), style mapping to GNOME `picture-options`, `gsettings`/`qdbus`/`xfconf-query`/`feh` commands
+  - `MacWallpaperService.cs` — `osascript` AppleScript with macOS 14+ System Events fallback to Finder
+  - `NullWallpaperService.cs` — No-op for headless/server/Docker/CI environments
+  - `WallpaperServiceExtensions.cs` — DI registration with `RuntimeInformation` platform detection + Linux display server check
+- Updated `ServerController.SetWallpaper`:
+  - Injected `IWallpaperService` via primary constructor DI
+  - Replaced `RuntimeInformation.IsOSPlatform(OSPlatform.Windows)` guard with `wallpaperService.IsSupported`
+  - Made `GetDominantColor` async (`GetDominantColorAsync`) with `Task.Run` to offload from request thread
+  - Added `ConcurrentDictionary` color cache per image path
+  - Removed `OrderedDither(1)` when `MaxColors = 1` (wasted work)
+  - Removed `#pragma warning disable CA1416`
+- Registered `AddWallpaperService()` in `ServiceConfiguration.ConfigureCoreServices`
+- Created `tests/NoMercy.Tests.Api/WallpaperServiceTests.cs` with 20 tests:
+  - `WallpaperInterfaceTests` (5): NullService IsSupported, Set/SetSilent/Restore don't throw, implements interface
+  - `WallpaperStyleTests` (2): Enum values match expected ints, has 6 values
+  - `LinuxWallpaperStyleMappingTests` (6): All style→GNOME mappings correct
+  - `LinuxDesktopDetectionTests` (7): DE detection for GNOME/UNITY/KDE/XFCE/MATE/no-env
+  - `WindowsHexToColorTests` (6): Hex→Win32 COLORREF conversion for red/green/blue/white/black/no-hash
+  - `WallpaperDiRegistrationTests` (2): AddWallpaperService registers a service, Linux without display registers NullService
+
+**Files modified**:
+- `src/NoMercy.Helpers/Wallpaper.cs` — Deleted (replaced by Wallpaper/ directory)
+- `src/NoMercy.Helpers/Wallpaper/IWallpaperService.cs` — New
+- `src/NoMercy.Helpers/Wallpaper/WindowsWallpaperService.cs` — New
+- `src/NoMercy.Helpers/Wallpaper/LinuxWallpaperService.cs` — New
+- `src/NoMercy.Helpers/Wallpaper/MacWallpaperService.cs` — New
+- `src/NoMercy.Helpers/Wallpaper/NullWallpaperService.cs` — New
+- `src/NoMercy.Helpers/Wallpaper/WallpaperServiceExtensions.cs` — New
+- `src/NoMercy.Api/Controllers/V1/Dashboard/ServerController.cs` — Updated wallpaper endpoint
+- `src/NoMercy.Server/Configuration/ServiceConfiguration.cs` — Added wallpaper DI registration
+- `tests/NoMercy.Tests.Api/WallpaperServiceTests.cs` — New: 20 tests
+- `.claude/PRD.md` — Marked WALL-01 complete, updated Next up to WALL-02
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All 2,343 tests pass across 13 test projects: 157 Plugins, 143 Database, 16 Networking, 150 Encoder, 27 Tray, 29 Cli, 105 Events, 234 Setup, 218 Repositories, 33 MediaProcessing, 424 Queue, 380 Api, 427 Providers = 0 failures.

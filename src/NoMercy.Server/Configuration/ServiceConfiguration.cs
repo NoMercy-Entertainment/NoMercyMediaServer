@@ -40,6 +40,7 @@ using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Server.Extensions;
 using NoMercy.Server.Services;
 using NoMercy.Server.Configuration.Swagger;
+using NoMercy.Helpers.Wallpaper;
 using NoMercy.Setup;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
@@ -256,6 +257,7 @@ public static class ServiceConfiguration
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();
         services.AddSingleton<DriveMonitor>();
+        services.AddWallpaperService();
 
         // Add DbContexts
         services.AddDbContext<QueueContext>(optionsAction =>

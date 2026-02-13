@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +13,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Helpers.Monitoring;
+using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Events;
@@ -28,7 +28,6 @@ using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Dithering;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 using HttpClient = System.Net.Http.HttpClient;
@@ -48,7 +47,8 @@ public class ServerController(
     FileRepository fileRepository,
     JobDispatcher jobDispatcher,
     QueueRunner queueRunner,
-    IEventBus eventBus) : BaseController
+    IEventBus eventBus,
+    IWallpaperService wallpaperService) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -536,8 +536,8 @@ public class ServerController(
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to set wallpaper");
 
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return BadRequestResponse("Wallpaper setting is only supported on Windows");
+        if (!wallpaperService.IsSupported)
+            return BadRequestResponse("Wallpaper setting is not supported on this platform");
 
         Image? wallpaper = await context.Images
             .FirstOrDefaultAsync(config => config.FilePath == request.Path);
@@ -547,10 +547,9 @@ public class ServerController(
 
         string path = Path.Combine(AppFiles.ImagesPath, "original", wallpaper.FilePath.Replace("/", ""));
 
-        string color = GetDominantColor(path);
-#pragma warning disable CA1416
-        Wallpaper.SilentSet(path, request.Style, request.Color ?? color);
-#pragma warning restore CA1416
+        string color = request.Color ?? await GetDominantColorAsync(path);
+
+        wallpaperService.SetSilent(path, request.Style, color);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -559,31 +558,36 @@ public class ServerController(
         });
     }
 
-    private static string GetDominantColor(string path)
+    private static readonly ConcurrentDictionary<string, string> DominantColorCache = new();
+
+    private static async Task<string> GetDominantColorAsync(string path)
     {
-        using Image<Rgb24> image = SixLabors.ImageSharp.Image.Load<Rgb24>(path);
-        image.Mutate(x => x
-            // Scale the image down preserving the aspect ratio. This will speed up quantization.
-            // We use nearest neighbor as it will be the fastest approach.
-            .Resize(new ResizeOptions
-            {
-                Sampler = KnownResamplers.NearestNeighbor,
-                Size = new(100, 0)
-            })
-            // Reduce the color palette to 1 color without dithering.
-            .Quantize(new OctreeQuantizer
-            {
-                Options =
+        if (DominantColorCache.TryGetValue(path, out string? cached))
+            return cached;
+
+        string color = await Task.Run(() =>
+        {
+            using Image<Rgb24> image = SixLabors.ImageSharp.Image.Load<Rgb24>(path);
+            image.Mutate(x => x
+                .Resize(new ResizeOptions
                 {
-                    MaxColors = 1,
-                    Dither = new OrderedDither(1),
-                    DitherScale = 1
-                }
-            }));
+                    Sampler = KnownResamplers.NearestNeighbor,
+                    Size = new(100, 0)
+                })
+                .Quantize(new OctreeQuantizer
+                {
+                    Options =
+                    {
+                        MaxColors = 1
+                    }
+                }));
 
-        Rgb24 dominant = image[0, 0];
+            Rgb24 dominant = image[0, 0];
+            return dominant.ToHexString();
+        });
 
-        return dominant.ToHexString();
+        DominantColorCache.TryAdd(path, color);
+        return color;
     }
 
     [HttpPost]
