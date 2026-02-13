@@ -101,7 +101,7 @@ public class Networking
 
     public static string ExternalIp
     {
-        get => _externalIp ?? GetExternalIp().GetAwaiter().GetResult();
+        get => _externalIp ?? "0.0.0.0";
         set
         {
             if (_externalIp == value) return;
