@@ -53,6 +53,9 @@ public class TrayIconManager
 
         NativeMenuItemSeparator separator1 = new();
 
+        NativeMenuItem openAppItem = new("Open App");
+        openAppItem.Click += OnOpenApp;
+
         NativeMenuItem openDashboardItem = new("Open Dashboard");
         openDashboardItem.Click += OnOpenDashboard;
 
@@ -80,6 +83,7 @@ public class TrayIconManager
         menu.Items.Add(_versionItem);
         menu.Items.Add(_uptimeItem);
         menu.Items.Add(separator1);
+        menu.Items.Add(openAppItem);
         menu.Items.Add(openDashboardItem);
         menu.Items.Add(serverControlItem);
         menu.Items.Add(viewLogsItem);
@@ -253,6 +257,11 @@ public class TrayIconManager
     private void OnTrayIconClicked(object? sender, EventArgs e)
     {
         OpenMainWindow(0);
+    }
+
+    private async void OnOpenApp(object? sender, EventArgs e)
+    {
+        await _processLauncher.LaunchAppAsync();
     }
 
     private void OnOpenDashboard(object? sender, EventArgs e)

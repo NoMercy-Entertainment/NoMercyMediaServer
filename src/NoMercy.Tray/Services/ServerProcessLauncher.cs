@@ -119,7 +119,83 @@ public class ServerProcessLauncher
         return null;
     }
 
+    public Task<bool> LaunchAppAsync()
+    {
+        ProcessStartInfo? startInfo =
+            CreateAppProductionStartInfo()
+            ?? CreateAppDevBinaryStartInfo()
+            ?? CreateAppDotnetRunStartInfo();
+
+        if (startInfo is null)
+            return Task.FromResult(false);
+
+        Process process = new() { StartInfo = startInfo };
+        bool started = process.Start();
+        return Task.FromResult(started);
+    }
+
+    private static ProcessStartInfo? CreateAppProductionStartInfo()
+    {
+        string exePath = AppFiles.AppExePath;
+
+        if (!File.Exists(exePath))
+            return null;
+
+        return new(exePath)
+        {
+            UseShellExecute = false
+        };
+    }
+
+    private static ProcessStartInfo? CreateAppDevBinaryStartInfo()
+    {
+        string? appProjectDir = FindProjectDirectory("NoMercy.App");
+
+        if (appProjectDir is null)
+            return null;
+
+        string execName = "NoMercyApp" + Info.ExecSuffix;
+
+        string[] searchPaths =
+        [
+            Path.Combine(appProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName),
+            Path.Combine(appProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName)
+        ];
+
+        foreach (string path in searchPaths)
+        {
+            if (File.Exists(path))
+                return new(path) { UseShellExecute = false };
+        }
+
+        return null;
+    }
+
+    private static ProcessStartInfo? CreateAppDotnetRunStartInfo()
+    {
+        string? appProjectDir = FindProjectDirectory("NoMercy.App");
+
+        if (appProjectDir is null)
+            return null;
+
+        ProcessStartInfo startInfo = new("dotnet")
+        {
+            UseShellExecute = false
+        };
+
+        startInfo.ArgumentList.Add("run");
+        startInfo.ArgumentList.Add("--project");
+        startInfo.ArgumentList.Add(appProjectDir);
+
+        return startInfo;
+    }
+
     private static string? FindServerProjectDirectory()
+    {
+        return FindProjectDirectory("NoMercy.Service");
+    }
+
+    private static string? FindProjectDirectory(string projectName)
     {
         string? assemblyLocation =
             Path.GetDirectoryName(
@@ -130,7 +206,7 @@ public class ServerProcessLauncher
         while (directory is not null)
         {
             string candidate = Path.Combine(
-                directory, "src", "NoMercy.Service");
+                directory, "src", projectName);
 
             if (Directory.Exists(candidate))
                 return candidate;

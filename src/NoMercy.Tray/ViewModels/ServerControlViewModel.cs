@@ -264,6 +264,27 @@ public class ServerControlViewModel : INotifyPropertyChanged
         }
     }
 
+    public async Task LaunchAppAsync()
+    {
+        if (IsActionInProgress) return;
+
+        IsActionInProgress = true;
+        ActionStatus = "Launching app...";
+
+        try
+        {
+            bool launched = await _processLauncher.LaunchAppAsync();
+
+            ActionStatus = launched
+                ? "App launched"
+                : "Failed to launch app";
+        }
+        finally
+        {
+            IsActionInProgress = false;
+        }
+    }
+
     public async Task StartServerAsync()
     {
         if (IsActionInProgress) return;

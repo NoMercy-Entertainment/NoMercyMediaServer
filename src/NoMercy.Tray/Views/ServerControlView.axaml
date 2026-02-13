@@ -150,6 +150,15 @@
                     HorizontalAlignment="Center"
                     Spacing="12"
                     Margin="0,8,0,0">
+            <Button x:Name="OpenAppButton"
+                    Content="Open App"
+                    Width="120"
+                    HorizontalContentAlignment="Center"
+                    IsEnabled="{Binding IsServerRunning}"
+                    Click="OnOpenAppClick"
+                    Background="#7C3AED"
+                    Foreground="White" />
+
             <Button x:Name="StartButton"
                     Content="Start Server"
                     Width="120"

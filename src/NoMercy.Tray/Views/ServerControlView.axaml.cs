@@ -14,6 +14,13 @@ public partial class ServerControlView : UserControl
     private ServerControlViewModel? ViewModel =>
         DataContext as ServerControlViewModel;
 
+    private async void OnOpenAppClick(
+        object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null)
+            await ViewModel.LaunchAppAsync();
+    }
+
     private async void OnStartClick(
         object? sender, RoutedEventArgs e)
     {
