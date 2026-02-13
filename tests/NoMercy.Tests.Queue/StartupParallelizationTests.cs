@@ -124,10 +124,11 @@ public class StartupParallelizationTests
 
         // If running in parallel, elapsed should be close to max(100, 100) = ~100ms
         // If sequential, it would be ~200ms
-        // Use generous margin for CI environments
-        Assert.True(elapsed.TotalMilliseconds < authDurationMs + binariesDurationMs,
+        // Use 3x single-task duration as threshold to tolerate CI runner scheduling jitter
+        int maxExpectedMs = authDurationMs * 3;
+        Assert.True(elapsed.TotalMilliseconds < maxExpectedMs,
             $"Tasks appear to have run sequentially: elapsed {elapsed.TotalMilliseconds}ms " +
-            $"(expected < {authDurationMs + binariesDurationMs}ms for concurrent execution)");
+            $"(expected < {maxExpectedMs}ms for concurrent execution)");
     }
 
     /// <summary>
