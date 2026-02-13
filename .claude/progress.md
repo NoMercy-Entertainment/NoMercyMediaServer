@@ -4581,3 +4581,23 @@ Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All 2,343 tests pass across 13 test projects = 0 failures.
+
+---
+
+## WALL-03 — Update wallpaper controller
+
+**Date**: 2026-02-13
+
+**What was done**:
+- Verified that all WALL-03 controller updates were already implemented as part of WALL-01:
+  - Windows-only `RuntimeInformation.IsOSPlatform(OSPlatform.Windows)` guard replaced with `wallpaperService.IsSupported` (ServerController.cs:539)
+  - `IWallpaperService wallpaperService` injected via primary constructor DI (ServerController.cs:51)
+  - Cached async color extraction via `GetDominantColorAsync` with `DominantColorCache` (ServerController.cs:550, 561-591)
+  - `#pragma warning disable CA1416` completely removed — confirmed no pragmas remain in file
+- No additional code changes needed — marking as complete since all items are verified present and tested
+
+**Files modified**:
+- `.claude/PRD.md` — Marked WALL-03 complete, updated Next up to BOOT-01
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All 2,343 tests pass across 13 test projects = 0 failures.
