@@ -20,10 +20,12 @@ runs:
 
         # Wine post-install triggers (gstreamer plugin scan) can fail with exit code 8
         # on GitHub runners. The packages are still installed correctly, so we recover.
-        sudo apt-get install -y innoextract wine64 || {
-          echo "apt-get exited with $?, attempting to fix broken packages..."
-          sudo dpkg --configure -a || true
-        }
+        sudo apt-get install -y innoextract wine64 || true
+        sudo dpkg --configure -a || true
+
+        # Verify the packages we need are actually installed
+        dpkg -l wine64 | grep -q '^ii' || { echo "ERROR: wine64 not installed"; exit 1; }
+        dpkg -l innoextract | grep -q '^ii' || { echo "ERROR: innoextract not installed"; exit 1; }
 
         # Download and install Inno Setup via wine
         INNO_URL="https://files.jrsoftware.org/is/6/innosetup-6.3.3.exe"
