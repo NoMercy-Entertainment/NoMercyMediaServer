@@ -25,7 +25,8 @@ public class AccessLogMiddleware
         "/styles",
         "/scripts",
         "/favicon",
-        "/transcode"
+        "/transcode",
+        "/manage"
     ];
 
     private readonly string[] _ignoreExact =

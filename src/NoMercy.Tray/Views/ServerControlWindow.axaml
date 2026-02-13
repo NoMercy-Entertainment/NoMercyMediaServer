@@ -112,6 +112,15 @@
                     HorizontalAlignment="Center"
                     Spacing="12"
                     Margin="0,8,0,0">
+            <Button x:Name="StartButton"
+                    Content="Start Server"
+                    Width="120"
+                    HorizontalContentAlignment="Center"
+                    IsEnabled="{Binding IsServerStopped}"
+                    Click="OnStartClick"
+                    Background="#16A34A"
+                    Foreground="White" />
+
             <Button x:Name="StopButton"
                     Content="Stop Server"
                     Width="120"

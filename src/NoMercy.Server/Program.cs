@@ -122,6 +122,11 @@ public static class Program
         bool startedWithoutCert = !Certificate.HasValidCertificate();
         IWebHost app = CreateWebHostBuilder(options).Build();
 
+        SetupState setupState = app.Services.GetRequiredService<SetupState>();
+        TokenState tokenState = await SetupState.ValidateTokenFile();
+        SetupPhase initialPhase = setupState.DetermineInitialPhase(tokenState);
+        Logger.App($"Token validation: {tokenState} → setup phase: {initialPhase}");
+
         RegisterLifetimeEvents(app, stopWatch);
 
         if (startedWithoutCert)
@@ -427,29 +432,6 @@ public static class Program
 
     private static IWebHostBuilder CreateWebHostBuilder(StartupOptions options)
     {
-        bool hasCert = Certificate.HasValidCertificate();
-        string scheme = hasCert ? Uri.UriSchemeHttps : Uri.UriSchemeHttp;
-
-        UriBuilder localhostIPv4Url = new()
-        {
-            Host = IPAddress.Any.ToString(),
-            Port = Config.InternalServerPort,
-            Scheme = scheme
-        };
-        UriBuilder localhostIPv6Url = new()
-        {
-            Host = IPAddress.IPv6Any.ToString(),
-            Port = Config.InternalServerPort,
-            Scheme = scheme
-        };
-
-        List<string> urls = [
-            localhostIPv4Url.ToString(),
-        ];
-
-        if(Software.IsWindows || Software.IsMac)
-            urls.Add(localhostIPv6Url.ToString());
-
         List<IPAddress> localAddresses =
         [
             IPAddress.Any
@@ -485,17 +467,14 @@ public static class Program
             {
                 Certificate.KestrelConfig(kestrelOptions);
 
-                // Management API — plain HTTP on separate port
-                foreach (IPAddress localAddress in localAddresses)
+                // Main server endpoints — HTTPS when certificate is available
+                foreach (IPAddress address in localAddresses)
                 {
-                    kestrelOptions.Listen(localAddress, Config.ManagementPort, listenOptions =>
+                    kestrelOptions.Listen(address, Config.InternalServerPort, listenOptions =>
                     {
-                        listenOptions.Protocols = HttpProtocols.Http1;
+                        Certificate.ConfigureHttpsListener(listenOptions);
                     });
                 }
-
-                Logger.App(
-                    $"Management API listening on http://0.0.0.0:{Config.ManagementPort}");
 
                 // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS)
                 if (Software.IsWindows)
@@ -526,7 +505,6 @@ public static class Program
                         $"IPC listening on Unix socket: {socketPath}");
                 }
             })
-            .UseUrls(urls.ToArray())
             .UseQuic()
             .UseSockets()
             .UseStartup<Startup>();

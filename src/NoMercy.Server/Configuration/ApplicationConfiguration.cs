@@ -77,7 +77,10 @@ public static class ApplicationConfiguration
         }
 
         app.UseHsts();
-        app.UseHttpsRedirection();
+        app.UseWhen(
+            context => !context.Request.Path.StartsWithSegments("/manage"),
+            branch => branch.UseHttpsRedirection()
+        );
         app.UseResponseCompression();
         app.UseResponseCaching();
 

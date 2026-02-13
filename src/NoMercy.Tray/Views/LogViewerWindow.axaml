@@ -83,7 +83,7 @@
         <!-- Log entries -->
         <ListBox x:Name="LogList"
                  ItemsSource="{Binding FilteredEntries}"
-                 SelectionMode="Single"
+                 SelectionMode="Multiple"
                  BorderThickness="1"
                  BorderBrush="#374151"
                  Background="#111827">
@@ -110,7 +110,7 @@
                                    Text="{Binding Type}"
                                    FontFamily="Cascadia Mono, Consolas, monospace"
                                    FontSize="12"
-                                   Foreground="#60A5FA"
+                                   Foreground="{Binding Color, Converter={x:Static vm:LogColorConverter.Instance}}"
                                    Margin="4,0"
                                    VerticalAlignment="Center" />
                         <TextBlock Grid.Column="3"

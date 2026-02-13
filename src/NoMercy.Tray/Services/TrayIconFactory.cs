@@ -1,4 +1,3 @@
-using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
@@ -46,10 +45,8 @@ public static class TrayIconFactory
     {
         if (_baseIcon is not null) return _baseIcon;
 
-        string assemblyDir = Path.GetDirectoryName(
-            Assembly.GetExecutingAssembly().Location) ?? ".";
         string iconPath = Path.Combine(
-            assemblyDir, "Assets", "icon.png");
+            AppContext.BaseDirectory, "Assets", "icon.png");
 
         if (File.Exists(iconPath))
         {

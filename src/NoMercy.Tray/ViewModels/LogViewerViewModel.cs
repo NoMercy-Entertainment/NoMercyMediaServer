@@ -1,15 +1,19 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using NoMercy.Tray.Models;
 using NoMercy.Tray.Services;
 
 namespace NoMercy.Tray.ViewModels;
 
-public class LogViewerViewModel : INotifyPropertyChanged
+public partial class LogViewerViewModel : INotifyPropertyChanged
 {
     private readonly ServerConnection _serverConnection;
     private CancellationTokenSource? _autoRefreshCts;
+
+    [GeneratedRegex(@"(\x1b|\\u001[bB])\[[0-9;]*[A-Za-z]")]
+    private static partial Regex AnsiEscapeRegex();
 
     private string _searchText = string.Empty;
     private string _selectedLevel = "All";
@@ -123,7 +127,31 @@ public class LogViewerViewModel : INotifyPropertyChanged
             LogEntries.Clear();
 
             foreach (LogEntryResponse entry in logs)
+            {
+                string message = entry.Message;
+
+                // Strip surrounding quotes from double-serialization
+                // (Logger.Log calls message.ToJson() which wraps strings in quotes)
+                if (message.Length >= 2
+                    && message[0] == '"'
+                    && message[^1] == '"')
+                {
+                    message = message[1..^1];
+                }
+
+                // Strip ANSI escape codes (both actual ESC byte and literal \u001b)
+                message = AnsiEscapeRegex().Replace(message, "");
+
+                // Unescape any remaining JSON escapes from double-serialization
+                message = message.Replace("\\n", "\n")
+                    .Replace("\\r", "\r")
+                    .Replace("\\t", "\t")
+                    .Replace("\\\"", "\"")
+                    .Replace("\\\\", "\\");
+
+                entry.Message = message;
                 LogEntries.Add(entry);
+            }
 
             ApplyFilter();
             StatusText = $"{FilteredEntries.Count} entries" +

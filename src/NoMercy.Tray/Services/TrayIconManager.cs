@@ -10,11 +10,13 @@ namespace NoMercy.Tray.Services;
 public class TrayIconManager
 {
     private readonly ServerConnection _serverConnection;
+    private readonly ServerProcessLauncher _processLauncher;
     private readonly IClassicDesktopStyleApplicationLifetime _lifetime;
     private TrayIcon? _trayIcon;
     private NativeMenuItem? _statusItem;
     private NativeMenuItem? _versionItem;
     private NativeMenuItem? _uptimeItem;
+    private NativeMenuItem? _startServerItem;
     private NativeMenuItem? _stopServerItem;
     private ServerState _currentState = ServerState.Disconnected;
     private LogViewerWindow? _logViewerWindow;
@@ -22,9 +24,11 @@ public class TrayIconManager
 
     public TrayIconManager(
         ServerConnection serverConnection,
+        ServerProcessLauncher processLauncher,
         IClassicDesktopStyleApplicationLifetime lifetime)
     {
         _serverConnection = serverConnection;
+        _processLauncher = processLauncher;
         _lifetime = lifetime;
     }
 
@@ -60,7 +64,11 @@ public class TrayIconManager
 
         NativeMenuItemSeparator separator2 = new();
 
+        _startServerItem = new("Start Server");
+        _startServerItem.Click += OnStartServer;
+
         _stopServerItem = new("Stop Server");
+        _stopServerItem.IsEnabled = false;
         _stopServerItem.Click += OnStopServer;
 
         NativeMenuItemSeparator separator3 = new();
@@ -76,6 +84,7 @@ public class TrayIconManager
         menu.Items.Add(viewLogsItem);
         menu.Items.Add(serverControlItem);
         menu.Items.Add(separator2);
+        menu.Items.Add(_startServerItem);
         menu.Items.Add(_stopServerItem);
         menu.Items.Add(separator3);
         menu.Items.Add(quitItem);
@@ -191,6 +200,10 @@ public class TrayIconManager
                 ? $"Uptime: {uptime}"
                 : "Uptime: --";
 
+        if (_startServerItem is not null)
+            _startServerItem.IsEnabled =
+                state == ServerState.Disconnected;
+
         if (_stopServerItem is not null)
             _stopServerItem.IsEnabled =
                 state != ServerState.Disconnected;
@@ -242,12 +255,18 @@ public class TrayIconManager
                 return;
             }
 
-            ServerControlViewModel viewModel = new(_serverConnection);
+            ServerControlViewModel viewModel = new(
+                _serverConnection, _processLauncher);
             _serverControlWindow = new(viewModel);
             _serverControlWindow.Closed += (_, _) =>
                 _serverControlWindow = null;
             _serverControlWindow.Show();
         });
+    }
+
+    private async void OnStartServer(object? sender, EventArgs e)
+    {
+        await _processLauncher.StartServerAsync();
     }
 
     private async void OnStopServer(object? sender, EventArgs e)

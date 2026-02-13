@@ -20,17 +20,19 @@ public static class Certificate
 
     public static void KestrelConfig(KestrelServerOptions options)
     {
-        if (HasValidCertificate())
-        {
-            options.ConfigureEndpointDefaults(listenOptions =>
-                listenOptions.UseHttps(HttpsConnectionAdapterOptions()));
-        }
-
         options.AddServerHeader = false;
         options.Limits.MaxRequestBodySize = 100L * 1024 * 1024 * 1024; // 100GB — 4K remux support
         options.Limits.MaxRequestBufferSize = null; // Kestrel manages adaptively
         options.Limits.MaxConcurrentConnections = 1000; // Many streaming clients
         options.Limits.MaxConcurrentUpgradedConnections = 500; // WebSocket/SignalR
+    }
+
+    public static void ConfigureHttpsListener(ListenOptions listenOptions)
+    {
+        if (HasValidCertificate())
+        {
+            listenOptions.UseHttps(HttpsConnectionAdapterOptions());
+        }
     }
     
     private static HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()

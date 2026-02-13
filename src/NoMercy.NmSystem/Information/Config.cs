@@ -47,14 +47,6 @@ public static class Config
         set => _externalServerPort = value;
     }
 
-    private static int? _managementPort = null;
-
-    public static int ManagementPort
-    {
-        get => _managementPort ?? 7626;
-        set => _managementPort = value;
-    }
-
     private static string? _managementPipeName = null;
 
     public static string ManagementPipeName

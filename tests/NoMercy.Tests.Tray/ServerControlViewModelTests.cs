@@ -37,7 +37,8 @@ public class ServerControlViewModelTests
     {
         ServerConnection connection = new();
 
-        ServerControlViewModel viewModel = new(connection);
+        ServerProcessLauncher launcher = new();
+        ServerControlViewModel viewModel = new(connection, launcher);
 
         Assert.Equal("Disconnected", viewModel.ServerStatus);
         Assert.Equal("--", viewModel.ServerName);
@@ -56,7 +57,8 @@ public class ServerControlViewModelTests
     public void PropertyChanged_FiresOnStatusChange()
     {
         ServerConnection connection = new();
-        ServerControlViewModel viewModel = new(connection);
+        ServerProcessLauncher launcher = new();
+        ServerControlViewModel viewModel = new(connection, launcher);
         List<string> changedProperties = [];
 
         viewModel.PropertyChanged += (_, e) =>
@@ -82,7 +84,8 @@ public class ServerControlViewModelTests
     public void PropertyChanged_FiresForAllProperties()
     {
         ServerConnection connection = new();
-        ServerControlViewModel viewModel = new(connection);
+        ServerProcessLauncher launcher = new();
+        ServerControlViewModel viewModel = new(connection, launcher);
         List<string> changedProperties = [];
 
         viewModel.PropertyChanged += (_, e) =>
@@ -110,7 +113,8 @@ public class ServerControlViewModelTests
     public async Task RefreshStatusAsync_WhenDisconnected_SetsDefaults()
     {
         ServerConnection connection = new();
-        ServerControlViewModel viewModel = new(connection);
+        ServerProcessLauncher launcher = new();
+        ServerControlViewModel viewModel = new(connection, launcher);
 
         await viewModel.RefreshStatusAsync();
 
@@ -129,7 +133,8 @@ public class ServerControlViewModelTests
     public void StartPolling_ThenStopPolling_DoesNotThrow()
     {
         ServerConnection connection = new();
-        ServerControlViewModel viewModel = new(connection);
+        ServerProcessLauncher launcher = new();
+        ServerControlViewModel viewModel = new(connection, launcher);
 
         viewModel.StartPolling();
         viewModel.StopPolling();
@@ -141,7 +146,8 @@ public class ServerControlViewModelTests
     public void StopPolling_WithoutStarting_DoesNotThrow()
     {
         ServerConnection connection = new();
-        ServerControlViewModel viewModel = new(connection);
+        ServerProcessLauncher launcher = new();
+        ServerControlViewModel viewModel = new(connection, launcher);
 
         viewModel.StopPolling();
 
@@ -152,7 +158,8 @@ public class ServerControlViewModelTests
     public void StartPolling_CalledTwice_DoesNotThrow()
     {
         ServerConnection connection = new();
-        ServerControlViewModel viewModel = new(connection);
+        ServerProcessLauncher launcher = new();
+        ServerControlViewModel viewModel = new(connection, launcher);
 
         viewModel.StartPolling();
         viewModel.StartPolling();

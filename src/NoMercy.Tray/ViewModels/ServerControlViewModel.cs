@@ -8,6 +8,7 @@ namespace NoMercy.Tray.ViewModels;
 public class ServerControlViewModel : INotifyPropertyChanged
 {
     private readonly ServerConnection _serverConnection;
+    private readonly ServerProcessLauncher _processLauncher;
     private CancellationTokenSource? _pollCts;
 
     private string _serverStatus = "Disconnected";
@@ -16,6 +17,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
     private string _platform = "--";
     private string _uptime = "--";
     private bool _isServerRunning;
+    private bool _isServerStopped = true;
     private bool _isActionInProgress;
     private string _actionStatus = string.Empty;
     private string _statusColor = "#EF4444";
@@ -56,6 +58,12 @@ public class ServerControlViewModel : INotifyPropertyChanged
         set { _isServerRunning = value; OnPropertyChanged(); }
     }
 
+    public bool IsServerStopped
+    {
+        get => _isServerStopped;
+        set { _isServerStopped = value; OnPropertyChanged(); }
+    }
+
     public bool IsActionInProgress
     {
         get => _isActionInProgress;
@@ -74,14 +82,20 @@ public class ServerControlViewModel : INotifyPropertyChanged
         set { _statusColor = value; OnPropertyChanged(); }
     }
 
-    public ServerControlViewModel(ServerConnection serverConnection)
+    public ServerControlViewModel(
+        ServerConnection serverConnection,
+        ServerProcessLauncher processLauncher)
     {
         _serverConnection = serverConnection;
+        _processLauncher = processLauncher;
     }
 
     public async Task RefreshStatusAsync(
         CancellationToken cancellationToken = default)
     {
+        if (!_serverConnection.IsConnected)
+            await _serverConnection.ConnectAsync(cancellationToken);
+
         ServerStatusResponse? status =
             await _serverConnection.GetAsync<ServerStatusResponse>(
                 "/manage/status", cancellationToken);
@@ -94,6 +108,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             Platform = "--";
             Uptime = "--";
             IsServerRunning = false;
+            IsServerStopped = !IsActionInProgress;
             StatusColor = "#EF4444";
             return;
         }
@@ -120,6 +135,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
         Uptime = TrayIconManager.FormatUptime(status.UptimeSeconds);
 
         IsServerRunning = status.Status == "running";
+        IsServerStopped = false;
 
         StatusColor = status.Status switch
         {
@@ -169,6 +185,31 @@ public class ServerControlViewModel : INotifyPropertyChanged
             ActionStatus = success
                 ? "Restart command sent"
                 : "Failed to send restart command";
+
+            await Task.Delay(2000);
+            await RefreshStatusAsync();
+        }
+        finally
+        {
+            IsActionInProgress = false;
+        }
+    }
+
+    public async Task StartServerAsync()
+    {
+        if (IsActionInProgress) return;
+
+        IsActionInProgress = true;
+        IsServerStopped = false;
+        ActionStatus = "Starting server...";
+
+        try
+        {
+            bool started = await _processLauncher.StartServerAsync();
+
+            ActionStatus = started
+                ? "Server process launched"
+                : "Failed to start server";
 
             await Task.Delay(2000);
             await RefreshStatusAsync();

@@ -10,6 +10,7 @@ public class App : Application
 {
     private TrayIconManager? _trayIconManager;
     private ServerConnection? _serverConnection;
+    private ServerProcessLauncher? _processLauncher;
 
     public override void Initialize()
     {
@@ -19,12 +20,14 @@ public class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         _serverConnection = new();
+        _processLauncher = new();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            _trayIconManager = new(_serverConnection, desktop);
+            _trayIconManager = new(
+                _serverConnection, _processLauncher, desktop);
             _trayIconManager.Initialize();
         }
 

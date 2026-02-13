@@ -34,9 +34,6 @@ public class StartupOptions
     [Option("external-ip", Required = false, HelpText = "External ip to use for the server.")]
     public string? ExternalIp { get; set; }
 
-    [Option('m', "management-port", Required = false, HelpText = "Management API port (localhost only).")]
-    public int ManagementPort { get; set; }
-
     [Option("pipe-name", Required = false, HelpText = "Named pipe name for IPC (Windows) or Unix socket filename.")]
     public string? PipeName { get; set; }
 
@@ -132,12 +129,6 @@ public class StartupOptions
             }
             Config.ExternalServerPort = ExternalPort;
             options.Add("externalPort", ExternalPort.ToString());
-        }
-
-        if (ManagementPort != 0)
-        {
-            Logger.App("Setting management port to " + ManagementPort);
-            Config.ManagementPort = ManagementPort;
         }
 
         if (!string.IsNullOrEmpty(PipeName))

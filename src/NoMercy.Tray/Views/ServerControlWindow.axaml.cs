@@ -31,6 +31,12 @@ public partial class ServerControlWindow : Window
         _viewModel.StopPolling();
     }
 
+    private async void OnStartClick(
+        object? sender, RoutedEventArgs e)
+    {
+        await _viewModel.StartServerAsync();
+    }
+
     private async void OnStopClick(
         object? sender, RoutedEventArgs e)
     {

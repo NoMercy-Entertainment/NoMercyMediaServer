@@ -29,7 +29,9 @@ public sealed class IpcClient : IDisposable
                         PipeDirection.InOut,
                         PipeOptions.Asynchronous);
 
-                    await pipe.ConnectAsync(cancellationToken);
+                    using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(3));
+                    await pipe.ConnectAsync(timeoutCts.Token);
                     return pipe;
                 }
                 else
@@ -38,7 +40,9 @@ public sealed class IpcClient : IDisposable
                     Socket socket = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                     UnixDomainSocketEndPoint endpoint = new(socketPath);
 
-                    await socket.ConnectAsync(endpoint, cancellationToken);
+                    using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(3));
+                    await socket.ConnectAsync(endpoint, timeoutCts.Token);
                     return new NetworkStream(socket, ownsSocket: true);
                 }
             }

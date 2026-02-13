@@ -14,7 +14,8 @@ public class SetupModeMiddleware
     [
         "/setup",
         "/sso-callback",
-        "/health"
+        "/health",
+        "/manage"
     ];
 
     public SetupModeMiddleware(RequestDelegate next, SetupState setupState)
