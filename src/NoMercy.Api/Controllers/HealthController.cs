@@ -75,9 +75,9 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
             Status = status,
             Timestamp = DateTime.UtcNow,
             Version = Software.GetReleaseVersion(),
-            Environment = System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
+            Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
             UptimeSeconds = (long)(DateTime.UtcNow - Info.StartTime).TotalSeconds,
-            Components = new ComponentStatus
+            Components = new()
             {
                 Database = databaseHealthy ? "ok" : "unavailable",
                 Authentication = isDegraded ? "degraded" : "ok",

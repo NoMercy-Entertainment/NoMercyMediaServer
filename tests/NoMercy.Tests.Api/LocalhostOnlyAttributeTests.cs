@@ -67,9 +67,9 @@ public class LocalhostOnlyAttributeTests
 
         ActionContext actionContext = new(
             httpContext,
-            new RouteData(),
-            new ActionDescriptor());
+            new(),
+            new());
 
-        return new AuthorizationFilterContext(actionContext, []);
+        return new(actionContext, []);
     }
 }

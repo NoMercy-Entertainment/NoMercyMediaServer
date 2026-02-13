@@ -22,7 +22,7 @@ public static class CacheController
             PruneLocks();
         }
 
-        return FileLocks.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
+        return FileLocks.GetOrAdd(path, _ => new(1, 1));
     }
 
     private static void PruneLocks()

@@ -64,6 +64,6 @@ public class MainViewModel : INotifyPropertyChanged
         [CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(
-            this, new PropertyChangedEventArgs(propertyName));
+            this, new(propertyName));
     }
 }

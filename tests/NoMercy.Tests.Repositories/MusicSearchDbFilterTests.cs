@@ -18,7 +18,7 @@ public class MusicSearchDbFilterTests : IDisposable
 
     public MusicSearchDbFilterTests()
     {
-        _keepAliveConnection = new SqliteConnection($"DataSource={_dbName};Mode=Memory;Cache=Shared");
+        _keepAliveConnection = new($"DataSource={_dbName};Mode=Memory;Cache=Shared");
         _keepAliveConnection.Open();
         _keepAliveConnection.CreateFunction("normalize_search", (string? input) =>
             input?.NormalizeSearch() ?? string.Empty);
@@ -74,7 +74,7 @@ public class MusicSearchDbFilterTests : IDisposable
 
         // Add all entities in one batch to avoid tracking conflicts
         // (the `= new()` defaults on navigation properties are resolved when parent is in same batch)
-        context.Artists.Add(new Artist
+        context.Artists.Add(new()
         {
             Id = Guid.Parse("a0000001-0000-0000-0000-000000000001"),
             Name = "Beyoncé",
@@ -84,7 +84,7 @@ public class MusicSearchDbFilterTests : IDisposable
             LibraryId = SeedConstants.MovieLibraryId,
             FolderId = SeedConstants.MovieFolderId
         });
-        context.Artists.Add(new Artist
+        context.Artists.Add(new()
         {
             Id = Guid.Parse("a0000001-0000-0000-0000-000000000002"),
             Name = "Mötley Crüe",
@@ -94,7 +94,7 @@ public class MusicSearchDbFilterTests : IDisposable
             LibraryId = SeedConstants.MovieLibraryId,
             FolderId = SeedConstants.MovieFolderId
         });
-        context.Artists.Add(new Artist
+        context.Artists.Add(new()
         {
             Id = Guid.Parse("a0000001-0000-0000-0000-000000000003"),
             Name = "AC/DC",
@@ -104,7 +104,7 @@ public class MusicSearchDbFilterTests : IDisposable
             LibraryId = SeedConstants.MovieLibraryId,
             FolderId = SeedConstants.MovieFolderId
         });
-        context.Artists.Add(new Artist
+        context.Artists.Add(new()
         {
             Id = Guid.Parse("a0000001-0000-0000-0000-000000000004"),
             Name = "Twenty—One Pilots",
@@ -114,7 +114,7 @@ public class MusicSearchDbFilterTests : IDisposable
             LibraryId = SeedConstants.MovieLibraryId,
             FolderId = SeedConstants.MovieFolderId
         });
-        context.Artists.Add(new Artist
+        context.Artists.Add(new()
         {
             Id = Guid.Parse("a0000001-0000-0000-0000-000000000005"),
             Name = "The Rolling Stones",
@@ -125,7 +125,7 @@ public class MusicSearchDbFilterTests : IDisposable
             FolderId = SeedConstants.MovieFolderId
         });
 
-        context.Albums.Add(new Album
+        context.Albums.Add(new()
         {
             Id = Guid.Parse("b0000001-0000-0000-0000-000000000001"),
             Name = "Résumé",
@@ -134,7 +134,7 @@ public class MusicSearchDbFilterTests : IDisposable
             Library = library,
             LibraryFolder = folder
         });
-        context.Albums.Add(new Album
+        context.Albums.Add(new()
         {
             Id = Guid.Parse("b0000001-0000-0000-0000-000000000002"),
             Name = "Greatest Hits",
@@ -147,7 +147,7 @@ public class MusicSearchDbFilterTests : IDisposable
         context.SaveChanges();
 
         // Second batch: Tracks and Playlists (after Library/Folder are committed)
-        context.Tracks.Add(new Track
+        context.Tracks.Add(new()
         {
             Id = Guid.Parse("c0000001-0000-0000-0000-000000000001"),
             Name = "Déjà Vu",
@@ -158,7 +158,7 @@ public class MusicSearchDbFilterTests : IDisposable
             HostFolder = "/media/music/Deja Vu",
             FolderId = SeedConstants.MovieFolderId
         });
-        context.Tracks.Add(new Track
+        context.Tracks.Add(new()
         {
             Id = Guid.Parse("c0000001-0000-0000-0000-000000000002"),
             Name = "Rock You Like a Hurricane",
@@ -170,13 +170,13 @@ public class MusicSearchDbFilterTests : IDisposable
             FolderId = SeedConstants.MovieFolderId
         });
 
-        context.Playlists.Add(new Playlist
+        context.Playlists.Add(new()
         {
             Id = Guid.Parse("d0000001-0000-0000-0000-000000000001"),
             Name = "Café Vibes",
             UserId = SeedConstants.UserId
         });
-        context.Playlists.Add(new Playlist
+        context.Playlists.Add(new()
         {
             Id = Guid.Parse("d0000001-0000-0000-0000-000000000002"),
             Name = "Road Trip",

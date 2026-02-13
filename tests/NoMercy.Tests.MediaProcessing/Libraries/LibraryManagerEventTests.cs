@@ -18,7 +18,7 @@ public class LibraryManagerEventTests : IDisposable
     public LibraryManagerEventTests()
     {
         string dbName = Guid.NewGuid().ToString();
-        _connection = new SqliteConnection($"DataSource={dbName};Mode=Memory;Cache=Shared");
+        _connection = new($"DataSource={dbName};Mode=Memory;Cache=Shared");
         _connection.Open();
         _connection.CreateFunction("normalize_search", (string? input) =>
             input?.NormalizeSearch() ?? string.Empty);
@@ -28,7 +28,7 @@ public class LibraryManagerEventTests : IDisposable
             .AddInterceptors(new SqliteNormalizeSearchInterceptor())
             .Options;
 
-        _context = new MediaContext(options);
+        _context = new(options);
         _context.Database.EnsureCreated();
     }
 
@@ -82,7 +82,7 @@ public class LibraryManagerEventTests : IDisposable
         });
 
         Ulid libraryId = Ulid.NewUlid();
-        _context.Libraries.Add(new Library
+        _context.Libraries.Add(new()
         {
             Id = libraryId,
             Title = "Test Movies",
@@ -113,7 +113,7 @@ public class LibraryManagerEventTests : IDisposable
     public async Task ProcessLibrary_WithoutEventBus_DoesNotThrow()
     {
         Ulid libraryId = Ulid.NewUlid();
-        _context.Libraries.Add(new Library
+        _context.Libraries.Add(new()
         {
             Id = libraryId,
             Title = "No Events Library",
@@ -141,7 +141,7 @@ public class LibraryManagerEventTests : IDisposable
         });
 
         Ulid libraryId = Ulid.NewUlid();
-        _context.Libraries.Add(new Library
+        _context.Libraries.Add(new()
         {
             Id = libraryId,
             Title = "Duration Test",
@@ -173,7 +173,7 @@ public class LibraryManagerEventTests : IDisposable
         });
 
         Ulid libraryId = Ulid.NewUlid();
-        _context.Libraries.Add(new Library
+        _context.Libraries.Add(new()
         {
             Id = libraryId,
             Title = "Metadata Test",

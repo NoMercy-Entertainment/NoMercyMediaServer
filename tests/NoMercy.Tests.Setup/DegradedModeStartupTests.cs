@@ -396,12 +396,12 @@ public class CloudflareFallbackTests
         // Set an IP → verify it persists → verify it can be read back
         string testIp = "203.0.113.42";
         string cacheFile = Path.Combine(
-            NoMercy.NmSystem.Information.AppFiles.ConfigPath, "external_ip.cache");
+            NmSystem.Information.AppFiles.ConfigPath, "external_ip.cache");
 
         try
         {
             // Ensure config directory exists
-            string configDir = NoMercy.NmSystem.Information.AppFiles.ConfigPath;
+            string configDir = NmSystem.Information.AppFiles.ConfigPath;
             if (!Directory.Exists(configDir))
                 Directory.CreateDirectory(configDir);
 
@@ -424,7 +424,7 @@ public class CloudflareFallbackTests
     public void ExternalIpCache_ReturnsNull_WhenFileDoesNotExist()
     {
         string cacheFile = Path.Combine(
-            NoMercy.NmSystem.Information.AppFiles.ConfigPath, "external_ip.cache");
+            NmSystem.Information.AppFiles.ConfigPath, "external_ip.cache");
 
         // Ensure no cache file
         if (File.Exists(cacheFile))

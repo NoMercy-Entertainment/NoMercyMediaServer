@@ -116,10 +116,10 @@ public class OfflineTokenValidationTests : IDisposable
         JwtSecurityTokenHandler handler = new();
         SecurityTokenDescriptor descriptor = new()
         {
-            Subject = new ClaimsIdentity(
+            Subject = new(
             [
-                new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
-                new Claim("scope", "openid profile")
+                new(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+                new("scope", "openid profile")
             ]),
             Expires = DateTime.UtcNow.AddHours(1),
             Issuer = "https://auth.nomercy.tv/realms/NoMercyTV/",
@@ -167,9 +167,9 @@ public class OfflineTokenValidationTests : IDisposable
         JwtSecurityTokenHandler handler = new();
         SecurityTokenDescriptor descriptor = new()
         {
-            Subject = new ClaimsIdentity(
+            Subject = new(
             [
-                new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())
+                new(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())
             ]),
             Expires = DateTime.UtcNow.AddHours(1),
             Issuer = "https://auth.nomercy.tv/realms/NoMercyTV/",
@@ -218,7 +218,7 @@ public class OfflineTokenValidationTests : IDisposable
         JwtSecurityTokenHandler handler = new();
         SecurityTokenDescriptor descriptor = new()
         {
-            Subject = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "test-user")]),
+            Subject = new([new(ClaimTypes.NameIdentifier, "test-user")]),
             Expires = DateTime.UtcNow.AddHours(1),
             Issuer = "test-issuer",
             Audience = "test-audience",

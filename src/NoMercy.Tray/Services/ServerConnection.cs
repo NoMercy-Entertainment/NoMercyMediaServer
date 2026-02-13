@@ -15,7 +15,7 @@ public sealed class ServerConnection : IDisposable
         try
         {
             Disconnect();
-            _client = new IpcClient();
+            _client = new();
 
             using HttpResponseMessage response =
                 await _client.GetAsync("/manage/status", cancellationToken);

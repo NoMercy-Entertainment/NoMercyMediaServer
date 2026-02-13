@@ -40,7 +40,7 @@ public class PluginAbstractionsTests
 
         public Task<MediaMetadata?> GetMetadataAsync(string title, MediaType type, CancellationToken ct = default)
         {
-            return Task.FromResult<MediaMetadata?>(new MediaMetadata
+            return Task.FromResult<MediaMetadata?>(new()
             {
                 Title = title,
                 Year = 2024,
@@ -64,7 +64,7 @@ public class PluginAbstractionsTests
         {
             return Task.FromResult<IEnumerable<MediaFile>>(
             [
-                new MediaFile { Path = $"{path}/movie.mkv", FileName = "movie.mkv", Size = 1024, Type = MediaType.Movie }
+                new() { Path = $"{path}/movie.mkv", FileName = "movie.mkv", Size = 1024, Type = MediaType.Movie }
             ]);
         }
 
@@ -82,7 +82,7 @@ public class PluginAbstractionsTests
 
         public EncodingProfile GetProfile(MediaInfo info)
         {
-            return new EncodingProfile
+            return new()
             {
                 Name = "test-profile",
                 VideoCodec = "libx264",
@@ -175,7 +175,7 @@ public class PluginAbstractionsTests
         plugin.Name.Should().Be("Test Plugin");
         plugin.Description.Should().NotBeNullOrEmpty();
         plugin.Id.Should().NotBe(Guid.Empty);
-        plugin.Version.Should().Be(new Version(1, 0, 0));
+        plugin.Version.Should().Be(new(1, 0, 0));
     }
 
     [Fact]
@@ -300,14 +300,14 @@ public class PluginAbstractionsTests
             Id = Guid.NewGuid(),
             Name = "My Plugin",
             Description = "A useful plugin",
-            Version = new Version(2, 1, 0),
+            Version = new(2, 1, 0),
             Status = PluginStatus.Active,
             Author = "Test Author"
         };
 
         info.Name.Should().Be("My Plugin");
         info.Status.Should().Be(PluginStatus.Active);
-        info.Version.Should().Be(new Version(2, 1, 0));
+        info.Version.Should().Be(new(2, 1, 0));
         info.Author.Should().Be("Test Author");
     }
 
@@ -398,13 +398,13 @@ public class PluginAbstractionsTests
         TestPluginContext context = new(bus);
 
         List<IEvent> received = [];
-        context.EventBus.Subscribe<NoMercy.Events.Playback.PlaybackStartedEvent>((evt, _) =>
+        context.EventBus.Subscribe<Events.Playback.PlaybackStartedEvent>((evt, _) =>
         {
             received.Add(evt);
             return Task.CompletedTask;
         });
 
-        await bus.PublishAsync(new NoMercy.Events.Playback.PlaybackStartedEvent
+        await bus.PublishAsync(new Events.Playback.PlaybackStartedEvent
         {
             UserId = Guid.NewGuid(),
             MediaId = 1,

@@ -94,7 +94,7 @@ public class SqliteQueueContextTests : IDisposable
     public void JobExists_ReturnsTrueForExistingPayload()
     {
         string payload = "{\"type\":\"exists-test\"}";
-        _context.AddJob(new QueueJobModel
+        _context.AddJob(new()
         {
             Payload = payload,
             Queue = "default",
@@ -137,14 +137,14 @@ public class SqliteQueueContextTests : IDisposable
     [Fact]
     public void GetNextJob_ReturnsHighestPriorityUnreservedJob()
     {
-        _context.AddJob(new QueueJobModel
+        _context.AddJob(new()
         {
             Payload = "{\"type\":\"low\"}",
             Queue = "worker",
             Priority = 1,
             AvailableAt = DateTime.UtcNow
         });
-        _context.AddJob(new QueueJobModel
+        _context.AddJob(new()
         {
             Payload = "{\"type\":\"high\"}",
             Queue = "worker",
@@ -196,7 +196,7 @@ public class SqliteQueueContextTests : IDisposable
     [Fact]
     public void GetNextJob_EmptyQueueName_ReturnsAnyJob()
     {
-        _context.AddJob(new QueueJobModel
+        _context.AddJob(new()
         {
             Payload = "{\"type\":\"any\"}",
             Queue = "some-queue",
@@ -285,14 +285,14 @@ public class SqliteQueueContextTests : IDisposable
     [Fact]
     public void GetFailedJobs_FilterById()
     {
-        _context.AddFailedJob(new FailedJobModel
+        _context.AddFailedJob(new()
         {
             Uuid = Guid.NewGuid(),
             Queue = "q1",
             Payload = "{\"a\":1}",
             Exception = "err1"
         });
-        _context.AddFailedJob(new FailedJobModel
+        _context.AddFailedJob(new()
         {
             Uuid = Guid.NewGuid(),
             Queue = "q2",
@@ -342,14 +342,14 @@ public class SqliteQueueContextTests : IDisposable
     [Fact]
     public void GetEnabledCronJobs_FiltersDisabled()
     {
-        _context.AddCronJob(new CronJobModel
+        _context.AddCronJob(new()
         {
             Name = "enabled",
             CronExpression = "0 * * * *",
             JobType = "A",
             IsEnabled = true
         });
-        _context.AddCronJob(new CronJobModel
+        _context.AddCronJob(new()
         {
             Name = "disabled",
             CronExpression = "0 * * * *",
@@ -392,7 +392,7 @@ public class SqliteQueueContextTests : IDisposable
     [Fact]
     public void RemoveCronJob_DeletesFromDatabase()
     {
-        _context.AddCronJob(new CronJobModel
+        _context.AddCronJob(new()
         {
             Name = "remove-cron",
             CronExpression = "0 * * * *",
@@ -419,7 +419,7 @@ public class SqliteQueueContextTests : IDisposable
         {
             using IQueueContext ctx = SqliteQueueContextFactory.Create(path);
 
-            ctx.AddJob(new QueueJobModel
+            ctx.AddJob(new()
             {
                 Payload = "{\"test\":true}",
                 Queue = "default",

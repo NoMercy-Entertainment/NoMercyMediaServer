@@ -63,7 +63,7 @@ internal class StowageWatcher : IDisposable
     public void Watch(TimeSpan interval)
     {
         if (_runTask != null) return;
-        _cts = new CancellationTokenSource();
+        _cts = new();
         _runTask = Task.Run(() => WatchLoopAsync(interval, _cts.Token));
     }
 

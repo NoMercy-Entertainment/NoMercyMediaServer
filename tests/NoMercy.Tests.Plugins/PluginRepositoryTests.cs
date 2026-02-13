@@ -37,7 +37,7 @@ public class PluginRepositoryTests : IDisposable
         List<PluginRepositoryEntry> plugins = [];
         for (int i = 0; i < pluginCount; i++)
         {
-            plugins.Add(new PluginRepositoryEntry
+            plugins.Add(new()
             {
                 Id = Guid.NewGuid(),
                 Name = $"Plugin{i}",
@@ -45,7 +45,7 @@ public class PluginRepositoryTests : IDisposable
                 Author = "Test Author",
                 Versions =
                 [
-                    new PluginVersionEntry
+                    new()
                     {
                         Version = "1.0.0",
                         DownloadUrl = $"https://example.com/plugin{i}-1.0.0.zip",
@@ -56,7 +56,7 @@ public class PluginRepositoryTests : IDisposable
             });
         }
 
-        return new PluginRepositoryManifest
+        return new()
         {
             Name = name,
             Url = "https://example.com/repo",
@@ -68,13 +68,13 @@ public class PluginRepositoryTests : IDisposable
     {
         string json = JsonSerializer.Serialize(manifest);
         MockHttpHandler handler = new(json, HttpStatusCode.OK);
-        return new HttpClient(handler);
+        return new(handler);
     }
 
     private static HttpClient CreateFailingHttpClient()
     {
         MockHttpHandler handler = new("", HttpStatusCode.InternalServerError);
-        return new HttpClient(handler);
+        return new(handler);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
-        Action act = () => new PluginRepository(new HttpClient(), null!, _tempDir);
+        Action act = () => new PluginRepository(new(), null!, _tempDir);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -96,7 +96,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void Constructor_NullPath_ThrowsArgumentException()
     {
-        Action act = () => new PluginRepository(new HttpClient(), NullLogger.Instance, null!);
+        Action act = () => new PluginRepository(new(), NullLogger.Instance, null!);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -106,7 +106,7 @@ public class PluginRepositoryTests : IDisposable
     {
         string configDir = Path.Combine(_tempDir, "configurations");
 
-        _ = new PluginRepository(new HttpClient(), NullLogger.Instance, _tempDir);
+        _ = new PluginRepository(new(), NullLogger.Instance, _tempDir);
 
         Directory.Exists(configDir).Should().BeTrue();
     }
@@ -114,7 +114,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void GetRepositories_Empty_ReturnsEmptyList()
     {
-        PluginRepository repo = new(new HttpClient(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
 
         IReadOnlyList<PluginRepositoryInfo> repos = repo.GetRepositories();
 
@@ -154,7 +154,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public async Task AddRepositoryAsync_NullName_ThrowsArgumentException()
     {
-        PluginRepository repo = new(new HttpClient(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
 
         Func<Task> act = () => repo.AddRepositoryAsync(null!, "https://example.com");
 
@@ -164,7 +164,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public async Task AddRepositoryAsync_NullUrl_ThrowsArgumentException()
     {
-        PluginRepository repo = new(new HttpClient(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
 
         Func<Task> act = () => repo.AddRepositoryAsync("test", null!);
 
@@ -216,7 +216,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public async Task RemoveRepositoryAsync_NotFound_ThrowsInvalidOperation()
     {
-        PluginRepository repo = new(new HttpClient(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
 
         Func<Task> act = () => repo.RemoveRepositoryAsync("nonexistent");
 
@@ -261,7 +261,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void GetAvailablePlugins_NoRefresh_ReturnsEmpty()
     {
-        PluginRepository repo = new(new HttpClient(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
 
         IReadOnlyList<PluginRepositoryEntry> plugins = repo.GetAvailablePlugins();
 
@@ -287,7 +287,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void FindPlugin_UnknownId_ReturnsNull()
     {
-        PluginRepository repo = new(new HttpClient(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
 
         PluginRepositoryEntry? found = repo.FindPlugin(Guid.NewGuid());
 
@@ -314,7 +314,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void FindVersion_UnknownPlugin_ReturnsNull()
     {
-        PluginRepository repo = new(new HttpClient(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
 
         PluginVersionEntry? found = repo.FindVersion(Guid.NewGuid(), "1.0.0");
 
@@ -339,7 +339,7 @@ public class PluginRepositoryTests : IDisposable
     [Fact]
     public void FindVersion_NullVersion_ThrowsArgumentException()
     {
-        PluginRepository repo = new(new HttpClient(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
 
         Action act = () => repo.FindVersion(Guid.NewGuid(), null!);
 
@@ -396,8 +396,8 @@ public class PluginRepositoryTests : IDisposable
             Description = "Test",
             Versions =
             [
-                new PluginVersionEntry { Version = "1.0.0", DownloadUrl = "https://example.com/v1.zip" },
-                new PluginVersionEntry { Version = "2.0.0", DownloadUrl = "https://example.com/v2.zip", TargetAbi = "9.0.0" }
+                new() { Version = "1.0.0", DownloadUrl = "https://example.com/v1.zip" },
+                new() { Version = "2.0.0", DownloadUrl = "https://example.com/v2.zip", TargetAbi = "9.0.0" }
             ]
         };
 
@@ -418,7 +418,7 @@ public class PluginRepositoryTests : IDisposable
         string json = JsonSerializer.Serialize(repos);
         File.WriteAllText(Path.Combine(configDir, "repositories.json"), json);
 
-        PluginRepository repo = new(new HttpClient(), NullLogger.Instance, _tempDir);
+        PluginRepository repo = new(new(), NullLogger.Instance, _tempDir);
 
         IReadOnlyList<PluginRepositoryInfo> loaded = repo.GetRepositories();
         loaded.Should().ContainSingle();

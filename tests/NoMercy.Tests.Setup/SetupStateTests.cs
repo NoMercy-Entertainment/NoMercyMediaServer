@@ -490,7 +490,7 @@ public class TokenValidationTests : IDisposable
         JwtSecurityToken token = new(
             issuer: "test",
             audience: "test",
-            claims: [new Claim("sub", "user1")],
+            claims: [new("sub", "user1")],
             notBefore: DateTime.UtcNow.AddMinutes(-5),
             expires: validTo);
         return handler.WriteToken(token);

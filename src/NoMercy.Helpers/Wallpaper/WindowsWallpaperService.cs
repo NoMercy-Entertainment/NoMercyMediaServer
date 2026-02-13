@@ -122,7 +122,7 @@ public class WindowsWallpaperService : IWallpaperService
         using RegistryKey? desktopKey = Registry.CurrentUser.OpenSubKey(DesktopRegPath, false);
         using RegistryKey? colorKey = Registry.CurrentUser.OpenSubKey(DesktopRegColor, false);
 
-        return new WallpaperConfig
+        return new()
         {
             Style = ParseRegistryInt(desktopKey, WallpaperStyleRegPath, 0),
             IsTile = ParseRegistryBool(desktopKey, TileWallpaperRegPath, false),
@@ -155,12 +155,12 @@ public class WindowsWallpaperService : IWallpaperService
     {
         WallpaperConfig config = style switch
         {
-            WallpaperStyle.Fill => new WallpaperConfig { Style = 10, IsTile = false, Color = "000000" },
-            WallpaperStyle.Fit => new WallpaperConfig { Style = 6, IsTile = false, Color = "000000" },
-            WallpaperStyle.Stretch => new WallpaperConfig { Style = 2, IsTile = false, Color = "000000" },
-            WallpaperStyle.Tile => new WallpaperConfig { Style = 0, IsTile = true, Color = "000000" },
-            WallpaperStyle.Center => new WallpaperConfig { Style = 0, IsTile = false, Color = "000000" },
-            WallpaperStyle.Span => new WallpaperConfig { Style = 22, IsTile = false, Color = "000000" },
+            WallpaperStyle.Fill => new() { Style = 10, IsTile = false, Color = "000000" },
+            WallpaperStyle.Fit => new() { Style = 6, IsTile = false, Color = "000000" },
+            WallpaperStyle.Stretch => new() { Style = 2, IsTile = false, Color = "000000" },
+            WallpaperStyle.Tile => new() { Style = 0, IsTile = true, Color = "000000" },
+            WallpaperStyle.Center => new() { Style = 0, IsTile = false, Color = "000000" },
+            WallpaperStyle.Span => new() { Style = 22, IsTile = false, Color = "000000" },
             _ => throw new ArgumentOutOfRangeException(nameof(style))
         };
 

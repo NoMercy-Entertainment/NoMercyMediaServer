@@ -18,7 +18,7 @@ public class HomeRepositoryTests : IDisposable
     public HomeRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new HomeRepository();
+        _repository = new();
     }
 
     [Fact]

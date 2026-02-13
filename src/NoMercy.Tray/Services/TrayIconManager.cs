@@ -32,17 +32,17 @@ public class TrayIconManager
     {
         NativeMenu menu = new();
 
-        _statusItem = new NativeMenuItem("Server: Disconnected")
+        _statusItem = new("Server: Disconnected")
         {
             IsEnabled = false
         };
 
-        _versionItem = new NativeMenuItem("Version: --")
+        _versionItem = new("Version: --")
         {
             IsEnabled = false
         };
 
-        _uptimeItem = new NativeMenuItem("Uptime: --")
+        _uptimeItem = new("Uptime: --")
         {
             IsEnabled = false
         };
@@ -60,7 +60,7 @@ public class TrayIconManager
 
         NativeMenuItemSeparator separator2 = new();
 
-        _stopServerItem = new NativeMenuItem("Stop Server");
+        _stopServerItem = new("Stop Server");
         _stopServerItem.Click += OnStopServer;
 
         NativeMenuItemSeparator separator3 = new();
@@ -83,7 +83,7 @@ public class TrayIconManager
         WindowIcon initialIcon =
             TrayIconFactory.CreateIcon(ServerState.Disconnected);
 
-        _trayIcon = new TrayIcon
+        _trayIcon = new()
         {
             Icon = initialIcon,
             ToolTipText = "NoMercy MediaServer - Disconnected",
@@ -226,7 +226,7 @@ public class TrayIconManager
             }
 
             LogViewerViewModel viewModel = new(_serverConnection);
-            _logViewerWindow = new LogViewerWindow(viewModel);
+            _logViewerWindow = new(viewModel);
             _logViewerWindow.Closed += (_, _) => _logViewerWindow = null;
             _logViewerWindow.Show();
         });
@@ -243,7 +243,7 @@ public class TrayIconManager
             }
 
             ServerControlViewModel viewModel = new(_serverConnection);
-            _serverControlWindow = new ServerControlWindow(viewModel);
+            _serverControlWindow = new(viewModel);
             _serverControlWindow.Closed += (_, _) =>
                 _serverControlWindow = null;
             _serverControlWindow.Show();

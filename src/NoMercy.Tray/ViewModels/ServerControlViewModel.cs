@@ -183,7 +183,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
     {
         StopPolling();
 
-        _pollCts = new CancellationTokenSource();
+        _pollCts = new();
         CancellationToken token = _pollCts.Token;
 
         _ = Task.Run(async () =>
@@ -231,6 +231,6 @@ public class ServerControlViewModel : INotifyPropertyChanged
         [CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(
-            this, new PropertyChangedEventArgs(propertyName));
+            this, new(propertyName));
     }
 }

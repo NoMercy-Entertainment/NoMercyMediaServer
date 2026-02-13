@@ -43,7 +43,7 @@ public class PluginController(IPluginManager pluginManager) : BaseController
 
         return Ok(new DataResponseDto<PluginInfoDto>
         {
-            Data = new PluginInfoDto(plugin)
+            Data = new(plugin)
         });
     }
 

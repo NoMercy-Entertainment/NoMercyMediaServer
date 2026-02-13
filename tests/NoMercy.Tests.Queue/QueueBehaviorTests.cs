@@ -265,7 +265,7 @@ public class QueueBehaviorTests : IDisposable
         // Attempt 1: reserve (Attempts → 1), fail
         QueueJobModel? a1 = jobQueue.ReserveJob("lifecycle", null);
         Assert.NotNull(a1);
-        jobQueue.FailJob(a1, new Exception("fail 1"));
+        jobQueue.FailJob(a1, new("fail 1"));
         Assert.Equal(1, _context.QueueJobs.Count());
         Assert.Equal(0, _context.FailedJobs.Count());
 
@@ -273,7 +273,7 @@ public class QueueBehaviorTests : IDisposable
         QueueJobModel? a2 = jobQueue.ReserveJob("lifecycle", null);
         Assert.NotNull(a2);
         Assert.Equal(2, a2.Attempts);
-        jobQueue.FailJob(a2, new Exception("fail 2"));
+        jobQueue.FailJob(a2, new("fail 2"));
         Assert.Equal(0, _context.QueueJobs.Count());
         Assert.Equal(1, _context.FailedJobs.Count());
 
@@ -773,7 +773,7 @@ public class QueueBehaviorTests : IDisposable
         // Arrange
         for (int i = 0; i < 5; i++)
         {
-            _context.FailedJobs.Add(new FailedJob
+            _context.FailedJobs.Add(new()
             {
                 Uuid = Guid.NewGuid(),
                 Connection = "default",
@@ -846,7 +846,7 @@ public class QueueBehaviorTests : IDisposable
         int[] priorities = [3, 1, 5, 2, 4];
         foreach (int p in priorities)
         {
-            _context.QueueJobs.Add(new QueueJob
+            _context.QueueJobs.Add(new()
             {
                 Queue = "priority-order",
                 Payload = $"priority-{p}",
@@ -931,7 +931,7 @@ public class QueueBehaviorTests : IDisposable
             ReservedAt = job.ReservedAt,
             Attempts = 1
         };
-        _jobQueue.FailJob(jobModel, new Exception("test"));
+        _jobQueue.FailJob(jobModel, new("test"));
 
         // Assert
         QueueJob? updated = _context.QueueJobs.FirstOrDefault();

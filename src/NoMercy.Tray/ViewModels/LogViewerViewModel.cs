@@ -147,7 +147,7 @@ public class LogViewerViewModel : INotifyPropertyChanged
     {
         StopAutoRefresh();
 
-        _autoRefreshCts = new CancellationTokenSource();
+        _autoRefreshCts = new();
         CancellationToken token = _autoRefreshCts.Token;
 
         _ = Task.Run(async () =>
@@ -199,6 +199,6 @@ public class LogViewerViewModel : INotifyPropertyChanged
         [CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(
-            this, new PropertyChangedEventArgs(propertyName));
+            this, new(propertyName));
     }
 }

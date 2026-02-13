@@ -11,7 +11,7 @@ public static class ServiceRegistration
 {
     public static IServiceCollection AddMediaServerQueue(this IServiceCollection services)
     {
-        services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter(new QueueContext()));
+        services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter(new()));
         services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
         services.AddSingleton<QueueRunner>(sp =>
         {
@@ -19,7 +19,7 @@ public static class ServiceRegistration
             IConfigurationStore configStore = sp.GetRequiredService<IConfigurationStore>();
             QueueConfiguration configuration = new()
             {
-                WorkerCounts = new Dictionary<string, int>
+                WorkerCounts = new()
                 {
                     [Config.QueueWorkers.Key] = Config.QueueWorkers.Value,
                     [Config.EncoderWorkers.Key] = Config.EncoderWorkers.Value,
@@ -28,7 +28,7 @@ public static class ServiceRegistration
                     [Config.ImageWorkers.Key] = Config.ImageWorkers.Value
                 }
             };
-            return new QueueRunner(queueContext, configuration, configStore);
+            return new(queueContext, configuration, configStore);
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
 

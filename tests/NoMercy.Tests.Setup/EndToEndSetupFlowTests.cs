@@ -22,11 +22,11 @@ public class EndToEndSetupFlowTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _state = new SetupState();
+        _state = new();
         _port = GetAvailablePort();
-        _server = new SetupServer(_state, _port);
+        _server = new(_state, _port);
         await _server.StartAsync();
-        _client = new HttpClient { BaseAddress = new Uri($"http://localhost:{_port}") };
+        _client = new() { BaseAddress = new($"http://localhost:{_port}") };
     }
 
     public async Task DisposeAsync()
@@ -195,11 +195,11 @@ public class EndToEndSseFlowTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _state = new SetupState();
+        _state = new();
         _port = GetAvailablePort();
-        _server = new SetupServer(_state, _port);
+        _server = new(_state, _port);
         await _server.StartAsync();
-        _client = new HttpClient { BaseAddress = new Uri($"http://localhost:{_port}") };
+        _client = new() { BaseAddress = new($"http://localhost:{_port}") };
     }
 
     public async Task DisposeAsync()
@@ -375,7 +375,7 @@ public class EndToEndMiddlewareFlowTests
         SetupState state, RequestDelegate? next = null)
     {
         next ??= _ => Task.CompletedTask;
-        return new SetupModeMiddleware(next, state);
+        return new(next, state);
     }
 
     private static DefaultHttpContext CreateContext(string path)
@@ -530,11 +530,11 @@ public class EndToEndErrorRecoveryTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _state = new SetupState();
+        _state = new();
         _port = GetAvailablePort();
-        _server = new SetupServer(_state, _port);
+        _server = new(_state, _port);
         await _server.StartAsync();
-        _client = new HttpClient { BaseAddress = new Uri($"http://localhost:{_port}") };
+        _client = new() { BaseAddress = new($"http://localhost:{_port}") };
     }
 
     public async Task DisposeAsync()

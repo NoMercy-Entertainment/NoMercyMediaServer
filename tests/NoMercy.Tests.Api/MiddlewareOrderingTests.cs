@@ -35,13 +35,13 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         // Create a client that does NOT auto-decompress so we can inspect Content-Encoding
         HttpClient client = new(_factory.Server.CreateHandler())
         {
-            BaseAddress = new Uri("http://localhost")
+            BaseAddress = new("http://localhost")
         };
         client = client.AsAuthenticated();
 
         HttpRequestMessage request = new(HttpMethod.Get, "/api/v1/setup/permissions");
-        request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
-        request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("br"));
+        request.Headers.AcceptEncoding.Add(new("gzip"));
+        request.Headers.AcceptEncoding.Add(new("br"));
 
         HttpResponseMessage response = await client.SendAsync(request);
 

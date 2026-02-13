@@ -26,7 +26,7 @@ public class MusicRepositoryTests : IDisposable
     {
         _context = TestMediaContextFactory.CreateContext();
         SeedMusicData(_context);
-        _repository = new MusicRepository(_context);
+        _repository = new(_context);
     }
 
     private static void SeedMusicData(MediaContext context)
@@ -65,8 +65,8 @@ public class MusicRepositoryTests : IDisposable
         context.SaveChanges();
 
         // Phase 2: Entities with FKs to phase 1
-        context.LibraryUser.Add(new LibraryUser(SeedConstants.MusicLibraryId, SeedConstants.UserId));
-        context.FolderLibrary.Add(new FolderLibrary(SeedConstants.MusicFolderId, SeedConstants.MusicLibraryId));
+        context.LibraryUser.Add(new(SeedConstants.MusicLibraryId, SeedConstants.UserId));
+        context.FolderLibrary.Add(new(SeedConstants.MusicFolderId, SeedConstants.MusicLibraryId));
 
         Track track1 = new()
         {
@@ -164,9 +164,9 @@ public class MusicRepositoryTests : IDisposable
             new AlbumArtist(AlbumId1, ArtistId1),
             new AlbumArtist(AlbumId2, ArtistId2));
 
-        context.ArtistUser.Add(new ArtistUser(ArtistId1, SeedConstants.UserId));
-        context.AlbumUser.Add(new AlbumUser(AlbumId1, SeedConstants.UserId));
-        context.TrackUser.Add(new TrackUser(TrackId1, SeedConstants.UserId));
+        context.ArtistUser.Add(new(ArtistId1, SeedConstants.UserId));
+        context.AlbumUser.Add(new(AlbumId1, SeedConstants.UserId));
+        context.TrackUser.Add(new(TrackId1, SeedConstants.UserId));
 
         context.MusicPlays.AddRange(
             new MusicPlay(SeedConstants.UserId, TrackId1),

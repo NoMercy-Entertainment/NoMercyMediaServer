@@ -9,14 +9,14 @@ public class ApiInfoApplyKeysTests
 {
     private static ApiInfoResponse CreateTestResponse()
     {
-        return new ApiInfoResponse
+        return new()
         {
             Status = "success",
-            Data = new ApiData
+            Data = new()
             {
                 Quote = "Test quote",
                 Colors = ["#111", "#222", "#333"],
-                Keys = new Keys
+                Keys = new()
                 {
                     MakeMkvKey = "mkv-key",
                     TmdbKey = "tmdb-key",
@@ -98,15 +98,15 @@ public class ApiInfoCacheTests : IDisposable
 
     private static ApiInfoResponse CreateTestResponse(string? cachedAt = null)
     {
-        return new ApiInfoResponse
+        return new()
         {
             Status = "success",
             CachedAt = cachedAt,
-            Data = new ApiData
+            Data = new()
             {
                 Quote = "Cached quote",
                 Colors = ["#aaa", "#bbb", "#ccc"],
-                Keys = new Keys
+                Keys = new()
                 {
                     MakeMkvKey = "cached-mkv",
                     TmdbKey = "cached-tmdb",
@@ -261,11 +261,11 @@ public class ApiInfoCacheFileParsingTests : IDisposable
         {
             Status = "success",
             CachedAt = "2026-02-07T12:00:00Z",
-            Data = new ApiData
+            Data = new()
             {
                 Quote = "test",
                 Colors = ["#fff"],
-                Keys = new Keys { TmdbKey = "key1" }
+                Keys = new() { TmdbKey = "key1" }
             }
         };
 

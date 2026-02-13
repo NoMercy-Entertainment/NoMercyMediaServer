@@ -32,7 +32,7 @@ public class EncoderCommandBuildingTests : IDisposable
         int width = 1920, int height = 1080,
         string pixelFormat = "yuv420p", string colorSpace = "bt709")
     {
-        return new FfProbeData
+        return new()
         {
             FilePath = "/input/test-movie.mkv",
             Duration = TimeSpan.FromMinutes(120),
@@ -45,7 +45,7 @@ public class EncoderCommandBuildingTests : IDisposable
 
     private static FfProbeData CreateHdrProbeData()
     {
-        return new FfProbeData
+        return new()
         {
             FilePath = "/input/hdr-movie.mkv",
             Duration = TimeSpan.FromMinutes(120),

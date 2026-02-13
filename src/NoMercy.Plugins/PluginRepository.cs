@@ -57,7 +57,7 @@ public class PluginRepository : IPluginRepository
                 throw new InvalidOperationException($"Repository '{name}' already exists.");
             }
 
-            _repositories.Add(new PluginRepositoryInfo
+            _repositories.Add(new()
             {
                 Name = name,
                 Url = url,

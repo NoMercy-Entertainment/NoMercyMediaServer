@@ -9,7 +9,7 @@ public class CommandStructureTests
 
     public CommandStructureTests()
     {
-        _root = new RootCommand("NoMercy MediaServer CLI");
+        _root = new("NoMercy MediaServer CLI");
 
         Option<string?> pipeOption = new("--pipe", "-p");
         _root.Options.Add(pipeOption);

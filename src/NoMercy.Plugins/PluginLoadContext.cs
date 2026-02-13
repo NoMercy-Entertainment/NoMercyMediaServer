@@ -9,7 +9,7 @@ public class PluginLoadContext : AssemblyLoadContext
 
     public PluginLoadContext(string pluginPath) : base(isCollectible: true)
     {
-        _resolver = new AssemblyDependencyResolver(pluginPath);
+        _resolver = new(pluginPath);
     }
 
     protected override Assembly? Load(AssemblyName assemblyName)

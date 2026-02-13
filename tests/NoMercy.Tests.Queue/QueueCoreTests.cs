@@ -276,7 +276,7 @@ public class QueueCoreTests
         {
             MaxAttempts = 5,
             PollingIntervalMs = 500,
-            WorkerCounts = new Dictionary<string, int>
+            WorkerCounts = new()
             {
                 ["queue"] = 2,
                 ["data"] = 6,
@@ -311,7 +311,7 @@ public class QueueCoreTests
         TestQueueContext context = new();
         QueueConfiguration config = new()
         {
-            WorkerCounts = new Dictionary<string, int>
+            WorkerCounts = new()
             {
                 ["queue"] = 2,
                 ["data"] = 5,

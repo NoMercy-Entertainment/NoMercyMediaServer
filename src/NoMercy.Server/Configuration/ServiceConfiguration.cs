@@ -73,7 +73,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.Tmdb, client =>
         {
-            client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
+            client.BaseAddress = new("https://api.themoviedb.org/3/");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -82,7 +82,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.TmdbImage, client =>
         {
-            client.BaseAddress = new Uri("https://image.tmdb.org/t/p/");
+            client.BaseAddress = new("https://image.tmdb.org/t/p/");
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
             client.DefaultRequestHeaders.Add("Accept", "image/*");
             client.Timeout = defaultTimeout;
@@ -90,7 +90,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.Tvdb, client =>
         {
-            client.BaseAddress = new Uri("https://api4.thetvdb.com/v4/");
+            client.BaseAddress = new("https://api4.thetvdb.com/v4/");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -99,14 +99,14 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.TvdbLogin, client =>
         {
-            client.BaseAddress = new Uri("https://api4.thetvdb.com/v4/");
+            client.BaseAddress = new("https://api4.thetvdb.com/v4/");
             client.DefaultRequestHeaders.Add("Accept", "application/json");
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
         });
 
         services.AddHttpClient(HttpClientNames.MusicBrainz, client =>
         {
-            client.BaseAddress = new Uri("https://musicbrainz.org/ws/2/");
+            client.BaseAddress = new("https://musicbrainz.org/ws/2/");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
@@ -114,7 +114,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.AcoustId, client =>
         {
-            client.BaseAddress = new Uri("https://api.acoustid.org/v2/");
+            client.BaseAddress = new("https://api.acoustid.org/v2/");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -122,7 +122,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.OpenSubtitles, client =>
         {
-            client.BaseAddress = new Uri("https://api.opensubtitles.org/xml-rpc");
+            client.BaseAddress = new("https://api.opensubtitles.org/xml-rpc");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -131,7 +131,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.FanArt, client =>
         {
-            client.BaseAddress = new Uri("http://webservice.fanart.tv/v3/");
+            client.BaseAddress = new("http://webservice.fanart.tv/v3/");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -139,14 +139,14 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.FanArtImage, client =>
         {
-            client.BaseAddress = new Uri("https://assets.fanart.tv");
+            client.BaseAddress = new("https://assets.fanart.tv");
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
             client.DefaultRequestHeaders.Add("Accept", "image/*");
         });
 
         services.AddHttpClient(HttpClientNames.CoverArt, client =>
         {
-            client.BaseAddress = new Uri("https://coverartarchive.org/");
+            client.BaseAddress = new("https://coverartarchive.org/");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -160,7 +160,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.Lrclib, client =>
         {
-            client.BaseAddress = new Uri("https://lrclib.net/api/get");
+            client.BaseAddress = new("https://lrclib.net/api/get");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
@@ -168,7 +168,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.MusixMatch, client =>
         {
-            client.BaseAddress = new Uri("https://apic-desktop.musixmatch.com/ws/1.1/");
+            client.BaseAddress = new("https://apic-desktop.musixmatch.com/ws/1.1/");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -186,7 +186,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.NoMercyImage, client =>
         {
-            client.BaseAddress = new Uri("https://image.nomercy.tv/");
+            client.BaseAddress = new("https://image.nomercy.tv/");
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
             client.DefaultRequestHeaders.Add("Accept", "image/*");
             client.Timeout = defaultTimeout;
@@ -194,7 +194,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.KitsuIo, client =>
         {
-            client.BaseAddress = new Uri("https://kitsu.io/api/edge/");
+            client.BaseAddress = new("https://kitsu.io/api/edge/");
             client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
         });
 
@@ -240,7 +240,7 @@ public static class ServiceConfiguration
         // Register Event Bus with audit logging and event audit trail
         InMemoryEventBus innerBus = new();
         LoggingEventBusDecorator loggingBus = new(innerBus, message => Logger.App(message));
-        EventAuditLog auditLog = new(new EventAuditOptions
+        EventAuditLog auditLog = new(new()
         {
             Enabled = true,
             MaxEntries = 10_000,

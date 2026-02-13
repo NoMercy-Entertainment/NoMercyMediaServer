@@ -20,11 +20,11 @@ public class PluginManagerTests : IDisposable
         _tempPluginsDir = Path.Combine(Path.GetTempPath(), "nomercy-plugin-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempPluginsDir);
 
-        _eventBus = new InMemoryEventBus();
+        _eventBus = new();
         IServiceProvider services = new MinimalServiceProvider();
         ILogger<PluginManager> logger = NullLogger<PluginManager>.Instance;
 
-        _manager = new PluginManager(_eventBus, services, logger, _tempPluginsDir);
+        _manager = new(_eventBus, services, logger, _tempPluginsDir);
     }
 
     public void Dispose()

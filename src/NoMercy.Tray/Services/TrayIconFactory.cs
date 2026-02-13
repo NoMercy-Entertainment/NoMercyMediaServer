@@ -24,7 +24,7 @@ public static class TrayIconFactory
         int height = baseIcon.PixelSize.Height;
 
         WriteableBitmap overlay = new(
-            new PixelSize(width, height),
+            new(width, height),
             baseIcon.Dpi,
             PixelFormat.Bgra8888,
             AlphaFormat.Premul);
@@ -39,7 +39,7 @@ public static class TrayIconFactory
         overlay.Save(stream);
         stream.Position = 0;
 
-        return new WindowIcon(stream);
+        return new(stream);
     }
 
     private static Bitmap LoadBaseIcon()
@@ -53,7 +53,7 @@ public static class TrayIconFactory
 
         if (File.Exists(iconPath))
         {
-            _baseIcon = new Bitmap(iconPath);
+            _baseIcon = new(iconPath);
             return _baseIcon;
         }
 
@@ -65,8 +65,8 @@ public static class TrayIconFactory
     {
         int size = 64;
         WriteableBitmap bmp = new(
-            new PixelSize(size, size),
-            new Vector(96, 96),
+            new(size, size),
+            new(96, 96),
             PixelFormat.Bgra8888,
             AlphaFormat.Premul);
 
@@ -103,7 +103,7 @@ public static class TrayIconFactory
         using MemoryStream stream = new();
         bmp.Save(stream);
         stream.Position = 0;
-        return new Bitmap(stream);
+        return new(stream);
     }
 
     private static unsafe void DrawStatusDot(

@@ -123,7 +123,7 @@ public class SetupState
     private void NotifyChange()
     {
         TaskCompletionSource previous = _changeSignal;
-        _changeSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _changeSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
         previous.TrySetResult();
     }
 

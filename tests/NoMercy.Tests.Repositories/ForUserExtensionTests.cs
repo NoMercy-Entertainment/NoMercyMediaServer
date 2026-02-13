@@ -137,7 +137,7 @@ public class ForUserExtensionTests
 
         // Add an album to the existing movie library (has user access already seeded)
         Folder folder = await context.Folders.FirstAsync();
-        context.Albums.Add(new Album
+        context.Albums.Add(new()
         {
             Id = Guid.NewGuid(),
             Name = "Test Album",
@@ -171,19 +171,19 @@ public class ForUserExtensionTests
         // Set up music library with user access
         Ulid musicLibraryId = Ulid.NewUlid();
         Ulid musicFolderId = Ulid.NewUlid();
-        context.Libraries.Add(new Library
+        context.Libraries.Add(new()
         {
             Id = musicLibraryId,
             Title = "Music",
             Type = "music",
             Order = 3
         });
-        context.Folders.Add(new Folder
+        context.Folders.Add(new()
         {
             Id = musicFolderId,
             Path = "/media/music"
         });
-        context.Users.Add(new User
+        context.Users.Add(new()
         {
             Id = _userId,
             Email = "test@nomercy.tv",
@@ -191,8 +191,8 @@ public class ForUserExtensionTests
             Owner = true,
             Allowed = true
         });
-        context.LibraryUser.Add(new LibraryUser(musicLibraryId, _userId));
-        context.Artists.Add(new Artist
+        context.LibraryUser.Add(new(musicLibraryId, _userId));
+        context.Artists.Add(new()
         {
             Id = Guid.NewGuid(),
             Name = "Test Artist",
@@ -274,7 +274,7 @@ public class ForUserExtensionTests
 
         // Add a second user with access to only the TV library
         Guid partialUserId = Guid.NewGuid();
-        context.Users.Add(new User
+        context.Users.Add(new()
         {
             Id = partialUserId,
             Email = "partial@nomercy.tv",
@@ -282,7 +282,7 @@ public class ForUserExtensionTests
             Owner = false,
             Allowed = true
         });
-        context.LibraryUser.Add(new LibraryUser(SeedConstants.TvLibraryId, partialUserId));
+        context.LibraryUser.Add(new(SeedConstants.TvLibraryId, partialUserId));
         await context.SaveChangesAsync();
 
         // Partial user should see TV shows but not movies

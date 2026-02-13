@@ -24,7 +24,7 @@ public class MediaConfigurationStore : IConfigurationStore
         }
         else
         {
-            context.Configuration.Add(new DbConfiguration { Key = key, Value = value });
+            context.Configuration.Add(new() { Key = key, Value = value });
         }
         context.SaveChanges();
     }
@@ -40,7 +40,7 @@ public class MediaConfigurationStore : IConfigurationStore
         }
         else
         {
-            context.Configuration.Add(new DbConfiguration { Key = key, Value = value, ModifiedBy = modifiedBy });
+            context.Configuration.Add(new() { Key = key, Value = value, ModifiedBy = modifiedBy });
         }
         await context.SaveChangesAsync();
     }

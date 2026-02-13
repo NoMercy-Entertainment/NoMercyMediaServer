@@ -9,7 +9,7 @@ public class QueueProcessorTests
     [Trait("Category", "Unit")]
     public async Task Queue_ContinuesProcessing_AfterTransientError()
     {
-        ProviderQueue queue = new(new QueueOptions { Concurrent = 1, Interval = 10, Start = true });
+        ProviderQueue queue = new(new() { Concurrent = 1, Interval = 10, Start = true });
 
         int callCount = 0;
         List<Exception> rejectedErrors = [];
@@ -50,7 +50,7 @@ public class QueueProcessorTests
     [Trait("Category", "Unit")]
     public async Task Queue_RejectsFailedTasks_WithErrorEvent()
     {
-        ProviderQueue queue = new(new QueueOptions { Concurrent = 1, Interval = 10, Start = true });
+        ProviderQueue queue = new(new() { Concurrent = 1, Interval = 10, Start = true });
 
         List<Exception> rejectedErrors = [];
         queue.Reject += (_, args) =>
@@ -82,7 +82,7 @@ public class QueueProcessorTests
     [Trait("Category", "Unit")]
     public async Task Queue_ProcessesMultipleTasks_InOrder()
     {
-        ProviderQueue queue = new(new QueueOptions { Concurrent = 1, Interval = 10, Start = true });
+        ProviderQueue queue = new(new() { Concurrent = 1, Interval = 10, Start = true });
 
         List<int> executionOrder = [];
 

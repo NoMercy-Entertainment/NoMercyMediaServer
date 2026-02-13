@@ -46,7 +46,7 @@ public class AutoStartupManager
                               [Service]
                               Type=notify
                               ExecStart={appPath} --service
-                              WorkingDirectory={System.IO.Path.GetDirectoryName(appPath)}
+                              WorkingDirectory={Path.GetDirectoryName(appPath)}
                               Restart=on-failure
                               RestartSec=10
                               StandardOutput=journal
@@ -93,7 +93,7 @@ public class AutoStartupManager
                                    <key>StandardErrorPath</key>
                                    <string>{logPath}/nomercy-stderr.log</string>
                                    <key>WorkingDirectory</key>
-                                   <string>{System.IO.Path.GetDirectoryName(appPath)}</string>
+                                   <string>{Path.GetDirectoryName(appPath)}</string>
                                </dict>
                                </plist>
                                """;

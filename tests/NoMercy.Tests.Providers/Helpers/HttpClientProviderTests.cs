@@ -13,16 +13,16 @@ public class HttpClientProviderTests : IDisposable
         ServiceCollection services = new();
         services.AddHttpClient(HttpClientNames.Tmdb, client =>
         {
-            client.BaseAddress = new Uri("https://api.themoviedb.org/3/");
+            client.BaseAddress = new("https://api.themoviedb.org/3/");
             client.DefaultRequestHeaders.Add("User-Agent", "test-agent");
         });
         services.AddHttpClient(HttpClientNames.MusicBrainz, client =>
         {
-            client.BaseAddress = new Uri("https://musicbrainz.org/ws/2/");
+            client.BaseAddress = new("https://musicbrainz.org/ws/2/");
         });
         services.AddHttpClient(HttpClientNames.FanArt, client =>
         {
-            client.BaseAddress = new Uri("http://webservice.fanart.tv/v3/");
+            client.BaseAddress = new("http://webservice.fanart.tv/v3/");
         });
         services.AddHttpClient(HttpClientNames.General);
 

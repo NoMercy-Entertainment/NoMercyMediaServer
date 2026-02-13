@@ -14,7 +14,7 @@ public class PluginConfigurationTests : IDisposable
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "nomercy-config-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempDir);
-        _config = new PluginConfiguration(_tempDir);
+        _config = new(_tempDir);
     }
 
     public void Dispose()

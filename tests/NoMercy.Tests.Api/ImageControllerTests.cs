@@ -33,7 +33,7 @@ public class ImageControllerTests : IClassFixture<NoMercyApiFactory>, IDisposabl
             Directory.CreateDirectory(AppFiles.TempImagesPath);
 
         // Create a real 200x100 PNG test image
-        using (Image<Rgba32> image = new(200, 100, new Rgba32(255, 0, 0)))
+        using (Image<Rgba32> image = new(200, 100, new(255, 0, 0)))
         {
             image.SaveAsPng(Path.Join(_testTypeFolder, _testImageName));
         }

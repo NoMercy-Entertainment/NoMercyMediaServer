@@ -149,7 +149,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3)
                 if (failedJob == null) return;
 
                 context.RemoveFailedJob(failedJob);
-                context.AddJob(new QueueJobModel
+                context.AddJob(new()
                 {
                     Queue = failedJob.Queue,
                     Payload = failedJob.Payload,
@@ -183,7 +183,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3)
 
             foreach (FailedJobModel failedJob in failedJobs)
             {
-                context.AddJob(new QueueJobModel
+                context.AddJob(new()
                 {
                     Queue = failedJob.Queue,
                     Payload = failedJob.Payload,

@@ -10,25 +10,25 @@ public static class EventHandlerExtensions
         services.AddSingleton<SignalRPlaybackEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new SignalRPlaybackEventHandler(eventBus);
+            return new(eventBus);
         });
 
         services.AddSingleton<SignalREncodingEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new SignalREncodingEventHandler(eventBus);
+            return new(eventBus);
         });
 
         services.AddSingleton<SignalRLibraryScanEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new SignalRLibraryScanEventHandler(eventBus);
+            return new(eventBus);
         });
 
         services.AddSingleton<SignalRLibraryRefreshEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new SignalRLibraryRefreshEventHandler(eventBus);
+            return new(eventBus);
         });
 
         return services;

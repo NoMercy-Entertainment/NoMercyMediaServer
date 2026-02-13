@@ -19,7 +19,7 @@ public static class HttpClient
                 IPHostEntry hostEntry;
                 if (!string.IsNullOrEmpty(server))
                 {
-                    LookupClient dnsClient = DnsClients.GetOrAdd(server, s => new LookupClient(IPAddress.Parse(s)));
+                    LookupClient dnsClient = DnsClients.GetOrAdd(server, s => new(IPAddress.Parse(s)));
                     IDnsQueryResponse? result = await dnsClient.QueryAsync(context.DnsEndPoint.Host, QueryType.A,
                         cancellationToken: token);
                     IPAddress? address = result.Answers.ARecords().FirstOrDefault()?.Address;

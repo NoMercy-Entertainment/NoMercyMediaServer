@@ -67,7 +67,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
 
                 services.AddSingleton(
-                    typeof(Microsoft.Extensions.Logging.ILogger<>),
+                    typeof(ILogger<>),
                     typeof(CustomLogger<>));
             });
     }
@@ -175,7 +175,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             new LibraryUser(MovieLibraryId, TestAuthHandler.DefaultUserId),
             new LibraryUser(TvLibraryId, TestAuthHandler.DefaultUserId));
 
-        context.FolderLibrary.Add(new FolderLibrary(MovieFolderId, MovieLibraryId));
+        context.FolderLibrary.Add(new(MovieFolderId, MovieLibraryId));
 
         Movie movie1 = new()
         {
@@ -226,14 +226,14 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             new LibraryMovie(MovieLibraryId, 550),
             new LibraryMovie(MovieLibraryId, 680));
 
-        context.LibraryTv.Add(new LibraryTv(TvLibraryId, 1399));
+        context.LibraryTv.Add(new(TvLibraryId, 1399));
 
         context.GenreMovie.AddRange(
             new GenreMovie { GenreId = 28, MovieId = 550 },
             new GenreMovie { GenreId = 18, MovieId = 550 },
             new GenreMovie { GenreId = 18, MovieId = 680 });
 
-        context.GenreTv.Add(new GenreTv { GenreId = 18, TvId = 1399 });
+        context.GenreTv.Add(new() { GenreId = 18, TvId = 1399 });
 
         Season season1 = new()
         {
@@ -342,8 +342,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         context.SaveChanges();
 
-        context.LibraryUser.Add(new LibraryUser(MusicLibraryId, TestAuthHandler.DefaultUserId));
-        context.FolderLibrary.Add(new FolderLibrary(MusicFolderId, MusicLibraryId));
+        context.LibraryUser.Add(new(MusicLibraryId, TestAuthHandler.DefaultUserId));
+        context.FolderLibrary.Add(new(MusicFolderId, MusicLibraryId));
 
         MusicGenre rockGenre = new()
         {
@@ -418,17 +418,17 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId1 },
             new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId2 });
 
-        context.AlbumArtist.Add(new AlbumArtist { AlbumId = AlbumId1, ArtistId = ArtistId1 });
+        context.AlbumArtist.Add(new() { AlbumId = AlbumId1, ArtistId = ArtistId1 });
 
-        context.ArtistLibrary.Add(new ArtistLibrary(ArtistId1, MusicLibraryId));
-        context.AlbumLibrary.Add(new AlbumLibrary(AlbumId1, MusicLibraryId));
+        context.ArtistLibrary.Add(new(ArtistId1, MusicLibraryId));
+        context.AlbumLibrary.Add(new(AlbumId1, MusicLibraryId));
 
         context.LibraryTrack.AddRange(
             new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId1 },
             new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId2 });
 
         context.ArtistMusicGenre.Add(
-            new ArtistMusicGenre { ArtistId = ArtistId1, MusicGenreId = MusicGenreId1 });
+            new() { ArtistId = ArtistId1, MusicGenreId = MusicGenreId1 });
 
         Playlist playlist1 = new()
         {
@@ -442,13 +442,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         context.SaveChanges();
 
         context.PlaylistTrack.Add(
-            new PlaylistTrack { PlaylistId = PlaylistId1, TrackId = TrackId1 });
+            new() { PlaylistId = PlaylistId1, TrackId = TrackId1 });
 
         // Favorite the artist/track so favorites endpoints have data
         context.ArtistUser.Add(
-            new ArtistUser { ArtistId = ArtistId1, UserId = TestAuthHandler.DefaultUserId });
+            new() { ArtistId = ArtistId1, UserId = TestAuthHandler.DefaultUserId });
         context.TrackUser.Add(
-            new TrackUser { TrackId = TrackId1, UserId = TestAuthHandler.DefaultUserId });
+            new() { TrackId = TrackId1, UserId = TestAuthHandler.DefaultUserId });
 
         context.SaveChanges();
     }

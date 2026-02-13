@@ -210,7 +210,7 @@ public class JobDispatcherTests
     }
 }
 
-public class PriorityTestJob : NoMercy.Queue.IShouldQueue
+public class PriorityTestJob : IShouldQueue
 {
     public string QueueName => "high-priority";
     public int Priority => 42;

@@ -37,12 +37,12 @@ public class TestAuthHandler(
 
         Claim[] claims =
         [
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(ClaimTypes.Name, userName),
-            new Claim(ClaimTypes.Email, userEmail),
-            new Claim(ClaimTypes.Role, "user"),
-            new Claim("scope", "openid"),
-            new Claim("scope", "profile")
+            new(ClaimTypes.NameIdentifier, userId.ToString()),
+            new(ClaimTypes.Name, userName),
+            new(ClaimTypes.Email, userEmail),
+            new(ClaimTypes.Role, "user"),
+            new("scope", "openid"),
+            new("scope", "profile")
         ];
 
         ClaimsIdentity identity = new(claims, TestAuthDefaults.AuthenticationScheme);

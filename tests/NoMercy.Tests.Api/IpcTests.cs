@@ -75,7 +75,7 @@ public class IpcUnixSocketIntegrationTests : IDisposable
     public IpcUnixSocketIntegrationTests()
     {
         _socketPath = Path.Combine(Path.GetTempPath(), $"nomercy-test-{Guid.NewGuid():N}.sock");
-        _listenSocket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        _listenSocket = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
         _listenSocket.Bind(new UnixDomainSocketEndPoint(_socketPath));
         _listenSocket.Listen(1);
     }

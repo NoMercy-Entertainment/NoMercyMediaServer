@@ -12,7 +12,7 @@ public class SetupModeMiddlewareTests
         SetupState state, RequestDelegate? next = null)
     {
         next ??= _ => Task.CompletedTask;
-        return new SetupModeMiddleware(next, state);
+        return new(next, state);
     }
 
     private static DefaultHttpContext CreateContext(string path)

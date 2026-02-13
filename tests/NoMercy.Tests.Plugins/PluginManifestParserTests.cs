@@ -252,7 +252,7 @@ public class PluginManifestParserTests : IDisposable
         info.Id.Should().Be(id);
         info.Name.Should().Be("TestPlugin");
         info.Description.Should().Be("A test");
-        info.Version.Should().Be(new Version(2, 0, 1));
+        info.Version.Should().Be(new(2, 0, 1));
         info.Status.Should().Be(PluginStatus.Active);
         info.Author.Should().Be("Author");
         info.ProjectUrl.Should().Be("https://test.com");

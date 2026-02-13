@@ -237,7 +237,7 @@ public class SqliteQueueContext : IQueueContext
 
     private static QueueJobModel ToModel(QueueJobEntity entity)
     {
-        return new QueueJobModel
+        return new()
         {
             Id = entity.Id,
             Priority = entity.Priority,
@@ -252,7 +252,7 @@ public class SqliteQueueContext : IQueueContext
 
     private static FailedJobModel ToFailedModel(FailedJobEntity entity)
     {
-        return new FailedJobModel
+        return new()
         {
             Id = entity.Id,
             Uuid = entity.Uuid,
@@ -266,7 +266,7 @@ public class SqliteQueueContext : IQueueContext
 
     private static CronJobModel ToCronModel(CronJobEntity entity)
     {
-        return new CronJobModel
+        return new()
         {
             Id = entity.Id,
             Name = entity.Name,

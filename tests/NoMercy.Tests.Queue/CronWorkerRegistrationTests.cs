@@ -94,7 +94,7 @@ public class CronWorkerRegistrationTests
 
     private static CronWorker CreateCronWorker(ServiceProvider provider)
     {
-        return new CronWorker(provider, provider.GetRequiredService<ILogger<CronWorker>>());
+        return new(provider, provider.GetRequiredService<ILogger<CronWorker>>());
     }
 
     private class TestCronJobA : ICronJobExecutor

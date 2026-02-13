@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using ConfigurationModel = global::NoMercy.Database.Models.Common.Configuration;
+using ConfigurationModel = NoMercy.Database.Models.Common.Configuration;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;

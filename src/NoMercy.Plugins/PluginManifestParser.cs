@@ -44,9 +44,9 @@ public static class PluginManifestParser
     {
         ArgumentNullException.ThrowIfNull(manifest);
 
-        Version version = System.Version.Parse(manifest.Version);
+        Version version = Version.Parse(manifest.Version);
 
-        return new PluginInfo
+        return new()
         {
             Id = manifest.Id,
             Name = manifest.Name,
@@ -78,7 +78,7 @@ public static class PluginManifestParser
             throw new InvalidOperationException("Plugin manifest 'version' is required.");
         }
 
-        if (!System.Version.TryParse(manifest.Version, out _))
+        if (!Version.TryParse(manifest.Version, out _))
         {
             throw new InvalidOperationException($"Plugin manifest 'version' is not a valid version string: '{manifest.Version}'.");
         }

@@ -14,7 +14,7 @@ public class MovieRepositoryTests : IDisposable
     public MovieRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new MovieRepository(_context);
+        _repository = new(_context);
     }
 
     [Fact]

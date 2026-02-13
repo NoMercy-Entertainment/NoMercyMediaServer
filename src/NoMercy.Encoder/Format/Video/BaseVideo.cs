@@ -15,7 +15,7 @@ public abstract class BaseVideo : Classes
 
     public virtual CodecDto VideoCodec { get; set; } = VideoCodecs.H264;
 
-    protected internal FFMpegCore.VideoStream? VideoStream;
+    protected internal VideoStream? VideoStream;
 
     internal List<VideoStream> VideoStreams { get; set; } = [];
 

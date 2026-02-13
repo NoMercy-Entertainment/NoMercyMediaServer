@@ -58,7 +58,7 @@ public class MusicPlaylistManager
         
         if (isFavorite && !track.TrackUser.Any(tu => tu.UserId == userId))
         {
-            track.TrackUser.Add(new TrackUser { TrackId = trackId, UserId = userId });
+            track.TrackUser.Add(new() { TrackId = trackId, UserId = userId });
         }
 
         PlaylistTrackDto trackDto = new(track, country);

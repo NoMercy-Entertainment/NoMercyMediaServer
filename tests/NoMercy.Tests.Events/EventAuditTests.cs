@@ -36,7 +36,7 @@ public class EventAuditTests
     [Fact]
     public void AuditLog_DisabledDoesNotRecord()
     {
-        EventAuditLog auditLog = new(new EventAuditOptions { Enabled = false });
+        EventAuditLog auditLog = new(new() { Enabled = false });
 
         auditLog.Record(new LibraryRefreshEvent
         {
@@ -50,7 +50,7 @@ public class EventAuditTests
     [Fact]
     public void AuditLog_ExcludedEventTypesAreSkipped()
     {
-        EventAuditLog auditLog = new(new EventAuditOptions
+        EventAuditLog auditLog = new(new()
         {
             ExcludedEventTypes = ["EncodingProgressEvent"]
         });
@@ -77,7 +77,7 @@ public class EventAuditTests
     [Fact]
     public void AuditLog_CompactsWhenMaxEntriesExceeded()
     {
-        EventAuditLog auditLog = new(new EventAuditOptions
+        EventAuditLog auditLog = new(new()
         {
             MaxEntries = 10,
             CompactionPercentage = 0.5
@@ -229,7 +229,7 @@ public class EventAuditTests
     [Fact]
     public async Task AuditLog_IsThreadSafe()
     {
-        EventAuditLog auditLog = new(new EventAuditOptions { MaxEntries = 50_000 });
+        EventAuditLog auditLog = new(new() { MaxEntries = 50_000 });
 
         Task[] tasks = Enumerable.Range(0, 100).Select(i =>
             Task.Run(() =>

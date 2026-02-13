@@ -15,7 +15,7 @@ public class FfprobeProcessCleanupTests
     public void Kill_OnAlreadyExitedProcess_DoesNotPropagateException()
     {
         using Process process = new();
-        process.StartInfo = new ProcessStartInfo
+        process.StartInfo = new()
         {
             FileName = "echo",
             Arguments = "done",
@@ -53,7 +53,7 @@ public class FfprobeProcessCleanupTests
     public void Kill_OnDisposedProcess_ThrowsObjectDisposedException()
     {
         Process process = new();
-        process.StartInfo = new ProcessStartInfo
+        process.StartInfo = new()
         {
             FileName = "echo",
             Arguments = "done",
@@ -78,7 +78,7 @@ public class FfprobeProcessCleanupTests
     public void ProcessDispose_SucceedsAfterKillOnExitedProcess()
     {
         Process process = new();
-        process.StartInfo = new ProcessStartInfo
+        process.StartInfo = new()
         {
             FileName = "echo",
             Arguments = "done",

@@ -304,7 +304,7 @@ public class SignalREventHandlerTests
         using SignalRPlaybackEventHandler handler = new(bus);
 
         Func<Task> act = () => handler.OnPlaybackStarted(
-            new PlaybackStartedEvent
+            new()
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 550,
@@ -323,7 +323,7 @@ public class SignalREventHandlerTests
         using SignalRPlaybackEventHandler handler = new(bus);
 
         Func<Task> act = () => handler.OnPlaybackCompleted(
-            new PlaybackCompletedEvent
+            new()
             {
                 UserId = Guid.NewGuid(),
                 MediaId = 550,
@@ -341,7 +341,7 @@ public class SignalREventHandlerTests
         using SignalREncodingEventHandler handler = new(bus);
 
         Func<Task> act = () => handler.OnEncodingProgress(
-            new EncodingProgressEvent
+            new()
             {
                 JobId = 1,
                 Percentage = 75.5,
@@ -434,7 +434,7 @@ public class SignalREventHandlerTests
         using SignalRLibraryRefreshEventHandler handler = new(bus);
 
         Func<Task> act = () => handler.OnLibraryRefresh(
-            new LibraryRefreshEvent
+            new()
             {
                 QueryKey = ["base", "info", "123"]
             },

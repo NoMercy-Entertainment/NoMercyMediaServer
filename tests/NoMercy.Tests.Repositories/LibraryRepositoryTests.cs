@@ -17,7 +17,7 @@ public class LibraryRepositoryTests : IDisposable
     public LibraryRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new LibraryRepository(_context);
+        _repository = new(_context);
     }
 
     [Fact]

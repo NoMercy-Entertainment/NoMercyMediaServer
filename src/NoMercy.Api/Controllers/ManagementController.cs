@@ -148,13 +148,13 @@ public class ManagementController(
 
         if (request.ServerName is not null)
         {
-            await mediaContext.Configuration.Upsert(new Configuration
+            await mediaContext.Configuration.Upsert(new()
                 {
                     Key = "serverName",
                     Value = request.ServerName
                 })
                 .On(e => e.Key)
-                .WhenMatched((_, n) => new Configuration
+                .WhenMatched((_, n) => new()
                 {
                     Value = n.Value
                 })
@@ -197,7 +197,7 @@ public class ManagementController(
         foreach (IGrouping<string, KeyValuePair<string, Thread>> group in activeThreads
                      .GroupBy(t => t.Key.Split('-')[0]))
         {
-            workers[group.Key] = new ManagementWorkerStatusDto
+            workers[group.Key] = new()
             {
                 ActiveThreads = group.Count()
             };

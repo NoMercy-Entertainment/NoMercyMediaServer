@@ -18,13 +18,13 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        _serverConnection = new ServerConnection();
+        _serverConnection = new();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-            _trayIconManager = new TrayIconManager(_serverConnection, desktop);
+            _trayIconManager = new(_serverConnection, desktop);
             _trayIconManager.Initialize();
         }
 

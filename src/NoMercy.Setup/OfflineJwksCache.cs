@@ -71,6 +71,6 @@ public static class OfflineJwksCache
         byte[] keyBytes = Convert.FromBase64String(publicKeyBase64);
         RSA rsa = RSA.Create();
         rsa.ImportSubjectPublicKeyInfo(keyBytes, out _);
-        return new RsaSecurityKey(rsa);
+        return new(rsa);
     }
 }

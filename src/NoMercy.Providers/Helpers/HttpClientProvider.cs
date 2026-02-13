@@ -28,6 +28,6 @@ public static class HttpClientProvider
             }
         }
 
-        return new HttpClient();
+        return new();
     }
 }

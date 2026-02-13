@@ -82,7 +82,7 @@ public class WriteLockTests : IDisposable
             {
                 try
                 {
-                    _jobQueue.Enqueue(new QueueJobModel
+                    _jobQueue.Enqueue(new()
                     {
                         Queue = "concurrent-test",
                         Payload = $"payload-{index}",
@@ -120,7 +120,7 @@ public class WriteLockTests : IDisposable
         // Seed some jobs first
         for (int i = 0; i < 10; i++)
         {
-            _context.QueueJobs.Add(new QueueJob
+            _context.QueueJobs.Add(new()
             {
                 Queue = "integrity-test",
                 Payload = $"seed-{i}",
@@ -143,7 +143,7 @@ public class WriteLockTests : IDisposable
             {
                 try
                 {
-                    _jobQueue.Enqueue(new QueueJobModel
+                    _jobQueue.Enqueue(new()
                     {
                         Queue = "integrity-test",
                         Payload = $"new-{index}",

@@ -145,8 +145,8 @@ public static class TestMediaContextFactory
         };
         context.Libraries.Add(tvLibrary);
 
-        context.LibraryUser.Add(new LibraryUser(SeedConstants.MovieLibraryId, SeedConstants.UserId));
-        context.LibraryUser.Add(new LibraryUser(SeedConstants.TvLibraryId, SeedConstants.UserId));
+        context.LibraryUser.Add(new(SeedConstants.MovieLibraryId, SeedConstants.UserId));
+        context.LibraryUser.Add(new(SeedConstants.TvLibraryId, SeedConstants.UserId));
 
         Folder movieFolder = new()
         {
@@ -154,7 +154,7 @@ public static class TestMediaContextFactory
             Path = "/media/movies"
         };
         context.Folders.Add(movieFolder);
-        context.FolderLibrary.Add(new FolderLibrary(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
+        context.FolderLibrary.Add(new(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
 
         EncoderProfile encoderProfile = new()
         {
@@ -163,7 +163,7 @@ public static class TestMediaContextFactory
             Container = "hls"
         };
         context.EncoderProfiles.Add(encoderProfile);
-        context.EncoderProfileFolder.Add(new EncoderProfileFolder(SeedConstants.EncoderProfileId, SeedConstants.MovieFolderId));
+        context.EncoderProfileFolder.Add(new(SeedConstants.EncoderProfileId, SeedConstants.MovieFolderId));
 
         Language english = new()
         {
@@ -173,7 +173,7 @@ public static class TestMediaContextFactory
             Name = "English"
         };
         context.Languages.Add(english);
-        context.LanguageLibrary.Add(new LanguageLibrary(1, SeedConstants.MovieLibraryId));
+        context.LanguageLibrary.Add(new(1, SeedConstants.MovieLibraryId));
 
         Genre actionGenre = new() { Id = 28, Name = "Action" };
         Genre dramaGenre = new() { Id = 18, Name = "Drama" };
@@ -255,7 +255,7 @@ public static class TestMediaContextFactory
         };
         context.Tvs.Add(show1);
 
-        context.LibraryTv.Add(new LibraryTv(SeedConstants.TvLibraryId, 1399));
+        context.LibraryTv.Add(new(SeedConstants.TvLibraryId, 1399));
 
         Season season1 = new()
         {

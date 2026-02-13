@@ -8,12 +8,12 @@ public class PluginLifecycleTests
 {
     private static PluginInfo CreatePluginInfo(PluginStatus status)
     {
-        return new PluginInfo
+        return new()
         {
             Id = Guid.NewGuid(),
             Name = "TestPlugin",
             Description = "Test",
-            Version = new Version(1, 0, 0),
+            Version = new(1, 0, 0),
             Status = status
         };
     }

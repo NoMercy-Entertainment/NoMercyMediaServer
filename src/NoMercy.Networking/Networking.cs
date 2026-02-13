@@ -101,7 +101,7 @@ public class Networking
 
     public static string ExternalIp
     {
-        get => _externalIp ?? "0.0.0.0";
+        get => _externalIp ?? GetExternalIp().GetAwaiter().GetResult();
         set
         {
             if (_externalIp == value) return;
@@ -402,7 +402,7 @@ public class Networking
             string ip = _device.GetExternalIP().ToString();
 
             Logger.Setup($"IP address obtained from UPNP: {ip}");
-            Logger.Setup($"IP address obtained from API: {ExternalIp}");
+            Logger.Setup($"IP address obtained from API: {_externalIp}");
 
             if(string.IsNullOrEmpty(_externalIp))
             {

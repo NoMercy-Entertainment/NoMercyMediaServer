@@ -238,7 +238,7 @@ public class EfQueueContextAdapter : IQueueContext
 
     private static QueueJobModel ToModel(QueueJob entity)
     {
-        return new QueueJobModel
+        return new()
         {
             Id = entity.Id,
             Priority = entity.Priority,
@@ -253,7 +253,7 @@ public class EfQueueContextAdapter : IQueueContext
 
     private static FailedJobModel ToFailedModel(FailedJob entity)
     {
-        return new FailedJobModel
+        return new()
         {
             Id = entity.Id,
             Uuid = entity.Uuid,
@@ -267,7 +267,7 @@ public class EfQueueContextAdapter : IQueueContext
 
     private static CronJobModel ToCronModel(CronJob entity)
     {
-        return new CronJobModel
+        return new()
         {
             Id = entity.Id,
             Name = entity.Name,

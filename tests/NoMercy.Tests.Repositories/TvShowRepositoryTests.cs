@@ -18,7 +18,7 @@ public class TvShowRepositoryTests : IDisposable
     public TvShowRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new TvShowRepository(_context);
+        _repository = new(_context);
     }
 
     [Fact]
@@ -292,8 +292,8 @@ public class TvShowRepositoryTests : IDisposable
         context.SaveChanges();
 
         // Show-level Cast and Crew
-        context.Casts.Add(new Cast { CreditId = "cast-tv-1", PersonId = 17419, RoleId = role1.Id, TvId = 1399 });
-        context.Crews.Add(new Crew { CreditId = "crew-tv-1", PersonId = 84497, JobId = job1.Id, TvId = 1399 });
+        context.Casts.Add(new() { CreditId = "cast-tv-1", PersonId = 17419, RoleId = role1.Id, TvId = 1399 });
+        context.Crews.Add(new() { CreditId = "crew-tv-1", PersonId = 84497, JobId = job1.Id, TvId = 1399 });
 
         // Episode-level Cast and Crew
         Role episodeRole = new() { Character = "Walter White", EpisodeCount = 1 };
@@ -302,14 +302,14 @@ public class TvShowRepositoryTests : IDisposable
         context.Jobs.Add(episodeJob);
         context.SaveChanges();
 
-        context.Casts.Add(new Cast { CreditId = "cast-ep-1", PersonId = 17419, RoleId = episodeRole.Id, EpisodeId = 62085 });
-        context.Crews.Add(new Crew { CreditId = "crew-ep-2", PersonId = 84497, JobId = episodeJob.Id, EpisodeId = 62085 });
+        context.Casts.Add(new() { CreditId = "cast-ep-1", PersonId = 17419, RoleId = episodeRole.Id, EpisodeId = 62085 });
+        context.Crews.Add(new() { CreditId = "crew-ep-2", PersonId = 84497, JobId = episodeJob.Id, EpisodeId = 62085 });
 
         // Creator
-        context.Creators.Add(new Creator { PersonId = 84497, TvId = 1399 });
+        context.Creators.Add(new() { PersonId = 84497, TvId = 1399 });
 
         // Translation
-        context.Translations.Add(new Translation
+        context.Translations.Add(new()
         {
             Iso6391 = "en",
             Iso31661 = "US",
@@ -319,7 +319,7 @@ public class TvShowRepositoryTests : IDisposable
         });
 
         // Image
-        context.Images.Add(new Image
+        context.Images.Add(new()
         {
             FilePath = "/logo.png",
             Type = "logo",
@@ -328,7 +328,7 @@ public class TvShowRepositoryTests : IDisposable
             VoteAverage = 5.0,
             TvId = 1399
         });
-        context.Images.Add(new Image
+        context.Images.Add(new()
         {
             FilePath = "/backdrop.jpg",
             Type = "backdrop",
@@ -341,17 +341,17 @@ public class TvShowRepositoryTests : IDisposable
         // Keyword
         Keyword keyword = new() { Id = 10765, Name = "drug dealer" };
         context.Keywords.Add(keyword);
-        context.KeywordTv.Add(new KeywordTv { KeywordId = 10765, TvId = 1399 });
+        context.KeywordTv.Add(new() { KeywordId = 10765, TvId = 1399 });
 
         // Certification
         Certification cert = new() { Iso31661 = "US", Rating = "TV-14", Meaning = "Parents Strongly Cautioned", Order = 3 };
         context.Certifications.Add(cert);
         context.SaveChanges();
-        context.CertificationTv.Add(new CertificationTv { CertificationId = cert.Id, TvId = 1399 });
+        context.CertificationTv.Add(new() { CertificationId = cert.Id, TvId = 1399 });
 
         // Similar and Recommendation
-        context.Similar.Add(new Similar { MediaId = 9999, TvFromId = 1399, Title = "Better Call Saul" });
-        context.Recommendations.Add(new Recommendation { MediaId = 9998, TvFromId = 1399, Title = "Ozark" });
+        context.Similar.Add(new() { MediaId = 9999, TvFromId = 1399, Title = "Better Call Saul" });
+        context.Recommendations.Add(new() { MediaId = 9998, TvFromId = 1399, Title = "Ozark" });
 
         context.SaveChanges();
     }

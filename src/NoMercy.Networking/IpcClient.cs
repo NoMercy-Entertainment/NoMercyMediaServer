@@ -16,7 +16,7 @@ public sealed class IpcClient : IDisposable
 
     public IpcClient(string? pipeNameOrSocketPath)
     {
-        _handler = new SocketsHttpHandler
+        _handler = new()
         {
             ConnectCallback = async (context, cancellationToken) =>
             {
@@ -44,9 +44,9 @@ public sealed class IpcClient : IDisposable
             }
         };
 
-        _httpClient = new HttpClient(_handler)
+        _httpClient = new(_handler)
         {
-            BaseAddress = new Uri("http://nomercy-ipc")
+            BaseAddress = new("http://nomercy-ipc")
         };
     }
 

@@ -15,7 +15,7 @@ public class GenreRepositoryTests : IDisposable
     public GenreRepositoryTests()
     {
         _context = TestMediaContextFactory.CreateSeededContext();
-        _repository = new GenreRepository(_context);
+        _repository = new(_context);
     }
 
     [Fact]

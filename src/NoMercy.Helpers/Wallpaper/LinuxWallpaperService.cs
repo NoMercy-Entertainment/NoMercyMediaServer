@@ -147,7 +147,7 @@ public class LinuxWallpaperService : IWallpaperService
         try
         {
             using Process process = new();
-            process.StartInfo = new ProcessStartInfo
+            process.StartInfo = new()
             {
                 FileName = command,
                 Arguments = arguments,

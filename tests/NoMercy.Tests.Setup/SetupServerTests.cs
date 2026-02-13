@@ -14,11 +14,11 @@ public class SetupServerTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _state = new SetupState();
+        _state = new();
         _port = GetAvailablePort();
-        _server = new SetupServer(_state, _port);
+        _server = new(_state, _port);
         await _server.StartAsync();
-        _client = new HttpClient { BaseAddress = new Uri($"http://localhost:{_port}") };
+        _client = new() { BaseAddress = new($"http://localhost:{_port}") };
     }
 
     public async Task DisposeAsync()
@@ -579,11 +579,11 @@ public class SetupServerPkceTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _state = new SetupState();
+        _state = new();
         _port = GetAvailablePort();
-        _server = new SetupServer(_state, _port);
+        _server = new(_state, _port);
         await _server.StartAsync();
-        _client = new HttpClient { BaseAddress = new Uri($"http://localhost:{_port}") };
+        _client = new() { BaseAddress = new($"http://localhost:{_port}") };
     }
 
     public async Task DisposeAsync()
@@ -656,7 +656,7 @@ public class SetupServerRedirectUriTests
     {
         DefaultHttpContext context = new();
         context.Request.Scheme = "http";
-        context.Request.Host = new HostString("192.168.1.100", 7626);
+        context.Request.Host = new("192.168.1.100", 7626);
 
         string result = SetupServer.BuildRedirectUri(context.Request);
 
@@ -668,7 +668,7 @@ public class SetupServerRedirectUriTests
     {
         DefaultHttpContext context = new();
         context.Request.Scheme = "http";
-        context.Request.Host = new HostString("localhost", 8080);
+        context.Request.Host = new("localhost", 8080);
 
         string result = SetupServer.BuildRedirectUri(context.Request);
 
@@ -680,7 +680,7 @@ public class SetupServerRedirectUriTests
     {
         DefaultHttpContext context = new();
         context.Request.Scheme = "https";
-        context.Request.Host = new HostString("example.com");
+        context.Request.Host = new("example.com");
 
         string result = SetupServer.BuildRedirectUri(context.Request);
 

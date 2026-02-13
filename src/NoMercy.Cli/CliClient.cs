@@ -9,7 +9,7 @@ internal sealed class CliClient : IDisposable
 
     public CliClient(string? pipeNameOrSocketPath = null)
     {
-        _client = new IpcClient(pipeNameOrSocketPath);
+        _client = new(pipeNameOrSocketPath);
     }
 
     public async Task<T?> GetAsync<T>(

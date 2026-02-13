@@ -79,7 +79,7 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
         ClaimsPrincipleExtensions.Initialize(_context);
 
         Guid newUserId = Guid.NewGuid();
-        _context.Users.Add(new User
+        _context.Users.Add(new()
         {
             Id = newUserId,
             Email = "added@nomercy.tv",
@@ -121,7 +121,7 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
     [Fact]
     public void Initialize_ClearsPreviousData()
     {
-        ClaimsPrincipleExtensions.Users.Add(new User
+        ClaimsPrincipleExtensions.Users.Add(new()
         {
             Id = Guid.NewGuid(),
             Email = "stale@nomercy.tv",

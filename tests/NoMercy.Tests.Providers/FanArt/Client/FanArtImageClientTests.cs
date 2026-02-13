@@ -27,7 +27,7 @@ public class FanArtImageClientTests
     private static Type GetStateMachineType(MethodInfo method)
     {
         AsyncStateMachineAttribute? attr = method
-            .GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>();
+            .GetCustomAttribute<AsyncStateMachineAttribute>();
 
         Assert.NotNull(attr);
         return attr.StateMachineType;
@@ -41,7 +41,7 @@ public class FanArtImageClientTests
         Assert.True(method.IsStatic, "Download should be a static method");
 
         AsyncStateMachineAttribute? attr = method
-            .GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>();
+            .GetCustomAttribute<AsyncStateMachineAttribute>();
         Assert.NotNull(attr);
     }
 

@@ -44,7 +44,7 @@ public class MacWallpaperService : IWallpaperService
         try
         {
             using Process process = new();
-            process.StartInfo = new ProcessStartInfo
+            process.StartInfo = new()
             {
                 FileName = "osascript",
                 Arguments = $"-e '{script}'",

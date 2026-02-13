@@ -33,13 +33,13 @@ public class QueueRunner
     public QueueRunner(IQueueContext queueContext, QueueConfiguration configuration, IConfigurationStore? configurationStore = null)
     {
         _configurationStore = configurationStore;
-        _jobQueue = new JobQueue(queueContext, configuration.MaxAttempts);
-        Dispatcher = new JobDispatcher(_jobQueue);
+        _jobQueue = new(queueContext, configuration.MaxAttempts);
+        Dispatcher = new(_jobQueue);
 
-        _workers = new Dictionary<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource _cancellationTokenSource)>();
+        _workers = new();
         foreach (KeyValuePair<string, int> entry in configuration.WorkerCounts)
         {
-            _workers[entry.Key] = (entry.Value, [], new CancellationTokenSource());
+            _workers[entry.Key] = (entry.Value, [], new());
         }
 
         Current = this;

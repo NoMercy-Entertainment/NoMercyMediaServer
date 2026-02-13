@@ -18,7 +18,7 @@ public class DiContextInjectionTests : IDisposable
 
     public DiContextInjectionTests()
     {
-        _keepAliveConnection = new SqliteConnection($"DataSource={_dbName};Mode=Memory;Cache=Shared");
+        _keepAliveConnection = new($"DataSource={_dbName};Mode=Memory;Cache=Shared");
         _keepAliveConnection.Open();
         _keepAliveConnection.CreateFunction("normalize_search", (string? input) =>
             input?.NormalizeSearch() ?? string.Empty);
@@ -65,7 +65,7 @@ public class DiContextInjectionTests : IDisposable
             Order = 1
         };
         context.Libraries.Add(musicLibrary);
-        context.LibraryUser.Add(new LibraryUser(SeedConstants.MovieLibraryId, SeedConstants.UserId));
+        context.LibraryUser.Add(new(SeedConstants.MovieLibraryId, SeedConstants.UserId));
 
         Folder musicFolder = new()
         {
@@ -73,7 +73,7 @@ public class DiContextInjectionTests : IDisposable
             Path = "/media/music"
         };
         context.Folders.Add(musicFolder);
-        context.FolderLibrary.Add(new FolderLibrary(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
+        context.FolderLibrary.Add(new(SeedConstants.MovieFolderId, SeedConstants.MovieLibraryId));
 
         Artist artist = new()
         {
@@ -120,25 +120,25 @@ public class DiContextInjectionTests : IDisposable
 
         context.SaveChanges();
 
-        context.ArtistTrack.Add(new ArtistTrack
+        context.ArtistTrack.Add(new()
         {
             ArtistId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
             TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333")
         });
-        context.AlbumTrack.Add(new AlbumTrack
+        context.AlbumTrack.Add(new()
         {
             AlbumId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
             TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333")
         });
-        context.AlbumArtist.Add(new AlbumArtist
+        context.AlbumArtist.Add(new()
         {
             AlbumId = Guid.Parse("22222222-2222-2222-2222-222222222222"),
             ArtistId = Guid.Parse("11111111-1111-1111-1111-111111111111")
         });
-        context.ArtistLibrary.Add(new ArtistLibrary(
+        context.ArtistLibrary.Add(new(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             SeedConstants.MovieLibraryId));
-        context.AlbumLibrary.Add(new AlbumLibrary(
+        context.AlbumLibrary.Add(new(
             Guid.Parse("22222222-2222-2222-2222-222222222222"),
             SeedConstants.MovieLibraryId));
 
@@ -153,7 +153,7 @@ public class DiContextInjectionTests : IDisposable
 
         context.SaveChanges();
 
-        context.PlaylistTrack.Add(new PlaylistTrack
+        context.PlaylistTrack.Add(new()
         {
             PlaylistId = Guid.Parse("44444444-4444-4444-4444-444444444444"),
             TrackId = Guid.Parse("33333333-3333-3333-3333-333333333333")
