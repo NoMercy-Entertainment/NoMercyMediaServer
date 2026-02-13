@@ -3,6 +3,7 @@ using NoMercy.Encoder.Core;
 using NoMercy.Networking;
 using NoMercy.NmSystem;
 using NoMercy.Queue;
+using Serilog.Events;
 using AppFiles = NoMercy.NmSystem.Information.AppFiles;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -18,6 +19,7 @@ public class Start
 
     public static int AppProcessStarted { get; set; }
     public static int ConsoleVisible { get; set; } = 1;
+    public static bool IsDegradedMode { get; internal set; }
 
     public static void VsConsoleWindow(int i)
     {
@@ -32,26 +34,40 @@ public class Start
         if (UserSettings.TryGetUserSettings(out Dictionary<string, string> settings))
             UserSettings.ApplySettings(settings);
 
+        // ── PHASE 1: MUST SUCCEED (no network) ─────────────────────
+        await AppFiles.CreateAppFolders();
         await ApiInfo.RequestInfo();
 
-        // Phase 1: Create app folders (all other tasks depend on this)
-        await AppFiles.CreateAppFolders();
+        // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
+        bool hasNetwork = await NetworkProbe.CheckConnectivity();
+        bool hasAuth;
 
-        // Phase 2: Auth and binary downloads are independent — run in parallel
-        // Binaries.DownloadAll only hits public GitHub APIs (no auth needed)
         Task binariesTask = Binaries.DownloadAll();
-        await Auth.Init();
 
-        // Phase 3: After auth, these tasks can all run in parallel:
-        // - Networking.Discover needs AccessToken for GetExternalIp
-        // - Caller tasks (DatabaseSeeder) need AccessToken for UsersSeed
-        // - ChromeCast.Init needs AccessToken
-        // - UpdateChecker, TrayIcon, DesktopIcon are fully independent
+        if (hasNetwork)
+        {
+            try
+            {
+                await Auth.Init();
+                hasAuth = Globals.Globals.AccessToken is not null;
+            }
+            catch (Exception e)
+            {
+                Logger.Setup($"Auth failed: {e.Message}. Trying cached tokens.",
+                    LogEventLevel.Warning);
+                hasAuth = await Auth.InitWithFallback();
+            }
+        }
+        else
+        {
+            hasAuth = await Auth.InitWithFallback();
+        }
+
+        // ── PHASE 3: NETWORK-DEPENDENT (run if possible, degrade if not) ──
         Task networkingTask = Networking.Networking.Discover();
 
-        List<Task> parallelTasks =
+        List<Task> independentTasks =
         [
-            ..tasks.Select(t => t.Invoke()),
             ChromeCast.Init(),
             UpdateChecker.StartPeriodicUpdateCheck(),
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
@@ -62,11 +78,65 @@ public class Start
                 AppFiles.ApplicationName, AppFiles.ServerExePath, AppFiles.AppIcon))
         ];
 
-        await Task.WhenAll(parallelTasks);
+        if (hasNetwork && hasAuth)
+        {
+            // Full mode — run caller tasks (DatabaseSeeder etc.) normally
+            independentTasks.AddRange(tasks.Select(t => t.Invoke()));
+            await Task.WhenAll(independentTasks);
 
-        // Phase 4: Register needs both Auth (AccessToken) and Networking (InternalIp)
-        await networkingTask;
-        await Register.Init();
+            await networkingTask;
+
+            // Phase 4: Register needs both Auth (AccessToken) and Networking (InternalIp)
+            try
+            {
+                await Register.Init();
+            }
+            catch (Exception e)
+            {
+                Logger.Setup($"Registration failed: {e.Message}. Server will operate in local-only mode.",
+                    LogEventLevel.Warning);
+                IsDegradedMode = true;
+            }
+        }
+        else
+        {
+            // Degraded mode — skip network-dependent tasks, schedule background recovery
+            IsDegradedMode = true;
+            Logger.Setup("Starting in DEGRADED MODE — some features unavailable",
+                LogEventLevel.Warning);
+            Logger.Setup("  Network-dependent tasks will retry in background",
+                LogEventLevel.Warning);
+
+            // Still run caller tasks — seeds that already have data will return early,
+            // seeds that need network will fail but are wrapped in try/catch
+            foreach (TaskDelegate callerTask in tasks)
+            {
+                try
+                {
+                    await callerTask.Invoke();
+                }
+                catch (Exception e)
+                {
+                    Logger.Setup($"Startup task failed (degraded mode): {e.Message}",
+                        LogEventLevel.Warning);
+                }
+            }
+
+            await Task.WhenAll(independentTasks);
+            await networkingTask;
+
+            // Start background recovery
+            DeferredTasks deferred = new()
+            {
+                ApiKeysLoaded = ApiInfo.KeysLoaded,
+                Authenticated = hasAuth,
+                NetworkDiscovered = true,
+                SeedsRun = false,
+                Registered = false,
+                CallerTasks = tasks
+            };
+            _ = Task.Run(() => DegradedModeRecovery.StartRecoveryLoop(deferred));
+        }
 
         // Wait for binary downloads to finish before server is considered ready
         await binariesTask;

@@ -4601,3 +4601,53 @@ Refactored `Auth.cs` to remove all `Console.*` calls, making it compatible with 
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All 2,343 tests pass across 13 test projects = 0 failures.
+
+---
+
+## BOOT-01 — Implement degraded mode startup
+
+**Date**: 2026-02-13
+
+**What was done**:
+- Created `NetworkProbe.CheckConnectivity()` in `src/NoMercy.Networking/NetworkProbe.cs` — probes api.nomercy.tv, 1.1.1.1, and 8.8.8.8 via TCP with configurable timeout to detect network availability early in startup
+- Fixed `GetInternalIp()` in `src/NoMercy.Networking/Networking.cs` — now uses `NetworkInterface.GetAllNetworkInterfaces()` enumeration as primary method (works offline, no UDP socket to 1.1.1.1 needed), falls back to UDP socket trick, and ultimately returns `127.0.0.1` instead of throwing
+- Added `Auth.InitWithFallback()` in `src/NoMercy.Setup/Auth.cs` — loads cached tokens from file, validates JWT expiry locally without Keycloak, attempts background refresh but doesn't block on failure. Returns bool instead of throwing.
+- Created `DegradedModeRecovery` and `DeferredTasks` in `src/NoMercy.Setup/DegradedModeRecovery.cs` — exponential backoff recovery loop (30s → 1m → 5m → 15m → 30m) that retries ApiInfo, Auth, Networking, Seeds, and Registration in dependency order when network returns
+- Restructured `Start.Init()` in `src/NoMercy.Setup/Start.cs` with degraded mode support:
+  - Phase 1 (MUST SUCCEED): CreateAppFolders + ApiInfo (already has cache fallback from SETUP-12)
+  - Phase 2 (BEST-EFFORT): NetworkProbe check → Auth.Init() with fallback to Auth.InitWithFallback() on failure
+  - Phase 3 (NETWORK-DEPENDENT): Full mode runs caller tasks normally; degraded mode runs tasks with per-task try/catch so seed failures don't kill the server
+  - Phase 4: Register.Init() wrapped in try/catch — failure sets IsDegradedMode instead of crashing
+  - Background recovery loop started when in degraded mode
+- Added `Start.IsDegradedMode` static property for runtime status queries
+- Seeds already have `if (await dbContext.Foo.AnyAsync()) return;` guards — confirmed Languages, Countries, Genres, Certifications, MusicGenres all skip network fetch when data exists
+- Added `NoMercy.Networking` project reference to test project
+- Wrote 12 new tests in `tests/NoMercy.Tests.Setup/DegradedModeStartupTests.cs`:
+  - `NetworkProbe_ReturnsTrue_WhenAtLeastOneTargetReachable` — validates probe completes without exception
+  - `NetworkProbe_CompletesWithinTimeout_WhenNoNetwork` — validates probe doesn't hang
+  - `DeferredTasks_InitializesWithAllFalse` — validates default state
+  - `DeferredTasks_TracksCompletionState` — validates state tracking
+  - `DeferredTasks_HoldsCallerTasks` — validates task delegation
+  - `IsDegradedMode_DefaultsFalse` / `IsDegradedMode_CanBeSet` — validates static property
+  - `DegradedModeRecovery_CompletesImmediately_WhenAllTasksDone` — validates loop exit
+  - `GetInternalIp_ReturnsNonEmpty_WithoutNetwork` — validates offline IP discovery
+  - `GetInternalIp_ReturnsValidIpFormat` — validates IP format
+  - `DegradedMode_RunsCallerTasksWithErrorHandling` — validates tasks continue after failures
+  - `FullMode_MaintainsPhasedDependencyOrder` — validates full mode preserves existing phased pattern
+  - `DegradedMode_SkipsRegisterAndStartsRecovery` — validates degraded mode behavior
+  - `Auth_InitWithFallback_ReturnsTrue_WhenTokenValid` — validates fallback doesn't throw
+
+**Files created**:
+- `src/NoMercy.Networking/NetworkProbe.cs`
+- `src/NoMercy.Setup/DegradedModeRecovery.cs`
+- `tests/NoMercy.Tests.Setup/DegradedModeStartupTests.cs`
+
+**Files modified**:
+- `src/NoMercy.Networking/Networking.cs` — GetInternalIp uses NetworkInterface enumeration first
+- `src/NoMercy.Setup/Auth.cs` — Added InitWithFallback() method
+- `src/NoMercy.Setup/Start.cs` — Restructured Init() with degraded mode support
+- `tests/NoMercy.Tests.Setup/NoMercy.Tests.Setup.csproj` — Added NoMercy.Networking reference
+- `.claude/PRD.md` — Marked BOOT-01 complete, updated Next up to BOOT-02
+- `.claude/progress.md` — Appended this entry
+
+**Test results**: Build succeeds with 0 errors. All 2,357 tests pass across 13 test projects (12 new + 2,345 existing) = 0 failures.

@@ -75,6 +75,76 @@ public static class Auth
             throw new("Failed to get tokens");
     }
 
+    public static async Task<bool> InitWithFallback()
+    {
+        if (!File.Exists(AppFiles.TokenFile)) await File.WriteAllTextAsync(AppFiles.TokenFile, "{}");
+
+        // Load cached tokens from file
+        try
+        {
+            Globals.Globals.AccessToken = GetAccessToken();
+            RefreshToken = GetRefreshToken();
+            ExpiresIn = TokenExpiration();
+            NotBefore = TokenNotBefore();
+        }
+        catch
+        {
+            // Token file may be empty or invalid
+        }
+
+        if (Globals.Globals.AccessToken is null)
+        {
+            Logger.Auth("No cached token — authentication requires network",
+                LogEventLevel.Warning);
+            return false;
+        }
+
+        // Check if token is still usable (local check, no network)
+        try
+        {
+            JwtSecurityTokenHandler tokenHandler = new();
+            _jwtSecurityToken = tokenHandler.ReadJwtToken(Globals.Globals.AccessToken);
+
+            if (_jwtSecurityToken.ValidTo > DateTime.UtcNow.AddMinutes(5))
+            {
+                Logger.Auth("Using cached token (still valid)");
+
+                // Try to refresh in background, but don't block
+                try
+                {
+                    await AuthKeys();
+                    await TokenByRefreshGrand();
+                }
+                catch
+                {
+                    // Network unavailable — cached token is fine
+                }
+
+                return true;
+            }
+        }
+        catch
+        {
+            // Token parsing failed — try refresh
+        }
+
+        // Token expired or invalid — try refresh (needs network)
+        try
+        {
+            await AuthKeys();
+            await TokenByRefreshGrand();
+            return true;
+        }
+        catch (Exception e)
+        {
+            Logger.Auth($"Token refresh failed: {e.Message}. Using expired token for local access.",
+                LogEventLevel.Warning);
+
+            // Use the expired token anyway — local requests can still work
+            return Globals.Globals.AccessToken is not null;
+        }
+    }
+
     private static async Task TokenByBrowserOrDeviceGrant()
     {
         Logger.Auth("Trying to authenticate by browser or device grant", LogEventLevel.Verbose);

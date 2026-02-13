@@ -123,17 +123,40 @@ public class Networking
 
     private static string GetInternalIp()
     {
-        using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+        // Primary: enumerate local network interfaces (no network needed)
+        try
+        {
+            foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (nic.OperationalStatus != OperationalStatus.Up) continue;
+                if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback
+                    or NetworkInterfaceType.Tunnel) continue;
 
-        socket.Connect("1.1.1.1", 65530);
+                foreach (UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses)
+                {
+                    if (addr.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                    if (IPAddress.IsLoopback(addr.Address)) continue;
 
-        IPEndPoint? endPoint = socket.LocalEndPoint as IPEndPoint;
+                    return addr.Address.ToString();
+                }
+            }
+        }
+        catch
+        {
+            // Fall through to socket method
+        }
 
-        string? localIp = endPoint?.Address.ToString();
-
-        if (localIp == null) return "";
-
-        return localIp.Replace("\"", "");
+        // Fallback: UDP socket trick (needs route to internet)
+        try
+        {
+            using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+            socket.Connect("1.1.1.1", 65530);
+            return (socket.LocalEndPoint as IPEndPoint)?.Address.ToString() ?? "127.0.0.1";
+        }
+        catch
+        {
+            return "127.0.0.1";
+        }
     }
 
     private static async Task<string> GetExternalIp()
