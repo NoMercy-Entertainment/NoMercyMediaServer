@@ -44,7 +44,7 @@ If all tasks in all sections are checked off, output `<promise>COMPLETE</promise
 
 ## Progress
 
-**Next up**: All tasks complete
+**Next up**: All defined tasks complete — see Phase 9 for additional work done outside original PRD scope
 
 ### Phase 0: Test Harness & Build Foundation
 Details: [02-testing-strategy.md](prd/02-testing-strategy.md) | [03-package-management.md](prd/03-package-management.md)
@@ -213,6 +213,34 @@ Details: [15-wallpaper.md](prd/15-wallpaper.md) | [16-offline-boot.md](prd/16-of
 - [x] BOOT-03 — Implement offline token validation
 - [x] BOOT-04 — Implement startup dependency reordering
 - [x] BOOT-05 — Implement health check endpoints
+- [x] BOOT-06 — Handle port-in-use error gracefully instead of crashing
+
+### Phase 9: Tray App Enhancements & Startup Optimization (Outside Original PRD)
+
+These items were implemented outside the original PRD task definitions. They extend Phase 7b (Service & Desktop) and Phase 8 (Offline Boot) with additional improvements to the tray app, server startup sequence, and developer experience.
+
+**Tray App & Server Process Management:**
+- [x] TRAY-01 — Add server process launching from tray with three-tier fallback
+- [x] TRAY-02 — Fix log viewer: strip ANSI escape codes, JSON unescape, color-coded log levels
+- [x] TRAY-03 — Add multi-select and Ctrl+C clipboard copy to log viewer
+- [x] TRAY-04 — Add "Start Server" button to server control and tray context menu
+- [x] TRAY-05 — Unify separate tray windows into single tabbed MainWindow (Dashboard + Logs)
+- [x] TRAY-06 — Hide console window when tray app launches server process (`CreateNoWindow = true`)
+
+**Server Startup & IPC:**
+- [x] IPC-01 — Remove old server-side tray icon (`H.NotifyIcon`, `TrayIcon.cs`) — now handled by Avalonia tray app
+- [x] IPC-02 — Remove console-hide behavior (`VsConsoleWindow`, `ConsoleVisible`, `AppProcessStarted`, P/Invoke)
+- [x] IPC-03 — Split `Start.Init()` into `InitEssential()` (Phase 1) + `InitRemaining()` (Phase 2-4) for early IPC availability
+- [x] IPC-04 — Add pre-completed task support to `StartupTaskRunner` for split-phase execution
+- [x] IPC-05 — Move IPC pipe listener startup before auth/networking/registration (Phase 2-4 runs in background)
+
+**Infrastructure & Code Quality:**
+- [x] INFRA-01 — Fix `DetermineInitialPhase` never being called in `Program.cs` (always entering setup-required mode)
+- [x] INFRA-02 — Move HTTPS config from endpoint defaults to per-listener so IPC stays plain HTTP
+- [x] INFRA-03 — Add IPC connect timeout (3s) to prevent indefinite hangs
+- [x] INFRA-04 — Remove unused `ManagementPort` config and separate management HTTP listener
+- [x] INFRA-05 — Exempt management routes from HTTPS redirect and setup-mode middleware
+- [x] INFRA-06 — Apply target-typed `new()` and remove unnecessary type qualifications across codebase (89 files)
 
 ---
 

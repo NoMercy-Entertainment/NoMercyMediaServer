@@ -4847,3 +4847,285 @@ Replaced the hardcoded if/else startup flow in `Start.Init()` with a declarative
 - `.claude/progress.md` — Appended this entry
 
 **Test results**: Build succeeds with 0 errors. All 1,885 tests pass across 7 test projects (3 new) = 0 failures.
+
+---
+
+## BOOT-06 — Handle port-in-use error gracefully instead of crashing
+
+**Date**: 2026-02-13
+**Commit**: `4ebfcf5`
+
+**What was done**:
+
+Previously, when the server's configured port was already in use by another process, Kestrel threw an unhandled `IOException`/`SocketException` and the server crashed with no useful error message. This made it difficult for users to diagnose why the server wouldn't start.
+
+### Changes
+
+1. **`Program.cs` — Added port-in-use detection and recovery** (`src/NoMercy.Server/Program.cs`)
+   - Added `HandlePortInUse(int port, IOException ex)` method that:
+     - Logs the port conflict with a clear error message
+     - Detects the blocking process using `ss`/`lsof` (Linux/macOS) or `netstat` (Windows) via `FindProcessOnPortAsync()`
+     - In interactive mode: prompts the user to kill the blocking process and retry
+     - In non-interactive/service mode: logs an actionable error and exits with code 1
+   - Added `FindProcessOnPortAsync(int port)` — cross-platform process detection on a given port
+   - Added `ParsePidFromPortInfo(string processInfo)` — extracts PID from platform-specific output formats
+   - Wrapped `host.RunAsync()` in `RunHost()` with `catch (IOException ex) when (ex.InnerException is SocketException)` to catch bind failures
+   - Wrapped `httpHost.StartAsync()` in `RunWithHttpsRestart()` with the same catch pattern
+   - Both paths call `HandlePortInUse` instead of crashing
+
+**Original behavior**:
+```
+Kestrel throws IOException → unhandled → crash with stack trace → user has no idea what happened
+```
+
+**New behavior**:
+```
+Kestrel throws IOException → caught → "Failed to start: port 7626 is already in use"
+  → detect blocking process → "PID 1234 (node) — LISTENING on :7626"
+  → interactive: "Kill process 1234 and retry? [y/N]"
+  → non-interactive: "Stop the other process manually and restart the server" → exit(1)
+```
+
+**Files changed**:
+- `src/NoMercy.Server/Program.cs` — Added 182 lines: `HandlePortInUse`, `FindProcessOnPortAsync`, `ParsePidFromPortInfo`, catch blocks in `RunHost` and `RunWithHttpsRestart`
+
+**Test results**: Build succeeds with 0 errors. All existing tests pass.
+
+---
+
+## INFRA-06 — Apply target-typed new and remove unnecessary type qualifications
+
+**Date**: 2026-02-13
+**Commit**: `79b3570`
+
+**What was done**:
+
+Applied consistent C# 12+ idioms across the entire codebase (89 files):
+- `new CancellationTokenSource()` → `new()` where target-typed
+- `System.Environment.Exit(1)` → `Environment.Exit(1)` (redundant namespace qualifications)
+- Similar patterns throughout src/ and tests/
+
+This is a cosmetic/consistency refactor with zero behavioral changes. All changes are mechanical find-and-replace of redundant type specifications.
+
+**Files changed**: 89 files across src/ and tests/ — see commit `79b3570` for full diff.
+
+**Test results**: Build succeeds with 0 errors. All existing tests pass.
+
+---
+
+## TRAY-01 through TRAY-04 + INFRA-01 through INFRA-05 — Server process launching, log viewer fixes, and IPC improvements
+
+**Date**: 2026-02-13
+**Commit**: `15e33d3`
+
+**What was done**:
+
+This commit addresses multiple tray app and server infrastructure improvements that were needed to make the tray app functional as a full server management tool.
+
+### Tray App: Server Process Launching (TRAY-01, TRAY-04)
+
+**Original state**: The tray app could only connect to an already-running server. If the server was stopped, the tray showed "Disconnected" with no way to start it.
+
+**New behavior**: Created `ServerProcessLauncher` (`src/NoMercy.Tray/Services/ServerProcessLauncher.cs`) with a three-tier fallback strategy:
+1. **Production binary**: Looks for the compiled `NoMercyMediaServer` executable next to the tray app
+2. **Dev build binary**: Looks for the binary in the server project's `bin/Debug/net9.0/` output
+3. **`dotnet run`**: Falls back to running the server project via `dotnet run --project`
+
+Added "Start Server" button to `ServerControlWindow` and tray context menu, enabled only when the server is disconnected. The launcher auto-detects which mode to use based on available files.
+
+### Log Viewer Fixes (TRAY-02, TRAY-03)
+
+**Original state**: Log entries displayed with raw ANSI escape codes (e.g., `\u001b[31m`) and JSON artifacts (wrapping quotes, escaped sequences). Log level colors were not visible. No way to copy log entries.
+
+**Changes**:
+- Strip ANSI escape codes: both raw ESC bytes (`\x1b[...m`) and literal `\u001b` from double-serialized JSON
+- Strip wrapping quotes from log messages
+- Unescape JSON sequences (`\\n` → newline, `\\"` → `"`)
+- Bind log level (Type column) color to server-provided `Color` property via new `LogColorConverter`
+- Added multi-select support to log viewer DataGrid
+- Added Ctrl+C clipboard copy for selected log entries
+
+### IPC Infrastructure Fixes (INFRA-01 through INFRA-05)
+
+**Original state**:
+- `DetermineInitialPhase` was never called in `Program.cs`, so the server always entered setup-required mode even with valid tokens — every restart forced users through the setup flow
+- HTTPS was configured on endpoint defaults, which applied to the IPC named pipe/Unix socket too — causing connection failures since IPC should be plain HTTP
+- IPC client had no connect timeout — if the server was down, `ConnectAsync` hung indefinitely
+- A separate management HTTP listener on `ManagementPort` existed but was redundant (management routes already served over IPC)
+- Management routes were blocked by HTTPS redirect and setup-mode middleware
+
+**Changes**:
+- **INFRA-01**: Added `SetupState.ValidateTokenFile()` and `setupState.DetermineInitialPhase(tokenState)` calls to `Program.Start()` so the server correctly identifies whether setup is needed
+- **INFRA-02**: Moved HTTPS config from `kestrelOptions.ConfigureEndpointDefaults()` to per-listener `Certificate.ConfigureHttpsListener(listenOptions)` — IPC transport stays plain HTTP
+- **INFRA-03**: Added 3-second connect timeout to `IpcClient` to prevent indefinite hangs when server is down
+- **INFRA-04**: Removed unused `Config.ManagementPort` and the separate management HTTP listener — management routes now only served over IPC
+- **INFRA-05**: Exempted `/manage/` routes from `SetupModeMiddleware` and `AccessLogMiddleware` so tray/CLI can always reach management endpoints
+
+**Files changed**:
+- `src/NoMercy.Tray/Services/ServerProcessLauncher.cs` — New: three-tier server launch strategy
+- `src/NoMercy.Tray/Services/TrayIconManager.cs` — Added "Start Server" menu item, start/stop handlers
+- `src/NoMercy.Tray/ViewModels/ServerControlViewModel.cs` — Added StartServer command, ServerProcessLauncher integration
+- `src/NoMercy.Tray/ViewModels/LogViewerViewModel.cs` — ANSI stripping, JSON unescaping, clipboard copy
+- `src/NoMercy.Tray/ViewModels/LevelClassConverter.cs` — Log level color converter
+- `src/NoMercy.Tray/Views/LogViewerWindow.axaml` — Multi-select DataGrid, Ctrl+C handler
+- `src/NoMercy.Tray/Views/LogViewerWindow.axaml.cs` — Clipboard copy handler
+- `src/NoMercy.Tray/Views/ServerControlWindow.axaml` — "Start Server" button
+- `src/NoMercy.Tray/Views/ServerControlWindow.axaml.cs` — Button click handler
+- `src/NoMercy.Networking/Certificate.cs` — New `ConfigureHttpsListener()` helper, moved HTTPS config
+- `src/NoMercy.Networking/IpcClient.cs` — Added 3s connect timeout
+- `src/NoMercy.NmSystem/Information/Config.cs` — Removed `ManagementPort`
+- `src/NoMercy.Server/Program.cs` — Added SetupState/token validation, removed separate management listener, removed endpoint defaults HTTPS
+- `src/NoMercy.Server/StartupOptions.cs` — Removed `--management-port` CLI option
+- `src/NoMercy.Server/Configuration/ApplicationConfiguration.cs` — Removed management listener setup
+- `src/NoMercy.Api/Middleware/SetupModeMiddleware.cs` — Exempt `/manage/` routes
+- `src/NoMercy.Api/Middleware/AccessLogMiddleware.cs` — Exempt `/manage/` routes
+- `src/NoMercy.Tray/App.axaml.cs` — Wire ServerProcessLauncher
+- `src/NoMercy.Tray/Services/TrayIconFactory.cs` — Fix asset path using AppContext.BaseDirectory
+- `tests/NoMercy.Tests.Tray/ServerControlViewModelTests.cs` — Updated for ServerProcessLauncher parameter
+
+**Test results**: Build succeeds with 0 errors. All existing tests pass.
+
+---
+
+## TRAY-05 — Unify tray windows into single tabbed MainWindow
+
+**Date**: 2026-02-13
+**Commit**: `fea7e67`
+
+**What was done**:
+
+**Original state**: The tray app had two separate windows — `ServerControlWindow` (dashboard with server status, start/stop buttons) and `LogViewerWindow` (log viewer with filtering). Each opened independently from the tray menu, leading to window management confusion.
+
+**New behavior**: Merged both windows into a single `MainWindow` with a `TabControl` containing two tabs:
+- **Dashboard** tab — server status, uptime, start/stop controls (previously `ServerControlWindow`)
+- **Logs** tab — log viewer with filtering, multi-select, clipboard copy (previously `LogViewerWindow`)
+
+### Architectural changes:
+- Extracted window content into reusable `UserControl`s: `ServerControlView.axaml` and `LogViewerView.axaml`
+- `MainViewModel` refactored as an orchestrator that holds sub-ViewModels (`ServerControlViewModel`, `LogViewerViewModel`)
+- Tray icon click and "Open Dashboard" menu item now open the unified `MainWindow`
+- "View Logs" menu item opens the `MainWindow` and switches to the Logs tab
+- `MainWindow.ShowTab(int index)` API for programmatic tab switching
+- Removed the separate `ServerControlWindow.axaml.cs` (content moved to `ServerControlView`)
+
+**Before (2 separate windows)**:
+```
+TrayIcon right-click → "Open Dashboard"  → opens ServerControlWindow
+TrayIcon right-click → "View Logs"       → opens LogViewerWindow
+TrayIcon left-click                       → opens ServerControlWindow
+```
+
+**After (1 unified window)**:
+```
+TrayIcon right-click → "Open Dashboard"  → opens MainWindow on Dashboard tab
+TrayIcon right-click → "View Logs"       → opens MainWindow on Logs tab
+TrayIcon left-click                       → opens MainWindow (last active tab)
+```
+
+**Files changed**:
+- `src/NoMercy.Tray/Views/MainWindow.axaml` — New: TabControl with Dashboard + Logs tabs
+- `src/NoMercy.Tray/Views/MainWindow.axaml.cs` — New: ShowTab(index), activate/focus logic
+- `src/NoMercy.Tray/Views/ServerControlView.axaml` — Renamed from `ServerControlWindow.axaml`, converted to UserControl
+- `src/NoMercy.Tray/Views/ServerControlView.axaml.cs` — New: UserControl code-behind
+- `src/NoMercy.Tray/Views/LogViewerView.axaml` — Renamed from `LogViewerWindow.axaml`, converted to UserControl
+- `src/NoMercy.Tray/Views/LogViewerView.axaml.cs` — Renamed from `LogViewerWindow.axaml.cs`, converted to UserControl
+- `src/NoMercy.Tray/Views/ServerControlWindow.axaml.cs` — Deleted (content moved to ServerControlView)
+- `src/NoMercy.Tray/Services/TrayIconManager.cs` — Updated to open MainWindow with tab switching
+- `src/NoMercy.Tray/ViewModels/MainViewModel.cs` — Refactored as orchestrator with sub-ViewModels
+
+**Test results**: Build succeeds with 0 errors. All existing tests pass.
+
+---
+
+## IPC-01 through IPC-05 — Remove old server tray icon and start IPC pipe before full startup
+
+**Date**: 2026-02-13
+**Commit**: `854e6d8`
+
+**What was done**:
+
+Two distinct improvements in a single commit: removing the redundant server-side tray icon, and reordering startup so the IPC pipe is available much earlier.
+
+### Part 1: Remove old server-side tray icon (IPC-01, IPC-02)
+
+**Original state**: The server process created its own Windows tray icon via `H.NotifyIcon` in `src/NoMercy.Setup/TrayIcon.cs`, registered as a Phase 3 startup task. It had a context menu with "Show/Hide Console", "Show/Hide App", "Pause", "Restart", and "Shutdown". The server also hid the console window after 10 seconds via P/Invoke calls (`GetConsoleWindow`/`ShowWindow`). This was all redundant now that the separate Avalonia tray app handles the system tray.
+
+**What was removed**:
+- `src/NoMercy.Setup/TrayIcon.cs` — Deleted entirely (162 lines)
+- `H.NotifyIcon` package reference from `NoMercy.Setup.csproj`
+- `TrayIcon` startup task entry from `BuildStartupTasks()` in `Start.cs`
+- P/Invoke declarations (`GetConsoleWindow`, `ShowWindow`) from `Start.cs`
+- `VsConsoleWindow()` method, `ConsoleVisible` property, `AppProcessStarted` property from `Start.cs`
+- `System.Runtime.InteropServices` using from `Start.cs`
+- Console-hide timer in `RegisterLifetimeEvents()` in `Program.cs` (the code that hid the console after 10 seconds with the message "we will hide the console window in 10 seconds, you can show it again by right-clicking the tray icon")
+- Unused `WndProc` delegate and `System.Runtime.InteropServices` using from `Program.cs`
+- "TrayIcon" from the expected task names in `BuildStartupTasksTests`
+
+### Part 2: Start IPC pipe before full startup (IPC-03, IPC-04, IPC-05)
+
+**Original startup flow**:
+```
+options.ApplySettings()          ← fast
+await Setup.Start.Init(tasks)   ← SLOW (Phase 1-4: auth, networking, registration — can take 10-30s)
+CreateWebHostBuilder().Build()   ← builds Kestrel (IPC pipe configured here)
+app.RunAsync()                   ← starts listening (IPC now available)
+```
+
+The tray app could not connect or show logs until the full startup finished, which could take 30+ seconds on slow networks.
+
+**New startup flow**:
+```
+options.ApplySettings()                    ← fast
+await Setup.Start.InitEssential(tasks)     ← Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast (<1s)
+CreateWebHostBuilder().Build()             ← builds Kestrel (IPC pipe configured here)
+RegisterLifetimeEvents(app, stopWatch)
+_ = Task.Run(Setup.Start.InitRemaining()) ← Phase 2-4 in background (auth, networking, registration)
+app.RunAsync()                             ← starts listening (IPC available immediately!)
+```
+
+**Key code changes**:
+- **`Start.cs`**: Split `Init()` into two methods:
+  - `InitEssential(List<TaskDelegate> tasks)` — builds the full task list, filters to Phase 1 only, runs via `StartupTaskRunner`. Stores the full task list and completed set in static fields for `InitRemaining()`.
+  - `InitRemaining()` — creates a new runner with Phase 2+ tasks, seeds the runner's completed set from Phase 1, calls `RunAll()`. Handles degraded mode recovery and the background FFmpeg/queue init exactly as the original `Init()` did.
+- **`StartupTaskRunner.cs`**: Added constructor overload `StartupTaskRunner(List<StartupTask> tasks, IEnumerable<string> alreadyCompleted)` that pre-seeds the completed set so Phase 2+ tasks can see Phase 1 dependencies as met. Updated `ValidateDependencies()` to include pre-completed names in the known task set.
+- **`Program.cs`**: Changed `await Setup.Start.Init(startupTasks)` → `await Setup.Start.InitEssential(startupTasks)`, then after building the host: `_ = Task.Run(async () => await Setup.Start.InitRemaining())` with error logging.
+
+**Result**:
+- IPC pipe available within ~1 second of server launch (after Phase 1 completes)
+- Tray app can connect and see "Starting" status + stream logs immediately
+- `/manage/status` reports `"starting"` while Phase 2-4 run in background
+- All startup phases still complete successfully (just concurrently with the host)
+- Server transitions from "starting" to "running" once all startup completes
+
+**Files changed**:
+- `src/NoMercy.Setup/TrayIcon.cs` — Deleted
+- `src/NoMercy.Setup/NoMercy.Setup.csproj` — Removed H.NotifyIcon package
+- `src/NoMercy.Setup/Start.cs` — Removed tray/console code, split Init into InitEssential + InitRemaining
+- `src/NoMercy.Setup/StartupTaskRunner.cs` — Added pre-completed constructor overload, updated ValidateDependencies
+- `src/NoMercy.Server/Program.cs` — Removed console-hide timer, removed WndProc delegate, reordered startup
+- `tests/NoMercy.Tests.Setup/StartupTaskRunnerTests.cs` — Removed "TrayIcon" from expected task names
+
+**Test results**: Build succeeds with 0 errors. All 295 Setup tests + 424 Queue tests pass = 0 failures.
+
+---
+
+## TRAY-06 — Hide console window when tray app launches server process
+
+**Date**: 2026-02-13
+**Commit**: `bb35886`
+
+**What was done**:
+
+**Original state**: `ServerProcessLauncher` set `UseShellExecute = false` on all three `ProcessStartInfo` paths (production binary, dev binary, `dotnet run`), but did not set `CreateNoWindow`. On Windows, this caused the server process to spawn a visible console window when launched from the tray app — defeating the purpose of having a tray-based management experience.
+
+**Change**: Added `CreateNoWindow = true` to all three `ProcessStartInfo` instances in `ServerProcessLauncher.cs`:
+- `BuildProductionStartInfo()` (line 53)
+- `BuildDevBinaryStartInfo()` (line 67)
+- `BuildDotnetRunStartInfo()` (line 85)
+
+This ensures the server process runs silently in the background when launched from the tray app. Users interact with the server exclusively through the tray app's Dashboard and Logs tabs.
+
+**Files changed**:
+- `src/NoMercy.Tray/Services/ServerProcessLauncher.cs` — Added `CreateNoWindow = true` to 3 ProcessStartInfo instances
+
+**Test results**: Build succeeds with 0 errors. All existing tests pass.

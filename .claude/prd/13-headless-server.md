@@ -94,5 +94,33 @@ nomercy queue status        # Queue statistics
 | HEAD-16 | Package tray app for macOS (.app bundle) | Medium |
 | HEAD-17 | Package tray app for Linux (AppImage/Flatpak) | Medium |
 
+### 13.6 Additional Work Completed (Outside Original PRD Tasks)
+
+The following improvements were implemented beyond the original task definitions to make the tray app and server fully functional together:
+
+| Task ID | Description | Status |
+|---------|-------------|--------|
+| TRAY-01 | Server process launching from tray with 3-tier fallback (production binary → dev binary → dotnet run) | Done |
+| TRAY-02 | Fix log viewer: strip ANSI escape codes, JSON unescape, color-coded log levels | Done |
+| TRAY-03 | Add multi-select and Ctrl+C clipboard copy to log viewer | Done |
+| TRAY-04 | Add "Start Server" button to server control and tray context menu | Done |
+| TRAY-05 | Unify separate ServerControlWindow + LogViewerWindow into single tabbed MainWindow | Done |
+| TRAY-06 | Hide console window when tray app launches server process (`CreateNoWindow = true`) | Done |
+| IPC-01 | Remove old server-side `H.NotifyIcon` tray icon — now redundant with Avalonia tray app | Done |
+| IPC-02 | Remove console-hide behavior (P/Invoke `GetConsoleWindow`/`ShowWindow`, `VsConsoleWindow`, `ConsoleVisible`, `AppProcessStarted`) | Done |
+| IPC-03 | Split `Start.Init()` into `InitEssential()` (Phase 1) + `InitRemaining()` (Phase 2-4) for early IPC availability | Done |
+| IPC-04 | Add pre-completed task support to `StartupTaskRunner` for split-phase execution | Done |
+| IPC-05 | Move IPC pipe listener startup before auth/networking/registration — IPC available in ~1s | Done |
+| INFRA-01 | Fix `DetermineInitialPhase` never being called — server always entered setup-required mode | Done |
+| INFRA-02 | Move HTTPS config to per-listener so IPC transport stays plain HTTP | Done |
+| INFRA-03 | Add IPC connect timeout (3s) to prevent indefinite hangs | Done |
+| INFRA-04 | Remove unused `ManagementPort` config and separate management HTTP listener | Done |
+| INFRA-05 | Exempt management routes from HTTPS redirect and setup-mode middleware | Done |
+| BOOT-06 | Handle port-in-use error gracefully — detect blocking process, prompt to kill | Done |
+
+**Key architectural change — Early IPC**: The original design had the IPC pipe start after all 4 startup phases completed (including slow network probe, auth, and registration). The tray app couldn't connect for 10-30 seconds after server launch. Now Phase 1 runs first (~1s), the web host starts (IPC available), and Phase 2-4 run concurrently in the background. The tray sees "Starting" status immediately.
+
+**Key removal — Server-side tray icon**: The original `TrayIcon.cs` (162 lines) used `H.NotifyIcon` to create a Windows system tray icon from the server process itself. This is now handled entirely by the separate `NoMercy.Tray` Avalonia application, so the server-side icon, console-hide behavior, and the `H.NotifyIcon` NuGet dependency were all removed.
+
 ---
 
