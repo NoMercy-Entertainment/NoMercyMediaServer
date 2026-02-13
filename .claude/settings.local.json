@@ -53,7 +53,8 @@
       "Bash(wc:*)",
       "Bash(cat:*)",
       "Bash(dotnet run:*)",
-      "Bash(fuser:*)"
+      "Bash(fuser:*)",
+      "Bash(gh run list:*)"
     ],
     "deny": []
   },
