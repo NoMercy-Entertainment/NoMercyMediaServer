@@ -1,0 +1,92 @@
+name: Staged Release
+
+on:
+  push:
+    paths: ['src/**', 'tests/**']
+    branches-ignore: [dev, main]
+  workflow_dispatch:
+
+concurrency:
+  group: staged-release-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+    with:
+      dotnet-version: "10.0.x"
+
+  prepare:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.tag.outputs.tag }}
+      branch: ${{ steps.branch.outputs.branch }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET Environment
+        uses: ./.github/actions/setup-dotnet
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Get version from csproj
+        id: version
+        uses: kzrnm/get-net-sdk-project-versions-action@v2
+        with:
+          proj-path: ./src/NoMercy.Service/NoMercy.Service.csproj
+
+      - name: Compute tag
+        id: tag
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          SAFE_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g' | cut -c1-50)
+          echo "tag=v${{ steps.version.outputs.version }}-${SAFE_BRANCH}" >> $GITHUB_OUTPUT
+
+      - name: Set branch output
+        id: branch
+        run: echo "branch=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Delete existing draft release for this branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SAFE_BRANCH=$(echo "${GITHUB_REF_NAME}" | sed 's/[^a-zA-Z0-9._-]/-/g' | cut -c1-50)
+          gh release list --limit 100 --json tagName,isDraft \
+            | jq -r ".[] | select(.isDraft and (.tagName | endswith(\"-${SAFE_BRANCH}\"))) | .tagName" \
+            | while read -r tag; do
+                echo "Deleting existing draft release: $tag"
+                gh release delete "$tag" --yes --cleanup-tag 2>/dev/null || true
+              done
+
+  build_executables:
+    needs: prepare
+    uses: ./.github/workflows/build-executables.yml
+    with:
+      dotnet-version: "10.0.x"
+      ref: ${{ needs.prepare.outputs.branch }}
+
+  build_packages:
+    needs: [prepare, build_executables]
+    uses: ./.github/workflows/build-packages.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.branch }}
+
+  create_release:
+    needs: [prepare, build_executables, build_packages]
+    uses: ./.github/workflows/create-release.yml
+    secrets: inherit
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      tag: ${{ needs.prepare.outputs.tag }}
+      draft: true
+      prerelease: true
+      release-name: "NoMercy MediaServer v${{ needs.prepare.outputs.version }} (${{ needs.prepare.outputs.branch }})"

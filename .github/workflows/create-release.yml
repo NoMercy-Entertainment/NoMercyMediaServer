@@ -7,6 +7,24 @@ on:
         description: 'Version to release'
         required: true
         type: string
+      tag:
+        description: 'Git tag for the release (defaults to v{version})'
+        required: false
+        type: string
+      draft:
+        description: 'Create as draft release'
+        required: false
+        type: boolean
+        default: false
+      prerelease:
+        description: 'Mark as prerelease'
+        required: false
+        type: boolean
+        default: false
+      release-name:
+        description: 'Release title (defaults to NoMercy MediaServer v{version})'
+        required: false
+        type: string
 
 jobs:
   create_release:
@@ -37,6 +55,9 @@ jobs:
           # Copy Windows installer to release
           find ./artifacts -path "*/windows-installer/*" -name "*-setup.exe" -exec cp {} ./output/ \;
 
+          # Copy macOS installer to release
+          find ./artifacts -path "*/macos-installer/*" -name "*.pkg" -exec cp {} ./output/ \;
+
           echo "=== Release artifacts ==="
           ls -la ./output/
 
@@ -47,47 +68,61 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version }}
-          name: NoMercy MediaServer v${{ inputs.version }}
+          tag_name: ${{ inputs.tag || format('v{0}', inputs.version) }}
+          name: ${{ inputs.release-name || format('NoMercy MediaServer v{0}', inputs.version) }}
           body: |
             ## What's New
+
             This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
+
+            ## Components
+
+            | Component | Description |
+            |-----------|-------------|
+            | **NoMercyMediaServer** | Media server backend |
+            | **NoMercyMediaServerService** | System tray app for managing the server |
+            | **NoMercyApp** | Web UI host |
+            | **nomercy** | Command-line tool |
 
             ## Downloads
 
             ### Windows
-            - **Installer** (x64): `NoMercyMediaServer-*-windows-x64-setup.exe` — includes Server, Tray, and CLI
-            - **Standalone executables** (x64): individual `.exe` files
+            - **Installer** (x64): `NoMercyMediaServer-*-windows-x64-setup.exe` — includes server, tray app, and CLI
+            - **Standalone executables** (x64): individual `.exe` files for each component
 
             ### macOS
+            - **Installer** (x64): `.pkg` — includes server, tray app, and CLI
             - **App bundles** (x64): `.tar.gz` and `.dmg` files
             - **CLI**: `nomercy-macos-x64` binary
 
             ### Linux
-            - **Binary executables** (x64): standalone binaries
-            - **Debian/Ubuntu**: `.deb` packages
-            - **Fedora/RHEL/CentOS**: `.rpm` packages
-            - **Arch Linux**: `.pkg.tar.zst` packages
+            - **Standalone binaries** (x64): `NoMercyMediaServer-linux-x64`, `NoMercyMediaServerService-linux-x64`, `nomercy-linux-x64`
+            - **Debian/Ubuntu**: `.deb` packages — install via `sudo apt install ./nomercymediaserver_*.deb`
+            - **Fedora/RHEL/CentOS**: `.rpm` packages — install via `sudo dnf install ./nomercymediaserver-*.rpm`
+            - **Arch Linux**: `.pkg.tar.zst` packages — install via `sudo pacman -U nomercymediaserver-*.pkg.tar.zst`
 
-            ### Package Repositories
-            For automatic updates, add our repository: https://repo.nomercy.tv
+            ### Package Repository
 
-            ## Installation
-            Download the appropriate files for your platform and follow the installation instructions in our documentation.
+            For automatic updates, add our repository instead of downloading manually: **https://repo.nomercy.tv**
+
+            See the [README](https://github.com/NoMercy-Entertainment/NoMercyMediaServer#installation) for setup instructions per distro.
 
             ## Feedback
-            If you encounter any issues, please report them on our GitHub repository.
 
-            Build: ${{ steps.get_short_sha.outputs.short_sha }}
-          draft: false
-          prerelease: false
+            If you encounter any issues, please [open an issue](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/issues).
+
+            ---
+            Build: `${{ steps.get_short_sha.outputs.short_sha }}`
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
           files: |
             ./output/NoMercyMediaServer-*
             ./output/NoMercyApp-*
-            ./output/NoMercyTray-*
+            ./output/NoMercyMediaServerService-*
             ./output/nomercy-*
             ./output/*.deb
             ./output/*.rpm
             ./output/*.pkg.tar.zst
+            ./output/*.pkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

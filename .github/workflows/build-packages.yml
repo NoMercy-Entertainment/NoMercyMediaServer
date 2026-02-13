@@ -3,6 +3,11 @@ name: 'Package Building Workflow'
 on:
   workflow_call:
     inputs:
+      ref:
+        description: 'Git ref to checkout'
+        required: false
+        type: string
+        default: 'main'
       version:
         description: 'Package version'
         required: true
@@ -14,15 +19,23 @@ on:
 
 jobs:
   build_packages:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        package-type: [deb, rpm, arch, windows-installer]
+        package-type: [deb, rpm, arch, windows-installer, macos-installer]
+        os: [ubuntu-latest]
+        include:
+          - package-type: macos-installer
+            os: macos-latest
+        exclude:
+          - package-type: macos-installer
+            os: ubuntu-latest
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: main
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
           fetch-tags: true
 
@@ -46,7 +59,7 @@ jobs:
         run: |
           chmod +x ./output/NoMercyMediaServer-linux-x64 2>/dev/null || true
           chmod +x ./output/NoMercyApp-linux-x64 2>/dev/null || true
-          chmod +x ./output/NoMercyTray-linux-x64 2>/dev/null || true
+          chmod +x ./output/NoMercyMediaServerService-linux-x64 2>/dev/null || true
           chmod +x ./output/nomercy-linux-x64 2>/dev/null || true
 
       - name: Build DEB packages
@@ -74,6 +87,13 @@ jobs:
       - name: Build Windows installer
         if: matrix.package-type == 'windows-installer'
         uses: ./.github/actions/build-windows-installer
+        with:
+          version: ${{ inputs.version }}
+          artifacts-path: './output'
+
+      - name: Build macOS installer
+        if: matrix.package-type == 'macos-installer'
+        uses: ./.github/actions/build-macos-installer
         with:
           version: ${{ inputs.version }}
           artifacts-path: './output'
