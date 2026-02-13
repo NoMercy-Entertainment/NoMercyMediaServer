@@ -25,9 +25,13 @@ jobs:
         package-type: [deb, rpm, arch, windows-installer, macos-installer]
         os: [ubuntu-latest]
         include:
+          - package-type: windows-installer
+            os: windows-latest
           - package-type: macos-installer
             os: macos-latest
         exclude:
+          - package-type: windows-installer
+            os: ubuntu-latest
           - package-type: macos-installer
             os: ubuntu-latest
       fail-fast: false
@@ -45,6 +49,7 @@ jobs:
           path: ./artifacts
 
       - name: Prepare executables
+        shell: bash
         run: |
           mkdir -p ./output
 
@@ -56,6 +61,7 @@ jobs:
           find ./artifacts -name "*-macos-x64" -exec cp {} ./output/ \;
 
       - name: Make Linux executables executable
+        if: runner.os == 'Linux'
         run: |
           chmod +x ./output/NoMercyMediaServer-linux-x64 2>/dev/null || true
           chmod +x ./output/NoMercyApp-linux-x64 2>/dev/null || true

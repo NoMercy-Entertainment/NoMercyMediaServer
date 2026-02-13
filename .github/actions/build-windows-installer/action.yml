@@ -13,62 +13,69 @@ runs:
   using: 'composite'
   steps:
     - name: Install Inno Setup
-      shell: bash
+      shell: pwsh
       run: |
-        sudo dpkg --add-architecture i386
-        sudo apt-get update
+        $InnoUrl = "https://files.jrsoftware.org/is/6/innosetup-6.3.3.exe"
+        $InstallerPath = "$env:TEMP\innosetup.exe"
 
-        # Wine post-install triggers (gstreamer plugin scan) can fail with exit code 8
-        # on GitHub runners. The packages are still installed correctly, so we recover.
-        sudo apt-get install -y innoextract wine64 || true
-        sudo dpkg --configure -a || true
+        Write-Host "Downloading Inno Setup..."
+        Invoke-WebRequest -Uri $InnoUrl -OutFile $InstallerPath -UseBasicParsing
 
-        # Verify the packages we need are actually installed
-        dpkg -l wine64 | grep -q '^ii' || { echo "ERROR: wine64 not installed"; exit 1; }
-        dpkg -l innoextract | grep -q '^ii' || { echo "ERROR: innoextract not installed"; exit 1; }
+        Write-Host "Installing Inno Setup..."
+        Start-Process -FilePath $InstallerPath -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/DIR=C:\InnoSetup' -Wait -NoNewWindow
 
-        # Download and install Inno Setup via wine
-        INNO_URL="https://files.jrsoftware.org/is/6/innosetup-6.3.3.exe"
-        wget -q "$INNO_URL" -O /tmp/innosetup.exe
-
-        # Install Inno Setup silently via wine
-        WINEPREFIX="$HOME/.wine" wine64 /tmp/innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /DIR="C:\\InnoSetup" 2>/dev/null || true
-
-        echo "Inno Setup installed"
+        if (Test-Path "C:\InnoSetup\ISCC.exe") {
+          Write-Host "Inno Setup installed successfully"
+        } else {
+          Write-Error "Inno Setup installation failed - ISCC.exe not found"
+          exit 1
+        }
 
     - name: Prepare installer artifacts
-      shell: bash
+      shell: pwsh
       run: |
-        VERSION="${{ inputs.version }}"
-        ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
-        ISS_DIR="./src/NoMercy.Service"
+        $IssDir = "./src/NoMercy.Service"
+        $ArtifactsPath = "${{ inputs.artifacts-path }}"
 
-        # Create artifacts directory next to the .iss file
-        mkdir -p "${ISS_DIR}/artifacts"
+        New-Item -ItemType Directory -Force -Path "$IssDir/artifacts" | Out-Null
 
-        # Copy Windows executables
-        cp "${ARTIFACTS_PATH}/NoMercyMediaServer-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: Server exe not found"
-        cp "${ARTIFACTS_PATH}/NoMercyMediaServerService-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: Service exe not found"
-        cp "${ARTIFACTS_PATH}/nomercy-windows-x64.exe" "${ISS_DIR}/artifacts/" 2>/dev/null || echo "Warning: CLI exe not found"
+        $files = @(
+          "NoMercyMediaServer-windows-x64.exe",
+          "NoMercyMediaServerService-windows-x64.exe",
+          "nomercy-windows-x64.exe"
+        )
 
-        echo "Prepared installer artifacts:"
-        ls -la "${ISS_DIR}/artifacts/"
+        foreach ($file in $files) {
+          $src = Join-Path $ArtifactsPath $file
+          if (Test-Path $src) {
+            Copy-Item $src "$IssDir/artifacts/"
+            Write-Host "Copied: $file"
+          } else {
+            Write-Warning "Not found: $file"
+          }
+        }
+
+        Write-Host "Prepared installer artifacts:"
+        Get-ChildItem "$IssDir/artifacts/"
 
     - name: Build Windows Installer
-      shell: bash
+      shell: pwsh
       run: |
-        VERSION="${{ inputs.version }}"
-        ISS_FILE="./src/NoMercy.Service/NoMercyMediaServer.iss"
-        INNO_COMPILER="$HOME/.wine/drive_c/InnoSetup/ISCC.exe"
+        $Version = "${{ inputs.version }}"
+        $IssFile = "./src/NoMercy.Service/NoMercyMediaServer.iss"
+        $InnoCompiler = "C:\InnoSetup\ISCC.exe"
 
-        # Build installer with version parameter
-        WINEPREFIX="$HOME/.wine" wine64 "$INNO_COMPILER" \
-          "/DVersion=${VERSION}" \
-          "/O./packages/windows" \
-          "$ISS_FILE" 2>/dev/null
+        New-Item -ItemType Directory -Force -Path "./packages/windows" | Out-Null
 
-        echo "Windows installer created:"
-        ls -la ./packages/windows/
+        & $InnoCompiler "/DVersion=$Version" "/O./packages/windows" $IssFile
+
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "Inno Setup compilation failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+
+        Write-Host "Windows installer created:"
+        Get-ChildItem "./packages/windows/"
 
     - name: Upload Windows installer artifacts
       uses: actions/upload-artifact@v4
