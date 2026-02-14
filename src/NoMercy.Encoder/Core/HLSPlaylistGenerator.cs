@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using static NoMercy.Encoder.Core.IsoLanguageMapper;
@@ -9,7 +10,6 @@ namespace NoMercy.Encoder.Core;
 
 public static class HlsPlaylistGenerator
 {
-    private const int MaxConcurrentProbes = 3;
 
     public static async Task Build(string basePath, string filename, List<string>? priorityLanguages = null)
     {
@@ -92,8 +92,7 @@ public static class HlsPlaylistGenerator
             .Select(f => Path.GetFileName(f).ToLowerInvariant())
             .Any(name => name.EndsWith("_sdr") || name.Contains("_hdr"));
 
-        // Probe video variants in parallel with bounded concurrency
-        SemaphoreSlim semaphore = new(MaxConcurrentProbes);
+        // Probe video variants in parallel with bounded concurrency (global throttle)
         List<Task<VideoVariantInfo>> probeTasks = videoFileList.Select(async videoFile =>
         {
             string folderName = Path.GetFileName(Path.GetDirectoryName(videoFile) ?? string.Empty) ?? string.Empty;
@@ -155,7 +154,7 @@ public static class HlsPlaylistGenerator
             string frameRateStr = "";
             double duration = 0;
 
-            await semaphore.WaitAsync();
+            await FfProbeThrottle.WaitAsync();
             try
             {
                 try
@@ -188,7 +187,7 @@ public static class HlsPlaylistGenerator
             }
             finally
             {
-                semaphore.Release();
+                FfProbeThrottle.Release();
             }
 
             int level = int.TryParse(levelStr, out int l) ? l : 40;

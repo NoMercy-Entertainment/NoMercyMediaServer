@@ -4,6 +4,7 @@ public static class FfProbe
 {
     public static FfProbeData Create(string file)
     {
+        FfProbeThrottle.WaitAsync().GetAwaiter().GetResult();
         try
         {
             FFMpegCore.IMediaAnalysis analysis = FFMpegCore.FFProbe.Analyse(file);
@@ -27,6 +28,10 @@ public static class FfProbe
             {
                 ErrorData = new List<string> { ex.Message }
             };
+        }
+        finally
+        {
+            FfProbeThrottle.Release();
         }
     }
 }

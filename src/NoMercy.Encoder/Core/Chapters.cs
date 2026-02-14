@@ -1,5 +1,6 @@
 using System.Text;
 using Newtonsoft.Json;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -13,7 +14,18 @@ public static class Chapters
         string chapterFile = $"{location}/chapters.vtt";
 
         string command = $"-v quiet -print_format json -show_chapters \"{inputFilePath}\"";
-        string result = await Shell.ExecStdOutAsync(AppFiles.FfProbePath, command);
+
+        await FfProbeThrottle.WaitAsync();
+        string result;
+        try
+        {
+            result = await Shell.ExecStdOutAsync(AppFiles.FfProbePath, command);
+        }
+        finally
+        {
+            FfProbeThrottle.Release();
+        }
+
         if (string.IsNullOrEmpty(result)) return;
 
         FfprobeChapterRoot? root = JsonConvert.DeserializeObject<FfprobeChapterRoot>(result);

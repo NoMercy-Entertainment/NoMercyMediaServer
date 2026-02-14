@@ -477,41 +477,49 @@ public partial class FfMpeg : Classes
 
     public static async Task<string> GetDuration(string file)
     {
-        using Process process2 = new()
+        await FfProbeThrottle.WaitAsync();
+        try
         {
-            StartInfo =
+            using Process process2 = new()
             {
-                FileName = AppFiles.FfProbePath,
-                Arguments = "-i \"" + file +
-                            "\" -hide_banner -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
-                WindowStyle = ProcessWindowStyle.Hidden,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            }
-        };
+                StartInfo =
+                {
+                    FileName = AppFiles.FfProbePath,
+                    Arguments = "-i \"" + file +
+                                "\" -hide_banner -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
 
-        process2.Start();
+            process2.Start();
 
-        using StreamReader outputReader2 = process2.StandardOutput;
-        using StreamReader errorReader2 = process2.StandardError;
+            using StreamReader outputReader2 = process2.StandardOutput;
+            using StreamReader errorReader2 = process2.StandardError;
 
-        // Read both streams simultaneously
-        Task<string> outputTask2 = outputReader2.ReadToEndAsync();
-        Task<string> errorTask2 = errorReader2.ReadToEndAsync();
+            // Read both streams simultaneously
+            Task<string> outputTask2 = outputReader2.ReadToEndAsync();
+            Task<string> errorTask2 = errorReader2.ReadToEndAsync();
 
-        await Task.WhenAll(outputTask2, errorTask2);
-        string time = await outputTask2;
-        await process2.WaitForExitAsync();
+            await Task.WhenAll(outputTask2, errorTask2);
+            string time = await outputTask2;
+            await process2.WaitForExitAsync();
 
-        if (string.IsNullOrEmpty(time)) throw new("Failed to get duration");
+            if (string.IsNullOrEmpty(time)) throw new("Failed to get duration");
 
-        if (time.Contains("N/A")) throw new("Failed to get duration");
+            if (time.Contains("N/A")) throw new("Failed to get duration");
 
-        if (time.Contains("Duration")) time = time.Split("Duration: ")[1].Split(",")[0];
+            if (time.Contains("Duration")) time = time.Split("Duration: ")[1].Split(",")[0];
 
-        return time.Trim();
+            return time.Trim();
+        }
+        finally
+        {
+            FfProbeThrottle.Release();
+        }
     }
 
 

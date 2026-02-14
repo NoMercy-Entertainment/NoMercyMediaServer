@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using NoMercy.Encoder.Dto;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -151,13 +152,14 @@ public class Ffprobe
     private async Task<(string, string)> ExecStdErrOut(CancellationToken ct = default)
     {
         Process? ffprobe = null;
-        
+
+        await FfProbeThrottle.WaitAsync(ct);
         try
         {
             // Create a timeout token that will cancel after ExecutionTimeoutMs
             using CancellationTokenSource timeoutCts = new(ExecutionTimeoutMs);
             using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
-            
+
             ffprobe = new();
 
             ffprobe.StartInfo = new()
@@ -196,6 +198,7 @@ public class Ffprobe
         }
         finally
         {
+            FfProbeThrottle.Release();
             ffprobe?.Dispose();
         }
     }
