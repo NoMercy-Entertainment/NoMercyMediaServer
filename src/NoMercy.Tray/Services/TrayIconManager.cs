@@ -190,8 +190,7 @@ public class TrayIconManager
             && !string.IsNullOrEmpty(status.SetupPhase)
             && status.SetupPhase != "Complete")
         {
-            _appAutoLaunched = true;
-            LaunchAppForSetup();
+            _appAutoLaunched = await TryLaunchAppForSetup();
         }
 
         string uptimeText = FormatUptime(status.UptimeSeconds);
@@ -316,12 +315,15 @@ public class TrayIconManager
         OpenMainWindow(0);
     }
 
-    private async void LaunchAppForSetup()
+    private async Task<bool> TryLaunchAppForSetup()
     {
         if (_serverConnection.IsConnected)
-            await _serverConnection.PostAsync("/manage/app/start");
-        else
-            await _processLauncher.LaunchAppAsync();
+        {
+            bool posted = await _serverConnection.PostAsync("/manage/app/start");
+            if (posted) return true;
+        }
+
+        return await _processLauncher.LaunchAppAsync();
     }
 
     private async void OnOpenApp(object? sender, EventArgs e)
