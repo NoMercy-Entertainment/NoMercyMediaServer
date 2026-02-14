@@ -21,6 +21,7 @@ public class TrayIconManager
     private ServerState _currentState = ServerState.Disconnected;
     private MainWindow? _mainWindow;
     private bool _autoStartAttempted;
+    private bool _startupWindowOpened;
 
     public TrayIconManager(
         ServerConnection serverConnection,
@@ -114,7 +115,15 @@ public class TrayIconManager
         while (_trayIcon?.IsVisible == true)
         {
             await UpdateStatusAsync();
-            await Task.Delay(TimeSpan.FromSeconds(10));
+
+            int delaySeconds = _currentState switch
+            {
+                ServerState.Starting => 2,
+                ServerState.Disconnected => 2,
+                _ => 10
+            };
+
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
         }
     }
 
@@ -141,6 +150,7 @@ public class TrayIconManager
                     ServerState.Disconnected,
                     "Disconnected",
                     null,
+                    null,
                     null);
                 return;
             }
@@ -155,6 +165,7 @@ public class TrayIconManager
                 ServerState.Disconnected,
                 "Disconnected",
                 null,
+                null,
                 null);
             return;
         }
@@ -166,19 +177,42 @@ public class TrayIconManager
             _ => ServerState.Running
         };
 
+        // Auto-open log window when first detecting startup
+        if (state == ServerState.Starting && !_startupWindowOpened)
+        {
+            _startupWindowOpened = true;
+            OpenMainWindow(1);
+        }
+
         string uptimeText = FormatUptime(status.UptimeSeconds);
         string versionText = string.IsNullOrEmpty(status.Version)
             ? null!
             : status.Version;
 
-        SetState(state, status.Status, versionText, uptimeText);
+        SetState(state, status.Status, versionText, uptimeText, status.SetupPhase);
+    }
+
+    private static string GetSetupPhaseLabel(string? setupPhase)
+    {
+        return setupPhase switch
+        {
+            "Unauthenticated" => "Waiting for login",
+            "Authenticating" => "Logging in",
+            "Authenticated" => "Authenticated",
+            "Registering" => "Registering server",
+            "Registered" => "Downloading binaries",
+            "CertificateAcquired" => "Configuring certificates",
+            "Complete" => "Setup complete",
+            _ => ""
+        };
     }
 
     private void SetState(
         ServerState state,
         string statusText,
         string? version,
-        string? uptime)
+        string? uptime,
+        string? setupPhase)
     {
         if (_trayIcon is null) return;
 
@@ -196,11 +230,24 @@ public class TrayIconManager
             _ => "Unknown"
         };
 
-        _trayIcon.ToolTipText =
-            $"NoMercy MediaServer - {stateLabel}";
+        string phaseDetail = "";
+        if (state == ServerState.Starting && !string.IsNullOrEmpty(setupPhase) && setupPhase != "Complete")
+        {
+            phaseDetail = GetSetupPhaseLabel(setupPhase);
+        }
+
+        string tooltipText = string.IsNullOrEmpty(phaseDetail)
+            ? $"NoMercy MediaServer - {stateLabel}"
+            : $"NoMercy MediaServer - {stateLabel} — {phaseDetail}";
+
+        _trayIcon.ToolTipText = tooltipText;
 
         if (_statusItem is not null)
-            _statusItem.Header = $"Server: {stateLabel}";
+        {
+            _statusItem.Header = string.IsNullOrEmpty(phaseDetail)
+                ? $"Server: {stateLabel}"
+                : $"Server: {stateLabel} — {phaseDetail}";
+        }
 
         if (_versionItem is not null)
             _versionItem.Header = version is not null

@@ -16,6 +16,7 @@ public class ServerStatusResponse
     [JsonProperty("auto_start")] public bool AutoStart { get; set; }
     [JsonProperty("update_available")] public bool UpdateAvailable { get; set; }
     [JsonProperty("latest_version")] public string? LatestVersion { get; set; }
+    [JsonProperty("setup_phase")] public string? SetupPhase { get; set; }
     [JsonProperty("app_status")] public AppStatusInfo? AppStatus { get; set; }
 }
 

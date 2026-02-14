@@ -2,6 +2,9 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using NoMercy.NmSystem;
+using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Information;
 using NoMercy.Tray.Models;
 using NoMercy.Tray.Services;
 
@@ -10,7 +13,7 @@ namespace NoMercy.Tray.ViewModels;
 public partial class LogViewerViewModel : INotifyPropertyChanged
 {
     private readonly ServerConnection _serverConnection;
-    private CancellationTokenSource? _autoRefreshCts;
+    private CancellationTokenSource? _streamCts;
 
     [GeneratedRegex(@"(\x1b|\\u001[bB])\[[0-9;]*[A-Za-z]")]
     private static partial Regex AnsiEscapeRegex();
@@ -56,7 +59,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         {
             _selectedLevel = value;
             OnPropertyChanged();
-            _ = RefreshLogsAsync();
+            ApplyFilter();
         }
     }
 
@@ -67,7 +70,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         {
             _tailCount = value;
             OnPropertyChanged();
-            _ = RefreshLogsAsync();
+            _ = RestartStreamAsync();
         }
     }
 
@@ -120,7 +123,8 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
 
             if (logs is null)
             {
-                StatusText = "Failed to fetch logs";
+                // Fall back to reading log files from disk
+                await LoadLogsFromDiskAsync(cancellationToken);
                 return;
             }
 
@@ -128,28 +132,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
 
             foreach (LogEntryResponse entry in logs)
             {
-                string message = entry.Message;
-
-                // Strip surrounding quotes from double-serialization
-                // (Logger.Log calls message.ToJson() which wraps strings in quotes)
-                if (message.Length >= 2
-                    && message[0] == '"'
-                    && message[^1] == '"')
-                {
-                    message = message[1..^1];
-                }
-
-                // Strip ANSI escape codes (both actual ESC byte and literal \u001b)
-                message = AnsiEscapeRegex().Replace(message, "");
-
-                // Unescape any remaining JSON escapes from double-serialization
-                message = message.Replace("\\n", "\n")
-                    .Replace("\\r", "\r")
-                    .Replace("\\t", "\t")
-                    .Replace("\\\"", "\"")
-                    .Replace("\\\\", "\\");
-
-                entry.Message = message;
+                CleanMessage(entry);
                 LogEntries.Add(entry);
             }
 
@@ -163,7 +146,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         }
         catch
         {
-            StatusText = "Error fetching logs";
+            await LoadLogsFromDiskAsync(cancellationToken);
         }
         finally
         {
@@ -171,29 +154,121 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         }
     }
 
+    private async Task LoadLogsFromDiskAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            string logPath = AppFiles.LogPath;
+            if (!Directory.Exists(logPath))
+            {
+                StatusText = "No log directory found";
+                return;
+            }
+
+            List<LogEntry> diskLogs = await LogReader.GetLogsAsync(logPath, _tailCount);
+
+            LogEntries.Clear();
+            foreach (LogEntry entry in diskLogs)
+            {
+                LogEntryResponse response = new()
+                {
+                    Type = entry.Type,
+                    Message = entry.Message,
+                    Color = entry.Color,
+                    ThreadId = entry.ThreadId,
+                    Time = entry.Time,
+                    Level = entry.Level
+                };
+                CleanMessage(response);
+                LogEntries.Add(response);
+            }
+
+            ApplyFilter();
+            StatusText = $"{FilteredEntries.Count} entries (from disk at {DateTime.Now:HH:mm:ss})";
+        }
+        catch
+        {
+            StatusText = "Error reading logs from disk";
+        }
+    }
+
     public void StartAutoRefresh()
     {
         StopAutoRefresh();
+        _ = StartStreamAsync();
+    }
 
-        _autoRefreshCts = new();
-        CancellationToken token = _autoRefreshCts.Token;
+    private async Task StartStreamAsync()
+    {
+        _streamCts = new();
+        CancellationToken token = _streamCts.Token;
 
+        // Load initial history
+        await RefreshLogsAsync(token);
+
+        if (!_serverConnection.IsConnected)
+        {
+            StatusText = "Streaming unavailable - showing disk logs";
+            return;
+        }
+
+        StatusText = $"{FilteredEntries.Count} entries (streaming)";
+
+        // Open SSE stream for real-time updates
         _ = Task.Run(async () =>
         {
-            while (!token.IsCancellationRequested)
+            await _serverConnection.StreamLogsAsync(entry =>
             {
-                await RefreshLogsAsync(token);
-                await Task.Delay(
-                    TimeSpan.FromSeconds(5), token);
-            }
+                CleanMessage(entry);
+
+                // Filter by level client-side
+                if (_selectedLevel != "All" &&
+                    !string.Equals(entry.Level, _selectedLevel, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                LogEntries.Add(entry);
+
+                // Check if entry matches current filter
+                if (MatchesFilter(entry))
+                {
+                    FilteredEntries.Add(entry);
+                    StatusText = $"{FilteredEntries.Count} entries (streaming)";
+                }
+
+                // Trim old entries to keep memory bounded
+                while (LogEntries.Count > _tailCount * 2)
+                    LogEntries.RemoveAt(0);
+                while (FilteredEntries.Count > _tailCount * 2)
+                    FilteredEntries.RemoveAt(0);
+            }, token);
         }, token);
+    }
+
+    private async Task RestartStreamAsync()
+    {
+        StopAutoRefresh();
+        if (_autoRefresh)
+            await StartStreamAsync();
+        else
+            await RefreshLogsAsync();
     }
 
     public void StopAutoRefresh()
     {
-        _autoRefreshCts?.Cancel();
-        _autoRefreshCts?.Dispose();
-        _autoRefreshCts = null;
+        _streamCts?.Cancel();
+        _streamCts?.Dispose();
+        _streamCts = null;
+    }
+
+    private bool MatchesFilter(LogEntryResponse entry)
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+            return true;
+
+        return entry.Message.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+               entry.Type.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
     }
 
     internal void ApplyFilter()
@@ -201,6 +276,12 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         FilteredEntries.Clear();
 
         IEnumerable<LogEntryResponse> filtered = LogEntries.AsEnumerable();
+
+        if (_selectedLevel != "All")
+        {
+            filtered = filtered.Where(e =>
+                string.Equals(e.Level, _selectedLevel, StringComparison.OrdinalIgnoreCase));
+        }
 
         if (!string.IsNullOrWhiteSpace(_searchText))
         {
@@ -213,6 +294,31 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
 
         foreach (LogEntryResponse entry in filtered)
             FilteredEntries.Add(entry);
+    }
+
+    private static void CleanMessage(LogEntryResponse entry)
+    {
+        string message = entry.Message;
+
+        // Strip surrounding quotes from double-serialization
+        if (message.Length >= 2
+            && message[0] == '"'
+            && message[^1] == '"')
+        {
+            message = message[1..^1];
+        }
+
+        // Strip ANSI escape codes
+        message = AnsiEscapeRegex().Replace(message, "");
+
+        // Unescape any remaining JSON escapes from double-serialization
+        message = message.Replace("\\n", "\n")
+            .Replace("\\r", "\r")
+            .Replace("\\t", "\t")
+            .Replace("\\\"", "\"")
+            .Replace("\\\\", "\\");
+
+        entry.Message = message;
     }
 
     public void ClearFilters()

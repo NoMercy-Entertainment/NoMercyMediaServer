@@ -1,6 +1,7 @@
 using System.Text;
 using Newtonsoft.Json;
 using NoMercy.Networking;
+using NoMercy.Tray.Models;
 
 namespace NoMercy.Tray.Services;
 
@@ -96,6 +97,55 @@ public sealed class ServerConnection : IDisposable
         {
             IsConnected = false;
             return false;
+        }
+    }
+
+    public async Task StreamLogsAsync(
+        Action<LogEntryResponse> onEntry,
+        CancellationToken cancellationToken)
+    {
+        int retryDelay = 1000;
+        const int MaxRetryDelay = 30000;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (_client is null) break;
+
+                using HttpResponseMessage response = await _client.GetStreamAsync(
+                    "/manage/logs/stream", cancellationToken);
+                using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using StreamReader reader = new(stream);
+
+                retryDelay = 1000;
+
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    string? line = await reader.ReadLineAsync(cancellationToken);
+
+                    if (line is null) break;
+                    if (!line.StartsWith("data: ")) continue;
+
+                    string json = line[6..];
+                    LogEntryResponse? entry = JsonConvert.DeserializeObject<LogEntryResponse>(json);
+                    if (entry is not null)
+                        onEntry(entry);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch
+            {
+                // Reconnect with backoff
+            }
+
+            if (cancellationToken.IsCancellationRequested) break;
+
+            await Task.Delay(retryDelay, cancellationToken);
+            retryDelay = Math.Min(retryDelay * 2, MaxRetryDelay);
         }
     }
 

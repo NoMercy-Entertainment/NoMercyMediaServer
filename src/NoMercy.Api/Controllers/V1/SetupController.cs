@@ -45,7 +45,7 @@ public class SetupController(
     
     [HttpGet]
     [Route("server-info")]
-    [ResponseCache(Duration = 3600)]
+    [ResponseCache(NoStore = true, Duration = 0)]
     public IActionResult ServerInfo()
     {
         if (!User.IsAllowed())

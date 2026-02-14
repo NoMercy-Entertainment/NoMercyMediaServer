@@ -9,10 +9,12 @@ using NoMercy.Helpers.Monitoring;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using Newtonsoft.Json;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Queue;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.FileSystem;
+using NoMercy.Setup;
 using Microsoft.Extensions.Hosting;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
@@ -28,7 +30,8 @@ public class ManagementController(
     MediaContext mediaContext,
     QueueRunner queueRunner,
     IPluginManager pluginManager,
-    AppProcessManager appProcessManager) : ControllerBase
+    AppProcessManager appProcessManager,
+    SetupState setupState) : ControllerBase
 {
     [HttpGet("status")]
     [ProducesResponseType(typeof(ManagementStatusDto), StatusCodes.Status200OK)]
@@ -52,6 +55,7 @@ public class ManagementController(
             AutoStart = AutoStartupManager.IsEnabled(),
             UpdateAvailable = Config.UpdateAvailable,
             LatestVersion = Config.LatestVersion,
+            SetupPhase = setupState.CurrentPhase.ToString(),
             AppStatus = new AppProcessStatusDto
             {
                 Running = appProcessManager.IsRunning,
@@ -80,6 +84,57 @@ public class ManagementController(
         });
 
         return Ok(logs);
+    }
+
+    [HttpGet("logs/stream")]
+    public async Task StreamLogs([FromQuery] int backfill = 50, CancellationToken cancellationToken = default)
+    {
+        Response.ContentType = "text/event-stream";
+        Response.Headers.CacheControl = "no-cache";
+        Response.Headers.Connection = "keep-alive";
+
+        await Response.StartAsync(cancellationToken);
+
+        // Send backfill of recent log entries
+        List<LogEntry> recentLogs = await Logger.GetLogs(backfill);
+        foreach (LogEntry entry in recentLogs)
+        {
+            string json = JsonConvert.SerializeObject(entry);
+            await Response.WriteAsync($"data: {json}\n\n", cancellationToken);
+        }
+
+        await Response.Body.FlushAsync(cancellationToken);
+
+        // Subscribe to live log events
+        TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellationTokenRegistration ctr = cancellationToken.Register(() => tcs.TrySetResult());
+
+        void OnLogEmitted(LogEntry entry)
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(entry);
+                byte[] data = System.Text.Encoding.UTF8.GetBytes($"data: {json}\n\n");
+                Response.Body.WriteAsync(data, 0, data.Length, cancellationToken)
+                    .ContinueWith(t => Response.Body.FlushAsync(cancellationToken), cancellationToken);
+            }
+            catch
+            {
+                tcs.TrySetResult();
+            }
+        }
+
+        Logger.LogEmitted += OnLogEmitted;
+
+        try
+        {
+            await tcs.Task;
+        }
+        finally
+        {
+            Logger.LogEmitted -= OnLogEmitted;
+            ctr.Dispose();
+        }
     }
 
     [HttpPost("stop")]

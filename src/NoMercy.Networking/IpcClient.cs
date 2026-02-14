@@ -77,6 +77,12 @@ public sealed class IpcClient : IDisposable
         return _httpClient.SendAsync(request, cancellationToken);
     }
 
+    public Task<HttpResponseMessage> GetStreamAsync(string requestUri, CancellationToken cancellationToken = default)
+    {
+        HttpRequestMessage request = new(HttpMethod.Get, requestUri);
+        return _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+    }
+
     public void Dispose()
     {
         _httpClient.Dispose();
