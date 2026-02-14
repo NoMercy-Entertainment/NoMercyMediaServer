@@ -22,6 +22,7 @@ public class TrayIconManager
     private MainWindow? _mainWindow;
     private bool _autoStartAttempted;
     private bool _startupWindowOpened;
+    private bool _appAutoLaunched;
 
     public TrayIconManager(
         ServerConnection serverConnection,
@@ -184,6 +185,15 @@ public class TrayIconManager
             OpenMainWindow(1);
         }
 
+        // Auto-launch the App when setup is in progress so the user sees the setup UI
+        if (!_appAutoLaunched
+            && !string.IsNullOrEmpty(status.SetupPhase)
+            && status.SetupPhase != "Complete")
+        {
+            _appAutoLaunched = true;
+            LaunchAppForSetup();
+        }
+
         string uptimeText = FormatUptime(status.UptimeSeconds);
         string versionText = string.IsNullOrEmpty(status.Version)
             ? null!
@@ -304,6 +314,14 @@ public class TrayIconManager
     private void OnTrayIconClicked(object? sender, EventArgs e)
     {
         OpenMainWindow(0);
+    }
+
+    private async void LaunchAppForSetup()
+    {
+        if (_serverConnection.IsConnected)
+            await _serverConnection.PostAsync("/manage/app/start");
+        else
+            await _processLauncher.LaunchAppAsync();
     }
 
     private async void OnOpenApp(object? sender, EventArgs e)

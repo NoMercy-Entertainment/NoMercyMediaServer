@@ -140,14 +140,27 @@ public static class Program
             }
         });
 
+        bool shouldRetry;
         if (startedWithoutCert)
         {
             Logger.App("Starting in HTTP mode — waiting for certificate acquisition...");
-            await RunWithHttpsRestart(app, options);
+            shouldRetry = await RunWithHttpsRestart(app, options);
         }
         else
         {
-            await RunHost(app);
+            shouldRetry = await RunHost(app);
+        }
+
+        if (shouldRetry)
+        {
+            Logger.App("Rebuilding server after port conflict resolution...");
+            _applicationShutdownCts = new();
+            Stopwatch retryStopWatch = new();
+            retryStopWatch.Start();
+
+            IWebHost retryHost = CreateWebHostBuilder(options).Build();
+            RegisterLifetimeEvents(retryHost, retryStopWatch);
+            await RunHost(retryHost);
         }
     }
 
@@ -179,7 +192,7 @@ public static class Program
         });
     }
 
-    private static async Task RunWithHttpsRestart(IWebHost httpHost, StartupOptions options)
+    private static async Task<bool> RunWithHttpsRestart(IWebHost httpHost, StartupOptions options)
     {
         SetupState setupState = httpHost.Services.GetRequiredService<SetupState>();
 
@@ -191,8 +204,9 @@ public static class Program
         catch (IOException ex) when (ex.InnerException is SocketException
                                      || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
         {
-            await HandlePortInUse(Config.InternalServerPort, ex);
-            return;
+            bool shouldRetry = await HandlePortInUse(Config.InternalServerPort, ex);
+            httpHost.Dispose();
+            return shouldRetry;
         }
 
         // Wait for either setup completion or shutdown
@@ -205,7 +219,7 @@ public static class Program
         {
             await httpHost.StopAsync(TimeSpan.FromSeconds(10));
             httpHost.Dispose();
-            return;
+            return false;
         }
 
         // Setup completed — certificate should now be available
@@ -214,7 +228,7 @@ public static class Program
             Logger.App("Setup completed but certificate not found — continuing on HTTP");
             await httpHost.WaitForShutdownAsync(_applicationShutdownCts.Token);
             httpHost.Dispose();
-            return;
+            return false;
         }
 
         Logger.App("Certificate acquired — restarting with HTTPS...");
@@ -233,10 +247,10 @@ public static class Program
         RegisterLifetimeEvents(httpsHost, restartStopWatch);
 
         Logger.App("HTTPS server starting...");
-        await RunHost(httpsHost);
+        return await RunHost(httpsHost);
     }
 
-    private static async Task RunHost(IWebHost host)
+    private static async Task<bool> RunHost(IWebHost host)
     {
         try
         {
@@ -252,15 +266,19 @@ public static class Program
         catch (IOException ex) when (ex.InnerException is SocketException
                                      || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
         {
-            await HandlePortInUse(Config.InternalServerPort, ex);
+            bool shouldRetry = await HandlePortInUse(Config.InternalServerPort, ex);
+            host.Dispose();
+            return shouldRetry;
         }
         catch (OperationCanceledException)
         {
             Logger.App("Shutdown completed");
         }
+
+        return false;
     }
 
-    private static async Task HandlePortInUse(int port, IOException ex)
+    private static async Task<bool> HandlePortInUse(int port, IOException ex)
     {
         Logger.Error($"Failed to start: port {port} is already in use.");
 
@@ -271,33 +289,52 @@ public static class Program
         else
             Logger.Warning($"Could not identify the process using port {port}.");
 
-        bool isInteractive = !IsRunningAsService && !Console.IsInputRedirected && !Console.IsOutputRedirected;
-
-        if (!isInteractive)
-        {
-            Logger.Error("Running non-interactively — cannot prompt to kill the blocking process. "
-                        + "Stop the other process manually and restart the server.");
-            Environment.ExitCode = 1;
-            return;
-        }
-
         int blockingPid = ParsePidFromPortInfo(processInfo);
 
         if (blockingPid <= 0)
         {
             Logger.Error("Could not determine the PID of the blocking process. Please free the port manually.");
             Environment.ExitCode = 1;
-            return;
+            return false;
         }
 
-        Console.Write($"\nWould you like to kill process {blockingPid} and retry? [y/N] ");
-        string? answer = Console.ReadLine();
-
-        if (string.IsNullOrEmpty(answer) || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase))
+        // Check if the blocking process is a stale instance of ourselves
+        bool isStaleInstance = false;
+        try
         {
-            Logger.App("User declined to kill the blocking process. Exiting.");
-            Environment.ExitCode = 1;
-            return;
+            Process blockingProcess = Process.GetProcessById(blockingPid);
+            isStaleInstance = blockingProcess.ProcessName == "NoMercyMediaServer";
+        }
+        catch
+        {
+            // Process may have exited between detection and lookup
+        }
+
+        if (isStaleInstance)
+        {
+            Logger.App($"Stale NoMercyMediaServer instance detected (PID {blockingPid}). Auto-killing...");
+        }
+        else
+        {
+            bool isInteractive = !IsRunningAsService && !Console.IsInputRedirected && !Console.IsOutputRedirected;
+
+            if (!isInteractive)
+            {
+                Logger.Error("Running non-interactively — cannot prompt to kill the blocking process. "
+                            + "Stop the other process manually and restart the server.");
+                Environment.ExitCode = 1;
+                return false;
+            }
+
+            Console.Write($"\nWould you like to kill process {blockingPid} and retry? [y/N] ");
+            string? answer = Console.ReadLine();
+
+            if (string.IsNullOrEmpty(answer) || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.App("User declined to kill the blocking process. Exiting.");
+                Environment.ExitCode = 1;
+                return false;
+            }
         }
 
         try
@@ -312,12 +349,13 @@ public static class Program
         {
             Logger.Error($"Failed to kill process {blockingPid}: {killEx.Message}");
             Environment.ExitCode = 1;
-            return;
+            return false;
         }
 
         // Brief pause so the OS releases the socket
         await Task.Delay(1000);
-        Logger.App("Port freed — please restart the server.");
+        Logger.App("Port freed — retrying...");
+        return true;
     }
 
     private static async Task<string> FindProcessOnPortAsync(int port)
