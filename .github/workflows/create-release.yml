@@ -31,6 +31,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v5
+
       - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
@@ -61,68 +63,104 @@ jobs:
           echo "=== Release artifacts ==="
           ls -la ./output/
 
-      - name: Get Short SHA
-        id: get_short_sha
-        run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+      - name: Write release notes
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          cat > ./release-notes.md << 'NOTES_END'
+          ## What's New
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.tag || format('v{0}', inputs.version) }}
-          name: ${{ inputs.release-name || format('NoMercy MediaServer v{0}', inputs.version) }}
-          body: |
-            ## What's New
+          This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
 
-            This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
+          ## Components
 
-            ## Components
+          | Component | Description |
+          |-----------|-------------|
+          | **NoMercyMediaServer** | Media server backend |
+          | **NoMercyMediaServerService** | System tray app for managing the server |
+          | **NoMercyApp** | Web UI host |
+          | **nomercy** | Command-line tool |
 
-            | Component | Description |
-            |-----------|-------------|
-            | **NoMercyMediaServer** | Media server backend |
-            | **NoMercyMediaServerService** | System tray app for managing the server |
-            | **NoMercyApp** | Web UI host |
-            | **nomercy** | Command-line tool |
+          ## Downloads
 
-            ## Downloads
+          ### Windows
+          - **Installer** (x64): `NoMercyMediaServer-*-windows-x64-setup.exe` — includes server, tray app, and CLI
+          - **Standalone executables** (x64): individual `.exe` files for each component
 
-            ### Windows
-            - **Installer** (x64): `NoMercyMediaServer-*-windows-x64-setup.exe` — includes server, tray app, and CLI
-            - **Standalone executables** (x64): individual `.exe` files for each component
+          ### macOS
+          - **Installer** (x64): `.pkg` — includes server, tray app, and CLI
+          - **App bundles** (x64): `.tar.gz` and `.dmg` files
+          - **CLI**: `nomercy-macos-x64` binary
 
-            ### macOS
-            - **Installer** (x64): `.pkg` — includes server, tray app, and CLI
-            - **App bundles** (x64): `.tar.gz` and `.dmg` files
-            - **CLI**: `nomercy-macos-x64` binary
+          ### Linux
+          - **Standalone binaries** (x64): `NoMercyMediaServer-linux-x64`, `NoMercyMediaServerService-linux-x64`, `nomercy-linux-x64`
+          - **Debian/Ubuntu**: `.deb` packages — install via `sudo apt install ./nomercymediaserver_*.deb`
+          - **Fedora/RHEL/CentOS**: `.rpm` packages — install via `sudo dnf install ./nomercymediaserver-*.rpm`
+          - **Arch Linux**: `.pkg.tar.zst` packages — install via `sudo pacman -U nomercymediaserver-*.pkg.tar.zst`
 
-            ### Linux
-            - **Standalone binaries** (x64): `NoMercyMediaServer-linux-x64`, `NoMercyMediaServerService-linux-x64`, `nomercy-linux-x64`
-            - **Debian/Ubuntu**: `.deb` packages — install via `sudo apt install ./nomercymediaserver_*.deb`
-            - **Fedora/RHEL/CentOS**: `.rpm` packages — install via `sudo dnf install ./nomercymediaserver-*.rpm`
-            - **Arch Linux**: `.pkg.tar.zst` packages — install via `sudo pacman -U nomercymediaserver-*.pkg.tar.zst`
+          ### Package Repository
 
-            ### Package Repository
+          For automatic updates, add our repository instead of downloading manually: **https://repo.nomercy.tv**
 
-            For automatic updates, add our repository instead of downloading manually: **https://repo.nomercy.tv**
+          See the [README](https://github.com/NoMercy-Entertainment/NoMercyMediaServer#installation) for setup instructions per distro.
 
-            See the [README](https://github.com/NoMercy-Entertainment/NoMercyMediaServer#installation) for setup instructions per distro.
+          ## Feedback
 
-            ## Feedback
+          If you encounter any issues, please [open an issue](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/issues).
+          NOTES_END
+          echo "" >> ./release-notes.md
+          echo "---" >> ./release-notes.md
+          echo "Build: \`${SHORT_SHA}\`" >> ./release-notes.md
 
-            If you encounter any issues, please [open an issue](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/issues).
-
-            ---
-            Build: `${{ steps.get_short_sha.outputs.short_sha }}`
-          draft: ${{ inputs.draft }}
-          prerelease: ${{ inputs.prerelease }}
-          files: |
-            ./output/NoMercyMediaServer-*
-            ./output/NoMercyApp-*
-            ./output/NoMercyMediaServerService-*
-            ./output/nomercy-*
-            ./output/*.deb
-            ./output/*.rpm
-            ./output/*.pkg.tar.zst
-            ./output/*.pkg
+      - name: Create Release and Upload Assets
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.tag || format('v{0}', inputs.version) }}"
+          NAME="${{ inputs.release-name || format('NoMercy MediaServer v{0}', inputs.version) }}"
+
+          # Build gh release create flags
+          FLAGS=(--title "$NAME" --notes-file ./release-notes.md)
+
+          if [ "${{ inputs.draft }}" = "true" ]; then
+            FLAGS+=(--draft)
+          fi
+
+          if [ "${{ inputs.prerelease }}" = "true" ]; then
+            FLAGS+=(--prerelease)
+          fi
+
+          # Create the release (without files)
+          gh release create "$TAG" "${FLAGS[@]}" --target "$GITHUB_SHA"
+          echo "Release created: $TAG"
+
+          # Upload assets with retry logic
+          FAILED=0
+          for file in ./output/*; do
+            [ -f "$file" ] || continue
+            BASENAME=$(basename "$file")
+            echo "⬆️ Uploading $BASENAME..."
+
+            SUCCESS=false
+            for i in 1 2 3; do
+              if gh release upload "$TAG" "$file" --clobber 2>&1; then
+                echo "✅ Uploaded $BASENAME"
+                SUCCESS=true
+                break
+              else
+                echo "⚠️ Upload attempt $i/3 failed for $BASENAME"
+                sleep $((i * 2))
+              fi
+            done
+
+            if [ "$SUCCESS" != "true" ]; then
+              echo "❌ Failed to upload $BASENAME after 3 attempts"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::$FAILED asset(s) failed to upload"
+            exit 1
+          fi
+
+          echo "All assets uploaded successfully"
