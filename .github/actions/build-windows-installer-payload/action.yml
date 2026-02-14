@@ -77,13 +77,13 @@ runs:
           exit 1
         fi
 
-    - name: Publish App (single-file)
+    - name: Publish App (shared runtime)
       shell: pwsh
       run: |
         dotnet publish ./src/NoMercy.App/NoMercy.App.csproj `
-          --configuration Release --runtime win-x64 `
-          --output ./app-publish
-        Copy-Item ./app-publish/NoMercyApp.exe ./installer-payload/
+          --configuration Release --runtime win-x64 --self-contained true `
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false `
+          --output ./installer-payload
 
     - name: List payload
       shell: pwsh
