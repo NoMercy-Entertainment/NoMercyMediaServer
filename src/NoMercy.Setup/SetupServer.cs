@@ -83,7 +83,7 @@ public class SetupServer
         }
     }
 
-    internal async Task HandleRequest(HttpContext context)
+    public async Task HandleRequest(HttpContext context)
     {
         string path = context.Request.Path.Value?.TrimEnd('/') ?? "";
 

@@ -226,8 +226,9 @@ public static class ServiceConfiguration
 
     private static void ConfigureCoreServices(IServiceCollection services)
     {
-        // Setup state — singleton shared between middleware and setup flow
+        // Setup state and server — singletons shared between middleware and setup flow
         services.AddSingleton<SetupState>();
+        services.AddSingleton(sp => new SetupServer(sp.GetRequiredService<SetupState>()));
 
         // Add Memory Cache with size limit to prevent unbounded growth
         services.AddMemoryCache(options =>

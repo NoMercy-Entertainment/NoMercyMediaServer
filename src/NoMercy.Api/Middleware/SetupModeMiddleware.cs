@@ -9,19 +9,25 @@ public class SetupModeMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly SetupState _setupState;
+    private readonly SetupServer _setupServer;
 
-    private static readonly string[] SetupRoutes =
+    private static readonly string[] SetupHandledRoutes =
     [
         "/setup",
-        "/sso-callback",
+        "/sso-callback"
+    ];
+
+    private static readonly string[] PassthroughRoutes =
+    [
         "/health",
         "/manage"
     ];
 
-    public SetupModeMiddleware(RequestDelegate next, SetupState setupState)
+    public SetupModeMiddleware(RequestDelegate next, SetupState setupState, SetupServer setupServer)
     {
         _next = next;
         _setupState = setupState;
+        _setupServer = setupServer;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -35,22 +41,27 @@ public class SetupModeMiddleware
         string path = context.Request.Path.Value?.TrimEnd('/') ?? "";
         string pathLower = path.ToLowerInvariant();
 
-        bool isSetupRoute = false;
-        foreach (string route in SetupRoutes)
+        // Routes handled directly by the setup server (no auth needed)
+        foreach (string route in SetupHandledRoutes)
         {
             if (pathLower == route || pathLower.StartsWith(route + "/"))
             {
-                isSetupRoute = true;
-                break;
+                await _setupServer.HandleRequest(context);
+                return;
             }
         }
 
-        if (isSetupRoute)
+        // Routes that pass through to the normal pipeline
+        foreach (string route in PassthroughRoutes)
         {
-            await _next(context);
-            return;
+            if (pathLower == route || pathLower.StartsWith(route + "/"))
+            {
+                await _next(context);
+                return;
+            }
         }
 
+        // Everything else is blocked during setup
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
 
