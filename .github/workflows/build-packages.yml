@@ -95,7 +95,6 @@ jobs:
         uses: ./.github/actions/build-windows-installer
         with:
           version: ${{ inputs.version }}
-          artifacts-path: './output'
 
       - name: Build macOS installer
         if: matrix.package-type == 'macos-installer'

@@ -1,0 +1,53 @@
+name: 'Build Windows Installer Payload'
+description: 'Publish all projects into shared runtime directory for Windows installer'
+inputs:
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '9.0.x'
+outputs:
+  payload-path:
+    description: 'Path to the shared runtime output'
+    value: ./installer-payload
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Restore
+      shell: pwsh
+      run: dotnet restore NoMercy.Server.sln
+
+    - name: Publish Service (shared runtime)
+      shell: pwsh
+      run: |
+        dotnet publish ./src/NoMercy.Service/NoMercy.Service.csproj `
+          --configuration Release --runtime win-x64 --self-contained true `
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false `
+          --output ./installer-payload
+
+    - name: Publish Tray (shared runtime)
+      shell: pwsh
+      run: |
+        dotnet publish ./src/NoMercy.Tray/NoMercy.Tray.csproj `
+          --configuration Release --runtime win-x64 --self-contained true `
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false `
+          --output ./installer-payload
+
+    - name: Publish CLI (shared runtime)
+      shell: pwsh
+      run: |
+        dotnet publish ./src/NoMercy.Cli/NoMercy.Cli.csproj `
+          --configuration Release --runtime win-x64 --self-contained true `
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false `
+          --output ./installer-payload
+
+    - name: List payload
+      shell: pwsh
+      run: |
+        $files = Get-ChildItem ./installer-payload -Recurse
+        Write-Host "Payload: $($files.Count) files, $(($files | Measure-Object -Property Length -Sum).Sum / 1MB)MB total"

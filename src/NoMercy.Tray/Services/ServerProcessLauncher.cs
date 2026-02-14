@@ -20,6 +20,7 @@ public class ServerProcessLauncher
 
         ProcessStartInfo? startInfo =
             CreateProductionStartInfo()
+            ?? CreateInstalledStartInfo()
             ?? CreateDevBinaryStartInfo()
             ?? CreateDotnetRunStartInfo();
 
@@ -49,6 +50,26 @@ public class ServerProcessLauncher
             return null;
 
         return new(exePath)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+    }
+
+    private static ProcessStartInfo? CreateInstalledStartInfo()
+    {
+        string? ownDir = Path.GetDirectoryName(
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+
+        if (ownDir is null)
+            return null;
+
+        string candidate = Path.Combine(ownDir, "NoMercyMediaServer" + Info.ExecSuffix);
+
+        if (!File.Exists(candidate))
+            return null;
+
+        return new(candidate)
         {
             UseShellExecute = false,
             CreateNoWindow = true
@@ -123,6 +144,7 @@ public class ServerProcessLauncher
     {
         ProcessStartInfo? startInfo =
             CreateAppProductionStartInfo()
+            ?? CreateAppInstalledStartInfo()
             ?? CreateAppDevBinaryStartInfo()
             ?? CreateAppDotnetRunStartInfo();
 
@@ -142,6 +164,25 @@ public class ServerProcessLauncher
             return null;
 
         return new(exePath)
+        {
+            UseShellExecute = false
+        };
+    }
+
+    private static ProcessStartInfo? CreateAppInstalledStartInfo()
+    {
+        string? ownDir = Path.GetDirectoryName(
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+
+        if (ownDir is null)
+            return null;
+
+        string candidate = Path.Combine(ownDir, "NoMercyApp" + Info.ExecSuffix);
+
+        if (!File.Exists(candidate))
+            return null;
+
+        return new(candidate)
         {
             UseShellExecute = false
         };

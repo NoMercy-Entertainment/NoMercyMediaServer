@@ -35,9 +35,16 @@ Name: "service"; Description: "NoMercy MediaServer Service (system tray control)
 Name: "cli"; Description: "NoMercy CLI (command-line tool)"; Types: full
 
 [Files]
-Source: "artifacts\NoMercyMediaServer-windows-x64.exe"; DestDir: "{app}"; DestName: "NoMercyMediaServer.exe"; Components: server; Flags: ignoreversion
-Source: "artifacts\NoMercyMediaServerService-windows-x64.exe"; DestDir: "{app}"; DestName: "NoMercyMediaServerService.exe"; Components: service; Flags: ignoreversion
-Source: "artifacts\nomercy-windows-x64.exe"; DestDir: "{app}"; DestName: "nomercy.exe"; Components: cli; Flags: ignoreversion
+; Shared runtime and dependencies (always installed with server)
+Source: "..\..\installer-payload\*.dll"; DestDir: "{app}"; Components: server; Flags: ignoreversion
+Source: "..\..\installer-payload\*.json"; DestDir: "{app}"; Components: server; Flags: ignoreversion
+
+; Main executables per component
+Source: "..\..\installer-payload\NoMercyMediaServer.exe"; DestDir: "{app}"; Components: server; Flags: ignoreversion
+Source: "..\..\installer-payload\NoMercyMediaServerService.exe"; DestDir: "{app}"; Components: service; Flags: ignoreversion
+Source: "..\..\installer-payload\nomercy.exe"; DestDir: "{app}"; Components: cli; Flags: ignoreversion
+
+; Icon
 Source: "..\..\assets\icons\icon.ico"; DestDir: "{app}"; DestName: "icon.ico"; Flags: ignoreversion
 
 [Icons]

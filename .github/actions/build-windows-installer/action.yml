@@ -1,17 +1,22 @@
 name: 'Build Windows Installer'
-description: 'Build Windows installer using Inno Setup'
+description: 'Build Windows installer using Inno Setup with shared runtime'
 inputs:
   version:
     description: 'Package version'
     required: true
-  artifacts-path:
-    description: 'Path to build artifacts'
-    required: true
-    default: './output'
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '9.0.x'
 
 runs:
   using: 'composite'
   steps:
+    - name: Build shared runtime payload
+      uses: ./.github/actions/build-windows-installer-payload
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
     - name: Install Inno Setup
       shell: pwsh
       run: |
@@ -30,33 +35,6 @@ runs:
           Write-Error "Inno Setup installation failed - ISCC.exe not found"
           exit 1
         }
-
-    - name: Prepare installer artifacts
-      shell: pwsh
-      run: |
-        $IssDir = "./src/NoMercy.Service"
-        $ArtifactsPath = "${{ inputs.artifacts-path }}"
-
-        New-Item -ItemType Directory -Force -Path "$IssDir/artifacts" | Out-Null
-
-        $files = @(
-          "NoMercyMediaServer-windows-x64.exe",
-          "NoMercyMediaServerService-windows-x64.exe",
-          "nomercy-windows-x64.exe"
-        )
-
-        foreach ($file in $files) {
-          $src = Join-Path $ArtifactsPath $file
-          if (Test-Path $src) {
-            Copy-Item $src "$IssDir/artifacts/"
-            Write-Host "Copied: $file"
-          } else {
-            Write-Warning "Not found: $file"
-          }
-        }
-
-        Write-Host "Prepared installer artifacts:"
-        Get-ChildItem "$IssDir/artifacts/"
 
     - name: Build Windows Installer
       shell: pwsh
