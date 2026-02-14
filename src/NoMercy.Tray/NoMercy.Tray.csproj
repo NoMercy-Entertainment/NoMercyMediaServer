@@ -49,4 +49,10 @@
         </None>
     </ItemGroup>
 
+    <ItemGroup>
+        <EmbeddedResource Include="..\..\assets\icons\icon.png" Link="Assets\icon.embedded.png">
+            <LogicalName>NoMercy.Tray.icon.png</LogicalName>
+        </EmbeddedResource>
+    </ItemGroup>
+
 </Project>

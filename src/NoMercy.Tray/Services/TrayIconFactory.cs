@@ -54,6 +54,15 @@ public static class TrayIconFactory
             return _baseIcon;
         }
 
+        Stream? resourceStream = typeof(TrayIconFactory).Assembly
+            .GetManifestResourceStream("NoMercy.Tray.icon.png");
+
+        if (resourceStream is not null)
+        {
+            _baseIcon = new(resourceStream);
+            return _baseIcon;
+        }
+
         _baseIcon = CreateFallbackIcon();
         return _baseIcon;
     }
