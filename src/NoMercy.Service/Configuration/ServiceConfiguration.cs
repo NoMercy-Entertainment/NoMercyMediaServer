@@ -490,7 +490,8 @@ public static class ServiceConfiguration
                         "https://nomercy.tv",
                         "https://*.nomercy.tv",
                         "https://cast.nomercy.tv",
-                        "https://hlsjs.video-dev.org"
+                        "https://hlsjs.video-dev.org",
+                        "http://localhost:7625"
                     ];
 
                     if (Config.IsDev)
@@ -499,7 +500,6 @@ public static class ServiceConfiguration
                         origins.Add("http://192.168.2.201:5502");
                         origins.Add("http://192.168.2.201:5503");
                         origins.Add("http://localhost");
-                        origins.Add("http://localhost:7625");
                         origins.Add("https://localhost");
                     }
 
