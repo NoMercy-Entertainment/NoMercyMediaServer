@@ -177,9 +177,17 @@ public static class ApplicationConfiguration
 
     private static void ConfigureDynamicStaticFiles(IApplicationBuilder app)
     {
-        using MediaContext mediaContext = new();
-        List<Folder> folderLibraries = mediaContext.Folders.ToList();
-        foreach (Folder folder in folderLibraries.Where(folder => Directory.Exists(folder.Path)))
-            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+        try
+        {
+            using MediaContext mediaContext = new();
+            List<Folder> folderLibraries = mediaContext.Folders.ToList();
+            foreach (Folder folder in folderLibraries.Where(folder => Directory.Exists(folder.Path)))
+                DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException)
+        {
+            // Database not yet initialized (fresh install) — folders will be
+            // registered when libraries are created after seeding completes.
+        }
     }
 }
