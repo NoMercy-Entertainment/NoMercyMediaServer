@@ -65,89 +65,36 @@ jobs:
 
       - name: Write release notes
         run: |
+          VERSION="${{ inputs.version }}"
+          TAG="${{ inputs.tag || format('v{0}', inputs.version) }}"
           SHORT_SHA="${GITHUB_SHA::7}"
-          cat > ./release-notes.md << 'NOTES_END'
+          REPO="https://github.com/NoMercy-Entertainment/NoMercyMediaServer"
+          DL="${REPO}/releases/download/${TAG}"
+
+          cat > ./release-notes.md << NOTES_END
+          ## Install
+
+          | Platform | Download |
+          |----------|----------|
+          | **Windows** | [NoMercyMediaServer-${VERSION}-windows-x64-setup.exe](${DL}/NoMercyMediaServer-${VERSION}-windows-x64-setup.exe) |
+          | **macOS** | [NoMercyMediaServer-${VERSION}-macos-x64-setup.pkg](${DL}/NoMercyMediaServer-${VERSION}-macos-x64-setup.pkg) |
+          | **Linux** | [repo.nomercy.tv](https://repo.nomercy.tv) — see [setup instructions](${REPO}#installation) |
+
           ## What's New
 
-          This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
+          Latest features, improvements, and bug fixes for NoMercy MediaServer.
 
-          ## Components
+          ## All Assets
 
-          | Component | Description |
-          |-----------|-------------|
-          | **NoMercyMediaServer** | Media server backend |
-          | **NoMercyMediaServerService** | System tray app for managing the server |
-          | **NoMercyApp** | Web UI host |
-          | **nomercy** | Command-line tool |
-
-          ## Quick Install
-
-          ### Windows (recommended)
-          Download and run **`NoMercyMediaServer-*-windows-x64-setup.exe`** from the assets below.
-
-          ### macOS (recommended)
-          Download and run **`NoMercyMediaServer-*-macos-x64-setup.pkg`** from the assets below.
-
-          ### Debian / Ubuntu (recommended)
-          ```bash
-          curl -fsSL https://repo.nomercy.tv/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/nomercy.gpg
-          echo "deb [signed-by=/usr/share/keyrings/nomercy.gpg] https://repo.nomercy.tv/apt stable main" | sudo tee /etc/apt/sources.list.d/nomercy.list
-          sudo apt update && sudo apt install nomercy
-          ```
-
-          ### Fedora / RHEL / CentOS (recommended)
-          ```bash
-          sudo tee /etc/yum.repos.d/nomercy.repo << 'EOF'
-          [nomercy]
-          name=NoMercy MediaServer
-          baseurl=https://repo.nomercy.tv/rpm
-          enabled=1
-          gpgcheck=1
-          gpgkey=https://repo.nomercy.tv/gpg.key
-          EOF
-          sudo dnf install nomercy
-          ```
-
-          ### Arch Linux (recommended)
-          ```bash
-          sudo tee -a /etc/pacman.conf << 'EOF'
-          [nomercy]
-          SigLevel = Optional TrustAll
-          Server = https://repo.nomercy.tv/arch/pool/x86_64
-          EOF
-          sudo pacman -Sy nomercy
-          ```
-
-          ## All Downloads
-
-          ### Windows
-          - **Installer** (x64): `NoMercyMediaServer-*-windows-x64-setup.exe` — includes server, app, tray service, and CLI
-          - **Standalone executables** (x64): individual `.exe` files for each component
-
-          ### macOS
-          - **Installer** (x64): `.pkg` — includes server, app, tray service, and CLI
-          - **App bundles** (x64): `.tar.gz` and `.dmg` files
-          - **CLI**: `nomercy-macos-x64` binary
-
-          ### Linux
-          - **Standalone binaries** (x64): `NoMercyMediaServer-linux-x64`, `NoMercyMediaServerService-linux-x64`, `NoMercyApp-linux-x64`, `nomercy-linux-x64`
-          - **Debian/Ubuntu**: `.deb` package — or install from the assets: `sudo apt install ./nomercy_*.deb`
-          - **Fedora/RHEL/CentOS**: `.rpm` package — or install from the assets: `sudo dnf install ./nomercy-*.rpm`
-          - **Arch Linux**: `.pkg.tar.zst` package — or install from the assets: `sudo pacman -U nomercy-*.pkg.tar.zst`
-
-          ### Package Repository
-
-          For automatic updates, add our repository instead of downloading manually: **https://repo.nomercy.tv**
-
-          See the [README](https://github.com/NoMercy-Entertainment/NoMercyMediaServer#installation) for full setup instructions.
+          All standalone binaries and Linux packages (.deb, .rpm, .pkg.tar.zst) are available in the assets below.
 
           ## Feedback
 
-          If you encounter any issues, please [open an issue](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/issues).
+          Found a bug? [Open an issue](${REPO}/issues).
+
+          ---
+          Build: \`${SHORT_SHA}\`
           NOTES_END
-          echo "" >> ./release-notes.md
-          echo "---" >> ./release-notes.md
-          echo "Build: \`${SHORT_SHA}\`" >> ./release-notes.md
 
       - name: Create Release and Upload Assets
         env:
