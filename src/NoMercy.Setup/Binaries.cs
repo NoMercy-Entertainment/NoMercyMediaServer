@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FileSystem;
@@ -16,7 +17,7 @@ namespace NoMercy.Setup;
 public static class Binaries
 {
     private static readonly HttpClient HttpClient = new();
-    
+
     private const string GithubMediaServerApiUrl    = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyMediaServer/releases/latest";
     private const string GithubFfmpegApiUrl         = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyFFMpeg/releases/latest";
     private const string GithubTesseractApiUrl      = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyTesseract/releases/latest";
@@ -28,6 +29,17 @@ public static class Binaries
     static Binaries()
     {
         HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+    }
+
+    private static bool ExistsInInstalledDirectory(string executableName)
+    {
+        string? ownDir = Path.GetDirectoryName(
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+
+        if (ownDir is null)
+            return false;
+
+        return File.Exists(Path.Combine(ownDir, executableName));
     }
 
     public static Task DownloadAll()
@@ -87,6 +99,12 @@ public static class Binaries
     
     private static async Task DownloadApp()
     {
+        if (ExistsInInstalledDirectory("NoMercyApp" + Info.ExecSuffix))
+        {
+            Logger.Setup("App found in installed directory, skipping download", LogEventLevel.Verbose);
+            return;
+        }
+
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
@@ -140,6 +158,12 @@ public static class Binaries
 
     private static async Task DownloadService()
     {
+        if (ExistsInInstalledDirectory("NoMercyMediaServerService" + Info.ExecSuffix))
+        {
+            Logger.Setup("Service found in installed directory, skipping download", LogEventLevel.Verbose);
+            return;
+        }
+
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
@@ -193,6 +217,12 @@ public static class Binaries
 
     private static async Task DownloadCli()
     {
+        if (ExistsInInstalledDirectory("nomercy" + Info.ExecSuffix))
+        {
+            Logger.Setup("CLI found in installed directory, skipping download", LogEventLevel.Verbose);
+            return;
+        }
+
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
