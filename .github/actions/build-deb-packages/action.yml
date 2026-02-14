@@ -1,17 +1,22 @@
 name: 'Build DEB Packages'
-description: 'Build Debian/Ubuntu packages'
+description: 'Build Debian/Ubuntu packages with shared runtime'
 inputs:
   version:
     description: 'Package version'
     required: true
-  artifacts-path:
-    description: 'Path to build artifacts'
-    required: true
-    default: './output'
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '9.0.x'
 
 runs:
   using: 'composite'
   steps:
+    - name: Build shared runtime payload
+      uses: ./.github/actions/build-linux-installer-payload
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
     - name: Install DEB build dependencies
       shell: bash
       run: |
@@ -22,194 +27,78 @@ runs:
       shell: bash
       run: |
         VERSION="${{ inputs.version }}"
-        ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
-        
-        # Function to create DEB package
-        create_deb_package() {
-          local name=$1
-          local friendly_name=$2
-          local bin_file=$3
-          local desktop_file=$4
-          local bin_path="$ARTIFACTS_PATH/$bin_file"
-          local PACKAGE_ROOT="./packages/debian-${name}"
+        PAYLOAD_PATH="./installer-payload"
+        INSTALL_DIR="/opt/nomercy"
 
-          # Validate source files exist
-          if [ ! -f "$bin_path" ]; then
-            echo "ERROR: Binary file not found: $bin_path"
-            return 1
-          fi
-          
-          if [ ! -f "./assets/linux/$desktop_file" ]; then
-            echo "ERROR: Desktop file not found: ./assets/linux/$desktop_file"
-            return 1
-          fi
+        # --- Main package: nomercy (shared runtime + all executables) ---
+        PACKAGE_ROOT="./packages/debian-nomercy"
+        rm -rf "${PACKAGE_ROOT}"
 
-          # Clean up any existing package directory
-          rm -rf "${PACKAGE_ROOT}"
-        
-          # Create directory structure
-          mkdir -p "${PACKAGE_ROOT}/DEBIAN"
-          mkdir -p "${PACKAGE_ROOT}/usr/bin"
-          mkdir -p "${PACKAGE_ROOT}/usr/share/applications"
-          mkdir -p "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps"
-          mkdir -p "${PACKAGE_ROOT}/usr/lib/systemd/user"
-          mkdir -p "${PACKAGE_ROOT}/usr/share/doc/${name}"
-    
-          # Copy binary with proper installation method
-          install -Dm755 "${bin_path}" "${PACKAGE_ROOT}/usr/bin/${name}"
-    
-          # Copy desktop file
-          install -Dm644 "./assets/linux/${desktop_file}" "${PACKAGE_ROOT}/usr/share/applications/"
-    
-          # Copy icon
-          install -Dm644 "./assets/icons/icon.png" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
-    
-          # Create systemd service file (use /usr/lib not /lib)
-          cat > "${PACKAGE_ROOT}/usr/lib/systemd/user/${name}.service" << EOF
+        mkdir -p "${PACKAGE_ROOT}/DEBIAN"
+        mkdir -p "${PACKAGE_ROOT}${INSTALL_DIR}"
+        mkdir -p "${PACKAGE_ROOT}/usr/bin"
+        mkdir -p "${PACKAGE_ROOT}/usr/share/applications"
+        mkdir -p "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps"
+        mkdir -p "${PACKAGE_ROOT}/usr/lib/systemd/user"
+        mkdir -p "${PACKAGE_ROOT}/usr/share/doc/nomercy"
+
+        # Copy entire shared runtime payload
+        cp -R "${PAYLOAD_PATH}/"* "${PACKAGE_ROOT}${INSTALL_DIR}/"
+        chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/NoMercyMediaServer"
+        chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/NoMercyMediaServerService"
+        chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/nomercy"
+
+        # Create symlinks in /usr/bin
+        ln -s "${INSTALL_DIR}/NoMercyMediaServer" "${PACKAGE_ROOT}/usr/bin/nomercymediaserver"
+        ln -s "${INSTALL_DIR}/NoMercyMediaServerService" "${PACKAGE_ROOT}/usr/bin/nomercymediaserverservice"
+        ln -s "${INSTALL_DIR}/nomercy" "${PACKAGE_ROOT}/usr/bin/nomercy"
+
+        # Copy desktop files
+        for df in NoMercy-MediaServer.desktop NoMercy-MediaServer-Service.desktop; do
+          if [ -f "./assets/linux/${df}" ]; then
+            install -Dm644 "./assets/linux/${df}" "${PACKAGE_ROOT}/usr/share/applications/"
+          fi
+        done
+
+        # Copy icon
+        install -Dm644 "./assets/icons/icon.png" \
+          "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png"
+
+        # Create systemd service files
+        cat > "${PACKAGE_ROOT}/usr/lib/systemd/user/nomercymediaserver.service" << 'EOF'
         [Unit]
-        Description=${friendly_name} Service
+        Description=NoMercy MediaServer
         After=network.target
-  
+
         [Service]
         Type=simple
-        ExecStart=/usr/bin/${name}
+        ExecStart=/opt/nomercy/NoMercyMediaServer
         Restart=on-failure
         RestartSec=5
-  
+
         [Install]
         WantedBy=default.target
         EOF
-        
-          chmod 644 "${PACKAGE_ROOT}/usr/lib/systemd/user/${name}.service"
+        chmod 644 "${PACKAGE_ROOT}/usr/lib/systemd/user/nomercymediaserver.service"
 
-          # Create copyright file (Debian requirement)
-          cat > "${PACKAGE_ROOT}/usr/share/doc/${name}/copyright" << EOF
-        Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-        Upstream-Name: ${friendly_name}
-        Source: https://nomercy.tv
+        cat > "${PACKAGE_ROOT}/usr/lib/systemd/user/nomercymediaserverservice.service" << 'EOF'
+        [Unit]
+        Description=NoMercy MediaServer Service (Tray)
+        After=network.target
 
-        Files: *
-        Copyright: $(date +%Y) NoMercy Entertainment
-        License: Proprietary
-         This is proprietary software.
-         .
-         All rights reserved.
+        [Service]
+        Type=simple
+        ExecStart=/opt/nomercy/NoMercyMediaServerService
+        Restart=on-failure
+        RestartSec=5
+
+        [Install]
+        WantedBy=default.target
         EOF
-        
-          # Create control file with better dependencies
-          cat > "${PACKAGE_ROOT}/DEBIAN/control" << EOF
-        Package: ${name}
-        Version: ${VERSION}
-        Architecture: amd64
-        Maintainer: NoMercy Entertainment <support@nomercy.tv>
-        Description: ${friendly_name}
-         Modern Media Server Solution
-        Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
-        Recommends: systemd
-        Priority: optional
-        Section: multimedia
-        EOF
-    
-          # Create postinst script
-          cat > "${PACKAGE_ROOT}/DEBIAN/postinst" << EOF
-        #!/bin/sh
-        set -e
-        
-        # Update icon cache if available
-        if command -v update-icon-caches >/dev/null 2>&1; then
-            update-icon-caches /usr/share/icons/hicolor >/dev/null 2>&1 || true
-        fi
-        
-        # Update desktop database if available
-        if command -v update-desktop-database >/dev/null 2>&1; then
-            update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
-        fi
-        
-        # Reload systemd user daemon if systemd is available
-        if command -v systemctl >/dev/null 2>&1; then
-            systemctl --user daemon-reload >/dev/null 2>&1 || true
-        fi
-        
-        exit 0
-        EOF
-          chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst"
-          
-          # Create prerm script (fix variable substitution)
-          cat > "${PACKAGE_ROOT}/DEBIAN/prerm" << EOF
-        #!/bin/sh
-        set -e
-        
-        # Stop and disable service if systemd is available
-        if command -v systemctl >/dev/null 2>&1; then
-            systemctl --user stop ${name}.service >/dev/null 2>&1 || true
-            systemctl --user disable ${name}.service >/dev/null 2>&1 || true
-        fi
-        
-        exit 0
-        EOF
-          chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm"
+        chmod 644 "${PACKAGE_ROOT}/usr/lib/systemd/user/nomercymediaserverservice.service"
 
-          # Create postrm script for cleanup
-          cat > "${PACKAGE_ROOT}/DEBIAN/postrm" << EOF
-        #!/bin/sh
-        set -e
-        
-        if [ "\$1" = "purge" ]; then
-            # Update icon cache if available
-            if command -v update-icon-caches >/dev/null 2>&1; then
-                update-icon-caches /usr/share/icons/hicolor >/dev/null 2>&1 || true
-            fi
-            
-            # Update desktop database if available
-            if command -v update-desktop-database >/dev/null 2>&1; then
-                update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
-            fi
-        fi
-        
-        exit 0
-        EOF
-          chmod 755 "${PACKAGE_ROOT}/DEBIAN/postrm"
-
-          # Build package
-          dpkg-deb --build "${PACKAGE_ROOT}"
-    
-          # Create package directory and move package
-          mkdir -p "./packages/apt/pool/main/n/${name}"
-          mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/${name}/${name}_${VERSION}_amd64.deb"
-          
-          # Create symlink
-          cd "./packages/apt/pool/main/n/${name}"
-          ln -sf "${name}_${VERSION}_amd64.deb" "${name}_latest_amd64.deb"
-          cd ../../../../../..
-          
-          echo "Successfully created DEB package for ${name}"
-        }
-  
-        # Build packages
-        create_deb_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
-        create_deb_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
-        create_deb_package "nomercymediaserverservice" "NoMercy-MediaServer-Service" "NoMercyMediaServerService-linux-x64" "NoMercy-MediaServer-Service.desktop"
-        create_deb_package "nomercy-cli" "NoMercy-CLI" "nomercy-linux-x64" "NoMercy-MediaServer.desktop"
-
-        # Build meta-package
-        META_ROOT="./packages/debian-nomercy"
-        rm -rf "${META_ROOT}"
-        mkdir -p "${META_ROOT}/DEBIAN"
-        mkdir -p "${META_ROOT}/usr/share/doc/nomercy"
-
-        cat > "${META_ROOT}/DEBIAN/control" << EOF
-        Package: nomercy
-        Version: ${VERSION}
-        Architecture: all
-        Maintainer: NoMercy Entertainment <support@nomercy.tv>
-        Description: NoMercy MediaServer - complete installation
-         Meta-package that installs the NoMercy MediaServer, Service application, and CLI tool.
-        Depends: nomercymediaserver (= ${VERSION}), nomercymediaserverservice (= ${VERSION}), nomercy-cli (= ${VERSION})
-        Priority: optional
-        Section: multimedia
-        EOF
-
-        cat > "${META_ROOT}/usr/share/doc/nomercy/copyright" << EOF
+        # Copyright file
+        cat > "${PACKAGE_ROOT}/usr/share/doc/nomercy/copyright" << EOF
         Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
         Upstream-Name: NoMercy MediaServer
         Source: https://nomercy.tv
@@ -222,13 +111,75 @@ runs:
          All rights reserved.
         EOF
 
-        dpkg-deb --build "${META_ROOT}"
+        # Control file
+        cat > "${PACKAGE_ROOT}/DEBIAN/control" << EOF
+        Package: nomercy
+        Version: ${VERSION}
+        Architecture: amd64
+        Maintainer: NoMercy Entertainment <support@nomercy.tv>
+        Description: NoMercy MediaServer - complete installation
+         Modern Media Server Solution with server, tray service, and CLI tool.
+        Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
+        Recommends: systemd
+        Priority: optional
+        Section: multimedia
+        EOF
+
+        # postinst
+        cat > "${PACKAGE_ROOT}/DEBIAN/postinst" << 'EOF'
+        #!/bin/sh
+        set -e
+        if command -v update-icon-caches >/dev/null 2>&1; then
+            update-icon-caches /usr/share/icons/hicolor >/dev/null 2>&1 || true
+        fi
+        if command -v update-desktop-database >/dev/null 2>&1; then
+            update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+        fi
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl --user daemon-reload >/dev/null 2>&1 || true
+        fi
+        exit 0
+        EOF
+        chmod 755 "${PACKAGE_ROOT}/DEBIAN/postinst"
+
+        # prerm
+        cat > "${PACKAGE_ROOT}/DEBIAN/prerm" << 'EOF'
+        #!/bin/sh
+        set -e
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl --user stop nomercymediaserver.service >/dev/null 2>&1 || true
+            systemctl --user disable nomercymediaserver.service >/dev/null 2>&1 || true
+            systemctl --user stop nomercymediaserverservice.service >/dev/null 2>&1 || true
+            systemctl --user disable nomercymediaserverservice.service >/dev/null 2>&1 || true
+        fi
+        exit 0
+        EOF
+        chmod 755 "${PACKAGE_ROOT}/DEBIAN/prerm"
+
+        # postrm
+        cat > "${PACKAGE_ROOT}/DEBIAN/postrm" << 'EOF'
+        #!/bin/sh
+        set -e
+        if [ "$1" = "purge" ]; then
+            if command -v update-icon-caches >/dev/null 2>&1; then
+                update-icon-caches /usr/share/icons/hicolor >/dev/null 2>&1 || true
+            fi
+            if command -v update-desktop-database >/dev/null 2>&1; then
+                update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+            fi
+        fi
+        exit 0
+        EOF
+        chmod 755 "${PACKAGE_ROOT}/DEBIAN/postrm"
+
+        # Build package
+        dpkg-deb --build "${PACKAGE_ROOT}"
         mkdir -p "./packages/apt/pool/main/n/nomercy"
-        mv "${META_ROOT}.deb" "./packages/apt/pool/main/n/nomercy/nomercy_${VERSION}_all.deb"
+        mv "${PACKAGE_ROOT}.deb" "./packages/apt/pool/main/n/nomercy/nomercy_${VERSION}_amd64.deb"
         cd "./packages/apt/pool/main/n/nomercy"
-        ln -sf "nomercy_${VERSION}_all.deb" "nomercy_latest_all.deb"
+        ln -sf "nomercy_${VERSION}_amd64.deb" "nomercy_latest_amd64.deb"
         cd ../../../../../..
-        echo "Successfully created nomercy meta-package"
+        echo "Successfully created nomercy DEB package"
 
         # Update package index
         mkdir -p packages/apt/dists/stable/main/binary-amd64

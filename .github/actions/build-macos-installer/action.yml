@@ -1,35 +1,21 @@
 name: 'Build macOS Installer'
-description: 'Build macOS .pkg installer containing Server, Service, and CLI'
+description: 'Build macOS .pkg installer with shared runtime'
 inputs:
   version:
     description: 'Package version'
     required: true
-  artifacts-path:
-    description: 'Path to build artifacts'
-    required: true
-    default: './output'
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '9.0.x'
 
 runs:
   using: 'composite'
   steps:
-    - name: Verify macOS artifacts exist
-      shell: bash
-      run: |
-        ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
-        for bin in NoMercyMediaServer-macos-x64 NoMercyMediaServerService-macos-x64 nomercy-macos-x64; do
-          if [ ! -f "${ARTIFACTS_PATH}/${bin}" ]; then
-            echo "ERROR: Required artifact not found: ${ARTIFACTS_PATH}/${bin}"
-            exit 1
-          fi
-        done
-        echo "All required macOS artifacts found."
-
-    - name: Make binaries executable
-      shell: bash
-      run: |
-        chmod +x "${{ inputs.artifacts-path }}/NoMercyMediaServer-macos-x64"
-        chmod +x "${{ inputs.artifacts-path }}/NoMercyMediaServerService-macos-x64"
-        chmod +x "${{ inputs.artifacts-path }}/nomercy-macos-x64"
+    - name: Build shared runtime payload
+      uses: ./.github/actions/build-macos-installer-payload
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
 
     - name: Build macOS .pkg installer
       shell: bash
@@ -37,7 +23,7 @@ runs:
         chmod +x ./packaging/macos/build-pkg.sh
         ./packaging/macos/build-pkg.sh \
           --version "${{ inputs.version }}" \
-          --artifacts-path "${{ inputs.artifacts-path }}" \
+          --payload-path "./installer-payload" \
           --output-path "./packages/macos-installer"
 
     - name: Upload macOS installer artifact

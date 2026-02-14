@@ -1,17 +1,22 @@
 name: 'Build Arch Packages'
-description: 'Build Arch Linux packages'
+description: 'Build Arch Linux packages with shared runtime'
 inputs:
   version:
     description: 'Package version'
     required: true
-  artifacts-path:
-    description: 'Path to build artifacts'
-    required: true
-    default: './output'
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '9.0.x'
 
 runs:
   using: 'composite'
   steps:
+    - name: Build shared runtime payload
+      uses: ./.github/actions/build-linux-installer-payload
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
     - name: Install Arch build dependencies
       shell: bash
       run: |
@@ -22,115 +27,56 @@ runs:
       shell: bash
       run: |
         VERSION="${{ inputs.version }}"
-        ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
+        PAYLOAD_PATH="./installer-payload"
+        INSTALL_DIR="/opt/nomercy"
 
-        # Function to create proper Arch package using PKGBUILD
-        create_arch_package() {
-          local name=$1
-          local friendly_name=$2
-          local bin_file=$3
-          local desktop_file=$4
+        # Create package directory structure
+        pkg_dir="arch-nomercy"
+        mkdir -p "${pkg_dir}/pkg${INSTALL_DIR}"
+        mkdir -p "${pkg_dir}/pkg/usr/bin"
+        mkdir -p "${pkg_dir}/pkg/usr/share/applications"
+        mkdir -p "${pkg_dir}/pkg/usr/share/icons/hicolor/scalable/apps"
+        mkdir -p "${pkg_dir}/pkg/usr/share/licenses/nomercy"
 
-          # Create package directory
-          local pkg_dir="arch-${name}"
-          mkdir -p "${pkg_dir}"
-          cd "${pkg_dir}"
+        # Copy shared runtime payload
+        cp -R "${PAYLOAD_PATH}/"* "${pkg_dir}/pkg${INSTALL_DIR}/"
+        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyMediaServer"
+        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyMediaServerService"
+        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/nomercy"
 
-          # Create proper PKGBUILD file
-          cat > PKGBUILD << EOF
+        # Symlinks in /usr/bin
+        ln -s "${INSTALL_DIR}/NoMercyMediaServer" "${pkg_dir}/pkg/usr/bin/nomercymediaserver"
+        ln -s "${INSTALL_DIR}/NoMercyMediaServerService" "${pkg_dir}/pkg/usr/bin/nomercymediaserverservice"
+        ln -s "${INSTALL_DIR}/nomercy" "${pkg_dir}/pkg/usr/bin/nomercy"
+
+        # Desktop files
+        for df in NoMercy-MediaServer.desktop NoMercy-MediaServer-Service.desktop; do
+          if [ -f "./assets/linux/${df}" ]; then
+            cp "./assets/linux/${df}" "${pkg_dir}/pkg/usr/share/applications/"
+          fi
+        done
+
+        # Icon
+        cp "./assets/icons/icon.png" "${pkg_dir}/pkg/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png"
+
+        # License
+        echo "Proprietary software. All rights reserved." > "${pkg_dir}/pkg/usr/share/licenses/nomercy/LICENSE"
+
+        # Create PKGBUILD (for reference)
+        cat > "${pkg_dir}/PKGBUILD" << EOF
         # Maintainer: NoMercy Entertainment <support@nomercy.tv>
-        pkgname=${name}
+        pkgname=nomercy
         pkgver=${VERSION}
         pkgrel=1
-        pkgdesc="${friendly_name}"
+        pkgdesc="NoMercy MediaServer - complete installation"
         arch=('x86_64')
         url="https://nomercy.tv"
         license=('custom')
         depends=('glibc')
-
-        package() {
-          # Create directory structure
-          install -dm755 "\$pkgdir/usr/bin"
-          install -dm755 "\$pkgdir/usr/share/applications"
-          install -dm755 "\$pkgdir/usr/share/icons/hicolor/scalable/apps"
-          install -dm755 "\$pkgdir/usr/share/licenses/\$pkgname"
-
-          # Install binary
-          install -Dm755 "../$ARTIFACTS_PATH/$bin_file" "\$pkgdir/usr/bin/${name}"
-          
-          # Install desktop file
-          install -Dm644 "../assets/linux/${desktop_file}" "\$pkgdir/usr/share/applications/"
-          
-          # Install icon
-          install -Dm644 "../assets/icons/icon.png" "\$pkgdir/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
-          
-          # Install license (create a simple custom license)
-          echo "Proprietary software. All rights reserved." > "\$pkgdir/usr/share/licenses/\$pkgname/LICENSE"
-        }
         EOF
 
-          # Build using makepkg (simulate it since we don't have a full Arch environment)
-          # We'll create the package manually following the same structure
-          
-          # Create fake root directory
-          local pkgdir="pkg"
-          mkdir -p "${pkgdir}/usr/bin"
-          mkdir -p "${pkgdir}/usr/share/applications"
-          mkdir -p "${pkgdir}/usr/share/icons/hicolor/scalable/apps"
-          mkdir -p "${pkgdir}/usr/share/licenses/${name}"
-
-          # Install files as per PKGBUILD
-          cp "../$ARTIFACTS_PATH/$bin_file" "${pkgdir}/usr/bin/${name}"
-          chmod 755 "${pkgdir}/usr/bin/${name}"
-          cp "../assets/linux/${desktop_file}" "${pkgdir}/usr/share/applications/"
-          cp "../assets/icons/icon.png" "${pkgdir}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png"
-          echo "Proprietary software. All rights reserved." > "${pkgdir}/usr/share/licenses/${name}/LICENSE"
-
-          # Create .PKGINFO file (required for Arch packages)
-          cat > "${pkgdir}/.PKGINFO" << EOF
-        pkgname = ${name}
-        pkgbase = ${name}
-        pkgver = ${VERSION}-1
-        pkgdesc = ${friendly_name}
-        url = https://nomercy.tv
-        builddate = $(date +%s)
-        packager = NoMercy Entertainment <support@nomercy.tv>
-        size = $(du -sb ${pkgdir} | cut -f1)
-        arch = x86_64
-        license = custom
-        depend = glibc
-        EOF
-
-          # Create .MTREE file (required for Arch packages)
-          cd "${pkgdir}"
-          find . -type f -exec stat -c '%n %Y %s' {} \; | sort > .MTREE
-          cd ..
-
-          # Create package file using standard Arch naming
-          mkdir -p "../packages/arch/pool/x86_64"
-          cd "${pkgdir}"
-          tar --use-compress-program=zstd -cf "../../packages/arch/pool/x86_64/${name}-${VERSION}-1-x86_64.pkg.tar.zst" .
-          
-          # Go back and clean up
-          cd ../..
-          rm -rf "${pkg_dir}"
-        }
-
-        # Create packages directory
-        mkdir -p packages/arch/pool/x86_64
-
-        # Build packages
-        create_arch_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
-        create_arch_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
-        create_arch_package "nomercymediaserverservice" "NoMercy-MediaServer-Service" "NoMercyMediaServerService-linux-x64" "NoMercy-MediaServer-Service.desktop"
-        create_arch_package "nomercy-cli" "NoMercy-CLI" "nomercy-linux-x64" "NoMercy-MediaServer.desktop"
-
-        # Build meta-package
-        META_DIR="arch-nomercy"
-        mkdir -p "${META_DIR}/pkg/usr/share/doc/nomercy"
-        echo "NoMercy MediaServer meta-package" > "${META_DIR}/pkg/usr/share/doc/nomercy/README"
-
-        cat > "${META_DIR}/pkg/.PKGINFO" << EOF
+        # Create .PKGINFO
+        cat > "${pkg_dir}/pkg/.PKGINFO" << EOF
         pkgname = nomercy
         pkgbase = nomercy
         pkgver = ${VERSION}-1
@@ -138,29 +84,32 @@ runs:
         url = https://nomercy.tv
         builddate = $(date +%s)
         packager = NoMercy Entertainment <support@nomercy.tv>
-        size = $(du -sb "${META_DIR}/pkg" | cut -f1)
-        arch = any
+        size = $(du -sb "${pkg_dir}/pkg" | cut -f1)
+        arch = x86_64
         license = custom
-        depend = nomercymediaserver
-        depend = nomercymediaserverservice
-        depend = nomercy-cli
+        depend = glibc
         EOF
 
-        cd "${META_DIR}/pkg"
+        # Create .MTREE
+        cd "${pkg_dir}/pkg"
         find . -type f -exec stat -c '%n %Y %s' {} \; | sort > .MTREE
-        tar --use-compress-program=zstd -cf "../../packages/arch/pool/x86_64/nomercy-${VERSION}-1-any.pkg.tar.zst" .
         cd ../..
-        rm -rf "${META_DIR}"
-        echo "Successfully created nomercy meta-package"
 
-        # Create a simple database (since we can't use repo-add in Ubuntu)
+        # Create package
+        mkdir -p packages/arch/pool/x86_64
+        cd "${pkg_dir}/pkg"
+        tar --use-compress-program=zstd -cf "../../packages/arch/pool/x86_64/nomercy-${VERSION}-1-x86_64.pkg.tar.zst" .
+        cd ../..
+        rm -rf "${pkg_dir}"
+        echo "Successfully created nomercy Arch package"
+
+        # Create simple database
         cd packages/arch/pool/x86_64
         if ls *.pkg.tar.zst >/dev/null 2>&1; then
-          # Create a basic database that Arch users can work with
           echo "# NoMercy Arch Repository Database" > nomercy.db
           echo "# Generated on $(date)" >> nomercy.db
           echo "" >> nomercy.db
-          
+
           for pkg in *.pkg.tar.zst; do
             echo "[Package]" >> nomercy.db
             echo "Name: ${pkg%%-*}" >> nomercy.db
@@ -169,14 +118,11 @@ runs:
             echo "Size: $(stat -c%s "$pkg")" >> nomercy.db
             echo "" >> nomercy.db
           done
-          
-          # Create simple compressed database
+
           gzip -c nomercy.db > nomercy.db.tar.gz
-          
-          # List what we created
+
           echo "Created Arch packages:"
           ls -la *.pkg.tar.zst
-          echo "Created database: nomercy.db.tar.gz"
         else
           echo "ERROR: No package files found"
           exit 1

@@ -2,20 +2,20 @@
 set -euo pipefail
 
 VERSION=""
-ARTIFACTS_PATH=""
+PAYLOAD_PATH=""
 OUTPUT_PATH="./output"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --version) VERSION="$2"; shift 2 ;;
-        --artifacts-path) ARTIFACTS_PATH="$2"; shift 2 ;;
+        --payload-path) PAYLOAD_PATH="$2"; shift 2 ;;
         --output-path) OUTPUT_PATH="$2"; shift 2 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
 done
 
-if [[ -z "$VERSION" || -z "$ARTIFACTS_PATH" ]]; then
-    echo "Usage: $0 --version <version> --artifacts-path <path> [--output-path <path>]"
+if [[ -z "$VERSION" || -z "$PAYLOAD_PATH" ]]; then
+    echo "Usage: $0 --version <version> --payload-path <path> [--output-path <path>]"
     exit 1
 fi
 
@@ -27,20 +27,21 @@ trap 'rm -rf "$STAGING" "$COMPONENT_PKGS"' EXIT
 
 echo "=== Building NoMercy MediaServer macOS installer v${VERSION} ==="
 
-# --- Component 1: Server ---
+# --- Component 1: Server (includes shared runtime) ---
 echo "Staging Server component..."
 SERVER_ROOT="${STAGING}/server"
-mkdir -p "${SERVER_ROOT}/Applications/NoMercy MediaServer.app/Contents/MacOS"
-mkdir -p "${SERVER_ROOT}/Applications/NoMercy MediaServer.app/Contents/Resources"
+APP_MACOS="${SERVER_ROOT}/Applications/NoMercy MediaServer.app/Contents/MacOS"
+APP_RESOURCES="${SERVER_ROOT}/Applications/NoMercy MediaServer.app/Contents/Resources"
+mkdir -p "${APP_MACOS}"
+mkdir -p "${APP_RESOURCES}"
 
-cp "${ARTIFACTS_PATH}/NoMercyMediaServer-macos-x64" \
-   "${SERVER_ROOT}/Applications/NoMercy MediaServer.app/Contents/MacOS/NoMercyMediaServer"
-chmod 755 "${SERVER_ROOT}/Applications/NoMercy MediaServer.app/Contents/MacOS/NoMercyMediaServer"
+# Copy entire shared runtime payload into the .app bundle
+cp -R "${PAYLOAD_PATH}/"* "${APP_MACOS}/"
+chmod 755 "${APP_MACOS}/NoMercyMediaServer"
 
 # Copy icon if available
 if [[ -f "${SCRIPT_DIR}/../../assets/icons/icon.icns" ]]; then
-    cp "${SCRIPT_DIR}/../../assets/icons/icon.icns" \
-       "${SERVER_ROOT}/Applications/NoMercy MediaServer.app/Contents/Resources/AppIcon.icns"
+    cp "${SCRIPT_DIR}/../../assets/icons/icon.icns" "${APP_RESOURCES}/AppIcon.icns"
 fi
 
 cat > "${SERVER_ROOT}/Applications/NoMercy MediaServer.app/Contents/Info.plist" << PLIST
@@ -78,15 +79,10 @@ pkgbuild --root "${SERVER_ROOT}" \
     --install-location "/" \
     "${COMPONENT_PKGS}/server.pkg"
 
-# --- Component 2: Service ---
+# --- Component 2: Service (LaunchAgent plist only — binary already in .app) ---
 echo "Staging Service component..."
 SERVICE_ROOT="${STAGING}/service"
-mkdir -p "${SERVICE_ROOT}/Applications/NoMercy MediaServer.app/Contents/MacOS"
 mkdir -p "${SERVICE_ROOT}/Library/LaunchAgents"
-
-cp "${ARTIFACTS_PATH}/NoMercyMediaServerService-macos-x64" \
-   "${SERVICE_ROOT}/Applications/NoMercy MediaServer.app/Contents/MacOS/NoMercyMediaServerService"
-chmod 755 "${SERVICE_ROOT}/Applications/NoMercy MediaServer.app/Contents/MacOS/NoMercyMediaServerService"
 
 cp "${SCRIPT_DIR}/tv.nomercy.mediaserver.service.plist" \
    "${SERVICE_ROOT}/Library/LaunchAgents/tv.nomercy.mediaserver.service.plist"
@@ -97,14 +93,13 @@ pkgbuild --root "${SERVICE_ROOT}" \
     --install-location "/" \
     "${COMPONENT_PKGS}/service.pkg"
 
-# --- Component 3: CLI ---
+# --- Component 3: CLI (symlink to binary inside .app) ---
 echo "Staging CLI component..."
 CLI_ROOT="${STAGING}/cli"
 mkdir -p "${CLI_ROOT}/usr/local/bin"
 
-cp "${ARTIFACTS_PATH}/nomercy-macos-x64" \
+ln -s "/Applications/NoMercy MediaServer.app/Contents/MacOS/nomercy" \
    "${CLI_ROOT}/usr/local/bin/nomercy"
-chmod 755 "${CLI_ROOT}/usr/local/bin/nomercy"
 
 pkgbuild --root "${CLI_ROOT}" \
     --identifier tv.nomercy.cli \

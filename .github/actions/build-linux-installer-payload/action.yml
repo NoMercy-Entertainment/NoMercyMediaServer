@@ -1,0 +1,54 @@
+name: 'Build Linux Installer Payload'
+description: 'Publish all projects into shared runtime directory for Linux packages'
+inputs:
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '9.0.x'
+outputs:
+  payload-path:
+    description: 'Path to the shared runtime output'
+    value: ./installer-payload
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Restore
+      shell: bash
+      run: dotnet restore NoMercy.Server.sln
+
+    - name: Publish Service (shared runtime)
+      shell: bash
+      run: |
+        dotnet publish ./src/NoMercy.Service/NoMercy.Service.csproj \
+          --configuration Release --runtime linux-x64 --self-contained true \
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false \
+          --output ./installer-payload
+
+    - name: Publish Tray (shared runtime)
+      shell: bash
+      run: |
+        dotnet publish ./src/NoMercy.Tray/NoMercy.Tray.csproj \
+          --configuration Release --runtime linux-x64 --self-contained true \
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false \
+          --output ./installer-payload
+
+    - name: Publish CLI (shared runtime)
+      shell: bash
+      run: |
+        dotnet publish ./src/NoMercy.Cli/NoMercy.Cli.csproj \
+          --configuration Release --runtime linux-x64 --self-contained true \
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false \
+          --output ./installer-payload
+
+    - name: List payload
+      shell: bash
+      run: |
+        FILE_COUNT=$(find ./installer-payload -type f | wc -l)
+        TOTAL_SIZE=$(du -sm ./installer-payload | cut -f1)
+        echo "Payload: ${FILE_COUNT} files, ${TOTAL_SIZE}MB total"
