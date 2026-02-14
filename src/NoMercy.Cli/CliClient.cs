@@ -73,6 +73,31 @@ internal sealed class CliClient : IDisposable
         return false;
     }
 
+    public async Task<T?> PostAsync<T>(
+        string path,
+        HttpContent? content = null,
+        CancellationToken cancellationToken = default) where T : class
+    {
+        using HttpResponseMessage response =
+            await _client.PostAsync(path, content, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            string body = await response.Content
+                .ReadAsStringAsync(cancellationToken);
+            Console.Error.WriteLine(
+                $"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+            if (!string.IsNullOrWhiteSpace(body))
+                Console.Error.WriteLine(body);
+            return null;
+        }
+
+        string json = await response.Content
+            .ReadAsStringAsync(cancellationToken);
+
+        return JsonConvert.DeserializeObject<T>(json);
+    }
+
     public async Task<bool> PutAsync(
         string path,
         HttpContent? content = null,
