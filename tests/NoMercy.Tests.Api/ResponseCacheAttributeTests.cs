@@ -25,7 +25,6 @@ public class ResponseCacheAttributeTests
     [InlineData(typeof(ConfigurationController), "Countries", 3600)]
     [InlineData(typeof(ServerController), "ServerInfo", 3600)]
     [InlineData(typeof(ServerController), "ServerPaths", 3600)]
-    [InlineData(typeof(SetupController), "ServerInfo", 3600)]
     [InlineData(typeof(SetupController), "Status", 30)]
     public void CacheableEndpoint_HasResponseCacheAttribute_WithCorrectDuration(
         Type controllerType, string methodName, int expectedDuration)
@@ -46,6 +45,7 @@ public class ResponseCacheAttributeTests
     [InlineData(typeof(SearchController), "SearchMusic")]
     [InlineData(typeof(SearchController), "SearchVideo")]
     [InlineData(typeof(ServerController), "Resources")]
+    [InlineData(typeof(SetupController), "ServerInfo")]
     public void RealTimeEndpoint_HasResponseCacheNoStore(Type controllerType, string methodName)
     {
         MethodInfo? method = controllerType.GetMethod(methodName,
