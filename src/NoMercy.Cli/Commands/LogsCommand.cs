@@ -11,6 +11,8 @@ namespace NoMercy.Cli.Commands;
 
 internal static partial class LogsCommand
 {
+    private static DateTime _lastEntryTime = DateTime.MinValue;
+
     [GeneratedRegex(@"(\x1b|\\u001[bB])\[[0-9;]*[A-Za-z]")]
     private static partial Regex AnsiEscapeRegex();
 
@@ -125,6 +127,11 @@ internal static partial class LogsCommand
 
     private static void PrintEntry(LogEntryResponse entry)
     {
+        if (_lastEntryTime != DateTime.MinValue && entry.Time < _lastEntryTime)
+            PrintSessionSeparator();
+
+        _lastEntryTime = entry.Time;
+
         string message = CleanMessage(entry.Message);
         string timestamp = entry.Time.ToLocalTime().ToString("d-M-yyyy HH:mm").Pastel(Color.DarkGray);
         string typeName = entry.Type.ToTitleCase().PadLeft(14);
@@ -133,6 +140,14 @@ internal static partial class LogsCommand
             typeName = typeName.Pastel(entry.Color);
 
         Console.WriteLine($"{timestamp} {typeName} | {message}");
+    }
+
+    private static void PrintSessionSeparator()
+    {
+        string separator = new string('-', 60);
+        Console.WriteLine();
+        Console.WriteLine($"{"",16}{"Server Restart".PadLeft(14)} | {separator}".Pastel(Color.DarkGray));
+        Console.WriteLine();
     }
 
     private static string CleanMessage(string message)
