@@ -375,7 +375,8 @@ public class EndToEndMiddlewareFlowTests
         SetupState state, RequestDelegate? next = null)
     {
         next ??= _ => Task.CompletedTask;
-        return new(next, state);
+        SetupServer setupServer = new(state);
+        return new(next, state, setupServer);
     }
 
     private static DefaultHttpContext CreateContext(string path)
@@ -403,11 +404,12 @@ public class EndToEndMiddlewareFlowTests
         Assert.Equal(StatusCodes.Status503ServiceUnavailable, context1.Response.StatusCode);
         Assert.False(nextCalled);
 
-        // Setup routes are allowed
+        // Setup routes are handled directly (not blocked, not passed to next)
         nextCalled = false;
         DefaultHttpContext context2 = CreateContext("/setup");
         await middleware.InvokeAsync(context2);
-        Assert.True(nextCalled);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context2.Response.StatusCode);
 
         // Complete setup
         state.TransitionTo(SetupPhase.Authenticating);

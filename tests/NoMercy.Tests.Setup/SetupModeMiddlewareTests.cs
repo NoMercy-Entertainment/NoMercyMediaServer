@@ -12,7 +12,8 @@ public class SetupModeMiddlewareTests
         SetupState state, RequestDelegate? next = null)
     {
         next ??= _ => Task.CompletedTask;
-        return new(next, state);
+        SetupServer setupServer = new(state);
+        return new(next, state, setupServer);
     }
 
     private static DefaultHttpContext CreateContext(string path)
@@ -118,7 +119,7 @@ public class SetupModeMiddlewareTests
     // --- Setup required: setup routes pass through ---
 
     [Fact]
-    public async Task SetupRoute_WhenSetupRequired_CallsNext()
+    public async Task SetupRoute_WhenSetupRequired_IsHandledDirectly()
     {
         SetupState state = new();
         bool nextCalled = false;
@@ -131,11 +132,12 @@ public class SetupModeMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        Assert.True(nextCalled);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
-    public async Task SetupStatusRoute_WhenSetupRequired_CallsNext()
+    public async Task SetupStatusRoute_WhenSetupRequired_IsHandledDirectly()
     {
         SetupState state = new();
         bool nextCalled = false;
@@ -148,11 +150,12 @@ public class SetupModeMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        Assert.True(nextCalled);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
-    public async Task SetupConfigRoute_WhenSetupRequired_CallsNext()
+    public async Task SetupConfigRoute_WhenSetupRequired_IsHandledDirectly()
     {
         SetupState state = new();
         bool nextCalled = false;
@@ -165,11 +168,12 @@ public class SetupModeMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        Assert.True(nextCalled);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
-    public async Task SsoCallbackRoute_WhenSetupRequired_CallsNext()
+    public async Task SsoCallbackRoute_WhenSetupRequired_IsHandledDirectly()
     {
         SetupState state = new();
         bool nextCalled = false;
@@ -182,7 +186,8 @@ public class SetupModeMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        Assert.True(nextCalled);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     [Fact]
@@ -240,7 +245,7 @@ public class SetupModeMiddlewareTests
     // --- Trailing slash handling ---
 
     [Fact]
-    public async Task SetupRouteWithTrailingSlash_WhenSetupRequired_CallsNext()
+    public async Task SetupRouteWithTrailingSlash_WhenSetupRequired_IsHandledDirectly()
     {
         SetupState state = new();
         bool nextCalled = false;
@@ -253,13 +258,14 @@ public class SetupModeMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        Assert.True(nextCalled);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     // --- Case insensitivity ---
 
     [Fact]
-    public async Task SetupRouteUpperCase_WhenSetupRequired_CallsNext()
+    public async Task SetupRouteUpperCase_WhenSetupRequired_IsHandledDirectly()
     {
         SetupState state = new();
         bool nextCalled = false;
@@ -272,7 +278,8 @@ public class SetupModeMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        Assert.True(nextCalled);
+        Assert.False(nextCalled);
+        Assert.NotEqual(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
     }
 
     // --- SignalR hubs blocked during setup ---
