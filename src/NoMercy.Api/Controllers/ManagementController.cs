@@ -27,7 +27,8 @@ public class ManagementController(
     IHostApplicationLifetime appLifetime,
     MediaContext mediaContext,
     QueueRunner queueRunner,
-    IPluginManager pluginManager) : ControllerBase
+    IPluginManager pluginManager,
+    AppProcessManager appProcessManager) : ControllerBase
 {
     [HttpGet("status")]
     [ProducesResponseType(typeof(ManagementStatusDto), StatusCodes.Status200OK)]
@@ -50,7 +51,12 @@ public class ManagementController(
             IsDev = Config.IsDev,
             AutoStart = AutoStartupManager.IsEnabled(),
             UpdateAvailable = Config.UpdateAvailable,
-            LatestVersion = Config.LatestVersion
+            LatestVersion = Config.LatestVersion,
+            AppStatus = new AppProcessStatusDto
+            {
+                Running = appProcessManager.IsRunning,
+                Pid = appProcessManager.ProcessId
+            }
         });
     }
 
@@ -294,5 +300,46 @@ public class ManagementController(
         {
             return StatusCode(500, new { status = "error", message = $"Resource monitor failed: {e.Message}" });
         }
+    }
+
+    [HttpGet("app/status")]
+    [ProducesResponseType(typeof(AppProcessStatusDto), StatusCodes.Status200OK)]
+    public IActionResult GetAppStatus()
+    {
+        return Ok(new AppProcessStatusDto
+        {
+            Running = appProcessManager.IsRunning,
+            Pid = appProcessManager.ProcessId
+        });
+    }
+
+    [HttpPost("app/start")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public IActionResult StartApp()
+    {
+        if (appProcessManager.IsRunning)
+            return Conflict(new { status = "already_running", message = "App is already running" });
+
+        bool started = appProcessManager.Start();
+
+        if (!started)
+            return StatusCode(500, new { status = "error", message = "Failed to start app — binary not found" });
+
+        return Ok(new { status = "ok", message = "App started" });
+    }
+
+    [HttpPost("app/stop")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult StopApp()
+    {
+        bool stopped = appProcessManager.Stop();
+
+        return Ok(new
+        {
+            status = "ok",
+            message = stopped ? "App stopped" : "App was not running"
+        });
     }
 }

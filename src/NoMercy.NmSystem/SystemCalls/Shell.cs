@@ -168,7 +168,7 @@ public static class Shell
     }
 
     // Child process manager: attaches started processes so they are terminated when the parent exits.
-    private static class ChildProcessManager
+    internal static class ChildProcessManager
     {
         private static readonly object _lock = new();
         private static IntPtr _jobHandle = IntPtr.Zero;

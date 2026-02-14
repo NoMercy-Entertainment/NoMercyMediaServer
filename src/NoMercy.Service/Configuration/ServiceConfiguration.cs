@@ -28,6 +28,7 @@ using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.Networking;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -254,6 +255,7 @@ public static class ServiceConfiguration
         EventBusProvider.Configure(eventBus);
 
         // Add Singleton Services
+        services.AddSingleton<AppProcessManager>();
         services.AddSingleton<ResourceMonitor>();
         services.AddSingleton<Networking.Networking>();
         services.AddSingleton<StorageMonitor>();

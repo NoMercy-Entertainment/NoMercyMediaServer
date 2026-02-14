@@ -273,7 +273,12 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         try
         {
-            bool launched = await _processLauncher.LaunchAppAsync();
+            bool launched;
+
+            if (_serverConnection.IsConnected)
+                launched = await _serverConnection.PostAsync("/manage/app/start");
+            else
+                launched = await _processLauncher.LaunchAppAsync();
 
             ActionStatus = launched
                 ? "App launched"

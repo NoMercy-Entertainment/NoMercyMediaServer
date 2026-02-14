@@ -7,9 +7,13 @@ namespace NoMercy.Tray.Services;
 public class ServerProcessLauncher
 {
     private Process? _serverProcess;
+    private Process? _appProcess;
 
     public bool IsServerProcessRunning =>
         _serverProcess is { HasExited: false };
+
+    public bool IsAppProcessRunning =>
+        _appProcess is { HasExited: false };
 
     public Process? ServerProcess => _serverProcess;
 
@@ -40,6 +44,42 @@ public class ServerProcessLauncher
 
         bool started = _serverProcess.Start();
         return Task.FromResult(started);
+    }
+
+    public Task<bool> LaunchAppAsync()
+    {
+        if (IsAppProcessRunning)
+            return Task.FromResult(false);
+
+        ProcessStartInfo? startInfo =
+            CreateAppProductionStartInfo()
+            ?? CreateAppInstalledStartInfo()
+            ?? CreateAppDevBinaryStartInfo()
+            ?? CreateAppDotnetRunStartInfo();
+
+        if (startInfo is null)
+            return Task.FromResult(false);
+
+        _appProcess = new()
+        {
+            StartInfo = startInfo,
+            EnableRaisingEvents = true
+        };
+
+        _appProcess.Exited += (_, _) =>
+        {
+            _appProcess = null;
+        };
+
+        bool started = _appProcess.Start();
+
+        if (!started)
+        {
+            _appProcess = null;
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(true);
     }
 
     private static ProcessStartInfo? CreateProductionStartInfo()
@@ -140,22 +180,6 @@ public class ServerProcessLauncher
         return null;
     }
 
-    public Task<bool> LaunchAppAsync()
-    {
-        ProcessStartInfo? startInfo =
-            CreateAppProductionStartInfo()
-            ?? CreateAppInstalledStartInfo()
-            ?? CreateAppDevBinaryStartInfo()
-            ?? CreateAppDotnetRunStartInfo();
-
-        if (startInfo is null)
-            return Task.FromResult(false);
-
-        Process process = new() { StartInfo = startInfo };
-        bool started = process.Start();
-        return Task.FromResult(started);
-    }
-
     private static ProcessStartInfo? CreateAppProductionStartInfo()
     {
         string exePath = AppFiles.AppExePath;
@@ -165,7 +189,8 @@ public class ServerProcessLauncher
 
         return new(exePath)
         {
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
     }
 
@@ -184,7 +209,8 @@ public class ServerProcessLauncher
 
         return new(candidate)
         {
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
     }
 
@@ -206,7 +232,7 @@ public class ServerProcessLauncher
         foreach (string path in searchPaths)
         {
             if (File.Exists(path))
-                return new(path) { UseShellExecute = false };
+                return new(path) { UseShellExecute = false, CreateNoWindow = true };
         }
 
         return null;
@@ -221,7 +247,8 @@ public class ServerProcessLauncher
 
         ProcessStartInfo startInfo = new("dotnet")
         {
-            UseShellExecute = false
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
 
         startInfo.ArgumentList.Add("run");

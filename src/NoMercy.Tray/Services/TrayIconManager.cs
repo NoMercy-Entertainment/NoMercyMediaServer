@@ -261,7 +261,10 @@ public class TrayIconManager
 
     private async void OnOpenApp(object? sender, EventArgs e)
     {
-        await _processLauncher.LaunchAppAsync();
+        if (_serverConnection.IsConnected)
+            await _serverConnection.PostAsync("/manage/app/start");
+        else
+            await _processLauncher.LaunchAppAsync();
     }
 
     private void OnOpenDashboard(object? sender, EventArgs e)
