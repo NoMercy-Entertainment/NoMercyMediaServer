@@ -122,6 +122,20 @@ internal class Program
         return baseDir;
     }
 
+    // WebView2 subdirectories inside Default/ that hold login/session state — preserved across updates
+    private static readonly HashSet<string> PreservedSubDirectories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Session Storage",
+        "Local Storage",
+    };
+
+    // WebView2 files inside Default/ that hold login/session state — preserved across updates
+    private static readonly string[] PreservedFilePrefixes =
+    [
+        "Cookies",
+        "Login Data",
+    ];
+
     private static void ClearBrowserDataOnVersionChange(string browserDataPath)
     {
         string versionFile = Path.Combine(browserDataPath, ".app-version");
@@ -136,21 +150,80 @@ internal class Program
 
         if (previousVersion != currentVersion)
         {
-            // Clear browser cache, localStorage, IndexedDB etc.
-            foreach (string dir in Directory.GetDirectories(browserDataPath))
-            {
-                try { Directory.Delete(dir, true); }
-                catch { /* locked or inaccessible — skip */ }
-            }
-
-            foreach (string file in Directory.GetFiles(browserDataPath))
-            {
-                if (Path.GetFileName(file) == ".app-version") continue;
-                try { File.Delete(file); }
-                catch { /* skip */ }
-            }
-
+            ClearBrowserCache(browserDataPath);
             File.WriteAllText(versionFile, currentVersion);
+        }
+    }
+
+    private static void ClearBrowserCache(string browserDataPath)
+    {
+        // WebView2 stores profile data under EBWebView/Default/
+        // Delete everything except session/login directories and files
+        foreach (string dir in Directory.GetDirectories(browserDataPath))
+        {
+            string dirName = Path.GetFileName(dir);
+
+            if (string.Equals(dirName, "EBWebView", StringComparison.OrdinalIgnoreCase))
+            {
+                ClearWebViewProfile(dir);
+                continue;
+            }
+
+            try { Directory.Delete(dir, true); }
+            catch { /* locked or inaccessible — skip */ }
+        }
+
+        foreach (string file in Directory.GetFiles(browserDataPath))
+        {
+            if (Path.GetFileName(file) == ".app-version") continue;
+            try { File.Delete(file); }
+            catch { /* skip */ }
+        }
+    }
+
+    private static void ClearWebViewProfile(string ebWebViewPath)
+    {
+        foreach (string profileDir in Directory.GetDirectories(ebWebViewPath))
+        {
+            string profileName = Path.GetFileName(profileDir);
+
+            if (string.Equals(profileName, "Default", StringComparison.OrdinalIgnoreCase))
+            {
+                ClearProfileContents(profileDir);
+                continue;
+            }
+
+            try { Directory.Delete(profileDir, true); }
+            catch { /* skip */ }
+        }
+
+        foreach (string file in Directory.GetFiles(ebWebViewPath))
+        {
+            try { File.Delete(file); }
+            catch { /* skip */ }
+        }
+    }
+
+    private static void ClearProfileContents(string profilePath)
+    {
+        foreach (string dir in Directory.GetDirectories(profilePath))
+        {
+            string dirName = Path.GetFileName(dir);
+            if (PreservedSubDirectories.Contains(dirName))
+                continue;
+
+            try { Directory.Delete(dir, true); }
+            catch { /* skip */ }
+        }
+
+        foreach (string file in Directory.GetFiles(profilePath))
+        {
+            string fileName = Path.GetFileName(file);
+            if (PreservedFilePrefixes.Any(prefix => fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            try { File.Delete(file); }
+            catch { /* skip */ }
         }
     }
 }

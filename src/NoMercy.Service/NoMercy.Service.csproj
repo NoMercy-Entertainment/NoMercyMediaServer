@@ -47,6 +47,7 @@
         <PackageReference Include="I18N.DotNet" />
         <PackageReference Include="MediaBrowser.Model.Signed" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <PackageReference Include="Microsoft.Extensions.Validation" />
         <PackageReference Include="Microsoft.AspNetCore.Hosting.WindowsServices" />
         <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />

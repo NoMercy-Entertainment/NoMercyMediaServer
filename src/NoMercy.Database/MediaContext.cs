@@ -54,12 +54,6 @@ public class MediaContext : DbContext
 
         modelBuilder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
-            .Where(p => p.ClrType == typeof(Ulid))
-            .ToList()
-            .ForEach(p => p.SetElementType(typeof(string)));
-
-        modelBuilder.Model.GetEntityTypes()
-            .SelectMany(t => t.GetProperties())
             .Where(p => p.Name is "CreatedAt" or "UpdatedAt")
             .ToList()
             .ForEach(p => p.SetDefaultValueSql("CURRENT_TIMESTAMP"));
