@@ -130,7 +130,7 @@ public class PluginTemplateTests
         string content = File.ReadAllText(csprojPath);
 
         content.Should().Contain("NoMercy.Plugins.Abstractions", "csproj must reference plugin abstractions");
-        content.Should().Contain("net9.0", "csproj must target net9.0");
+        content.Should().Contain("net10.0", "csproj must target net10.0");
     }
 
     [Fact]

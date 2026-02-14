@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
         <PackageType>Template</PackageType>
         <PackageVersion>1.0.0</PackageVersion>
         <PackageId>NoMercy.Plugin.Templates</PackageId>
@@ -8,7 +9,6 @@
         <Authors>NoMercy Entertainment</Authors>
         <Description>Project templates for creating NoMercy MediaServer plugins</Description>
         <PackageTags>dotnet-new;templates;nomercy;plugin;media-server</PackageTags>
-        <TargetFramework>net9.0</TargetFramework>
         <IncludeContentInPack>true</IncludeContentInPack>
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <ContentTargetFolders>content</ContentTargetFolders>

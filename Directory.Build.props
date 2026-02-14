@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
     <!-- Suppress NETSDK1206: MediaInfo.Core.Native uses version-specific RIDs (third-party, not fixable) -->
     <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
     <Authors>NoMercy Entertainment</Authors>

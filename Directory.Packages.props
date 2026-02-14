@@ -8,25 +8,25 @@
     <PackageVersion Include="Asp.Versioning.Http" Version="8.1.0" />
     <PackageVersion Include="Asp.Versioning.Mvc" Version="8.1.0" />
     <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
-    <PackageVersion Include="AspNetCore.SwaggerUI.Themes" Version="2.0.0" />
+    <PackageVersion Include="AspNetCore.SwaggerUI.Themes" Version="3.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore" Version="2.3.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.Hosting" Version="2.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Http" Version="2.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Http.Extensions" Version="2.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc" Version="2.3.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer" Version="5.1.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Server.Kestrel.Core" Version="2.3.6" />
     <PackageVersion Include="Microsoft.AspNetCore.Server.Kestrel.Https" Version="2.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Localization" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Localization" Version="10.0.3" />
     <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.14.0" />
     <PackageVersion Include="MimeMapping" Version="3.1.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.13.0" />
@@ -34,21 +34,21 @@
     <PackageVersion Include="System.Net.WebSockets" Version="4.3.0" />
 
     <!-- Swagger -->
-    <PackageVersion Include="Swashbuckle.AspNetCore.Newtonsoft" Version="9.0.6" />
-    <PackageVersion Include="Swashbuckle.AspNetCore.Swagger" Version="9.0.6" />
-    <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.6" />
-    <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.6" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.Newtonsoft" Version="10.1.1" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.2" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.1.2" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.2" />
 
     <!-- Entity Framework -->
-    <PackageVersion Include="FlexLabs.EntityFrameworkCore.Upsert" Version="9.100.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10" />
+    <PackageVersion Include="FlexLabs.EntityFrameworkCore.Upsert" Version="10.0.0-beta1" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Abstractions" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.3" />
 
     <!-- Serialization -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
@@ -79,15 +79,15 @@
     <PackageVersion Include="MusixmatchClientLib" Version="1.1.9" />
 
     <!-- Plugin System -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
 
     <!-- Hosting -->
-    <PackageVersion Include="Microsoft.AspNetCore.Hosting.WindowsServices" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Hosting.WindowsServices" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.3" />
 
     <!-- Avalonia (Tray App) -->
     <PackageVersion Include="Avalonia" Version="11.2.7" />
@@ -109,11 +109,11 @@
     <PackageVersion Include="InfiniLore.InfiniFrame" Version="0.1.0-preview.25" />
     <PackageVersion Include="InfiniLore.InfiniFrame.WebServer" Version="0.1.0-preview.25" />
     <PackageVersion Include="LibreHardwareMonitorLib" Version="0.9.5-pre437" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.14.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.0.0" />
     <PackageVersion Include="Mono.Nat" Version="3.0.4" />
     <PackageVersion Include="MovieFileLibrary" Version="3.1.0" />
     <PackageVersion Include="NCrontab" Version="3.4.0" />
@@ -124,7 +124,7 @@
     <PackageVersion Include="Sharpcaster" Version="3.0.0" />
     <PackageVersion Include="Stowage" Version="2.0.1" />
     <PackageVersion Include="System.CommandLine" Version="2.0.3" />
-    <PackageVersion Include="System.Management" Version="9.0.10" />
+    <PackageVersion Include="System.Management" Version="10.0.3" />
     <PackageVersion Include="Ulid" Version="1.4.1" />
 
     <!-- Benchmarking -->

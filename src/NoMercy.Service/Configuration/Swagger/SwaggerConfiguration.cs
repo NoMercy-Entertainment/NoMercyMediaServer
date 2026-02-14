@@ -18,7 +18,7 @@ public static class SwaggerConfiguration
     public static void UseSwaggerUi(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
     {
         app.UseSwagger();
-        app.UseSwaggerUI(ModernStyle.Dark, options =>
+        app.UseSwaggerUI(Theme.Dark, options =>
         {
             options.RoutePrefix = string.Empty;
             options.DocumentTitle = "NoMercy MediaServer API";

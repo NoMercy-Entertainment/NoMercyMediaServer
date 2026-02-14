@@ -7,7 +7,7 @@
 # =============================================================================
 # Stage 1: Build
 # =============================================================================
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution and project files first (better layer caching)
@@ -47,7 +47,7 @@ RUN dotnet publish src/NoMercy.Server/NoMercy.Server.csproj \
 # =============================================================================
 # Stage 2: Runtime with AMD VAAPI libraries
 # =============================================================================
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Install AMD Mesa drivers and VAAPI libraries

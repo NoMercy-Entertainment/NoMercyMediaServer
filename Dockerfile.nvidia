@@ -7,7 +7,7 @@
 # =============================================================================
 # Stage 1: Build
 # =============================================================================
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution and project files first (better layer caching)
@@ -50,7 +50,7 @@ RUN dotnet publish src/NoMercy.Server/NoMercy.Server.csproj \
 FROM nvidia/cuda:12.3.1-runtime-ubuntu22.04 AS runtime
 WORKDIR /app
 
-# Install .NET 9.0 runtime and NVIDIA codec libraries
+# Install .NET 10.0 runtime and NVIDIA codec libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # .NET dependencies
     ca-certificates \
@@ -72,10 +72,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install .NET 9.0 ASP.NET runtime
+# Install .NET 10.0 ASP.NET runtime
 RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh \
     && chmod +x dotnet-install.sh \
-    && ./dotnet-install.sh --channel 9.0 --runtime aspnetcore --install-dir /usr/share/dotnet \
+    && ./dotnet-install.sh --channel 10.0 --runtime aspnetcore --install-dir /usr/share/dotnet \
     && rm dotnet-install.sh \
     && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
 

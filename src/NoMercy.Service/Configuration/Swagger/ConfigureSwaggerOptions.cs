@@ -1,6 +1,6 @@
 using Asp.Versioning.ApiExplorer;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using NoMercy.NmSystem.Information;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -24,12 +24,12 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
         }
 
         // Configure security definitions - only add once, not per version
-        options.AddSecurityDefinition("Keycloak", new()
+        options.AddSecurityDefinition("Keycloak", new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.OAuth2,
-            Flows = new()
+            Flows = new OpenApiOAuthFlows
             {
-                Implicit = new()
+                Implicit = new OpenApiOAuthFlow
                 {
                     AuthorizationUrl = new($"{Config.AuthBaseUrl}protocol/openid-connect/auth"),
                     Scopes = new Dictionary<string, string>
@@ -41,27 +41,10 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
             }
         });
 
-        OpenApiSecurityScheme keycloakSecurityScheme = new()
+        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
         {
-            Reference = new()
-            {
-                Id = "Keycloak",
-                Type = ReferenceType.SecurityScheme
-            },
-            In = ParameterLocation.Header,
-            Name = "Authorization",
-            Type = SecuritySchemeType.OAuth2,
-            Description = "Use the Keycloak authorization server to authenticate.",
-            Scheme = "Bearer"
-        };
-
-        options.AddSecurityRequirement(new()
-        {
-            { keycloakSecurityScheme, [] },
-            {
-                new() { Reference = new() { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
-                []
-            }
+            { new OpenApiSecuritySchemeReference("Keycloak", document), [] },
+            { new OpenApiSecuritySchemeReference("Bearer", document), [] }
         });
     }
 
