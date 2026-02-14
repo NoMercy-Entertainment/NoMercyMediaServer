@@ -20,6 +20,7 @@ public class CronWorker : BackgroundService
     private readonly Dictionary<string, Task> _jobTasks = new();
 
     private static readonly TaskCompletionSource<bool> QueueWorkersReadyTcs = new();
+    private static readonly TaskCompletionSource<bool> DatabaseReadyTcs = new();
 
     /// <summary>
     /// Signal that queue workers have started and cron jobs can begin execution.
@@ -28,6 +29,18 @@ public class CronWorker : BackgroundService
     public static void SignalQueueWorkersReady()
     {
         QueueWorkersReadyTcs.TrySetResult(true);
+    }
+
+    /// <summary>
+    /// Signal that the database has been migrated and is ready for queries.
+    /// Call this from DatabaseSeeder after migrations complete.
+    /// </summary>
+    public static void SignalDatabaseReady(bool success = true)
+    {
+        if (success)
+            DatabaseReadyTcs.TrySetResult(true);
+        else
+            DatabaseReadyTcs.TrySetResult(false);
     }
 
     public CronWorker(IServiceProvider serviceProvider, ILogger<CronWorker> logger)
@@ -229,8 +242,32 @@ public class CronWorker : BackgroundService
     {
         _logger.LogInformation("Cron Worker started with individual job workers");
 
-        // Load and start workers for database jobs
-        await StartDatabaseJobWorkers(stoppingToken);
+        // Wait for database migrations to complete before querying the database
+        try
+        {
+            using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(30));
+            using CancellationTokenSource combinedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timeoutCts.Token);
+
+            bool dbReady = await DatabaseReadyTcs.Task.WaitAsync(combinedCts.Token);
+            if (dbReady)
+            {
+                _logger.LogInformation("Database ready — loading database job workers");
+                await StartDatabaseJobWorkers(stoppingToken);
+            }
+            else
+            {
+                _logger.LogWarning("Database seeding failed — skipping database job workers");
+            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("Cron Worker stopping before database was ready");
+            return;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Timed out waiting for database readiness — skipping database job workers");
+        }
 
         // Keep the main service running
         try

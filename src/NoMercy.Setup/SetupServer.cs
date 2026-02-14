@@ -252,9 +252,33 @@ public class SetupServer
         bool isError = false)
     {
         string color = isError ? "#f08080" : "#CBAFFF";
-        string redirect = isError
-            ? "window.location.href='/setup';"
-            : "window.location.href='/setup';";
+
+        if (isError)
+        {
+            return "<!DOCTYPE html><html><head>"
+                   + "<meta charset=\"UTF-8\">"
+                   + "<style>"
+                   + "body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,"
+                   + "BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;"
+                   + "display:flex;align-items:center;justify-content:center;"
+                   + "min-height:100vh;margin:0;}"
+                   + ".card{background:#16161e;border:1px solid #2a2a3a;"
+                   + "border-radius:12px;padding:32px 24px;text-align:center;"
+                   + "max-width:440px;width:100%;}"
+                   + $"h2{{color:{color};margin-bottom:12px;}}"
+                   + "p{color:#999;font-size:14px;}"
+                   + "</style></head><body>"
+                   + "<div class=\"card\">"
+                   + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
+                   + $"<p>{WebUtility.HtmlEncode(message)}</p>"
+                   + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
+                   + "</div>"
+                   + "<script>setTimeout(function(){window.location.href='/setup';}, 1500);</script>"
+                   + "</body></html>";
+        }
+
+        // Success case: try to close the tab (works when opened as popup),
+        // otherwise show a static message since the server will restart for HTTPS
         return "<!DOCTYPE html><html><head>"
                + "<meta charset=\"UTF-8\">"
                + "<style>"
@@ -271,9 +295,13 @@ public class SetupServer
                + "<div class=\"card\">"
                + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
                + $"<p>{WebUtility.HtmlEncode(message)}</p>"
-               + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
+               + "<p id=\"status\" style=\"margin-top:16px;color:#666;\">You can close this tab.</p>"
                + "</div>"
-               + $"<script>setTimeout(function(){{{redirect}}}, 1500);</script>"
+               + "<script>"
+               + "try{window.close();}catch(e){}"
+               + "document.getElementById('status').textContent="
+               + "'Server is restarting with HTTPS. You can close this tab.';"
+               + "</script>"
                + "</body></html>";
     }
 

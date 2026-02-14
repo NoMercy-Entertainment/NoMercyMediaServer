@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Queue.Workers;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;
@@ -25,7 +26,10 @@ public static class DatabaseSeeder
             
             await Migrate(queueDbContext);
             await EnsureDatabaseCreated(queueDbContext);
-            
+
+            // Signal CronWorker that the database is migrated and ready for queries
+            CronWorker.SignalDatabaseReady();
+
             await ConfigSeed.Init(mediaDbContext);
             await LanguagesSeed.Init(mediaDbContext);
             await CountriesSeed.Init(mediaDbContext);
@@ -48,6 +52,7 @@ public static class DatabaseSeeder
         }
         catch (Exception ex)
         {
+            CronWorker.SignalDatabaseReady(false);
             Logger.Setup(ex.Message, LogEventLevel.Fatal);
         }
     }

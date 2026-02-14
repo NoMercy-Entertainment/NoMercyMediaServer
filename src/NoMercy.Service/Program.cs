@@ -238,6 +238,9 @@ public static class Program
 
         Logger.App("Certificate acquired — restarting with HTTPS...");
 
+        // Give the SSO callback page time to deliver its response to the browser
+        await Task.Delay(3000);
+
         // Gracefully stop the HTTP host
         Config.Started = false;
         await httpHost.StopAsync(TimeSpan.FromSeconds(10));
@@ -357,9 +360,20 @@ public static class Program
             return;
         }
 
-        await Task.Delay(1000);
+        // Retry port check — the OS may not release the socket immediately
+        bool portFreed = false;
+        for (int attempt = 1; attempt <= 5; attempt++)
+        {
+            await Task.Delay(500);
+            if (IsPortAvailable(port))
+            {
+                portFreed = true;
+                break;
+            }
+            Logger.App($"Port {port} still in use, retrying ({attempt}/5)...");
+        }
 
-        if (!IsPortAvailable(port))
+        if (!portFreed)
         {
             Logger.Error($"Port {port} still not available after killing process. Exiting.");
             Environment.ExitCode = 1;

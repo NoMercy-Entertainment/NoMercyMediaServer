@@ -636,16 +636,16 @@ public class SetupServerPkceTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         string body = await response.Content.ReadAsStringAsync();
         Assert.Contains("Authentication Received", body);
-        Assert.Contains("/setup", body);
+        Assert.Contains("window.close()", body);
     }
 
     [Fact]
-    public async Task SsoCallback_WithCode_ReturnsRedirectHtml()
+    public async Task SsoCallback_WithCode_ReturnsStaticMessage()
     {
         using HttpResponseMessage response = await _client.GetAsync("/sso-callback?code=test-code");
 
         string body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("window.location.href='/setup'", body);
+        Assert.Contains("Server is restarting with HTTPS. You can close this tab.", body);
     }
 }
 
@@ -812,9 +812,19 @@ public class SetupServerCallbackHtmlTests
     }
 
     [Fact]
-    public void BuildCallbackHtml_ContainsRedirectScript()
+    public void BuildCallbackHtml_Success_ContainsCloseScript()
     {
         string html = SetupServer.BuildCallbackHtml("Title", "Message");
+
+        Assert.Contains("window.close()", html);
+        Assert.Contains("Server is restarting with HTTPS. You can close this tab.", html);
+    }
+
+    [Fact]
+    public void BuildCallbackHtml_Error_ContainsRedirectScript()
+    {
+        string html = SetupServer.BuildCallbackHtml("Error", "Something went wrong",
+            isError: true);
 
         Assert.Contains("window.location.href='/setup'", html);
         Assert.Contains("setTimeout", html);
