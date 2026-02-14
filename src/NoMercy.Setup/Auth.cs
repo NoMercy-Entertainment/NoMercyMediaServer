@@ -41,14 +41,7 @@ public static class Auth
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
         {
-            try
-            {
-                await TokenByRefreshGrand();
-            }
-            catch (Exception)
-            {
-                //
-            }
+            await TokenByBrowserOrDeviceGrant();
             return;
         }
 
