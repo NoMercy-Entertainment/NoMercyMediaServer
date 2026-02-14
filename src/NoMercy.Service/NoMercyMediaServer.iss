@@ -25,12 +25,13 @@ MinVersion=10.0
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Types]
-Name: "full"; Description: "Full installation (Server + Service + CLI)"
+Name: "full"; Description: "Full installation (Server + App + Service + CLI)"
 Name: "server"; Description: "Server only"
 Name: "custom"; Description: "Custom installation"; Flags: iscustom
 
 [Components]
 Name: "server"; Description: "NoMercy MediaServer"; Types: full server custom; Flags: fixed
+Name: "app"; Description: "NoMercy App (desktop media interface)"; Types: full
 Name: "service"; Description: "NoMercy MediaServer Service (system tray control)"; Types: full
 Name: "cli"; Description: "NoMercy CLI (command-line tool)"; Types: full
 
@@ -41,6 +42,7 @@ Source: "..\..\installer-payload\*.json"; DestDir: "{app}"; Components: server; 
 
 ; Main executables per component
 Source: "..\..\installer-payload\NoMercyMediaServer.exe"; DestDir: "{app}"; Components: server; Flags: ignoreversion
+Source: "..\..\installer-payload\NoMercyApp.exe"; DestDir: "{app}"; Components: app; Flags: ignoreversion
 Source: "..\..\installer-payload\NoMercyMediaServerService.exe"; DestDir: "{app}"; Components: service; Flags: ignoreversion
 Source: "..\..\installer-payload\nomercy.exe"; DestDir: "{app}"; Components: cli; Flags: ignoreversion
 

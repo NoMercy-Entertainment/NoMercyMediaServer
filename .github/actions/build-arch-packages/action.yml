@@ -41,16 +41,18 @@ runs:
         # Copy shared runtime payload
         cp -R "${PAYLOAD_PATH}/"* "${pkg_dir}/pkg${INSTALL_DIR}/"
         chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyMediaServer"
+        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyApp"
         chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyMediaServerService"
         chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/nomercy"
 
         # Symlinks in /usr/bin
         ln -s "${INSTALL_DIR}/NoMercyMediaServer" "${pkg_dir}/pkg/usr/bin/nomercymediaserver"
+        ln -s "${INSTALL_DIR}/NoMercyApp" "${pkg_dir}/pkg/usr/bin/nomercyapp"
         ln -s "${INSTALL_DIR}/NoMercyMediaServerService" "${pkg_dir}/pkg/usr/bin/nomercymediaserverservice"
         ln -s "${INSTALL_DIR}/nomercy" "${pkg_dir}/pkg/usr/bin/nomercy"
 
         # Desktop files
-        for df in NoMercy-MediaServer.desktop NoMercy-MediaServer-Service.desktop; do
+        for df in NoMercy-MediaServer.desktop NoMercy-MediaServer-Service.desktop NoMercy-App.desktop; do
           if [ -f "./assets/linux/${df}" ]; then
             cp "./assets/linux/${df}" "${pkg_dir}/pkg/usr/share/applications/"
           fi

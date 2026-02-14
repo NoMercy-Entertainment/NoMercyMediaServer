@@ -45,16 +45,18 @@ runs:
         # Copy entire shared runtime payload
         cp -R "${PAYLOAD_PATH}/"* "${PACKAGE_ROOT}${INSTALL_DIR}/"
         chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/NoMercyMediaServer"
+        chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/NoMercyApp"
         chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/NoMercyMediaServerService"
         chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/nomercy"
 
         # Create symlinks in /usr/bin
         ln -s "${INSTALL_DIR}/NoMercyMediaServer" "${PACKAGE_ROOT}/usr/bin/nomercymediaserver"
+        ln -s "${INSTALL_DIR}/NoMercyApp" "${PACKAGE_ROOT}/usr/bin/nomercyapp"
         ln -s "${INSTALL_DIR}/NoMercyMediaServerService" "${PACKAGE_ROOT}/usr/bin/nomercymediaserverservice"
         ln -s "${INSTALL_DIR}/nomercy" "${PACKAGE_ROOT}/usr/bin/nomercy"
 
         # Copy desktop files
-        for df in NoMercy-MediaServer.desktop NoMercy-MediaServer-Service.desktop; do
+        for df in NoMercy-MediaServer.desktop NoMercy-MediaServer-Service.desktop NoMercy-App.desktop; do
           if [ -f "./assets/linux/${df}" ]; then
             install -Dm644 "./assets/linux/${df}" "${PACKAGE_ROOT}/usr/share/applications/"
           fi

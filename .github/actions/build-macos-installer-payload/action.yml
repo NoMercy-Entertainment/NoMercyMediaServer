@@ -46,6 +46,45 @@ runs:
           /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false \
           --output ./installer-payload
 
+    - name: Pull App Files
+      uses: actions/checkout@v5
+      with:
+        repository: NoMercy-Entertainment/NoMercyApp
+        path: ./src/NoMercy.App/Resources/wwwroot
+        fetch-depth: 1
+        fetch-tags: false
+        ref: gh-pages
+
+    - name: Move App Files
+      shell: bash
+      run: |
+        mkdir -p ./src/NoMercy.App/wwwroot
+        rm -rf ./src/NoMercy.App/Resources/wwwroot/.git
+        mv ./src/NoMercy.App/Resources/wwwroot/* ./src/NoMercy.App/wwwroot/ || true
+        rm -rf ./src/NoMercy.App/Resources/wwwroot
+
+    - name: Copy InfiniFrame.js to wwwroot
+      shell: bash
+      run: |
+        mkdir -p ./src/NoMercy.App/wwwroot/_content/InfiniLore.InfiniFrame.Js
+        NUGET_CACHE="${HOME}/.nuget/packages"
+        INFINIFRAME_PKG=$(find "$NUGET_CACHE/infinilore.infiniframe.js" -maxdepth 1 -type d | sort -V | tail -1)
+        if [ -d "$INFINIFRAME_PKG/staticwebassets" ]; then
+          cp "$INFINIFRAME_PKG/staticwebassets/InfiniFrame.js" "./src/NoMercy.App/wwwroot/_content/InfiniLore.InfiniFrame.Js/"
+          echo "InfiniFrame.js copied from $INFINIFRAME_PKG"
+        else
+          echo "Warning: InfiniFrame.js not found in NuGet cache"
+          exit 1
+        fi
+
+    - name: Publish App (single-file)
+      shell: bash
+      run: |
+        dotnet publish ./src/NoMercy.App/NoMercy.App.csproj \
+          --configuration Release --runtime osx-x64 \
+          --output ./app-publish
+        cp ./app-publish/NoMercyApp ./installer-payload/
+
     - name: List payload
       shell: bash
       run: |

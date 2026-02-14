@@ -38,6 +38,7 @@ mkdir -p "${APP_RESOURCES}"
 # Copy entire shared runtime payload into the .app bundle
 cp -R "${PAYLOAD_PATH}/"* "${APP_MACOS}/"
 chmod 755 "${APP_MACOS}/NoMercyMediaServer"
+chmod 755 "${APP_MACOS}/NoMercyApp"
 
 # Copy icon if available
 if [[ -f "${SCRIPT_DIR}/../../assets/icons/icon.icns" ]]; then

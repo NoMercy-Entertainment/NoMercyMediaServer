@@ -78,12 +78,14 @@ runs:
         mkdir -p %{buildroot}/opt/nomercy
         cp -R * %{buildroot}/opt/nomercy/
         chmod 755 %{buildroot}/opt/nomercy/NoMercyMediaServer
+        chmod 755 %{buildroot}/opt/nomercy/NoMercyApp
         chmod 755 %{buildroot}/opt/nomercy/NoMercyMediaServerService
         chmod 755 %{buildroot}/opt/nomercy/nomercy
 
         # Symlinks in /usr/bin
         mkdir -p %{buildroot}/usr/bin
         ln -s /opt/nomercy/NoMercyMediaServer %{buildroot}/usr/bin/nomercymediaserver
+        ln -s /opt/nomercy/NoMercyApp %{buildroot}/usr/bin/nomercyapp
         ln -s /opt/nomercy/NoMercyMediaServerService %{buildroot}/usr/bin/nomercymediaserverservice
         ln -s /opt/nomercy/nomercy %{buildroot}/usr/bin/nomercy
 
@@ -144,6 +146,7 @@ runs:
         %defattr(-,root,root,-)
         /opt/nomercy
         /usr/bin/nomercymediaserver
+        /usr/bin/nomercyapp
         /usr/bin/nomercymediaserverservice
         /usr/bin/nomercy
         %attr(644,root,root) /usr/share/applications/*.desktop
