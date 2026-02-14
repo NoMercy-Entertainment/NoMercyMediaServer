@@ -1,7 +1,9 @@
+using System.Collections.Specialized;
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using NoMercy.Tray.Models;
 using NoMercy.Tray.ViewModels;
 
@@ -16,6 +18,23 @@ public partial class LogViewerView : UserControl
 
     private LogViewerViewModel? ViewModel =>
         DataContext as LogViewerViewModel;
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+
+        if (ViewModel is not null)
+            ViewModel.FilteredEntries.CollectionChanged += (_, _) => ScrollToBottom();
+    }
+
+    private void ScrollToBottom()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (LogList.ItemCount > 0)
+                LogList.ScrollIntoView(LogList.Items[LogList.ItemCount - 1]!);
+        });
+    }
 
     private async void OnRefreshClick(
         object? sender, RoutedEventArgs e)

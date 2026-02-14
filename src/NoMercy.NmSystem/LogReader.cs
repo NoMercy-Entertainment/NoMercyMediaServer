@@ -31,6 +31,7 @@ public static class LogReader
             .OrderByDescending(entry => entry.Time)
             .Skip((page - 1) * limit)
             .Take(limit)
+            .OrderBy(entry => entry.Time)
             .ToList();
 
         return logEntries;
