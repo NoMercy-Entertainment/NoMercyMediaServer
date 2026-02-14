@@ -5,10 +5,7 @@
         <OutputType>Exe</OutputType>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Authors>NoMercy Entertainment</Authors>
         <Description>NoMercy MediaServer CLI Tool</Description>
-        <Copyright>2025 NoMercy Entertainment</Copyright>
-        <Company>NoMercy Entertainment</Company>
         <Product>NoMercy CLI</Product>
         <AssemblyName>nomercy</AssemblyName>
         <PublishSingleFile>true</PublishSingleFile>

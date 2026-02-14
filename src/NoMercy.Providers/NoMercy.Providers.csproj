@@ -4,10 +4,6 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Authors>NoMercy Entertainment</Authors>
-        <Copyright>(c) 2023 NoMercy Entertainment</Copyright>
-        <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
-        <Company>NoMercy Entertainment</Company>
         <Product>NoMercy API Providers</Product>
         <LangVersion>12</LangVersion>
         <BuildFrameworkVersion>6.0.2</BuildFrameworkVersion>

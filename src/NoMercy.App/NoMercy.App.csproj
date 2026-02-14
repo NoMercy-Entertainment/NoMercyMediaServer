@@ -1,21 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
         <ApplicationIcon>..\..\assets\icons\icon.ico</ApplicationIcon>
-        <Authors>NoMercy Entertainment</Authors>
         <Description>NoMercy MediaServer UI Application</Description>
-        <Copyright>2025 NoMercy Entertainment</Copyright>
-        <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
         <PackageIcon>..\..\assets\icons\icon.png</PackageIcon>
-        <Company>NoMercy Entertainment</Company>
         <Product>NoMercy App</Product>
         <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
         <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-        <RepositoryUrl>https://github.com/NoMercy-Entertainment/NoMercyMediaServer</RepositoryUrl>
         <PackageTags>streaming media content-management private streaming-video streaming-audio blurayrip video-encoder</PackageTags>
         <NeutralLanguage>en</NeutralLanguage>
         <OutputType>WinExe</OutputType>

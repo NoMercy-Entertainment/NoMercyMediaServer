@@ -15,6 +15,9 @@ internal class Program
         string windowTitle = "NoMercy TV";
         string iconPath = GetIconPath();
 
+        string browserDataPath = GetBrowserDataPath();
+        ClearBrowserDataOnVersionChange(browserDataPath);
+
         // Set environment variable for URL before creating builder
         if (!Debugger.IsAttached)
         {
@@ -24,6 +27,7 @@ internal class Program
         InfiniFrameWebApplicationBuilder builder = InfiniFrameWebApplication.CreateBuilder(args);
 
         IInfiniFrameWindowBuilder window = builder.Window
+            .SetTemporaryFilesPath(browserDataPath)
             .Center()
             .SetTitle(windowTitle)
             .SetMinSize(1280 + 16, 720 + 39)
@@ -96,5 +100,57 @@ internal class Program
         }
 
         return iconPath;
+    }
+
+    private static string GetBrowserDataPath()
+    {
+        string baseDir;
+        if (OperatingSystem.IsWindows())
+            baseDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "NoMercy", "browser");
+        else if (OperatingSystem.IsMacOS())
+            baseDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Library", "Application Support", "NoMercy", "browser");
+        else
+            baseDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".local", "share", "NoMercy", "browser");
+
+        Directory.CreateDirectory(baseDir);
+        return baseDir;
+    }
+
+    private static void ClearBrowserDataOnVersionChange(string browserDataPath)
+    {
+        string versionFile = Path.Combine(browserDataPath, ".app-version");
+        string currentVersion = typeof(Program).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? typeof(Program).Assembly.GetName().Version?.ToString()
+            ?? "0.0.0";
+
+        string? previousVersion = null;
+        if (File.Exists(versionFile))
+            previousVersion = File.ReadAllText(versionFile).Trim();
+
+        if (previousVersion != currentVersion)
+        {
+            // Clear browser cache, localStorage, IndexedDB etc.
+            foreach (string dir in Directory.GetDirectories(browserDataPath))
+            {
+                try { Directory.Delete(dir, true); }
+                catch { /* locked or inaccessible — skip */ }
+            }
+
+            foreach (string file in Directory.GetFiles(browserDataPath))
+            {
+                if (Path.GetFileName(file) == ".app-version") continue;
+                try { File.Delete(file); }
+                catch { /* skip */ }
+            }
+
+            File.WriteAllText(versionFile, currentVersion);
+        }
     }
 }

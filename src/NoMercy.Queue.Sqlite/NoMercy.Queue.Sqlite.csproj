@@ -5,10 +5,6 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
-        <Authors>NoMercy Entertainment</Authors>
-        <Copyright>(c) 2023 NoMercy Entertainment</Copyright>
-        <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
-        <Company>NoMercy Entertainment</Company>
         <Product>NoMercy Queue SQLite Provider</Product>
     </PropertyGroup>
     <PropertyGroup>

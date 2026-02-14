@@ -6,10 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <ApplicationIcon>..\..\assets\icons\icon.ico</ApplicationIcon>
-        <Authors>NoMercy Entertainment</Authors>
         <Description>NoMercy MediaServer Service Application</Description>
-        <Copyright>2025 NoMercy Entertainment</Copyright>
-        <Company>NoMercy Entertainment</Company>
         <Product>NoMercy MediaServer</Product>
         <AssemblyName>NoMercyMediaServerService</AssemblyName>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>

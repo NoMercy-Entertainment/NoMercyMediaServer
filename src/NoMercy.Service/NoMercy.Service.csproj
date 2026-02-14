@@ -4,18 +4,13 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <ApplicationIcon>..\..\assets\icons\icon.ico</ApplicationIcon>
-        <Authors>NoMercy Entertainment</Authors>
         <Description>The Effortless Encoder</Description>
-        <Copyright>2025 NoMercy Entertainment</Copyright>
-        <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
         <PackageIcon>Assets\icon.png</PackageIcon>
-        <Company>NoMercy Entertainment</Company>
         <Product>NoMercy MediaServer</Product>
         <LangVersion>12</LangVersion>
         <BuildFrameworkVersion>6.0.2</BuildFrameworkVersion>
         <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
         <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-        <RepositoryUrl>https://github.com/NoMercy-Entertainment/NoMercyMediaServer</RepositoryUrl>
         <PackageTags>streaming media content-management private streaming-video streaming-audio
             blurayrip video-encoder</PackageTags>
         <NeutralLanguage>en</NeutralLanguage>

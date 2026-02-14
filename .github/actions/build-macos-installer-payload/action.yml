@@ -58,10 +58,11 @@ runs:
     - name: Move App Files
       shell: bash
       run: |
-        mkdir -p ./src/NoMercy.App/wwwroot
         rm -rf ./src/NoMercy.App/Resources/wwwroot/.git
-        mv ./src/NoMercy.App/Resources/wwwroot/* ./src/NoMercy.App/wwwroot/ || true
+        cp -a ./src/NoMercy.App/Resources/wwwroot/. ./src/NoMercy.App/wwwroot/
         rm -rf ./src/NoMercy.App/Resources/wwwroot
+        echo "App files copied to wwwroot:"
+        find ./src/NoMercy.App/wwwroot -type f | head -20
 
     - name: Copy InfiniFrame.js to wwwroot
       shell: bash

@@ -4,10 +4,6 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Authors>NoMercy Entertainment</Authors>
-        <Copyright>(c) 2023 NoMercy Entertainment</Copyright>
-        <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
-        <Company>NoMercy Entertainment</Company>
         <Product>NoMercy Database</Product>
         <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
         <Platforms>AnyCPU;x64;x86;ARM32</Platforms>
