@@ -69,6 +69,8 @@ public class Networking
                 Logger.Setup($"Failed to get external IP from API: {e.Message}");
             }
         }
+
+        Logger.App($"External Address: {ExternalAddress}");
     }
 
     private static void NetworkAddressChanged(object? sender, EventArgs e)

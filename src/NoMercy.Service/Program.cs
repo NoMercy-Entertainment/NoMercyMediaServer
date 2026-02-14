@@ -163,7 +163,6 @@ public static class Program
                 Task.Delay(300).Wait();
 
                 Logger.App($"Internal Address: {Networking.Networking.InternalAddress}");
-                Logger.App($"External Address: {Networking.Networking.ExternalAddress}");
 
                 if (!IsRunningAsService && !Console.IsOutputRedirected)
                     await ConsoleMessages.ServerRunning();
