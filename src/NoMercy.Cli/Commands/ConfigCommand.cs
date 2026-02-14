@@ -35,6 +35,7 @@ internal static class ConfigCommand
             Console.WriteLine($"Cron Workers:     {config.CronWorkers}");
             Console.WriteLine($"Data Workers:     {config.DataWorkers}");
             Console.WriteLine($"Image Workers:    {config.ImageWorkers}");
+            Console.WriteLine($"File Workers:     {config.FileWorkers}");
             Console.WriteLine($"Request Workers:  {config.RequestWorkers}");
             Console.WriteLine($"Swagger:          {config.Swagger}");
             return 0;

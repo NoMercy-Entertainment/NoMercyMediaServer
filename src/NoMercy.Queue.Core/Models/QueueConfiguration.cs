@@ -8,7 +8,8 @@ public record QueueConfiguration
         ["encoder"] = 2,
         ["cron"] = 1,
         ["data"] = 10,
-        ["image"] = 5
+        ["image"] = 5,
+        ["file"] = 2
     };
 
     public byte MaxAttempts { get; init; } = 3;

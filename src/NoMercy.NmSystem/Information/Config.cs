@@ -72,6 +72,7 @@ public static class Config
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
     public static KeyValuePair<string, int> DataWorkers { get; set; } = new("data", 10);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 5);
+    public static KeyValuePair<string, int> FileWorkers { get; set; } = new("file", 2);
     public static KeyValuePair<string, int> RequestWorkers { get; set; } = new("request", 15);
     
     public static readonly ParallelOptions ParallelOptions = new()

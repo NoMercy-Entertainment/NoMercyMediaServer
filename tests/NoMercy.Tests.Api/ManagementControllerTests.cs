@@ -91,6 +91,7 @@ public class ManagementControllerTests : IClassFixture<NoMercyApiFactory>
         Assert.True(root.TryGetProperty("cron_workers", out _));
         Assert.True(root.TryGetProperty("data_workers", out _));
         Assert.True(root.TryGetProperty("image_workers", out _));
+        Assert.True(root.TryGetProperty("file_workers", out _));
         Assert.True(root.TryGetProperty("request_workers", out _));
         Assert.True(root.TryGetProperty("swagger", out _));
     }

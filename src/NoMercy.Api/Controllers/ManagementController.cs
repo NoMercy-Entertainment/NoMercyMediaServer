@@ -224,6 +224,7 @@ public class ManagementController(
             CronWorkers = Config.CronWorkers.Value,
             DataWorkers = Config.DataWorkers.Value,
             ImageWorkers = Config.ImageWorkers.Value,
+            FileWorkers = Config.FileWorkers.Value,
             RequestWorkers = Config.RequestWorkers.Value,
             Swagger = Config.Swagger
         });
@@ -261,6 +262,12 @@ public class ManagementController(
         {
             Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
             await queueRunner.SetWorkerCount(Config.ImageWorkers.Key, (int)request.ImageWorkers, null);
+        }
+
+        if (request.FileWorkers is not null)
+        {
+            Config.FileWorkers = new(Config.FileWorkers.Key, (int)request.FileWorkers);
+            await queueRunner.SetWorkerCount(Config.FileWorkers.Key, (int)request.FileWorkers, null);
         }
 
         if (request.RequestWorkers is not null)

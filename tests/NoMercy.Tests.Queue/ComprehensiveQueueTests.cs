@@ -1498,6 +1498,7 @@ public class ComprehensiveQueueTests
             Assert.Contains("encoder", config.WorkerCounts.Keys);
             Assert.Contains("cron", config.WorkerCounts.Keys);
             Assert.Contains("image", config.WorkerCounts.Keys);
+            Assert.Contains("file", config.WorkerCounts.Keys);
         }
 
         [Fact]

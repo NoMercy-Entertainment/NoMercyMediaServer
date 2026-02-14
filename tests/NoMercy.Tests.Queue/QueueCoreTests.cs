@@ -267,6 +267,7 @@ public class QueueCoreTests
         Assert.Equal(2, config.WorkerCounts["encoder"]);
         Assert.Equal(1, config.WorkerCounts["cron"]);
         Assert.Equal(5, config.WorkerCounts["image"]);
+        Assert.Equal(2, config.WorkerCounts["file"]);
     }
 
     [Fact]

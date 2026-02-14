@@ -25,7 +25,8 @@ public static class ServiceRegistration
                     [Config.EncoderWorkers.Key] = Config.EncoderWorkers.Value,
                     [Config.CronWorkers.Key] = Config.CronWorkers.Value,
                     [Config.DataWorkers.Key] = Config.DataWorkers.Value,
-                    [Config.ImageWorkers.Key] = Config.ImageWorkers.Value
+                    [Config.ImageWorkers.Key] = Config.ImageWorkers.Value,
+                    [Config.FileWorkers.Key] = Config.FileWorkers.Value
                 }
             };
             return new(queueContext, configuration, configStore);

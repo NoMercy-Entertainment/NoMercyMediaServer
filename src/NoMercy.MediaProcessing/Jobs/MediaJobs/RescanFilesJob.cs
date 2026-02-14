@@ -15,7 +15,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 [Serializable]
 public class RescanFilesJob : AbstractMediaJob
 {
-    public override string QueueName => "image";
+    public override string QueueName => "file";
     public override int Priority => 10;
 
     public override async Task Handle()
