@@ -4,7 +4,7 @@ inputs:
   dotnet-version:
     description: '.NET version to use'
     required: false
-    default: '9.0.x'
+    default: '10.0.x'
 outputs:
   payload-path:
     description: 'Path to the shared runtime output'
@@ -62,7 +62,7 @@ runs:
         cp -a ./src/NoMercy.App/Resources/wwwroot/. ./src/NoMercy.App/wwwroot/
         rm -rf ./src/NoMercy.App/Resources/wwwroot
         echo "App files copied to wwwroot:"
-        find ./src/NoMercy.App/wwwroot -type f | head -20
+        find ./src/NoMercy.App/wwwroot -type f | head -20 || true
 
     - name: Copy InfiniFrame.js to wwwroot
       shell: bash
