@@ -8,6 +8,8 @@ namespace NoMercy.Service.Configuration.Swagger;
 
 public static class SwaggerConfiguration
 {
+    private static readonly Lock ThemeLock = new();
+
     public static void AddSwagger(IServiceCollection services)
     {
         services.AddSwaggerGen(options => options.OperationFilter<SwaggerDefaultValues>());
@@ -18,6 +20,9 @@ public static class SwaggerConfiguration
     public static void UseSwaggerUi(IApplicationBuilder app, IApiVersionDescriptionProvider provider)
     {
         app.UseSwagger();
+        // Lock required: AspNetCore.SwaggerUI.Themes uses a non-concurrent Dictionary internally,
+        // which causes corruption when multiple hosts initialize in parallel (e.g. during tests).
+        lock (ThemeLock)
         app.UseSwaggerUI(Theme.Dark, options =>
         {
             options.RoutePrefix = string.Empty;
