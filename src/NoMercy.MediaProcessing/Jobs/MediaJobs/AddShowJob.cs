@@ -50,6 +50,8 @@ public class AddShowJob : AbstractMediaJob
             .ThenInclude(f => f.Folder)
             .FirstAsync();
 
+        bool wasEmpty = !await context.LibraryTv.AnyAsync(lt => lt.LibraryId == LibraryId);
+
         TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary, HighPriority);
         if (show == null) return;
 
@@ -81,9 +83,17 @@ public class AddShowJob : AbstractMediaJob
         jobDispatcher.DispatchJob<RescanFilesJob>(Id, tvLibrary);
         
         if (EventBusProvider.IsConfigured)
+        {
             await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
             {
                 QueryKey = ["base", "info", Id.ToString()]
             });
+
+            if (wasEmpty)
+                await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                {
+                    QueryKey = ["libraries"]
+                });
+        }
     }
 }

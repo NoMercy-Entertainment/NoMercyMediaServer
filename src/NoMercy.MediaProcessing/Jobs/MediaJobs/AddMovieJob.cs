@@ -41,6 +41,8 @@ public class AddMovieJob : AbstractMediaJob
             .ThenInclude(f => f.Folder)
             .FirstAsync();
 
+        bool wasEmpty = !await context.LibraryMovie.AnyAsync(lm => lm.LibraryId == LibraryId);
+
         TmdbMovieAppends? movieAppends = await movieManager.Add(Id, movieLibrary);
         if (movieAppends == null) return;
 
@@ -63,9 +65,17 @@ public class AddMovieJob : AbstractMediaJob
         Logger.App($"Movie {Id} added to library, extra data will be added in the background");
         
         if (EventBusProvider.IsConfigured)
+        {
             await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
             {
                 QueryKey = ["base", "info", Id.ToString()]
             });
+
+            if (wasEmpty)
+                await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                {
+                    QueryKey = ["libraries"]
+                });
+        }
     }
 }

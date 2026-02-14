@@ -64,6 +64,7 @@ public class AudioImportJob : AbstractMusicFolderJob
         using (musicBrainzReleaseClient) using (musicBrainzArtistClient) using (musicBrainzRecordingClient)
         await using (_mediaContext)
         {
+            bool wasEmpty = !await _mediaContext!.AlbumLibrary.AnyAsync(al => al.LibraryId == LibraryId);
 
             Dictionary<Guid, (MusicBrainzReleaseAppends SingleAppends,
                 List<(MediaFile MediaFile, AudioTagModel audioTagModel)> File)> processedSingles = new();
@@ -99,6 +100,9 @@ public class AudioImportJob : AbstractMusicFolderJob
                 jobDispatcher.DispatchJob<MusicDescriptionJob>(singleRelease.MusicBrainzReleaseGroup);
                 await SendRefresh(["music", "start"]);
             }
+
+            if (wasEmpty && processedSingles.Count > 0)
+                await SendRefresh(["libraries"]);
         }
         try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
         try { musicBrainzArtistClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
@@ -130,6 +134,8 @@ public class AudioImportJob : AbstractMusicFolderJob
         using (musicBrainzReleaseClient) using (musicBrainzArtistClient) using (musicBrainzRecordingClient)
         await using (_mediaContext)
         {
+            bool wasEmpty = !await _mediaContext!.AlbumLibrary.AnyAsync(al => al.LibraryId == LibraryId);
+
             // First pass: count releases without storing all tags in memory
             await foreach ((_, AudioTagModel audioTag) in audioFilesFactory())
             {
@@ -177,6 +183,9 @@ public class AudioImportJob : AbstractMusicFolderJob
 
             jobDispatcher.DispatchJob<MusicDescriptionJob>(release.MusicBrainzReleaseGroup);
             await SendRefresh(["music", "start"]);
+
+            if (wasEmpty)
+                await SendRefresh(["libraries"]);
         }
         try { musicBrainzReleaseClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
         try { musicBrainzArtistClient.Dispose(); } catch (Exception disposeEx) { Logger.Error($"Dispose failed: {disposeEx}"); }
