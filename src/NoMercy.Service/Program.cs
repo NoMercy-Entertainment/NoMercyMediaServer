@@ -116,6 +116,11 @@ public static class Program
         // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
         await Setup.Start.InitEssential(startupTasks);
 
+        // Proactively resolve port conflicts before building the host.
+        // This avoids the costly build→fail→kill→rebuild cycle and prevents
+        // CronWorker "Failed to start database job workers" errors.
+        await EnsurePortAvailable(Config.InternalServerPort);
+
         _applicationShutdownCts = new();
         bool startedWithoutCert = !Certificate.HasValidCertificate();
         IWebHost app = CreateWebHostBuilder(options).Build();
@@ -276,6 +281,108 @@ public static class Program
         }
 
         return false;
+    }
+
+    private static async Task EnsurePortAvailable(int port)
+    {
+        if (IsPortAvailable(port))
+            return;
+
+        Logger.App($"Port {port} is in use — checking for stale instances...");
+        string processInfo = await FindProcessOnPortAsync(port);
+
+        if (!string.IsNullOrEmpty(processInfo))
+            Logger.App($"Process holding port {port}:\n{processInfo}");
+
+        int blockingPid = ParsePidFromPortInfo(processInfo);
+
+        if (blockingPid <= 0)
+        {
+            Logger.Error($"Port {port} is in use but cannot identify the process. Please free it manually.");
+            Environment.ExitCode = 1;
+            Environment.Exit(1);
+            return;
+        }
+
+        bool isStaleInstance = false;
+        try
+        {
+            Process blockingProcess = Process.GetProcessById(blockingPid);
+            isStaleInstance = blockingProcess.ProcessName == "NoMercyMediaServer";
+        }
+        catch
+        {
+            // Process may have exited between detection and lookup
+        }
+
+        if (isStaleInstance)
+        {
+            Logger.App($"Stale NoMercyMediaServer instance detected (PID {blockingPid}). Auto-killing...");
+        }
+        else
+        {
+            bool isInteractive = !IsRunningAsService && !Console.IsInputRedirected && !Console.IsOutputRedirected;
+            if (!isInteractive)
+            {
+                Logger.Error($"Port {port} is in use by PID {blockingPid}. Stop it manually and restart.");
+                Environment.ExitCode = 1;
+                Environment.Exit(1);
+                return;
+            }
+
+            Console.Write($"\nPort {port} is in use by process {blockingPid}. Kill it and retry? [y/N] ");
+            string? answer = Console.ReadLine();
+            if (string.IsNullOrEmpty(answer) || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.App("User declined. Exiting.");
+                Environment.ExitCode = 1;
+                Environment.Exit(1);
+                return;
+            }
+        }
+
+        try
+        {
+            Process blockingProcess = Process.GetProcessById(blockingPid);
+            Logger.App($"Killing process {blockingPid} ({blockingProcess.ProcessName})...");
+            blockingProcess.Kill();
+            blockingProcess.WaitForExit(5000);
+            Logger.App($"Process {blockingPid} terminated.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Failed to kill process {blockingPid}: {ex.Message}");
+            Environment.ExitCode = 1;
+            Environment.Exit(1);
+            return;
+        }
+
+        await Task.Delay(1000);
+
+        if (!IsPortAvailable(port))
+        {
+            Logger.Error($"Port {port} still not available after killing process. Exiting.");
+            Environment.ExitCode = 1;
+            Environment.Exit(1);
+            return;
+        }
+
+        Logger.App("Port freed — continuing startup...");
+    }
+
+    private static bool IsPortAvailable(int port)
+    {
+        try
+        {
+            using TcpListener listener = new(IPAddress.Loopback, port);
+            listener.Start();
+            listener.Stop();
+            return true;
+        }
+        catch (SocketException)
+        {
+            return false;
+        }
     }
 
     private static async Task<bool> HandlePortInUse(int port, IOException ex)
