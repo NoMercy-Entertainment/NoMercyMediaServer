@@ -107,27 +107,20 @@ public class QueueRunnerFireAndForgetTests
     [Fact]
     public void QueueRunner_VolatileFlags_AreMarkedVolatile()
     {
-        // CRIT-08: Verify _isInitialized and _isUpdating are volatile for cross-thread visibility
-        // (now instance fields since QueueRunner is no longer static)
+        // CRIT-08: Verify _isInitialized is volatile for cross-thread visibility.
+        // _isUpdating was moved to a per-pool flag in the _workers dictionary,
+        // protected by _workersLock instead of volatile.
         FieldInfo? isInitialized = typeof(QueueRunner).GetField(
             "_isInitialized",
             BindingFlags.NonPublic | BindingFlags.Instance);
-        FieldInfo? isUpdating = typeof(QueueRunner).GetField(
-            "_isUpdating",
-            BindingFlags.NonPublic | BindingFlags.Instance);
 
         Assert.NotNull(isInitialized);
-        Assert.NotNull(isUpdating);
 
         // Check for volatile modifier via attributes
         Assert.True(
             isInitialized.GetRequiredCustomModifiers().Any(t => t == typeof(System.Runtime.CompilerServices.IsVolatile)) ||
             isInitialized.FieldType == typeof(bool),
             "_isInitialized should be volatile");
-        Assert.True(
-            isUpdating.GetRequiredCustomModifiers().Any(t => t == typeof(System.Runtime.CompilerServices.IsVolatile)) ||
-            isUpdating.FieldType == typeof(bool),
-            "_isUpdating should be volatile");
     }
 
     [Fact]

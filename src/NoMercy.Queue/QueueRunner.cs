@@ -12,11 +12,10 @@ public class QueueRunner
     private readonly object _workersLock = new();
 
     private readonly
-        Dictionary<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource _cancellationTokenSource)>
+        Dictionary<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource _cancellationTokenSource, bool isUpdating)>
         _workers;
 
     private volatile bool _isInitialized;
-    private volatile bool _isUpdating;
 
     private readonly ConcurrentDictionary<string, Thread> _activeWorkerThreads = new();
 
@@ -39,7 +38,7 @@ public class QueueRunner
         _workers = new();
         foreach (KeyValuePair<string, int> entry in configuration.WorkerCounts)
         {
-            _workers[entry.Key] = (entry.Value, [], new());
+            _workers[entry.Key] = (entry.Value, [], new(), false);
         }
 
         Current = this;
@@ -61,7 +60,7 @@ public class QueueRunner
 
         int workerCount = 0;
         foreach (KeyValuePair<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource
-                     _cancellationTokenSource)> keyValuePair in _workers)
+                     _cancellationTokenSource, bool isUpdating)> keyValuePair in _workers)
             for (int i = 0; i < keyValuePair.Value.count; i++)
             {
                 SpawnWorkerThread(keyValuePair.Key);
@@ -225,28 +224,31 @@ public class QueueRunner
 
     private void UpdateRunningWorkerCounts(string name)
     {
+        int spawned;
+        int targetCount;
         CancellationToken token;
         lock (_workersLock)
         {
             if (ShouldRemoveWorker(name)) return;
+            spawned = _workers[name].workerInstances.Count;
+            targetCount = _workers[name].count;
             token = _workers[name]._cancellationTokenSource.Token;
         }
 
         Task workerTask = Task.Run(async () =>
         {
-            while (!_isUpdating)
+            while (spawned < targetCount)
             {
-                int currentCount;
-                int targetCount;
+                bool isUpdating;
                 lock (_workersLock)
                 {
-                    currentCount = _workers[name].workerInstances.Count;
-                    targetCount = _workers[name].count;
+                    isUpdating = _workers[name].isUpdating;
                 }
 
-                if (_isUpdating || currentCount >= targetCount) break;
+                if (isUpdating || spawned >= targetCount) break;
 
                 SpawnWorkerThread(name);
+                spawned += 1;
 
                 await Task.Delay(100, token);
             }
@@ -265,6 +267,7 @@ public class QueueRunner
         lock (_workersLock)
         {
             exists = _workers.ContainsKey(name);
+            if (exists && _workers[name].count == max) return true;
         }
 
         if (!exists) return false;
@@ -279,11 +282,10 @@ public class QueueRunner
         CancellationToken token;
         lock (_workersLock)
         {
-            _isUpdating = true;
-            _workers[name]._cancellationTokenSource.Cancel();
-
-            (int count, List<QueueWorker> workerInstances, CancellationTokenSource _cancellationTokenSource)
+            (int count, List<QueueWorker> workerInstances, CancellationTokenSource _cancellationTokenSource, bool isUpdating)
                 valueTuple = _workers[name];
+            valueTuple.isUpdating = true;
+            valueTuple._cancellationTokenSource.Cancel();
             valueTuple.count = max;
             valueTuple._cancellationTokenSource = new();
             _workers[name] = valueTuple;
@@ -292,7 +294,13 @@ public class QueueRunner
 
         await Task.Run(() =>
         {
-            _isUpdating = false;
+            lock (_workersLock)
+            {
+                (int count, List<QueueWorker> workerInstances, CancellationTokenSource _cancellationTokenSource, bool isUpdating)
+                    valueTuple = _workers[name];
+                valueTuple.isUpdating = false;
+                _workers[name] = valueTuple;
+            }
             UpdateRunningWorkerCounts(name);
         }, token);
 
