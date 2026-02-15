@@ -68,7 +68,16 @@ public static class OfflineJwksCache
 
     internal static RsaSecurityKey CreateSecurityKeyFromBase64(string publicKeyBase64)
     {
-        byte[] keyBytes = Convert.FromBase64String(publicKeyBase64);
+        string cleaned = publicKeyBase64
+            .Replace("-----BEGIN PUBLIC KEY-----", "")
+            .Replace("-----END PUBLIC KEY-----", "")
+            .Replace("-----BEGIN RSA PUBLIC KEY-----", "")
+            .Replace("-----END RSA PUBLIC KEY-----", "")
+            .Replace("\n", "")
+            .Replace("\r", "")
+            .Trim();
+
+        byte[] keyBytes = Convert.FromBase64String(cleaned);
         RSA rsa = RSA.Create();
         rsa.ImportSubjectPublicKeyInfo(keyBytes, out _);
         return new(rsa);

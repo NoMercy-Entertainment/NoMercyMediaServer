@@ -1,7 +1,6 @@
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercy.Providers.TMDB.Models.Movies;
-using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.People;
 using NoMercy.Providers.TMDB.Models.Search;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -253,48 +252,6 @@ public class TmdbSearchClientTests : TmdbTestBase
 
         // Assert
         result.Should().NotBeNull();
-    }
-
-    #endregion
-
-    #region Network Search Tests
-
-    [Fact]
-    public async Task Network_WithValidQuery_ReturnsResults()
-    {
-        // Arrange
-        using TmdbSearchClient client = new();
-        const string query = "HBO";
-
-        // Act
-        TmdbPaginatedResponse<TmdbNetwork>? result = await client.Network(query);
-
-        // Assert
-        // API may return null for certain network queries
-        if (result != null)
-        {
-            result.Results.Should().NotBeNull();
-        }
-    }
-
-    [Theory]
-    [InlineData("Netflix")]
-    [InlineData("Disney")]
-    [InlineData("BBC")]
-    public async Task Network_WithNetworkNames_ReturnsResults(string networkName)
-    {
-        // Arrange
-        using TmdbSearchClient client = new();
-
-        // Act
-        TmdbPaginatedResponse<TmdbNetwork>? result = await client.Network(networkName);
-
-        // Assert
-        // API may return null for certain network queries
-        if (result != null)
-        {
-            result.Results.Should().NotBeNull();
-        }
     }
 
     #endregion

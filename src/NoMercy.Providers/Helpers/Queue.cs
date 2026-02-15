@@ -151,7 +151,7 @@ public class Queue(QueueOptions options)
                             Reject?.Invoke(this, new() { Error = ex });
                             tcs.SetException(ex);
                             if (ex.Message.Contains("404") || ex.Message.Contains("502") || ex.Message.Contains("503")) return;
-                            Logger.App($"Url failed: {url} {ex.Message}", LogEventLevel.Error);
+                            Logger.App($"Url failed: {url} {ex.Message}", LogEventLevel.Debug);
                             return;
                         }
                     }

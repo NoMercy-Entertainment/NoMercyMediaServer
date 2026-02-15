@@ -40,6 +40,7 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
                 CronWorkers = Config.CronWorkers.Value,
                 DataWorkers = Config.DataWorkers.Value,
                 ImageWorkers = Config.ImageWorkers.Value,
+                FileWorkers = Config.FileWorkers.Value,
                 RequestWorkers = Config.RequestWorkers.Value,
                 ServerName = DeviceName(),
                 Swagger = Config.Swagger
@@ -138,6 +139,12 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
         {
             Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
             await queueRunner.SetWorkerCount(Config.ImageWorkers.Key, (int)request.ImageWorkers, userId);
+        }
+
+        if (request.FileWorkers is not null)
+        {
+            Config.FileWorkers = new(Config.FileWorkers.Key, (int)request.FileWorkers);
+            await queueRunner.SetWorkerCount(Config.FileWorkers.Key, (int)request.FileWorkers, userId);
         }
 
         if (request.RequestWorkers is not null)

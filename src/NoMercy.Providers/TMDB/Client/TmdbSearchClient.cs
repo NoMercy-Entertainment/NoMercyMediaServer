@@ -1,6 +1,5 @@
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercy.Providers.TMDB.Models.Movies;
-using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.People;
 using NoMercy.Providers.TMDB.Models.Search;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -64,17 +63,6 @@ public class TmdbSearchClient : TmdbBaseClient
         };
 
         return Get<TmdbPaginatedResponse<TmdbCollection>>("search/collection", queryParams, priority);
-    }
-
-    public Task<TmdbPaginatedResponse<TmdbNetwork>?> Network(string query, string? year = "", bool? priority = false)
-    {
-        Dictionary<string, string?> queryParams = new()
-        {
-            ["query"] = query,
-            ["primary_release_year"] = year
-        };
-
-        return Get<TmdbPaginatedResponse<TmdbNetwork>>("search/network", queryParams, priority);
     }
 
     public Task<TmdbPaginatedResponse<TmdbKeyword>?> Keyword(string query, string? year = "", bool? priority = false)

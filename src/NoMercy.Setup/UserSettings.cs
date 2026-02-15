@@ -101,6 +101,9 @@ public static class UserSettings
                 case "imageRunners":
                     Config.ImageWorkers = new(Config.ImageWorkers.Key, setting.Value.ToInt());
                     break;
+                case "fileRunners":
+                    Config.FileWorkers = new(Config.FileWorkers.Key, setting.Value.ToInt());
+                    break;
                 case "requestRunners":
                     Config.RequestWorkers = new(Config.RequestWorkers.Key, setting.Value.ToInt());
                     break;
