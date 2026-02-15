@@ -206,46 +206,74 @@ public class SetupServer
         _state.TransitionTo(SetupPhase.Authenticating);
 
         string redirectUri = BuildRedirectUri(context.Request);
+        string codeVerifier = _codeVerifier;
+
+        // Exchange the authorization code for tokens synchronously so they are
+        // persisted before the response is sent.  This prevents token loss if
+        // the process is killed (e.g. port-conflict auto-kill) before the
+        // background task finishes.
+        string responseTitle;
+        string responseMessage;
+        bool responseIsError;
+
+        try
+        {
+            await Auth.TokenByAuthorizationCode(code, codeVerifier, redirectUri);
+
+            if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
+                throw new("Token exchange succeeded but access token was not stored");
+
+            if (!File.Exists(AppFiles.TokenFile))
+                throw new("Token exchange succeeded but token file was not written");
+
+            _state.TransitionTo(SetupPhase.Authenticated);
+            Logger.Setup("OAuth token exchange completed successfully");
+
+            responseTitle = "Authentication Successful";
+            responseMessage = "Tokens saved. Completing server registration...";
+            responseIsError = false;
+        }
+        catch (Exception ex)
+        {
+            _state.SetError($"Authentication failed: {ex.Message}");
+            _state.TransitionTo(SetupPhase.Unauthenticated);
+            Logger.Setup($"OAuth token exchange failed: {ex.Message}",
+                LogEventLevel.Error);
+
+            responseTitle = "Authentication Failed";
+            responseMessage = $"Token exchange failed: {ex.Message}";
+            responseIsError = true;
+        }
+        finally
+        {
+            _codeVerifier = Auth.GenerateCodeVerifier();
+            _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
+        }
 
         context.Response.ContentType = "text/html; charset=utf-8";
         context.Response.StatusCode = StatusCodes.Status200OK;
         await context.Response.WriteAsync(BuildCallbackHtml(
-            "Authentication Received",
-            "Exchanging authorization code for tokens..."));
+            responseTitle, responseMessage, responseIsError));
         await context.Response.CompleteAsync();
 
-        string codeVerifier = _codeVerifier;
-
-        _ = Task.Run(async () =>
+        // Run post-auth registration in the background (networking, cert, etc.)
+        // The response is already sent and tokens are persisted, so this is safe.
+        if (!responseIsError)
         {
-            try
+            _ = Task.Run(async () =>
             {
-                await Auth.TokenByAuthorizationCode(code, codeVerifier, redirectUri);
-
-                if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
-                    throw new("Token exchange succeeded but access token was not stored");
-
-                if (!File.Exists(AppFiles.TokenFile))
-                    throw new("Token exchange succeeded but token file was not written");
-
-                _state.TransitionTo(SetupPhase.Authenticated);
-                Logger.Setup("OAuth token exchange completed successfully");
-
-                await RunPostAuthRegistration();
-            }
-            catch (Exception ex)
-            {
-                _state.SetError($"Authentication failed: {ex.Message}");
-                _state.TransitionTo(SetupPhase.Unauthenticated);
-                Logger.Setup($"OAuth token exchange failed: {ex.Message}",
-                    LogEventLevel.Error);
-            }
-            finally
-            {
-                _codeVerifier = Auth.GenerateCodeVerifier();
-                _codeChallenge = Auth.GenerateCodeChallenge(_codeVerifier);
-            }
-        });
+                try
+                {
+                    await RunPostAuthRegistration();
+                }
+                catch (Exception ex)
+                {
+                    _state.SetError($"Registration failed: {ex.Message}");
+                    Logger.Setup($"Post-auth registration failed: {ex.Message}",
+                        LogEventLevel.Error);
+                }
+            });
+        }
     }
 
     internal static string BuildCallbackHtml(string title, string message,
