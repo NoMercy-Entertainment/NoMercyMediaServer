@@ -388,7 +388,9 @@ public static class Program
     {
         try
         {
-            using TcpListener listener = new(IPAddress.Loopback, port);
+            // Check on IPAddress.Any (0.0.0.0) to match how Kestrel binds.
+            // Checking only on Loopback can miss processes bound to 0.0.0.0.
+            using TcpListener listener = new(IPAddress.Any, port);
             listener.Start();
             listener.Stop();
             return true;
@@ -473,10 +475,21 @@ public static class Program
             return false;
         }
 
-        // Brief pause so the OS releases the socket
-        await Task.Delay(1000);
-        Logger.App("Port freed — retrying...");
-        return true;
+        // Retry port check — the OS may not release the socket immediately
+        for (int attempt = 1; attempt <= 5; attempt++)
+        {
+            await Task.Delay(500);
+            if (IsPortAvailable(port))
+            {
+                Logger.App("Port freed — retrying...");
+                return true;
+            }
+            Logger.App($"Port {port} still in use, retrying ({attempt}/5)...");
+        }
+
+        Logger.Error($"Port {port} still not available after killing process.");
+        Environment.ExitCode = 1;
+        return false;
     }
 
     private static async Task<string> FindProcessOnPortAsync(int port)
