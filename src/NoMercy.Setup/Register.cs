@@ -18,12 +18,20 @@ public static class Register
 {
     private static string GetDeviceName()
     {
-        MediaContext mediaContext = new();
-        Configuration? device = mediaContext.Configuration
-            .FirstOrDefault(device => device.Key == "serverName");
-        
-        Info.DeviceName = device?.Value ?? Environment.MachineName;
-        
+        try
+        {
+            MediaContext mediaContext = new();
+            Configuration? device = mediaContext.Configuration
+                .FirstOrDefault(device => device.Key == "serverName");
+
+            Info.DeviceName = device?.Value ?? Environment.MachineName;
+        }
+        catch (Exception)
+        {
+            // Table may not exist yet on first boot — fall back to machine name
+            Info.DeviceName = Environment.MachineName;
+        }
+
         return Info.DeviceName;
     }
 
@@ -45,12 +53,28 @@ public static class Register
 
     private const int DefaultMaxRetries = 5;
     private static readonly int[] BackoffSeconds = [2, 5, 15, 30, 60];
+    private static readonly SemaphoreSlim InitLock = new(1, 1);
+    public static bool IsRegistered { get; private set; }
 
     public static async Task Init(int maxRetries = DefaultMaxRetries)
     {
-        await RegisterServer(maxRetries);
-        await AssignServerWithRetry(maxRetries);
-        await Certificate.RenewSslCertificate();
+        if (!await InitLock.WaitAsync(0))
+        {
+            Logger.Register("Registration already in progress, skipping duplicate call");
+            return;
+        }
+
+        try
+        {
+            await RegisterServer(maxRetries);
+            await AssignServerWithRetry(maxRetries);
+            await Certificate.RenewSslCertificate();
+            IsRegistered = true;
+        }
+        finally
+        {
+            InitLock.Release();
+        }
     }
 
     private static async Task RegisterServer(int maxRetries)
@@ -158,19 +182,26 @@ public static class Register
 
     public static async Task GetTunnelAvailability()
     {
-        Dictionary<string, string> serverData = GetServerInfo();
+        try
+        {
+            Dictionary<string, string> serverData = GetServerInfo();
 
-        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
-        
-        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "tunnel", new FormUrlEncodedContent(serverData));
+            GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+            authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
 
-        ServerTunnelAvailabilityResponse? data = response.FromJson<ServerTunnelAvailabilityResponse>();
+            string response = await authClient.SendAndReadAsync(HttpMethod.Post, "tunnel", new FormUrlEncodedContent(serverData));
 
-        if (data is null || !data.Allowed || data.Token is null) return;
+            ServerTunnelAvailabilityResponse? data = response.FromJson<ServerTunnelAvailabilityResponse>();
 
-        Config.CloudflareTunnelToken = data.Token;
-        
-        Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
+            if (data is null || !data.Allowed || data.Token is null) return;
+
+            Config.CloudflareTunnelToken = data.Token;
+
+            Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
+        }
+        catch (Exception ex)
+        {
+            Logger.Register($"Tunnel check: {ex.Message}", LogEventLevel.Debug);
+        }
     }
 }

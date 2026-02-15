@@ -12,6 +12,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Queue.Workers;
 using QRCoder;
 using Serilog.Events;
 
@@ -560,6 +561,13 @@ public class SetupServer
 
         try
         {
+            // Wait for database schema to be ready before registration queries it
+            using CancellationTokenSource dbTimeoutCts = new(TimeSpan.FromSeconds(30));
+            bool dbReady = await CronWorker.GetDatabaseReadyTask().WaitAsync(dbTimeoutCts.Token);
+            if (!dbReady)
+                Logger.Setup("Database schema init reported failure — continuing registration anyway",
+                    LogEventLevel.Warning);
+
             _state.TransitionTo(SetupPhase.Registering);
 
             await Networking.Networking.Discover();

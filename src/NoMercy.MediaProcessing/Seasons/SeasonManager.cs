@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
@@ -19,7 +20,7 @@ public class SeasonManager(
 {
     public async Task<IEnumerable<TmdbSeasonAppends>> StoreSeasonsAsync(TmdbTvShowAppends show, bool? priority = false)
     {
-        List<TmdbSeasonAppends> seasonAppends = [];
+        ConcurrentBag<TmdbSeasonAppends> seasonAppends = [];
 
         await Parallel.ForEachAsync(show.Seasons, Config.ParallelOptions, async (season, _) =>
         {

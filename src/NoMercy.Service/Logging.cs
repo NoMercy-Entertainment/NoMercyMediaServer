@@ -24,6 +24,7 @@ public class CustomLogger<T> : ILogger<T>
         "Executing endpoint",
         "Executed endpoint",
         "Authorization was successful",
+        "Authorization failed",
         "Request did not match any endpoints",
         "Microsoft",
     ];

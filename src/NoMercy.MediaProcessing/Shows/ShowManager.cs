@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -416,29 +417,28 @@ public class ShowManager(
             Logger.MovieDb($"Show {show.Name}: No production companies found", LogEventLevel.Debug);
             return;
         }
-        
+
         TmdbTvClient showClient = new(show.Id);
 
-        List<Company> companies = [];
+        ConcurrentDictionary<int, Company> companiesDict = new();
 
         await Parallel.ForEachAsync(show.ProductionCompanies, Config.ParallelOptions, async (productionCompany, _) =>
         {
             TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(productionCompany.Id);
             if (nw == null) return;
 
-            if (companies.All(n => n.Id != nw.Id))
+            companiesDict.TryAdd(nw.Id, new()
             {
-                companies.Add(new()
-                {
-                    Id = nw.Id,
-                    Name = nw.Name,
-                    Logo = nw.LogoPath,
-                    OriginCountry = nw.OriginCountry,
-                    Headquarters = nw.Headquarters,
-                    Homepage = nw.Homepage,
-                });
-            }
+                Id = nw.Id,
+                Name = nw.Name,
+                Logo = nw.LogoPath,
+                OriginCountry = nw.OriginCountry,
+                Headquarters = nw.Headquarters,
+                Homepage = nw.Homepage,
+            });
         });
+
+        List<Company> companies = companiesDict.Values.ToList();
 
         List<CompanyTv> companyTvs = show.ProductionCompanies
             .Select(company => new CompanyTv

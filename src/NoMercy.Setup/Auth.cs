@@ -41,8 +41,10 @@ public static class Auth
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
         {
-            await TokenByBrowserOrDeviceGrant();
-            return;
+            // No token exists — skip interactive auth during startup.
+            // Authentication should happen through the /setup web UI instead.
+            Logger.Auth("No token found — authentication required through /setup UI", LogEventLevel.Information);
+            throw new InvalidOperationException("No authentication token - setup required");
         }
 
         JwtSecurityTokenHandler tokenHandler = new();
@@ -59,10 +61,16 @@ public static class Auth
             }
             catch (Exception)
             {
-                await TokenByBrowserOrDeviceGrant();
+                // Token refresh failed — need to re-authenticate through /setup UI
+                Logger.Auth("Token refresh failed — re-authentication required through /setup UI", LogEventLevel.Warning);
+                throw new InvalidOperationException("Token refresh failed - setup required");
             }
         else
-            await TokenByBrowserOrDeviceGrant();
+        {
+            // Token expired — need to re-authenticate through /setup UI
+            Logger.Auth("Token expired — re-authentication required through /setup UI", LogEventLevel.Warning);
+            throw new InvalidOperationException("Token expired - setup required");
+        }
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
             throw new("Failed to get tokens");
@@ -90,8 +98,7 @@ public static class Auth
 
         if (Globals.Globals.AccessToken is null)
         {
-            Logger.Auth("No cached token — authentication requires network",
-                LogEventLevel.Warning);
+            Logger.Auth("No cached token — authentication requires network");
             return false;
         }
 
@@ -386,7 +393,7 @@ public static class Auth
         SetTokens(data);
     }
 
-    private static void OpenBrowser(string url)
+    public static void OpenBrowser(string url)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
@@ -398,7 +405,7 @@ public static class Auth
             throw new("Unsupported OS");
     }
 
-    private static bool IsDesktopEnvironment()
+    public static bool IsDesktopEnvironment()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return true;

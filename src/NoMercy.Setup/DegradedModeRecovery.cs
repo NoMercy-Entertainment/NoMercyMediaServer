@@ -102,14 +102,22 @@ public static class DegradedModeRecovery
 
             if (!tasks.Registered && tasks.Authenticated && tasks.NetworkDiscovered)
             {
-                try
+                // Skip if RunPostAuthRegistration() already completed registration
+                if (Register.IsRegistered)
                 {
-                    await Register.Init();
                     tasks.Registered = true;
                 }
-                catch (Exception e)
+                else
                 {
-                    Logger.App($"Deferred registration failed: {e.Message}", LogEventLevel.Warning);
+                    try
+                    {
+                        await Register.Init();
+                        tasks.Registered = true;
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.App($"Deferred registration failed: {e.Message}", LogEventLevel.Warning);
+                    }
                 }
             }
 

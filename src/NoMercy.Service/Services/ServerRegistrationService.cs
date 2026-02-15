@@ -27,6 +27,21 @@ public class ServerRegistrationService : IHostedService, IDisposable
 
             if (cancellationToken.IsCancellationRequested) return;
 
+            // Wait for authentication to be available before making API calls
+            if (NoMercy.Globals.Globals.AccessToken is null)
+            {
+                Logger.Setup("ServerRegistrationService waiting for authentication...", LogEventLevel.Debug);
+                int maxWait = 30;
+                while (NoMercy.Globals.Globals.AccessToken is null && maxWait-- > 0 && !cancellationToken.IsCancellationRequested)
+                    await Task.Delay(1000, cancellationToken);
+
+                if (NoMercy.Globals.Globals.AccessToken is null)
+                {
+                    Logger.Setup("ServerRegistrationService skipped — no authentication available", LogEventLevel.Debug);
+                    return;
+                }
+            }
+
             if (Config.NatStatus == NatStatus.Open)
             {
                 Logger.Setup("NAT status is open, you can access your server from outside your local network.");
@@ -83,7 +98,7 @@ public class ServerRegistrationService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Error in ServerRegistrationService: {ex.Message}", LogEventLevel.Error);
+            Logger.Setup($"Error in ServerRegistrationService: {ex.Message}", LogEventLevel.Warning);
         }
     }
 

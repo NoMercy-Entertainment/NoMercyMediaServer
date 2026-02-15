@@ -8,8 +8,6 @@ namespace NoMercy.Queue.MediaServer;
 
 public class EfQueueContextAdapter : IQueueContext
 {
-    private readonly QueueContext _context;
-
     public static readonly Func<QueueContext, byte, string, long?, QueueJob?> ReserveJobQuery =
         EF.CompileQuery((QueueContext queueContext, byte maxAttempts, string name, long? currentJobId) =>
             queueContext.QueueJobs
@@ -23,217 +21,369 @@ public class EfQueueContextAdapter : IQueueContext
         EF.CompileQuery((QueueContext queueContext, string payloadString) =>
             queueContext.QueueJobs.Any(queueJob => queueJob.Payload == payloadString));
 
+    private readonly Func<QueueContext> _contextFactory;
+    private readonly bool _ownsContext;
+
+    /// <summary>
+    /// Creates an adapter that manages its own QueueContext per operation (thread-safe).
+    /// </summary>
+    public EfQueueContextAdapter()
+    {
+        _contextFactory = static () => new QueueContext();
+        _ownsContext = true;
+    }
+
+    /// <summary>
+    /// Creates an adapter using a shared QueueContext (for tests with in-memory databases).
+    /// The caller is responsible for disposing the context.
+    /// </summary>
     public EfQueueContextAdapter(QueueContext context)
     {
-        _context = context;
+        _contextFactory = () => context;
+        _ownsContext = false;
+    }
+
+    private QueueContext AcquireContext() => _contextFactory();
+
+    private void ReleaseContext(QueueContext context)
+    {
+        if (_ownsContext) context.Dispose();
     }
 
     public void AddJob(QueueJobModel job)
     {
-        QueueJob entity = new()
+        QueueContext context = AcquireContext();
+        try
         {
-            Priority = job.Priority,
-            Queue = job.Queue,
-            Payload = job.Payload,
-            Attempts = job.Attempts,
-            ReservedAt = job.ReservedAt,
-            AvailableAt = job.AvailableAt,
-            CreatedAt = job.CreatedAt
-        };
-        _context.QueueJobs.Add(entity);
-        SaveAndClear();
-        job.Id = entity.Id;
+            QueueJob entity = new()
+            {
+                Priority = job.Priority,
+                Queue = job.Queue,
+                Payload = job.Payload,
+                Attempts = job.Attempts,
+                ReservedAt = job.ReservedAt,
+                AvailableAt = job.AvailableAt,
+                CreatedAt = job.CreatedAt
+            };
+            context.QueueJobs.Add(entity);
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
+            job.Id = entity.Id;
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public void RemoveJob(QueueJobModel job)
     {
-        QueueJob? entity = _context.QueueJobs.Find(job.Id);
-        if (entity == null)
+        QueueContext context = AcquireContext();
+        try
         {
-            entity = new()
+            QueueJob? entity = context.QueueJobs.Find(job.Id);
+            if (entity == null)
             {
-                Id = job.Id,
-                Payload = job.Payload,
-                Queue = job.Queue
-            };
-            _context.QueueJobs.Attach(entity);
+                entity = new()
+                {
+                    Id = job.Id,
+                    Payload = job.Payload,
+                    Queue = job.Queue
+                };
+                context.QueueJobs.Attach(entity);
+            }
+            context.QueueJobs.Remove(entity);
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
         }
-        _context.QueueJobs.Remove(entity);
-        SaveAndClear();
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId)
     {
-        if (string.IsNullOrEmpty(queueName))
+        QueueContext context = AcquireContext();
+        try
         {
-            QueueJob? anyJob = _context.QueueJobs.FirstOrDefault();
-            return anyJob == null ? null : ToModel(anyJob);
+            if (string.IsNullOrEmpty(queueName))
+            {
+                QueueJob? anyJob = context.QueueJobs.FirstOrDefault();
+                return anyJob == null ? null : ToModel(anyJob);
+            }
+
+            QueueJob? job = ReserveJobQuery(context, maxAttempts, queueName, currentJobId);
+            return job == null ? null : ToModel(job);
         }
-
-        QueueJob? job = ReserveJobQuery(_context, maxAttempts, queueName, currentJobId);
-        if (job == null) return null;
-
-        return ToModel(job);
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public QueueJobModel? FindJob(int id)
     {
-        QueueJob? job = _context.QueueJobs.Find(id);
-        return job == null ? null : ToModel(job);
+        QueueContext context = AcquireContext();
+        try
+        {
+            QueueJob? job = context.QueueJobs.Find(id);
+            return job == null ? null : ToModel(job);
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public bool JobExists(string payload)
     {
-        return ExistsQuery(_context, payload);
+        QueueContext context = AcquireContext();
+        try
+        {
+            return ExistsQuery(context, payload);
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public void UpdateJob(QueueJobModel job)
     {
-        QueueJob? entity = _context.QueueJobs.Find(job.Id);
-        if (entity == null) return;
+        QueueContext context = AcquireContext();
+        try
+        {
+            QueueJob? entity = context.QueueJobs.Find(job.Id);
+            if (entity == null) return;
 
-        entity.Priority = job.Priority;
-        entity.Queue = job.Queue;
-        entity.Attempts = job.Attempts;
-        entity.ReservedAt = job.ReservedAt;
-        entity.AvailableAt = job.AvailableAt;
-        SaveAndClear();
+            entity.Priority = job.Priority;
+            entity.Queue = job.Queue;
+            entity.Attempts = job.Attempts;
+            entity.ReservedAt = job.ReservedAt;
+            entity.AvailableAt = job.AvailableAt;
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public void ResetAllReservedJobs()
     {
-        foreach (QueueJob job in _context.QueueJobs)
+        QueueContext context = AcquireContext();
+        try
         {
-            job.ReservedAt = null;
+            foreach (QueueJob job in context.QueueJobs)
+            {
+                job.ReservedAt = null;
+            }
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
         }
-        SaveAndClear();
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public void AddFailedJob(FailedJobModel failedJob)
     {
-        FailedJob entity = new()
+        QueueContext context = AcquireContext();
+        try
         {
-            Uuid = failedJob.Uuid,
-            Connection = failedJob.Connection,
-            Queue = failedJob.Queue,
-            Payload = failedJob.Payload,
-            Exception = failedJob.Exception,
-            FailedAt = failedJob.FailedAt
-        };
-        _context.FailedJobs.Add(entity);
+            FailedJob entity = new()
+            {
+                Uuid = failedJob.Uuid,
+                Connection = failedJob.Connection,
+                Queue = failedJob.Queue,
+                Payload = failedJob.Payload,
+                Exception = failedJob.Exception,
+                FailedAt = failedJob.FailedAt
+            };
+            context.FailedJobs.Add(entity);
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public void RemoveFailedJob(FailedJobModel failedJob)
     {
-        FailedJob? entity = _context.FailedJobs.Find(failedJob.Id);
-        if (entity != null)
+        QueueContext context = AcquireContext();
+        try
         {
-            _context.FailedJobs.Remove(entity);
+            FailedJob? entity = context.FailedJobs.Find(failedJob.Id);
+            if (entity != null)
+            {
+                context.FailedJobs.Remove(entity);
+                context.SaveChanges();
+                context.ChangeTracker.Clear();
+            }
+        }
+        finally
+        {
+            ReleaseContext(context);
         }
     }
 
     public FailedJobModel? FindFailedJob(int id)
     {
-        FailedJob? entity = _context.FailedJobs.Find((long)id);
-        return entity == null ? null : ToFailedModel(entity);
+        QueueContext context = AcquireContext();
+        try
+        {
+            FailedJob? entity = context.FailedJobs.Find((long)id);
+            return entity == null ? null : ToFailedModel(entity);
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public IReadOnlyList<FailedJobModel> GetFailedJobs(long? failedJobId = null)
     {
-        IQueryable<FailedJob> query = _context.FailedJobs;
-        if (failedJobId.HasValue)
-            query = query.Where(j => j.Id == failedJobId.Value);
-
-        return query.Select(j => new FailedJobModel
+        QueueContext context = AcquireContext();
+        try
         {
-            Id = j.Id,
-            Uuid = j.Uuid,
-            Connection = j.Connection,
-            Queue = j.Queue,
-            Payload = j.Payload,
-            Exception = j.Exception,
-            FailedAt = j.FailedAt
-        }).ToList();
+            IQueryable<FailedJob> query = context.FailedJobs;
+            if (failedJobId.HasValue)
+                query = query.Where(j => j.Id == failedJobId.Value);
+
+            return query.Select(j => new FailedJobModel
+            {
+                Id = j.Id,
+                Uuid = j.Uuid,
+                Connection = j.Connection,
+                Queue = j.Queue,
+                Payload = j.Payload,
+                Exception = j.Exception,
+                FailedAt = j.FailedAt
+            }).ToList();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public IReadOnlyList<CronJobModel> GetEnabledCronJobs()
     {
-        return _context.CronJobs
-            .Where(c => c.IsEnabled)
-            .Select(c => new CronJobModel
-            {
-                Id = c.Id,
-                Name = c.Name,
-                CronExpression = c.CronExpression,
-                JobType = c.JobType,
-                Parameters = c.Parameters,
-                IsEnabled = c.IsEnabled,
-                LastRun = c.LastRun,
-                NextRun = c.NextRun
-            }).ToList();
+        QueueContext context = AcquireContext();
+        try
+        {
+            return context.CronJobs
+                .Where(c => c.IsEnabled)
+                .Select(c => new CronJobModel
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    CronExpression = c.CronExpression,
+                    JobType = c.JobType,
+                    Parameters = c.Parameters,
+                    IsEnabled = c.IsEnabled,
+                    LastRun = c.LastRun,
+                    NextRun = c.NextRun
+                }).ToList();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public CronJobModel? FindCronJobByName(string name)
     {
-        CronJob? entity = _context.CronJobs.FirstOrDefault(c => c.Name == name);
-        return entity == null ? null : ToCronModel(entity);
+        QueueContext context = AcquireContext();
+        try
+        {
+            CronJob? entity = context.CronJobs.FirstOrDefault(c => c.Name == name);
+            return entity == null ? null : ToCronModel(entity);
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public void AddCronJob(CronJobModel cronJob)
     {
-        CronJob entity = new()
+        QueueContext context = AcquireContext();
+        try
         {
-            Name = cronJob.Name,
-            CronExpression = cronJob.CronExpression,
-            JobType = cronJob.JobType,
-            Parameters = cronJob.Parameters,
-            IsEnabled = cronJob.IsEnabled,
-            LastRun = cronJob.LastRun,
-            NextRun = cronJob.NextRun
-        };
-        _context.CronJobs.Add(entity);
-        SaveAndClear();
+            CronJob entity = new()
+            {
+                Name = cronJob.Name,
+                CronExpression = cronJob.CronExpression,
+                JobType = cronJob.JobType,
+                Parameters = cronJob.Parameters,
+                IsEnabled = cronJob.IsEnabled,
+                LastRun = cronJob.LastRun,
+                NextRun = cronJob.NextRun
+            };
+            context.CronJobs.Add(entity);
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public void UpdateCronJob(CronJobModel cronJob)
     {
-        CronJob? entity = _context.CronJobs.Find(cronJob.Id);
-        if (entity == null) return;
+        QueueContext context = AcquireContext();
+        try
+        {
+            CronJob? entity = context.CronJobs.Find(cronJob.Id);
+            if (entity == null) return;
 
-        entity.CronExpression = cronJob.CronExpression;
-        entity.IsEnabled = cronJob.IsEnabled;
-        entity.LastRun = cronJob.LastRun;
-        entity.NextRun = cronJob.NextRun;
-        SaveAndClear();
+            entity.CronExpression = cronJob.CronExpression;
+            entity.IsEnabled = cronJob.IsEnabled;
+            entity.LastRun = cronJob.LastRun;
+            entity.NextRun = cronJob.NextRun;
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
+        }
+        finally
+        {
+            ReleaseContext(context);
+        }
     }
 
     public void RemoveCronJob(CronJobModel cronJob)
     {
-        CronJob? entity = _context.CronJobs.Find(cronJob.Id);
-        if (entity != null)
+        QueueContext context = AcquireContext();
+        try
         {
-            _context.CronJobs.Remove(entity);
-            SaveAndClear();
+            CronJob? entity = context.CronJobs.Find(cronJob.Id);
+            if (entity != null)
+            {
+                context.CronJobs.Remove(entity);
+                context.SaveChanges();
+                context.ChangeTracker.Clear();
+            }
+        }
+        finally
+        {
+            ReleaseContext(context);
         }
     }
 
     public void SaveChanges()
     {
-        SaveAndClear();
+        // No-op: each method now manages its own context and saves immediately
     }
 
     public void Dispose()
     {
-        _context.Dispose();
-    }
-
-    private void SaveAndClear()
-    {
-        if (_context.ChangeTracker.HasChanges())
-        {
-            _context.SaveChanges();
-            _context.ChangeTracker.Clear();
-        }
+        // No shared context to dispose when using per-operation contexts
     }
 
     private static QueueJobModel ToModel(QueueJob entity)

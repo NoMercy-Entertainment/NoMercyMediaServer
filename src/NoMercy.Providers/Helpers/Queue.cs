@@ -129,16 +129,32 @@ public class Queue(QueueOptions options)
             {
                 try
                 {
-                    T result = await task();
-                    Resolve?.Invoke(this, new() { Result = result });
-                    tcs.SetResult(result);
-                }
-                catch (Exception ex)
-                {
-                    Reject?.Invoke(this, new() { Error = ex });
-                    tcs.SetException(ex);
-                    if (ex.Message.Contains("404")) return;
-                    Logger.App($"Url failed: {url} {ex.Message}", LogEventLevel.Error);
+                    int maxRetries = 3;
+                    for (int attempt = 0; attempt <= maxRetries; attempt++)
+                    {
+                        try
+                        {
+                            T result = await task();
+                            Resolve?.Invoke(this, new() { Result = result });
+                            tcs.SetResult(result);
+                            return;
+                        }
+                        catch (Exception ex) when (attempt < maxRetries &&
+                            (ex.Message.Contains("502") || ex.Message.Contains("503")))
+                        {
+                            int delay = (int)Math.Pow(2, attempt + 1) * 1000;
+                            Logger.App($"Rate limited ({url}), retrying in {delay / 1000}s (attempt {attempt + 1}/{maxRetries})", LogEventLevel.Debug);
+                            await Task.Delay(delay);
+                        }
+                        catch (Exception ex)
+                        {
+                            Reject?.Invoke(this, new() { Error = ex });
+                            tcs.SetException(ex);
+                            if (ex.Message.Contains("404") || ex.Message.Contains("502") || ex.Message.Contains("503")) return;
+                            Logger.App($"Url failed: {url} {ex.Message}", LogEventLevel.Error);
+                            return;
+                        }
+                    }
                 }
                 finally
                 {

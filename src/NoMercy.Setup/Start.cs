@@ -53,8 +53,7 @@ public class Start
                     }
                     catch (Exception e)
                     {
-                        Logger.Setup($"Auth failed: {e.Message}. Trying cached tokens.",
-                            LogEventLevel.Warning);
+                        Logger.Setup("Auth not yet available, checking for cached tokens");
                         bool result = await Auth.InitWithFallback();
                         if (!result)
                             throw new InvalidOperationException("Auth failed and no cached tokens available");
@@ -119,11 +118,9 @@ public class Start
         if (runner.DeferredTasks.Count > 0)
         {
             IsDegradedMode = true;
-            Logger.Setup("Starting in DEGRADED MODE — some features unavailable",
-                LogEventLevel.Warning);
+            Logger.Setup("Some startup tasks were deferred — they will be retried in the background");
             Logger.Setup(
-                $"  Deferred tasks: {string.Join(", ", runner.DeferredTasks.Select(t => t.Name))}",
-                LogEventLevel.Warning);
+                $"  Deferred tasks: {string.Join(", ", runner.DeferredTasks.Select(t => t.Name))}");
 
             DeferredTasks deferred = new()
             {
@@ -151,7 +148,16 @@ public class Start
 
             // Start queue workers after a short delay
             await Task.Delay(TimeSpan.FromSeconds(2));
-            await QueueRunner.Current!.Initialize();
+            if (QueueRunner.Current is not null)
+            {
+                Logger.Setup("Calling QueueRunner.Initialize() from InitRemaining background task...");
+                await QueueRunner.Current.Initialize();
+                Logger.Setup("QueueRunner.Initialize() completed from InitRemaining background task");
+            }
+            else
+            {
+                Logger.Setup("QueueRunner.Current is null — skipping Initialize from InitRemaining (will be initialized after host restart)", LogEventLevel.Warning);
+            }
         });
     }
 }

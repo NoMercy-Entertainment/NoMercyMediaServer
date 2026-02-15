@@ -32,6 +32,11 @@ public class CronWorker : BackgroundService
     }
 
     /// <summary>
+    /// Returns a task that completes when the database is ready for queries.
+    /// </summary>
+    public static Task<bool> GetDatabaseReadyTask() => DatabaseReadyTcs.Task;
+
+    /// <summary>
     /// Signal that the database has been migrated and is ready for queries.
     /// Call this from DatabaseSeeder after migrations complete.
     /// </summary>
@@ -240,7 +245,7 @@ public class CronWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Cron Worker started with individual job workers");
+        _logger.LogDebug("Cron Worker started with individual job workers");
 
         // Wait for database migrations to complete before querying the database
         try
@@ -299,7 +304,7 @@ public class CronWorker : BackgroundService
                 }
                 else
                 {
-                    _logger.LogWarning("Database job {JobName} has unregistered job type: {JobType}", 
+                    _logger.LogWarning("Database job {JobName} has unregistered job type: {JobType}",
                         job.Name, job.JobType);
                 }
             }

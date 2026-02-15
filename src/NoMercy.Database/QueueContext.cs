@@ -19,6 +19,7 @@ public class QueueContext : DbContext
         {
             options.UseSqlite($"Data Source={AppFiles.QueueDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;");
         }
+
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

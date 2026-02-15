@@ -97,8 +97,7 @@ public class StartupTaskRunner
                     if (task.CanDefer)
                     {
                         Logger.Setup(
-                            $"Startup task '{task.Name}' deferred — dependencies not met",
-                            LogEventLevel.Warning);
+                            $"Startup task '{task.Name}' deferred — will retry in background");
                         _deferredTasks.Add(task);
                         continue;
                     }
@@ -116,8 +115,7 @@ public class StartupTaskRunner
                 catch (Exception ex) when (task.CanDefer)
                 {
                     Logger.Setup(
-                        $"Startup task '{task.Name}' failed: {ex.Message}. Deferring to background.",
-                        LogEventLevel.Warning);
+                        $"Startup task '{task.Name}' not ready: {ex.Message} — will retry in background");
                     _deferredTasks.Add(task);
                 }
                 catch (Exception ex) when (!task.CanDefer)

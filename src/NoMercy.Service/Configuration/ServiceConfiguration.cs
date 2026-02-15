@@ -241,7 +241,7 @@ public static class ServiceConfiguration
 
         // Register Event Bus with audit logging and event audit trail
         InMemoryEventBus innerBus = new();
-        LoggingEventBusDecorator loggingBus = new(innerBus, message => Logger.App(message));
+        LoggingEventBusDecorator loggingBus = new(innerBus, message => Logger.App(message, Serilog.Events.LogEventLevel.Verbose));
         EventAuditLog auditLog = new(new()
         {
             Enabled = true,
@@ -266,7 +266,7 @@ public static class ServiceConfiguration
         // Add DbContexts
         services.AddDbContext<QueueContext>(optionsAction =>
         {
-            optionsAction.UseSqlite($"Data Source={AppFiles.QueueDatabase} Pooling=True");
+            optionsAction.UseSqlite($"Data Source={AppFiles.QueueDatabase}; Pooling=True;");
         });
 
         services.AddDbContext<MediaContext>(optionsAction =>
@@ -334,21 +334,8 @@ public static class ServiceConfiguration
     {
         services.AddLogging(logging =>
         {
-            // logging.ClearProviders();
-            // logging.AddFilter("Microsoft", LogLevel.Critical);
-            // logging.AddFilter("System", LogLevel.Critical);
-            // logging.AddFilter("Network", LogLevel.Critical);
-            // logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Critical);
-            // logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Critical);
-            //
-            // logging.AddFilter("Microsoft.AspNetCore", LogLevel.Critical);
-            // logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Critical);
-            // logging.AddFilter("Microsoft.AspNetCore.Routing", LogLevel.Critical);
-            // logging.AddFilter("Microsoft.AspNetCore.Mvc", LogLevel.Critical);
-            //
-            // logging.AddFilter("Microsoft.AspNetCore.HostFiltering.HostFilteringMiddleware", LogLevel.Critical);
-            // logging.AddFilter("Microsoft.AspNetCore.Cors.Infrastructure.CorsMiddleware", LogLevel.Critical);
-            // logging.AddFilter("Microsoft.AspNetCore.Middleware", LogLevel.Critical);
+            // Logging filters are handled by CustomLogger's message filtering
+            // since it replaces ILogger<T> and bypasses the built-in filter pipeline
         });
     }
 

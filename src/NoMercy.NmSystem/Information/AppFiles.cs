@@ -1,6 +1,7 @@
 // ReSharper disable MemberCanBePrivate.Global
 
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -113,7 +114,7 @@ public static class AppFiles
 
         foreach (string path in AllPaths().Where(path => !Directory.Exists(path)))
         {
-            Logger.Setup($"Creating directory: {path}");
+            Logger.Setup($"Creating directory: {path}", LogEventLevel.Verbose);
             Directory.CreateDirectory(path);
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {

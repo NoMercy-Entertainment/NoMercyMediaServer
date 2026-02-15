@@ -15,7 +15,7 @@ public class LoggingEventBusDecorator : IEventBus
         where TEvent : IEvent
     {
         string eventTypeName = typeof(TEvent).Name;
-        _log($"[Event] {eventTypeName} | Source={@event.Source} | EventId={@event.EventId} | Timestamp={@event.Timestamp:O}");
+        _log($"[Event] {eventTypeName} | Source={@event.Source} | EventId={@event.EventId}");
 
         await _inner.PublishAsync(@event, ct);
     }

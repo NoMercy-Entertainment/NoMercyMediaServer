@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
@@ -52,7 +53,7 @@ public class EpisodeManager(
     private static async Task<List<TmdbEpisodeAppends>> Collect(
         TmdbTvShow show, TmdbSeasonAppends season, bool? priority = false)
     {
-        List<TmdbEpisodeAppends> episodeAppends = [];
+        ConcurrentBag<TmdbEpisodeAppends> episodeAppends = [];
 
         await Parallel.ForEachAsync(season.Episodes, Config.ParallelOptions, async (episode, _) =>
         {
@@ -70,7 +71,7 @@ public class EpisodeManager(
             }
         });
 
-        return episodeAppends;
+        return episodeAppends.ToList();
     }
 
     internal async Task StoreTranslations(string showName, TmdbEpisodeAppends episode)

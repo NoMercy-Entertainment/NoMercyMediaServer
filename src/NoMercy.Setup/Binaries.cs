@@ -92,7 +92,7 @@ public static class Binaries
             return jsonResponse.FromJson<GithubReleaseResponse>() ?? new GithubReleaseResponse();
         } catch (Exception e)
         {
-            Logger.Setup($"Error fetching release info from {apiUrl}: {e.Message}", LogEventLevel.Error);
+            Logger.Setup($"Error fetching release info from {apiUrl}: {e.Message}", LogEventLevel.Warning);
             return new();
         }
     }
@@ -108,7 +108,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for App release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for App release.", LogEventLevel.Warning);
             return;
         }
 
@@ -145,7 +145,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable NoMercyApp asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable NoMercyApp asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
         
@@ -167,7 +167,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for Service release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for Service release.", LogEventLevel.Warning);
             return;
         }
 
@@ -204,7 +204,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable NoMercyMediaServerService asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable NoMercyMediaServerService asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
 
@@ -226,7 +226,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for CLI release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for CLI release.", LogEventLevel.Warning);
             return;
         }
 
@@ -263,7 +263,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable nomercy CLI asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable nomercy CLI asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
 
@@ -279,7 +279,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for Server release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for Server release.", LogEventLevel.Warning);
             return;
         }
 
@@ -324,7 +324,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable NoMercyMediaServer asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable NoMercyMediaServer asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
 
@@ -342,7 +342,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubFfmpegApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for FFMpeg release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for FFMpeg release.", LogEventLevel.Warning);
             return;
         }
 
@@ -386,7 +386,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable FFMpeg asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable FFMpeg asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
         
@@ -407,7 +407,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubYtdlpApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for yt-dlp release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for yt-dlp release.", LogEventLevel.Warning);
             return;
         }
         
@@ -444,7 +444,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable yt-dlp asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable yt-dlp asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
         
@@ -462,7 +462,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubCloudflaredApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for cloudflared release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for cloudflared release.", LogEventLevel.Warning);
             return;
         }
         
@@ -502,7 +502,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable cloudflared asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable cloudflared asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
         
@@ -539,7 +539,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubWhisperModelApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for WhisperGmmlModels release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for WhisperGmmlModels release.", LogEventLevel.Warning);
             return;
         }
         
@@ -558,7 +558,7 @@ public static class Binaries
 
         if (downloadUrls.Count == 0)
         {
-            Logger.Setup($"No assets found for model {modelName} in WhisperGmmlModels release.", LogEventLevel.Error);
+            Logger.Setup($"No assets found for model {modelName} in WhisperGmmlModels release.", LogEventLevel.Warning);
             return;
         }
 
@@ -611,7 +611,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubTesseractApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for TesseractData release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for TesseractData release.", LogEventLevel.Warning);
             return;
         }
 

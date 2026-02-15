@@ -96,7 +96,7 @@ public class StartupOptions
             }
             catch (Exception)
             {
-                Logger.App("Database not yet initialized, using default internal port.");
+                Logger.App("Database not yet initialized, using default internal port.", LogEventLevel.Debug);
             }
             Config.InternalServerPort = InternalPort;
             options.Add("internalPort", InternalPort.ToString());
@@ -125,7 +125,7 @@ public class StartupOptions
             }
             catch (Exception)
             {
-                Logger.App("Database not yet initialized, using default external port.");
+                Logger.App("Database not yet initialized, using default external port.", LogEventLevel.Debug);
             }
             Config.ExternalServerPort = ExternalPort;
             options.Add("externalPort", ExternalPort.ToString());

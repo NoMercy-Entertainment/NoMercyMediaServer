@@ -10,34 +10,85 @@ namespace NoMercy.Service.Seeds;
 public static class DatabaseSeeder
 {
     internal static bool ShouldSeedMarvel { get; set; }
-    
-    public static async Task Run()
+
+    /// <summary>
+    /// Phase 1: Create database schema (migrations + EnsureCreated).
+    /// Does NOT require authentication — safe to call before auth.
+    /// </summary>
+    public static async Task InitSchema()
     {
-        Logger.Setup("Starting database seeding process", LogEventLevel.Verbose);
-        
+        Logger.Setup("Initializing database schema...", LogEventLevel.Verbose);
+
         MediaContext mediaDbContext = new();
         await using QueueContext queueDbContext = new();
-        
+
         try
         {
-            // Ensure database is created
             await Migrate(mediaDbContext);
             await EnsureDatabaseCreated(mediaDbContext);
-            
+
             await Migrate(queueDbContext);
             await EnsureDatabaseCreated(queueDbContext);
 
-            // Signal CronWorker that the database is migrated and ready for queries
             CronWorker.SignalDatabaseReady();
+            Logger.Setup("Database schema initialized successfully", LogEventLevel.Verbose);
+        }
+        catch (Exception ex)
+        {
+            CronWorker.SignalDatabaseReady(false);
+            Logger.Setup($"Database schema initialization failed: {ex.Message}", LogEventLevel.Fatal);
+            throw;
+        }
+    }
 
-            await ConfigSeed.Init(mediaDbContext);
+    /// <summary>
+    /// Seed truly offline data (config, encoder profiles, libraries).
+    /// No network or auth required — safe to call right after InitSchema().
+    /// Each seed is individually guarded so one failure doesn't block the rest.
+    /// </summary>
+    public static async Task SeedOfflineData()
+    {
+        MediaContext mediaDbContext = new();
+
+        Func<Task>[] offlineSeeds =
+        [
+            () => ConfigSeed.Init(mediaDbContext),
+            () => LibrariesSeed.Init(mediaDbContext),
+            () => EncoderProfilesSeed.Init(mediaDbContext),
+        ];
+
+        foreach (Func<Task> seed in offlineSeeds)
+        {
+            try
+            {
+                await seed();
+            }
+            catch (Exception ex)
+            {
+                Logger.Setup($"Offline seed failed: {ex.Message}", LogEventLevel.Warning);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Phase 3: Seed all remaining data (TMDB genres, languages, users, etc.).
+    /// Requires network + auth — called after auth completes.
+    /// Schema and offline data must already exist.
+    /// </summary>
+    public static async Task Run()
+    {
+        MediaContext mediaDbContext = new();
+
+        try
+        {
+            // Re-run offline seeds to pick up any updates
+            await SeedOfflineData();
+
             await LanguagesSeed.Init(mediaDbContext);
             await CountriesSeed.Init(mediaDbContext);
             await GenresSeed.Init(mediaDbContext);
             await CertificationsSeed.Init(mediaDbContext);
             await MusicGenresSeed.Init(mediaDbContext);
-            await LibrariesSeed.Init(mediaDbContext);
-            await EncoderProfilesSeed.Init(mediaDbContext);
             await UsersSeed.Init(mediaDbContext);
 
             ClaimsPrincipleExtensions.Initialize(mediaDbContext);
@@ -47,152 +98,115 @@ public static class DatabaseSeeder
                 Thread thread = new(() => _ = SpecialSeed.Init(mediaDbContext));
                 thread.Start();
             }
-            
-            Logger.Setup("Successfully completed database seeding", LogEventLevel.Verbose);
         }
         catch (Exception ex)
         {
-            CronWorker.SignalDatabaseReady(false);
-            Logger.Setup(ex.Message, LogEventLevel.Fatal);
+            Logger.Setup($"Database seeding failed: {ex.Message}", LogEventLevel.Warning);
         }
     }
     
     private static Task Migrate(DbContext context)
     {
+        string contextName = context.GetType().Name;
+
+        // Check if migration history table exists to determine DB state.
+        // Do NOT run PRAGMA commands first — they create an empty .db file
+        // which causes CanConnect() to return true on a fresh install.
+        bool migrationTableExists = false;
         try
         {
-            // Configure SQLite for better performance and UTF-8 support
-            context.Database.ExecuteSqlRaw("PRAGMA journal_mode = WAL;");
-            context.Database.ExecuteSqlRaw("PRAGMA encoding = 'UTF-8'");
-            
-            // First check if the database exists - if not, create it
-            bool dbExists = context.Database.CanConnect();
-            
-            if (!dbExists)
+            migrationTableExists = context.Database
+                .ExecuteSqlRaw("SELECT COUNT(*) FROM __EFMigrationsHistory") >= 0;
+        }
+        catch
+        {
+            // Table doesn't exist — could be fresh install or pre-migration DB
+        }
+
+        List<string> availableMigrations = context.Database.GetMigrations().ToList();
+        List<string> appliedMigrations = migrationTableExists
+            ? context.Database.GetAppliedMigrations().ToList()
+            : [];
+
+        if (migrationTableExists && appliedMigrations.Count == availableMigrations.Count)
+        {
+            Logger.Setup($"{contextName}: Database is up to date. No migrations needed.", LogEventLevel.Verbose);
+        }
+        else
+        {
+            List<string> pendingMigrations = context.Database.GetPendingMigrations().ToList();
+
+            if (pendingMigrations.Count > 0)
             {
-                Logger.Setup("Database doesn't exist. Creating database and applying migrations...", LogEventLevel.Verbose);
-                context.Database.Migrate();
+                Logger.Setup($"{contextName}: Applying {pendingMigrations.Count} migration(s)...", LogEventLevel.Verbose);
+                try
+                {
+                    context.Database.Migrate();
+                    Logger.Setup($"{contextName}: Migrations applied successfully.", LogEventLevel.Verbose);
+                }
+                catch (Exception ex) when (ex.Message.Contains("already exists"))
+                {
+                    Logger.Setup($"{contextName}: Tables already exist. Syncing migration history...", LogEventLevel.Verbose);
+                    SyncMigrationHistory(context, migrationTableExists, pendingMigrations, availableMigrations);
+                }
             }
             else
             {
-                // Check if migration history table exists and has the correct records
-                bool migrationTableExists;
+                Logger.Setup($"{contextName}: No pending migrations found.", LogEventLevel.Verbose);
+            }
+        }
+
+        // Configure SQLite pragmas after schema exists
+        context.Database.ExecuteSqlRaw("PRAGMA journal_mode = WAL;");
+        context.Database.ExecuteSqlRaw("PRAGMA encoding = 'UTF-8'");
+
+        return Task.CompletedTask;
+    }
+
+    private static void SyncMigrationHistory(DbContext context, bool migrationTableExists,
+        List<string> pendingMigrations, List<string> availableMigrations)
+    {
+        string version = context.GetType().Assembly.GetName().Version?.ToString() ?? "1.0.0";
+
+        if (migrationTableExists)
+        {
+            foreach (string migration in pendingMigrations)
+            {
                 try
                 {
-                    migrationTableExists = context.Database
-                        .ExecuteSqlRaw("SELECT COUNT(*) FROM __EFMigrationsHistory") >= 0;
+                    context.Database.ExecuteSqlRaw(
+                        "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})",
+                        migration, version);
+                    Logger.Setup($"Added migration {migration} to history", LogEventLevel.Verbose);
                 }
                 catch
                 {
-                    migrationTableExists = false;
-                }
-                
-                // Get list of applied migrations in the database
-                List<string> appliedMigrations = [];
-                if (migrationTableExists)
-                {
-                    appliedMigrations = context.Database.GetAppliedMigrations().ToList();
-                }
-                
-                // Get list of available migrations in code
-                List<string> availableMigrations = context.Database.GetMigrations().ToList();
-                
-                if (migrationTableExists && appliedMigrations.Count == availableMigrations.Count)
-                {
-                    Logger.Setup("Database is up to date. No migrations needed.", LogEventLevel.Verbose);
-                }
-                else
-                {
-                    Logger.Setup("Checking for pending migrations...", LogEventLevel.Verbose);
-                    bool hasPendingMigrations = context.Database.GetPendingMigrations().Any();
-                    
-                    if (hasPendingMigrations)
-                    {
-                        try
-                        {
-                            context.Database.Migrate();
-                            Logger.Setup("Migrations applied successfully.", LogEventLevel.Verbose);
-                        }
-                        catch (Exception ex) when (ex.Message.Contains("already exists"))
-                        {
-                            Logger.Setup("Tables already exist. Ensuring migration history is up to date...", LogEventLevel.Verbose);
-                            
-                            try
-                            {
-                                if (migrationTableExists)
-                                {
-                                    // Don't delete - just ensure all migrations are recorded
-                                    List<string> pendingMigrations = context.Database.GetPendingMigrations().ToList();
-                                    string version = context.GetType().Assembly.GetName().Version?.ToString() ?? "1.0.0";
-                                    
-                                    foreach (string migration in pendingMigrations)
-                                    {
-                                        try
-                                        {
-                                            context.Database.ExecuteSqlRaw(
-                                                "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})", 
-                                                migration, 
-                                                version);
-                                            Logger.Setup($"Added migration {migration} to history", LogEventLevel.Verbose);
-                                        }
-                                        catch
-                                        {
-                                            Logger.Setup($"Failed to add migration {migration} to history", LogEventLevel.Fatal);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // Create the migrations history table
-                                    context.Database.ExecuteSqlRaw(@"
-                                        CREATE TABLE __EFMigrationsHistory (
-                                            MigrationId TEXT NOT NULL CONSTRAINT PK___EFMigrationsHistory PRIMARY KEY,
-                                            ProductVersion TEXT NOT NULL
-                                        );");
-                                    
-                                    // Add all migrations to history
-                                    string version = context.GetType().Assembly.GetName().Version?.ToString() ?? "1.0.0";
-                                    foreach (string migration in availableMigrations)
-                                    {
-                                        context.Database.ExecuteSqlRaw(
-                                            "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})", 
-                                            migration, 
-                                            version);
-                                    }
-                                    Logger.Setup("Migration history table created and populated.", LogEventLevel.Verbose);
-                                }
-                            }
-                            catch (Exception innerEx)
-                            {
-                                Logger.Setup($"Failed to update migration history: {innerEx.Message}", LogEventLevel.Fatal);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Logger.Setup("No pending migrations found.", LogEventLevel.Verbose);
-                    }
+                    Logger.Setup($"Failed to add migration {migration} to history", LogEventLevel.Fatal);
                 }
             }
         }
-        catch (Exception ex)
+        else
         {
-            Console.WriteLine($"Error applying migrations: {ex.Message}", LogEventLevel.Fatal);
+            context.Database.ExecuteSqlRaw(@"
+                CREATE TABLE __EFMigrationsHistory (
+                    MigrationId TEXT NOT NULL CONSTRAINT PK___EFMigrationsHistory PRIMARY KEY,
+                    ProductVersion TEXT NOT NULL
+                );");
+
+            foreach (string migration in availableMigrations)
+            {
+                context.Database.ExecuteSqlRaw(
+                    "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})",
+                    migration, version);
+            }
+
+            Logger.Setup("Migration history table created and populated.", LogEventLevel.Verbose);
         }
-        
-        return Task.CompletedTask;
     }
     
     private static async Task EnsureDatabaseCreated(DbContext context)
     {
-        try
-        {
-            Logger.Setup($"Ensuring database is created for {context.GetType().Name}", LogEventLevel.Verbose);
-            await context.Database.EnsureCreatedAsync();
-        }
-        catch (Exception e)
-        {
-            Logger.Setup(e.Message, LogEventLevel.Fatal);
-        }
+        Logger.Setup($"Ensuring database is created for {context.GetType().Name}", LogEventLevel.Verbose);
+        await context.Database.EnsureCreatedAsync();
     }
 }

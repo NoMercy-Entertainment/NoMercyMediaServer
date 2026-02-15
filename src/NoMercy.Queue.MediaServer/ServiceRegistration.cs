@@ -11,7 +11,7 @@ public static class ServiceRegistration
 {
     public static IServiceCollection AddMediaServerQueue(this IServiceCollection services)
     {
-        services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter(new()));
+        services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter());
         services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
         services.AddSingleton<QueueRunner>(sp =>
         {

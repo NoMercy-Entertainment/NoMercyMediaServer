@@ -404,7 +404,8 @@ public class Networking
             string ip = _device.GetExternalIP().ToString();
 
             Logger.Setup($"IP address obtained from UPNP: {ip}");
-            Logger.Setup($"IP address obtained from API: {_externalIp}");
+            if (!string.IsNullOrEmpty(_externalIp))
+                Logger.Setup($"IP address obtained from API: {_externalIp}");
 
             if(string.IsNullOrEmpty(_externalIp))
             {
@@ -447,13 +448,13 @@ public class Networking
         {
             Logger.Setup(
                 $"SocketException checking {ExternalIp}:{Config.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})",
-                LogEventLevel.Error);
+                LogEventLevel.Debug);
             return false;
         }
         catch (Exception ex)
         {
             Logger.Setup($"Exception checking {ExternalIp}:{Config.ExternalServerPort}: {ex.Message}",
-                LogEventLevel.Error);
+                LogEventLevel.Debug);
             return false;
         }
     }

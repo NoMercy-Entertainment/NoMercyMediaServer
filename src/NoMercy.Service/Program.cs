@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Queue;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup;
 
@@ -116,6 +117,14 @@ public static class Program
         // Phase 1 only (UserSettings, CreateAppFolders, ApiInfo) — fast, no network
         await Setup.Start.InitEssential(startupTasks);
 
+        // Create database schema before anything else can query it.
+        // This does NOT require auth — only migrations + EnsureCreated.
+        await DatabaseSeeder.InitSchema();
+
+        // Seed offline data (config, languages, encoder profiles, etc.)
+        // immediately so the UI has data before auth completes.
+        await DatabaseSeeder.SeedOfflineData();
+
         // Proactively resolve port conflicts before building the host.
         // This avoids the costly build→fail→kill→rebuild cycle and prevents
         // CronWorker "Failed to start database job workers" errors.
@@ -129,6 +138,10 @@ public static class Program
         TokenState tokenState = await SetupState.ValidateTokenFile();
         SetupPhase initialPhase = setupState.DetermineInitialPhase(tokenState);
         Logger.App($"Token validation: {tokenState} → setup phase: {initialPhase}");
+
+        // Force QueueRunner singleton creation so QueueRunner.Current is set
+        // before InitRemaining's background task tries to call Initialize().
+        app.Services.GetRequiredService<QueueRunner>();
 
         RegisterLifetimeEvents(app, stopWatch);
 
@@ -166,6 +179,25 @@ public static class Program
             IWebHost retryHost = CreateWebHostBuilder(options).Build();
             RegisterLifetimeEvents(retryHost, retryStopWatch);
 
+            // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
+            QueueRunner retryQueueRunner = retryHost.Services.GetRequiredService<QueueRunner>();
+
+            // Initialize queue workers so they can process jobs on the retry host.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                    Logger.App("Initializing QueueRunner for retry host...");
+                    await retryQueueRunner.Initialize();
+                    Logger.App("QueueRunner initialized for retry host");
+                }
+                catch (Exception ex)
+                {
+                    Logger.App($"Failed to initialize QueueRunner for retry host: {ex}");
+                }
+            });
+
             if (startedWithoutCert)
             {
                 // Re-enter the setup/certificate flow so the server can complete
@@ -196,6 +228,24 @@ public static class Program
                     await ConsoleMessages.ServerRunning();
 
                 Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
+
+                // Auto-open setup URL in browser if in setup mode and desktop environment
+                SetupState? setupState = app.Services.GetService<SetupState>();
+                if (setupState?.IsSetupRequired == true && !IsRunningAsService && Auth.IsDesktopEnvironment())
+                {
+                    try
+                    {
+                        // Use HTTP with actual IP address since no certificate exists yet
+                        string setupUrl = $"http://{Networking.Networking.InternalIp}:{Config.InternalServerPort}/setup";
+                        Logger.App($"Opening setup page in browser: {setupUrl}");
+                        Auth.OpenBrowser(setupUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.App($"Could not open browser automatically: {ex.Message}");
+                        Logger.App($"Please open your browser and navigate to: http://{Networking.Networking.InternalIp}:{Config.InternalServerPort}/setup");
+                    }
+                }
 
                 await Dev.Run();
             });
@@ -262,6 +312,33 @@ public static class Program
         restartStopWatch.Start();
 
         IWebHost httpsHost = CreateWebHostBuilder(options).Build();
+
+        // Re-evaluate token state so the new host's SetupState reflects
+        // that auth already completed — prevents reopening the setup page.
+        SetupState httpsSetupState = httpsHost.Services.GetRequiredService<SetupState>();
+        TokenState httpsTokenState = await SetupState.ValidateTokenFile();
+        httpsSetupState.DetermineInitialPhase(httpsTokenState);
+
+        // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
+        // The constructor sets QueueRunner.Current = this.
+        QueueRunner httpsQueueRunner = httpsHost.Services.GetRequiredService<QueueRunner>();
+
+        // Initialize queue workers so they can process jobs on the HTTPS host.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3));
+                Logger.App("Initializing QueueRunner for HTTPS host...");
+                await httpsQueueRunner.Initialize();
+                Logger.App("QueueRunner initialized for HTTPS host");
+            }
+            catch (Exception ex)
+            {
+                Logger.App($"Failed to initialize QueueRunner for HTTPS host: {ex}");
+            }
+        });
+
         RegisterLifetimeEvents(httpsHost, restartStopWatch);
 
         Logger.App("HTTPS server starting...");

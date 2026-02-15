@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.People;
 using NoMercy.MediaProcessing.Common;
@@ -477,7 +478,7 @@ public class PersonManager(
     {
         try
         {
-            List<TmdbPersonAppends> personAppends = [];
+            ConcurrentBag<TmdbPersonAppends> personAppends = [];
 
             await Parallel.ForEachAsync(ids, Config.ParallelOptions, async (id, _) =>
             {
@@ -503,7 +504,7 @@ public class PersonManager(
                     Logger.MovieDb(e.Message, LogEventLevel.Error);
                 }
             });
-            
+
             return personAppends
                 .Where(f => f is { Name: not null })
                 .OrderBy(f => f!.Name)
@@ -513,7 +514,7 @@ public class PersonManager(
         {
             Logger.MovieDb(e.Message, LogEventLevel.Error);
         }
-        
+
         return [];
     }
 }

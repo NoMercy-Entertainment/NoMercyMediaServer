@@ -219,11 +219,11 @@ public partial class FileManager(
 
         if (items.Count == 0) return;
 
-        await Parallel.ForEachAsync(items, Config.ParallelOptions, async (item, _) =>
+        foreach (MediaFile item in items)
         {
             await StoreVideoItem(item);
-        });
-        
+        }
+
         Logger.App($"Found {items.Count} files for {Show?.Title}");
     }
 
@@ -778,7 +778,7 @@ public partial class FileManager(
             return folders;
         }
 
-        MediaContext mediaContext = new();
+        using MediaContext mediaContext = new();
         Folder[] rootFolders = mediaContext.FolderLibrary
             .Select(f => f.Folder)
             .ToArray();

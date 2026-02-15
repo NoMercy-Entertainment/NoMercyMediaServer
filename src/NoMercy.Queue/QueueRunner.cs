@@ -47,16 +47,28 @@ public class QueueRunner
 
     public async Task Initialize()
     {
-        if (_isInitialized) return;
+        if (_isInitialized)
+        {
+            Logger.Queue("QueueRunner.Initialize() skipped — already initialized", LogEventLevel.Debug);
+            return;
+        }
 
         _isInitialized = true;
 
+        Logger.Queue("QueueRunner.Initialize() starting — spawning workers...", LogEventLevel.Information);
+
         _jobQueue.ResetAllReservedJobs();
 
+        int workerCount = 0;
         foreach (KeyValuePair<string, (int count, List<QueueWorker> workerInstances, CancellationTokenSource
                      _cancellationTokenSource)> keyValuePair in _workers)
             for (int i = 0; i < keyValuePair.Value.count; i++)
+            {
                 SpawnWorkerThread(keyValuePair.Key);
+                workerCount++;
+            }
+
+        Logger.Queue($"QueueRunner.Initialize() complete — spawned {workerCount} workers", LogEventLevel.Information);
 
         // Signal that queue workers are ready, allowing cron jobs to start execution
         CronWorker.SignalQueueWorkersReady();

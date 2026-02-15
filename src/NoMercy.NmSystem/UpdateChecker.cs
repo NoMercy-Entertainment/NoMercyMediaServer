@@ -66,7 +66,7 @@ public static class UpdateChecker
         }
         catch (Exception e)
         {
-            Logger.Setup($"Update check failed: {e.Message}", LogEventLevel.Warning);
+            Logger.Setup($"Update check failed: {e.Message}", LogEventLevel.Debug);
             return false;
         }
     }

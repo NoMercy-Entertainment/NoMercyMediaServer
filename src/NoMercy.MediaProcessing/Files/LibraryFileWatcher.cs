@@ -21,15 +21,12 @@ public class LibraryFileWatcher
     private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new());
     public static LibraryFileWatcher Instance => _instance.Value;
 
-    private static readonly MediaContext MediaContext = new();
     private static readonly FolderWatcher Fs = new();
 
     private static readonly Dictionary<string, FileChangeGroup> FileChangeGroups = new();
     private static readonly Lock LockObject = new();
 
     private static readonly JobDispatcher JobDispatcher = new();
-    private static readonly FileRepository FileRepository = new(MediaContext);
-    private static readonly FileManager FileManager = new(FileRepository);
 
     private const int Delay = 10;
 
@@ -43,7 +40,8 @@ public class LibraryFileWatcher
         Fs.OnRenamed += _onFileRenamed;
         Fs.OnError += _onError;
 
-        List<Library> libraries = MediaContext.Libraries
+        using MediaContext mediaContext = new();
+        List<Library> libraries = mediaContext.Libraries
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .ToList();
@@ -99,7 +97,8 @@ public class LibraryFileWatcher
 
     private Library? GetLibraryByPath(string path)
     {
-        return MediaContext.Libraries
+        using MediaContext mediaContext = new();
+        return mediaContext.Libraries
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .FirstOrDefault(library => library.FolderLibraries
@@ -229,7 +228,10 @@ public class LibraryFileWatcher
 
         Logger.System($"Tv Show {res.First().Name}: Found {res.First().Name}");
 
-        await FileManager.FindFiles(res.First().Id, library);
+        await using MediaContext mediaContext = new();
+        FileRepository fileRepository = new(mediaContext);
+        FileManager fileManager = new(fileRepository);
+        await fileManager.FindFiles(res.First().Id, library);
 
         JobDispatcher.DispatchJob<AddShowJob>(res.First().Id, library);
     }
@@ -249,7 +251,10 @@ public class LibraryFileWatcher
 
         Logger.System($"Movie {res.First().Title}: Found {res.First().Title}");
 
-        await FileManager.FindFiles(res.First().Id, library);
+        await using MediaContext mediaContext = new();
+        FileRepository fileRepository = new(mediaContext);
+        FileManager fileManager = new(fileRepository);
+        await fileManager.FindFiles(res.First().Id, library);
 
         JobDispatcher.DispatchJob<AddMovieJob>(res.First().Id, library);
     }
