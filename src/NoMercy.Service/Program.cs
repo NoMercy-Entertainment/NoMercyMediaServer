@@ -165,7 +165,17 @@ public static class Program
 
             IWebHost retryHost = CreateWebHostBuilder(options).Build();
             RegisterLifetimeEvents(retryHost, retryStopWatch);
-            await RunHost(retryHost);
+
+            if (startedWithoutCert)
+            {
+                // Re-enter the setup/certificate flow so the server can complete
+                // first-boot setup rather than just running without HTTPS support.
+                await RunWithHttpsRestart(retryHost, options);
+            }
+            else
+            {
+                await RunHost(retryHost);
+            }
         }
     }
 
