@@ -125,7 +125,8 @@ public sealed class ServerConnection : IDisposable
 
     public async Task StreamLogsAsync(
         Action<LogEntryResponse> onEntry,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action? onConnected = null)
     {
         int retryDelay = 1000;
         const int MaxRetryDelay = 30000;
@@ -134,7 +135,17 @@ public sealed class ServerConnection : IDisposable
         {
             try
             {
-                if (_client is null) break;
+                // Ensure we have a connection before streaming
+                if (!IsConnected)
+                    await ConnectAsync(cancellationToken);
+
+                if (_client is null)
+                {
+                    // ConnectAsync failed, wait and retry
+                    await Task.Delay(retryDelay, cancellationToken);
+                    retryDelay = Math.Min(retryDelay * 2, MaxRetryDelay);
+                    continue;
+                }
 
                 using HttpResponseMessage response = await _client.GetStreamAsync(
                     "/manage/logs/stream", cancellationToken);
@@ -142,6 +153,7 @@ public sealed class ServerConnection : IDisposable
                 using StreamReader reader = new(stream);
 
                 retryDelay = 1000;
+                onConnected?.Invoke();
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
@@ -162,7 +174,7 @@ public sealed class ServerConnection : IDisposable
             }
             catch
             {
-                // Reconnect with backoff
+                IsConnected = false;
             }
 
             if (cancellationToken.IsCancellationRequested) break;

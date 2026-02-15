@@ -204,18 +204,17 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         _streamCts = new();
         CancellationToken token = _streamCts.Token;
 
-        // Load initial history
+        // Load initial history (from server if connected, disk otherwise)
         await RefreshLogsAsync(token);
 
         if (!_serverConnection.IsConnected)
-        {
-            StatusText = "Streaming unavailable - showing disk logs";
-            return;
-        }
+            StatusText = $"{FilteredEntries.Count} entries (waiting for server)";
+        else
+            StatusText = $"{FilteredEntries.Count} entries (streaming)";
 
-        StatusText = $"{FilteredEntries.Count} entries (streaming)";
-
-        // Open SSE stream for real-time updates
+        // Open SSE stream for real-time updates.
+        // StreamLogsAsync handles reconnection with backoff internally,
+        // so this works even if the server isn't up yet.
         _ = Task.Run(async () =>
         {
             await _serverConnection.StreamLogsAsync(entry =>
@@ -246,7 +245,12 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
                     while (FilteredEntries.Count > _tailCount * 2)
                         FilteredEntries.RemoveAt(0);
                 });
-            }, token);
+            }, token, onConnected: () =>
+            {
+                // Stream connected (or reconnected) — fetch log history
+                // to fill in any entries we missed while disconnected
+                Dispatcher.UIThread.Post(() => _ = RefreshLogsAsync(token));
+            });
         }, token);
     }
 
