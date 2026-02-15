@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using Newtonsoft.Json;
+using NoMercy.NmSystem.Information;
 using NoMercy.Tray.Models;
 using NoMercy.Tray.ViewModels;
 using NoMercy.Tray.Views;
@@ -24,15 +26,22 @@ public class TrayIconManager
     private bool _autoStartAttempted;
     private bool _startupWindowOpened;
     private bool _appAutoLaunched;
+    private bool _showOnStartup;
+    private readonly bool _isDev;
+    private NativeMenuItem? _showOnStartupItem;
 
     public TrayIconManager(
         ServerConnection serverConnection,
         ServerProcessLauncher processLauncher,
-        IClassicDesktopStyleApplicationLifetime lifetime)
+        IClassicDesktopStyleApplicationLifetime lifetime,
+        bool showOnStartup = false,
+        bool isDev = false)
     {
         _serverConnection = serverConnection;
         _processLauncher = processLauncher;
         _lifetime = lifetime;
+        _showOnStartup = showOnStartup || LoadShowOnStartup();
+        _isDev = isDev;
     }
 
     public void Initialize()
@@ -79,6 +88,11 @@ public class TrayIconManager
 
         NativeMenuItemSeparator separator3 = new();
 
+        _showOnStartupItem = new(_showOnStartup
+            ? "Show on Startup: On"
+            : "Show on Startup: Off");
+        _showOnStartupItem.Click += OnToggleShowOnStartup;
+
         NativeMenuItem quitItem = new("Quit");
         quitItem.Click += OnQuit;
 
@@ -94,6 +108,7 @@ public class TrayIconManager
         menu.Items.Add(_startServerItem);
         menu.Items.Add(_stopServerItem);
         menu.Items.Add(separator3);
+        menu.Items.Add(_showOnStartupItem);
         menu.Items.Add(quitItem);
 
         WindowIcon initialIcon =
@@ -142,7 +157,7 @@ public class TrayIconManager
 
             if (!wasConnected)
             {
-                if (!_autoStartAttempted)
+                if (!_autoStartAttempted && !_isDev)
                 {
                     _autoStartAttempted = true;
                     await _processLauncher.StartServerAsync();
@@ -179,11 +194,11 @@ public class TrayIconManager
             _ => ServerState.Running
         };
 
-        // Auto-open log window when first detecting startup
-        if (state == ServerState.Starting && !_startupWindowOpened)
+        // Auto-open log window when first detecting startup (if show on startup is enabled)
+        if (_showOnStartup && !_startupWindowOpened)
         {
             _startupWindowOpened = true;
-            OpenMainWindow(1);
+            OpenMainWindow(state == ServerState.Starting ? 1 : 0);
         }
 
         // Auto-launch the App when setup is in progress so the user sees the setup UI
@@ -363,6 +378,53 @@ public class TrayIconManager
     private async void OnStopServer(object? sender, EventArgs e)
     {
         await _serverConnection.PostAsync("/manage/stop");
+    }
+
+    private void OnToggleShowOnStartup(object? sender, EventArgs e)
+    {
+        _showOnStartup = !_showOnStartup;
+        SaveShowOnStartup(_showOnStartup);
+
+        if (_showOnStartupItem is not null)
+            _showOnStartupItem.Header = _showOnStartup
+                ? "Show on Startup: On"
+                : "Show on Startup: Off";
+    }
+
+    private static string TraySettingsFile =>
+        Path.Combine(AppFiles.ConfigPath, "tray_settings.json");
+
+    private static bool LoadShowOnStartup()
+    {
+        try
+        {
+            if (!File.Exists(TraySettingsFile)) return false;
+            string json = File.ReadAllText(TraySettingsFile);
+            TraySettings? settings = JsonConvert.DeserializeObject<TraySettings>(json);
+            return settings?.ShowOnStartup ?? false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void SaveShowOnStartup(bool value)
+    {
+        try
+        {
+            string directory = Path.GetDirectoryName(TraySettingsFile)!;
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            TraySettings settings = new() { ShowOnStartup = value };
+            string json = JsonConvert.SerializeObject(settings, Formatting.Indented);
+            File.WriteAllText(TraySettingsFile, json);
+        }
+        catch
+        {
+            // Ignore write failures
+        }
     }
 
     private void OnQuit(object? sender, EventArgs e)

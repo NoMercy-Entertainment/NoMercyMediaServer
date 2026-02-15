@@ -47,6 +47,14 @@ using NoMercy.Setup;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
 using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
+using MediaProcessingLibraryRepository = NoMercy.MediaProcessing.Libraries.LibraryRepository;
+using MediaProcessingMovieRepository = NoMercy.MediaProcessing.Movies.MovieRepository;
+using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
+using MediaProcessingShowRepository = NoMercy.MediaProcessing.Shows.ShowRepository;
+using MediaProcessingSeasonRepository = NoMercy.MediaProcessing.Seasons.SeasonRepository;
+using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;
+using MediaProcessingPersonRepository = NoMercy.MediaProcessing.People.PersonRepository;
+using MediaProcessingFileRepository = NoMercy.MediaProcessing.Files.FileRepository;
 
 namespace NoMercy.Service.Configuration;
 
@@ -288,14 +296,28 @@ public static class ServiceConfiguration
         services.AddScoped<MusicRepository>();
         services.AddScoped<EncoderRepository>();
         services.AddScoped<LibraryRepository>();
+        services.AddScoped<MediaProcessingLibraryRepository>();
         services.AddScoped<DeviceRepository>();
         services.AddScoped<FolderRepository>();
-        services.AddScoped<FileRepository>();
+        services.AddScoped<MediaProcessingFileRepository>();
+        services.AddScoped<IFileRepository, MediaProcessingFileRepository>();
         services.AddScoped<LanguageRepository>();
         services.AddScoped<CollectionRepository>();
+        services.AddScoped<MediaProcessingCollectionRepository>();
+        services.AddScoped<ICollectionRepository, MediaProcessingCollectionRepository>();
         services.AddScoped<GenreRepository>();
         services.AddScoped<MovieRepository>();
+        services.AddScoped<MediaProcessingMovieRepository>();
+        services.AddScoped<IMovieRepository, MediaProcessingMovieRepository>();
         services.AddScoped<TvShowRepository>();
+        services.AddScoped<MediaProcessingShowRepository>();
+        services.AddScoped<IShowRepository, MediaProcessingShowRepository>();
+        services.AddScoped<MediaProcessingSeasonRepository>();
+        services.AddScoped<ISeasonRepository, MediaProcessingSeasonRepository>();
+        services.AddScoped<MediaProcessingEpisodeRepository>();
+        services.AddScoped<IEpisodeRepository, MediaProcessingEpisodeRepository>();
+        services.AddScoped<MediaProcessingPersonRepository>();
+        services.AddScoped<IPersonRepository, MediaProcessingPersonRepository>();
         services.AddScoped<SpecialRepository>();
 
         // Add Managers
@@ -360,13 +382,15 @@ public static class ServiceConfiguration
                 }));
             });
 
+        // Eagerly load cached signing key so it's available before auth init completes
+        OfflineJwksCache.LoadCachedPublicKey();
+
         // Configure Authentication
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
                 options.Authority = Config.AuthBaseUrl;
                 options.RequireHttpsMetadata = true;
-                options.Audience = "nomercy-ui";
                 options.Audience = Config.TokenClientId;
 
                 // Enable offline token validation via cached signing keys

@@ -7,33 +7,56 @@ namespace NoMercy.Helpers.Extensions;
 
 public static class ClaimsPrincipleExtensions
 {
-    public static readonly List<User> Users = [];
+    private static readonly Lock UsersLock = new();
+    private static readonly Lock FolderIdsLock = new();
 
-    public static readonly List<Ulid> FolderIds = [];
+    private static List<User> _users = [];
+    private static List<Ulid> _folderIds = [];
 
-    private static User? Owner => Users.FirstOrDefault(u => u.Owner);
-    private static List<User> ManagerUsers => Users.Where(u => u.Manage).ToList();
-    private static List<User> AllowedUsers => Users.Where(u => u.Allowed).ToList();
+    public static List<User> Users
+    {
+        get { lock (UsersLock) return [.._users]; }
+    }
+
+    public static List<Ulid> FolderIds
+    {
+        get { lock (FolderIdsLock) return [.._folderIds]; }
+    }
+
+    private static User? Owner
+    {
+        get { lock (UsersLock) return _users.FirstOrDefault(u => u.Owner); }
+    }
+
+    private static List<User> ManagerUsers
+    {
+        get { lock (UsersLock) return _users.Where(u => u.Manage).ToList(); }
+    }
+
+    private static List<User> AllowedUsers
+    {
+        get { lock (UsersLock) return _users.Where(u => u.Allowed).ToList(); }
+    }
 
     public static void Initialize(MediaContext context)
     {
-        Users.Clear();
-        Users.AddRange(context.Users.ToList());
+        List<User> users = context.Users.ToList();
+        List<Ulid> folderIds = context.Folders.Select(x => x.Id).ToList();
 
-        FolderIds.Clear();
-        FolderIds.AddRange(context.Folders.Select(x => x.Id).ToList());
+        lock (UsersLock) _users = users;
+        lock (FolderIdsLock) _folderIds = folderIds;
     }
 
     public static void RefreshUsers(MediaContext context)
     {
-        Users.Clear();
-        Users.AddRange(context.Users.ToList());
+        List<User> users = context.Users.ToList();
+        lock (UsersLock) _users = users;
     }
 
     public static void RefreshFolderIds(MediaContext context)
     {
-        FolderIds.Clear();
-        FolderIds.AddRange(context.Folders.Select(x => x.Id).ToList());
+        List<Ulid> folderIds = context.Folders.Select(x => x.Id).ToList();
+        lock (FolderIdsLock) _folderIds = folderIds;
     }
 
     public static Guid UserId(this ClaimsPrincipal? principal)
@@ -104,27 +127,30 @@ public static class ClaimsPrincipleExtensions
 
     public static User? User(this ClaimsPrincipal? principal)
     {
-        return Users.FirstOrDefault(u => u.Id == principal.UserId());
+        lock (UsersLock) return _users.FirstOrDefault(u => u.Id == principal.UserId());
     }
 
     public static void AddUser(User user)
     {
-        Users.Add(user);
+        lock (UsersLock) _users = [.._users, user];
     }
 
     public static void RemoveUser(User user)
     {
-        Users.Remove(user);
+        lock (UsersLock) _users = _users.Where(u => u.Id != user.Id).ToList();
     }
 
     public static void UpdateUser(User user)
     {
-        User? existingUser = Users.FirstOrDefault(u => u.Id == user.Id);
-
-        if (existingUser != null)
+        lock (UsersLock)
         {
-            Users.Remove(existingUser);
-            Users.Add(user);
+            _users = _users.Select(u => u.Id == user.Id ? user : u).ToList();
         }
+    }
+
+    public static void Reset()
+    {
+        lock (UsersLock) _users = [];
+        lock (FolderIdsLock) _folderIds = [];
     }
 }

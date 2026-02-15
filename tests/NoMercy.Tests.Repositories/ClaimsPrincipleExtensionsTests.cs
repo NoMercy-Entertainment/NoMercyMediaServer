@@ -17,8 +17,7 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
 
     public void Dispose()
     {
-        ClaimsPrincipleExtensions.Users.Clear();
-        ClaimsPrincipleExtensions.FolderIds.Clear();
+        ClaimsPrincipleExtensions.Reset();
         _context.Dispose();
     }
 
@@ -121,7 +120,7 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
     [Fact]
     public void Initialize_ClearsPreviousData()
     {
-        ClaimsPrincipleExtensions.Users.Add(new()
+        ClaimsPrincipleExtensions.AddUser(new()
         {
             Id = Guid.NewGuid(),
             Email = "stale@nomercy.tv",
