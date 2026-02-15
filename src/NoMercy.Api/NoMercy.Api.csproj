@@ -28,7 +28,7 @@
         <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
-        <PackageReference Include="System.Net.WebSockets"/>
+
         <PackageReference Include="Ulid" />
         <PackageReference Include="xunit"/>
         <PackageReference Include="Microsoft.AspNetCore.SignalR"/>

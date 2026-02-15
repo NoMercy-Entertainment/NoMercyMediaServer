@@ -10,11 +10,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore"/>
-        <PackageReference Include="Microsoft.AspNetCore.Hosting"/>
-        <PackageReference Include="Microsoft.AspNetCore.Http"/>
-        <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Core"/>
-        <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Https"/>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
         <PackageReference Include="Polly" />
@@ -32,15 +31,6 @@
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
         <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
         <ProjectReference Include="..\NoMercy.Queue\NoMercy.Queue.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Reference Include="Microsoft.AspNetCore">
-            <HintPath>..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.2\Microsoft.AspNetCore.dll</HintPath>
-        </Reference>
-        <Reference Include="Microsoft.AspNetCore.Hosting.Abstractions">
-            <HintPath>..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.2\Microsoft.AspNetCore.Hosting.Abstractions.dll</HintPath>
-        </Reference>
     </ItemGroup>
 
     <ItemGroup>

@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Builder;
 using Newtonsoft.Json;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
@@ -26,7 +26,7 @@ public static class Auth
     private static JwtSecurityToken? _jwtSecurityToken;
     private static string? _codeVerifier;
 
-    private static IWebHost? TempServerInstance { get; set; }
+    private static WebApplication? TempServerInstance { get; set; }
 
     public static async Task Init()
     {

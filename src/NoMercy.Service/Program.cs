@@ -6,13 +6,12 @@ using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using CommandLine;
-using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Hosting.WindowsServices;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Queue;
+using NoMercy.Service.Configuration;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup;
 
@@ -37,7 +36,7 @@ public static class Program
             lock (ShutdownLock)
             {
                 _shutdownAttempts++;
-                
+
                 if (_shutdownAttempts == 1)
                 {
                     e.Cancel = true; // Prevent immediate termination
@@ -132,7 +131,7 @@ public static class Program
 
         _applicationShutdownCts = new();
         bool startedWithoutCert = !Certificate.HasValidCertificate();
-        IWebHost app = CreateWebHostBuilder(options).Build();
+        WebApplication app = CreateWebApplication(options);
 
         SetupState setupState = app.Services.GetRequiredService<SetupState>();
         TokenState tokenState = await SetupState.ValidateTokenFile();
@@ -176,7 +175,7 @@ public static class Program
             Stopwatch retryStopWatch = new();
             retryStopWatch.Start();
 
-            IWebHost retryHost = CreateWebHostBuilder(options).Build();
+            WebApplication retryHost = CreateWebApplication(options);
             RegisterLifetimeEvents(retryHost, retryStopWatch);
 
             // Force the DI container to instantiate QueueRunner (it's a lazy singleton).
@@ -211,7 +210,7 @@ public static class Program
         }
     }
 
-    private static void RegisterLifetimeEvents(IWebHost app, Stopwatch stopWatch)
+    private static void RegisterLifetimeEvents(WebApplication app, Stopwatch stopWatch)
     {
         app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStarted.Register(() =>
         {
@@ -257,7 +256,7 @@ public static class Program
         });
     }
 
-    private static async Task<bool> RunWithHttpsRestart(IWebHost httpHost, StartupOptions options)
+    private static async Task<bool> RunWithHttpsRestart(WebApplication httpHost, StartupOptions options)
     {
         SetupState setupState = httpHost.Services.GetRequiredService<SetupState>();
 
@@ -270,7 +269,7 @@ public static class Program
                                      || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
         {
             bool shouldRetry = await HandlePortInUse(Config.InternalServerPort, ex);
-            httpHost.Dispose();
+            await httpHost.DisposeAsync();
             return shouldRetry;
         }
 
@@ -283,7 +282,7 @@ public static class Program
         if (completedTask == shutdownTask || _applicationShutdownCts.IsCancellationRequested)
         {
             await httpHost.StopAsync(TimeSpan.FromSeconds(10));
-            httpHost.Dispose();
+            await httpHost.DisposeAsync();
             return false;
         }
 
@@ -292,7 +291,7 @@ public static class Program
         {
             Logger.App("Setup completed but certificate not found — continuing on HTTP");
             await httpHost.WaitForShutdownAsync(_applicationShutdownCts.Token);
-            httpHost.Dispose();
+            await httpHost.DisposeAsync();
             return false;
         }
 
@@ -304,14 +303,14 @@ public static class Program
         // Gracefully stop the HTTP host
         Config.Started = false;
         await httpHost.StopAsync(TimeSpan.FromSeconds(10));
-        httpHost.Dispose();
+        await httpHost.DisposeAsync();
 
         // Build and start a new host with HTTPS
         _applicationShutdownCts = new();
         Stopwatch restartStopWatch = new();
         restartStopWatch.Start();
 
-        IWebHost httpsHost = CreateWebHostBuilder(options).Build();
+        WebApplication httpsHost = CreateWebApplication(options);
 
         // Re-evaluate token state so the new host's SetupState reflects
         // that auth already completed — prevents reopening the setup page.
@@ -345,24 +344,17 @@ public static class Program
         return await RunHost(httpsHost);
     }
 
-    private static async Task<bool> RunHost(IWebHost host)
+    private static async Task<bool> RunHost(WebApplication host)
     {
         try
         {
-            if (IsRunningAsService && OperatingSystem.IsWindows())
-            {
-                host.RunAsService();
-            }
-            else
-            {
-                await host.RunAsync(_applicationShutdownCts!.Token);
-            }
+            await host.RunAsync(_applicationShutdownCts!.Token);
         }
         catch (IOException ex) when (ex.InnerException is SocketException
                                      || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
         {
             bool shouldRetry = await HandlePortInUse(Config.InternalServerPort, ex);
-            host.Dispose();
+            await host.DisposeAsync();
             return shouldRetry;
         }
         catch (OperationCanceledException)
@@ -688,7 +680,7 @@ public static class Program
         await Task.CompletedTask;
     }
 
-    private static IWebHostBuilder CreateWebHostBuilder(StartupOptions options)
+    private static WebApplication CreateWebApplication(StartupOptions options)
     {
         List<IPAddress> localAddresses =
         [
@@ -698,79 +690,90 @@ public static class Program
         if(Software.IsWindows || Software.IsMac)
             localAddresses.Add(IPAddress.IPv6Any);
 
-        IWebHostBuilder builder = WebHost.CreateDefaultBuilder([])
-            .ConfigureServices(services =>
-            {
-                services.AddSingleton<StartupOptions>(options);
-                services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
-                services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
-                services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
 
-                // Configure host options with reduced shutdown timeout
-                services.Configure<HostOptions>(hostOptions =>
+        builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
+        builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
+        builder.Services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
+
+        // Configure host options with reduced shutdown timeout
+        builder.Services.Configure<HostOptions>(hostOptions =>
+        {
+            hostOptions.ShutdownTimeout = TimeSpan.FromSeconds(10);
+        });
+
+        // Service integration — context-aware lifetime management
+        if (IsRunningAsService)
+        {
+            if (Software.IsWindows)
+                builder.Services.AddWindowsService();
+            else if (Software.IsLinux)
+                builder.Services.AddSystemd();
+        }
+
+        builder.Logging.ClearProviders();
+
+        builder.WebHost.ConfigureKestrel(kestrelOptions =>
+        {
+            Certificate.KestrelConfig(kestrelOptions);
+
+            // Main server endpoints — HTTPS when certificate is available
+            foreach (IPAddress address in localAddresses)
+            {
+                kestrelOptions.Listen(address, Config.InternalServerPort, listenOptions =>
                 {
-                    hostOptions.ShutdownTimeout = TimeSpan.FromSeconds(10);
+                    Certificate.ConfigureHttpsListener(listenOptions);
+                });
+            }
+
+            // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS)
+            if (Software.IsWindows)
+            {
+                kestrelOptions.ListenNamedPipe(Config.ManagementPipeName, listenOptions =>
+                {
+                    listenOptions.Protocols = HttpProtocols.Http1;
                 });
 
-                // Systemd integration — context-aware, no-ops when not running under systemd.
-                // Registers SystemdLifetime (sd_notify) and configures console logging for journal.
-                if (IsRunningAsService && Software.IsLinux)
-                    services.AddSystemd();
-            })
-            .ConfigureLogging(logging =>
+                Logger.App(
+                    $"IPC listening on named pipe: {Config.ManagementPipeName}");
+            }
+            else
             {
-                logging.ClearProviders();
-            })
-            .ConfigureKestrel(kestrelOptions =>
-            {
-                Certificate.KestrelConfig(kestrelOptions);
+                string socketPath = Config.ManagementSocketPath;
 
-                // Main server endpoints — HTTPS when certificate is available
-                foreach (IPAddress address in localAddresses)
+                // Remove stale socket file from previous run
+                if (File.Exists(socketPath))
+                    File.Delete(socketPath);
+
+                kestrelOptions.ListenUnixSocket(socketPath, listenOptions =>
                 {
-                    kestrelOptions.Listen(address, Config.InternalServerPort, listenOptions =>
-                    {
-                        Certificate.ConfigureHttpsListener(listenOptions);
-                    });
-                }
+                    listenOptions.Protocols =
+                        HttpProtocols.Http1;
+                });
 
-                // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS)
-                if (Software.IsWindows)
-                {
-                    kestrelOptions.ListenNamedPipe(Config.ManagementPipeName, listenOptions =>
-                    {
-                        listenOptions.Protocols = HttpProtocols.Http1;
-                    });
+                Logger.App(
+                    $"IPC listening on Unix socket: {socketPath}");
+            }
+        });
 
-                    Logger.App(
-                        $"IPC listening on named pipe: {Config.ManagementPipeName}");
-                }
-                else
-                {
-                    string socketPath = Config.ManagementSocketPath;
-
-                    // Remove stale socket file from previous run
-                    if (File.Exists(socketPath))
-                        File.Delete(socketPath);
-
-                    kestrelOptions.ListenUnixSocket(socketPath, listenOptions =>
-                    {
-                        listenOptions.Protocols =
-                            HttpProtocols.Http1;
-                    });
-
-                    Logger.App(
-                        $"IPC listening on Unix socket: {socketPath}");
-                }
-            })
-            .UseQuic()
-            .UseSockets()
-            .UseStartup<Startup>();
+        builder.WebHost.UseQuic();
+        builder.WebHost.UseSockets();
 
         // Set content root to executable directory when running as a service
         if (IsRunningAsService)
-            builder.UseContentRoot(AppContext.BaseDirectory);
+            builder.WebHost.UseContentRoot(AppContext.BaseDirectory);
 
-        return builder;
+        // Register services from Startup.ConfigureServices
+        ServiceConfiguration.ConfigureServices(builder.Services);
+        builder.Services.AddSingleton(options);
+
+        WebApplication app = builder.Build();
+
+        // Configure middleware from Startup.Configure
+        IApiVersionDescriptionProvider provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+        ApplicationConfiguration.ConfigureApp(app, provider);
+
+        return app;
     }
 }

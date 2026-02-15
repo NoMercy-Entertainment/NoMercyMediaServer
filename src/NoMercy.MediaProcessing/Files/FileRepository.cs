@@ -164,7 +164,7 @@ public class FileRepository(MediaContext context) : IFileRepository
         FileInfo[] videoFiles = GetVideoFilesInDirectory(directoryPath);
 
         FileInfo[] audioFiles = GetAudioFilesInDirectory(directoryPath);
-
+        
         ConcurrentBag<FileItem> fileList = [];
         if (videoFiles.Length == 0 && audioFiles.Length == 0)
             return fileList.ToList();
@@ -206,23 +206,26 @@ public class FileRepository(MediaContext context) : IFileRepository
         }
         else if (videoFiles.Length > 0)
         {
-            await Parallel.ForEachAsync(videoFiles, Config.ParallelOptions, async (file, _) =>
+            // Process video files sequentially - each file may add shows/movies to the DB,
+            // and parallel processing causes race conditions when the show isn't known yet
+            // (multiple iterations see "not found" simultaneously, all try to add, some fail)
+            foreach (FileInfo file in videoFiles)
             {
                 try
                 {
-                    await ProcessVideoFileInfo(libraryType, file, fileList);
+                    await ProcessVideoFileInfo(_context, libraryType, file, fileList);
                 }
                 catch (Exception e)
                 {
                     Logger.App(e.Message, LogEventLevel.Error);
                 }
-            });
+            }
         }
 
         return fileList.OrderBy(file => file.Name).ToList();
     }
 
-    private async Task<bool> ProcessVideoFileInfo(string libraryType, FileInfo file,
+    private async Task<bool> ProcessVideoFileInfo(MediaContext ctx, string libraryType, FileInfo file,
         ConcurrentBag<FileItem> fileList)
     {
         MovieOrEpisode match = new();
@@ -241,15 +244,18 @@ public class FileRepository(MediaContext context) : IFileRepository
 
         if (parsed.Title == null) return true;
 
-        Regex regex = Str.MatchNumbers();
-        Match match2 = regex.Match(parsed.Title);
-    
-        if (match2.Success)
+        if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
-            parsed.Season = 1;
-            parsed.Episode = int.Parse(match2.Value);
+            Regex regex = Str.MatchNumbers();
+            Match match2 = regex.Match(parsed.Title);
 
-            parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
+            if (match2.Success)
+            {
+                parsed.Season = 1;
+                parsed.Episode = int.Parse(match2.Value);
+
+                parsed.Title = regex.Split(parsed.Title).FirstOrDefault();
+            }
         }
 
         switch (libraryType)
@@ -261,10 +267,10 @@ public class FileRepository(MediaContext context) : IFileRepository
                 TmdbTvShow? show = shows?.Results.FirstOrDefault();
                 if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) return true;
 
-                bool hasShow = _context.Tvs
+                bool hasShow = ctx.Tvs
                     .Any(item => item.Id == show.Id);
 
-                Ulid libraryId = await _context.Libraries
+                Ulid libraryId = await ctx.Libraries
                     .Where(item => item.Type == libraryType)
                     .Select(item => item.Id)
                     .FirstOrDefaultAsync();
@@ -286,14 +292,14 @@ public class FileRepository(MediaContext context) : IFileRepository
                     await job.Handle();
                 }
 
-                Episode? episode = _context.Episodes
+                Episode? episode = ctx.Episodes
                     .Where(item => item.TvId == show.Id)
                     .Where(item => item.SeasonNumber == parsed.Season)
                     .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
 
                 if (episode == null)
                 {
-                    List<Episode> episodes = _context.Episodes
+                    List<Episode> episodes = ctx.Episodes
                         .Where(item => item.TvId == show.Id)
                         .Where(item => item.SeasonNumber > 0)
                         .OrderBy(item => item.SeasonNumber)
@@ -310,7 +316,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                     TmdbEpisodeDetails? details = await episodeClient.Details(true);
                     if (details == null) return true;
 
-                    Season? season = await _context.Seasons
+                    Season? season = await ctx.Seasons
                         .FirstOrDefaultAsync(season =>
                             season.TvId == show.Id && season.SeasonNumber == details.SeasonNumber);
 
@@ -329,8 +335,8 @@ public class FileRepository(MediaContext context) : IFileRepository
                         SeasonId = season?.Id ?? 0,
                     };
 
-                    _context.Episodes.Add(episode);
-                    await _context.SaveChangesAsync();
+                    ctx.Episodes.Add(episode);
+                    await ctx.SaveChangesAsync();
                 }
 
                 match = new()
@@ -354,7 +360,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                 TmdbMovie? movie = movies?.Results.FirstOrDefault();
                 if (movie == null) return true;
 
-                Movie? movieItem = _context.Movies
+                Movie? movieItem = ctx.Movies
                     .FirstOrDefault(item => item.Id == movie.Id);
 
                 if (movieItem == null)
@@ -363,10 +369,10 @@ public class FileRepository(MediaContext context) : IFileRepository
                     TmdbMovieDetails? details = await movieClient.Details(true);
                     if (details == null) return true;
 
-                    bool hasMovie = _context.Movies
+                    bool hasMovie = ctx.Movies
                         .Any(item => item.Id == movie.Id);
 
-                    Ulid libraryId = await _context.Libraries
+                    Ulid libraryId = await ctx.Libraries
                         .Where(item => item.Type == libraryType)
                         .Select(item => item.Id)
                         .FirstOrDefaultAsync();

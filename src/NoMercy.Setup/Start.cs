@@ -51,7 +51,7 @@ public class Start
                         if (Globals.Globals.AccessToken is null)
                             throw new InvalidOperationException("No access token after auth");
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         Logger.Setup("Auth not yet available, checking for cached tokens");
                         bool result = await Auth.InitWithFallback();

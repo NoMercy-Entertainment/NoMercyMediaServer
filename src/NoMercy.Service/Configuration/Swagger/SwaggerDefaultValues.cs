@@ -10,12 +10,13 @@ public class SwaggerDefaultValues : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        ApiDescription? apiDescription = context.ApiDescription;
+        ApiDescription apiDescription = context.ApiDescription;
 
         foreach (ApiResponseType responseType in context.ApiDescription.SupportedResponseTypes)
         {
             string responseKey = responseType.IsDefaultResponse ? "default" : responseType.StatusCode.ToString();
-            IOpenApiResponse response = operation.Responses[responseKey];
+            if (operation.Responses?.TryGetValue(responseKey, out IOpenApiResponse? response) != true) continue;
+            if (response?.Content is null) continue;
 
             foreach (string? contentType in response.Content.Keys)
                 if (responseType.ApiResponseFormats.All(x => x.MediaType != contentType))
@@ -24,12 +25,13 @@ public class SwaggerDefaultValues : IOperationFilter
 
         if (operation.Parameters == null) return;
 
-        foreach (OpenApiParameter? parameter in operation.Parameters)
+        foreach (OpenApiParameter parameter in operation.Parameters)
         {
-            ApiParameterDescription description =
-                apiDescription.ParameterDescriptions.First(p => p.Name == parameter.Name);
+            ApiParameterDescription? description =
+                apiDescription.ParameterDescriptions.FirstOrDefault(p => p.Name == parameter?.Name);
+            if (description is null) continue;
 
-            parameter.Description ??= description.ModelMetadata.Description;
+            parameter.Description ??= description.ModelMetadata?.Description;
 
             if (parameter.Schema is OpenApiSchema schema &&
                 schema.Default == null &&

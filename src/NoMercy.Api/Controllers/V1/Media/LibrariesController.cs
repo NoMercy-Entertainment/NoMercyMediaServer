@@ -2,10 +2,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.Repositories;
+using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
@@ -20,8 +22,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/libraries")]
 public class LibrariesController(
     LibraryRepository libraryRepository,
-    CollectionRepository collectionRepository,
-    SpecialRepository specialRepository)
+    IDbContextFactory<MediaContext> contextFactory)
     : BaseController
 {
     [HttpGet]
@@ -53,12 +54,32 @@ public class LibrariesController(
         string language = Language();
         string country = Country();
 
-        // Start all independent queries in parallel
-        Task<List<Library>> librariesTask = libraryRepository.GetLibraries(userId, ct);
-        Task<List<Collection>> collectionsTask = collectionRepository.GetCollectionItems(userId, language, country, 10, 0, ct);
-        Task<List<Special>> specialsTask = specialRepository.GetSpecialItems(userId, language, country, 10, 0, ct);
-        Task<Tv?> randomTvTask = libraryRepository.GetRandomTvShow(userId, language, ct);
-        Task<Movie?> randomMovieTask = libraryRepository.GetRandomMovie(userId, language, ct);
+        // Start all independent queries in parallel - each task gets its own DbContext for thread safety
+        Task<List<Library>> librariesTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetLibraries(userId, ct);
+        });
+        Task<List<Collection>> collectionsTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new CollectionRepository(ctx).GetCollectionItems(userId, language, country, 10, 0, ct);
+        });
+        Task<List<Special>> specialsTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new SpecialRepository(ctx).GetSpecialItems(userId, language, country, 10, 0, ct);
+        });
+        Task<Tv?> randomTvTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetRandomTvShow(userId, language, ct);
+        });
+        Task<Movie?> randomMovieTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetRandomMovie(userId, language, ct);
+        });
 
         await Task.WhenAll(librariesTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask);
 
@@ -68,16 +89,17 @@ public class LibrariesController(
         Tv? tv = randomTvTask.Result;
         Movie? movie = randomMovieTask.Result;
 
-        // Fetch library data in parallel for all non-music libraries using optimized projection queries
+        // Fetch library data in parallel - each task gets its own DbContext for thread safety
         Library[] nonMusicLibraries = libraries.Where(lib => lib.Type != "music").ToArray();
 
         Task<(Library library, List<MovieCardDto> movies, List<TvCardDto> shows)>[] libraryDataTasks = nonMusicLibraries
             .Select(async library =>
             {
-                Task<List<MovieCardDto>> moviesTask = libraryRepository.GetLibraryMovieCardsAsync(userId, library.Id, country, 10, 0, ct);
-                Task<List<TvCardDto>> showsTask = libraryRepository.GetLibraryTvCardsAsync(userId, library.Id, country, 10, 0, ct);
-                await Task.WhenAll(moviesTask, showsTask);
-                return (library, moviesTask.Result, showsTask.Result);
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                LibraryRepository repo = new(ctx);
+                List<MovieCardDto> movies = await repo.GetLibraryMovieCardsAsync(userId, library.Id, country, 10, 0, ct);
+                List<TvCardDto> shows = await repo.GetLibraryTvCardsAsync(userId, library.Id, country, 10, 0, ct);
+                return (library, movies, shows);
             })
             .ToArray();
 
@@ -179,12 +201,32 @@ public class LibrariesController(
         string language = Language();
         string country = Country();
 
-        // Start all independent queries in parallel
-        Task<List<Library>> librariesTask = libraryRepository.GetLibraries(userId, ct);
-        Task<List<Collection>> collectionsTask = collectionRepository.GetCollectionItems(userId, language, country, 6, 0, ct);
-        Task<List<Special>> specialsTask = specialRepository.GetSpecialItems(userId, language, country, 6, 0, ct);
-        Task<Tv?> randomTvTask = libraryRepository.GetRandomTvShow(userId, language, ct);
-        Task<Movie?> randomMovieTask = libraryRepository.GetRandomMovie(userId, language, ct);
+        // Start all independent queries in parallel - each task gets its own DbContext for thread safety
+        Task<List<Library>> librariesTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetLibraries(userId, ct);
+        });
+        Task<List<Collection>> collectionsTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new CollectionRepository(ctx).GetCollectionItems(userId, language, country, 6, 0, ct);
+        });
+        Task<List<Special>> specialsTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new SpecialRepository(ctx).GetSpecialItems(userId, language, country, 6, 0, ct);
+        });
+        Task<Tv?> randomTvTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetRandomTvShow(userId, language, ct);
+        });
+        Task<Movie?> randomMovieTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetRandomMovie(userId, language, ct);
+        });
 
         await Task.WhenAll(librariesTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask);
 
@@ -194,14 +236,15 @@ public class LibrariesController(
         Tv? tv = randomTvTask.Result;
         Movie? movie = randomMovieTask.Result;
 
-        // Fetch library data in parallel for all libraries using optimized projection queries
+        // Fetch library data in parallel - each task gets its own DbContext for thread safety
         Task<(Library library, List<MovieCardDto> movies, List<TvCardDto> shows)>[] libraryDataTasks = libraries
             .Select(async library =>
             {
-                Task<List<MovieCardDto>> moviesTask = libraryRepository.GetLibraryMovieCardsAsync(userId, library.Id, country, 6, 0, ct);
-                Task<List<TvCardDto>> showsTask = libraryRepository.GetLibraryTvCardsAsync(userId, library.Id, country, 6, 0, ct);
-                await Task.WhenAll(moviesTask, showsTask);
-                return (library, moviesTask.Result, showsTask.Result);
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                LibraryRepository repo = new(ctx);
+                List<MovieCardDto> movies = await repo.GetLibraryMovieCardsAsync(userId, library.Id, country, 6, 0, ct);
+                List<TvCardDto> shows = await repo.GetLibraryTvCardsAsync(userId, library.Id, country, 6, 0, ct);
+                return (library, movies, shows);
             })
             .ToArray();
 
@@ -281,9 +324,17 @@ public class LibrariesController(
         string language = Language();
         string country = Country();
 
-        // Fetch movies and shows in parallel using optimized projection queries
-        Task<List<MovieCardDto>> moviesTask = libraryRepository.GetLibraryMovieCardsAsync(userId, libraryId, country, request.Take, request.Page * request.Take, ct);
-        Task<List<TvCardDto>> showsTask = libraryRepository.GetLibraryTvCardsAsync(userId, libraryId, country, request.Take, request.Page * request.Take, ct);
+        // Fetch movies and shows in parallel - each task gets its own DbContext for thread safety
+        Task<List<MovieCardDto>> moviesTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetLibraryMovieCardsAsync(userId, libraryId, country, request.Take, request.Page * request.Take, ct);
+        });
+        Task<List<TvCardDto>> showsTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetLibraryTvCardsAsync(userId, libraryId, country, request.Take, request.Page * request.Take, ct);
+        });
 
         await Task.WhenAll(moviesTask, showsTask);
 
@@ -353,11 +404,17 @@ public class LibrariesController(
         string language = Language();
         string country = Country();
 
-        // Fetch movies and shows in parallel
-        Task<List<Movie>> moviesTask = libraryRepository
-            .GetPaginatedLibraryMovies(userId, libraryId, letter, language, country, request.Take, request.Page, ct);
-        Task<List<Tv>> showsTask = libraryRepository
-            .GetPaginatedLibraryShows(userId, libraryId, letter, language, country, request.Take, request.Page, ct: ct);
+        // Fetch movies and shows in parallel - each task gets its own DbContext for thread safety
+        Task<List<Movie>> moviesTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetPaginatedLibraryMovies(userId, libraryId, letter, language, country, request.Take, request.Page, ct);
+        });
+        Task<List<Tv>> showsTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            return await new LibraryRepository(ctx).GetPaginatedLibraryShows(userId, libraryId, letter, language, country, request.Take, request.Page, ct: ct);
+        });
 
         await Task.WhenAll(moviesTask, showsTask);
 

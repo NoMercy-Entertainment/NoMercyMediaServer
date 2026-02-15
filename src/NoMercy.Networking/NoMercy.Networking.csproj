@@ -16,7 +16,7 @@
         <PackageReference Include="Mono.Nat"/>
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Sharpcaster" />
-        <PackageReference Include="System.Net.WebSockets"/>
+
         <PackageReference Include="Ulid" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     </ItemGroup>

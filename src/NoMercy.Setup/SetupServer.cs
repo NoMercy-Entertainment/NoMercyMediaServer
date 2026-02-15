@@ -1,7 +1,6 @@
 using System.Net;
 using System.Reflection;
 using System.Text;
-using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -21,7 +20,7 @@ namespace NoMercy.Setup;
 public class SetupServer
 {
     private readonly SetupState _state;
-    private IWebHost? _host;
+    private WebApplication? _host;
     private readonly int _port;
 
     private static string? _cachedSetupHtml;
@@ -44,20 +43,18 @@ public class SetupServer
         if (IsRunning)
             return;
 
-        _host = WebHost.CreateDefaultBuilder()
-            .ConfigureKestrel(kestrelOptions =>
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        builder.WebHost.ConfigureKestrel(kestrelOptions =>
+        {
+            kestrelOptions.Listen(IPAddress.Any, _port, listenOptions =>
             {
-                kestrelOptions.Listen(IPAddress.Any, _port, listenOptions =>
-                {
-                    listenOptions.Protocols = HttpProtocols.Http1;
-                });
-            })
-            .Configure(app =>
-            {
-                app.UseRouting();
-                app.Run(HandleRequest);
-            })
-            .Build();
+                listenOptions.Protocols = HttpProtocols.Http1;
+            });
+        });
+
+        _host = builder.Build();
+        _host.UseRouting();
+        _host.Run(HandleRequest);
 
         await _host.StartAsync(cancellationToken);
         IsRunning = true;
@@ -76,7 +73,7 @@ public class SetupServer
         }
         finally
         {
-            _host.Dispose();
+            await _host.DisposeAsync();
             _host = null;
             IsRunning = false;
 
