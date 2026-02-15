@@ -56,6 +56,8 @@ public class ManagementController(
             UpdateAvailable = Config.UpdateAvailable,
             LatestVersion = Config.LatestVersion,
             SetupPhase = setupState.CurrentPhase.ToString(),
+            InternalAddress = Networking.Networking.InternalAddress,
+            ExternalAddress = Networking.Networking.ExternalAddress,
             AppStatus = new AppProcessStatusDto
             {
                 Running = appProcessManager.IsRunning,

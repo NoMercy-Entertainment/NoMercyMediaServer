@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using Avalonia.Threading;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
@@ -228,20 +229,23 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
                     return;
                 }
 
-                LogEntries.Add(entry);
-
-                // Check if entry matches current filter
-                if (MatchesFilter(entry))
+                Dispatcher.UIThread.Post(() =>
                 {
-                    FilteredEntries.Add(entry);
-                    StatusText = $"{FilteredEntries.Count} entries (streaming)";
-                }
+                    LogEntries.Add(entry);
 
-                // Trim old entries to keep memory bounded
-                while (LogEntries.Count > _tailCount * 2)
-                    LogEntries.RemoveAt(0);
-                while (FilteredEntries.Count > _tailCount * 2)
-                    FilteredEntries.RemoveAt(0);
+                    // Check if entry matches current filter
+                    if (MatchesFilter(entry))
+                    {
+                        FilteredEntries.Add(entry);
+                        StatusText = $"{FilteredEntries.Count} entries (streaming)";
+                    }
+
+                    // Trim old entries to keep memory bounded
+                    while (LogEntries.Count > _tailCount * 2)
+                        LogEntries.RemoveAt(0);
+                    while (FilteredEntries.Count > _tailCount * 2)
+                        FilteredEntries.RemoveAt(0);
+                });
             }, token);
         }, token);
     }

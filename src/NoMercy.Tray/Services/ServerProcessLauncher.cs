@@ -46,7 +46,7 @@ public class ServerProcessLauncher
         return Task.FromResult(started);
     }
 
-    public Task<bool> LaunchAppAsync()
+    public Task<bool> LaunchAppAsync(string? route = null)
     {
         if (IsAppProcessRunning)
             return Task.FromResult(false);
@@ -59,6 +59,12 @@ public class ServerProcessLauncher
 
         if (startInfo is null)
             return Task.FromResult(false);
+
+        if (!string.IsNullOrEmpty(route))
+        {
+            startInfo.ArgumentList.Add("--route");
+            startInfo.ArgumentList.Add(route);
+        }
 
         _appProcess = new()
         {

@@ -33,7 +33,7 @@ internal class Program
             .SetMinSize(1280 + 16, 720 + 39)
             .SetResizable(true)
             .SetIconFile(iconPath)
-            .SetUseOsDefaultSize(false)
+            .SetUseOsDefaultSize(true)
             .SetMediaAutoplayEnabled(true)
             .SetMediaStreamEnabled(true)
             .SetBrowserControlInitParameters("--remote-debugging-port=9222")
@@ -49,9 +49,28 @@ internal class Program
                 infiniWindow.SendWebMessage(response);
             });
 
-        // In debug mode, load from dev server; otherwise use local server
+        // Parse --route argument
+        string route = "";
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--route" && i + 1 < args.Length)
+            {
+                route = args[i + 1];
+                break;
+            }
+
+            if (args[i].StartsWith("--route="))
+            {
+                route = args[i]["--route=".Length..];
+                break;
+            }
+        }
+
+        // Set start URL with optional route
         if (Debugger.IsAttached)
-            window.SetStartUrl("https://app-dev.nomercy.tv");
+            window.SetStartUrl($"https://app-dev.nomercy.tv{route}");
+        else if (!string.IsNullOrEmpty(route))
+            window.SetStartUrl($"http://localhost:7625{route}");
 
         InfiniFrameWebApplication application = builder.Build();
 

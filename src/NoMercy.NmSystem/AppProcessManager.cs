@@ -32,7 +32,7 @@ public class AppProcessManager
         }
     }
 
-    public bool Start()
+    public bool Start(string? route = null)
     {
         lock (_lock)
         {
@@ -44,6 +44,12 @@ public class AppProcessManager
                 ?? CreateInstalledStartInfo()
                 ?? CreateDevBinaryStartInfo()
                 ?? CreateDotnetRunStartInfo();
+
+            if (startInfo is not null && !string.IsNullOrEmpty(route))
+            {
+                startInfo.ArgumentList.Add("--route");
+                startInfo.ArgumentList.Add(route);
+            }
 
             if (startInfo is null)
                 return false;

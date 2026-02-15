@@ -19,6 +19,7 @@ public class TrayIconManager
     private NativeMenuItem? _startServerItem;
     private NativeMenuItem? _stopServerItem;
     private ServerState _currentState = ServerState.Disconnected;
+    private string? _dashboardUrl;
     private MainWindow? _mainWindow;
     private bool _autoStartAttempted;
     private bool _startupWindowOpened;
@@ -193,6 +194,8 @@ public class TrayIconManager
             _appAutoLaunched = await TryLaunchAppForSetup();
         }
 
+        _dashboardUrl = status.InternalAddress;
+
         string uptimeText = FormatUptime(status.UptimeSeconds);
         string versionText = string.IsNullOrEmpty(status.Version)
             ? null!
@@ -336,7 +339,9 @@ public class TrayIconManager
 
     private void OnOpenDashboard(object? sender, EventArgs e)
     {
-        string url = "https://app.nomercy.tv";
+        string url = _dashboardUrl is not null
+            ? $"{_dashboardUrl}/dashboard/system"
+            : "https://app.nomercy.tv";
         OpenUrl(url);
     }
 
