@@ -100,6 +100,29 @@ public sealed class ServerConnection : IDisposable
         }
     }
 
+    public async Task<bool> PutAsync<T>(
+        string path,
+        T body,
+        CancellationToken cancellationToken = default)
+    {
+        if (_client is null) return false;
+
+        try
+        {
+            string json = JsonConvert.SerializeObject(body);
+            using StringContent content = new(json, Encoding.UTF8, "application/json");
+            using HttpResponseMessage response = await _client.PutAsync(
+                path, content, cancellationToken);
+
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            IsConnected = false;
+            return false;
+        }
+    }
+
     public async Task StreamLogsAsync(
         Action<LogEntryResponse> onEntry,
         CancellationToken cancellationToken)

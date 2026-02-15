@@ -25,6 +25,18 @@ public class ServerControlViewModel : INotifyPropertyChanged
     private bool _updateAvailable;
     private string _latestVersion = string.Empty;
 
+    private bool _configLoaded;
+    private string _configServerName = string.Empty;
+    private int _internalPort;
+    private int _externalPort;
+    private int _queueWorkers;
+    private int _encoderWorkers;
+    private int _cronWorkers;
+    private int _dataWorkers;
+    private int _imageWorkers;
+    private int _fileWorkers;
+    private int _requestWorkers;
+
     public string ServerStatus
     {
         get => _serverStatus;
@@ -103,6 +115,72 @@ public class ServerControlViewModel : INotifyPropertyChanged
         set { _latestVersion = value; OnPropertyChanged(); }
     }
 
+    public bool ConfigLoaded
+    {
+        get => _configLoaded;
+        set { _configLoaded = value; OnPropertyChanged(); }
+    }
+
+    public string ConfigServerName
+    {
+        get => _configServerName;
+        set { _configServerName = value; OnPropertyChanged(); }
+    }
+
+    public int InternalPort
+    {
+        get => _internalPort;
+        set { _internalPort = value; OnPropertyChanged(); }
+    }
+
+    public int ExternalPort
+    {
+        get => _externalPort;
+        set { _externalPort = value; OnPropertyChanged(); }
+    }
+
+    public int QueueWorkers
+    {
+        get => _queueWorkers;
+        set { _queueWorkers = value; OnPropertyChanged(); }
+    }
+
+    public int EncoderWorkers
+    {
+        get => _encoderWorkers;
+        set { _encoderWorkers = value; OnPropertyChanged(); }
+    }
+
+    public int CronWorkers
+    {
+        get => _cronWorkers;
+        set { _cronWorkers = value; OnPropertyChanged(); }
+    }
+
+    public int DataWorkers
+    {
+        get => _dataWorkers;
+        set { _dataWorkers = value; OnPropertyChanged(); }
+    }
+
+    public int ImageWorkers
+    {
+        get => _imageWorkers;
+        set { _imageWorkers = value; OnPropertyChanged(); }
+    }
+
+    public int FileWorkers
+    {
+        get => _fileWorkers;
+        set { _fileWorkers = value; OnPropertyChanged(); }
+    }
+
+    public int RequestWorkers
+    {
+        get => _requestWorkers;
+        set { _requestWorkers = value; OnPropertyChanged(); }
+    }
+
     public ServerControlViewModel(
         ServerConnection serverConnection,
         ServerProcessLauncher processLauncher)
@@ -168,6 +246,9 @@ public class ServerControlViewModel : INotifyPropertyChanged
         AutoStartEnabled = status.AutoStart;
         UpdateAvailable = status.UpdateAvailable;
         LatestVersion = status.LatestVersion ?? string.Empty;
+
+        if (!ConfigLoaded)
+            await LoadConfigAsync(cancellationToken);
     }
 
     public async Task StopServerAsync()
@@ -257,6 +338,66 @@ public class ServerControlViewModel : INotifyPropertyChanged
             {
                 ActionStatus = "Failed to apply update";
             }
+        }
+        finally
+        {
+            IsActionInProgress = false;
+        }
+    }
+
+    public async Task LoadConfigAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!_serverConnection.IsConnected)
+            await _serverConnection.ConnectAsync(cancellationToken);
+
+        ServerConfigResponse? config =
+            await _serverConnection.GetAsync<ServerConfigResponse>(
+                "/manage/config", cancellationToken);
+
+        if (config is null) return;
+
+        ConfigServerName = config.ServerName ?? string.Empty;
+        InternalPort = config.InternalPort;
+        ExternalPort = config.ExternalPort;
+        QueueWorkers = config.QueueWorkers;
+        EncoderWorkers = config.EncoderWorkers;
+        CronWorkers = config.CronWorkers;
+        DataWorkers = config.DataWorkers;
+        ImageWorkers = config.ImageWorkers;
+        FileWorkers = config.FileWorkers;
+        RequestWorkers = config.RequestWorkers;
+        ConfigLoaded = true;
+    }
+
+    public async Task SaveConfigAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (IsActionInProgress) return;
+
+        IsActionInProgress = true;
+        ActionStatus = "Saving configuration...";
+
+        try
+        {
+            bool success = await _serverConnection.PutAsync(
+                "/manage/config",
+                new
+                {
+                    server_name = ConfigServerName,
+                    queue_workers = QueueWorkers,
+                    encoder_workers = EncoderWorkers,
+                    cron_workers = CronWorkers,
+                    data_workers = DataWorkers,
+                    image_workers = ImageWorkers,
+                    file_workers = FileWorkers,
+                    request_workers = RequestWorkers
+                },
+                cancellationToken);
+
+            ActionStatus = success
+                ? "Configuration saved"
+                : "Failed to save configuration";
         }
         finally
         {

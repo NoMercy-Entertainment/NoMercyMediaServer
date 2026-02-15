@@ -63,4 +63,11 @@ public partial class ServerControlView : UserControl
             await ViewModel.ToggleAutoStartAsync(
                 checkBox.IsChecked == true);
     }
+
+    private async void OnSaveConfigClick(
+        object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not null)
+            await ViewModel.SaveConfigAsync();
+    }
 }
