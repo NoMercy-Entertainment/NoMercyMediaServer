@@ -23,11 +23,15 @@ public record SpecialResponseDto
                 .Include(special => special.Items
                     .OrderBy(specialItem => specialItem.Order)
                 )
-                .Include(special => special.Items
-                    .OrderBy(specialItem => specialItem.Order)
-                )
+                .Include(special => special.Items)
                 .ThenInclude(specialItem => specialItem.Episode)
                 .ThenInclude(ep => ep!.Tv)
+                .Include(special => special.Items)
+                .ThenInclude(specialItem => specialItem.Movie)
+                .ThenInclude(m => m!.VideoFiles.Where(v => v.Folder != null))
+                .Include(special => special.Items)
+                .ThenInclude(specialItem => specialItem.Episode)
+                .ThenInclude(ep => ep!.VideoFiles.Where(v => v.Folder != null))
                 .Include(special => special.SpecialUser
                     .Where(specialUser => specialUser.UserId.Equals(userId))
                 )

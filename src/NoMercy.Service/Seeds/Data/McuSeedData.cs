@@ -654,9 +654,9 @@ public static class McuSeedData
         {
             Index = 78,
             Type = Config.TvMediaType,
-            Title = "Loki",
+            Title = "What If...?",
             Year = 2021,
-            Seasons = [2],
+            Seasons = [1],
             Episodes = []
         },
         new()
@@ -665,21 +665,12 @@ public static class McuSeedData
             Type = Config.TvMediaType,
             Title = "What If...?",
             Year = 2021,
-            Seasons = [1],
-            Episodes = []
-        },
-        new()
-        {
-            Index = 80,
-            Type = Config.TvMediaType,
-            Title = "What If...?",
-            Year = 2021,
             Seasons = [2],
             Episodes = []
         },
         new()
         {
-            Index = 81,
+            Index = 80,
             Type = Config.TvMediaType,
             Title = "WandaVision",
             Year = 2021,
@@ -688,7 +679,7 @@ public static class McuSeedData
         },
         new()
         {
-            Index = 82,
+            Index = 81,
             Type = Config.TvMediaType,
             Title = "The Falcon and the Winter Soldier",
             Year = 2021,
@@ -697,42 +688,42 @@ public static class McuSeedData
         },
         new()
         {
-            Index = 83,
+            Index = 82,
             Type = Config.MovieMediaType,
             Title = "Shang-Chi and the Legend of the Ten Rings",
             Year = 2021
         },
         new()
         {
-            Index = 84,
+            Index = 83,
             Type = Config.MovieMediaType,
             Title = "Eternals",
             Year = 2021
         },
         new()
         {
-            Index = 85,
+            Index = 84,
             Type = Config.MovieMediaType,
             Title = "Spider-Man: Far From Home",
             Year = 2019
         },
         new()
         {
-            Index = 86,
+            Index = 85,
             Type = Config.MovieMediaType,
             Title = "Spider-Man: No Way Home",
             Year = 2021
         },
         new()
         {
-            Index = 87,
+            Index = 86,
             Type = Config.MovieMediaType,
             Title = "Doctor Strange in the Multiverse of Madness",
             Year = 2022
         },
         new()
         {
-            Index = 88,
+            Index = 87,
             Type = Config.TvMediaType,
             Title = "Hawkeye",
             Year = 2021,
@@ -741,7 +732,7 @@ public static class McuSeedData
         },
         new()
         {
-            Index = 89,
+            Index = 88,
             Type = Config.TvMediaType,
             Title = "Moon Knight",
             Year = 2022,
@@ -750,14 +741,14 @@ public static class McuSeedData
         },
         new()
         {
-            Index = 90,
+            Index = 89,
             Type = Config.MovieMediaType,
             Title = "Black Panther: Wakanda Forever",
             Year = 2022
         },
         new()
         {
-            Index = 91,
+            Index = 90,
             Type = Config.TvMediaType,
             Title = "Echo",
             Year = 2024,
@@ -766,7 +757,7 @@ public static class McuSeedData
         },
         new()
         {
-            Index = 92,
+            Index = 91,
             Type = Config.TvMediaType,
             Title = "She-Hulk: Attorney at Law",
             Year = 2022,
@@ -775,7 +766,7 @@ public static class McuSeedData
         },
         new()
         {
-            Index = 93,
+            Index = 92,
             Type = Config.TvMediaType,
             Title = "Ms Marvel",
             Year = 2022,
@@ -784,42 +775,42 @@ public static class McuSeedData
         },
         new()
         {
-            Index = 94,
+            Index = 93,
             Type = Config.MovieMediaType,
             Title = "Thor: Love and Thunder",
             Year = 2022
         },
         new()
         {
-            Index = 95,
+            Index = 94,
             Type = Config.MovieMediaType,
             Title = "Werewolf by Night",
             Year = 2022
         },
         new()
         {
-            Index = 96,
+            Index = 95,
             Type = Config.MovieMediaType,
             Title = "The Guardians of the Galaxy Holiday Special",
             Year = 2022
         },
         new()
         {
-            Index = 97,
+            Index = 96,
             Type = Config.MovieMediaType,
             Title = "Ant-Man and The Wasp: Quantumania",
             Year = 2023
         },
         new()
         {
-            Index = 98,
+            Index = 97,
             Type = Config.MovieMediaType,
             Title = "Guardians of the Galaxy Vol 3",
             Year = 2023
         },
         new()
         {
-            Index = 99,
+            Index = 98,
             Type = Config.TvMediaType,
             Title = "Secret Invasion",
             Year = 2023,
@@ -828,10 +819,110 @@ public static class McuSeedData
         },
         new()
         {
+            Index = 99,
+            Type = Config.TvMediaType,
+            Title = "Loki",
+            Year = 2021,
+            Seasons = [2],
+            Episodes = []
+        },
+        new()
+        {
             Index = 100,
             Type = Config.MovieMediaType,
             Title = "The Marvels",
             Year = 2023
+        },
+        new()
+        {
+            Index = 101,
+            Type = Config.MovieMediaType,
+            Title = "Deadpool & Wolverine",
+            Year = 2024
+        },
+        new()
+        {
+            Index = 102,
+            Type = Config.TvMediaType,
+            Title = "Agatha All Along",
+            Year = 2024,
+            Seasons = [1],
+            Episodes = []
+        },
+        new()
+        {
+            Index = 103,
+            Type = Config.TvMediaType,
+            Title = "X-Men '97",
+            Year = 2024,
+            Seasons = [1],
+            Episodes = []
+        },
+        new()
+        {
+            Index = 104,
+            Type = Config.TvMediaType,
+            Title = "What If...?",
+            Year = 2021,
+            Seasons = [3],
+            Episodes = []
+        },
+        new()
+        {
+            Index = 105,
+            Type = Config.TvMediaType,
+            Title = "Your Friendly Neighborhood Spider-Man",
+            Year = 2025,
+            Seasons = [1],
+            Episodes = []
+        },
+        new()
+        {
+            Index = 106,
+            Type = Config.MovieMediaType,
+            Title = "Captain America: Brave New World",
+            Year = 2025
+        },
+        new()
+        {
+            Index = 107,
+            Type = Config.TvMediaType,
+            Title = "Daredevil: Born Again",
+            Year = 2025,
+            Seasons = [1],
+            Episodes = []
+        },
+        new()
+        {
+            Index = 108,
+            Type = Config.TvMediaType,
+            Title = "Ironheart",
+            Year = 2025,
+            Seasons = [1],
+            Episodes = []
+        },
+        new()
+        {
+            Index = 109,
+            Type = Config.MovieMediaType,
+            Title = "Thunderbolts*",
+            Year = 2025
+        },
+        new()
+        {
+            Index = 110,
+            Type = Config.MovieMediaType,
+            Title = "The Fantastic Four: First Steps",
+            Year = 2025
+        },
+        new()
+        {
+            Index = 111,
+            Type = Config.TvMediaType,
+            Title = "Wonder Man",
+            Year = 2026,
+            Seasons = [1],
+            Episodes = []
         }
     ];
 }
