@@ -112,6 +112,12 @@ public static partial class Str
     [GeneratedRegex(@"^S(\d{1,2})E(\d{1,2})", RegexOptions.IgnoreCase)]
     public static partial Regex MatchEpisodePrefix();
 
+    [GeneratedRegex(@"\(.*?\)")]
+    public static partial Regex RemoveParenthesizedString();
+
+    [GeneratedRegex(@"[\-\.\s]+Episode\s*(\d+)", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchEpisodeWord();
+
     [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();
 

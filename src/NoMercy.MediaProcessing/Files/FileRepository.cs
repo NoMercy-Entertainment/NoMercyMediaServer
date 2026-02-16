@@ -272,12 +272,54 @@ public class FileRepository(MediaContext context) : IFileRepository
         }
         else
         {
-            parsed = movieDetector.GetInfo(title);
+            // Check for "Episode XX" naming convention (e.g. "Blade - Episode 02 - title.mp4").
+            // Remove parenthesized noise like "(Marvel ANIME)" or "(480p)" before matching.
+            string fileNameNoParens = Str.RemoveParenthesizedString()
+                .Replace(cleanedFileName, string.Empty).Trim();
+            Match episodeWordMatch = Str.MatchEpisodeWord().Match(fileNameNoParens);
+
+            if (episodeWordMatch.Success)
+            {
+                int episodeNumber = int.Parse(episodeWordMatch.Groups[1].Value);
+                string showTitle = fileNameNoParens[..episodeWordMatch.Index]
+                    .TrimEnd('-', '.', '_', ' ');
+
+                if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
+                {
+                    string? folderName = Path.GetFileName(file.DirectoryName);
+                    if (!string.IsNullOrWhiteSpace(folderName))
+                    {
+                        showTitle = Str.RemoveParenthesizedString().Replace(folderName, string.Empty);
+                        showTitle = Str.RemoveBracketedString().Replace(showTitle, string.Empty);
+                        showTitle = showTitle.Replace('.', ' ').Replace('_', ' ')
+                            .TrimEnd('-', '.', '_', ' ').Trim();
+                    }
+                }
+
+                parsed = new MovieFile(title)
+                {
+                    Title = showTitle,
+                    Season = 1,
+                    Episode = episodeNumber,
+                    IsSeries = true,
+                    IsSuccess = true
+                };
+            }
+            else
+            {
+                parsed = movieDetector.GetInfo(title);
+            }
         }
 
         parsed.Year ??= title.TryGetYear();
 
         if (parsed.Title == null) return true;
+
+        // Default season to 1 when episode is found but season is not
+        if (parsed.Episode.HasValue && !parsed.Season.HasValue)
+        {
+            parsed.Season = 1;
+        }
 
         if (!parsed.Season.HasValue && !parsed.Episode.HasValue)
         {
@@ -342,6 +384,12 @@ public class FileRepository(MediaContext context) : IFileRepository
                         .ToList();
 
                     episode = episodes.ElementAtOrDefault(parsed.Episode.Value - 1);
+                }
+
+                if (episode == null)
+                {
+                    // Try resolving absolute episode number via TMDB episode groups
+                    episode = await ResolveAbsoluteEpisodeAsync(ctx, show.Id, parsed.Episode.Value);
                 }
 
                 if (episode == null)
@@ -488,6 +536,69 @@ public class FileRepository(MediaContext context) : IFileRepository
             }
         });
         return false;
+    }
+
+    private static async Task<Episode?> ResolveAbsoluteEpisodeAsync(MediaContext ctx, int showId, int absoluteEpisodeNumber)
+    {
+        TmdbTvClient tvClient = new(showId);
+        TmdbTvEpisodeGroups? episodeGroups = await tvClient.EpisodeGroups(true);
+        if (episodeGroups == null) return null;
+
+        // Find the "Absolute" type group (type 2)
+        TmdbEpisodeGroupsResult? absoluteGroup = episodeGroups.Results
+            .FirstOrDefault(g => g.Type == 2);
+        if (absoluteGroup == null) return null;
+
+        TmdbEpisodeGroupClient groupClient = new(absoluteGroup.Id);
+        TmdbEpisodeGroupDetails? groupDetails = await groupClient.Details(true);
+        if (groupDetails == null) return null;
+
+        // Flatten all episodes across all groups, ordered by group order
+        List<TmdbEpisodeGroupEpisode> allEpisodes = groupDetails.Groups
+            .OrderBy(g => g.Order)
+            .SelectMany(g => g.Episodes)
+            .ToList();
+
+        if (absoluteEpisodeNumber < 1 || absoluteEpisodeNumber > allEpisodes.Count)
+            return null;
+
+        TmdbEpisodeGroupEpisode target = allEpisodes[absoluteEpisodeNumber - 1];
+
+        // Look up the resolved episode in the DB
+        Episode? episode = await ctx.Episodes
+            .FirstOrDefaultAsync(e => e.TvId == showId
+                && e.SeasonNumber == target.SeasonNumber
+                && e.EpisodeNumber == target.EpisodeNumber);
+
+        if (episode != null) return episode;
+
+        // Fetch from TMDB and add to DB
+        TmdbEpisodeClient episodeClient = new(showId, target.SeasonNumber, target.EpisodeNumber);
+        TmdbEpisodeDetails? details = await episodeClient.Details(true);
+        if (details == null) return null;
+
+        Season? season = await ctx.Seasons
+            .FirstOrDefaultAsync(s => s.TvId == showId && s.SeasonNumber == details.SeasonNumber);
+
+        episode = new()
+        {
+            Id = details.Id,
+            TvId = showId,
+            SeasonNumber = details.SeasonNumber,
+            EpisodeNumber = details.EpisodeNumber,
+            Title = details.Name,
+            Overview = details.Overview,
+            Still = details.StillPath,
+            VoteAverage = details.VoteAverage,
+            VoteCount = details.VoteCount,
+            AirDate = details.AirDate,
+            SeasonId = season?.Id ?? 0,
+        };
+
+        ctx.Episodes.Add(episode);
+        await ctx.SaveChangesAsync();
+
+        return episode;
     }
 
     private static readonly List<string> PrevSearchQueries = [];

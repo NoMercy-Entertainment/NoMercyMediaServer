@@ -94,6 +94,11 @@ public class TmdbTvClient : TmdbBaseClient
         return Get<TmdbTvEpisodeGroups>("tv/" + Id + "/episode_groups", priority: priority);
     }
 
+    public TmdbEpisodeGroupClient EpisodeGroup(string groupId)
+    {
+        return new TmdbEpisodeGroupClient(groupId);
+    }
+
     public Task<TmdbTvExternalIds?> ExternalIds(bool? priority = false)
     {
         return Get<TmdbTvExternalIds>("tv/" + Id + "/external_ids", priority: priority);
