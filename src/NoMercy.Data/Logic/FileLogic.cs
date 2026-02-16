@@ -9,6 +9,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
@@ -264,6 +265,13 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
         foreach (Folder rootFolder in rootFolders)
         {
             string path = Path.Combine(rootFolder.Path, folder);
+
+            if (!Directory.Exists(path))
+            {
+                string? match = Str.FindMatchingDirectory(rootFolder.Path, folder);
+                if (match != null)
+                    path = match;
+            }
 
             if (Directory.Exists(path))
                 Folders.Add(new()

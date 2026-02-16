@@ -16,6 +16,7 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using Serilog.Events;
 using SubtitlesParserV2;
@@ -117,6 +118,13 @@ public partial class FileManager(
             foreach (FolderLibrary libraryFolder in tv.Library.FolderLibraries)
             {
                 string path = libraryFolder.Folder.Path + tv.Folder;
+                if (!Directory.Exists(path))
+                {
+                    string? match = Str.FindMatchingDirectory(libraryFolder.Folder.Path, tv.Folder.Replace("/", ""));
+                    if (match != null)
+                        path = match;
+                }
+
                 if (!Directory.Exists(path)) continue;
 
                 folderName = tv.Folder;
@@ -128,6 +136,13 @@ public partial class FileManager(
             foreach (FolderLibrary libraryFolder in movie.Library.FolderLibraries)
             {
                 string path = libraryFolder.Folder.Path + movie.Folder;
+                if (!Directory.Exists(path))
+                {
+                    string? match = Str.FindMatchingDirectory(libraryFolder.Folder.Path, movie.Folder.Replace("/", ""));
+                    if (match != null)
+                        path = match;
+                }
+
                 if (!Directory.Exists(path)) continue;
 
                 folderName = movie.Folder;
@@ -786,6 +801,13 @@ public partial class FileManager(
         foreach (Folder rootFolder in rootFolders)
         {
             string path = Path.Combine(rootFolder.Path, folder);
+
+            if (!Directory.Exists(path))
+            {
+                string? match = Str.FindMatchingDirectory(rootFolder.Path, folder);
+                if (match != null)
+                    path = match;
+            }
 
             if (Directory.Exists(path))
                 folders.Add(new()

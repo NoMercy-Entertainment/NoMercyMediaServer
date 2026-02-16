@@ -392,6 +392,28 @@ public static partial class Str
         return _cleanFileName(self);
     }
 
+    public static string NormalizeForComparison(this string name)
+    {
+        name = name.Replace("&", "and");
+        return Regex.Replace(name, @"[^a-zA-Z0-9]", "").ToLowerInvariant();
+    }
+
+    public static string? FindMatchingDirectory(string rootPath, string expectedFolderName)
+    {
+        if (!Directory.Exists(rootPath)) return null;
+
+        string normalizedExpected = expectedFolderName.NormalizeForComparison();
+
+        foreach (string dir in Directory.EnumerateDirectories(rootPath))
+        {
+            string dirName = Path.GetFileName(dir) ?? "";
+            if (dirName.NormalizeForComparison() == normalizedExpected)
+                return dir;
+        }
+
+        return null;
+    }
+
     public static string TitleSort(this object self, int? parseYear)
     {
         return _parseTitleSort(self.ToString(), parseYear != null ? new DateTime(parseYear.Value, 1, 1) : null);

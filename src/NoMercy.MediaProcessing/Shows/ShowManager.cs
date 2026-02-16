@@ -40,11 +40,19 @@ public class ShowManager(
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
             string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
-            if(!Directory.Exists(folderName)) continue;
-            
+
+            if (!Directory.Exists(folderName))
+            {
+                string? match = Str.FindMatchingDirectory(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
+                if (match != null)
+                    folderName = match;
+            }
+
+            if (!Directory.Exists(folderName)) continue;
+
             DirectoryInfo folderInfo = new(folderName);
             folderCreatedAt = folderInfo.CreationTimeUtc;
-            
+
             if(folderCreatedAt != DateTime.UtcNow) break;
         }
 
