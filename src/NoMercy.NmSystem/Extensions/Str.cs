@@ -106,11 +106,14 @@ public static partial class Str
     [GeneratedRegex(@"\d+")]
     public static partial Regex MatchNumbers();
 
-    [GeneratedRegex(@"[\.\s\-_]S\d{1,2}(?:E\d{1,2})?(?:[\.\s\-_]|$)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"[\.\s\-_]S\d{1,2}(?:E\d+)?(?:[\.\s\-_]|$)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchSeasonTag();
 
-    [GeneratedRegex(@"^S(\d{1,2})E(\d{1,2})", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchEpisodePrefix();
+
+    [GeneratedRegex(@"[\.\s\-_]S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchSeasonEpisode();
 
     [GeneratedRegex(@"\(.*?\)")]
     public static partial Regex RemoveParenthesizedString();
