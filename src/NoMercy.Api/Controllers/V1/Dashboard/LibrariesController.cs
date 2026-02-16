@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Common;
-using NoMercy.Api.Middleware;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -16,6 +15,8 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
@@ -429,7 +430,14 @@ public class LibrariesController(
             
             await folderRepository.AddFolderAsync(folder);
             
-            DynamicStaticFilesMiddleware.AddPath(library.Id, folder.Path);
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
+                {
+                    RequestPath = library.Id,
+                    PhysicalPath = folder.Path
+                });
+            }
         }
         catch (Exception e)
         {
@@ -483,8 +491,18 @@ public class LibrariesController(
             folder.Path = request.Path;
             await folderRepository.UpdateFolderAsync(folder);
             
-            DynamicStaticFilesMiddleware.RemovePath(folder.Id);
-            DynamicStaticFilesMiddleware.AddPath(id, folder.Path);
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
+                {
+                    RequestPath = folder.Id
+                });
+                await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
+                {
+                    RequestPath = id,
+                    PhysicalPath = folder.Path
+                });
+            }
             
             return Ok(new StatusResponseDto<string>
             {
@@ -518,8 +536,14 @@ public class LibrariesController(
         {
             await folderRepository.DeleteFolderAsync(folder);
             
-            DynamicStaticFilesMiddleware.RemovePath(folder.Id);
-            
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
+                {
+                    RequestPath = folder.Id
+                });
+            }
+
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok", Message = "Successfully deleted folder {0}.", Args = [folder.Path]

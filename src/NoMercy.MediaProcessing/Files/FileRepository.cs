@@ -12,7 +12,8 @@ using NoMercy.Encoder;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Media;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -473,12 +474,15 @@ public class FileRepository(MediaContext context) : IFileRepository
 
             if (!hasMovie)
             {
-                Networking.Networking.SendToAll("Notify", "videoHub", new NotifyDto
+                if (EventBusProvider.IsConfigured)
                 {
-                    Title = "Movie not found",
-                    Message = $"Movie {movie.Title} not found in library, adding now",
-                    Type = "info"
-                });
+                    await EventBusProvider.Current.PublishAsync(new UserNotificationEvent
+                    {
+                        Title = "Movie not found",
+                        Message = $"Movie {movie.Title} not found in library, adding now",
+                        Type = "info"
+                    });
+                }
                 AddMovieJob job = new()
                 {
                     LibraryId = libraryId,
@@ -513,12 +517,15 @@ public class FileRepository(MediaContext context) : IFileRepository
         bool hasShow = ctx.Tvs.Any(item => item.Id == showId);
         if (hasShow) return;
 
-        Networking.Networking.SendToAll("Notify", "videoHub", new NotifyDto
+        if (EventBusProvider.IsConfigured)
         {
-            Title = "Show not found",
-            Message = $"Show {showName} not found in library, adding now",
-            Type = "info"
-        });
+            await EventBusProvider.Current.PublishAsync(new UserNotificationEvent
+            {
+                Title = "Show not found",
+                Message = $"Show {showName} not found in library, adding now",
+                Type = "info"
+            });
+        }
 
         AddShowJob job = new()
         {

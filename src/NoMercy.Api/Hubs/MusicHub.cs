@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Music;
 using NoMercy.Api.Services.Music;
 using NoMercy.Database;
@@ -390,29 +389,6 @@ public class MusicHub : ConnectionHub
             }
     }
 
-    private async Task LikeEvent(MusicLikeEventDto musicLikeEvent)
-    {
-        User? user = musicLikeEvent.User;
-        if (user is null) return;
-
-        if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
-        {
-            if (playerState.CurrentItem != null && playerState.CurrentItem.Id == musicLikeEvent.Id)
-                playerState.CurrentItem.Favorite = musicLikeEvent.Liked;
-
-            foreach (PlaylistTrackDto track in playerState.Playlist)
-                if (track.Id == musicLikeEvent.Id)
-                    track.Favorite = musicLikeEvent.Liked;
-
-            await _musicPlaybackService.UpdatePlaybackState(user, playerState);
-        }
-    }
-
-    private void OnLikeEvent(object? sender, MusicLikeEventDto e)
-    {
-        LikeEvent(e).Wait();
-    }
-
     public override async Task OnConnectedAsync()
     {
         await base.OnConnectedAsync();
@@ -435,10 +411,6 @@ public class MusicHub : ConnectionHub
         {
             await _musicPlaybackService.UpdatePlaybackState(user, new());
 
-            // Subscribe to the OnLikeEvent
-            AlbumsController.OnLikeEvent += OnLikeEvent;
-            ArtistsController.OnLikeEvent += OnLikeEvent;
-            TracksController.OnLikeEvent += OnLikeEvent;
         }
 
         Logger.Socket("Music client connected");
@@ -477,11 +449,6 @@ public class MusicHub : ConnectionHub
             {
                 CurrentDevice.TryRemove(user.Id, out _);
                 
-                // Unsubscribe from the OnLikeEvent
-                AlbumsController.OnLikeEvent -= OnLikeEvent;
-                ArtistsController.OnLikeEvent -= OnLikeEvent;
-                TracksController.OnLikeEvent -= OnLikeEvent;
-
                 playerState.DeviceId = null;
                 playerState.PlayState = false;
                 playerState.Actions = new()

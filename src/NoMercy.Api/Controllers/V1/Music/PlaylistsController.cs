@@ -142,6 +142,11 @@ public class PlaylistsController : BaseController
             .ThenInclude(pt => pt.Track)
             .First(p => p.Name == request.Name && p.UserId == User.UserId());
 
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music-playlists"]
+        });
+
         return Ok(new StatusResponseDto<Playlist>()
         {
             Data = playlist,

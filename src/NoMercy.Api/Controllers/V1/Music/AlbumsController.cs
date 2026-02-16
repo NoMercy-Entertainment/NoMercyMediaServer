@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Services.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Api.DTOs.Music;
@@ -14,6 +13,7 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.Events;
 using NoMercy.Events.Library;
+using NoMercy.Events.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -26,7 +26,6 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/album")]
 public class AlbumsController : BaseController
 {
-    public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
@@ -115,15 +114,13 @@ public class AlbumsController : BaseController
             QueryKey = ["music", "album", album.Id]
         });
 
-        MusicLikeEventDto musicLikeEventDto = new()
+        await _eventBus.PublishAsync(new MusicItemLikedEvent
         {
-            Id = album.Id,
-            Type = "album",
-            Liked = request.Value,
-            User = User.User()
-        };
-
-        OnLikeEvent?.Invoke(this, musicLikeEventDto);
+            UserId = User.UserId(),
+            ItemId = album.Id,
+            ItemType = "album",
+            Liked = request.Value
+        });
 
         return Ok(new StatusResponseDto<string>
         {

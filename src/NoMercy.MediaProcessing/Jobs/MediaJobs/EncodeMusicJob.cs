@@ -102,16 +102,16 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
 
                 await AddRecording(container, folder);
 
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Id = track.Id,
-                    Status = "completed",
-                    Title = FoundTrack.Title,
-                    Message = "Done"
-                });
-
                 if (EventBusProvider.IsConfigured)
                 {
+                    await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
+                    {
+                        JobId = track.Id,
+                        Status = "completed",
+                        Title = FoundTrack.Title,
+                        Message = "Done"
+                    });
+
                     stopwatch.Stop();
                     await EventBusProvider.Current.PublishAsync(new EncodingCompletedEvent
                     {
@@ -125,16 +125,16 @@ public class EncodeMusicJob : AbstractMusicEncoderJob
             {
                 Logger.Encoder(e, LogEventLevel.Error);
 
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Id = track.Id,
-                    Status = "failed",
-                    Title = FoundTrack.Title,
-                    Message = e.Message
-                });
-
                 if (EventBusProvider.IsConfigured)
                 {
+                    await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
+                    {
+                        JobId = track.Id,
+                        Status = "failed",
+                        Title = FoundTrack.Title,
+                        Message = e.Message
+                    });
+
                     await EventBusProvider.Current.PublishAsync(new EncodingFailedEvent
                     {
                         JobId = track.Id.GetHashCode(),

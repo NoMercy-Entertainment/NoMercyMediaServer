@@ -14,6 +14,7 @@ public class SignalREncodingEventHandler : IDisposable
         _subscriptions.Add(eventBus.Subscribe<EncodingProgressEvent>(OnEncodingProgress));
         _subscriptions.Add(eventBus.Subscribe<EncodingCompletedEvent>(OnEncodingCompleted));
         _subscriptions.Add(eventBus.Subscribe<EncodingFailedEvent>(OnEncodingFailed));
+        _subscriptions.Add(eventBus.Subscribe<EncodingStageChangedEvent>(OnEncodingStageChanged));
     }
 
     internal Task OnEncodingStarted(EncodingStartedEvent @event, CancellationToken ct)
@@ -70,6 +71,26 @@ public class SignalREncodingEventHandler : IDisposable
         });
 
         Logger.Socket($"Encoding failed: Job={@event.JobId}, Error={@event.ErrorMessage}");
+        return Task.CompletedTask;
+    }
+
+    internal Task OnEncodingStageChanged(EncodingStageChangedEvent @event, CancellationToken ct)
+    {
+        Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new
+        {
+            id = @event.JobId,
+            status = @event.Status,
+            title = @event.Title,
+            message = @event.Message,
+            base_folder = @event.BaseFolder,
+            share_path = @event.ShareBasePath,
+            video_streams = @event.VideoStreams,
+            audio_streams = @event.AudioStreams,
+            subtitle_streams = @event.SubtitleStreams,
+            has_gpu = @event.HasGpu,
+            is_hdr = @event.IsHdr
+        });
+
         return Task.CompletedTask;
     }
 

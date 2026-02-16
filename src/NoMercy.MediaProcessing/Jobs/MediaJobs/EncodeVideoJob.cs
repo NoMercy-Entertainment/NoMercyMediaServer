@@ -70,38 +70,13 @@ public class EncodeVideoJob : AbstractEncoderJob
 
                 BaseContainer container = BaseContainer.Create(profile.Container);
 
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Message = "Preparing to encode",
-                    Status = "running",
-                    Id = fileMetadata.Id,
-                    Title = fileMetadata.Title,
-                    BaseFolder = fileMetadata.Path,
-                    ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
-                    AudioStreams = container.AudioStreams
-                        .Select(x => $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}").Distinct().ToList(),
-                    VideoStreams = container.VideoStreams
-                        .Select(x => $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}").Distinct()
-                        .ToList(),
-                    SubtitleStreams = container.SubtitleStreams
-                        .Select(x => $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}").Distinct().ToList(),
-                    HasGpu = container.VideoStreams.Any(x =>
-                        x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value ||
-                        x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value),
-                    IsHdr = container.VideoStreams.Any(x => x.IsHdr)
-                });
+                await PublishStageAsync(fileMetadata, folder, container, "running", "Preparing to encode");
 
                 BuildVideoStreams(profile, ref container);
                 BuildAudioStreams(profile, ref container);
                 BuildSubtitleStreams(profile, ref container);
 
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Message = "Preparing to encode",
-                    Status = "running",
-                    Id = fileMetadata.Id,
-                    Title = fileMetadata.Title,
-                });
+                await PublishStageAsync(fileMetadata, folder, container, "running", "Preparing to encode");
 
                 BaseImage sprite = new Sprite()
                     .SetScale(320)
@@ -145,130 +120,39 @@ public class EncodeVideoJob : AbstractEncoderJob
 
                 await ffmpeg.Run(fullCommand, fileMetadata.Path, progressMeta);
 
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Id = fileMetadata.Id,
-                    Status = "running",
-                    Title = fileMetadata.Title,
-                    Message = "Building sprite images",
-                    BaseFolder = progressMeta.BaseFolder,
-                    ShareBasePath = progressMeta.ShareBasePath,
-                    AudioStreams = progressMeta.AudioStreams,
-                    VideoStreams = progressMeta.VideoStreams,
-                    SubtitleStreams = progressMeta.SubtitleStreams,
-                    HasGpu = progressMeta.HasGpu,
-                    IsHdr = progressMeta.IsHdr,
-                });
-                
+                await PublishStageAsync(fileMetadata, progressMeta, "running", "Building sprite images");
+
                 await sprite.BuildSprite(progressMeta);
-                
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Id = fileMetadata.Id,
-                    Status = "running",
-                    Title = fileMetadata.Title,
-                    Message = "Building Master Playlist",
-                    BaseFolder = progressMeta.BaseFolder,
-                    ShareBasePath = progressMeta.ShareBasePath,
-                    AudioStreams = progressMeta.AudioStreams,
-                    VideoStreams = progressMeta.VideoStreams,
-                    SubtitleStreams = progressMeta.SubtitleStreams,
-                    HasGpu = progressMeta.HasGpu,
-                    IsHdr = progressMeta.IsHdr,
-                });
-                
+
+                await PublishStageAsync(fileMetadata, progressMeta, "running", "Building Master Playlist");
+
                 await container.BuildMasterPlaylist();
-                
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Id = fileMetadata.Id,
-                    Status = "running",
-                    Title = fileMetadata.Title,
-                    Message = "Extracting chapters",
-                    BaseFolder = progressMeta.BaseFolder,
-                    ShareBasePath = progressMeta.ShareBasePath,
-                    AudioStreams = progressMeta.AudioStreams,
-                    VideoStreams = progressMeta.VideoStreams,
-                    SubtitleStreams = progressMeta.SubtitleStreams,
-                    HasGpu = progressMeta.HasGpu,
-                    IsHdr = progressMeta.IsHdr,
-                });
-                
+
+                await PublishStageAsync(fileMetadata, progressMeta, "running", "Extracting chapters");
+
                 await container.ExtractChapters();
-                
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Id = fileMetadata.Id,
-                    Status = "running",
-                    Title = fileMetadata.Title,
-                    Message = "Extracting fonts",
-                    BaseFolder = progressMeta.BaseFolder,
-                    ShareBasePath = progressMeta.ShareBasePath,
-                    AudioStreams = progressMeta.AudioStreams,
-                    VideoStreams = progressMeta.VideoStreams,
-                    SubtitleStreams = progressMeta.SubtitleStreams,
-                    HasGpu = progressMeta.HasGpu,
-                    IsHdr = progressMeta.IsHdr,
-                });
+
+                await PublishStageAsync(fileMetadata, progressMeta, "running", "Extracting fonts");
 
                 await container.ExtractFonts();
 
                 if (ffmpeg.Container.SubtitleStreams.Any(x => x.ConvertSubtitle))
                 {
-                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                    {
-                        Id = fileMetadata.Id,
-                        Status = "running",
-                        Title = fileMetadata.Title,
-                        Message = "Converting subtitles",
-                        BaseFolder = progressMeta.BaseFolder,
-                        ShareBasePath = progressMeta.ShareBasePath,
-                        AudioStreams = progressMeta.AudioStreams,
-                        VideoStreams = progressMeta.VideoStreams,
-                        SubtitleStreams = progressMeta.SubtitleStreams,
-                        HasGpu = progressMeta.HasGpu,
-                        IsHdr = progressMeta.IsHdr,
-                    });
-                    
+                    await PublishStageAsync(fileMetadata, progressMeta, "running", "Converting subtitles");
+
                     List<BaseSubtitle> streams = ffmpeg.Container.SubtitleStreams
                         .Where(x => x.ConvertSubtitle)
                         .ToList();
                     await ffmpeg.ConvertSubtitles(streams, Id.ToInt(), fileMetadata.Title, fileMetadata.ImgPath);
                 }
 
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Id = fileMetadata.Id,
-                    Status = "running",
-                    Title = fileMetadata.Title,
-                    Message = "Scanning files",
-                    BaseFolder = progressMeta.BaseFolder,
-                    ShareBasePath = progressMeta.ShareBasePath,
-                    AudioStreams = progressMeta.AudioStreams,
-                    VideoStreams = progressMeta.VideoStreams,
-                    SubtitleStreams = progressMeta.SubtitleStreams,
-                    HasGpu = progressMeta.HasGpu,
-                    IsHdr = progressMeta.IsHdr,
-                });
+                await PublishStageAsync(fileMetadata, progressMeta, "running", "Scanning files");
 
                 fileManager.FilterFiles(container.FileName);
 
                 await fileManager.FindFiles(fileMetadata.Id, folder.FolderLibraries.First().Library);
 
-                Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                {
-                    Id = fileMetadata.Id,
-                    Status = "completed",
-                    Title = fileMetadata.Title,
-                    Message = "Done",
-                    BaseFolder = progressMeta.BaseFolder,
-                    ShareBasePath = progressMeta.ShareBasePath,
-                    AudioStreams = progressMeta.AudioStreams,
-                    VideoStreams = progressMeta.VideoStreams,
-                    SubtitleStreams = progressMeta.SubtitleStreams,
-                    HasGpu = progressMeta.HasGpu,
-                    IsHdr = progressMeta.IsHdr,
-                });
+                await PublishStageAsync(fileMetadata, progressMeta, "completed", "Done");
 
                 if (EventBusProvider.IsConfigured)
                 {
@@ -288,16 +172,16 @@ public class EncodeVideoJob : AbstractEncoderJob
 
             CleanupPartialOutput(fileMetadata.Path);
 
-            Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-            {
-                Id = fileMetadata.Id,
-                Status = "failed",
-                Title = fileMetadata.Title,
-                Message = e.Message,
-            });
-
             if (EventBusProvider.IsConfigured)
             {
+                await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
+                {
+                    JobId = fileMetadata.Id,
+                    Status = "failed",
+                    Title = fileMetadata.Title,
+                    Message = e.Message
+                });
+
                 await EventBusProvider.Current.PublishAsync(new EncodingFailedEvent
                 {
                     JobId = fileMetadata.Id,
@@ -309,6 +193,52 @@ public class EncodeVideoJob : AbstractEncoderJob
 
             throw;
         }
+    }
+
+    private static async Task PublishStageAsync(FileMetadata fileMetadata, Folder folder, BaseContainer container,
+        string status, string message)
+    {
+        if (!EventBusProvider.IsConfigured) return;
+        await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
+        {
+            JobId = fileMetadata.Id,
+            Status = status,
+            Title = fileMetadata.Title,
+            Message = message,
+            BaseFolder = fileMetadata.Path,
+            ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
+            VideoStreams = container.VideoStreams
+                .Select(x => $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}").Distinct()
+                .ToList(),
+            AudioStreams = container.AudioStreams
+                .Select(x => $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}").Distinct().ToList(),
+            SubtitleStreams = container.SubtitleStreams
+                .Select(x => $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}").Distinct().ToList(),
+            HasGpu = container.VideoStreams.Any(x =>
+                x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value ||
+                x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value),
+            IsHdr = container.VideoStreams.Any(x => x.IsHdr)
+        });
+    }
+
+    private static async Task PublishStageAsync(FileMetadata fileMetadata, ProgressMeta progressMeta,
+        string status, string message)
+    {
+        if (!EventBusProvider.IsConfigured) return;
+        await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
+        {
+            JobId = fileMetadata.Id,
+            Status = status,
+            Title = fileMetadata.Title,
+            Message = message,
+            BaseFolder = progressMeta.BaseFolder,
+            ShareBasePath = progressMeta.ShareBasePath,
+            VideoStreams = progressMeta.VideoStreams,
+            AudioStreams = progressMeta.AudioStreams,
+            SubtitleStreams = progressMeta.SubtitleStreams,
+            HasGpu = progressMeta.HasGpu,
+            IsHdr = progressMeta.IsHdr
+        });
     }
 
     private async Task<FileMetadata> GetFileMetaData(Folder folder, MediaContext context)

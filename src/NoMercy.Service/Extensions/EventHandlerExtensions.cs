@@ -1,4 +1,5 @@
 using NoMercy.Api.EventHandlers;
+using NoMercy.Api.Services.Music;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.EventHandlers;
 
@@ -38,6 +39,27 @@ public static class EventHandlerExtensions
             return new(eventBus);
         });
 
+        services.AddSingleton<FolderPathEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            return new(eventBus);
+        });
+
+        services.AddSingleton<MusicLikeEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            MusicPlayerStateManager stateManager = sp.GetRequiredService<MusicPlayerStateManager>();
+            MusicPlaybackService playbackService = sp.GetRequiredService<MusicPlaybackService>();
+            IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+            return new(eventBus, stateManager, playbackService, scopeFactory);
+        });
+
+        services.AddSingleton<SignalRNotificationEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            return new(eventBus);
+        });
+
         return services;
     }
 
@@ -49,6 +71,9 @@ public static class EventHandlerExtensions
         serviceProvider.GetRequiredService<SignalRLibraryScanEventHandler>();
         serviceProvider.GetRequiredService<SignalRLibraryRefreshEventHandler>();
         serviceProvider.GetRequiredService<FileWatcherEventHandler>();
+        serviceProvider.GetRequiredService<FolderPathEventHandler>();
+        serviceProvider.GetRequiredService<MusicLikeEventHandler>();
+        serviceProvider.GetRequiredService<SignalRNotificationEventHandler>();
 
         return serviceProvider;
     }
