@@ -54,7 +54,11 @@
       "Bash(cat:*)",
       "Bash(dotnet run:*)",
       "Bash(fuser:*)",
-      "Bash(gh run list:*)"
+      "Bash(gh run list:*)",
+      "Bash(tasklist:*)",
+      "Bash(netstat:*)",
+      "Bash(dotnet --version:*)",
+      "Bash(dotnet:*)"
     ],
     "deny": []
   },
