@@ -60,6 +60,24 @@ public static class EventHandlerExtensions
             return new(eventBus);
         });
 
+        services.AddSingleton<DriveMonitorEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            return new(eventBus);
+        });
+
+        services.AddSingleton<CastEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            return new(eventBus);
+        });
+
+        services.AddSingleton<UserPermissionsEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            return new(eventBus);
+        });
+
         return services;
     }
 
@@ -74,6 +92,9 @@ public static class EventHandlerExtensions
         serviceProvider.GetRequiredService<FolderPathEventHandler>();
         serviceProvider.GetRequiredService<MusicLikeEventHandler>();
         serviceProvider.GetRequiredService<SignalRNotificationEventHandler>();
+        serviceProvider.GetRequiredService<DriveMonitorEventHandler>();
+        serviceProvider.GetRequiredService<CastEventHandler>();
+        serviceProvider.GetRequiredService<UserPermissionsEventHandler>();
 
         return serviceProvider;
     }

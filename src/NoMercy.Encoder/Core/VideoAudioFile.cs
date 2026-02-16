@@ -7,6 +7,8 @@ using NoMercy.Encoder.Format.Image;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.Encoder.Format.Subtitle;
 using NoMercy.Encoder.Format.Video;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -216,14 +218,18 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
             string ocrCommand =
                 $" -i \"{input}\" -f lavfi -i color=black:s=hd720 -filter_complex \"[0:s:0]ocr=language={subtitle.Language},metadata=print:key=lavfi.ocr.text:file=temp.txt\" -an -f null -";
 
-            Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-            {
-                Id = id,
-                Status = "running",
-                Title = title,
-                Thumbnail = $"/images/original{imgPath}",
-                Message = $"OCR {IsoLanguageMapper.IsoToLanguage[subtitle.Language]}"
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
+                {
+                    ProgressData = new Progress
+                    {
+                        Id = id,
+                        Status = "running",
+                        Title = title,
+                        Thumbnail = $"/images/original{imgPath}",
+                        Message = $"OCR {IsoLanguageMapper.IsoToLanguage[subtitle.Language]}"
+                    }
+                });
 
             Logger.Encoder($"Converting {IsoLanguageMapper.IsoToLanguage[subtitle.Language]} subtitle to WebVtt");
             Logger.Encoder(AppFiles.FfmpegPath + ocrCommand, LogEventLevel.Debug);
@@ -241,14 +247,18 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
             {
                 while (!execTask.IsCompleted)
                 {
-                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-                    {
-                        Id = id,
-                        Status = "running",
-                        Title = title,
-                        Thumbnail = $"/images/original{imgPath}",
-                        Message = $"OCR {IsoLanguageMapper.IsoToLanguage[subtitle.Language]}"
-                    });
+                    if (EventBusProvider.IsConfigured)
+                        _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
+                        {
+                            ProgressData = new Progress
+                            {
+                                Id = id,
+                                Status = "running",
+                                Title = title,
+                                Thumbnail = $"/images/original{imgPath}",
+                                Message = $"OCR {IsoLanguageMapper.IsoToLanguage[subtitle.Language]}"
+                            }
+                        });
 
                     await Task.Delay(1000);
                 }
@@ -267,14 +277,18 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
             File.Delete(orcFile);
         }
 
-        Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-        {
-            Id = id,
-            Status = "completed",
-            Title = title,
-            Thumbnail = $"/images/original{imgPath}",
-            Message = $"Completed converting subtitles to WebVtt"
-        });
+        if (EventBusProvider.IsConfigured)
+            _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
+            {
+                ProgressData = new Progress
+                {
+                    Id = id,
+                    Status = "completed",
+                    Title = title,
+                    Thumbnail = $"/images/original{imgPath}",
+                    Message = "Completed converting subtitles to WebVtt"
+                }
+            });
     }
     
     public static async Task GetSubtitleFromWhisperAi(string inputFile, string basePath, string fileName, string language)

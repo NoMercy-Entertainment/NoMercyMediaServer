@@ -257,40 +257,45 @@ public class HomeController : BaseController
             );
         }
 
-        _ = Task.Run(async () =>
+        _ = Task.Run(() =>
         {
-            StringBuilder sb = new();
-
-            sb.Append(AppFiles.YtdlpPath);
-            sb.Append(" -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" ");
-
-            if (!string.IsNullOrEmpty(language))
-                sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
-
-            sb.Append(trailerId);
-
-            sb.Append(" -o - ");
-            sb.Append($" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast ");
-            sb.Append("-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 ");
-
-            if (Software.IsWindows)
+            try
             {
-                Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
-                Shell.ExecSync("cmd", $"/c \"{sb}\"", new()
-                {
-                    WorkingDirectory = folder
-                });
-            }
-            else
-            {
-                Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
-                Shell.ExecSync("/bin/bash", $"-c \"{sb}\"", new()
-                {
-                    WorkingDirectory = folder
-                });
-            }
+                StringBuilder sb = new();
 
-            return Task.CompletedTask;
+                sb.Append(AppFiles.YtdlpPath);
+                sb.Append(" -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" ");
+
+                if (!string.IsNullOrEmpty(language))
+                    sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
+
+                sb.Append(trailerId);
+
+                sb.Append(" -o - ");
+                sb.Append($" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast ");
+                sb.Append("-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 ");
+
+                if (Software.IsWindows)
+                {
+                    Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
+                    Shell.ExecSync("cmd", $"/c \"{sb}\"", new()
+                    {
+                        WorkingDirectory = folder
+                    });
+                }
+                else
+                {
+                    Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
+                    Shell.ExecSync("/bin/bash", $"-c \"{sb}\"", new()
+                    {
+                        WorkingDirectory = folder
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Encoder($"Trailer download failed for {trailerId}: {ex.Message}", LogEventLevel.Error);
+            }
         });
 
         using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted);

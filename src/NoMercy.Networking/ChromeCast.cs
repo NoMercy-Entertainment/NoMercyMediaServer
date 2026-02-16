@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using NoMercy.Events;
+using NoMercy.Events.Cast;
 using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster;
 using Sharpcaster.Models;
@@ -53,29 +55,32 @@ public class ChromeCast
 
         _client.MediaChannel.StatusChanged += (sender, args) =>
         {
-            Networking.SendToAll("StatusChanged", "castHub", new Dictionary<string, object?>
-            {
-                { "sender", sender },
-                { "args", args }
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new CastDeviceStatusChangedEvent
+                {
+                    EventType = "StatusChanged",
+                    StatusData = new Dictionary<string, object?> { { "sender", sender }, { "args", args } }
+                });
         };
 
         _client.ReceiverChannel.ReceiverStatusChanged += (sender, args) =>
         {
-            Networking.SendToAll("ReceiverStatusChanged", "castHub", new Dictionary<string, object?>
-            {
-                { "sender", sender },
-                { "args", args }
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new CastDeviceStatusChangedEvent
+                {
+                    EventType = "ReceiverStatusChanged",
+                    StatusData = new Dictionary<string, object?> { { "sender", sender }, { "args", args } }
+                });
         };
 
         _client.ReceiverChannel.LaunchStatusChanged += (sender, args) =>
         {
-            Networking.SendToAll("LaunchStatusChanged", "castHub", new Dictionary<string, object?>
-            {
-                { "sender", sender },
-                { "args", args }
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new CastDeviceStatusChangedEvent
+                {
+                    EventType = "LaunchStatusChanged",
+                    StatusData = new Dictionary<string, object?> { { "sender", sender }, { "args", args } }
+                });
         };
 
         await _client.ConnectChromecast(receiver);

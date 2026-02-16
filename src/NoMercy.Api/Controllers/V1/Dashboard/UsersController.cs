@@ -8,6 +8,8 @@ using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Users;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -231,6 +233,13 @@ public class UsersController(MediaContext mediaContext) : BaseController
         await mediaContext.SaveChangesAsync();
 
         ClaimsPrincipleExtensions.UpdateUser(user);
+
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new UserPermissionsChangedEvent
+            {
+                UserId = id,
+                ChangedBy = userId
+            });
 
         return Ok(new StatusResponseDto<string>
         {

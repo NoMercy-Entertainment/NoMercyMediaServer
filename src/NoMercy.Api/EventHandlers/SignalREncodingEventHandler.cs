@@ -15,6 +15,7 @@ public class SignalREncodingEventHandler : IDisposable
         _subscriptions.Add(eventBus.Subscribe<EncodingCompletedEvent>(OnEncodingCompleted));
         _subscriptions.Add(eventBus.Subscribe<EncodingFailedEvent>(OnEncodingFailed));
         _subscriptions.Add(eventBus.Subscribe<EncodingStageChangedEvent>(OnEncodingStageChanged));
+        _subscriptions.Add(eventBus.Subscribe<EncoderProgressBroadcastEvent>(OnEncoderProgressBroadcast));
     }
 
     internal Task OnEncodingStarted(EncodingStartedEvent @event, CancellationToken ct)
@@ -91,6 +92,12 @@ public class SignalREncodingEventHandler : IDisposable
             is_hdr = @event.IsHdr
         });
 
+        return Task.CompletedTask;
+    }
+
+    internal Task OnEncoderProgressBroadcast(EncoderProgressBroadcastEvent @event, CancellationToken ct)
+    {
+        Networking.Networking.SendToAll("encoder-progress", "dashboardHub", @event.ProgressData);
         return Task.CompletedTask;
     }
 

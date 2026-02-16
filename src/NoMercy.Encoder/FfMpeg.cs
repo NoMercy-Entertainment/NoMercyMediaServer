@@ -266,7 +266,8 @@ public partial class FfMpeg : Classes
                             ProgressId = ffmpeg.Id
                         };
                         progressData.RemainingSplit = new int[] { 0, 0, 0, 0 };
-                        Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progressData);
+                        if (EventBusProvider.IsConfigured)
+                            _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent { ProgressData = progressData });
                         output2.Clear();
                         return;
                     }
@@ -304,23 +305,9 @@ public partial class FfMpeg : Classes
                     };
                     progressDataRunning.RemainingSplit = progressDataRunning.RemainingHms
                         .Split(":").Select(s => int.TryParse(s, out int v) ? v : 0).ToArray();
-                    if (progressDataRunning.Speed > 0)
+                    if (progressDataRunning.Speed > 0 && EventBusProvider.IsConfigured)
                     {
-                        Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progressDataRunning);
-
-                        if (EventBusProvider.IsConfigured)
-                        {
-                            int jobId = meta.Id is int intId
-                                ? intId
-                                : int.TryParse(meta.Id?.ToString(), out int parsed) ? parsed : 0;
-                            _ = EventBusProvider.Current.PublishAsync(new EncodingProgressEvent
-                            {
-                                JobId = jobId,
-                                Percentage = progress,
-                                Elapsed = currentTime,
-                                Estimated = remaining > 0 ? TimeSpan.FromSeconds(remaining) : null
-                            });
-                        }
+                        _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent { ProgressData = progressDataRunning });
                     }
                     output2.Clear();
                 }
@@ -332,11 +319,11 @@ public partial class FfMpeg : Classes
 
             await ffmpeg.WaitForExitAsync();
 
-            Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-            {
-                Status = "completed",
-                Id = meta.Id
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
+                {
+                    ProgressData = new Progress { Status = "completed", Id = meta.Id }
+                });
 
             if (!hasOutput && error.Length > 0)
                 throw new(error.ToString());

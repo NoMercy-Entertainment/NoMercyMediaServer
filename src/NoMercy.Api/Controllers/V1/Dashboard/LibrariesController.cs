@@ -245,7 +245,22 @@ public class LibrariesController(
         try
         {
             await libraryRepository.DeleteLibraryAsync(library);
-            
+
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new LibraryDeletedEvent
+                {
+                    LibraryId = library.Id,
+                    LibraryName = library.Title
+                });
+
+                foreach (FolderLibrary fl in library.FolderLibraries)
+                    await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
+                    {
+                        RequestPath = fl.FolderId
+                    });
+            }
+
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok", Message = "Successfully deleted {0} library.", Args = [library.Title]

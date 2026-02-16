@@ -16,6 +16,8 @@ using NoMercy.Database.Models.Queue;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder;
 using NoMercy.Encoder.Core;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
 using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
@@ -193,14 +195,18 @@ public class TasksController(MediaContext mediaContext) : BaseController
         IEnumerable<EncodeVideoJob> runningJobs = encoderJobs
             .Where(j => j.Status == "running");
 
-        foreach (EncodeVideoJob job in runningJobs)
-            Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-            {
-                Id = job.Id,
-                Status = "running",
-                Title = GetTitle(folders, job),
-                Message = "Encoding video"
-            });
+        if (EventBusProvider.IsConfigured)
+            foreach (EncodeVideoJob job in runningJobs)
+                _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
+                {
+                    ProgressData = new Progress
+                    {
+                        Id = job.Id,
+                        Status = "running",
+                        Title = GetTitle(folders, job),
+                        Message = "Encoding video"
+                    }
+                });
 
         return Ok(new DataResponseDto<QueueJobDto[]>
         {
