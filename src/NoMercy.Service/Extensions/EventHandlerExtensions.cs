@@ -1,5 +1,6 @@
 using NoMercy.Api.EventHandlers;
 using NoMercy.Events;
+using NoMercy.MediaProcessing.EventHandlers;
 
 namespace NoMercy.Service.Extensions;
 
@@ -31,6 +32,12 @@ public static class EventHandlerExtensions
             return new(eventBus);
         });
 
+        services.AddSingleton<FileWatcherEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            return new(eventBus);
+        });
+
         return services;
     }
 
@@ -41,6 +48,7 @@ public static class EventHandlerExtensions
         serviceProvider.GetRequiredService<SignalREncodingEventHandler>();
         serviceProvider.GetRequiredService<SignalRLibraryScanEventHandler>();
         serviceProvider.GetRequiredService<SignalRLibraryRefreshEventHandler>();
+        serviceProvider.GetRequiredService<FileWatcherEventHandler>();
 
         return serviceProvider;
     }

@@ -12,4 +12,7 @@ public interface IFileRepository
     Task<Ulid> StoreMetadata(Metadata metadata);
     Task<Episode?> GetEpisode(int? showId, MediaFile item);
     Task<(Movie? movie, Tv? show, string type)> MediaType(int id, Library library);
+    Task<int> DeleteVideoFilesByHostFolderAsync(string hostFolder);
+    Task<int> DeleteMetadataByHostFolderAsync(string hostFolder);
+    Task<int> UpdateVideoFilePathsAsync(string oldHostFolder, string oldFilename, string newHostFolder, string newFilename);
 }

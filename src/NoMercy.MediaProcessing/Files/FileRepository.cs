@@ -1013,6 +1013,32 @@ public class FileRepository(MediaContext context) : IFileRepository
                tagTitle.ContainsSanitized(trackTitle);
     }
 
+    public async Task<int> DeleteVideoFilesByHostFolderAsync(string hostFolder)
+    {
+        return await _context.VideoFiles
+            .Where(vf => vf.HostFolder == hostFolder)
+            .ExecuteDeleteAsync();
+    }
+
+    public async Task<int> DeleteMetadataByHostFolderAsync(string hostFolder)
+    {
+        return await _context.Metadata
+            .Where(m => m.HostFolder == hostFolder)
+            .ExecuteDeleteAsync();
+    }
+
+    public async Task<int> UpdateVideoFilePathsAsync(string oldHostFolder, string oldFilename, string newHostFolder, string newFilename)
+    {
+        string newFolder = "/" + Path.GetFileName(Path.GetDirectoryName(newHostFolder + "/placeholder"));
+
+        return await _context.VideoFiles
+            .Where(vf => vf.HostFolder == oldHostFolder && vf.Filename == oldFilename)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(vf => vf.HostFolder, newHostFolder)
+                .SetProperty(vf => vf.Filename, newFilename)
+                .SetProperty(vf => vf.Folder, newFolder));
+    }
+
     public List<DirectoryTree> GetDirectoryTree(string folder = "")
     {
         List<DirectoryTree> array = [];
