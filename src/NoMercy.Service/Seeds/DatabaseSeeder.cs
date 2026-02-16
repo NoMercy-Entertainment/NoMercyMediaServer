@@ -112,15 +112,21 @@ public static class DatabaseSeeder
         // Check if migration history table exists to determine DB state.
         // Do NOT run PRAGMA commands first — they create an empty .db file
         // which causes CanConnect() to return true on a fresh install.
+        // NOTE: Must use raw ADO.NET here — ExecuteSqlRaw returns rows-affected (-1 for SELECT),
+        // not the query result, so it can't be used to read a scalar value.
         bool migrationTableExists = false;
         try
         {
-            migrationTableExists = context.Database
-                .ExecuteSqlRaw("SELECT COUNT(*) FROM __EFMigrationsHistory") >= 0;
+            System.Data.Common.DbConnection connection = context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+                connection.Open();
+            using System.Data.Common.DbCommand command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'";
+            migrationTableExists = Convert.ToInt64(command.ExecuteScalar()) > 0;
         }
         catch
         {
-            // Table doesn't exist — could be fresh install or pre-migration DB
+            // Could not check — assume table doesn't exist
         }
 
         List<string> availableMigrations = context.Database.GetMigrations().ToList();
@@ -168,39 +174,33 @@ public static class DatabaseSeeder
     {
         string version = context.GetType().Assembly.GetName().Version?.ToString() ?? "1.0.0";
 
-        if (migrationTableExists)
-        {
-            foreach (string migration in pendingMigrations)
-            {
-                try
-                {
-                    context.Database.ExecuteSqlRaw(
-                        "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})",
-                        migration, version);
-                    Logger.Setup($"Added migration {migration} to history", LogEventLevel.Verbose);
-                }
-                catch
-                {
-                    Logger.Setup($"Failed to add migration {migration} to history", LogEventLevel.Fatal);
-                }
-            }
-        }
-        else
+        // Always ensure the table exists — Migrate() may have partially created it before failing,
+        // or it may already exist from a previous installation.
+        if (!migrationTableExists)
         {
             context.Database.ExecuteSqlRaw(@"
-                CREATE TABLE __EFMigrationsHistory (
+                CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
                     MigrationId TEXT NOT NULL CONSTRAINT PK___EFMigrationsHistory PRIMARY KEY,
                     ProductVersion TEXT NOT NULL
                 );");
+            Logger.Setup("Migration history table created.", LogEventLevel.Verbose);
+        }
 
-            foreach (string migration in availableMigrations)
+        // Mark all relevant migrations as applied — use OR IGNORE to skip duplicates.
+        List<string> migrationsToRecord = migrationTableExists ? pendingMigrations : availableMigrations;
+        foreach (string migration in migrationsToRecord)
+        {
+            try
             {
                 context.Database.ExecuteSqlRaw(
-                    "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})",
+                    "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})",
                     migration, version);
+                Logger.Setup($"Added migration {migration} to history", LogEventLevel.Verbose);
             }
-
-            Logger.Setup("Migration history table created and populated.", LogEventLevel.Verbose);
+            catch
+            {
+                Logger.Setup($"Failed to add migration {migration} to history", LogEventLevel.Fatal);
+            }
         }
     }
     
