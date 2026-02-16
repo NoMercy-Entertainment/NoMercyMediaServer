@@ -106,6 +106,12 @@ public static partial class Str
     [GeneratedRegex(@"\d+")]
     public static partial Regex MatchNumbers();
 
+    [GeneratedRegex(@"[\.\s\-_]S\d{1,2}(?:E\d{1,2})?(?:[\.\s\-_]|$)", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchSeasonTag();
+
+    [GeneratedRegex(@"^S(\d{1,2})E(\d{1,2})", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchEpisodePrefix();
+
     [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();
 

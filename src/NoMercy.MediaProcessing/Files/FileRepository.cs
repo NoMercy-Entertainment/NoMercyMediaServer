@@ -238,7 +238,42 @@ public class FileRepository(MediaContext context) : IFileRepository
 
         Ffprobe ffprobeData = await new Ffprobe(file.FullName).GetStreamData();
 
-        MovieFile parsed = movieDetector.GetInfo(title);
+        // When filenames start with the S##E## pattern (e.g. "S01E01-some.title.mkv"),
+        // MovieDetector matches "S01" from the folder name instead of "S01E02" from the filename.
+        // Detect this upfront and parse season/episode + show title ourselves.
+        string cleanedFileName = Str.RemoveBracketedString()
+            .Replace(Path.GetFileNameWithoutExtension(file.Name), string.Empty).Trim();
+        Regex episodePrefix = Str.MatchEpisodePrefix();
+        Match epMatch = episodePrefix.Match(cleanedFileName);
+
+        MovieFile parsed;
+        if (epMatch.Success)
+        {
+            string? folderName = Path.GetFileName(file.DirectoryName);
+            string showTitle = folderName ?? "";
+            if (!string.IsNullOrWhiteSpace(folderName))
+            {
+                string cleanedFolder = Str.RemoveBracketedString().Replace(folderName, string.Empty);
+                Match seasonMatch = Str.MatchSeasonTag().Match(cleanedFolder);
+                showTitle = seasonMatch.Success && seasonMatch.Index > 0
+                    ? cleanedFolder[..seasonMatch.Index]
+                    : cleanedFolder;
+                showTitle = showTitle.Replace('.', ' ').Replace('_', ' ').Trim();
+            }
+
+            parsed = new MovieFile(title)
+            {
+                Title = showTitle,
+                Season = int.Parse(epMatch.Groups[1].Value),
+                Episode = int.Parse(epMatch.Groups[2].Value),
+                IsSeries = true,
+                IsSuccess = true
+            };
+        }
+        else
+        {
+            parsed = movieDetector.GetInfo(title);
+        }
 
         parsed.Year ??= title.TryGetYear();
 
