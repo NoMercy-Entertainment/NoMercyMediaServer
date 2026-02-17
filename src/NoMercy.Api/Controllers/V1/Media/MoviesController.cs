@@ -75,7 +75,7 @@ public class MoviesController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to delete movies");
 
-        await movieRepository.DeleteMovieAsync(id, ct);
+        await movieRepository.DeleteAsync(id, ct);
 
         return Ok(new StatusResponseDto<string>
         {

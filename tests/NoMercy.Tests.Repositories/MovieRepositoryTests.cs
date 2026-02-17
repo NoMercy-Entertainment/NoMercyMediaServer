@@ -89,7 +89,7 @@ public class MovieRepositoryTests : IDisposable
     [Fact]
     public async Task DeleteMovieAsync_RemovesMovie()
     {
-        await _repository.DeleteMovieAsync(129);
+        await _repository.DeleteAsync(129);
 
         Movie? movie = await _repository.GetMovieAsync(
             SeedConstants.UserId, 129, "en", "US");

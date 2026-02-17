@@ -111,7 +111,7 @@ public class VideoPlaylistManager
     private async Task<(VideoPlaylistResponseDto? item, List<VideoPlaylistResponseDto> playlist)> GetTvItems(
         Guid userId, dynamic listId, int? itemId, string language, string country)
     {
-        Tv? tv = await _tvShowRepository.GetTvPlaylistAsync(userId, int.Parse(listId), language, country);
+        Tv? tv = await _tvShowRepository.GetPlaylistAsync(userId, int.Parse(listId), language, country);
 
         VideoPlaylistResponseDto[] episodes = tv?.Seasons
             .Where(season => season.SeasonNumber > 0)

@@ -84,7 +84,7 @@ public class QueryOutputTests : IDisposable
         MovieRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.DeleteMovieAsync(999);
+        await repository.DeleteAsync(999);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -118,7 +118,7 @@ public class QueryOutputTests : IDisposable
         TvShowRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.GetTvPlaylistAsync(SeedConstants.UserId, 1399, "en", "US");
+        await repository.GetPlaylistAsync(SeedConstants.UserId, 1399, "en", "US");
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);
@@ -134,7 +134,7 @@ public class QueryOutputTests : IDisposable
         TvShowRepository repository = new(_context);
         _interceptor.Clear();
 
-        await repository.DeleteTvAsync(999);
+        await repository.DeleteAsync(999);
 
         Assert.NotEmpty(_interceptor.CapturedSql);
         string sql = string.Join(" ", _interceptor.CapturedSql);

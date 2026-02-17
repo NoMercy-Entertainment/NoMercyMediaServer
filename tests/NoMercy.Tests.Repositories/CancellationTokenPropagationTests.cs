@@ -56,7 +56,7 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.DeleteMovieAsync(999999, cts.Token));
+            repository.DeleteAsync(999999, cts.Token));
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class CancellationTokenPropagationTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            repository.DeleteTvAsync(999999, cts.Token));
+            repository.DeleteAsync(999999, cts.Token));
     }
 
     [Fact]

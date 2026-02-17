@@ -307,7 +307,7 @@ public class CollectionRepository(MediaContext context)
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<bool> LikeCollectionAsync(int id, Guid userId, bool like, CancellationToken ct = default)
+    public async Task<bool> LikeAsync(int id, Guid userId, bool like, CancellationToken ct = default)
     {
         Collection? collection = await context.Collections
             .AsNoTracking()
@@ -393,5 +393,12 @@ public class CollectionRepository(MediaContext context)
     
         await context.SaveChangesAsync(ct);
         return true;
+    }
+    
+    public Task DeleteAsync(int id, CancellationToken ct = default)
+    {
+        return context.Collections
+            .Where(collection => collection.Id == id)
+            .ExecuteDeleteAsync(ct);
     }
 }

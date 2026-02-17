@@ -229,14 +229,20 @@ public class FileRepository(MediaContext context) : IFileRepository
     private async Task<bool> ProcessVideoFileInfo(MediaContext ctx, string libraryType, FileInfo file,
         ConcurrentBag<FileItem> fileList)
     {
+        string rawFileName = Path.GetFileNameWithoutExtension(file.Name);
+        string? extractedYear = rawFileName.TryGetYear();
+        
         string title = file.FullName.Replace("v2", "");
         title = Str.RemoveBracketedString().Replace(title, string.Empty);
-
+        
         Ffprobe ffprobeData = await new Ffprobe(file.FullName).GetStreamData();
         MovieFile parsed = ParseVideoFileName(file, title);
-
-        parsed.Year ??= title.TryGetYear();
+        
+        parsed.Year = extractedYear ?? parsed.Year;
         if (parsed.Title == null) return true;
+        
+        parsed.Title = Str.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
+
 
         if (parsed.Episode.HasValue && !parsed.Season.HasValue)
             parsed.Season = 1;
@@ -266,6 +272,7 @@ public class FileRepository(MediaContext context) : IFileRepository
 
         parsed.ImdbId = result.Value.imdbId;
         fileList.Add(BuildFileItem(file, parsed, result.Value.episodeMatch, ffprobeData));
+
         return false;
     }
 

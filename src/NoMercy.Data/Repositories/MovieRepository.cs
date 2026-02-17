@@ -161,7 +161,7 @@ public class MovieRepository(MediaContext context)
         jobDispatcher.DispatchJob<AddMovieJob>(id, movieLibrary.Id);
     }
 
-    public Task DeleteMovieAsync(int id, CancellationToken ct = default)
+    public Task DeleteAsync(int id, CancellationToken ct = default)
     {
         return context.Movies
             .Where(movie => movie.Id == id)

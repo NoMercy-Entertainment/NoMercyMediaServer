@@ -137,7 +137,7 @@ public class TvShowRepository(MediaContext context)
             .AnyAsync(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)), ct);
     }
 
-    public async Task<Tv?> GetTvPlaylistAsync(Guid userId, int id, string language, string country, CancellationToken ct = default)
+    public async Task<Tv?> GetPlaylistAsync(Guid userId, int id, string language, string country, CancellationToken ct = default)
     {
         return await context.Tvs.AsNoTracking()
             .Where(tv => tv.Id == id)
@@ -189,7 +189,7 @@ public class TvShowRepository(MediaContext context)
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<bool> LikeTvAsync(int id, Guid userId, bool like, CancellationToken ct = default)
+    public async Task<bool> LikeAsync(int id, Guid userId, bool like, CancellationToken ct = default)
     {
         TvUser? tvUser = await context.TvUser
             .FirstOrDefaultAsync(tu => tu.TvId == id && tu.UserId == userId, ct);
@@ -234,7 +234,7 @@ public class TvShowRepository(MediaContext context)
         jobDispatcher.DispatchJob<AddShowJob>(id, tvLibrary);
     }
 
-    public Task DeleteTvAsync(int id, CancellationToken ct = default)
+    public Task DeleteAsync(int id, CancellationToken ct = default)
     {
         return context.Tvs
             .Where(tv => tv.Id == id)

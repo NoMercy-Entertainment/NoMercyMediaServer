@@ -48,7 +48,7 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task GetTvPlaylistAsync_ReturnsShowWithSeasons()
     {
-        Tv? playlist = await _repository.GetTvPlaylistAsync(
+        Tv? playlist = await _repository.GetPlaylistAsync(
             SeedConstants.UserId, 1399, "en", "US");
 
         Assert.NotNull(playlist);
@@ -60,7 +60,7 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task GetTvPlaylistAsync_ReturnsNull_WhenUserHasNoAccess()
     {
-        Tv? playlist = await _repository.GetTvPlaylistAsync(
+        Tv? playlist = await _repository.GetPlaylistAsync(
             SeedConstants.OtherUserId, 1399, "en", "US");
 
         Assert.Null(playlist);
@@ -69,7 +69,7 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task GetTvPlaylistAsync_IncludesEpisodesWithVideoFiles()
     {
-        Tv? playlist = await _repository.GetTvPlaylistAsync(
+        Tv? playlist = await _repository.GetPlaylistAsync(
             SeedConstants.UserId, 1399, "en", "US");
 
         Assert.NotNull(playlist);
@@ -81,7 +81,7 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task DeleteTvAsync_RemovesShow()
     {
-        await _repository.DeleteTvAsync(1399);
+        await _repository.DeleteAsync(1399);
 
         bool available = await _repository.GetTvAvailableAsync(SeedConstants.UserId, 1399);
         Assert.False(available);
@@ -112,7 +112,7 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task LikeTvAsync_AddsTvUser_WhenLikeIsTrue()
     {
-        bool result = await _repository.LikeTvAsync(1399, SeedConstants.UserId, true);
+        bool result = await _repository.LikeAsync(1399, SeedConstants.UserId, true);
 
         Assert.True(result);
 
@@ -124,8 +124,8 @@ public class TvShowRepositoryTests : IDisposable
     [Fact]
     public async Task LikeTvAsync_RemovesTvUser_WhenLikeIsFalse()
     {
-        await _repository.LikeTvAsync(1399, SeedConstants.UserId, true);
-        bool result = await _repository.LikeTvAsync(1399, SeedConstants.UserId, false);
+        await _repository.LikeAsync(1399, SeedConstants.UserId, true);
+        bool result = await _repository.LikeAsync(1399, SeedConstants.UserId, false);
 
         Assert.True(result);
 

@@ -72,7 +72,7 @@ public class TvShowsController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to delete shows");
 
-        await tvShowRepository.DeleteTvAsync(id, ct);
+        await tvShowRepository.DeleteAsync(id, ct);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -124,7 +124,7 @@ public class TvShowsController(
         string language = Language();
         string country = Country();
 
-        Tv? tv = await tvShowRepository.GetTvPlaylistAsync(userId, id, language, country, ct);
+        Tv? tv = await tvShowRepository.GetPlaylistAsync(userId, id, language, country, ct);
 
         if (tv is null)
             return NotFoundResponse("Tv show not found");
@@ -157,7 +157,7 @@ public class TvShowsController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like tv shows");
 
-        bool success = await tvShowRepository.LikeTvAsync(id, userId, request.Value, ct);
+        bool success = await tvShowRepository.LikeAsync(id, userId, request.Value, ct);
 
         if (!success)
             return UnprocessableEntityResponse("Tv show not found");
