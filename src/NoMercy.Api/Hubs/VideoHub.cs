@@ -124,9 +124,6 @@ public class VideoHub : ConnectionHub
                         || x.CollectionId == request.TmdbId)
             .ToArrayAsync();
 
-        Logger.Socket(request);
-        Logger.Socket(userdata);
-
         mediaContext.UserData.RemoveRange(userdata);
 
         await mediaContext.SaveChangesAsync();
