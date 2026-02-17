@@ -428,6 +428,54 @@ public class LibrariesController(
     }
 
     [HttpPost]
+    [Route("scan-new")]
+    public async Task<IActionResult> ScanNewAll()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to scan all libraries");
+
+        List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
+
+        if (librariesList.Count == 0)
+        {
+            return NotFound(new StatusResponseDto<List<string?>>
+            {
+                Status = "error", Message = "No libraries found to scan.", Args = []
+            });
+        }
+
+        foreach (Library library in librariesList)
+        {
+            jobDispatcher.DispatchJob<ScanNewLibraryItemsJob>(library.Id);
+        }
+
+        return Ok(new StatusResponseDto<List<string?>>
+        {
+            Status = "ok", Message = "Scanning all libraries for new items."
+        });
+    }
+
+    [HttpPost]
+    [Route("{id:ulid}/scan-new")]
+    public async Task<IActionResult> ScanNew(Ulid id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to scan the library");
+
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
+
+        if (library is null)
+            return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Library not found" });
+
+        jobDispatcher.DispatchJob<ScanNewLibraryItemsJob>(id);
+
+        return Ok(new StatusResponseDto<List<dynamic>>
+        {
+            Status = "ok", Message = "Scanning {0} library for new items.", Args = [library.Title]
+        });
+    }
+
+    [HttpPost]
     [Route("{id:ulid}/folders")]
     public async Task<IActionResult> AddFolder(Ulid id, [FromBody] FolderRequest request)
     {

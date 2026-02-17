@@ -12,4 +12,6 @@ public interface ILibraryRepository : IDisposable, IAsyncDisposable
     public Task<Folder?> GetLibraryFolder(Ulid folderId);
 
     public Task<Library?> GetLibraryByIdWithFolders(Ulid libraryId);
+
+    public Task<HashSet<string>> GetExistingFolderNamesAsync(Ulid libraryId, string libraryType);
 }
