@@ -148,17 +148,19 @@ public class Start
 
             // Initialize hardware acceleration detection in background
             await FFmpegHardwareConfig.InitializeAsync();
-            foreach (GpuAccelerator accelerator in FFmpegHardwareConfig.Accelerators)
-                Logger.Encoder(
-                    $"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}", LogEventLevel.Debug);
+            if (FFmpegHardwareConfig.Accelerators.Count > 0)
+            {
+                List<string> gpus = FFmpegHardwareConfig.Accelerators
+                    .Select(a => $"{a.Vendor}/{a.Accelerator}")
+                    .ToList();
+                Logger.Encoder($"GPU acceleration: {string.Join(", ", gpus)}", LogEventLevel.Debug);
+            }
 
             // Start queue workers after a short delay
             await Task.Delay(TimeSpan.FromSeconds(2));
             if (QueueRunner.Current is not null)
             {
-                Logger.Setup("Calling QueueRunner.Initialize() from InitRemaining background task...");
                 await QueueRunner.Current.Initialize();
-                Logger.Setup("QueueRunner.Initialize() completed from InitRemaining background task");
             }
             else
             {

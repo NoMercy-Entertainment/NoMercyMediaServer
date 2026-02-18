@@ -54,8 +54,6 @@ public class QueueRunner
 
         _isInitialized = true;
 
-        Logger.Queue("QueueRunner.Initialize() starting — spawning workers...", LogEventLevel.Debug);
-
         _jobQueue.ResetAllReservedJobs();
 
         int workerCount = 0;
@@ -67,7 +65,7 @@ public class QueueRunner
                 workerCount++;
             }
 
-        Logger.Queue($"QueueRunner.Initialize() complete — spawned {workerCount} workers", LogEventLevel.Debug);
+        Logger.Queue($"Queue workers initialized: {workerCount} workers spawned", LogEventLevel.Debug);
 
         // Signal that queue workers are ready, allowing cron jobs to start execution
         CronWorker.SignalQueueWorkersReady();

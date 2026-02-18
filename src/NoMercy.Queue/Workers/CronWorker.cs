@@ -86,8 +86,7 @@ public class CronWorker : BackgroundService
         DateTime currentTime = DateTime.Now;
         DateTime nextRun = CronService.GetNextOccurrence(executor.CronExpression, currentTime);
 
-        _logger.LogTrace("Registered job {JobType}: {JobName}, Cron: {Cron}, Next run: {NextRun}",
-            jobType, executor.JobName, executor.CronExpression, nextRun);
+        // Individual registration logged at trace — summary logged in ExecuteAsync
 
         CronJob job = new()
         {
@@ -120,18 +119,15 @@ public class CronWorker : BackgroundService
         Task task = Task.Run(async () => await JobWorkerLoop(job, cts.Token), cts.Token);
         _jobTasks[job.JobType] = task;
 
-        _logger.LogTrace("Started worker thread for job: {JobName}", job.Name);
+        // Per-job start logged at trace level only
     }
 
     private async Task JobWorkerLoop(CronJob job, CancellationToken cancellationToken)
     {
-        _logger.LogTrace("Job worker started for: {JobName}, waiting for queue workers...", job.Name);
-
         // Wait for queue workers to be ready before starting cron job execution
         try
         {
             await QueueWorkersReadyTcs.Task.WaitAsync(cancellationToken);
-            _logger.LogTrace("Queue workers ready, cron job {JobName} can now execute", job.Name);
         }
         catch (OperationCanceledException)
         {
@@ -245,7 +241,7 @@ public class CronWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogTrace("Cron Worker started with individual job workers");
+        _logger.LogDebug("Cron Worker started with {JobCount} registered jobs", _codeDefinedJobs.Count);
 
         // Wait for database migrations to complete before querying the database
         try
