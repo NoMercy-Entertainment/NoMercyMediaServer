@@ -103,17 +103,13 @@ public class NetworkDiscovery : INetworkDiscovery
                 }
             }
 
-            Logger.App($"External Address: {ExternalAddress}");
-
             // Discover external IPv6 address
             if (Ipv6Enabled)
             {
                 try
                 {
                     ExternalIpV6 = await GetExternalIpV6Async();
-                    if (ExternalIpV6 is not null)
-                        Logger.App($"External IPv6 Address: {ExternalAddressV6}");
-                    else
+                    if (ExternalIpV6 is null)
                         Logger.Setup("No external IPv6 address available", LogEventLevel.Debug);
                 }
                 catch (Exception e)

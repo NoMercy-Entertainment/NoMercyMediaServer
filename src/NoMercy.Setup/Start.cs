@@ -150,7 +150,7 @@ public class Start
             await FFmpegHardwareConfig.InitializeAsync();
             foreach (GpuAccelerator accelerator in FFmpegHardwareConfig.Accelerators)
                 Logger.Encoder(
-                    $"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}");
+                    $"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}", LogEventLevel.Debug);
 
             // Start queue workers after a short delay
             await Task.Delay(TimeSpan.FromSeconds(2));

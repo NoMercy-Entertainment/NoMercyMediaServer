@@ -155,6 +155,43 @@ public static class Program
             {
                 Logger.App($"Background startup tasks failed: {ex.Message}");
             }
+
+            // Show addresses and server box after all startup tasks complete
+            NoMercy.Networking.Discovery.INetworkDiscovery? networkDiscovery = app.Services.GetService<NoMercy.Networking.Discovery.INetworkDiscovery>();
+            if (networkDiscovery is not null)
+            {
+                Logger.App($"Internal Address: {networkDiscovery.InternalAddress}");
+                if (!string.IsNullOrEmpty(networkDiscovery.ExternalIp) && networkDiscovery.ExternalIp != "0.0.0.0")
+                    Logger.App($"External Address: {networkDiscovery.ExternalAddress}");
+                if (networkDiscovery.ExternalAddressV6 is not null)
+                    Logger.App($"External IPv6 Address: {networkDiscovery.ExternalAddressV6}");
+            }
+
+            if (!IsRunningAsService && !Console.IsOutputRedirected)
+                await ConsoleMessages.ServerRunning();
+
+            Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
+
+            // Auto-open setup URL in browser if in setup mode and desktop environment
+            SetupState? setupState = app.Services.GetService<SetupState>();
+            if (setupState?.IsSetupRequired == true && !IsRunningAsService && Auth.IsDesktopEnvironment())
+            {
+                try
+                {
+                    string internalIp = networkDiscovery?.InternalIp ?? "127.0.0.1";
+                    string setupUrl = $"http://{internalIp}:{Config.InternalServerPort}/setup";
+                    Logger.App($"Opening setup page in browser: {setupUrl}");
+                    Auth.OpenBrowser(setupUrl);
+                }
+                catch (Exception ex)
+                {
+                    Logger.App($"Could not open browser automatically: {ex.Message}");
+                    string internalIp2 = networkDiscovery?.InternalIp ?? "127.0.0.1";
+                    Logger.App($"Please open your browser and navigate to: http://{internalIp2}:{Config.InternalServerPort}/setup");
+                }
+            }
+
+            await Dev.Run();
         });
 
         bool shouldRetry;
@@ -216,42 +253,6 @@ public static class Program
         {
             Config.Started = true;
             stopWatch.Stop();
-
-            Task.Run(async () =>
-            {
-                Task.Delay(300).Wait();
-
-                NoMercy.Networking.Discovery.INetworkDiscovery? networkDiscovery = app.Services.GetService<NoMercy.Networking.Discovery.INetworkDiscovery>();
-                if (networkDiscovery is not null)
-                    Logger.App($"Internal Address: {networkDiscovery.InternalAddress}");
-
-                if (!IsRunningAsService && !Console.IsOutputRedirected)
-                    await ConsoleMessages.ServerRunning();
-
-                Logger.App($"Server started in {stopWatch.ElapsedMilliseconds}ms");
-
-                // Auto-open setup URL in browser if in setup mode and desktop environment
-                SetupState? setupState = app.Services.GetService<SetupState>();
-                if (setupState?.IsSetupRequired == true && !IsRunningAsService && Auth.IsDesktopEnvironment())
-                {
-                    try
-                    {
-                        string internalIp = networkDiscovery?.InternalIp ?? "127.0.0.1";
-                        // Use HTTP with actual IP address since no certificate exists yet
-                        string setupUrl = $"http://{internalIp}:{Config.InternalServerPort}/setup";
-                        Logger.App($"Opening setup page in browser: {setupUrl}");
-                        Auth.OpenBrowser(setupUrl);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.App($"Could not open browser automatically: {ex.Message}");
-                        string internalIp2 = networkDiscovery?.InternalIp ?? "127.0.0.1";
-                        Logger.App($"Please open your browser and navigate to: http://{internalIp2}:{Config.InternalServerPort}/setup");
-                    }
-                }
-
-                await Dev.Run();
-            });
         });
 
         app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStopping.Register(() =>

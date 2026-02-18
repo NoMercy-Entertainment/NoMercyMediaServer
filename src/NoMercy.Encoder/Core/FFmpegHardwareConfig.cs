@@ -57,7 +57,7 @@ public static class FFmpegHardwareConfig
     {
         try
         {
-            Logger.Encoder($"Checking Acceleration: -hide_banner {arg} -hwaccels 2>&1", LogEventLevel.Debug);
+            Logger.Encoder($"Checking Acceleration: -hide_banner {arg} -hwaccels 2>&1", LogEventLevel.Verbose);
             string result = Shell.ExecStdOutSync(AppFiles.FfmpegPath, $"-hide_banner {arg} -hwaccels 2>&1");
 
             return !result.Contains("Failed", StringComparison.InvariantCultureIgnoreCase) &&

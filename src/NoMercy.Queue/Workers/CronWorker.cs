@@ -86,7 +86,7 @@ public class CronWorker : BackgroundService
         DateTime currentTime = DateTime.Now;
         DateTime nextRun = CronService.GetNextOccurrence(executor.CronExpression, currentTime);
 
-        _logger.LogDebug("Registered job {JobType}: {JobName}, Cron: {Cron}, Next run: {NextRun}",
+        _logger.LogTrace("Registered job {JobType}: {JobName}, Cron: {Cron}, Next run: {NextRun}",
             jobType, executor.JobName, executor.CronExpression, nextRun);
 
         CronJob job = new()
@@ -120,18 +120,18 @@ public class CronWorker : BackgroundService
         Task task = Task.Run(async () => await JobWorkerLoop(job, cts.Token), cts.Token);
         _jobTasks[job.JobType] = task;
 
-        _logger.LogDebug("Started worker thread for job: {JobName}", job.Name);
+        _logger.LogTrace("Started worker thread for job: {JobName}", job.Name);
     }
 
     private async Task JobWorkerLoop(CronJob job, CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Job worker started for: {JobName}, waiting for queue workers...", job.Name);
+        _logger.LogTrace("Job worker started for: {JobName}, waiting for queue workers...", job.Name);
 
         // Wait for queue workers to be ready before starting cron job execution
         try
         {
             await QueueWorkersReadyTcs.Task.WaitAsync(cancellationToken);
-            _logger.LogDebug("Queue workers ready, cron job {JobName} can now execute", job.Name);
+            _logger.LogTrace("Queue workers ready, cron job {JobName} can now execute", job.Name);
         }
         catch (OperationCanceledException)
         {
@@ -245,7 +245,7 @@ public class CronWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogDebug("Cron Worker started with individual job workers");
+        _logger.LogTrace("Cron Worker started with individual job workers");
 
         // Wait for database migrations to complete before querying the database
         try
@@ -256,7 +256,7 @@ public class CronWorker : BackgroundService
             bool dbReady = await DatabaseReadyTcs.Task.WaitAsync(combinedCts.Token);
             if (dbReady)
             {
-                _logger.LogInformation("Database ready — loading database job workers");
+                _logger.LogDebug("Database ready — loading database job workers");
                 await StartDatabaseJobWorkers(stoppingToken);
             }
             else
