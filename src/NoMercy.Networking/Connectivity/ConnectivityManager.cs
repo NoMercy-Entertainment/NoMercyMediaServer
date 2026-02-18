@@ -145,8 +145,19 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
     public void Dispose()
     {
-        _stoppingCts.Cancel();
-        _stoppingCts.Dispose();
+        try
+        {
+            if (!_stoppingCts.IsCancellationRequested)
+                _stoppingCts.Cancel();
+        }
+        catch (ObjectDisposedException) { }
+
+        try
+        {
+            _stoppingCts.Dispose();
+        }
+        catch (ObjectDisposedException) { }
+
         GC.SuppressFinalize(this);
     }
 }
