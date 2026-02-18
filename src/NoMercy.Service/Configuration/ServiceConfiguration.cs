@@ -28,6 +28,10 @@ using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.Networking;
+using NoMercy.Networking.Connectivity;
+using NoMercy.Networking.Connectivity.Strategies;
+using NoMercy.Networking.Discovery;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -42,7 +46,6 @@ using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Extensions;
 using NoMercy.Helpers.Wallpaper;
 using NoMercy.Service.Configuration.Swagger;
-using NoMercy.Service.Services;
 using NoMercy.Setup;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
@@ -265,7 +268,40 @@ public static class ServiceConfiguration
         // Add Singleton Services
         services.AddSingleton<AppProcessManager>();
         services.AddSingleton<ResourceMonitor>();
-        services.AddSingleton<Networking.Networking>();
+
+        // Network discovery (replaces static Networking.Networking IP/address members)
+        services.AddSingleton<INetworkDiscovery>(sp =>
+        {
+            NetworkDiscovery discovery = new();
+            if (!string.IsNullOrEmpty(StartupOptions.OverrideInternalIp))
+                discovery.InternalIp = StartupOptions.OverrideInternalIp;
+            if (!string.IsNullOrEmpty(StartupOptions.OverrideExternalIp))
+                discovery.ExternalIp = StartupOptions.OverrideExternalIp;
+            Start.NetworkDiscovery = discovery;
+            Register.Discovery = discovery;
+            ChromeCast.NetworkDiscovery = discovery;
+            return discovery;
+        });
+
+        // Client messaging (replaces static Networking.Networking.SendTo/SendToAll)
+        services.AddSingleton<ConnectedClients>();
+        services.AddSingleton<IClientMessenger, ClientMessenger>();
+
+        // Connectivity strategies (ordered by priority)
+        services.AddSingleton<IConnectivityStrategy>(sp =>
+            new PortForwardStrategy((NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>()));
+        services.AddSingleton<IConnectivityStrategy, StunHolePunchStrategy>();
+        services.AddSingleton<IConnectivityStrategy>(sp =>
+            new CloudflareTunnelStrategy(Register.GetTunnelAvailability));
+
+        // Connectivity manager (replaces ServerRegistrationService + CloudflareTunnelService)
+        services.AddSingleton<IConnectivityManager, ConnectivityManager>();
+        services.AddHostedService(sp => (ConnectivityManager)sp.GetRequiredService<IConnectivityManager>());
+
+        // Network change monitor
+        services.AddSingleton<NetworkChangeMonitor>();
+        services.AddHostedService(sp => sp.GetRequiredService<NetworkChangeMonitor>());
+
         services.AddSingleton<StorageMonitor>();
         services.AddSingleton<ChromeCast>();
         services.AddSingleton<DriveMonitor>();
@@ -340,12 +376,6 @@ public static class ServiceConfiguration
         services.AddVideoHubServices();
         services.AddMusicHubServices();
         services.AddSignalREventHandlers();
-
-        services.AddHostedService<ServerRegistrationService>(_ =>
-        {
-            ServerRegistrationService service = new();
-            return service;
-        });
 
         services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.AddScoped<ILocalizer, Localizer>();

@@ -1,16 +1,19 @@
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Media;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.EventHandlers;
 
 public class SignalRLibraryScanEventHandler : IDisposable
 {
+    private readonly IClientMessenger _clientMessenger;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public SignalRLibraryScanEventHandler(IEventBus eventBus)
+    public SignalRLibraryScanEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
+        _clientMessenger = clientMessenger;
         _subscriptions.Add(eventBus.Subscribe<LibraryScanStartedEvent>(OnScanStarted));
         _subscriptions.Add(eventBus.Subscribe<LibraryScanCompletedEvent>(OnScanCompleted));
         _subscriptions.Add(eventBus.Subscribe<MediaAddedEvent>(OnMediaAdded));
@@ -19,7 +22,7 @@ public class SignalRLibraryScanEventHandler : IDisposable
 
     internal Task OnScanStarted(LibraryScanStartedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("LibraryScanStarted", "dashboardHub", new
+        _clientMessenger.SendToAll("LibraryScanStarted", "dashboardHub", new
         {
             LibraryId = @event.LibraryId.ToString(),
             @event.LibraryName,
@@ -32,7 +35,7 @@ public class SignalRLibraryScanEventHandler : IDisposable
 
     internal Task OnScanCompleted(LibraryScanCompletedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("LibraryScanCompleted", "dashboardHub", new
+        _clientMessenger.SendToAll("LibraryScanCompleted", "dashboardHub", new
         {
             LibraryId = @event.LibraryId.ToString(),
             @event.LibraryName,
@@ -47,7 +50,7 @@ public class SignalRLibraryScanEventHandler : IDisposable
 
     internal Task OnMediaAdded(MediaAddedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("MediaAdded", "dashboardHub", new
+        _clientMessenger.SendToAll("MediaAdded", "dashboardHub", new
         {
             @event.MediaId,
             @event.MediaType,
@@ -61,7 +64,7 @@ public class SignalRLibraryScanEventHandler : IDisposable
 
     internal Task OnMediaRemoved(MediaRemovedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("MediaRemoved", "dashboardHub", new
+        _clientMessenger.SendToAll("MediaRemoved", "dashboardHub", new
         {
             @event.MediaId,
             @event.MediaType,

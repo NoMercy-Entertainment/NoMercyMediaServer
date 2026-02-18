@@ -1,15 +1,18 @@
 using NoMercy.Events;
 using NoMercy.Events.Playback;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.EventHandlers;
 
 public class SignalRPlaybackEventHandler : IDisposable
 {
+    private readonly IClientMessenger _clientMessenger;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public SignalRPlaybackEventHandler(IEventBus eventBus)
+    public SignalRPlaybackEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
+        _clientMessenger = clientMessenger;
         _subscriptions.Add(eventBus.Subscribe<PlaybackStartedEvent>(OnPlaybackStarted));
         _subscriptions.Add(eventBus.Subscribe<PlaybackProgressEvent>(OnPlaybackProgress));
         _subscriptions.Add(eventBus.Subscribe<PlaybackCompletedEvent>(OnPlaybackCompleted));
@@ -17,7 +20,7 @@ public class SignalRPlaybackEventHandler : IDisposable
 
     internal Task OnPlaybackStarted(PlaybackStartedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("PlaybackStarted", "dashboardHub", new
+        _clientMessenger.SendToAll("PlaybackStarted", "dashboardHub", new
         {
             @event.UserId,
             @event.MediaId,
@@ -34,7 +37,7 @@ public class SignalRPlaybackEventHandler : IDisposable
     internal Task OnPlaybackProgress(PlaybackProgressEvent @event, CancellationToken ct)
     {
         // Progress events are high-frequency; broadcast but don't log to avoid noise
-        Networking.Networking.SendToAll("PlaybackProgress", "dashboardHub", new
+        _clientMessenger.SendToAll("PlaybackProgress", "dashboardHub", new
         {
             @event.UserId,
             @event.MediaId,
@@ -48,7 +51,7 @@ public class SignalRPlaybackEventHandler : IDisposable
 
     internal Task OnPlaybackCompleted(PlaybackCompletedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("PlaybackCompleted", "dashboardHub", new
+        _clientMessenger.SendToAll("PlaybackCompleted", "dashboardHub", new
         {
             @event.UserId,
             @event.MediaId,

@@ -2,6 +2,7 @@ using NoMercy.Api.EventHandlers;
 using NoMercy.Api.Services.Music;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.EventHandlers;
+using NoMercy.Networking.Messaging;
 
 namespace NoMercy.Service.Extensions;
 
@@ -12,25 +13,29 @@ public static class EventHandlerExtensions
         services.AddSingleton<SignalRPlaybackEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new(eventBus);
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new(eventBus, clientMessenger);
         });
 
         services.AddSingleton<SignalREncodingEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new(eventBus);
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new(eventBus, clientMessenger);
         });
 
         services.AddSingleton<SignalRLibraryScanEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new(eventBus);
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new(eventBus, clientMessenger);
         });
 
         services.AddSingleton<SignalRLibraryRefreshEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new(eventBus);
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new(eventBus, clientMessenger);
         });
 
         services.AddSingleton<FileWatcherEventHandler>(sp =>
@@ -57,25 +62,29 @@ public static class EventHandlerExtensions
         services.AddSingleton<SignalRNotificationEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new(eventBus);
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new(eventBus, clientMessenger);
         });
 
         services.AddSingleton<DriveMonitorEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new(eventBus);
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new(eventBus, clientMessenger);
         });
 
         services.AddSingleton<CastEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new(eventBus);
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new(eventBus, clientMessenger);
         });
 
         services.AddSingleton<UserPermissionsEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            return new(eventBus);
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new(eventBus, clientMessenger);
         });
 
         return services;

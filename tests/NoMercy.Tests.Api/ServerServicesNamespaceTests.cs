@@ -4,8 +4,8 @@ using NoMercy.Api.Hubs;
 using NoMercy.Api.Hubs.Shared;
 using NoMercy.Api.Services.Music;
 using NoMercy.Api.Services.Video;
+using NoMercy.Networking.Connectivity;
 using NoMercy.Service.Extensions;
-using NoMercy.Service.Services;
 using Xunit;
 
 namespace NoMercy.Tests.Api;
@@ -14,31 +14,21 @@ namespace NoMercy.Tests.Api;
 public class ServerServicesNamespaceTests
 {
     [Fact]
-    public void ServerServices_UsesPascalCaseNamespace()
+    public void ConnectivityManager_UsesPascalCaseNamespace()
     {
-        // Verify the namespace follows PascalCase convention (Services, not services)
-        Type cloudflareType = typeof(CloudflareTunnelService);
-        Type registrationType = typeof(ServerRegistrationService);
+        Type connectivityManagerType = typeof(ConnectivityManager);
         Type musicExtType = typeof(MusicHubServiceExtensions);
         Type videoExtType = typeof(VideoHubServiceExtensions);
 
-        Assert.Equal("NoMercy.Service.Services", cloudflareType.Namespace);
-        Assert.Equal("NoMercy.Service.Services", registrationType.Namespace);
+        Assert.Equal("NoMercy.Networking.Connectivity", connectivityManagerType.Namespace);
         Assert.Equal("NoMercy.Service.Extensions", musicExtType.Namespace);
         Assert.Equal("NoMercy.Service.Extensions", videoExtType.Namespace);
     }
 
     [Fact]
-    public void CloudflareTunnelService_ImplementsIHostedService()
+    public void ConnectivityManager_ImplementsIHostedService()
     {
-        Assert.True(typeof(IHostedService).IsAssignableFrom(typeof(CloudflareTunnelService)));
-    }
-
-    [Fact]
-    public void ServerRegistrationService_ImplementsIHostedServiceAndIDisposable()
-    {
-        Assert.True(typeof(IHostedService).IsAssignableFrom(typeof(ServerRegistrationService)));
-        Assert.True(typeof(IDisposable).IsAssignableFrom(typeof(ServerRegistrationService)));
+        Assert.True(typeof(IHostedService).IsAssignableFrom(typeof(ConnectivityManager)));
     }
 
     [Fact]

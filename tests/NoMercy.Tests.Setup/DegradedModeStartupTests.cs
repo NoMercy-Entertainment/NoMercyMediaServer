@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.Setup;
 using NoMercy.Setup.Dto;
 using Xunit;
@@ -131,7 +132,8 @@ public class DegradedModeStartupTests
     {
         // GetInternalIp now uses NetworkInterface enumeration first,
         // which works without network connectivity
-        string ip = Networking.Networking.InternalIp;
+        NetworkDiscovery discovery = new();
+        string ip = discovery.InternalIp;
 
         Assert.False(string.IsNullOrEmpty(ip),
             "GetInternalIp should return a valid IP via NetworkInterface enumeration");
@@ -140,7 +142,8 @@ public class DegradedModeStartupTests
     [Fact]
     public void GetInternalIp_ReturnsValidIpFormat()
     {
-        string ip = Networking.Networking.InternalIp;
+        NetworkDiscovery discovery = new();
+        string ip = discovery.InternalIp;
 
         // Should be a valid IPv4 address
         bool isValid = System.Net.IPAddress.TryParse(ip, out System.Net.IPAddress? parsed);
@@ -340,7 +343,8 @@ public class CloudflareFallbackTests
     {
         // ExternalIp property should return "0.0.0.0" when no IP has been discovered,
         // not throw an exception
-        string ip = Networking.Networking.ExternalIp;
+        NetworkDiscovery discovery = new();
+        string ip = discovery.ExternalIp;
         Assert.NotNull(ip);
     }
 
@@ -377,15 +381,16 @@ public class CloudflareFallbackTests
     [Fact]
     public async Task GetExternalIp_Discover_DoesNotThrow_WhenApiUnavailable()
     {
-        // Discover() wraps GetExternalIp in try/catch, so even when
+        // DiscoverExternalIpAsync() wraps GetExternalIpAsync in try/catch, so even when
         // api.nomercy.tv (Cloudflare) is down, it should not throw
         try
         {
-            await Networking.Networking.Discover();
+            NetworkDiscovery discovery = new();
+            await discovery.DiscoverExternalIpAsync();
         }
         catch (Exception ex)
         {
-            Assert.Fail($"Discover should not throw when external IP API is unavailable: {ex.Message}");
+            Assert.Fail($"DiscoverExternalIpAsync should not throw when external IP API is unavailable: {ex.Message}");
         }
     }
 

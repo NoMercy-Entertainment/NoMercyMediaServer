@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Newtonsoft.Json;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -567,7 +568,8 @@ public class SetupServer
 
             _state.TransitionTo(SetupPhase.Registering);
 
-            await Networking.Networking.Discover();
+            if (Start.NetworkDiscovery is not null)
+                await Start.NetworkDiscovery.DiscoverExternalIpAsync();
             await Register.Init();
 
             _state.TransitionTo(SetupPhase.Registered);

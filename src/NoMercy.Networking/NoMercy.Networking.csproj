@@ -13,8 +13,10 @@
         <PackageReference Include="Castle.Core"/>
         <PackageReference Include="Microsoft.AspNetCore.SignalR"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
         <PackageReference Include="Mono.Nat"/>
         <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Stun.Net" />
         <PackageReference Include="Sharpcaster" />
 
         <PackageReference Include="Ulid" />

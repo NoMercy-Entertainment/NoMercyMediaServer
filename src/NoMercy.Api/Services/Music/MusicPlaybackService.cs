@@ -6,6 +6,7 @@ using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Playback;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Services.Music;
@@ -14,15 +15,17 @@ public class MusicPlaybackService
 {
     private readonly MusicPlayerStateManager _stateManager;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IClientMessenger _clientMessenger;
     private readonly IEventBus? _eventBus;
     private readonly string[] _repeatStates = ["off", "one", "all"];
     private static int _playerStateEventId;
     private static int PlayerStateEventId => ++_playerStateEventId;
 
-    public MusicPlaybackService(MusicPlayerStateManager stateManager, IServiceProvider serviceProvider, IEventBus? eventBus = null)
+    public MusicPlaybackService(MusicPlayerStateManager stateManager, IServiceProvider serviceProvider, IClientMessenger clientMessenger, IEventBus? eventBus = null)
     {
         _stateManager = stateManager;
         _serviceProvider = serviceProvider;
+        _clientMessenger = clientMessenger;
         _eventBus = eventBus;
     }
 
@@ -106,7 +109,7 @@ public class MusicPlaybackService
             ]
         };
 
-        await Networking.Networking.SendTo("MusicPlayerState", "musicHub", user.Id, payload);
+        await _clientMessenger.SendTo("MusicPlayerState", "musicHub", user.Id, payload);
     }
 
     internal async Task PublishStartedEventAsync(Guid userId, MusicPlayerState state)

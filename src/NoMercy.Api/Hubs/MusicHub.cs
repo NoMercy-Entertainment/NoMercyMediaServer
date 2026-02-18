@@ -7,6 +7,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -15,6 +16,7 @@ namespace NoMercy.Api.Hubs;
 public class MusicHub : ConnectionHub
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IClientMessenger _clientMessenger;
     private readonly MusicPlaybackService _musicPlaybackService;
     private readonly MusicPlayerStateManager _musicPlayerStateManager;
     private readonly MusicDeviceManager _musicDeviceManager;
@@ -24,14 +26,17 @@ public class MusicHub : ConnectionHub
     public MusicHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
+        ConnectedClients connectedClients,
+        IClientMessenger clientMessenger,
         MusicPlaybackService musicPlaybackService,
         MusicPlayerStateManager musicPlayerStateManager,
         MusicDeviceManager musicDeviceManager,
         MusicPlaylistManager musicPlaylistManager,
         MusicPlaybackCommandHandler commandHandler)
-        : base(httpContextAccessor, contextFactory)
+        : base(httpContextAccessor, contextFactory, connectedClients)
     {
         _httpContextAccessor = httpContextAccessor;
+        _clientMessenger = clientMessenger;
         _musicPlaybackService = musicPlaybackService;
         _musicPlayerStateManager = musicPlayerStateManager;
         _musicDeviceManager = musicDeviceManager;
@@ -105,7 +110,7 @@ public class MusicHub : ConnectionHub
 
     private Device GetCurrentDevice(User user)
     {
-        Client device = Networking.Networking.SocketClients
+        Client device = ConnectedClients.Clients
             .First(d => d.Key == Context.ConnectionId).Value;
     
         CurrentDevice[user.Id] = device;
@@ -223,7 +228,7 @@ public class MusicHub : ConnectionHub
 
     private void UpdateDeviceInfo(MusicPlayerState state)
     {
-        if (!Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? device)) return;
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device)) return;
         state.DeviceId = device.DeviceId;
         state.VolumePercentage = device.VolumePercent;
     }
@@ -296,7 +301,7 @@ public class MusicHub : ConnectionHub
         _commandHandler.HandleCommand(user, command, data, state);
 
         if (state.DeviceId == null)
-            if (Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? device))
+            if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
             {
                 state.DeviceId = device.DeviceId;
                 state.VolumePercentage = device.VolumePercent;
@@ -330,7 +335,7 @@ public class MusicHub : ConnectionHub
 
         List<Device> connectedDevices = Devices();
 
-        await Networking.Networking.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
+        await _clientMessenger.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
@@ -358,7 +363,7 @@ public class MusicHub : ConnectionHub
             ]
         };
 
-        await Networking.Networking.SendTo("ChangeDevice", "musicHub", user.Id, payload);
+        await _clientMessenger.SendTo("ChangeDevice", "musicHub", user.Id, payload);
     }
 
     public async Task ChangeVolumeCommand(int volume)
@@ -377,7 +382,7 @@ public class MusicHub : ConnectionHub
             return;
         }
 
-        if (Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
+        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             if (CurrentDevice.TryGetValue(user.Id, out Device? device) && device.DeviceId == client.DeviceId)
             {
                 device.VolumePercent = volume;
@@ -400,7 +405,7 @@ public class MusicHub : ConnectionHub
 
         // Send updated device list to all connected devices for this user
         List<Device> connectedDevices = Devices();
-        await Networking.Networking.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
+        await _clientMessenger.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
@@ -424,7 +429,7 @@ public class MusicHub : ConnectionHub
         bool stopPlayback = false;
         bool wasCurrentDevice = false;
 
-        if (Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
+        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
                 if (state.DeviceId == client.DeviceId)
                 {
@@ -443,7 +448,7 @@ public class MusicHub : ConnectionHub
             List<Device> connectedDevices = Devices();
 
             // Send updated device list to all remaining connected devices
-            await Networking.Networking.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
+            await _clientMessenger.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
 
             if (connectedDevices.Count == 0)
             {

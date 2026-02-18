@@ -1,10 +1,11 @@
+using NoMercy.Networking.Discovery;
 using Xunit;
 
 namespace NoMercy.Tests.Networking;
 
 /// <summary>
-/// HIGH-20: Tests verifying that the ExternalIp property getter does not block
-/// with .Result on an async operation, and that Discover() eagerly populates the IP.
+/// Tests verifying that the ExternalIp property getter does not block
+/// with .Result on an async operation, and that DiscoverExternalIpAsync() eagerly populates the IP.
 /// </summary>
 [Trait("Category", "Unit")]
 public class NetworkingExternalIpTests
@@ -12,8 +13,8 @@ public class NetworkingExternalIpTests
     [Fact]
     public void ExternalIp_Getter_NoBlockingResult()
     {
-        // HIGH-20: The ExternalIp getter must NOT call .Result on async GetExternalIp().
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Networking.cs");
+        // The ExternalIp getter must NOT call .Result on async GetExternalIp().
+        string sourceFile = FindSourceFile("src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
         string source = File.ReadAllText(sourceFile);
 
         string[] lines = source.Split('\n');
@@ -25,7 +26,7 @@ public class NetworkingExternalIpTests
         {
             string trimmed = lines[i].Trim();
 
-            if (trimmed.Contains("public static string ExternalIp"))
+            if (trimmed.Contains("public string ExternalIp"))
             {
                 insideExternalIpGetter = true;
                 braceDepth = 0;
@@ -57,8 +58,8 @@ public class NetworkingExternalIpTests
     [Fact]
     public void ExternalIp_Getter_ReturnsFallbackWhenNotPopulated()
     {
-        // HIGH-20: The getter should return a safe fallback ("0.0.0.0"), not call async methods.
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Networking.cs");
+        // The getter should return a safe fallback ("0.0.0.0"), not call async methods.
+        string sourceFile = FindSourceFile("src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
         string source = File.ReadAllText(sourceFile);
 
         string[] lines = source.Split('\n');
@@ -73,42 +74,35 @@ public class NetworkingExternalIpTests
     [Fact]
     public void Discover_AlwaysPopulatesExternalIp()
     {
-        // HIGH-20: Discover() must eagerly fetch the external IP so the getter never blocks.
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Networking.cs");
+        // DiscoverExternalIpAsync() must eagerly fetch the external IP so the getter never blocks.
+        string sourceFile = FindSourceFile("src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
         string source = File.ReadAllText(sourceFile);
 
         Assert.Contains("string.IsNullOrEmpty(_externalIp)", source);
-        Assert.Contains("await GetExternalIp()", source);
+        Assert.Contains("await GetExternalIpAsync()", source);
     }
 
     [Fact]
     public void ExternalIp_ReturnsCachedValueWithoutBlocking()
     {
-        // HIGH-20: After setting ExternalIp, the getter returns the cached value instantly.
-        string original = NoMercy.Networking.Networking.ExternalIp;
+        // After setting ExternalIp, the getter returns the cached value instantly.
+        NetworkDiscovery discovery = new();
+        string original = discovery.ExternalIp;
 
-        NoMercy.Networking.Networking.ExternalIp = "1.2.3.4";
+        discovery.ExternalIp = "1.2.3.4";
 
-        Assert.Equal("1.2.3.4", NoMercy.Networking.Networking.ExternalIp);
+        Assert.Equal("1.2.3.4", discovery.ExternalIp);
 
         // Restore original state
-        if (original == "0.0.0.0")
-        {
-            // Reset backing field via setter with a different value then back
-            NoMercy.Networking.Networking.ExternalIp = original;
-        }
-        else
-        {
-            NoMercy.Networking.Networking.ExternalIp = original;
-        }
+        discovery.ExternalIp = original;
     }
 
     [Fact]
     public void ExternalIp_DefaultFallbackIsNotEmpty()
     {
-        // HIGH-20: When _externalIp is null, getter must not return null or empty.
+        // When _externalIp is null, getter must not return null or empty.
         // We can verify by checking the source — the fallback is "0.0.0.0".
-        string sourceFile = FindSourceFile("src/NoMercy.Networking/Networking.cs");
+        string sourceFile = FindSourceFile("src/NoMercy.Networking/Discovery/NetworkDiscovery.cs");
         string source = File.ReadAllText(sourceFile);
 
         string[] lines = source.Split('\n');

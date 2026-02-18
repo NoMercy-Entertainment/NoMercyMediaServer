@@ -1,5 +1,6 @@
 using NoMercy.Encoder.Core;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.Queue;
 using Serilog.Events;
@@ -10,6 +11,8 @@ namespace NoMercy.Setup;
 
 public class Start
 {
+    public static INetworkDiscovery? NetworkDiscovery { get; set; }
+
     public static bool IsDegradedMode { get; internal set; }
 
     private static List<StartupTask> _allTasks = [];
@@ -71,8 +74,11 @@ public class Start
                 CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
 
             // ── PHASE 3: NETWORK-DEPENDENT (run if possible, degrade if not) ──
-            new("Networking", Networking.Networking.Discover,
-                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
+            new("Networking", async () =>
+            {
+                if (NetworkDiscovery is not null)
+                    await NetworkDiscovery.DiscoverExternalIpAsync();
+            }, CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
 
             new("ChromeCast", ChromeCast.Init,
                 CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),

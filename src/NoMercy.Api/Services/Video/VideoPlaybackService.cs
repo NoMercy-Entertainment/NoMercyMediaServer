@@ -6,6 +6,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Playback;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
@@ -15,14 +16,16 @@ public class VideoPlaybackService
 {
     private readonly VideoPlayerStateManager _stateManager;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IClientMessenger _clientMessenger;
     private readonly IEventBus? _eventBus;
     private static int _playerStateEventId;
     private static int PlayerStateEventId => ++_playerStateEventId;
 
-    public VideoPlaybackService(VideoPlayerStateManager stateManager, IServiceScopeFactory scopeFactory, IEventBus? eventBus = null)
+    public VideoPlaybackService(VideoPlayerStateManager stateManager, IServiceScopeFactory scopeFactory, IClientMessenger clientMessenger, IEventBus? eventBus = null)
     {
         _stateManager = stateManager;
         _scopeFactory = scopeFactory;
+        _clientMessenger = clientMessenger;
         _eventBus = eventBus;
     }
 
@@ -120,7 +123,7 @@ public class VideoPlaybackService
             ]
         };
 
-        await Networking.Networking.SendTo("VideoPlayerState", "videoHub", user.Id, payload);
+        await _clientMessenger.SendTo("VideoPlayerState", "videoHub", user.Id, payload);
     }
 
     private void UpdateState(VideoPlayerState state, int currentIndex)

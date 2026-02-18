@@ -10,6 +10,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using Newtonsoft.Json;
+using NoMercy.Networking.Discovery;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Queue;
 using NoMercy.NmSystem;
@@ -31,7 +32,8 @@ public class ManagementController(
     QueueRunner queueRunner,
     IPluginManager pluginManager,
     AppProcessManager appProcessManager,
-    SetupState setupState) : ControllerBase
+    SetupState setupState,
+    INetworkDiscovery networkDiscovery) : ControllerBase
 {
     [HttpGet("status")]
     [ProducesResponseType(typeof(ManagementStatusDto), StatusCodes.Status200OK)]
@@ -56,8 +58,8 @@ public class ManagementController(
             UpdateAvailable = Config.UpdateAvailable,
             LatestVersion = Config.LatestVersion,
             SetupPhase = setupState.CurrentPhase.ToString(),
-            InternalAddress = Networking.Networking.InternalAddress,
-            ExternalAddress = Networking.Networking.ExternalAddress,
+            InternalAddress = networkDiscovery.InternalAddress,
+            ExternalAddress = networkDiscovery.ExternalAddress,
             AppStatus = new AppProcessStatusDto
             {
                 Running = appProcessManager.IsRunning,

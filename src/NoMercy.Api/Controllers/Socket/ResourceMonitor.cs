@@ -1,4 +1,5 @@
 using NoMercy.Helpers.Monitoring;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -8,10 +9,12 @@ public static class ResourceMonitor
 {
     private static bool _broadcasting;
     private static CancellationTokenSource? _cancellationTokenSource;
+    private static IClientMessenger? _clientMessenger;
 
-    public static void StartBroadcasting()
+    public static void StartBroadcasting(IClientMessenger clientMessenger)
     {
         if (_broadcasting) return;
+        _clientMessenger = clientMessenger;
         Logger.Socket("Starting resource monitoring broadcast");
         _broadcasting = true;
         _cancellationTokenSource = new();
@@ -34,7 +37,7 @@ public static class ResourceMonitor
             try
             {
                 Resource resourceData = Helpers.Monitoring.ResourceMonitor.Monitor();
-                Networking.Networking.SendToAll("ResourceUpdate", "dashboardHub", resourceData);
+                _clientMessenger?.SendToAll("ResourceUpdate", "dashboardHub", resourceData);
 
                 // at least one second between broadcasts
                 int delay = 1000 - (int)(DateTime.Now - time).TotalMilliseconds;

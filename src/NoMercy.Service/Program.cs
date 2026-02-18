@@ -221,7 +221,9 @@ public static class Program
             {
                 Task.Delay(300).Wait();
 
-                Logger.App($"Internal Address: {Networking.Networking.InternalAddress}");
+                NoMercy.Networking.Discovery.INetworkDiscovery? networkDiscovery = app.Services.GetService<NoMercy.Networking.Discovery.INetworkDiscovery>();
+                if (networkDiscovery is not null)
+                    Logger.App($"Internal Address: {networkDiscovery.InternalAddress}");
 
                 if (!IsRunningAsService && !Console.IsOutputRedirected)
                     await ConsoleMessages.ServerRunning();
@@ -234,15 +236,17 @@ public static class Program
                 {
                     try
                     {
+                        string internalIp = networkDiscovery?.InternalIp ?? "127.0.0.1";
                         // Use HTTP with actual IP address since no certificate exists yet
-                        string setupUrl = $"http://{Networking.Networking.InternalIp}:{Config.InternalServerPort}/setup";
+                        string setupUrl = $"http://{internalIp}:{Config.InternalServerPort}/setup";
                         Logger.App($"Opening setup page in browser: {setupUrl}");
                         Auth.OpenBrowser(setupUrl);
                     }
                     catch (Exception ex)
                     {
                         Logger.App($"Could not open browser automatically: {ex.Message}");
-                        Logger.App($"Please open your browser and navigate to: http://{Networking.Networking.InternalIp}:{Config.InternalServerPort}/setup");
+                        string internalIp2 = networkDiscovery?.InternalIp ?? "127.0.0.1";
+                        Logger.App($"Please open your browser and navigate to: http://{internalIp2}:{Config.InternalServerPort}/setup");
                     }
                 }
 
@@ -718,11 +722,12 @@ public static class Program
         {
             Certificate.KestrelConfig(kestrelOptions);
 
-            // Main server endpoints — HTTPS when certificate is available
+            // Main server endpoints — HTTPS when certificate is available, with HTTP/3 (QUIC) support
             foreach (IPAddress address in localAddresses)
             {
                 kestrelOptions.Listen(address, Config.InternalServerPort, listenOptions =>
                 {
+                    listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
                     Certificate.ConfigureHttpsListener(listenOptions);
                 });
             }

@@ -6,6 +6,7 @@ using NoMercy.Database.Models.Users;
 using Serilog.Events;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -16,6 +17,8 @@ namespace NoMercy.Setup;
 
 public static class Register
 {
+    public static INetworkDiscovery? Discovery { get; set; }
+
     private static string GetDeviceName()
     {
         try
@@ -41,11 +44,16 @@ public static class Register
         {
             { "id", Info.DeviceId.ToString() },
             { "name", GetDeviceName() },
-            { "internal_ip", Networking.Networking.InternalIp },
+            { "internal_ip", Discovery?.InternalIp ?? "0.0.0.0" },
+            { "internal_ipv6", Discovery?.InternalIpV6 ?? "" },
+            { "external_ipv6", Discovery?.ExternalIpV6 ?? "" },
             { "internal_port", Config.InternalServerPort.ToString() },
             { "external_port", Config.ExternalServerPort.ToString() },
             { "version", Software.Version!.ToString() },
-            { "platform", Info.Platform }
+            { "platform", Info.Platform },
+            { "stun_public_ip", Config.StunPublicIp ?? "" },
+            { "stun_public_port", Config.StunPublicPort?.ToString() ?? "" },
+            { "stun_nat_type", Config.NatStatus.ToString() }
         };
 
         return serverData;

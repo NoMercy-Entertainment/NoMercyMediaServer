@@ -30,6 +30,10 @@ public static class Config
 
     public static NatStatus NatStatus { get; set; } = NatStatus.None;
     public static bool PortForwarded { get; set; }
+
+    public static string? StunPublicIp { get; set; }
+    public static int? StunPublicPort { get; set; }
+    public static int StunPort => InternalServerPort + 1;
     
     private static int? _internalServerPort = null;
 

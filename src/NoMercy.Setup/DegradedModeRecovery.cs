@@ -1,4 +1,5 @@
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -75,7 +76,8 @@ public static class DegradedModeRecovery
             {
                 try
                 {
-                    await Networking.Networking.Discover();
+                    if (Start.NetworkDiscovery is not null)
+                        await Start.NetworkDiscovery.DiscoverExternalIpAsync();
                     tasks.NetworkDiscovered = true;
                 }
                 catch (Exception e)

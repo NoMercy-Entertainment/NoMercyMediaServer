@@ -1,15 +1,18 @@
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.EventHandlers;
 
 public class SignalREncodingEventHandler : IDisposable
 {
+    private readonly IClientMessenger _clientMessenger;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public SignalREncodingEventHandler(IEventBus eventBus)
+    public SignalREncodingEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
+        _clientMessenger = clientMessenger;
         _subscriptions.Add(eventBus.Subscribe<EncodingStartedEvent>(OnEncodingStarted));
         _subscriptions.Add(eventBus.Subscribe<EncodingProgressEvent>(OnEncodingProgress));
         _subscriptions.Add(eventBus.Subscribe<EncodingCompletedEvent>(OnEncodingCompleted));
@@ -20,7 +23,7 @@ public class SignalREncodingEventHandler : IDisposable
 
     internal Task OnEncodingStarted(EncodingStartedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("EncodingStarted", "dashboardHub", new
+        _clientMessenger.SendToAll("EncodingStarted", "dashboardHub", new
         {
             @event.JobId,
             @event.InputPath,
@@ -35,7 +38,7 @@ public class SignalREncodingEventHandler : IDisposable
 
     internal Task OnEncodingProgress(EncodingProgressEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("EncodingProgress", "dashboardHub", new
+        _clientMessenger.SendToAll("EncodingProgress", "dashboardHub", new
         {
             @event.JobId,
             @event.Percentage,
@@ -48,7 +51,7 @@ public class SignalREncodingEventHandler : IDisposable
 
     internal Task OnEncodingCompleted(EncodingCompletedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("EncodingCompleted", "dashboardHub", new
+        _clientMessenger.SendToAll("EncodingCompleted", "dashboardHub", new
         {
             @event.JobId,
             @event.OutputPath,
@@ -62,7 +65,7 @@ public class SignalREncodingEventHandler : IDisposable
 
     internal Task OnEncodingFailed(EncodingFailedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("EncodingFailed", "dashboardHub", new
+        _clientMessenger.SendToAll("EncodingFailed", "dashboardHub", new
         {
             @event.JobId,
             @event.InputPath,
@@ -77,7 +80,7 @@ public class SignalREncodingEventHandler : IDisposable
 
     internal Task OnEncodingStageChanged(EncodingStageChangedEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new
+        _clientMessenger.SendToAll("encoder-progress", "dashboardHub", new
         {
             id = @event.JobId,
             status = @event.Status,
@@ -97,7 +100,7 @@ public class SignalREncodingEventHandler : IDisposable
 
     internal Task OnEncoderProgressBroadcast(EncoderProgressBroadcastEvent @event, CancellationToken ct)
     {
-        Networking.Networking.SendToAll("encoder-progress", "dashboardHub", @event.ProgressData);
+        _clientMessenger.SendToAll("encoder-progress", "dashboardHub", @event.ProgressData);
         return Task.CompletedTask;
     }
 

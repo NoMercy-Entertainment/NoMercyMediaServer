@@ -9,6 +9,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -18,6 +19,7 @@ namespace NoMercy.Api.Hubs;
 public class VideoHub : ConnectionHub
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IClientMessenger _clientMessenger;
     private readonly VideoPlaybackService _videoPlaybackService;
     private readonly VideoPlayerStateManager _videoPlayerStateManager;
     private readonly VideoDeviceManager _videoDeviceManager;
@@ -29,14 +31,17 @@ public class VideoHub : ConnectionHub
     public VideoHub(
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<MediaContext> contextFactory,
+        ConnectedClients connectedClients,
+        IClientMessenger clientMessenger,
         VideoPlaybackService videoPlaybackService,
         VideoPlayerStateManager videoPlayerStateManager,
         VideoDeviceManager videoDeviceManager,
         VideoPlaylistManager videoPlaylistManager,
         VideoPlaybackCommandHandler commandHandler)
-        : base(httpContextAccessor, contextFactory)
+        : base(httpContextAccessor, contextFactory, connectedClients)
     {
         _httpContextAccessor = httpContextAccessor;
+        _clientMessenger = clientMessenger;
         _contextFactory = contextFactory;
         _videoPlaybackService = videoPlaybackService;
         _videoPlayerStateManager = videoPlayerStateManager;
@@ -186,7 +191,7 @@ public class VideoHub : ConnectionHub
         if (CurrentDevice.TryGetValue(user.Id, out Device? device))
             return device;
 
-        device = Networking.Networking.SocketClients
+        device = ConnectedClients.Clients
             .FirstOrDefault(d => d.Key == Context.ConnectionId).Value;
         CurrentDevice[user.Id] = device;
 
@@ -232,7 +237,7 @@ public class VideoHub : ConnectionHub
 
     private void UpdateDeviceInfo(VideoPlayerState state)
     {
-        if (!Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? device)) return;
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device)) return;
         state.DeviceId = device.DeviceId;
         state.VolumePercentage = device.VolumePercent;
     }
@@ -283,8 +288,8 @@ public class VideoHub : ConnectionHub
             return;
         }
 
-        Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? device);
-        
+        ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device);
+
         await _commandHandler.HandleCommand(user, command, data, state, device);
 
         if (state.DeviceId == null)
@@ -304,7 +309,7 @@ public class VideoHub : ConnectionHub
 
         List<Device> connectedDevices = Devices();
 
-        await Networking.Networking.SendTo("ConnectedDevicesState", "videoHub", user.Id, connectedDevices);
+        await _clientMessenger.SendTo("ConnectedDevicesState", "videoHub", user.Id, connectedDevices);
 
         if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
         {
@@ -332,7 +337,7 @@ public class VideoHub : ConnectionHub
             ]
         };
 
-        await Networking.Networking.SendTo("ChangeDevice", "videoHub", user.Id, payload);
+        await _clientMessenger.SendTo("ChangeDevice", "videoHub", user.Id, payload);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -342,7 +347,7 @@ public class VideoHub : ConnectionHub
 
         bool stopPlayback = false;
 
-        if (Networking.Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
+        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
             if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? state))
                 if (state.DeviceId == client.DeviceId)
                 {

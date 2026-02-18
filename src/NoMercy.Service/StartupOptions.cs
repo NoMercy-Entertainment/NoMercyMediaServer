@@ -12,6 +12,9 @@ namespace NoMercy.Service;
 
 public class StartupOptions
 {
+    public static string? OverrideInternalIp { get; private set; }
+    public static string? OverrideExternalIp { get; private set; }
+
     // dev
     [Option('d', "dev", Required = false, HelpText = "Run the server in development mode.")]
     public bool Development { get; set; }
@@ -140,14 +143,14 @@ public class StartupOptions
         if (!string.IsNullOrEmpty(InternalIp))
         {
             Logger.App("Setting internal ip to " + InternalIp);
-            Networking.Networking.InternalIp = InternalIp;
+            OverrideInternalIp = InternalIp;
             options.Add("internalIp", InternalIp);
         }
 
         if (!string.IsNullOrEmpty(ExternalIp))
         {
             Logger.App("Setting external ip to " + ExternalIp);
-            Networking.Networking.ExternalIp = ExternalIp;
+            OverrideExternalIp = ExternalIp;
             options.Add("externalIp", ExternalIp);
         }
 

@@ -18,6 +18,7 @@ using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.Events;
 using NoMercy.Events.Library;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -48,7 +49,8 @@ public class ServerController(
     JobDispatcher jobDispatcher,
     QueueRunner queueRunner,
     IEventBus eventBus,
-    IWallpaperService wallpaperService) : BaseController
+    IWallpaperService wallpaperService,
+    INetworkDiscovery networkDiscovery) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -602,7 +604,7 @@ public class ServerController(
 
         Logger.App($"Changing IP address to {request.Ip}");
 
-        Networking.Networking.InternalIp = request.Ip;
+        networkDiscovery.InternalIp = request.Ip;
 
         return Ok(new StatusResponseDto<string>
         {

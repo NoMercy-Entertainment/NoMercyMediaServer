@@ -2,15 +2,19 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Networking;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.Socket;
 
 public class DashboardHub : ConnectionHub
 {
-    public DashboardHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory)
-        : base(httpContextAccessor, contextFactory)
+    private readonly IClientMessenger _clientMessenger;
+
+    public DashboardHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory, ConnectedClients connectedClients, IClientMessenger clientMessenger)
+        : base(httpContextAccessor, contextFactory, connectedClients)
     {
+        _clientMessenger = clientMessenger;
     }
 
     public override async Task OnConnectedAsync()
@@ -29,12 +33,12 @@ public class DashboardHub : ConnectionHub
 
     public void StartResources()
     {
-        ResourceMonitor.StartBroadcasting();
+        ResourceMonitor.StartBroadcasting(_clientMessenger);
     }
 
     public void StopResources()
     {
-        if (Networking.Networking.SocketClients.Values.All(x => x.Endpoint != "/dashboardHub"))
+        if (ConnectedClients.Clients.Values.All(x => x.Endpoint != "/dashboardHub"))
             ResourceMonitor.StopBroadcasting();
     }
 }
