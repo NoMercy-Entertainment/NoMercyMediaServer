@@ -14,6 +14,13 @@ public record GenreDto
 
     public Uri Link { get; set; }
 
+    public GenreDto()
+    {
+        Id = 0;
+        Name = string.Empty;
+        Link = new("/genre/0", UriKind.Relative);
+    }
+
     public GenreDto(GenreMovie genreMovie)
     {
         Id = genreMovie.GenreId;

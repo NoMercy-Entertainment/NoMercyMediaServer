@@ -41,34 +41,19 @@ public class AlbumsController : BaseController
     [Route("/api/v{version:apiVersion}/music/albums/{letter}")]
     public async Task<IActionResult> Index(string letter)
     {
-        List<AlbumsResponseItemDto> albums = [];
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view albums");
 
         string language = Language();
 
-        foreach (Album album in _musicRepository.GetAlbums(userId, letter))
-        {
-            albums.Add(new(album, language));
-        }
+        List<AlbumCardDto> albumCards = await _musicRepository.GetAlbumCardsAsync(userId, letter, language);
 
-        List<AlbumTrack> tracks = await _musicRepository.GetAlbumTracksForIdsAsync(
-            albums.Select(a => a.Id).ToList());
-
-        if (tracks.Count == 0)
+        if (albumCards.Count == 0)
             return NotFoundResponse("Albums not found");
 
-        foreach (AlbumsResponseItemDto album in albums)
-        {
-            album.Tracks = tracks.Count(track => track.AlbumId == album.Id);
-        }
-        
         ComponentEnvelope response = Component.Grid()
-            .WithItems(albums
-                .Where(response => response.Tracks > 0)
-                .OrderBy(album => album.Name)
-                .Select(Component.MusicCard));
+            .WithItems(albumCards.Select(a => Component.MusicCard(new AlbumsResponseItemDto(a))));
 
         return Ok(ComponentResponse.From(response));
     }

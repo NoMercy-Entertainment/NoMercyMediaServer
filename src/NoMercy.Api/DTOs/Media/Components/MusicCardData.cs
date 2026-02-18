@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
@@ -98,6 +99,59 @@ public record MusicCardData
         Link = carousel.Link.ToString();
         Tracks = carousel.Tracks;
         ColorPalette = carousel.ColorPalette;
+    }
+
+    public MusicCardData(ArtistCardDto artist)
+    {
+        Id = artist.Id.ToString();
+        Name = artist.Name;
+        Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
+        Type = "artist";
+        Link = $"/music/artist/{artist.Id}";
+        ColorPalette = !string.IsNullOrEmpty(artist.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(artist.ColorPalette)
+            : null;
+        Disambiguation = artist.Disambiguation;
+        Description = artist.Description;
+        Tracks = artist.TrackCount;
+        LibraryId = artist.LibraryId?.ToString();
+    }
+
+    public MusicCardData(AlbumCardDto album)
+    {
+        Id = album.Id.ToString();
+        Name = album.Name;
+        Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
+        Type = "album";
+        Link = $"/music/album/{album.Id}";
+        ColorPalette = !string.IsNullOrEmpty(album.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(album.ColorPalette)
+            : null;
+        Year = album.Year;
+        Tracks = album.TrackCount;
+        LibraryId = album.LibraryId.ToString();
+    }
+
+    public MusicCardData(PlaylistCardDto playlist)
+    {
+        Id = playlist.Id.ToString();
+        Name = playlist.Name;
+        Cover = playlist.Cover is not null ? $"/images/music{playlist.Cover}" : null;
+        Type = "playlist";
+        Link = $"/music/playlist/{playlist.Id}";
+        ColorPalette = !string.IsNullOrEmpty(playlist.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(playlist.ColorPalette)
+            : null;
+        Tracks = playlist.TrackCount;
+    }
+
+    public MusicCardData(MusicGenreCardDto genre)
+    {
+        Id = genre.Id.ToString();
+        Name = genre.Name.ToTitleCase();
+        Type = "genre";
+        Link = $"/music/genres/{genre.Id}";
+        Tracks = genre.TrackCount;
     }
 }
 

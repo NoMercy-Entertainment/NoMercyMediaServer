@@ -17,6 +17,10 @@ public record ImageDto
     [JsonProperty("voteCount")] public long VoteCount { get; set; }
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
 
+    public ImageDto()
+    {
+    }
+
     public ImageDto(Image media)
     {
         Id = media.Id;

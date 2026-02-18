@@ -143,4 +143,68 @@ public record CarouselResponseItemDto
 
         Tracks = genre.MusicGenreTracks.Count;
     }
+
+    public CarouselResponseItemDto(ArtistCardDto artist)
+    {
+        ColorPalette = !string.IsNullOrEmpty(artist.ColorPalette)
+            ? Newtonsoft.Json.JsonConvert.DeserializeObject<IColorPalettes>(artist.ColorPalette)
+            : null;
+        Cover = artist.Cover ?? artist.ThumbImagePath;
+        Cover = Cover is not null
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            : null;
+        Disambiguation = artist.Disambiguation;
+        Description = artist.Description;
+        Folder = artist.Folder ?? "";
+        Id = artist.Id.ToString();
+        LibraryId = artist.LibraryId;
+        Name = artist.Name;
+        Type = "artist";
+        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Tracks = artist.TrackCount;
+    }
+
+    public CarouselResponseItemDto(AlbumCardDto album)
+    {
+        ColorPalette = !string.IsNullOrEmpty(album.ColorPalette)
+            ? Newtonsoft.Json.JsonConvert.DeserializeObject<IColorPalettes>(album.ColorPalette)
+            : null;
+        Cover = album.Cover is not null
+            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
+            : null;
+        Disambiguation = album.Disambiguation;
+        Description = album.Description;
+        Folder = album.Folder ?? "";
+        Id = album.Id.ToString();
+        LibraryId = album.LibraryId;
+        Name = album.Name;
+        Type = "album";
+        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Tracks = album.TrackCount;
+    }
+
+    public CarouselResponseItemDto(PlaylistCardDto playlist)
+    {
+        ColorPalette = !string.IsNullOrEmpty(playlist.ColorPalette)
+            ? Newtonsoft.Json.JsonConvert.DeserializeObject<IColorPalettes>(playlist.ColorPalette)
+            : null;
+        Cover = playlist.Cover is not null
+            ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString()
+            : null;
+        Description = playlist.Description;
+        Id = playlist.Id.ToString();
+        Name = playlist.Name;
+        Type = "playlist";
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
+        Tracks = playlist.TrackCount;
+    }
+
+    public CarouselResponseItemDto(MusicGenreCardDto genre)
+    {
+        Id = genre.Id.ToString();
+        Name = genre.Name.ToTitleCase();
+        Type = "genre";
+        Link = new($"/music/genres/{Id}", UriKind.Relative);
+        Tracks = genre.TrackCount;
+    }
 }

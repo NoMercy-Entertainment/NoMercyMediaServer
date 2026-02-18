@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 
@@ -85,14 +86,14 @@ public record TopResultCardData
             Disc = track.DiscNumber,
             Track = track.TrackNumber,
             Quality = track.Quality,
-            Artists = track.ArtistTrack.Select(at => new TopResultArtist 
+            Artists = track.ArtistTrack.Select(at => new TopResultArtist
             {
                 Id = at.ArtistId.ToString(),
                 Name = at.Artist.Name,
                 Link = new($"/music/artist/{at.ArtistId}", UriKind.Relative),
                 Type = "artist"
             }),
-            Albums = track.AlbumTrack.Select(at => new TopResultAlbum 
+            Albums = track.AlbumTrack.Select(at => new TopResultAlbum
             {
                 Id = at.AlbumId.ToString(),
                 Name = at.Album.Name,
@@ -100,6 +101,84 @@ public record TopResultCardData
                 Type = "album"
             })
         };
+    }
+
+    public TopResultCardData(SearchTrackCardDto track)
+    {
+        Id = track.Id.ToString();
+        Title = track.Name;
+        Type = "track";
+        Link = $"/music/tracks/{track.Id}";
+        string? cover = track.AlbumCover ?? track.ArtistCover;
+        Cover = cover is not null ? $"/images/music{cover}" : null;
+        string? colorPaletteStr = track.AlbumColorPalette ?? track.ArtistColorPalette;
+        ColorPalette = !string.IsNullOrEmpty(colorPaletteStr)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(colorPaletteStr)
+            : null;
+        Artists = track.Artists.Select(at => new TopResultArtist
+        {
+            Id = at.Id.ToString(),
+            Name = at.Name,
+            Link = new($"/music/artist/{at.Id}", UriKind.Relative),
+            Type = "artist"
+        });
+        Albums = track.Albums.Select(at => new TopResultAlbum
+        {
+            Id = at.Id.ToString(),
+            Name = at.Name,
+            Link = new($"/music/album/{at.Id}", UriKind.Relative),
+            Type = "album"
+        });
+        Track = new()
+        {
+            Id = track.Id.ToString(),
+            Name = track.Name,
+            Duration = track.Duration,
+            Path = $"/{track.FolderId}{track.Folder}{track.Filename}",
+            Link = new($"/music/tracks/{track.Id}", UriKind.Relative),
+            Type = "track",
+            Disc = track.DiscNumber,
+            Track = track.TrackNumber,
+            Quality = track.Quality,
+            Artists = track.Artists.Select(at => new TopResultArtist
+            {
+                Id = at.Id.ToString(),
+                Name = at.Name,
+                Link = new($"/music/artist/{at.Id}", UriKind.Relative),
+                Type = "artist"
+            }),
+            Albums = track.Albums.Select(at => new TopResultAlbum
+            {
+                Id = at.Id.ToString(),
+                Name = at.Name,
+                Link = new($"/music/album/{at.Id}", UriKind.Relative),
+                Type = "album"
+            })
+        };
+    }
+
+    public TopResultCardData(ArtistCardDto artist)
+    {
+        Id = artist.Id.ToString();
+        Title = artist.Name;
+        Type = "artist";
+        Link = $"/music/artist/{artist.Id}";
+        Cover = artist.Cover is not null ? $"/images/music{artist.Cover}" : null;
+        ColorPalette = !string.IsNullOrEmpty(artist.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(artist.ColorPalette)
+            : null;
+    }
+
+    public TopResultCardData(AlbumCardDto album)
+    {
+        Id = album.Id.ToString();
+        Title = album.Name;
+        Type = "album";
+        Link = $"/music/album/{album.Id}";
+        Cover = album.Cover is not null ? $"/images/music{album.Cover}" : null;
+        ColorPalette = !string.IsNullOrEmpty(album.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(album.ColorPalette)
+            : null;
     }
 }
 

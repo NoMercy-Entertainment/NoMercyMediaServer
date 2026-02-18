@@ -3,16 +3,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
-using NoMercy.Database.Models.Music;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
-using CarouselResponseItemDto = NoMercy.Data.Repositories.CarouselResponseItemDto;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -24,12 +20,10 @@ namespace NoMercy.Api.Controllers.V1.Music;
 public class MusicController : BaseController
 {
     private readonly MusicRepository _musicRepository;
-    private readonly MediaContext _mediaContext;
 
-    public MusicController(MusicRepository musicService, MediaContext mediaContext)
+    public MusicController(MusicRepository musicService)
     {
         _musicRepository = musicService;
-        _mediaContext = mediaContext;
     }
 
     [HttpGet]
@@ -41,113 +35,79 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        // Run queries sequentially - DbContext is not thread-safe so parallel execution causes errors
-        TopMusicDto? favoriteArtist = (await _musicRepository.GetFavoriteArtistAsync(userId))
-            .Select(artistTrack => new TopMusicDto(artistTrack))
-            .GroupBy(a => a.Name)
-            .MaxBy(g => g.Count())?
-            .FirstOrDefault();
-
-        TopMusicDto? favoriteAlbum = (await _musicRepository.GetFavoriteAlbumAsync(userId))
-            .Select(albumTrack => new TopMusicDto(albumTrack))
-            .GroupBy(a => a.Name)
-            .MaxBy(g => g.Count())?
-            .FirstOrDefault();
-
-        TopMusicDto? favoritePlaylist = (await _musicRepository.GetFavoritePlaylistAsync(userId))
-            .Select(musicPlay => new TopMusicDto(musicPlay))
-            .GroupBy(a => a.Name)
-            .MaxBy(g => g.Count())?
-            .FirstOrDefault();
-
-        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtists(userId)
-            .Select(artistUser => new CarouselResponseItemDto(artistUser))
-            .Take(36)
-            .ToListAsync();
-
-        List<CarouselResponseItemDto> favoriteAlbums = await _musicRepository.GetFavoriteAlbums(userId)
-            .Select(artistUser => new CarouselResponseItemDto(artistUser))
-            .Take(36)
-            .ToListAsync();
-
-        List<CarouselResponseItemDto> playlists = await _musicRepository.GetCarouselPlaylistsAsync(userId);
-
-        List<CarouselResponseItemDto> latestArtists = await _musicRepository.GetLatestArtists()
-            .Select(artist => new CarouselResponseItemDto(artist))
-            .Take(36)
-            .ToListAsync();
-
-        List<CarouselResponseItemDto> latestGenres = await _musicRepository.GetLatestGenres()
-            .Select(genre => new CarouselResponseItemDto(genre))
-            .Take(36)
-            .ToListAsync();
-
-        List<CarouselResponseItemDto> latestAlbums = await _musicRepository.GetLatestAlbums()
-            .Select(artist => new CarouselResponseItemDto(artist))
-            .Take(36)
-            .ToListAsync();
+        // Run 3 groups of 3 queries in parallel using separate DbContext instances
+        MusicStartPageData data = await _musicRepository.GetMusicStartPageAsync(userId);
 
         List<ComponentEnvelope> items = [];
         List<ComponentEnvelope> items2 = [];
 
         // Add favorite home cards
-        if (favoriteArtist is not null && request.Version != "lolomo")
+        if (data.TopArtist is not null && request.Version != "lolomo")
+        {
+            TopMusicDto favoriteArtist = new(data.TopArtist);
             items2.Add(Component.MusicHomeCard(new(favoriteArtist))
                 .WithId("favorite-artist")
                 .WithTitle("Most listened artist".Localize()));
+        }
 
-        if (favoriteAlbum is not null && request.Version != "lolomo")
+        if (data.TopAlbum is not null && request.Version != "lolomo")
+        {
+            TopMusicDto favoriteAlbum = new(data.TopAlbum);
             items2.Add(Component.MusicHomeCard(new(favoriteAlbum))
                 .WithId("favorite-album")
                 .WithTitle("Most listened album".Localize()));
+        }
 
-        if (favoritePlaylist is not null && request.Version != "lolomo")
+        if (data.TopPlaylist is not null && request.Version != "lolomo")
+        {
+            TopMusicDto favoritePlaylist = new(data.TopPlaylist);
             items2.Add(Component.MusicHomeCard(new(favoritePlaylist))
                 .WithId("favorite-playlist")
                 .WithTitle("Most listened playlist".Localize()));
-        
+        }
+
         items.Add(Component.Container().WithItems(items2));
-        
+
         // Add carousels
         items.Add(Component.Carousel()
             .WithId("favorite-artists")
             .WithTitle("Favorite Artists".Localize())
             .WithNavigation("", "favorite-albums")
-            .WithItems(favoriteArtists.Select(item => Component.MusicCard(new MusicCardData(item)))));
+            .WithItems(data.FavoriteArtists.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         items.Add(Component.Carousel()
             .WithId("favorite-albums")
             .WithTitle("Favorite Albums".Localize())
             .WithNavigation("favorite-artists", "playlists")
-            .WithItems(favoriteAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))));
+            .WithItems(data.FavoriteAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         items.Add(Component.Carousel()
             .WithId("playlists")
             .WithTitle("Playlists".Localize())
             .WithMoreLink("/music/playlists")
             .WithNavigation("favorite-albums", "artists")
-            .WithItems(playlists.Select(item => Component.MusicCard(new MusicCardData(item)))));
+            .WithItems(data.Playlists.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         items.Add(Component.Carousel()
             .WithId("artists")
             .WithTitle("Artists".Localize())
             .WithMoreLink("/music/artists/_")
             .WithNavigation("playlists", "albums")
-            .WithItems(latestArtists.Select(item => Component.MusicCard(new MusicCardData(item)))));
+            .WithItems(data.LatestArtists.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         items.Add(Component.Carousel()
             .WithId("albums")
             .WithTitle("Albums".Localize())
             .WithMoreLink("/music/albums/_")
             .WithNavigation("artists", "genres")
-            .WithItems(latestAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))));
+            .WithItems(data.LatestAlbums.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         items.Add(Component.Carousel()
             .WithId("genres")
             .WithTitle("Genres".Localize())
             .WithMoreLink("/music/genres/letter/_")
             .WithNavigation("albums")
-            .WithItems(latestGenres.Select(item => Component.MusicCard(new MusicCardData(item)))));
+            .WithItems(data.LatestGenres.Select(item => Component.MusicCard(new MusicCardData(item)))));
 
         return Ok(ComponentResponse.From(items));
     }
@@ -160,33 +120,19 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        TopMusicDto? favoriteArtist = (await _musicRepository.GetFavoriteArtistAsync(userId))
-            .Select(artistTrack => new TopMusicDto(artistTrack))
-            .GroupBy(a => a.Name)
-            .MaxBy(g => g.Count())?
-            .FirstOrDefault();
-
-        TopMusicDto? favoriteAlbum = (await _musicRepository.GetFavoriteAlbumAsync(userId))
-            .Select(albumTrack => new TopMusicDto(albumTrack))
-            .GroupBy(a => a.Name)
-            .MaxBy(g => g.Count())?
-            .FirstOrDefault();
-
-        TopMusicDto? favoritePlaylist = (await _musicRepository.GetFavoritePlaylistAsync(userId))
-            .Select(musicPlay => new TopMusicDto(musicPlay))
-            .GroupBy(a => a.Name)
-            .MaxBy(g => g.Count())?
-            .FirstOrDefault();
+        TopMusicItemDto? topArtist = await _musicRepository.GetTopArtistAsync(userId);
+        TopMusicItemDto? topAlbum = await _musicRepository.GetTopAlbumAsync(userId);
+        TopMusicItemDto? topPlaylist = await _musicRepository.GetTopPlaylistAsync(userId);
 
         List<ComponentEnvelope> favoriteItems = [];
-        if (favoriteArtist is not null)
-            favoriteItems.Add(Component.MusicHomeCard(new(favoriteArtist))
+        if (topArtist is not null)
+            favoriteItems.Add(Component.MusicHomeCard(new(new TopMusicDto(topArtist)))
                 .WithTitle("Most listened artist".Localize()));
-        if (favoriteAlbum is not null)
-            favoriteItems.Add(Component.MusicHomeCard(new(favoriteAlbum))
+        if (topAlbum is not null)
+            favoriteItems.Add(Component.MusicHomeCard(new(new TopMusicDto(topAlbum)))
                 .WithTitle("Most listened album".Localize()));
-        if (favoritePlaylist is not null)
-            favoriteItems.Add(Component.MusicHomeCard(new(favoritePlaylist))
+        if (topPlaylist is not null)
+            favoriteItems.Add(Component.MusicHomeCard(new(new TopMusicDto(topPlaylist)))
                 .WithTitle("Most listened playlist".Localize()));
 
         return Ok(ComponentResponse.From(
@@ -205,10 +151,7 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        List<CarouselResponseItemDto> favoriteArtists = await _musicRepository.GetFavoriteArtists(userId)
-            .Select(artistUser => new CarouselResponseItemDto(artistUser))
-            .Take(36)
-            .ToListAsync();
+        List<ArtistCardDto> favoriteArtists = await _musicRepository.GetFavoriteArtistCardsAsync(userId);
 
         return Ok(ComponentResponse.From(
             Component.Carousel()
@@ -228,10 +171,7 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        List<CarouselResponseItemDto> favoriteAlbums = await _musicRepository.GetFavoriteAlbums(userId)
-            .Select(artistUser => new CarouselResponseItemDto(artistUser))
-            .Take(36)
-            .ToListAsync();
+        List<AlbumCardDto> favoriteAlbums = await _musicRepository.GetFavoriteAlbumCardsAsync(userId);
 
         return Ok(ComponentResponse.From(
             Component.Carousel()
@@ -251,8 +191,8 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view music");
 
-        List<CarouselResponseItemDto> playlists = await _musicRepository.GetCarouselPlaylistsAsync(userId);
-        
+        List<PlaylistCardDto> playlists = await _musicRepository.GetPlaylistCardsAsync(userId);
+
         return Ok(ComponentResponse.From(
             Component.Carousel()
                 .WithId("playlists")
@@ -279,82 +219,51 @@ public class MusicController : BaseController
             return UnauthorizedResponse("You do not have permission to search music");
 
         string country = Country();
-
         string normalizedQuery = request.Query.NormalizeSearch();
 
-        // Step 1: Get IDs using MusicRepository search methods
+        // Step 1: Get IDs using search methods
         List<Guid> artistIds = await _musicRepository.SearchArtistIdsAsync(normalizedQuery);
         List<Guid> albumIds = await _musicRepository.SearchAlbumIdsAsync(normalizedQuery);
         List<Guid> playlistIds = await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery);
         List<Guid> trackIds = await _musicRepository.SearchTrackIdsAsync(normalizedQuery);
-        // Step 2: Query full data using the IDs
-        List<Artist> artists = _mediaContext.Artists
-            .Where(artist => artistIds.Contains(artist.Id))
-            .Include(artist => artist.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Track)
-            .Include(artist => artist.AlbumArtist)
-            .ThenInclude(albumArtist => albumArtist.Album)
-            .ToList();
 
-        List<Album> albums = _mediaContext.Albums
-            .Where(album => albumIds.Contains(album.Id))
-            .Include(album => album.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Track)
-            .ThenInclude(track => track.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(album => album.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Track)
-            .ThenInclude(song => song.TrackUser)
-            .ToList();
+        // Step 2: Cross-reference to find additional artists/albums
+        List<Guid> additionalArtistIds = [];
+        if (albumIds.Count > 0)
+            additionalArtistIds.AddRange(await _musicRepository.GetArtistIdsFromAlbumsAsync(albumIds));
+        if (playlistIds.Count > 0)
+            additionalArtistIds.AddRange(await _musicRepository.GetArtistIdsFromPlaylistTracksAsync(playlistIds));
+        if (trackIds.Count > 0)
+            additionalArtistIds.AddRange(await _musicRepository.GetArtistIdsFromTracksAsync(trackIds));
 
-        List<Playlist> playlists = _mediaContext.Playlists
-            .Where(playlist => playlistIds.Contains(playlist.Id))
-            .Include(playlist => playlist.Tracks)
-            .ThenInclude(playlistTrack => playlistTrack.Track)
-            .ThenInclude(song => song.TrackUser)
-            .ToList();
+        List<Guid> allArtistIds = artistIds.Union(additionalArtistIds).Distinct().ToList();
 
-        List<Track> songs = _mediaContext.Tracks
-            .Where(track => trackIds.Contains(track.Id))
-            .Include(track => track.ArtistTrack)
-            .ThenInclude(artistTrack => artistTrack.Artist)
-            .Include(track => track.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Album)
-            .Include(track => track.PlaylistTrack)
-            .ThenInclude(playlistTrack => playlistTrack.Playlist)
-            .Include(track => track.TrackUser)
-            .ToList();
+        List<Guid> additionalAlbumIds = [];
+        if (trackIds.Count > 0)
+            additionalAlbumIds.AddRange(await _musicRepository.GetAlbumIdsFromTracksAsync(trackIds));
 
-        if (artists.Count == 0 && albums.Count == 0 && playlists.Count == 0 && songs.Count == 0)
+        List<Guid> allAlbumIds = albumIds.Union(additionalAlbumIds).Distinct().ToList();
+
+        // Step 3: Get projection data
+        List<ArtistCardDto> artists = allArtistIds.Count > 0
+            ? await _musicRepository.GetArtistCardsByIdsAsync(allArtistIds)
+            : [];
+        List<AlbumCardDto> albums = allAlbumIds.Count > 0
+            ? await _musicRepository.GetAlbumCardsByIdsAsync(allAlbumIds)
+            : [];
+        List<PlaylistCardDto> playlistCards = playlistIds.Count > 0
+            ? await _musicRepository.GetPlaylistCardsByIdsAsync(playlistIds)
+            : [];
+        List<SearchTrackCardDto> tracks = trackIds.Count > 0
+            ? await _musicRepository.SearchTrackCardsAsync(trackIds, country)
+            : [];
+
+        if (artists.Count == 0 && albums.Count == 0 && playlistCards.Count == 0 && tracks.Count == 0)
             return NotFoundResponse("No results found");
 
-        if (albums.Count > 0)
-            foreach (Album album in albums)
-                if (album.AlbumTrack.Count > 0)
-                    foreach (IEnumerable<Artist> artist in album.AlbumTrack.Select(albumTrack => albumTrack.Track
-                                 .ArtistTrack
-                                 .Select(artistTrack => artistTrack.Artist)).ToList())
-                        artists.AddRange(artist);
-
-        if (playlists.Count > 0)
-            foreach (Playlist playlist in playlists)
-                if (playlist.Tracks.Count > 0)
-                    foreach (IEnumerable<Artist> artist in playlist.Tracks
-                                 .Select(playlistTrack => playlistTrack.Track.ArtistTrack
-                                     .Select(artistTrack => artistTrack.Artist)).ToList())
-                        artists.AddRange(artist);
-
-        if (songs.Count > 0)
-            foreach (Track song in songs)
-            {
-                if (song.ArtistTrack.Count > 0)
-                    artists.AddRange(song.ArtistTrack.Select(artistTrack => artistTrack.Artist));
-                if (song.AlbumTrack.Count > 0) albums.AddRange(song.AlbumTrack.Select(albumTrack => albumTrack.Album));
-            }
-
-        Track? topTrack = songs.FirstOrDefault();
-        Artist? topArtist = artists.FirstOrDefault();
-        Album? topAlbum = albums.FirstOrDefault();
+        SearchTrackCardDto? topTrack = tracks.FirstOrDefault();
+        ArtistCardDto? topArtist = artists.FirstOrDefault();
+        AlbumCardDto? topAlbum = albums.FirstOrDefault();
 
         // Build TopResultCardData from the first match
         TopResultCardData? topResultData = topTrack != null ? new(topTrack)
@@ -362,9 +271,9 @@ public class MusicController : BaseController
             : topAlbum != null ? new TopResultCardData(topAlbum)
             : null;
 
-        List<TrackRowData> songResults = songs
+        List<TrackRowData> songResults = tracks
             .Take(6)
-            .Select(track => new TrackRowData(track, country))
+            .Select(track => new TrackRowData(track))
             .ToList();
 
         return Ok(ComponentResponse.From(
@@ -386,26 +295,17 @@ public class MusicController : BaseController
             Component.Carousel()
                 .WithId("artists")
                 .WithTitle("Artist".Localize())
-                .WithItems(artists
-                    .GroupBy(artist => artist.Id)
-                    .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new MusicCardData(item))))
+                .WithItems(artists.Select(item => Component.MusicCard(new MusicCardData(item))))
                 .Build(),
             Component.Carousel()
                 .WithId("albums")
                 .WithTitle("Albums".Localize())
-                .WithItems(albums
-                    .GroupBy(album => album.Id)
-                    .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new MusicCardData(item))))
+                .WithItems(albums.Select(item => Component.MusicCard(new MusicCardData(item))))
                 .Build(),
             Component.Carousel()
                 .WithId("playlists")
                 .WithTitle("Playlists".Localize())
-                .WithItems(playlists
-                    .GroupBy(playlist => playlist.Id)
-                    .Select(group => group.First())
-                    .Select(item => Component.MusicCard(new MusicCardData(item)))))
+                .WithItems(playlistCards.Select(item => Component.MusicCard(new MusicCardData(item)))))
         );
     }
 

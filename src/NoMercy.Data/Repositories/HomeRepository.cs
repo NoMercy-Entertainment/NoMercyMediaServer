@@ -11,40 +11,140 @@ using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
 
+public class GenreHomeDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? TranslatedName { get; set; }
+    public List<int> MovieIds { get; set; } = [];
+    public List<int> TvIds { get; set; } = [];
+}
+
+public class HomeMovieCardDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string TitleSort { get; set; } = string.Empty;
+    public string? TranslatedTitle { get; set; }
+    public string? Overview { get; set; }
+    public string? TranslatedOverview { get; set; }
+    public string? Poster { get; set; }
+    public string? Backdrop { get; set; }
+    public string? Logo { get; set; }
+    public DateTime? ReleaseDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string? ColorPalette { get; set; }
+    public int VideoFileCount { get; set; }
+    public string? CertificationRating { get; set; }
+    public string? CertificationCountry { get; set; }
+}
+
+public class HomeTvCardDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string TitleSort { get; set; } = string.Empty;
+    public string? TranslatedTitle { get; set; }
+    public string? Overview { get; set; }
+    public string? TranslatedOverview { get; set; }
+    public string? Poster { get; set; }
+    public string? Backdrop { get; set; }
+    public string? Logo { get; set; }
+    public DateTime? FirstAirDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string? ColorPalette { get; set; }
+    public int NumberOfEpisodes { get; set; }
+    public int EpisodesWithVideo { get; set; }
+    public string? CertificationRating { get; set; }
+    public string? CertificationCountry { get; set; }
+}
+
 public class HomeRepository
 {
-    public async Task<List<Tv>> GetHomeTvs(MediaContext mediaContext, List<int> tvIds, string? language, string country, CancellationToken ct = default)
+    public async Task<List<HomeTvCardDto>> GetHomeTvs(MediaContext mediaContext, List<int> tvIds, string? language, string country, CancellationToken ct = default)
     {
         return await mediaContext.Tvs
             .AsNoTracking()
             .Where(tv => tvIds.Contains(tv.Id))
             .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any()))
-            .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
-            .Include(tv => tv.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1))
-            .Include(tv => tv.Media.Where(m => m.Site == "YouTube").Take(3))
-            .Include(tv => tv.Episodes.Where(e => e.SeasonNumber > 0))
-                .ThenInclude(e => e.VideoFiles)
-            .Include(tv => tv.CertificationTvs
-                .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
-                .Take(1))
-                .ThenInclude(c => c.Certification)
+            .Select(tv => new HomeTvCardDto
+            {
+                Id = tv.Id,
+                Title = tv.Title,
+                TitleSort = tv.TitleSort,
+                TranslatedTitle = tv.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Title)
+                    .FirstOrDefault(),
+                Overview = tv.Overview,
+                TranslatedOverview = tv.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Overview)
+                    .FirstOrDefault(),
+                Poster = tv.Poster,
+                Backdrop = tv.Backdrop,
+                Logo = tv.Images
+                    .Where(i => i.Type == "logo" && i.Iso6391 == "en")
+                    .Select(i => i.FilePath)
+                    .FirstOrDefault(),
+                FirstAirDate = tv.FirstAirDate,
+                CreatedAt = tv.CreatedAt,
+                ColorPalette = tv._colorPalette,
+                NumberOfEpisodes = tv.NumberOfEpisodes,
+                EpisodesWithVideo = tv.Episodes
+                    .Where(e => e.SeasonNumber > 0)
+                    .Count(e => e.VideoFiles.Any(v => v.Folder != null)),
+                CertificationRating = tv.CertificationTvs
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Rating)
+                    .FirstOrDefault(),
+                CertificationCountry = tv.CertificationTvs
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Iso31661)
+                    .FirstOrDefault()
+            })
             .ToListAsync(ct);
     }
 
-    public async Task<List<Movie>> GetHomeMovies(MediaContext mediaContext, List<int> movieIds, string? language, string country, CancellationToken ct = default)
+    public async Task<List<HomeMovieCardDto>> GetHomeMovies(MediaContext mediaContext, List<int> movieIds, string? language, string country, CancellationToken ct = default)
     {
         return await mediaContext.Movies
             .AsNoTracking()
             .Where(movie => movieIds.Contains(movie.Id))
             .Where(movie => movie.VideoFiles.Any())
-            .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
-            .Include(movie => movie.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en").Take(1))
-            .Include(movie => movie.Media.Where(m => m.Site == "YouTube").Take(3))
-            .Include(movie => movie.VideoFiles)
-            .Include(movie => movie.CertificationMovies
-                .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
-                .Take(1))
-                .ThenInclude(c => c.Certification)
+            .Select(movie => new HomeMovieCardDto
+            {
+                Id = movie.Id,
+                Title = movie.Title,
+                TitleSort = movie.TitleSort,
+                TranslatedTitle = movie.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Title)
+                    .FirstOrDefault(),
+                Overview = movie.Overview,
+                TranslatedOverview = movie.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Overview)
+                    .FirstOrDefault(),
+                Poster = movie.Poster,
+                Backdrop = movie.Backdrop,
+                Logo = movie.Images
+                    .Where(i => i.Type == "logo" && i.Iso6391 == "en")
+                    .Select(i => i.FilePath)
+                    .FirstOrDefault(),
+                ReleaseDate = movie.ReleaseDate,
+                CreatedAt = movie.CreatedAt,
+                ColorPalette = movie._colorPalette,
+                VideoFileCount = movie.VideoFiles.Count(v => v.Folder != null),
+                CertificationRating = movie.CertificationMovies
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Rating)
+                    .FirstOrDefault(),
+                CertificationCountry = movie.CertificationMovies
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Iso31661)
+                    .FirstOrDefault()
+            })
             .ToListAsync(ct);
     }
 
@@ -70,6 +170,7 @@ public class HomeRepository
         // Step 2: Hydrate only the unique entries with all includes
         List<UserData> userData = await mediaContext.UserData
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(ud => uniqueIds.Contains(ud.Id))
             .Include(ud => ud.VideoFile)
             // Movie includes - only what CardData needs
@@ -156,15 +257,6 @@ public class HomeRepository
         return mediaContext.Libraries
             .AsNoTracking()
             .ForUser(userId)
-            .Include(library => library.LibraryUsers)
-            .Include(library => library.FolderLibraries)
-                .ThenInclude(fl => fl.Folder)
-                .ThenInclude(f => f.EncoderProfileFolder)
-                .ThenInclude(epf => epf.EncoderProfile)
-            .Include(library => library.LanguageLibraries)
-                .ThenInclude(ll => ll.Language)
-            .Include(library => library.LibraryMovies)
-            .Include(library => library.LibraryTvs)
             .ToListAsync(ct);
     }
 
@@ -192,19 +284,33 @@ public class HomeRepository
             .CountAsync(tv => tv.Library.Type == Config.TvMediaType, ct);
     }
 
-    public async Task<List<Genre>> GetHomeGenresAsync(MediaContext mediaContext, Guid userId, string? language, int take, int page = 0, CancellationToken ct = default)
+    public async Task<List<GenreHomeDto>> GetHomeGenresAsync(MediaContext mediaContext, Guid userId, string? language, int take, int page = 0, CancellationToken ct = default)
     {
         return await mediaContext.Genres
             .AsNoTracking()
             .Where(genre =>
                 genre.GenreMovies.Any(g => g.Movie.Library.LibraryUsers.Any(u => u.UserId == userId)) ||
                 genre.GenreTvShows.Any(g => g.Tv.Library.LibraryUsers.Any(u => u.UserId == userId)))
-            .Include(genre => genre.Translations.Where(t => t.Iso6391 == language))
-            .Include(genre => genre.GenreMovies.Where(gm => gm.Movie.VideoFiles.Any()))
-            .Include(genre => genre.GenreTvShows.Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any())))
             .OrderBy(genre => genre.Name)
             .Skip(page * take)
             .Take(take)
+            .Select(genre => new GenreHomeDto
+            {
+                Id = genre.Id,
+                Name = genre.Name,
+                TranslatedName = genre.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Name)
+                    .FirstOrDefault(),
+                MovieIds = genre.GenreMovies
+                    .Where(gm => gm.Movie.VideoFiles.Any())
+                    .Select(gm => gm.MovieId)
+                    .ToList(),
+                TvIds = genre.GenreTvShows
+                    .Where(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any()))
+                    .Select(gt => gt.TvId)
+                    .ToList()
+            })
             .ToListAsync(ct);
     }
 }

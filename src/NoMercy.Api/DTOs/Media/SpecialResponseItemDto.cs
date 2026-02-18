@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.TvShows;
@@ -153,7 +154,7 @@ public record SpecialResponseItemDto
         Genres = [];
 
         TotalDuration = special.Items.Sum(item => item.Movie?.Runtime ?? 0);
-        
+
         VoteAverage = special.Items
             .Where(item => item.Movie?.VoteAverage != null)
             .Select(item => item.Movie?.VoteAverage).Average() ?? 0;
@@ -163,5 +164,94 @@ public record SpecialResponseItemDto
                 .Select(certification => certification.Certification)
                 .FirstOrDefault())
             .DistinctBy(rating => rating?.Iso31661);
+    }
+
+    public SpecialResponseItemDto(SpecialDetailDto detail, List<SpecialItemsDto> items)
+    {
+        List<SpecialItemDto> specialItems = [];
+        foreach (SpecialItemRefDto itemRef in detail.Items)
+            if (itemRef.MovieId is not null)
+            {
+                SpecialItemsDto? newItem = items.Find(i => i.Id == itemRef.MovieId);
+                if (newItem is null) continue;
+
+                SpecialItemDto item = new(newItem);
+                specialItems.Add(item);
+            }
+            else
+            {
+                SpecialItemsDto? newItem = items.FirstOrDefault(i => i.EpisodeIds.Contains(itemRef.EpisodeId ?? 0));
+                if (newItem is null) continue;
+
+                SpecialItemDto item = new(newItem);
+                specialItems.Add(item);
+            }
+
+        IEnumerable<PeopleDto> cast = items
+            .SelectMany(tv => tv.Cast)
+            .DistinctBy(people => people.Id)
+            .ToList();
+
+        IEnumerable<PeopleDto> crew = items
+            .SelectMany(item => item.Crew)
+            .DistinctBy(people => people.Id)
+            .ToList();
+
+        IEnumerable<ImageDto> posters = items
+            .SelectMany(item => item.Posters)
+            .ToList();
+
+        IEnumerable<ImageDto> backdrops = items
+            .SelectMany(item => item.Backdrops)
+            .ToList();
+
+        IEnumerable<GenreDto> genres = items
+            .SelectMany(item => item.Genres)
+            .DistinctBy(genre => genre.Id)
+            .ToList();
+
+        foreach (SpecialItemsDto item in items)
+        {
+            item.Posters = [];
+            item.Backdrops = [];
+            item.Cast = [];
+            item.Crew = [];
+            item.Genres = [];
+        }
+
+        Id = detail.Id;
+        Title = detail.Title;
+        Overview = detail.Overview;
+        Backdrop = detail.Backdrop?.Replace("https://storage.nomercy.tv/laravel", "");
+        Poster = detail.Poster;
+        TitleSort = detail.Title.TitleSort();
+        Type = "specials";
+        MediaType = "specials";
+        Link = new($"/specials/{Id}", UriKind.Relative);
+        ColorPalette = !string.IsNullOrEmpty(detail.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(detail.ColorPalette)
+            : null;
+        Backdrops = backdrops;
+        Posters = posters;
+        Cast = cast;
+        Crew = crew;
+        Genres = genres;
+
+        Favorite = detail.Favorite;
+
+        NumberOfItems = detail.NumberOfItems;
+        HaveItems = detail.HaveMovies + detail.HaveEpisodes;
+
+        TotalDuration = items.Sum(item => item.TotalDuration);
+
+        VoteAverage = items
+            .Where(item => item.VoteAverage != null)
+            .Select(item => item.VoteAverage).Average() ?? 0;
+
+        ContentRatings = items
+            .Select(specialItem => specialItem.Rating)
+            .DistinctBy(rating => rating.Iso31661);
+
+        Special = specialItems.DistinctBy(si => si.Id);
     }
 }

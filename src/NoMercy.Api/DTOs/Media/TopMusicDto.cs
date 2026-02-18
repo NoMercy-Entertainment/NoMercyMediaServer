@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 
@@ -48,6 +49,25 @@ public record TopMusicDto
         Type = "artist";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
         Cover = artistTrack.Artist.Cover;
+        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+    }
+
+    public TopMusicDto(TopMusicItemDto item)
+    {
+        Id = item.Id;
+        Name = item.Name;
+        ColorPalette = !string.IsNullOrEmpty(item.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(item.ColorPalette)
+            : null;
+        Type = item.Type;
+        Link = item.Type switch
+        {
+            "artist" => new($"/music/artist/{Id}", UriKind.Relative),
+            "album" => new($"/music/album/{Id}", UriKind.Relative),
+            "playlist" => new($"/music/playlists/{Id}", UriKind.Relative),
+            _ => new($"/music/{Id}", UriKind.Relative)
+        };
+        Cover = item.Cover;
         Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
     }
 }

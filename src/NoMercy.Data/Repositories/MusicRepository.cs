@@ -6,7 +6,7 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Data.Repositories;
 
-public class MusicRepository(MediaContext mediaContext)
+public class MusicRepository(MediaContext mediaContext, IDbContextFactory<MediaContext> contextFactory)
 {
     private static readonly string[] Letters = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
@@ -16,6 +16,7 @@ public class MusicRepository(MediaContext mediaContext)
     {
         return mediaContext.Artists
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(artist => artist.Id == id)
             .ForUser(userId)
             .Include(artist => artist.Library)
@@ -97,6 +98,7 @@ public class MusicRepository(MediaContext mediaContext)
     {
         return mediaContext.Albums
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(album => album.Id == id)
             .ForUser(userId)
             .Include(album => album.Library)
@@ -589,4 +591,763 @@ public class MusicRepository(MediaContext mediaContext)
 
     #endregion
 
+    #region Projection Methods — Artist Cards
+
+    public Task<List<ArtistCardDto>> GetArtistCardsAsync(Guid userId, string letter, CancellationToken ct = default)
+    {
+        return mediaContext.Artists
+            .AsNoTracking()
+            .ForUser(userId)
+            .Where(artist => (letter == "_" || letter == "#")
+                ? Letters.Any(p => artist.Name.StartsWith(p))
+                : artist.Name.StartsWith(letter))
+            .Where(artist => artist.ArtistTrack.Any())
+            .OrderBy(artist => artist.Name)
+            .Select(artist => new ArtistCardDto
+            {
+                Id = artist.Id,
+                Name = artist.Name,
+                Cover = artist.Cover,
+                Disambiguation = artist.Disambiguation,
+                Description = artist.Description,
+                ColorPalette = artist._colorPalette,
+                LibraryId = artist.LibraryId,
+                Folder = artist.Folder,
+                TrackCount = artist.ArtistTrack.Count(),
+                ThumbImagePath = artist.Images
+                    .Where(image => image.Type == "thumb")
+                    .Select(image => image.FilePath)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(ct);
+    }
+
+    public Task<List<ArtistCardDto>> GetLatestArtistCardsAsync(int take = 36, CancellationToken ct = default)
+    {
+        return mediaContext.Artists
+            .AsNoTracking()
+            .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Any())
+            .OrderByDescending(artist => artist.CreatedAt)
+            .Select(artist => new ArtistCardDto
+            {
+                Id = artist.Id,
+                Name = artist.Name,
+                Cover = artist.Cover,
+                Disambiguation = artist.Disambiguation,
+                Description = artist.Description,
+                ColorPalette = artist._colorPalette,
+                LibraryId = artist.LibraryId,
+                Folder = artist.Folder,
+                TrackCount = artist.ArtistTrack.Count(),
+                ThumbImagePath = artist.Images
+                    .Where(image => image.Type == "thumb")
+                    .Select(image => image.FilePath)
+                    .FirstOrDefault()
+            })
+            .Take(take)
+            .ToListAsync(ct);
+    }
+
+    public Task<List<ArtistCardDto>> GetFavoriteArtistCardsAsync(Guid userId, int take = 36, CancellationToken ct = default)
+    {
+        return mediaContext.ArtistUser
+            .AsNoTracking()
+            .Where(artistUser => artistUser.UserId == userId)
+            .Select(artistUser => new ArtistCardDto
+            {
+                Id = artistUser.Artist.Id,
+                Name = artistUser.Artist.Name,
+                Cover = artistUser.Artist.Cover,
+                Disambiguation = artistUser.Artist.Disambiguation,
+                Description = artistUser.Artist.Description,
+                ColorPalette = artistUser.Artist._colorPalette,
+                LibraryId = artistUser.Artist.LibraryId,
+                Folder = artistUser.Artist.Folder,
+                TrackCount = artistUser.Artist.ArtistTrack.Count(),
+                ThumbImagePath = artistUser.Artist.Images
+                    .Where(image => image.Type == "thumb")
+                    .Select(image => image.FilePath)
+                    .FirstOrDefault()
+            })
+            .Take(take)
+            .ToListAsync(ct);
+    }
+
+    public Task<List<ArtistCardDto>> GetArtistCardsByIdsAsync(List<Guid> artistIds, CancellationToken ct = default)
+    {
+        return mediaContext.Artists
+            .AsNoTracking()
+            .Where(artist => artistIds.Contains(artist.Id))
+            .Select(artist => new ArtistCardDto
+            {
+                Id = artist.Id,
+                Name = artist.Name,
+                Cover = artist.Cover,
+                Disambiguation = artist.Disambiguation,
+                Description = artist.Description,
+                ColorPalette = artist._colorPalette,
+                LibraryId = artist.LibraryId,
+                Folder = artist.Folder,
+                TrackCount = artist.ArtistTrack.Count(),
+                ThumbImagePath = artist.Images
+                    .Where(image => image.Type == "thumb")
+                    .Select(image => image.FilePath)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(ct);
+    }
+
+    #endregion
+
+    #region Projection Methods — Album Cards
+
+    public Task<List<AlbumCardDto>> GetAlbumCardsAsync(Guid userId, string letter, string language, CancellationToken ct = default)
+    {
+        return mediaContext.Albums
+            .AsNoTracking()
+            .ForUser(userId)
+            .Where(album => (letter == "_" || letter == "#")
+                ? Letters.Any(p => album.Name.StartsWith(p))
+                : album.Name.StartsWith(letter))
+            .Where(album => album.AlbumTrack.Any(at => at.Track.Duration != null))
+            .OrderBy(album => album.Name)
+            .Select(album => new AlbumCardDto
+            {
+                Id = album.Id,
+                Name = album.Name,
+                Cover = album.Cover,
+                Disambiguation = album.Disambiguation,
+                Description = album.Description,
+                ColorPalette = album._colorPalette,
+                LibraryId = album.LibraryId,
+                Folder = album.Folder,
+                Year = album.Year,
+                TrackCount = album.AlbumTrack.Count(at => at.Track.Duration != null),
+                TranslatedDescription = album.Translations
+                    .Where(t => t.Iso31661 == language)
+                    .Select(t => t.Description)
+                    .FirstOrDefault(),
+                BackgroundImagePath = album.Images
+                    .Where(image => image.Type == "background")
+                    .Select(image => image.FilePath)
+                    .FirstOrDefault(),
+                BackgroundImageColorPalette = album.Images
+                    .Where(image => image.Type == "background")
+                    .Select(image => image._colorPalette)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(ct);
+    }
+
+    public Task<List<AlbumCardDto>> GetLatestAlbumCardsAsync(int take = 36, CancellationToken ct = default)
+    {
+        return mediaContext.Albums
+            .AsNoTracking()
+            .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Any())
+            .OrderByDescending(album => album.CreatedAt)
+            .Select(album => new AlbumCardDto
+            {
+                Id = album.Id,
+                Name = album.Name,
+                Cover = album.Cover,
+                Disambiguation = album.Disambiguation,
+                Description = album.Description,
+                ColorPalette = album._colorPalette,
+                LibraryId = album.LibraryId,
+                Folder = album.Folder,
+                Year = album.Year,
+                TrackCount = album.AlbumTrack.Count()
+            })
+            .Take(take)
+            .ToListAsync(ct);
+    }
+
+    public Task<List<AlbumCardDto>> GetFavoriteAlbumCardsAsync(Guid userId, int take = 36, CancellationToken ct = default)
+    {
+        return mediaContext.AlbumUser
+            .AsNoTracking()
+            .Where(albumUser => albumUser.UserId == userId)
+            .Select(albumUser => new AlbumCardDto
+            {
+                Id = albumUser.Album.Id,
+                Name = albumUser.Album.Name,
+                Cover = albumUser.Album.Cover,
+                Disambiguation = albumUser.Album.Disambiguation,
+                Description = albumUser.Album.Description,
+                ColorPalette = albumUser.Album._colorPalette,
+                LibraryId = albumUser.Album.LibraryId,
+                Folder = albumUser.Album.Folder,
+                Year = albumUser.Album.Year,
+                TrackCount = albumUser.Album.AlbumTrack.Count()
+            })
+            .Take(take)
+            .ToListAsync(ct);
+    }
+
+    public Task<List<AlbumCardDto>> GetAlbumCardsByIdsAsync(List<Guid> albumIds, CancellationToken ct = default)
+    {
+        return mediaContext.Albums
+            .AsNoTracking()
+            .Where(album => albumIds.Contains(album.Id))
+            .Select(album => new AlbumCardDto
+            {
+                Id = album.Id,
+                Name = album.Name,
+                Cover = album.Cover,
+                Disambiguation = album.Disambiguation,
+                Description = album.Description,
+                ColorPalette = album._colorPalette,
+                LibraryId = album.LibraryId,
+                Folder = album.Folder,
+                Year = album.Year,
+                TrackCount = album.AlbumTrack.Count()
+            })
+            .ToListAsync(ct);
+    }
+
+    #endregion
+
+    #region Projection Methods — Playlist Cards
+
+    public Task<List<PlaylistCardDto>> GetPlaylistCardsAsync(Guid userId, int take = 36, CancellationToken ct = default)
+    {
+        return mediaContext.Playlists
+            .AsNoTracking()
+            .Where(playlist => playlist.UserId == userId)
+            .Select(playlist => new PlaylistCardDto
+            {
+                Id = playlist.Id,
+                Name = playlist.Name,
+                Cover = playlist.Cover,
+                Description = playlist.Description,
+                ColorPalette = playlist._colorPalette,
+                TrackCount = playlist.Tracks.Count()
+            })
+            .Take(take)
+            .ToListAsync(ct);
+    }
+
+    public Task<List<PlaylistCardDto>> GetPlaylistCardsByIdsAsync(List<Guid> playlistIds, CancellationToken ct = default)
+    {
+        return mediaContext.Playlists
+            .AsNoTracking()
+            .Where(playlist => playlistIds.Contains(playlist.Id))
+            .Select(playlist => new PlaylistCardDto
+            {
+                Id = playlist.Id,
+                Name = playlist.Name,
+                Cover = playlist.Cover,
+                Description = playlist.Description,
+                ColorPalette = playlist._colorPalette,
+                TrackCount = playlist.Tracks.Count()
+            })
+            .ToListAsync(ct);
+    }
+
+    #endregion
+
+    #region Projection Methods — Genre Cards
+
+    public Task<List<MusicGenreCardDto>> GetLatestGenreCardsAsync(int take = 36, CancellationToken ct = default)
+    {
+        return mediaContext.MusicGenres
+            .AsNoTracking()
+            .Where(genre => genre.MusicGenreTracks.Any())
+            .OrderByDescending(genre => genre.MusicGenreTracks.Count())
+            .Select(genre => new MusicGenreCardDto
+            {
+                Id = genre.Id,
+                Name = genre.Name,
+                TrackCount = genre.MusicGenreTracks.Count()
+            })
+            .Take(take)
+            .ToListAsync(ct);
+    }
+
+    #endregion
+
+    #region Projection Methods — Top Music (Favorites)
+
+    public Task<TopMusicItemDto?> GetTopArtistAsync(Guid userId, CancellationToken ct = default)
+    {
+        return mediaContext.MusicPlays
+            .AsNoTracking()
+            .Where(mp => mp.UserId == userId)
+            .SelectMany(mp => mp.Track.ArtistTrack)
+            .GroupBy(at => new { at.Artist.Id, at.Artist.Name, at.Artist.Cover, ColorPalette = at.Artist._colorPalette })
+            .OrderByDescending(g => g.Count())
+            .Select(g => new TopMusicItemDto
+            {
+                Id = g.Key.Id.ToString(),
+                Name = g.Key.Name,
+                Cover = g.Key.Cover,
+                ColorPalette = g.Key.ColorPalette,
+                Type = "artist"
+            })
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public Task<TopMusicItemDto?> GetTopAlbumAsync(Guid userId, CancellationToken ct = default)
+    {
+        return mediaContext.MusicPlays
+            .AsNoTracking()
+            .Where(mp => mp.UserId == userId)
+            .SelectMany(mp => mp.Track.AlbumTrack)
+            .GroupBy(at => new { at.Album.Id, at.Album.Name, at.Album.Cover, ColorPalette = at.Album._colorPalette })
+            .OrderByDescending(g => g.Count())
+            .Select(g => new TopMusicItemDto
+            {
+                Id = g.Key.Id.ToString(),
+                Name = g.Key.Name,
+                Cover = g.Key.Cover,
+                ColorPalette = g.Key.ColorPalette,
+                Type = "album"
+            })
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public Task<TopMusicItemDto?> GetTopPlaylistAsync(Guid userId, CancellationToken ct = default)
+    {
+        return mediaContext.MusicPlays
+            .AsNoTracking()
+            .Where(mp => mp.Track.PlaylistTrack.Any(pt => pt.Playlist.UserId == userId))
+            .SelectMany(mp => mp.Track.PlaylistTrack)
+            .Where(pt => pt.Playlist.UserId == userId)
+            .GroupBy(pt => new { pt.Playlist.Id, pt.Playlist.Name, pt.Playlist.Cover, ColorPalette = pt.Playlist._colorPalette })
+            .OrderByDescending(g => g.Count())
+            .Select(g => new TopMusicItemDto
+            {
+                Id = g.Key.Id.ToString(),
+                Name = g.Key.Name,
+                Cover = g.Key.Cover,
+                ColorPalette = g.Key.ColorPalette,
+                Type = "playlist"
+            })
+            .FirstOrDefaultAsync(ct);
+    }
+
+    #endregion
+
+    #region Projection Methods — Search Cross-Reference
+
+    public Task<List<Guid>> GetArtistIdsFromAlbumsAsync(List<Guid> albumIds, CancellationToken ct = default)
+    {
+        return mediaContext.AlbumTrack
+            .AsNoTracking()
+            .Where(at => albumIds.Contains(at.AlbumId))
+            .SelectMany(at => at.Track.ArtistTrack)
+            .Select(at => at.ArtistId)
+            .Distinct()
+            .ToListAsync(ct);
+    }
+
+    public Task<List<Guid>> GetArtistIdsFromPlaylistTracksAsync(List<Guid> playlistIds, CancellationToken ct = default)
+    {
+        return mediaContext.PlaylistTrack
+            .AsNoTracking()
+            .Where(pt => playlistIds.Contains(pt.PlaylistId))
+            .SelectMany(pt => pt.Track.ArtistTrack)
+            .Select(at => at.ArtistId)
+            .Distinct()
+            .ToListAsync(ct);
+    }
+
+    public Task<List<Guid>> GetArtistIdsFromTracksAsync(List<Guid> trackIds, CancellationToken ct = default)
+    {
+        return mediaContext.ArtistTrack
+            .AsNoTracking()
+            .Where(at => trackIds.Contains(at.TrackId))
+            .Select(at => at.ArtistId)
+            .Distinct()
+            .ToListAsync(ct);
+    }
+
+    public Task<List<Guid>> GetAlbumIdsFromTracksAsync(List<Guid> trackIds, CancellationToken ct = default)
+    {
+        return mediaContext.AlbumTrack
+            .AsNoTracking()
+            .Where(at => trackIds.Contains(at.TrackId))
+            .Select(at => at.AlbumId)
+            .Distinct()
+            .ToListAsync(ct);
+    }
+
+    public Task<List<SearchTrackCardDto>> SearchTrackCardsAsync(List<Guid> trackIds, string country, CancellationToken ct = default)
+    {
+        return mediaContext.Tracks
+            .AsNoTracking()
+            .Where(track => trackIds.Contains(track.Id))
+            .Select(track => new SearchTrackCardDto
+            {
+                Id = track.Id,
+                Name = track.Name,
+                FolderId = track.FolderId,
+                Folder = track.Folder,
+                Filename = track.Filename,
+                Cover = track.Cover,
+                ColorPalette = track._colorPalette,
+                Duration = track.Duration,
+                DiscNumber = track.DiscNumber,
+                TrackNumber = track.TrackNumber,
+                Quality = track.Quality,
+                UpdatedAt = track.UpdatedAt,
+                Favorite = track.TrackUser.Any(),
+                AlbumId = track.AlbumTrack.Select(at => at.AlbumId.ToString()).FirstOrDefault(),
+                AlbumName = track.AlbumTrack.Select(at => at.Album.Name).FirstOrDefault(),
+                AlbumCover = track.AlbumTrack.Select(at => at.Album.Cover).FirstOrDefault(),
+                AlbumColorPalette = track.AlbumTrack.Select(at => at.Album._colorPalette).FirstOrDefault(),
+                ArtistCover = track.ArtistTrack.Select(at => at.Artist.Cover).FirstOrDefault(),
+                ArtistColorPalette = track.ArtistTrack.Select(at => at.Artist._colorPalette).FirstOrDefault(),
+                Artists = track.ArtistTrack.Select(at => new SearchTrackArtistDto
+                {
+                    Id = at.ArtistId,
+                    Name = at.Artist.Name
+                }).ToList(),
+                Albums = track.AlbumTrack.Select(at => new SearchTrackAlbumDto
+                {
+                    Id = at.AlbumId,
+                    Name = at.Album.Name
+                }).ToList()
+            })
+            .ToListAsync(ct);
+    }
+
+    #endregion
+
+    #region Parallel Music Start Page
+
+    public async Task<MusicStartPageData> GetMusicStartPageAsync(Guid userId, CancellationToken ct = default)
+    {
+        // Run 3 groups in parallel — each group gets its own DbContext
+        Task<(TopMusicItemDto?, TopMusicItemDto?, TopMusicItemDto?)> topTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            TopMusicItemDto? artist = await GetTopArtistQuery(ctx, userId).FirstOrDefaultAsync(ct);
+            TopMusicItemDto? album = await GetTopAlbumQuery(ctx, userId).FirstOrDefaultAsync(ct);
+            TopMusicItemDto? playlist = await GetTopPlaylistQuery(ctx, userId).FirstOrDefaultAsync(ct);
+            return (artist, album, playlist);
+        }, ct);
+
+        Task<(List<ArtistCardDto>, List<AlbumCardDto>, List<PlaylistCardDto>)> favoritesTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            List<ArtistCardDto> artists = await GetFavoriteArtistCardsQuery(ctx, userId).Take(36).ToListAsync(ct);
+            List<AlbumCardDto> albums = await GetFavoriteAlbumCardsQuery(ctx, userId).Take(36).ToListAsync(ct);
+            List<PlaylistCardDto> playlists = await GetPlaylistCardsQuery(ctx, userId).Take(36).ToListAsync(ct);
+            return (artists, albums, playlists);
+        }, ct);
+
+        Task<(List<ArtistCardDto>, List<MusicGenreCardDto>, List<AlbumCardDto>)> latestTask = Task.Run(async () =>
+        {
+            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+            List<ArtistCardDto> artists = await GetLatestArtistCardsQuery(ctx).Take(36).ToListAsync(ct);
+            List<MusicGenreCardDto> genres = await GetLatestGenreCardsQuery(ctx).Take(36).ToListAsync(ct);
+            List<AlbumCardDto> albums = await GetLatestAlbumCardsQuery(ctx).Take(36).ToListAsync(ct);
+            return (artists, genres, albums);
+        }, ct);
+
+        await Task.WhenAll(topTask, favoritesTask, latestTask);
+
+        (TopMusicItemDto? topArtist, TopMusicItemDto? topAlbum, TopMusicItemDto? topPlaylist) = topTask.Result;
+        (List<ArtistCardDto> favArtists, List<AlbumCardDto> favAlbums, List<PlaylistCardDto> playlists) = favoritesTask.Result;
+        (List<ArtistCardDto> latestArtists, List<MusicGenreCardDto> latestGenres, List<AlbumCardDto> latestAlbums) = latestTask.Result;
+
+        return new MusicStartPageData
+        {
+            TopArtist = topArtist,
+            TopAlbum = topAlbum,
+            TopPlaylist = topPlaylist,
+            FavoriteArtists = favArtists,
+            FavoriteAlbums = favAlbums,
+            Playlists = playlists,
+            LatestArtists = latestArtists,
+            LatestGenres = latestGenres,
+            LatestAlbums = latestAlbums
+        };
+    }
+
+    // Static query builders for parallel execution with arbitrary MediaContext instances
+
+    private static IQueryable<TopMusicItemDto> GetTopArtistQuery(MediaContext ctx, Guid userId)
+    {
+        return ctx.MusicPlays
+            .AsNoTracking()
+            .Where(mp => mp.UserId == userId)
+            .SelectMany(mp => mp.Track.ArtistTrack)
+            .GroupBy(at => new { at.Artist.Id, at.Artist.Name, at.Artist.Cover, ColorPalette = at.Artist._colorPalette })
+            .OrderByDescending(g => g.Count())
+            .Select(g => new TopMusicItemDto
+            {
+                Id = g.Key.Id.ToString(),
+                Name = g.Key.Name,
+                Cover = g.Key.Cover,
+                ColorPalette = g.Key.ColorPalette,
+                Type = "artist"
+            });
+    }
+
+    private static IQueryable<TopMusicItemDto> GetTopAlbumQuery(MediaContext ctx, Guid userId)
+    {
+        return ctx.MusicPlays
+            .AsNoTracking()
+            .Where(mp => mp.UserId == userId)
+            .SelectMany(mp => mp.Track.AlbumTrack)
+            .GroupBy(at => new { at.Album.Id, at.Album.Name, at.Album.Cover, ColorPalette = at.Album._colorPalette })
+            .OrderByDescending(g => g.Count())
+            .Select(g => new TopMusicItemDto
+            {
+                Id = g.Key.Id.ToString(),
+                Name = g.Key.Name,
+                Cover = g.Key.Cover,
+                ColorPalette = g.Key.ColorPalette,
+                Type = "album"
+            });
+    }
+
+    private static IQueryable<TopMusicItemDto> GetTopPlaylistQuery(MediaContext ctx, Guid userId)
+    {
+        return ctx.MusicPlays
+            .AsNoTracking()
+            .Where(mp => mp.Track.PlaylistTrack.Any(pt => pt.Playlist.UserId == userId))
+            .SelectMany(mp => mp.Track.PlaylistTrack)
+            .Where(pt => pt.Playlist.UserId == userId)
+            .GroupBy(pt => new { pt.Playlist.Id, pt.Playlist.Name, pt.Playlist.Cover, ColorPalette = pt.Playlist._colorPalette })
+            .OrderByDescending(g => g.Count())
+            .Select(g => new TopMusicItemDto
+            {
+                Id = g.Key.Id.ToString(),
+                Name = g.Key.Name,
+                Cover = g.Key.Cover,
+                ColorPalette = g.Key.ColorPalette,
+                Type = "playlist"
+            });
+    }
+
+    private static IQueryable<ArtistCardDto> GetFavoriteArtistCardsQuery(MediaContext ctx, Guid userId)
+    {
+        return ctx.ArtistUser
+            .AsNoTracking()
+            .Where(artistUser => artistUser.UserId == userId)
+            .Select(artistUser => new ArtistCardDto
+            {
+                Id = artistUser.Artist.Id,
+                Name = artistUser.Artist.Name,
+                Cover = artistUser.Artist.Cover,
+                Disambiguation = artistUser.Artist.Disambiguation,
+                Description = artistUser.Artist.Description,
+                ColorPalette = artistUser.Artist._colorPalette,
+                LibraryId = artistUser.Artist.LibraryId,
+                Folder = artistUser.Artist.Folder,
+                TrackCount = artistUser.Artist.ArtistTrack.Count(),
+                ThumbImagePath = artistUser.Artist.Images
+                    .Where(image => image.Type == "thumb")
+                    .Select(image => image.FilePath)
+                    .FirstOrDefault()
+            });
+    }
+
+    private static IQueryable<AlbumCardDto> GetFavoriteAlbumCardsQuery(MediaContext ctx, Guid userId)
+    {
+        return ctx.AlbumUser
+            .AsNoTracking()
+            .Where(albumUser => albumUser.UserId == userId)
+            .Select(albumUser => new AlbumCardDto
+            {
+                Id = albumUser.Album.Id,
+                Name = albumUser.Album.Name,
+                Cover = albumUser.Album.Cover,
+                Disambiguation = albumUser.Album.Disambiguation,
+                Description = albumUser.Album.Description,
+                ColorPalette = albumUser.Album._colorPalette,
+                LibraryId = albumUser.Album.LibraryId,
+                Folder = albumUser.Album.Folder,
+                Year = albumUser.Album.Year,
+                TrackCount = albumUser.Album.AlbumTrack.Count()
+            });
+    }
+
+    private static IQueryable<PlaylistCardDto> GetPlaylistCardsQuery(MediaContext ctx, Guid userId)
+    {
+        return ctx.Playlists
+            .AsNoTracking()
+            .Where(playlist => playlist.UserId == userId)
+            .Select(playlist => new PlaylistCardDto
+            {
+                Id = playlist.Id,
+                Name = playlist.Name,
+                Cover = playlist.Cover,
+                Description = playlist.Description,
+                ColorPalette = playlist._colorPalette,
+                TrackCount = playlist.Tracks.Count()
+            });
+    }
+
+    private static IQueryable<ArtistCardDto> GetLatestArtistCardsQuery(MediaContext ctx)
+    {
+        return ctx.Artists
+            .AsNoTracking()
+            .Where(artist => !string.IsNullOrEmpty(artist.Cover) && artist.ArtistTrack.Any())
+            .OrderByDescending(artist => artist.CreatedAt)
+            .Select(artist => new ArtistCardDto
+            {
+                Id = artist.Id,
+                Name = artist.Name,
+                Cover = artist.Cover,
+                Disambiguation = artist.Disambiguation,
+                Description = artist.Description,
+                ColorPalette = artist._colorPalette,
+                LibraryId = artist.LibraryId,
+                Folder = artist.Folder,
+                TrackCount = artist.ArtistTrack.Count(),
+                ThumbImagePath = artist.Images
+                    .Where(image => image.Type == "thumb")
+                    .Select(image => image.FilePath)
+                    .FirstOrDefault()
+            });
+    }
+
+    private static IQueryable<MusicGenreCardDto> GetLatestGenreCardsQuery(MediaContext ctx)
+    {
+        return ctx.MusicGenres
+            .AsNoTracking()
+            .Where(genre => genre.MusicGenreTracks.Any())
+            .OrderByDescending(genre => genre.MusicGenreTracks.Count())
+            .Select(genre => new MusicGenreCardDto
+            {
+                Id = genre.Id,
+                Name = genre.Name,
+                TrackCount = genre.MusicGenreTracks.Count()
+            });
+    }
+
+    private static IQueryable<AlbumCardDto> GetLatestAlbumCardsQuery(MediaContext ctx)
+    {
+        return ctx.Albums
+            .AsNoTracking()
+            .Where(album => !string.IsNullOrEmpty(album.Cover) && album.AlbumTrack.Any())
+            .OrderByDescending(album => album.CreatedAt)
+            .Select(album => new AlbumCardDto
+            {
+                Id = album.Id,
+                Name = album.Name,
+                Cover = album.Cover,
+                Disambiguation = album.Disambiguation,
+                Description = album.Description,
+                ColorPalette = album._colorPalette,
+                LibraryId = album.LibraryId,
+                Folder = album.Folder,
+                Year = album.Year,
+                TrackCount = album.AlbumTrack.Count()
+            });
+    }
+
+    #endregion
+
+}
+
+public class MusicStartPageData
+{
+    public TopMusicItemDto? TopArtist { get; set; }
+    public TopMusicItemDto? TopAlbum { get; set; }
+    public TopMusicItemDto? TopPlaylist { get; set; }
+    public List<ArtistCardDto> FavoriteArtists { get; set; } = [];
+    public List<AlbumCardDto> FavoriteAlbums { get; set; } = [];
+    public List<PlaylistCardDto> Playlists { get; set; } = [];
+    public List<ArtistCardDto> LatestArtists { get; set; } = [];
+    public List<MusicGenreCardDto> LatestGenres { get; set; } = [];
+    public List<AlbumCardDto> LatestAlbums { get; set; } = [];
+}
+
+public class ArtistCardDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Cover { get; set; }
+    public string? Disambiguation { get; set; }
+    public string? Description { get; set; }
+    public string ColorPalette { get; set; } = string.Empty;
+    public Ulid? LibraryId { get; set; }
+    public string? Folder { get; set; }
+    public int TrackCount { get; set; }
+    public string? ThumbImagePath { get; set; }
+}
+
+public class AlbumCardDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Cover { get; set; }
+    public string? Disambiguation { get; set; }
+    public string? Description { get; set; }
+    public string ColorPalette { get; set; } = string.Empty;
+    public Ulid LibraryId { get; set; }
+    public string? Folder { get; set; }
+    public int Year { get; set; }
+    public int TrackCount { get; set; }
+    public string? TranslatedDescription { get; set; }
+    public string? BackgroundImagePath { get; set; }
+    public string? BackgroundImageColorPalette { get; set; }
+}
+
+public class PlaylistCardDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Cover { get; set; }
+    public string? Description { get; set; }
+    public string ColorPalette { get; set; } = string.Empty;
+    public int TrackCount { get; set; }
+}
+
+public class MusicGenreCardDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+    public int TrackCount { get; set; }
+}
+
+public class TopMusicItemDto
+{
+    public string Id { get; set; } = null!;
+    public string Name { get; set; } = null!;
+    public string? Cover { get; set; }
+    public string ColorPalette { get; set; } = string.Empty;
+    public string Type { get; set; } = null!;
+}
+
+public class SearchTrackCardDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+    public Ulid? FolderId { get; set; }
+    public string? Folder { get; set; }
+    public string? Filename { get; set; }
+    public string? Cover { get; set; }
+    public string ColorPalette { get; set; } = string.Empty;
+    public string? Duration { get; set; }
+    public int DiscNumber { get; set; }
+    public int TrackNumber { get; set; }
+    public int? Quality { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public bool Favorite { get; set; }
+    public string? AlbumId { get; set; }
+    public string? AlbumName { get; set; }
+    public string? AlbumCover { get; set; }
+    public string? AlbumColorPalette { get; set; }
+    public string? ArtistCover { get; set; }
+    public string? ArtistColorPalette { get; set; }
+    public List<SearchTrackArtistDto> Artists { get; set; } = [];
+    public List<SearchTrackAlbumDto> Albums { get; set; } = [];
+}
+
+public class SearchTrackArtistDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+}
+
+public class SearchTrackAlbumDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
 }

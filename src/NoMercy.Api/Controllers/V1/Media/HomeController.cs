@@ -124,7 +124,7 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view home card");
 
-        ComponentResponse result = await _homeService.GetHomeCard(User.UserId(), Language(), request.ReplaceId);
+        ComponentResponse result = await _homeService.GetHomeCard(User.UserId(), Language(), Country(), request.ReplaceId);
 
         return Ok(result);
     }

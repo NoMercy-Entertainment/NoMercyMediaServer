@@ -47,33 +47,10 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
 
-        List<ArtistsResponseItemDto> artists = [];
+        List<ArtistCardDto> artistCards = await _musicRepository.GetArtistCardsAsync(userId, letter);
 
-        foreach (Artist artist in _musicRepository.GetArtists(userId, letter))
-            artists.Add(new(artist));
-
-        List<ArtistTrack> tracks = await _musicRepository.GetArtistTracksForCollectionAsync(
-            artists.Select(a => a.Id).ToList());
-
-        foreach (ArtistsResponseItemDto artist in artists)
-            artist.Tracks = tracks.Count(track => track.ArtistId == artist.Id);
-        
         ComponentEnvelope response = Component.Grid()
-            .WithItems(artists
-                .Where(response => response.Tracks > 0)
-                .OrderBy(artist => artist.Name)
-                .Select(item => Component.MusicCard(item)));
-                // {
-                //     Id = item.Id.ToString(),
-                //     Name = item.Name,
-                //     Cover = item.Cover,
-                //     Type = "artist",
-                //     Link = $"/music/artist/{item.Id}",
-                //     ColorPalette = null,
-                //     Disambiguation = item.Disambiguation,
-                //     Description = item.Description,
-                //     Tracks = item.Tracks
-                // })));
+            .WithItems(artistCards.Select(a => Component.MusicCard(new ArtistsResponseItemDto(a))));
 
         return Ok(ComponentResponse.From(response));
     }

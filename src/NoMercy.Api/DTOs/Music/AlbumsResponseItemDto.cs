@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
@@ -50,5 +51,34 @@ public record AlbumsResponseItemDto
         Tracks = album.AlbumTrack
             .Select(albumTrack => albumTrack.Track)
             .Count(albumTrack => albumTrack.Duration != null);
+    }
+
+    public AlbumsResponseItemDto(AlbumCardDto album)
+    {
+        Description = !string.IsNullOrEmpty(album.TranslatedDescription)
+            ? album.TranslatedDescription
+            : album.Description;
+
+        Backdrop = !string.IsNullOrEmpty(album.BackgroundImagePath)
+            ? new Uri($"/images/music{album.BackgroundImagePath}", UriKind.Relative).ToString()
+            : null;
+        Cover = !string.IsNullOrEmpty(album.Cover)
+            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
+            : null;
+        ColorPalette = !string.IsNullOrEmpty(album.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(album.ColorPalette)
+            : null;
+        if (ColorPalette is not null && !string.IsNullOrEmpty(album.BackgroundImageColorPalette))
+        {
+            IColorPalettes? bgPalette = JsonConvert.DeserializeObject<IColorPalettes>(album.BackgroundImageColorPalette);
+            ColorPalette.Backdrop = bgPalette?.Image;
+        }
+        Disambiguation = album.Disambiguation;
+        Folder = album.Folder;
+        Id = album.Id;
+        Name = album.Name;
+        Type = "album";
+        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Tracks = album.TrackCount;
     }
 }

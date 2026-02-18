@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Movies;
@@ -209,5 +210,17 @@ public class NmGenreCardDto
         Link = new($"/music/genres/{genre.Id}", UriKind.Relative);
         NumberOfItems = genre.MusicGenreTracks.Count;
         HaveItems = genre.MusicGenreTracks.Count;
+    }
+
+    public NmGenreCardDto(MusicGenreCardDto genre)
+    {
+        Id = genre.Id;
+        Title = genre.Name.ToTitleCase();
+        TitleSort = genre.Name.TitleSort();
+
+        Type = "genre";
+        Link = new($"/music/genres/{genre.Id}", UriKind.Relative);
+        NumberOfItems = genre.TrackCount;
+        HaveItems = genre.TrackCount;
     }
 }

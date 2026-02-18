@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 
@@ -43,8 +44,8 @@ public record ArtistsResponseItemDto
         ColorPalette = album.ColorPalette;
         Cover = album.Cover ?? album.Images
             .FirstOrDefault()?.FilePath;
-        Cover = !string.IsNullOrEmpty(Cover) 
-            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() 
+        Cover = !string.IsNullOrEmpty(Cover)
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = album.Disambiguation;
         Description = album.Description;
@@ -56,5 +57,23 @@ public record ArtistsResponseItemDto
         Tracks = album.AlbumTrack
             .Select(albumTrack => albumTrack.Track)
             .Count();
+    }
+
+    public ArtistsResponseItemDto(ArtistCardDto artist)
+    {
+        ColorPalette = !string.IsNullOrEmpty(artist.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(artist.ColorPalette)
+            : null;
+        Cover = artist.Cover ?? artist.ThumbImagePath;
+        Cover = !string.IsNullOrEmpty(Cover)
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            : null;
+        Disambiguation = artist.Disambiguation;
+        Description = artist.Description;
+        Id = artist.Id;
+        Name = artist.Name;
+        Type = "artist";
+        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Tracks = artist.TrackCount;
     }
 }

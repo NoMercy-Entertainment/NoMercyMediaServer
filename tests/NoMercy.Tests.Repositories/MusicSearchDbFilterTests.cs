@@ -190,7 +190,7 @@ public class MusicSearchDbFilterTests : IDisposable
     public async Task SearchArtistIdsAsync_AccentedQuery_FindsMatch()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         // "beyonce" should find "Beyoncé" via accent normalization
         List<Guid> ids = await repository.SearchArtistIdsAsync("beyonce");
@@ -202,7 +202,7 @@ public class MusicSearchDbFilterTests : IDisposable
     public async Task SearchArtistIdsAsync_UmlautQuery_FindsMatch()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         // "motley crue" should find "Mötley Crüe"
         List<Guid> ids = await repository.SearchArtistIdsAsync("motley crue");
@@ -214,7 +214,7 @@ public class MusicSearchDbFilterTests : IDisposable
     public async Task SearchArtistIdsAsync_EmDashNormalized_FindsMatch()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         // "twenty-one" should find "Twenty—One Pilots" (em dash normalized to hyphen)
         List<Guid> ids = await repository.SearchArtistIdsAsync("twenty-one");
@@ -226,7 +226,7 @@ public class MusicSearchDbFilterTests : IDisposable
     public async Task SearchArtistIdsAsync_CaseInsensitive_FindsMatch()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         // "rolling stones" should find "The Rolling Stones"
         List<Guid> ids = await repository.SearchArtistIdsAsync("rolling stones");
@@ -238,7 +238,7 @@ public class MusicSearchDbFilterTests : IDisposable
     public async Task SearchArtistIdsAsync_NoMatch_ReturnsEmpty()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         List<Guid> ids = await repository.SearchArtistIdsAsync("nonexistent artist");
         Assert.Empty(ids);
@@ -248,7 +248,7 @@ public class MusicSearchDbFilterTests : IDisposable
     public async Task SearchAlbumIdsAsync_AccentedAlbum_FindsMatch()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         // "resume" should find "Résumé"
         List<Guid> ids = await repository.SearchAlbumIdsAsync("resume");
@@ -260,7 +260,7 @@ public class MusicSearchDbFilterTests : IDisposable
     public async Task SearchTrackIdsAsync_AccentedTrack_FindsMatch()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         // "deja vu" should find "Déjà Vu"
         List<Guid> ids = await repository.SearchTrackIdsAsync("deja vu");
@@ -272,7 +272,7 @@ public class MusicSearchDbFilterTests : IDisposable
     public async Task SearchPlaylistIdsAsync_AccentedPlaylist_FindsMatch()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         // "cafe" should find "Café Vibes"
         List<Guid> ids = await repository.SearchPlaylistIdsAsync("cafe");
@@ -299,7 +299,7 @@ public class MusicSearchDbFilterTests : IDisposable
         using TestMediaContext context = new(options);
         context.Database.EnsureCreated();
 
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
         interceptor.Clear();
 
         await repository.SearchArtistIdsAsync("test");
@@ -314,7 +314,7 @@ public class MusicSearchDbFilterTests : IDisposable
     public async Task SearchArtistIdsAsync_PartialMatch_FindsMultiple()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         // "e" should match multiple artists (Beyoncé, Mötley Crüe, Twenty—One Pilots, The Rolling Stones)
         List<Guid> ids = await repository.SearchArtistIdsAsync("e");

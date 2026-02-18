@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
-using NoMercy.Data.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Database;
+using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Playback;
@@ -10,17 +13,17 @@ namespace NoMercy.Api.Services.Music;
 public class MusicPlaybackService
 {
     private readonly MusicPlayerStateManager _stateManager;
-    private readonly MusicRepository _musicRepository;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IEventBus? _eventBus;
     private readonly string[] _repeatStates = ["off", "one", "all"];
     private static int _playerStateEventId;
     private static int PlayerStateEventId => ++_playerStateEventId;
 
-    public MusicPlaybackService(MusicPlayerStateManager stateManager, IEventBus? eventBus = null)
+    public MusicPlaybackService(MusicPlayerStateManager stateManager, IServiceProvider serviceProvider, IEventBus? eventBus = null)
     {
         _stateManager = stateManager;
+        _serviceProvider = serviceProvider;
         _eventBus = eventBus;
-        _musicRepository = new(new());
     }
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
@@ -43,7 +46,11 @@ public class MusicPlaybackService
 
             if (playerState.Time >= (duration / 2) && playerState.Time < (duration / 2) + TimerInterval)
             {
-                await _musicRepository.RecordPlaybackAsync(playerState.CurrentItem.Id, user.Id);
+                await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+                IDbContextFactory<MediaContext> factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+                await using MediaContext ctx = await factory.CreateDbContextAsync();
+                await ctx.MusicPlays.AddAsync(new MusicPlay(user.Id, playerState.CurrentItem.Id));
+                await ctx.SaveChangesAsync();
                 await PublishProgressEventAsync(user.Id, playerState);
             }
 

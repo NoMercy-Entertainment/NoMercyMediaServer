@@ -26,7 +26,7 @@ public class MusicRepositoryTests : IDisposable
     {
         _context = TestMediaContextFactory.CreateContext();
         SeedMusicData(_context);
-        _repository = new(_context);
+        _repository = new(_context, null!);
     }
 
     private static void SeedMusicData(MediaContext context)

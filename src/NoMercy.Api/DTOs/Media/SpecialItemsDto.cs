@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Movies;
@@ -166,5 +167,219 @@ public record SpecialItemsDto
         Crew = tv.Crew
             .Take(15)
             .Select(crew => new PeopleDto(crew));
+    }
+
+    public SpecialItemsDto(SpecialMovieProjection movie)
+    {
+        Id = movie.Id;
+        EpisodeIds = [];
+        Title = movie.Title;
+        Overview = movie.Overview;
+        Backdrop = movie.Backdrop;
+        Logo = movie.Logo;
+
+        Backdrops = movie.Backdrops.Select(i => new ImageDto
+        {
+            Id = i.Id,
+            Src = i.Site == "https://image.tmdb.org/t/p/"
+                ? new Uri(i.FilePath!, UriKind.Relative).ToString()
+                : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+            Width = i.Width,
+            Type = i.Type,
+            Height = i.Height,
+            Iso6391 = i.Iso6391,
+            VoteAverage = i.VoteAverage,
+            VoteCount = i.VoteCount,
+            ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
+                ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
+                : null
+        });
+
+        Posters = movie.Posters.Select(i => new ImageDto
+        {
+            Id = i.Id,
+            Src = i.Site == "https://image.tmdb.org/t/p/"
+                ? new Uri(i.FilePath!, UriKind.Relative).ToString()
+                : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+            Width = i.Width,
+            Type = i.Type,
+            Height = i.Height,
+            Iso6391 = i.Iso6391,
+            VoteAverage = i.VoteAverage,
+            VoteCount = i.VoteCount,
+            ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
+                ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
+                : null
+        });
+
+        MediaType = Config.MovieMediaType;
+        ColorPalette = !string.IsNullOrEmpty(movie.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(movie.ColorPalette)
+            : null;
+        Poster = movie.Poster;
+        Type = Config.MovieMediaType;
+        Link = new($"/movie/{movie.Id}", UriKind.Relative);
+        Year = movie.ReleaseDate.ParseYear();
+        Duration = movie.Runtime * 60 ?? 0;
+        TotalDuration = movie.Runtime * 60 ?? 0;
+        VoteAverage = movie.VoteAverage;
+
+        Genres = movie.Genres.Select(g => new GenreDto
+        {
+            Id = g.Id,
+            Name = g.Name,
+            Link = new($"/genre/{g.Id}", UriKind.Relative)
+        });
+
+        Rating = new Certification
+        {
+            Rating = movie.CertificationRating ?? string.Empty,
+            Iso31661 = movie.CertificationCountry ?? string.Empty
+        };
+
+        NumberOfItems = 1;
+        HaveItems = movie.VideoFileCount > 0 ? 1 : 0;
+        VideoId = movie.Video;
+
+        Cast = movie.Cast.Select(c => new PeopleDto
+        {
+            Id = c.PersonId,
+            Name = c.PersonName,
+            ProfilePath = c.PersonProfile,
+            KnownForDepartment = c.PersonKnownForDepartment,
+            ColorPalette = !string.IsNullOrEmpty(c.PersonColorPalette)
+                ? JsonConvert.DeserializeObject<IColorPalettes>(c.PersonColorPalette)
+                : null,
+            DeathDay = c.PersonDeathDay,
+            Gender = c.PersonGender,
+            Character = c.Character,
+            Order = c.Order,
+            Link = new($"/person/{c.PersonId}", UriKind.Relative),
+            Translations = []
+        });
+
+        Crew = movie.Crew.Select(c => new PeopleDto
+        {
+            Id = c.PersonId,
+            Name = c.PersonName,
+            ProfilePath = c.PersonProfile,
+            KnownForDepartment = c.PersonKnownForDepartment,
+            ColorPalette = !string.IsNullOrEmpty(c.PersonColorPalette)
+                ? JsonConvert.DeserializeObject<IColorPalettes>(c.PersonColorPalette)
+                : null,
+            DeathDay = c.PersonDeathDay,
+            Gender = c.PersonGender,
+            Job = c.Task,
+            Order = c.Order,
+            Link = new($"/person/{c.PersonId}", UriKind.Relative),
+            Translations = []
+        });
+    }
+
+    public SpecialItemsDto(SpecialTvProjection tv)
+    {
+        Id = tv.Id;
+        EpisodeIds = tv.EpisodeIds;
+        Title = tv.Title;
+        Overview = tv.Overview;
+        Backdrop = tv.Backdrop;
+        Logo = tv.Logo;
+
+        Backdrops = tv.Backdrops.Select(i => new ImageDto
+        {
+            Id = i.Id,
+            Src = i.Site == "https://image.tmdb.org/t/p/"
+                ? new Uri(i.FilePath!, UriKind.Relative).ToString()
+                : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+            Width = i.Width,
+            Type = i.Type,
+            Height = i.Height,
+            Iso6391 = i.Iso6391,
+            VoteAverage = i.VoteAverage,
+            VoteCount = i.VoteCount,
+            ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
+                ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
+                : null
+        });
+
+        Posters = tv.Posters.Select(i => new ImageDto
+        {
+            Id = i.Id,
+            Src = i.Site == "https://image.tmdb.org/t/p/"
+                ? new Uri(i.FilePath!, UriKind.Relative).ToString()
+                : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+            Width = i.Width,
+            Type = i.Type,
+            Height = i.Height,
+            Iso6391 = i.Iso6391,
+            VoteAverage = i.VoteAverage,
+            VoteCount = i.VoteCount,
+            ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
+                ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
+                : null
+        });
+
+        MediaType = "tv";
+        ColorPalette = !string.IsNullOrEmpty(tv.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(tv.ColorPalette)
+            : null;
+        Poster = tv.Poster;
+        Type = "tv";
+        Link = new($"/tv/{tv.Id}", UriKind.Relative);
+        Year = tv.FirstAirDate.ParseYear();
+        VoteAverage = tv.VoteAverage;
+
+        Genres = tv.Genres.Select(g => new GenreDto
+        {
+            Id = g.Id,
+            Name = g.Name,
+            Link = new($"/genre/{g.Id}", UriKind.Relative)
+        });
+
+        Rating = new Certification
+        {
+            Rating = tv.CertificationRating ?? string.Empty,
+            Iso31661 = tv.CertificationCountry ?? string.Empty
+        };
+
+        NumberOfItems = tv.NumberOfEpisodes;
+        HaveItems = tv.HaveEpisodes;
+        Duration = tv.Duration * tv.HaveEpisodes * 60 ?? 0;
+        TotalDuration = tv.EpisodeDurations.Sum(d => d?.ToSeconds() ?? 0);
+        VideoId = tv.Trailer;
+
+        Cast = tv.Cast.Select(c => new PeopleDto
+        {
+            Id = c.PersonId,
+            Name = c.PersonName,
+            ProfilePath = c.PersonProfile,
+            KnownForDepartment = c.PersonKnownForDepartment,
+            ColorPalette = !string.IsNullOrEmpty(c.PersonColorPalette)
+                ? JsonConvert.DeserializeObject<IColorPalettes>(c.PersonColorPalette)
+                : null,
+            DeathDay = c.PersonDeathDay,
+            Gender = c.PersonGender,
+            Character = c.Character,
+            Order = c.Order,
+            Link = new($"/person/{c.PersonId}", UriKind.Relative),
+            Translations = []
+        });
+
+        Crew = tv.Crew.Select(c => new PeopleDto
+        {
+            Id = c.PersonId,
+            Name = c.PersonName,
+            ProfilePath = c.PersonProfile,
+            KnownForDepartment = c.PersonKnownForDepartment,
+            ColorPalette = !string.IsNullOrEmpty(c.PersonColorPalette)
+                ? JsonConvert.DeserializeObject<IColorPalettes>(c.PersonColorPalette)
+                : null,
+            DeathDay = c.PersonDeathDay,
+            Gender = c.PersonGender,
+            Job = c.Task,
+            Order = c.Order,
+            Link = new($"/person/{c.PersonId}", UriKind.Relative),
+            Translations = []
+        });
     }
 }

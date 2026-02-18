@@ -18,8 +18,6 @@ using NoMercy.Events.Library;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using CarouselResponseItemDto = NoMercy.Data.Repositories.CarouselResponseItemDto;
-
 namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
@@ -47,15 +45,10 @@ public class PlaylistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view playlists");
 
-        List<CarouselResponseItemDto> playlists = [];
-        playlists.AddRange(await _musicRepository.GetCarouselPlaylistsAsync(userId));
-
-        List<MusicCardData> musicCards = playlists
-            .Select(p => new MusicCardData(p))
-            .ToList();
+        List<PlaylistCardDto> playlistCards = await _musicRepository.GetPlaylistCardsAsync(userId);
 
         ComponentEnvelope response = Component.Grid()
-            .WithItems(musicCards.Select(Component.MusicCard));
+            .WithItems(playlistCards.Select(p => Component.MusicCard(new MusicCardData(p))));
 
         return Ok(ComponentResponse.From(response));
     }

@@ -33,7 +33,8 @@ public class GenresController : BaseController
 
         Guid userId = User.UserId();
 
-        IEnumerable<NmGenreCardDto> genres = (await _genreRepository.GetMusicGenresAsync(userId))
+        List<MusicGenreCardDto> genreCards = await _genreRepository.GetMusicGenreCardsAsync(userId);
+        IEnumerable<NmGenreCardDto> genres = genreCards
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 
@@ -42,7 +43,7 @@ public class GenresController : BaseController
 
         return Ok(ComponentResponse.From(response));
     }
-    
+
     [HttpGet]
     [Route("letter/{letter}")]
     public async Task<IActionResult> LibraryByLetter(Ulid libraryId, string letter, [FromQuery] PageRequestDto request)
@@ -52,7 +53,8 @@ public class GenresController : BaseController
 
         Guid userId = User.UserId();
 
-        IEnumerable<NmGenreCardDto> genres = (await _genreRepository.GetPaginatedMusicGenresAsync(userId, letter, request.Take, request.Page))
+        List<MusicGenreCardDto> genreCards = await _genreRepository.GetPaginatedMusicGenreCardsAsync(userId, letter, request.Take, request.Page);
+        IEnumerable<NmGenreCardDto> genres = genreCards
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 

@@ -25,6 +25,14 @@ public record PeopleDto
 
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
 
+    public PeopleDto()
+    {
+        Name = string.Empty;
+        Gender = string.Empty;
+        Translations = [];
+        Link = new("/person/0", UriKind.Relative);
+    }
+
     public PeopleDto(Cast cast)
     {
         Id = cast.Person.Id;

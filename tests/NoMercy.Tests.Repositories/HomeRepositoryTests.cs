@@ -24,7 +24,7 @@ public class HomeRepositoryTests : IDisposable
     [Fact]
     public async Task GetHomeMovies_ReturnsMoviesById()
     {
-        List<Movie> movies = await _repository.GetHomeMovies(
+        List<HomeMovieCardDto> movies = await _repository.GetHomeMovies(
             _context, [129, 680], "en", "US");
 
         Assert.Equal(2, movies.Count);
@@ -35,7 +35,7 @@ public class HomeRepositoryTests : IDisposable
     [Fact]
     public async Task GetHomeMovies_ReturnsEmpty_WhenIdsNotFound()
     {
-        List<Movie> movies = await _repository.GetHomeMovies(
+        List<HomeMovieCardDto> movies = await _repository.GetHomeMovies(
             _context, [999999], "en", "US");
 
         Assert.Empty(movies);
@@ -44,7 +44,7 @@ public class HomeRepositoryTests : IDisposable
     [Fact]
     public async Task GetHomeTvs_ReturnsTvShowsById()
     {
-        List<Tv> shows = await _repository.GetHomeTvs(
+        List<HomeTvCardDto> shows = await _repository.GetHomeTvs(
             _context, [1399], "en", "US");
 
         Assert.Single(shows);
@@ -96,7 +96,7 @@ public class HomeRepositoryTests : IDisposable
     [Fact]
     public async Task GetHomeGenresAsync_ReturnsGenresForUser()
     {
-        List<Genre> genres = await _repository.GetHomeGenresAsync(
+        List<GenreHomeDto> genres = await _repository.GetHomeGenresAsync(
             _context, SeedConstants.UserId, "en", 10, 0);
 
         Assert.Equal(2, genres.Count);
@@ -107,7 +107,7 @@ public class HomeRepositoryTests : IDisposable
     [Fact]
     public async Task GetHomeGenresAsync_RespectsPageAndTake()
     {
-        List<Genre> genres = await _repository.GetHomeGenresAsync(
+        List<GenreHomeDto> genres = await _repository.GetHomeGenresAsync(
             _context, SeedConstants.UserId, "en", 1, 0);
 
         Assert.Single(genres);

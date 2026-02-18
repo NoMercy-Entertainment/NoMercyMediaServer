@@ -197,6 +197,126 @@ public class NmCardDto
             .FirstOrDefault();
     }
 
+    public NmCardDto(HomeMovieCardDto movie, string country)
+    {
+        Id = movie.Id;
+        Title = !string.IsNullOrEmpty(movie.TranslatedTitle) ? movie.TranslatedTitle : movie.Title;
+        Overview = !string.IsNullOrEmpty(movie.TranslatedOverview) ? movie.TranslatedOverview : movie.Overview;
+        Poster = movie.Poster;
+        Backdrop = movie.Backdrop;
+        Logo = movie.Logo;
+        TitleSort = movie.TitleSort;
+        Year = movie.ReleaseDate.ParseYear();
+        Type = Config.MovieMediaType;
+        CreatedAt = movie.CreatedAt;
+        Link = new($"/movie/{movie.Id}", UriKind.Relative);
+        NumberOfItems = 1;
+        HaveItems = movie.VideoFileCount;
+
+        ColorPalette = !string.IsNullOrEmpty(movie.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(movie.ColorPalette)
+            : null;
+
+        if (movie.CertificationRating != null)
+        {
+            Rating = new()
+            {
+                Rating = movie.CertificationRating,
+                Iso31661 = movie.CertificationCountry!,
+                Image = $"/{movie.CertificationCountry}/{movie.CertificationCountry}_{movie.CertificationRating}.svg"
+            };
+        }
+    }
+
+    public NmCardDto(HomeTvCardDto tv, string country)
+    {
+        Id = tv.Id;
+        Title = !string.IsNullOrEmpty(tv.TranslatedTitle) ? tv.TranslatedTitle : tv.Title;
+        Overview = !string.IsNullOrEmpty(tv.TranslatedOverview) ? tv.TranslatedOverview : tv.Overview;
+        Poster = tv.Poster;
+        Backdrop = tv.Backdrop;
+        Logo = tv.Logo;
+        TitleSort = tv.TitleSort;
+        Year = tv.FirstAirDate.ParseYear();
+        Type = Config.TvMediaType;
+        CreatedAt = tv.CreatedAt;
+        Link = new($"/tv/{tv.Id}", UriKind.Relative);
+        NumberOfItems = tv.NumberOfEpisodes;
+        HaveItems = tv.EpisodesWithVideo;
+
+        ColorPalette = !string.IsNullOrEmpty(tv.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(tv.ColorPalette)
+            : null;
+
+        if (tv.CertificationRating != null)
+        {
+            Rating = new()
+            {
+                Rating = tv.CertificationRating,
+                Iso31661 = tv.CertificationCountry!,
+                Image = $"/{tv.CertificationCountry}/{tv.CertificationCountry}_{tv.CertificationRating}.svg"
+            };
+        }
+    }
+
+    public NmCardDto(CollectionListDto dto, string country)
+    {
+        Id = dto.Id;
+        Title = !string.IsNullOrEmpty(dto.TranslatedTitle) ? dto.TranslatedTitle : dto.Title;
+        Overview = !string.IsNullOrEmpty(dto.TranslatedOverview) ? dto.TranslatedOverview : dto.Overview;
+        Poster = dto.Poster;
+        Backdrop = dto.Backdrop;
+        Logo = dto.Logo;
+        TitleSort = dto.TitleSort;
+        Year = dto.FirstMovieYear;
+        Type = Config.CollectionMediaType;
+        Link = new($"/collection/{dto.Id}", UriKind.Relative);
+        NumberOfItems = dto.TotalMovies;
+        HaveItems = dto.MoviesWithVideo;
+        ColorPalette = dto.ColorPalette;
+        CreatedAt = dto.CreatedAt;
+
+        if (!string.IsNullOrEmpty(dto.CertificationRating) && !string.IsNullOrEmpty(dto.CertificationCountry))
+        {
+            Rating = new()
+            {
+                Rating = dto.CertificationRating,
+                Iso31661 = dto.CertificationCountry,
+                Image = $"/{dto.CertificationCountry}/{dto.CertificationCountry}_{dto.CertificationRating}.svg"
+            };
+        }
+    }
+
+    public NmCardDto(SpecialCardDto dto, string country)
+    {
+        Id = dto.Id;
+        Title = dto.Title;
+        Overview = dto.Overview;
+        Poster = dto.Poster;
+        Backdrop = dto.Backdrop;
+        Logo = dto.Logo;
+        TitleSort = dto.TitleSort;
+        Type = Config.SpecialMediaType;
+        Link = new($"/specials/{dto.Id}", UriKind.Relative);
+        NumberOfItems = dto.NumberOfItems;
+        CreatedAt = dto.CreatedAt;
+        HaveItems = dto.HaveMovies + dto.HaveEpisodes;
+
+        ColorPalette = !string.IsNullOrEmpty(dto.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(dto.ColorPalette)
+            : null;
+
+        if (dto.CertificationRating != null)
+        {
+            Rating = new()
+            {
+                Rating = dto.CertificationRating,
+                Iso31661 = dto.CertificationCountry!,
+                Image = $"/{dto.CertificationCountry}/{dto.CertificationCountry}_{dto.CertificationRating}.svg"
+            };
+        }
+    }
+
     public NmCardDto(UserData item, string country)
     {
         Id = item.SpecialId?.ToString()

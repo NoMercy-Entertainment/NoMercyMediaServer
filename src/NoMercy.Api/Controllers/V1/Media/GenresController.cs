@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.Repositories;
-using NoMercy.Database.Models.Common;
 using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -65,18 +64,19 @@ public class GenresController : BaseController
         string language = Language();
         string country = Country();
 
-        Genre? genre = await _genreRepository.GetGenreAsync(userId, genreId, language, country, request.Take, request.Page);
+        (GenreDetailDto? genreDetail, List<HomeMovieCardDto> movies, List<HomeTvCardDto> tvShows) =
+            await _genreRepository.GetGenreCardsAsync(userId, genreId, language, country, request.Take, request.Page, ct);
 
-        if (genre is null || (genre.GenreTvShows.Count == 0 && genre.GenreMovies.Count == 0))
+        if (genreDetail is null || (movies.Count == 0 && tvShows.Count == 0))
             return NotFoundResponse("Genre not found");
 
         if (request.Version != "lolomo")
         {
             // Simple grid view
-            IOrderedEnumerable<CardData> concat = genre.GenreMovies
-                .Select(genreMovie => new CardData(genreMovie.Movie, country))
-                .Concat(genre.GenreTvShows
-                    .Select(genteTv => new CardData(genteTv.Tv, country)))
+            IOrderedEnumerable<CardData> concat = movies
+                .Select(movie => new CardData(movie, country))
+                .Concat(tvShows
+                    .Select(tv => new CardData(tv, country)))
                 .OrderBy(card => card.TitleSort);
 
             ComponentEnvelope response = Component.Grid()
@@ -91,16 +91,16 @@ public class GenresController : BaseController
         List<ComponentEnvelope> carousels = Letters
             .Select((letter, index) =>
             {
-                List<CardData> carouselItems = genre.GenreMovies
-                    .Where(libraryMovie => letter == "#"
-                        ? Numbers.Any(p => libraryMovie.Movie.Title.StartsWith(p))
-                        : libraryMovie.Movie.Title.StartsWith(letter))
-                    .Select(genreMovie => new CardData(genreMovie.Movie, country))
-                    .Concat(genre.GenreTvShows
-                        .Where(libraryTv => letter == "#"
-                            ? Numbers.Any(p => libraryTv.Tv.Title.StartsWith(p))
-                            : libraryTv.Tv.Title.StartsWith(letter))
-                        .Select(genreTv => new CardData(genreTv.Tv, country)))
+                List<CardData> carouselItems = movies
+                    .Where(movie => letter == "#"
+                        ? Numbers.Any(p => movie.Title.StartsWith(p))
+                        : movie.Title.StartsWith(letter))
+                    .Select(movie => new CardData(movie, country))
+                    .Concat(tvShows
+                        .Where(tv => letter == "#"
+                            ? Numbers.Any(p => tv.Title.StartsWith(p))
+                            : tv.Title.StartsWith(letter))
+                        .Select(tv => new CardData(tv, country)))
                     .OrderBy(card => card.TitleSort)
                     .ToList();
 

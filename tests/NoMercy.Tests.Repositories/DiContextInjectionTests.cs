@@ -167,7 +167,7 @@ public class DiContextInjectionTests : IDisposable
     {
         // Verify MusicRepository queries use the injected context by checking data is accessible
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         List<Guid> artistIds = await repository.SearchArtistIdsAsync("test");
         Assert.Single(artistIds);
@@ -178,7 +178,7 @@ public class DiContextInjectionTests : IDisposable
     public async Task MusicRepository_SearchAlbumIds_UsesInjectedContext()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         List<Guid> albumIds = await repository.SearchAlbumIdsAsync("test");
         Assert.Single(albumIds);
@@ -189,7 +189,7 @@ public class DiContextInjectionTests : IDisposable
     public async Task MusicRepository_SearchTrackIds_UsesInjectedContext()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         List<Guid> trackIds = await repository.SearchTrackIdsAsync("test");
         Assert.Single(trackIds);
@@ -200,7 +200,7 @@ public class DiContextInjectionTests : IDisposable
     public async Task MusicRepository_SearchPlaylistIds_UsesInjectedContext()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         List<Guid> playlistIds = await repository.SearchPlaylistIdsAsync("test");
         Assert.Single(playlistIds);
@@ -211,7 +211,7 @@ public class DiContextInjectionTests : IDisposable
     public async Task MusicRepository_GetArtistAsync_UsesInjectedContext()
     {
         using MediaContext context = CreateContext();
-        MusicRepository repository = new(context);
+        MusicRepository repository = new(context, null!);
 
         Artist? artist = await repository.GetArtistAsync(
             SeedConstants.UserId,
@@ -269,7 +269,7 @@ public class DiContextInjectionTests : IDisposable
         using TestMediaContext emptyContext = new(options);
         emptyContext.Database.EnsureCreated();
 
-        MusicRepository repository = new(emptyContext);
+        MusicRepository repository = new(emptyContext, null!);
 
         List<Guid> artistIds = await repository.SearchArtistIdsAsync("test");
         List<Guid> albumIds = await repository.SearchAlbumIdsAsync("test");

@@ -31,7 +31,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         string language = Language();
         string country = Country();
 
-        List<Special> specials = await specialRepository.GetSpecialsAsync(userId, language, request.Take, request.Page, ct);
+        List<SpecialCardDto> specials = await specialRepository.GetSpecialCardsAsync(userId, language, request.Take, request.Page, ct);
 
         if (request.Version != "lolomo")
         {
@@ -52,7 +52,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
             .Select(letter =>
             {
                 List<CardData> letterItems = specials
-                    .Select(movie => new CardData(new NmCardDto(movie, country)))
+                    .Select(special => new CardData(special, country))
                     .Where(item => letter == "#"
                         ? Numbers.Any(p => item.Title.StartsWith(p))
                         : item.Title.StartsWith(letter))
@@ -81,45 +81,37 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view a special");
 
-        string language = Language();
         string country = Country();
 
-        Special? special = await SpecialResponseDto.GetSpecial(context, userId, id, language, country);
+        SpecialDetailDto? detail = await specialRepository.GetSpecialDetailAsync(userId, id, ct);
 
-        if (special is null)
+        if (detail is null)
             return NotFoundResponse("Special not found");
 
-        IEnumerable<int> movieIds = special.Items
+        IEnumerable<int> movieIds = detail.Items
             .Where(item => item.MovieId is not null)
             .Select(item => item.MovieId ?? 0);
 
-        IEnumerable<int> tvIds = special.Items
+        IEnumerable<int> tvIds = detail.Items
             .Where(item => item.EpisodeId is not null)
-            .Select(item => item.Episode)
-            .Select(episode => episode!.Tv)
-            .Select(tv => tv.Id);
+            .Select(item => item.TvId)
+            .Distinct();
 
-        // Fetch movies and TVs in parallel
+        // Fetch movies and TVs in parallel using separate DbContexts
         Task<List<SpecialItemsDto>> moviesTask = Task.Run(async () =>
         {
             await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-            List<SpecialItemsDto> movieItems = [];
-            IAsyncEnumerable<Movie> specialMovies =
-                SpecialResponseDto.GetSpecialMovies(mediaContext, userId, movieIds, language, country);
-            await foreach (Movie movie in specialMovies)
-                movieItems.Add(new(movie));
-            return movieItems;
+            List<SpecialMovieProjection> projections =
+                await SpecialRepository.GetSpecialMovieProjectionsAsync(mediaContext, userId, movieIds, country, ct);
+            return projections.Select(p => new SpecialItemsDto(p)).ToList();
         });
 
         Task<List<SpecialItemsDto>> tvsTask = Task.Run(async () =>
         {
             await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
-            List<SpecialItemsDto> tvItems = [];
-            IAsyncEnumerable<Tv> specialTvs =
-                SpecialResponseDto.GetSpecialTvs(mediaContext, userId, tvIds, language, country);
-            await foreach (Tv tv in specialTvs)
-                tvItems.Add(new(tv));
-            return tvItems;
+            List<SpecialTvProjection> projections =
+                await SpecialRepository.GetSpecialTvProjectionsAsync(mediaContext, userId, tvIds, country, ct);
+            return projections.Select(p => new SpecialItemsDto(p)).ToList();
         });
 
         await Task.WhenAll(moviesTask, tvsTask);
@@ -128,7 +120,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
 
         return Ok(new DataResponseDto<SpecialResponseItemDto>
         {
-            Data = new(special, items)
+            Data = new(detail, items)
         });
     }
 

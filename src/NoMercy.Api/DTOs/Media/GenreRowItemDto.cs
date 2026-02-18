@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
@@ -112,6 +113,76 @@ public record GenreRowItemDto
                 Rating = certificationTv.Certification.Rating,
                 Iso31661 = certificationTv.Certification.Iso31661
             });
+    }
+
+    public GenreRowItemDto(HomeMovieCardDto movie, string country)
+    {
+        Id = movie.Id;
+        Title = !string.IsNullOrEmpty(movie.TranslatedTitle) ? movie.TranslatedTitle : movie.Title;
+        Overview = !string.IsNullOrEmpty(movie.TranslatedOverview) ? movie.TranslatedOverview : movie.Overview;
+        Poster = movie.Poster;
+        Backdrop = movie.Backdrop;
+        Logo = movie.Logo;
+        TitleSort = movie.TitleSort;
+        Year = movie.ReleaseDate.ParseYear();
+        MediaType = Config.MovieMediaType;
+        Type = Config.MovieMediaType;
+        Link = new($"/movie/{movie.Id}", UriKind.Relative);
+        NumberOfItems = 1;
+        HaveItems = movie.VideoFileCount;
+        Tags = [];
+        Videos = [];
+
+        ColorPalette = !string.IsNullOrEmpty(movie.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(movie.ColorPalette)
+            : null;
+
+        if (movie.CertificationRating != null)
+        {
+            ContentRatings =
+            [
+                new()
+                {
+                    Rating = movie.CertificationRating,
+                    Iso31661 = movie.CertificationCountry!
+                }
+            ];
+        }
+    }
+
+    public GenreRowItemDto(HomeTvCardDto tv, string country)
+    {
+        Id = tv.Id;
+        Title = !string.IsNullOrEmpty(tv.TranslatedTitle) ? tv.TranslatedTitle : tv.Title;
+        Overview = !string.IsNullOrEmpty(tv.TranslatedOverview) ? tv.TranslatedOverview : tv.Overview;
+        Poster = tv.Poster;
+        Backdrop = tv.Backdrop;
+        Logo = tv.Logo;
+        TitleSort = tv.TitleSort;
+        Year = tv.FirstAirDate.ParseYear();
+        MediaType = Config.TvMediaType;
+        Type = Config.TvMediaType;
+        Link = new($"/tv/{tv.Id}", UriKind.Relative);
+        NumberOfItems = tv.NumberOfEpisodes;
+        HaveItems = tv.EpisodesWithVideo;
+        Tags = [];
+        Videos = [];
+
+        ColorPalette = !string.IsNullOrEmpty(tv.ColorPalette)
+            ? JsonConvert.DeserializeObject<IColorPalettes>(tv.ColorPalette)
+            : null;
+
+        if (tv.CertificationRating != null)
+        {
+            ContentRatings =
+            [
+                new()
+                {
+                    Rating = tv.CertificationRating,
+                    Iso31661 = tv.CertificationCountry!
+                }
+            ];
+        }
     }
 
     public GenreRowItemDto()
