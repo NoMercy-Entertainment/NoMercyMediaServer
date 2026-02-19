@@ -71,7 +71,7 @@ public class Start
             }, CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
 
             new("Binaries", Binaries.DownloadAll,
-                CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
+                CanDefer: false, Phase: 2, DependsOn: ["NetworkProbe"]),
 
             // ── PHASE 3: NETWORK-DEPENDENT (run if possible, degrade if not) ──
             new("Networking", async () =>

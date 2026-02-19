@@ -28,7 +28,8 @@ public class AccessLogMiddleware
         "/scripts",
         "/favicon",
         "/transcode",
-        "/manage"
+        "/manage",
+        "/health"
     ];
 
     private readonly string[] _ignoreExact =
