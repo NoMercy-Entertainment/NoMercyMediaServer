@@ -25,7 +25,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core"/>
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Stowage" />
         <PackageReference Include="SubtitlesParserV2" />

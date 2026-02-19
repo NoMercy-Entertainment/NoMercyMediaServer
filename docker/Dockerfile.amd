@@ -25,8 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd -f video && groupadd -f render \
     && useradd -m -o -u 1000 -G video,render nomercy
 
-# Create data directories
-RUN mkdir -p /data/config /data/cache /data/media /data/log \
+# Create data directories (app stores data under $HOME/.local/share/NoMercy/)
+RUN mkdir -p /data/.local/share/NoMercy \
     && chown -R nomercy:nomercy /data
 
 # Copy self-contained binary

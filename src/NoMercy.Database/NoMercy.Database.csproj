@@ -12,7 +12,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core"/>
         <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" />
         <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" />
@@ -28,10 +27,8 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Moq"/>
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Ulid" />
-        <PackageReference Include="xunit"/>
     </ItemGroup>
 
     <ItemGroup>
