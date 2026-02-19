@@ -1,0 +1,103 @@
+name: 'Build Docker Images'
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version tag for the images (e.g. 0.1.236)'
+        required: true
+        type: string
+      push:
+        description: 'Push images to registry'
+        required: false
+        type: boolean
+        default: true
+      ref:
+        description: 'Git ref to checkout'
+        required: false
+        type: string
+        default: 'main'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: nomercy-entertainment/nomercymediaserver
+
+jobs:
+  # Package the linux-x64 binary (from build_executables) into each GPU variant
+  # Expects the Service-executables artifact to already be uploaded by build_executables
+  package:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: cpu
+            dockerfile: docker/Dockerfile.cpu
+            suffix: ""
+          - variant: nvidia
+            dockerfile: docker/Dockerfile.nvidia
+            suffix: "-nvidia"
+          - variant: intel
+            dockerfile: docker/Dockerfile.intel
+            suffix: "-intel"
+          - variant: amd
+            dockerfile: docker/Dockerfile.amd
+            suffix: "-amd"
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Download linux binary
+        uses: actions/download-artifact@v5
+        with:
+          name: Service-executables
+          path: ./artifacts
+
+      - name: Prepare binary
+        run: |
+          mkdir -p ./publish
+          cp ./artifacts/NoMercyMediaServer-linux-x64 ./publish/NoMercyMediaServer
+          chmod +x ./publish/NoMercyMediaServer
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ inputs.version }}${{ matrix.suffix }}
+            type=raw,value=latest${{ matrix.suffix }},enable=${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_call' }}
+            type=raw,value=${{ matrix.variant }},enable=${{ matrix.variant != 'cpu' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.variant }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.variant }}
+          provenance: false

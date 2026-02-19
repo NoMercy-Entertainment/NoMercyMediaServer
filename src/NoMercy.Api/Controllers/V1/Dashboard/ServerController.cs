@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -7,30 +6,33 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.Dashboard.DTO;
-using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 using NoMercy.Helpers.Monitoring;
+using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Queue;
+using NoMercyQueue;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Dithering;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
-using Configuration = NoMercy.Database.Models.Configuration;
+using Configuration = NoMercy.Database.Models.Common.Configuration;
 using HttpClient = System.Net.Http.HttpClient;
-using Image = NoMercy.Database.Models.Image;
+using Image = NoMercy.Database.Models.Media.Image;
 using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -44,7 +46,11 @@ public class ServerController(
     IHostApplicationLifetime appLifetime,
     MediaContext context,
     FileRepository fileRepository,
-    JobDispatcher jobDispatcher) : BaseController
+    JobDispatcher jobDispatcher,
+    QueueRunner queueRunner,
+    IEventBus eventBus,
+    IWallpaperService wallpaperService,
+    INetworkDiscovery networkDiscovery) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -135,16 +141,16 @@ public class ServerController(
 
     [HttpPost]
     [Route("invalidate")]
-    public IActionResult Invalidate([FromBody] InvalidateRequest request)
+    public async Task<IActionResult> Invalidate([FromBody] InvalidateRequest request)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to invalidate the library cache");
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = request.QueryKey
         });
-        
+
         return Content("Done");
     }
 
@@ -160,11 +166,11 @@ public class ServerController(
     }
 
     [HttpGet("update/check")]
-    public IActionResult CheckForUpdate()
+    public async Task<IActionResult> CheckForUpdate()
     {
         return Ok(new
         {
-            updateAvailable = UpdateChecker.IsUpdateAvailable()
+            updateAvailable = await UpdateChecker.IsUpdateAvailableAsync()
         });
     }
 
@@ -210,23 +216,26 @@ public class ServerController(
             if (library.Type == "music")
             {
                 Logger.App("Adding music files to library", LogEventLevel.Verbose);
-                jobDispatcher.DispatchJob<ProcessReleaseFolderJob>(
+                string directoryPath = Path.GetFullPath(request.Files[0].Path);
+                jobDispatcher.DispatchJob<ReleaseImportJob>(
                     library.Id,
                     request.FolderId,
                     request.Files[0].Id.ToGuid(),
-                    request.Files[0].Path);
+                    directoryPath);
 
                 return Ok(request);
             }
 
             foreach (AddFile file in request.Files)
-                jobDispatcher.DispatchJob<EncodeVideoJob>(
+            {
+                string filePath = Path.GetFullPath(file.Path);
+                jobDispatcher.DispatchJob<VideoEncodeJob>(
                     library.Id,
                     request.FolderId,
                     file.Id,
-                    file.Path
+                    filePath
                 );
-
+            }
             return Ok(request);
         }
         catch (Exception e)
@@ -312,6 +321,7 @@ public class ServerController(
 
     [HttpGet]
     [Route("info")]
+    [ResponseCache(Duration = 3600)]
     public IActionResult ServerInfo()
     {
         if (!User.IsAllowed())
@@ -415,6 +425,7 @@ public class ServerController(
 
     [HttpGet]
     [Route("resources")]
+    [ResponseCache(NoStore = true)]
     public IActionResult Resources()
     {
         if (!User.IsModerator())
@@ -443,6 +454,7 @@ public class ServerController(
 
     [HttpGet]
     [Route("paths")]
+    [ResponseCache(Duration = 3600)]
     public IActionResult ServerPaths()
     {
         if (!User.IsModerator())
@@ -500,7 +512,7 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update workers");
 
-        if (await QueueRunner.SetWorkerCount(worker, count, User.UserId()))
+        if (await queueRunner.SetWorkerCount(worker, count, User.UserId()))
             return Ok($"{worker} worker count set to {count}");
 
         return BadRequestResponse($"{worker} worker count could not be set to {count}");
@@ -526,11 +538,10 @@ public class ServerController(
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to set wallpaper");
 
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return BadRequestResponse("Wallpaper setting is only supported on Windows");
+        if (!wallpaperService.IsSupported)
+            return BadRequestResponse("Wallpaper setting is not supported on this platform");
 
-        await using MediaContext mediaContext = new();
-        Image? wallpaper = await mediaContext.Images
+        Image? wallpaper = await context.Images
             .FirstOrDefaultAsync(config => config.FilePath == request.Path);
 
         if (wallpaper?.FilePath is null)
@@ -538,10 +549,9 @@ public class ServerController(
 
         string path = Path.Combine(AppFiles.ImagesPath, "original", wallpaper.FilePath.Replace("/", ""));
 
-        string color = GetDominantColor(path);
-#pragma warning disable CA1416
-        Wallpaper.SilentSet(path, request.Style, request.Color ?? color);
-#pragma warning restore CA1416
+        string color = request.Color ?? await GetDominantColorAsync(path);
+
+        wallpaperService.SetSilent(path, request.Style, color);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -550,31 +560,36 @@ public class ServerController(
         });
     }
 
-    private static string GetDominantColor(string path)
+    private static readonly ConcurrentDictionary<string, string> DominantColorCache = new();
+
+    private static async Task<string> GetDominantColorAsync(string path)
     {
-        using Image<Rgb24> image = SixLabors.ImageSharp.Image.Load<Rgb24>(path);
-        image.Mutate(x => x
-            // Scale the image down preserving the aspect ratio. This will speed up quantization.
-            // We use nearest neighbor as it will be the fastest approach.
-            .Resize(new ResizeOptions
-            {
-                Sampler = KnownResamplers.NearestNeighbor,
-                Size = new(100, 0)
-            })
-            // Reduce the color palette to 1 color without dithering.
-            .Quantize(new OctreeQuantizer
-            {
-                Options =
+        if (DominantColorCache.TryGetValue(path, out string? cached))
+            return cached;
+
+        string color = await Task.Run(() =>
+        {
+            using Image<Rgb24> image = SixLabors.ImageSharp.Image.Load<Rgb24>(path);
+            image.Mutate(x => x
+                .Resize(new ResizeOptions
                 {
-                    MaxColors = 1,
-                    Dither = new OrderedDither(1),
-                    DitherScale = 1
-                }
-            }));
+                    Sampler = KnownResamplers.NearestNeighbor,
+                    Size = new(100, 0)
+                })
+                .Quantize(new OctreeQuantizer
+                {
+                    Options =
+                    {
+                        MaxColors = 1
+                    }
+                }));
 
-        Rgb24 dominant = image[0, 0];
+            Rgb24 dominant = image[0, 0];
+            return dominant.ToHexString();
+        });
 
-        return dominant.ToHexString();
+        DominantColorCache.TryAdd(path, color);
+        return color;
     }
 
     [HttpPost]
@@ -589,7 +604,7 @@ public class ServerController(
 
         Logger.App($"Changing IP address to {request.Ip}");
 
-        Networking.Networking.InternalIp = request.Ip;
+        networkDiscovery.InternalIp = request.Ip;
 
         return Ok(new StatusResponseDto<string>
         {

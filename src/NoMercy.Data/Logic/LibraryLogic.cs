@@ -1,18 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Jobs;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
-using NoMercy.Queue;
+using NoMercyQueue;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public class LibraryLogic(Ulid id) : IDisposable, IAsyncDisposable
+public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAsyncDisposable
 {
-    private readonly MediaContext _mediaContext = new();
+    private readonly MediaContext _mediaContext = mediaContext;
     private Library Library { get; set; } = new();
 
     public Ulid Id { get; set; } = id;
@@ -91,28 +91,19 @@ public class LibraryLogic(Ulid id) : IDisposable, IAsyncDisposable
             Logger.App($"Processing {rootFolder.Path}", LogEventLevel.Verbose);
 
             MusicJob musicJob = new(rootFolder.Path, Library);
-            JobDispatcher.Dispatch(musicJob, "queue", 5);
+            QueueRunner.Current!.Dispatcher.Dispatch(musicJob);
         }
 
         Logger.App("Found " + Titles.Count + " subfolders");
     }
 
-    ~LibraryLogic()
-    {
-        Dispose();
-    }
-
     public void Dispose()
     {
         _mediaContext.Dispose();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
 
     public async ValueTask DisposeAsync()
     {
         await _mediaContext.DisposeAsync();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
 }

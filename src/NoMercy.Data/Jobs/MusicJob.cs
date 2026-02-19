@@ -1,9 +1,9 @@
 using NoMercy.Data.Logic;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Jobs;
@@ -12,6 +12,9 @@ namespace NoMercy.Data.Jobs;
 public class MusicJob : IShouldQueue, IDisposable, IAsyncDisposable
 {
     private readonly MediaContext _mediaContext = new();
+
+    public string QueueName => "import";
+    public int Priority => 5;
 
     public string? Folder { get; set; }
     public Library? Library { get; set; }
@@ -43,29 +46,18 @@ public class MusicJob : IShouldQueue, IDisposable, IAsyncDisposable
         {
             Logger.App($"Music {list.Path}: Processing");
 
-            MusicLogic music = new(Library, list);
+            MusicLogic music = new(Library, list, _mediaContext);
             await music.Process();
         }
-    }
-
-    ~MusicJob()
-    {
-        Dispose();
     }
 
     public void Dispose()
     {
         _mediaContext.Dispose();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 
     public async ValueTask DisposeAsync()
     {
         await _mediaContext.DisposeAsync();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

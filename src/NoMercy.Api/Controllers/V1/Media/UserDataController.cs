@@ -2,13 +2,16 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.Helpers.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.V1.Media;
@@ -17,7 +20,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/userData")]
-public class UserDataController(HomeRepository homeRepository, MediaContext mediaContext) : BaseController
+public class UserDataController(HomeRepository homeRepository, MediaContext mediaContext, IEventBus eventBus) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -38,6 +41,7 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
 
     [HttpGet]
     [Route("continue")]
+    [ResponseCache(NoStore = true)]
     public async Task<IActionResult> ContinueWatching()
     {
         Guid userId = User.UserId();
@@ -74,26 +78,25 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "You do not have permission to remove continue watching"
             });
 
-        await using MediaContext mediaContext = new();
 
         List<UserData>? userData = body.Type switch
         {
-            "movie" => await mediaContext.UserData
+            Config.MovieMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.MovieId == int.Parse(body.Id))
                 .ToListAsync(),
-            "tv" => await mediaContext.UserData
+            Config.TvMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.TvId == int.Parse(body.Id))
                 .ToListAsync(),
-            "special" => await mediaContext.UserData
+            Config.SpecialMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.SpecialId == Ulid.Parse(body.Id))
                 .ToListAsync(),
-            "collection" => await mediaContext.UserData
+            Config.CollectionMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.CollectionId == int.Parse(body.Id))
@@ -112,6 +115,11 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
 
         mediaContext.UserData.RemoveRange(userData);
         await mediaContext.SaveChangesAsync();
+
+        await eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["continue-watching"]
+        });
 
         return Ok(new StatusResponseDto<string>
         {
@@ -132,26 +140,25 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "You do not have permission to view watched"
             });
 
-        await using MediaContext mediaContext = new();
 
         UserData? userData = body.Type switch
         {
-            "movie" => await mediaContext.UserData
+            Config.MovieMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.MovieId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "tv" => await mediaContext.UserData
+            Config.TvMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.TvId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "special" => await mediaContext.UserData
+            Config.SpecialMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.SpecialId == Ulid.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "collection" => await mediaContext.UserData
+            Config.CollectionMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.CollectionId == int.Parse(body.Id))
@@ -187,26 +194,25 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "You do not have permission to view favorites"
             });
 
-        await using MediaContext mediaContext = new();
 
         UserData? userData = body.Type switch
         {
-            "movie" => await mediaContext.UserData
+            Config.MovieMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.MovieId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "tv" => await mediaContext.UserData
+            Config.TvMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.TvId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "special" => await mediaContext.UserData
+            Config.SpecialMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.SpecialId == Ulid.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            "collection" => await mediaContext.UserData
+            Config.CollectionMediaType => await mediaContext.UserData
                 .AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.CollectionId == int.Parse(body.Id))

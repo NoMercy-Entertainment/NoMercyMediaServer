@@ -1,4 +1,8 @@
-using NoMercy.Database.Models;
+using System.Collections.Concurrent;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -34,11 +38,19 @@ public class MovieManager(
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
             string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
-            if(!Directory.Exists(folderName)) continue;
-            
+
+            if (!Directory.Exists(folderName))
+            {
+                string? match = Str.FindMatchingDirectory(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
+                if (match != null)
+                    folderName = match;
+            }
+
+            if (!Directory.Exists(folderName)) continue;
+
             DirectoryInfo folderInfo = new(folderName);
             folderCreatedAt = folderInfo.CreationTimeUtc;
-            
+
             if(folderCreatedAt != DateTime.UtcNow) break;
         }
 
@@ -66,8 +78,8 @@ public class MovieManager(
             Runtime = movieAppends.Runtime,
             Status = movieAppends.Status,
             Tagline = movieAppends.Tagline,
-            Trailer = movieAppends.Video,
-            Video = movieAppends.Video,
+            Trailer = movieAppends.Video?.ToString(),
+            Video = movieAppends.Video?.ToString(),
             VoteAverage = movieAppends.VoteAverage,
             VoteCount = movieAppends.VoteCount,
             
@@ -88,7 +100,7 @@ public class MovieManager(
 
         Logger.MovieDb($"Movie: {movieAppends.Title}: Added to Library {library.Title}");
 
-        jobDispatcher.DispatchJob<AddMovieExtraDataJob, TmdbMovieAppends>(movieAppends);
+        jobDispatcher.DispatchJob<MovieExtrasJob, TmdbMovieAppends>(movieAppends);
 
         return movieAppends;
     }
@@ -354,28 +366,27 @@ public class MovieManager(
         
         TmdbTvClient showClient = new(movie.Id);
 
-        List<Company> companies = [];
+        ConcurrentDictionary<int, Company> companiesDict = new();
 
         await Parallel.ForEachAsync(movie.ProductionCompanies, Config.ParallelOptions, async (productionCompany, _) =>
         {
             TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(productionCompany.Id);
             if (nw == null) return;
 
-            if (companies.All(n => n.Id != nw.Id))
+            companiesDict.TryAdd(nw.Id, new()
             {
-                companies.Add(new()
-                {
-                    Id = nw.Id,
-                    Name = nw.Name,
-                    Logo = nw.LogoPath,
-                    OriginCountry = nw.OriginCountry,
-                    Headquarters = nw.Headquarters,
-                    Homepage = nw.Homepage,
-                });
-            }
+                Id = nw.Id,
+                Name = nw.Name,
+                Logo = nw.LogoPath,
+                OriginCountry = nw.OriginCountry,
+                Headquarters = nw.Headquarters,
+                Homepage = nw.Homepage,
+            });
         });
+
+        List<Company> companies = companiesDict.Values.ToList();
         
-        List<CompanyMovie> companyMovies = movie.ProductionCompanies
+        List<CompanyMovie> companyMovies = companies
             .Select(company => new CompanyMovie
             {
                 CompanyId = company.Id,

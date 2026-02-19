@@ -19,10 +19,11 @@
 services:
   nomercy:
     container_name: nomercy-mediaserver
-    build:
-      context: .
-      dockerfile: Dockerfile.intel
-    image: nomercy/mediaserver:intel
+    image: ghcr.io/nomercy-entertainment/nomercymediaserver:intel
+    # To build locally instead of pulling from registry, uncomment:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.intel
     restart: unless-stopped
     ports:
       - "7626:7626"

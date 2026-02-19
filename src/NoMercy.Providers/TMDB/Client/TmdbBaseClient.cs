@@ -13,7 +13,7 @@ public class TmdbBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new("https://api.themoviedb.org/3/");
     private readonly string Language;
-    private bool _disposed = false;
+    private bool _disposed;
 
     public int Id { get; private set; }
 
@@ -21,30 +21,17 @@ public class TmdbBaseClient : IDisposable
 
     protected TmdbBaseClient()
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+        _client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
+        _client.BaseAddress ??= _baseUrl;
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        _client.Timeout = TimeSpan.FromMinutes(5);
         Language = "en,null";
     }
 
     protected TmdbBaseClient(int id, string language = "en-US")
     {
-
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+        _client = HttpClientProvider.CreateClient(HttpClientNames.Tmdb);
+        _client.BaseAddress ??= _baseUrl;
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {ApiInfo.TmdbToken}");
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        _client.Timeout = TimeSpan.FromMinutes(5);
         Language = language + ",null";
         Id = id;
     }
@@ -139,9 +126,8 @@ public class TmdbBaseClient : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        
+
         _disposed = true;
-        _client.Dispose();
         GC.SuppressFinalize(this);
     }
 }

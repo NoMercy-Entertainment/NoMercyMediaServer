@@ -71,14 +71,14 @@ jobs:
         if: steps.check-changes.outputs.has_source_changes == 'true'
         run: |
           NEW_VERSION="${{ steps.calc-version.outputs.new_version }}"
-          sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" src/NoMercy.Server/NoMercy.Server.csproj
-          echo "Updated NoMercy.Server.csproj to version $NEW_VERSION"
+          sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" src/NoMercy.Service/NoMercy.Service.csproj
+          echo "Updated NoMercy.Service.csproj to version $NEW_VERSION"
 
       - name: Get Version
         id: get-version
         uses: kzrnm/get-net-sdk-project-versions-action@v2
         with:
-          proj-path: ./src/NoMercy.Server/NoMercy.Server.csproj
+          proj-path: ./src/NoMercy.Service/NoMercy.Service.csproj
 
       - name: Generate changelog
         id: changelog
@@ -140,7 +140,7 @@ jobs:
           NEW_VERSION="${{ steps.get-version.outputs.version }}"
 
           # Stage the version change locally (don't push to dev yet)
-          git add src/NoMercy.Server/NoMercy.Server.csproj
+          git add src/NoMercy.Service/NoMercy.Service.csproj
           git commit -m "chore: bump version to $NEW_VERSION" || true
 
           # Store the current dev state
@@ -155,8 +155,8 @@ jobs:
           git merge --squash origin/dev
 
           # Also include the version bump we made locally
-          git checkout $DEV_HEAD -- src/NoMercy.Server/NoMercy.Server.csproj
-          git add src/NoMercy.Server/NoMercy.Server.csproj
+          git checkout $DEV_HEAD -- src/NoMercy.Service/NoMercy.Service.csproj
+          git add src/NoMercy.Service/NoMercy.Service.csproj
 
           # Read changelog from file
           CHANGELOG=$(cat /tmp/changelog.txt)

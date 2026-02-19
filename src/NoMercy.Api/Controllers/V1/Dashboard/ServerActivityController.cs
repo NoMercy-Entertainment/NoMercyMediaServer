@@ -2,11 +2,11 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.V1.Dashboard.DTO;
-using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Database;
-using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -15,7 +15,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/activity", Order = 10)]
-public class ServerActivityController : BaseController
+public class ServerActivityController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] ServerActivityRequest request)
@@ -23,7 +23,6 @@ public class ServerActivityController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view activity");
 
-        await using MediaContext mediaContext = new();
         ServerActivityDto[] activityDtos = mediaContext.ActivityLogs
             .OrderByDescending(x => x.CreatedAt)
             .Take((request.Take ?? 10) + 1)

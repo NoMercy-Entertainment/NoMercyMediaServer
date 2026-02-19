@@ -1,0 +1,13 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force LF line endings for shell scripts (critical for CI runners)
+*.sh text eol=lf
+
+# Force LF for other scripts that may run on Unix
+*.bash text eol=lf
+*.zsh text eol=lf
+
+# Keep Windows batch files with CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf

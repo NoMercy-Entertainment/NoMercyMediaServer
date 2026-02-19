@@ -1,24 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
         <ApplicationIcon>..\..\assets\icons\icon.ico</ApplicationIcon>
-        <Authors>NoMercy Entertainment</Authors>
         <Description>NoMercy MediaServer UI Application</Description>
-        <Copyright>2025 NoMercy Entertainment</Copyright>
-        <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
         <PackageIcon>..\..\assets\icons\icon.png</PackageIcon>
-        <Company>NoMercy Entertainment</Company>
         <Product>NoMercy App</Product>
         <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
         <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-        <RepositoryUrl>https://github.com/NoMercy-Entertainment/NoMercyMediaServer</RepositoryUrl>
         <PackageTags>streaming media content-management private streaming-video streaming-audio blurayrip video-encoder</PackageTags>
         <NeutralLanguage>en</NeutralLanguage>
         <OutputType>WinExe</OutputType>
+        <!-- Disable static web assets publishing - we embed them instead -->
+        <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+        <!-- Disable web.config generation -->
+        <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -43,23 +41,17 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="InfiniLore.InfiniFrame" Version="0.1.0-preview.23" />
-        <PackageReference Include="InfiniLore.InfiniFrame.WebServer" Version="0.1.0-preview.23" />
-        <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
+        <PackageReference Include="InfiniLore.InfiniFrame" />
+        <PackageReference Include="InfiniLore.InfiniFrame.WebServer" />
+        <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
     </ItemGroup>
 
+    <!-- Remove wwwroot from Content (SDK.Web default) and embed as resources -->
     <ItemGroup>
+        <Content Remove="wwwroot\**" />
         <EmbeddedResource Include="wwwroot\**" />
         <EmbeddedResource Include="..\..\assets\icons\*.*" Link="Resources\AppIcon\%(Filename)%(Extension)" />
     </ItemGroup>
 
-    <ItemGroup>
-        <None Include="wwwroot\**">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-        <None Include="..\..\assets\icons\*.*" Link="Resources\AppIcon\%(Filename)%(Extension)">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
 
 </Project>

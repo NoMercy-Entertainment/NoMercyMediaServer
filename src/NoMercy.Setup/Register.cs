@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Users;
 using Serilog.Events;
-using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -15,14 +17,24 @@ namespace NoMercy.Setup;
 
 public static class Register
 {
+    public static INetworkDiscovery? Discovery { get; set; }
+
     private static string GetDeviceName()
     {
-        MediaContext mediaContext = new();
-        Configuration? device = mediaContext.Configuration
-            .FirstOrDefault(device => device.Key == "serverName");
-        
-        Info.DeviceName = device?.Value ?? Environment.MachineName;
-        
+        try
+        {
+            MediaContext mediaContext = new();
+            Configuration? device = mediaContext.Configuration
+                .FirstOrDefault(device => device.Key == "serverName");
+
+            Info.DeviceName = device?.Value ?? Environment.MachineName;
+        }
+        catch (Exception)
+        {
+            // Table may not exist yet on first boot — fall back to machine name
+            Info.DeviceName = Environment.MachineName;
+        }
+
         return Info.DeviceName;
     }
 
@@ -32,36 +44,97 @@ public static class Register
         {
             { "id", Info.DeviceId.ToString() },
             { "name", GetDeviceName() },
-            { "internal_ip", Networking.Networking.InternalIp },
+            { "internal_ip", Discovery?.InternalIp ?? "0.0.0.0" },
+            { "internal_ipv6", Discovery?.InternalIpV6 ?? "" },
+            { "external_ipv6", Discovery?.ExternalIpV6 ?? "" },
             { "internal_port", Config.InternalServerPort.ToString() },
             { "external_port", Config.ExternalServerPort.ToString() },
             { "version", Software.Version!.ToString() },
-            { "platform", Info.Platform }
+            { "platform", Info.Platform },
+            { "stun_public_ip", Config.StunPublicIp ?? "" },
+            { "stun_public_port", Config.StunPublicPort?.ToString() ?? "" },
+            { "stun_nat_type", Config.NatStatus.ToString() }
         };
 
         return serverData;
     }
 
-    public static async Task Init()
+    private const int DefaultMaxRetries = 5;
+    private static readonly int[] BackoffSeconds = [2, 5, 15, 30, 60];
+    private static readonly SemaphoreSlim InitLock = new(1, 1);
+    public static bool IsRegistered { get; private set; }
+
+    public static async Task Init(int maxRetries = DefaultMaxRetries)
     {
-        Dictionary<string, string> serverData = GetServerInfo();
-        
+        if (!await InitLock.WaitAsync(0))
+        {
+            Logger.Register("Registration already in progress, skipping duplicate call");
+            return;
+        }
+
+        try
+        {
+            await RegisterServer(maxRetries);
+            await AssignServerWithRetry(maxRetries);
+            await Certificate.RenewSslCertificate();
+            IsRegistered = true;
+        }
+        finally
+        {
+            InitLock.Release();
+        }
+    }
+
+    private static async Task RegisterServer(int maxRetries)
+    {
         Logger.Register("Registering Server, this takes a moment...");
 
-        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
-        string response =
-            await authClient.SendAndReadAsync(HttpMethod.Post, "register", new FormUrlEncodedContent(serverData));
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                Dictionary<string, string> serverData = GetServerInfo();
+                GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+                authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
+                string response = await authClient.SendAndReadAsync(
+                    HttpMethod.Post, "register", new FormUrlEncodedContent(serverData));
 
-        object? data = JsonConvert.DeserializeObject(response);
+                object? data = JsonConvert.DeserializeObject(response);
+                if (data == null)
+                    throw new InvalidOperationException("Failed to register Server — empty response");
 
-        if (data == null) throw new("Failed to register Server");
+                Logger.Register("Server registered successfully");
+                return;
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
+                Logger.Register(
+                    $"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning);
+                await Task.Delay(TimeSpan.FromSeconds(delay));
+            }
+        }
+    }
 
-        Logger.Register("Server registered successfully");
-
-        await AssignServer();
-        
-        await Certificate.RenewSslCertificate();
+    private static async Task AssignServerWithRetry(int maxRetries)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                await AssignServer();
+                return;
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
+                Logger.Register(
+                    $"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    LogEventLevel.Warning);
+                await Task.Delay(TimeSpan.FromSeconds(delay));
+            }
+        }
     }
 
     private static async Task AssignServer()
@@ -117,19 +190,26 @@ public static class Register
 
     public static async Task GetTunnelAvailability()
     {
-        Dictionary<string, string> serverData = GetServerInfo();
+        try
+        {
+            Dictionary<string, string> serverData = GetServerInfo();
 
-        GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
-        authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
-        
-        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "tunnel", new FormUrlEncodedContent(serverData));
+            GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
+            authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
 
-        ServerTunnelAvailabilityResponse? data = response.FromJson<ServerTunnelAvailabilityResponse>();
+            string response = await authClient.SendAndReadAsync(HttpMethod.Post, "tunnel", new FormUrlEncodedContent(serverData));
 
-        if (data is null || !data.Allowed || data.Token is null) return;
+            ServerTunnelAvailabilityResponse? data = response.FromJson<ServerTunnelAvailabilityResponse>();
 
-        Config.CloudflareTunnelToken = data.Token;
-        
-        Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
+            if (data is null || !data.Allowed || data.Token is null) return;
+
+            Config.CloudflareTunnelToken = data.Token;
+
+            Logger.Register("Cloudflare tunnel is available", LogEventLevel.Verbose);
+        }
+        catch (Exception ex)
+        {
+            Logger.Register($"Tunnel check: {ex.Message}", LogEventLevel.Debug);
+        }
     }
 }

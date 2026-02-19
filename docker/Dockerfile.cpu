@@ -1,0 +1,43 @@
+# NoMercy MediaServer - Runtime Only (CPU)
+# Used by CI with pre-built self-contained binary in ./publish/
+
+FROM debian:bookworm-slim
+WORKDIR /app
+
+# Install minimal dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libva2 \
+    libva-drm2 \
+    libdrm2 \
+    libicu72 \
+    libssl3 \
+    mediainfo \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -o -u 1000 nomercy
+
+# Create data directories
+RUN mkdir -p /data/config /data/cache /data/media /data/log \
+    && chown -R nomercy:nomercy /data
+
+# Copy self-contained binary
+COPY publish/NoMercyMediaServer .
+RUN chown -R nomercy:nomercy /app
+
+USER nomercy
+
+ENV ASPNETCORE_URLS=http://+:7626
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV HOME=/data
+
+EXPOSE 7626
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:7626/health || exit 1
+
+ENTRYPOINT ["./NoMercyMediaServer"]
+CMD ["--internal-port", "7626"]

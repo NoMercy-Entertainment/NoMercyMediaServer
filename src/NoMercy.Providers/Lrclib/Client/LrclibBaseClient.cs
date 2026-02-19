@@ -15,13 +15,8 @@ public class LrclibBaseClient : IDisposable
 
     public LrclibBaseClient()
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+        _client = HttpClientProvider.CreateClient(HttpClientNames.Lrclib);
+        _client.BaseAddress ??= _baseUrl;
     }
 
     private static Helpers.Queue? _queue;
@@ -73,6 +68,6 @@ public class LrclibBaseClient : IDisposable
     
     public void Dispose()
     {
-        _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

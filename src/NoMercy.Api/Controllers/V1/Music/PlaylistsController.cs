@@ -1,16 +1,23 @@
+using System.Text.RegularExpressions;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.V1.Media.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO.Components;
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
-using CarouselResponseItemDto = NoMercy.Data.Repositories.CarouselResponseItemDto;
-
+using NoMercy.Database.Models.Music;
+using NoMercy.Helpers.Extensions;
+using NoMercy.MediaProcessing.Images;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
 namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
@@ -22,11 +29,13 @@ public class PlaylistsController : BaseController
 {
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
+    private readonly IEventBus _eventBus;
 
-    public PlaylistsController(MusicRepository musicService, MediaContext mediaContext)
+    public PlaylistsController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
+        _eventBus = eventBus;
     }
 
     [HttpGet]
@@ -36,19 +45,10 @@ public class PlaylistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view playlists");
 
-        List<CarouselResponseItemDto> playlists = [];
-
-        foreach (CarouselResponseItemDto playlist in await _musicRepository.GetPlaylistsAsync(userId))
-            playlists.Add(playlist);
-
-        List<MusicCardData> musicCards = playlists
-            .Select(p => new MusicCardData(p))
-            .ToList();
+        List<PlaylistCardDto> playlistCards = await _musicRepository.GetPlaylistCardsAsync(userId);
 
         ComponentEnvelope response = Component.Grid()
-            .WithItems(musicCards.Select(item => Component.MusicCard(item)
-                ))
-            ;
+            .WithItems(playlistCards.Select(p => Component.MusicCard(new MusicCardData(p))));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -67,58 +67,277 @@ public class PlaylistsController : BaseController
             return NotFoundResponse("Playlist not found");
 
         string language = Language();
-
-        return Ok(new TracksResponseDto
+        
+        return Ok(new PlaylistResponseDto
         {
-            Data = new()
-            {
-                Id = playlist.Id,
-                Name = playlist.Name,
-                Cover = playlist.Cover is not null
-                    ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString()
-                    : null,
-                Description = playlist.Description,
-                ColorPalette = playlist.ColorPalette,
-                Tracks = playlist.Tracks.Select(t => new ArtistTrackDto(t.Track, language)).ToList()
-            }
+            Data = new(playlist, language)
         });
     }
 
     [HttpPost]
-    public IActionResult Create()
+    public async Task<IActionResult> Create([FromBody] CreatePlaylistRequestDto request)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to create a playlist");
-
-        return Ok(new PlaceholderResponse
+        
+        if(await _mediaContext.Playlists.AnyAsync(p => p.Name == request.Name && p.UserId == User.UserId()))
+            return ConflictResponse("You already have a playlist with that name");
+        
+        Playlist newPlaylist = new()
         {
-            Data = []
+            Name = request.Name,
+            Description = request.Description,
+            UserId = User.UserId()
+        };
+
+        string slug = newPlaylist.Name.ToSlug();
+        
+        // save to app images folder
+        string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+        Logger.App(filePath);
+        
+        if (request.Cover is not null)
+        {
+            await using (FileStream stream = new(filePath, FileMode.OpenOrCreate))
+            {
+                string base64Data = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)").Groups["data"].Value;
+                byte[] binData = Convert.FromBase64String(base64Data);
+                await stream.WriteAsync(binData);
+            }
+        
+            newPlaylist.Cover = $"/{slug}.jpg";
+            newPlaylist._colorPalette = await CoverArtImageManagerManager
+                .ColorPalette("cover", new(filePath));
+        }
+        
+        Logger.App(newPlaylist);
+        _mediaContext.Playlists.Add(newPlaylist);
+        
+        if (request.Tracks.Count > 0)
+        {
+            foreach (Guid trackId in request.Tracks)
+            {
+                PlaylistTrack playlistTrack = new()
+                {
+                    PlaylistId = newPlaylist.Id,
+                    TrackId = trackId,
+                };
+        
+                _mediaContext.PlaylistTrack.Add(playlistTrack);
+            }
+        
+        }
+        
+        await _mediaContext.SaveChangesAsync();
+        
+        Playlist playlist = _mediaContext.Playlists
+            .Include(p => p.Tracks)
+            .ThenInclude(pt => pt.Track)
+            .First(p => p.Name == request.Name && p.UserId == User.UserId());
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music-playlists"]
+        });
+
+        return Ok(new StatusResponseDto<Playlist>()
+        {
+            Data = playlist,
+            Status = "ok",
         });
     }
 
     [HttpPatch]
     [Route("{id:guid}")]
-    public IActionResult Edit(Guid id)
+    public async Task<IActionResult> Edit(Guid id, [FromBody] CreatePlaylistRequestDto request)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to edit a playlist");
+        
+        Playlist? playlist = await _mediaContext.Playlists
+            .FirstOrDefaultAsync(a => a.Id == id);
+        
+        if (playlist is null)
+            return NotFoundResponse("Playlist not found");
 
-        return Ok(new PlaceholderResponse
+        string slug = playlist.Name.ToSlug();
+        string colorPalette = playlist._colorPalette;
+        string cover = playlist.Cover ?? "";
+        
+        if (request.Cover is not null)
         {
-            Data = []
+            cover = $"/{slug}.jpg";
+            string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+
+            await using (FileStream stream = new(filePath, FileMode.Create))
+            {
+                string base64Data = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)").Groups["data"].Value;
+                byte[] binData = Convert.FromBase64String(base64Data);
+                await stream.WriteAsync(binData);
+            }
+            
+            colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
+        }
+        
+        playlist.Name = request.Name;
+        playlist.Description = request.Description;
+        playlist.Cover = cover;
+        playlist._colorPalette = colorPalette;
+
+        int result = await _mediaContext.SaveChangesAsync();
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music", "playlists", id]
+        });
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Data = (result > 0 ? "Playlist updated successfully" : "No changes made").Localize(),
+            Status = "ok",
         });
     }
 
     [HttpDelete]
     [Route("{id:guid}")]
-    public IActionResult Destroy(Guid id)
+    public async Task<IActionResult> Destroy(Guid id)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to delete a playlist");
 
-        return Ok(new PlaceholderResponse
+        int result = await _mediaContext.Playlists
+            .Where(p => p.Id == id && p.UserId == User.UserId())
+            .ExecuteDeleteAsync();
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
-            Data = []
+            QueryKey = ["music-playlists"]
+        });
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Data = (result > 0 ? "Playlist deleted successfully" : "Playlist not found").Localize(),
+            Status = "ok",
         });
     }
+    
+    [HttpPost]
+    [Route("{id:guid}/cover")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Cover(Guid id, IFormFile image)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to upload playlist covers");
+
+        Playlist? playlist = await _mediaContext.Playlists
+            .Where(pt => pt.UserId == User.UserId())
+            .FirstOrDefaultAsync(playlist => playlist.Id == id);
+
+        if (playlist is null)
+            return NotFoundResponse("Playlist not found");
+
+        string slug = playlist.Name.ToSlug();
+
+        // save to app images folder
+        string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+        Logger.App(filePath2);
+        await using (FileStream stream = new(filePath2, FileMode.Create))
+        {
+            await image.CopyToAsync(stream);
+        }
+
+        playlist.Cover = $"/{slug}.jpg";
+        playlist._colorPalette = await CoverArtImageManagerManager
+            .ColorPalette("cover", new(filePath2));
+
+        await _mediaContext.SaveChangesAsync();
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music", "playlists", playlist.Id]
+        });
+
+        return Ok(new StatusResponseDto<ImageUploadResponseDto>
+        {
+            Status = "ok",
+            Message = "Playlist cover updated",
+            Data = new()
+            {
+                Url = new($"/images/music/{slug}.jpg", UriKind.Relative),
+                ColorPalette = playlist.ColorPalette
+            }
+        });
+    }
+
+    [HttpPost]
+    [Route("{id:guid}/tracks")]
+    public async Task<IActionResult> AddTrack(Guid id, [FromBody] CreatePlaylistTrackRequestDto request)
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to edit a playlist");
+
+        PlaylistTrack playlistTrack = new()
+        {
+            PlaylistId = id,
+            TrackId = request.Id,
+        };
+
+        _mediaContext.PlaylistTrack.Add(playlistTrack);
+        int result = await _mediaContext.SaveChangesAsync();
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music", "playlists", id]
+        });
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Data = (result > 0 ? "Playlist updated successfully" : "No changes made").Localize(),
+            Status = "ok",
+        });
+    }
+
+    [HttpDelete]
+    [Route("{id:guid}/tracks/{trackId:guid}")]
+    public async Task<IActionResult> AddTrack(Guid id, Guid trackId)
+    {
+        if (!User.IsAllowed())
+            return UnauthorizedResponse("You do not have permission to edit a playlist");
+
+        PlaylistTrack? playlistTrack = await _mediaContext.PlaylistTrack
+            .Where(pt => pt.Playlist.UserId == User.UserId())
+            .FirstOrDefaultAsync(pt => pt.PlaylistId == id && pt.TrackId == trackId);
+        
+        if (playlistTrack is null)
+            return NotFoundResponse("Track not found in playlist");
+        
+        _mediaContext.PlaylistTrack.Remove(playlistTrack);
+        
+        int result = await _mediaContext.SaveChangesAsync();
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music", "playlists", id]
+        });
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Data = (result > 0 ? "Playlist updated successfully" : "No changes made").Localize(),
+            Status = "ok",
+        });
+    }
+}
+
+public class CreatePlaylistRequestDto
+{
+    [JsonProperty("name")] public string Name { get; set; } = null!;
+    [JsonProperty("description")] public string? Description { get; set; }
+    [JsonProperty("cover")] public string? Cover { get; set; }
+    [JsonProperty("tracks")] public List<Guid> Tracks { get; set; } = [];
+    
+}
+
+public class CreatePlaylistTrackRequestDto
+{
+    [JsonProperty("id")] public Guid Id { get; set; }
 }

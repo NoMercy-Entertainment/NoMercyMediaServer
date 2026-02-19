@@ -1,7 +1,7 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -10,6 +10,8 @@ using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Providers.MusicBrainz.Client;
 using Serilog.Events;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.MediaProcessing.Releases;
 
@@ -33,8 +35,10 @@ public class ReleaseManager(
 
         CoverArtImageManagerManager.CoverPalette? coverPalette = await CoverArtImageManagerManager.Add(releaseAppends.MusicBrainzReleaseGroup.Id);
         
-        if (coverPalette is not null) 
-            await CoverArtCoverArtClient.Download(coverPalette.Url);
+        if (coverPalette is not null)
+        {
+            using Image<Rgba32>? downloadedImage = await CoverArtCoverArtClient.Download(coverPalette.Url);
+        }
 
         await Store(releaseAppends, albumLibrary, libraryFolder, mediaFolder, coverPalette);
 

@@ -5,13 +5,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Logic;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -21,7 +21,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/specials", Order = 11)]
-public class SpecialsController : BaseController
+public class SpecialsController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -289,7 +289,7 @@ public class SpecialsController : BaseController
         //
         //         switch (special.Type)
         //         {
-        //             case "movie":
+        //             case Config.MovieMediaType:
         //             {
         //                 SearchClient searchClient = new();
         //
@@ -303,11 +303,11 @@ public class SpecialsController : BaseController
         //
         //                 titles.Add(res[0].Title);
         //
-        //                 AddMovieJob addMovieJob = new AddMovieJob(id:res[0].Id, specialId:special.Id.ToString());
+        //                 MovieImportJob addMovieJob = new MovieImportJob(id:res[0].Id, specialId:special.Id.ToString());
         //                 JobDispatcher.Dispatch(addMovieJob, "queue", 5);
         //                 break;
         //             }
-        //             case "tv":
+        //             case Config.TvMediaType:
         //             {
         //                 SearchClient searchClient = new();
         //
@@ -321,7 +321,7 @@ public class SpecialsController : BaseController
         //
         //                 titles.Add(res[0].Name);
         //
-        //                 AddShowJob addShowJob = new AddShowJob(id:res[0].Id, specialId:special.Id.ToString());
+        //                 ShowImportJob addShowJob = new ShowImportJob(id:res[0].Id, specialId:special.Id.ToString());
         //                 JobDispatcher.Dispatch(addShowJob, "queue", 5);
         //                 break;
         //             }
@@ -350,7 +350,7 @@ public class SpecialsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan the special");
 
-        LibraryLogic specialLogic = new(id);
+        LibraryLogic specialLogic = new(id, mediaContext);
 
         if (await specialLogic.Process())
             return Ok(new StatusResponseDto<List<dynamic>>

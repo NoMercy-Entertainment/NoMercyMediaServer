@@ -1,24 +1,22 @@
 using System.Diagnostics;
+using System.Reflection;
 using InfiniFrame;
 using InfiniFrame.Js.MessageHandlers;
 using InfiniFrame.WebServer;
+using NoMercy.App.EmbeddedStaticAssets;
 
 namespace NoMercy.App;
 
 internal class Program
 {
-    private static int WindowWidth { get; set; } = 1280;
-    private static int WindowHeight { get; set; } = 720;
-    private static int WindowRestoreWidth { get; set; } = 1280;
-    private static int WindowRestoreHeight { get; set; } = 720;
-    private static int Top { get; set; }
-    private static int Left { get; set; }
-
     [STAThread]
     private static void Main(string[] args)
     {
         string windowTitle = "NoMercy TV";
         string iconPath = GetIconPath();
+
+        string browserDataPath = GetBrowserDataPath();
+        ClearBrowserDataOnVersionChange(browserDataPath);
 
         // Set environment variable for URL before creating builder
         if (!Debugger.IsAttached)
@@ -29,106 +27,222 @@ internal class Program
         InfiniFrameWebApplicationBuilder builder = InfiniFrameWebApplication.CreateBuilder(args);
 
         IInfiniFrameWindowBuilder window = builder.Window
+            .SetTemporaryFilesPath(browserDataPath)
             .Center()
             .SetTitle(windowTitle)
-            .SetMinSize(960 + 16, 540 + 39)
+            .SetMinSize(1280 + 16, 720 + 39)
             .SetResizable(true)
             .SetIconFile(iconPath)
-            .SetUseOsDefaultSize(false)
-            .SetSmoothScrollingEnabled(true)
+            .SetUseOsDefaultSize(true)
             .SetMediaAutoplayEnabled(true)
-            .SetMediaStreamEnabled(true);
-
-        // In debug mode, load from dev server; otherwise use local server
-        window.SetStartUrl(Debugger.IsAttached ? "https://app-dev.nomercy.tv" : "https://app.nomercy.tv");
-
-        window.RegisterFullScreenWebMessageHandler()
+            .SetMediaStreamEnabled(true)
+            .SetBrowserControlInitParameters("--remote-debugging-port=9222")
+            .RegisterFullScreenWebMessageHandler()
+            .RegisterOpenExternalTargetWebMessageHandler()
+            .RegisterTitleChangedWebMessageHandler()
             .RegisterWindowManagementWebMessageHandler()
-            .RegisterCustomSchemeHandler("nomercy",
-                (object sender, string scheme, string url, out string? contentType) =>
-                {
-                    contentType = "text/javascript";
-                    return new MemoryStream("""
-                        (() =>{
-                            window.setTimeout(() => {
-                                alert(`NoMercy custom scheme handler loaded.`);
-                            }, 1000);
-                        })();
-                    """u8.ToArray());
-                })
-            .RegisterWebMessageReceivedHandler((object? sender, string message) =>
+            .RegisterWebMessageReceivedHandler((sender, message) =>
             {
-                if (sender is not IInfiniFrameWindow window) return;
+                if (sender is not IInfiniFrameWindow infiniWindow) return;
 
-                switch (message)
-                {
-                    case "enterFullscreen":
-                        window.SetFullScreen(true);
-                        return;
-                    case "exitFullscreen":
-                        window.SetFullScreen(false);
-                        return;
-                }
-            })
-            .RegisterWindowCreatedHandler((sender, _) =>
-            {
-                if (sender is not IInfiniFrameWindow window) return;
-
-                InfiniMonitor primaryMonitor = window.MainMonitor;
-
-                WindowWidth = primaryMonitor.WorkArea.Width / 2;
-                WindowHeight = (int)(primaryMonitor.WorkArea.Width / 2 / 16 * 9.3);
-                Top = window.Top;
-                Left = window.Left;
-                window.SetSize(WindowWidth, WindowHeight);
-                window.Center();
-            })
-            .RegisterMaximizedHandler((sender, _) =>
-            {
-                if (sender is not IInfiniFrameWindow window) return;
-
-                WindowRestoreWidth = WindowWidth;
-                WindowRestoreHeight = WindowHeight;
-
-                InfiniMonitor primaryMonitor = window.MainMonitor;
-                WindowWidth = primaryMonitor.WorkArea.Width;
-                WindowHeight = primaryMonitor.WorkArea.Height;
-            })
-            .RegisterRestoredHandler((sender, _) =>
-            {
-                WindowWidth = WindowRestoreWidth;
-                WindowHeight = WindowRestoreHeight;
-            })
-            .RegisterLocationChangedHandler((sender, e) =>
-            {
-                if (e.IsEmpty || e.X == 0) return;
-                Top = e.Y;
-                Left = e.X;
+                string response = $"Received message: \"{message}\"";
+                infiniWindow.SendWebMessage(response);
             });
+
+        // Parse --route argument
+        string route = "";
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--route" && i + 1 < args.Length)
+            {
+                route = args[i + 1];
+                break;
+            }
+
+            if (args[i].StartsWith("--route="))
+            {
+                route = args[i]["--route=".Length..];
+                break;
+            }
+        }
+
+        // Set start URL with optional route
+        if (Debugger.IsAttached)
+            window.SetStartUrl($"https://app-dev.nomercy.tv{route}");
+        else if (!string.IsNullOrEmpty(route))
+            window.SetStartUrl($"http://localhost:7625{route}");
 
         InfiniFrameWebApplication application = builder.Build();
 
         application.UseAutoServerClose();
 
-        application.WebApp.UseStaticFiles();
+        // Use custom embedded static assets middleware with optimizations
+        // (compression, caching, ETags) - replaces MapStaticAssets for embedded resources
+        // Also injects the InfiniFrame.js script tag into HTML files at runtime
+        application.WebApp.UseEmbeddedStaticAssets(options =>
+        {
+            // Inject InfiniFrame script before </body> - required for InfiniFrame communication
+            options.InjectScripts.Add("/_content/InfiniLore.InfiniFrame.Js/InfiniFrame.js");
+        }, typeof(Program).Assembly, "wwwroot");
 
         application.Run();
     }
 
     private static string GetIconPath()
     {
-        string iconPath;
+        string iconName;
         if (OperatingSystem.IsWindows())
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.ico");
+            iconName = "icon.ico";
         else if (OperatingSystem.IsLinux())
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.png");
+            iconName = "icon.png";
         else if (OperatingSystem.IsMacOS())
-            iconPath = Path.Combine(AppContext.BaseDirectory, "Resources", "AppIcon", "icon.icns");
+            iconName = "icon.icns";
         else
             throw new PlatformNotSupportedException("Unsupported OS platform");
 
-        if (!File.Exists(iconPath)) throw new FileNotFoundException("Tray icon file not found", iconPath);
+        // Extract embedded icon to temp directory (InfiniFrame requires a file path)
+        string tempDir = Path.Combine(Path.GetTempPath(), "NoMercyApp");
+        Directory.CreateDirectory(tempDir);
+        string iconPath = Path.Combine(tempDir, iconName);
+
+        if (!File.Exists(iconPath))
+        {
+            Assembly assembly = typeof(Program).Assembly;
+            string resourceName = $"NoMercy.App.Resources.AppIcon.{iconName}";
+
+            using Stream? stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream == null)
+                throw new FileNotFoundException($"Embedded icon resource not found: {resourceName}");
+
+            using FileStream fileStream = File.Create(iconPath);
+            stream.CopyTo(fileStream);
+        }
 
         return iconPath;
+    }
+
+    private static string GetBrowserDataPath()
+    {
+        string baseDir;
+        if (OperatingSystem.IsWindows())
+            baseDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "NoMercy", "browser");
+        else if (OperatingSystem.IsMacOS())
+            baseDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Library", "Application Support", "NoMercy", "browser");
+        else
+            baseDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".local", "share", "NoMercy", "browser");
+
+        Directory.CreateDirectory(baseDir);
+        return baseDir;
+    }
+
+    // WebView2 subdirectories inside Default/ that hold login/session state — preserved across updates
+    private static readonly HashSet<string> PreservedSubDirectories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Session Storage",
+        "Local Storage",
+    };
+
+    // WebView2 files inside Default/ that hold login/session state — preserved across updates
+    private static readonly string[] PreservedFilePrefixes =
+    [
+        "Cookies",
+        "Login Data",
+    ];
+
+    private static void ClearBrowserDataOnVersionChange(string browserDataPath)
+    {
+        string versionFile = Path.Combine(browserDataPath, ".app-version");
+        string currentVersion = typeof(Program).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? typeof(Program).Assembly.GetName().Version?.ToString()
+            ?? "0.0.0";
+
+        string? previousVersion = null;
+        if (File.Exists(versionFile))
+            previousVersion = File.ReadAllText(versionFile).Trim();
+
+        if (previousVersion != currentVersion)
+        {
+            ClearBrowserCache(browserDataPath);
+            File.WriteAllText(versionFile, currentVersion);
+        }
+    }
+
+    private static void ClearBrowserCache(string browserDataPath)
+    {
+        // WebView2 stores profile data under EBWebView/Default/
+        // Delete everything except session/login directories and files
+        foreach (string dir in Directory.GetDirectories(browserDataPath))
+        {
+            string dirName = Path.GetFileName(dir);
+
+            if (string.Equals(dirName, "EBWebView", StringComparison.OrdinalIgnoreCase))
+            {
+                ClearWebViewProfile(dir);
+                continue;
+            }
+
+            try { Directory.Delete(dir, true); }
+            catch { /* locked or inaccessible — skip */ }
+        }
+
+        foreach (string file in Directory.GetFiles(browserDataPath))
+        {
+            if (Path.GetFileName(file) == ".app-version") continue;
+            try { File.Delete(file); }
+            catch { /* skip */ }
+        }
+    }
+
+    private static void ClearWebViewProfile(string ebWebViewPath)
+    {
+        foreach (string profileDir in Directory.GetDirectories(ebWebViewPath))
+        {
+            string profileName = Path.GetFileName(profileDir);
+
+            if (string.Equals(profileName, "Default", StringComparison.OrdinalIgnoreCase))
+            {
+                ClearProfileContents(profileDir);
+                continue;
+            }
+
+            try { Directory.Delete(profileDir, true); }
+            catch { /* skip */ }
+        }
+
+        foreach (string file in Directory.GetFiles(ebWebViewPath))
+        {
+            try { File.Delete(file); }
+            catch { /* skip */ }
+        }
+    }
+
+    private static void ClearProfileContents(string profilePath)
+    {
+        foreach (string dir in Directory.GetDirectories(profilePath))
+        {
+            string dirName = Path.GetFileName(dir);
+            if (PreservedSubDirectories.Contains(dirName))
+                continue;
+
+            try { Directory.Delete(dir, true); }
+            catch { /* skip */ }
+        }
+
+        foreach (string file in Directory.GetFiles(profilePath))
+        {
+            string fileName = Path.GetFileName(file);
+            if (PreservedFilePrefixes.Any(prefix => fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            try { File.Delete(file); }
+            catch { /* skip */ }
+        }
     }
 }

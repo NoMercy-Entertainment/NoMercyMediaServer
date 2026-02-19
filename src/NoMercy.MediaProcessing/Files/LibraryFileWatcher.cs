@@ -1,15 +1,11 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.MediaProcessing.Jobs;
-using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.NmSystem;
-using NoMercy.NmSystem.Dto;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Events;
+using NoMercy.Events.FileWatcher;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.TMDB.Client;
-using NoMercy.Providers.TMDB.Models.Movies;
-using NoMercy.Providers.TMDB.Models.Shared;
-using NoMercy.Providers.TMDB.Models.TV;
 using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Files;
@@ -20,17 +16,18 @@ public class LibraryFileWatcher
     private static readonly Lazy<LibraryFileWatcher> _instance = new(() => new());
     public static LibraryFileWatcher Instance => _instance.Value;
 
-    private static readonly MediaContext MediaContext = new();
     private static readonly FolderWatcher Fs = new();
 
     private static readonly Dictionary<string, FileChangeGroup> FileChangeGroups = new();
     private static readonly Lock LockObject = new();
 
-    private static readonly JobDispatcher JobDispatcher = new();
-    private static readonly FileRepository FileRepository = new();
-    private static readonly FileManager FileManager = new(FileRepository);
+    private static readonly Regex EncodingOutputRegex = new(
+        @"^(video_.*|audio_.*|subtitles|fonts|thumbs|metadata|scans|cds.*|NCED|NCOP)$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private const int Delay = 10;
+
+    private static List<Library> _libraries = [];
 
     public LibraryFileWatcher()
     {
@@ -42,12 +39,17 @@ public class LibraryFileWatcher
         Fs.OnRenamed += _onFileRenamed;
         Fs.OnError += _onError;
 
-        List<Library> libraries = MediaContext.Libraries
+        RefreshLibraryCache();
+        Parallel.ForEach(_libraries, library => AddLibraryWatcher(library));
+    }
+
+    public static void RefreshLibraryCache()
+    {
+        using MediaContext mediaContext = new();
+        _libraries = mediaContext.Libraries
             .Include(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
             .ToList();
-
-        foreach (Library library in libraries) AddLibraryWatcher(library);
     }
 
     // ReSharper disable once MemberCanBePrivate.Global
@@ -56,7 +58,7 @@ public class LibraryFileWatcher
         List<string> paths = library.FolderLibraries
             .Select(folderLibrary => folderLibrary.Folder.Path)
             .ToList();
-        
+
         List<Action> disposers = [];
 
         Task.Run(() =>
@@ -71,43 +73,40 @@ public class LibraryFileWatcher
         };
     }
 
-    private void _onFileChanged(FileWatcherEventArgs e)
-    {
-        HandleFileChange(e);
-    }
-
-    private void _onFileCreated(FileWatcherEventArgs e)
-    {
-        HandleFileChange(e);
-    }
-
-    private void _onFileDeleted(FileWatcherEventArgs e)
-    {
-        HandleFileChange(e);
-    }
-
-    private void _onFileRenamed(FileWatcherEventArgs e)
-    {
-        HandleFileChange(e);
-    }
+    private void _onFileChanged(FileWatcherEventArgs e) => HandleFileChange(e);
+    private void _onFileCreated(FileWatcherEventArgs e) => HandleFileChange(e);
+    private void _onFileDeleted(FileWatcherEventArgs e) => HandleFileChange(e);
+    private void _onFileRenamed(FileWatcherEventArgs e) => HandleFileChange(e);
 
     private void _onError(FileWatcherEventArgs e)
     {
         Logger.System(e, LogEventLevel.Error);
     }
 
-    private Library? GetLibraryByPath(string path)
+    private static Library? GetLibraryByPath(string path)
     {
-        using MediaContext mediaContext = new();
-        return mediaContext.Libraries
-            .Include(library => library.FolderLibraries)
-            .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .FirstOrDefault(library => library.FolderLibraries
-                .Any(folderLibrary => path.Contains(folderLibrary.Folder.Path)));
+        return _libraries.FirstOrDefault(library => library.FolderLibraries
+            .Any(folderLibrary => path.Contains(folderLibrary.Folder.Path)));
+    }
+
+    private static bool IsInEncodingOutputDirectory(string fullPath)
+    {
+        string? directory = Path.GetDirectoryName(fullPath);
+        while (!string.IsNullOrEmpty(directory))
+        {
+            string dirName = Path.GetFileName(directory);
+            if (EncodingOutputRegex.IsMatch(dirName))
+                return true;
+
+            directory = Path.GetDirectoryName(directory);
+        }
+        return false;
     }
 
     private void HandleFileChange(FileWatcherEventArgs e)
     {
+        if (IsInEncodingOutputDirectory(e.FullPath)) return;
+
         string watcherPath = e.Path;
         Library? library = GetLibraryByPath(watcherPath);
 
@@ -115,10 +114,11 @@ public class LibraryFileWatcher
 
         if (!IsAllowedExtensionForLibrary(library, e.FullPath)) return;
 
+        if (e.ChangeType != WatcherChangeTypes.Deleted && !Path.Exists(e.FullPath)) return;
+
         string folderPath = Path.GetDirectoryName(e.FullPath) ?? string.Empty;
-        
-        if (Directory.Exists(folderPath))
-            folderPath = e.FullPath;
+
+        if (string.IsNullOrEmpty(folderPath)) return;
 
         lock (LockObject)
         {
@@ -127,6 +127,12 @@ public class LibraryFileWatcher
                 fileChangeGroup = new(e.ChangeType, library, folderPath);
                 FileChangeGroups[folderPath] = fileChangeGroup;
             }
+
+            fileChangeGroup.FullPath = e.FullPath;
+            fileChangeGroup.ChangeType = e.ChangeType;
+
+            if (e.ChangeType == WatcherChangeTypes.Renamed && e.OldFullPath is not null)
+                fileChangeGroup.OldFullPath = e.OldFullPath;
 
             fileChangeGroup.Timer?.Dispose();
             fileChangeGroup.Timer = new(ProcessFileChanges, fileChangeGroup, TimeSpan.FromSeconds(Delay),
@@ -137,14 +143,14 @@ public class LibraryFileWatcher
     private static bool IsAllowedExtensionForLibrary(Library library, string path)
     {
         if (Directory.Exists(path)) return true;
-        
+
         switch (library.Type)
         {
-            case "movie":
-            case "tv":
+            case Config.MovieMediaType:
+            case Config.TvMediaType:
                 string[] videoExtensions = [".mp4", ".mkv", ".avi", ".webm", ".mov", ".m3u8"];
                 return videoExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
-            case "music":
+            case Config.MusicMediaType:
                 string[] audioExtensions = [".mp3", ".flac", ".opus", ".wav", ".m4a"];
                 return audioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
             default:
@@ -154,91 +160,85 @@ public class LibraryFileWatcher
 
     private void ProcessFileChanges(object? state)
     {
-        if (state is not FileChangeGroup group) return;
+        if (state is not FileChangeGroup group)
+            return;
 
+        FileChangeGroup snapshot;
         lock (LockObject)
         {
-            switch (group.ChangeType)
+            snapshot = new(group.ChangeType, group.Library, group.FolderPath)
             {
-                case WatcherChangeTypes.Created:
-                case WatcherChangeTypes.Deleted:
-                case WatcherChangeTypes.Changed:
-                case WatcherChangeTypes.Renamed:
-                    _ = HandleFolder(group.Library, group.FolderPath);
-                    break;
-            }
+                FullPath = group.FullPath,
+                OldFullPath = group.OldFullPath
+            };
             FileChangeGroups.Remove(group.FolderPath);
         }
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await PublishFileEvent(snapshot);
+            }
+            catch (Exception ex)
+            {
+                Logger.System($"FileWatcher error processing {snapshot.FolderPath}: {ex.Message}", LogEventLevel.Error);
+            }
+        });
     }
 
-    private async Task HandleFolder(Library library, string path)
+    private static async Task PublishFileEvent(FileChangeGroup group)
     {
-        MediaScan mediaScan = new();
-        MediaScan scan = mediaScan.EnableFileListing();
+        if (!EventBusProvider.IsConfigured) return;
 
-        if (library.Type == "music")
-            scan.DisableRegexFilter();
-
-        IEnumerable<MediaFolderExtend> mediaFolder = await scan.Process(path);
-
-        switch (library.Type)
+        switch (group.ChangeType)
         {
-            case "movie":
-                await HandleMovieFolder(library, mediaFolder.First());
+            case WatcherChangeTypes.Created:
+            case WatcherChangeTypes.Changed:
+                Logger.System($"FileWatcher: Publishing FileCreatedEvent for {group.FolderPath}", LogEventLevel.Debug);
+                await EventBusProvider.Current.PublishAsync(new FileCreatedEvent
+                {
+                    FolderPath = group.FolderPath,
+                    LibraryId = group.Library.Id,
+                    LibraryType = group.Library.Type
+                });
                 break;
-            case "tv":
-                await HandleTvFolder(library, mediaFolder.First());
+
+            case WatcherChangeTypes.Deleted:
+                Logger.System($"FileWatcher: Publishing FileDeletedEvent for {group.FullPath}", LogEventLevel.Debug);
+                await EventBusProvider.Current.PublishAsync(new FileDeletedEvent
+                {
+                    FullPath = group.FullPath ?? group.FolderPath,
+                    LibraryId = group.Library.Id,
+                    LibraryType = group.Library.Type
+                });
                 break;
-            case "music":
-                HandleMusicFolder(library, mediaFolder.First());
+
+            case WatcherChangeTypes.Renamed when group.OldFullPath is not null:
+                Logger.System($"FileWatcher: Publishing FileRenamedEvent from {group.OldFullPath} to {group.FullPath}", LogEventLevel.Debug);
+                await EventBusProvider.Current.PublishAsync(new FileRenamedEvent
+                {
+                    OldFullPath = group.OldFullPath,
+                    NewFullPath = group.FullPath ?? group.FolderPath,
+                    LibraryId = group.Library.Id,
+                    LibraryType = group.Library.Type
+                });
+                break;
+
+            case WatcherChangeTypes.Renamed:
+                Logger.System($"FileWatcher: Rename detected but no OldFullPath, treating as Created for {group.FolderPath}", LogEventLevel.Debug);
+                await EventBusProvider.Current.PublishAsync(new FileCreatedEvent
+                {
+                    FolderPath = group.FolderPath,
+                    LibraryId = group.Library.Id,
+                    LibraryType = group.Library.Type
+                });
                 break;
         }
     }
 
-    private void HandleMusicFolder(Library library, MediaFolderExtend path)
+    public static void Start()
     {
-        Logger.System($"Music {path.Path}: Processing");
-
-        JobDispatcher.DispatchJob<ProcessReleaseFolderJob>(path.Path, library.Id);
-    }
-
-    private async Task HandleTvFolder(Library library, MediaFolderExtend path)
-    {
-        Logger.System($"Tv Show {path.Path}: Processing");
-
-        using TmdbSearchClient tmdbSearchClient = new();
-        TmdbPaginatedResponse<TmdbTvShow>? paginatedTvShowResponse =
-            await tmdbSearchClient.TvShow(path.Parsed.Title!, path.Parsed.Year);
-
-        if (paginatedTvShowResponse?.Results.Count <= 0) return;
-
-        IEnumerable<TmdbTvShow> res = paginatedTvShowResponse?.Results ?? [];
-        if (res.Count() is 0) return;
-
-        Logger.System($"Tv Show {res.First().Name}: Found {res.First().Name}");
-
-        await FileManager.FindFiles(res.First().Id, library);
-
-        JobDispatcher.DispatchJob<AddShowJob>(res.First().Id, library);
-    }
-
-    private async Task HandleMovieFolder(Library library, MediaFolderExtend path)
-    {
-        Logger.System($"Movie {path.Path}: Processing");
-
-        using TmdbSearchClient tmdbSearchClient = new();
-        TmdbPaginatedResponse<TmdbMovie>? paginatedTvShowResponse =
-            await tmdbSearchClient.Movie(path.Parsed.Title!, path.Parsed.Year);
-
-        if (paginatedTvShowResponse?.Results.Count <= 0) return;
-
-        IEnumerable<TmdbMovie> res = paginatedTvShowResponse?.Results ?? [];
-        if (res.Count() is 0) return;
-
-        Logger.System($"Movie {res.First().Title}: Found {res.First().Title}");
-
-        await FileManager.FindFiles(res.First().Id, library);
-
-        JobDispatcher.DispatchJob<AddMovieJob>(res.First().Id, library);
+        _ = Instance;
     }
 }

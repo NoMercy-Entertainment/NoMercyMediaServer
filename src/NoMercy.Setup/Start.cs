@@ -1,8 +1,9 @@
-using System.Runtime.InteropServices;
 using NoMercy.Encoder.Core;
 using NoMercy.Networking;
+using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
-using NoMercy.Queue;
+using NoMercyQueue;
+using Serilog.Events;
 using AppFiles = NoMercy.NmSystem.Information.AppFiles;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -10,58 +11,134 @@ namespace NoMercy.Setup;
 
 public class Start
 {
-    [DllImport("Kernel32.dll")]
-    private static extern IntPtr GetConsoleWindow();
+    public static INetworkDiscovery? NetworkDiscovery { get; set; }
 
-    [DllImport("User32.dll")]
-    private static extern bool ShowWindow(IntPtr hWnd, int cmdShow);
+    public static bool IsDegradedMode { get; internal set; }
 
-    public static int AppProcessStarted { get; set; }
-    public static int ConsoleVisible { get; set; } = 1;
+    private static List<StartupTask> _allTasks = [];
+    private static HashSet<string> _phase1Completed = [];
+    private static List<TaskDelegate> _callerTasks = [];
 
-    public static void VsConsoleWindow(int i)
+    internal static List<StartupTask> BuildStartupTasks(List<TaskDelegate> callerTasks)
     {
-        IntPtr hWnd = GetConsoleWindow();
-        if (hWnd == IntPtr.Zero) return;
-        ConsoleVisible = i;
-        ShowWindow(hWnd, i);
+        bool hasNetwork = false;
+
+        return
+        [
+            // ── PHASE 1: MUST SUCCEED (no network) ─────────────────────
+            new("UserSettings", async () =>
+            {
+                if (UserSettings.TryGetUserSettings(out Dictionary<string, string> settings))
+                    UserSettings.ApplySettings(settings);
+            }, CanDefer: false, Phase: 1),
+
+            new("CreateAppFolders", AppFiles.CreateAppFolders,
+                CanDefer: false, Phase: 1, DependsOn: ["UserSettings"]),
+
+            new("ApiInfo", ApiInfo.RequestInfo,
+                CanDefer: false, Phase: 1, DependsOn: ["CreateAppFolders"]),
+
+            // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
+            new("NetworkProbe", async () =>
+            {
+                hasNetwork = await NetworkProbe.CheckConnectivity();
+            }, CanDefer: false, Phase: 2, DependsOn: ["ApiInfo"]),
+
+            new("Auth", async () =>
+            {
+                if (hasNetwork)
+                {
+                    try
+                    {
+                        await Auth.Init();
+                        if (Globals.Globals.AccessToken is null)
+                            throw new InvalidOperationException("No access token after auth");
+                    }
+                    catch (Exception)
+                    {
+                        Logger.Setup("Auth not yet available, checking for cached tokens");
+                        bool result = await Auth.InitWithFallback();
+                        if (!result)
+                            throw new InvalidOperationException("Auth failed and no cached tokens available");
+                    }
+                }
+                else
+                {
+                    bool result = await Auth.InitWithFallback();
+                    if (!result)
+                        throw new InvalidOperationException("No network and no cached tokens available");
+                }
+            }, CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
+
+            new("Binaries", Binaries.DownloadAll,
+                CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
+
+            // ── PHASE 3: NETWORK-DEPENDENT (run if possible, degrade if not) ──
+            new("Networking", async () =>
+            {
+                if (NetworkDiscovery is not null)
+                    await NetworkDiscovery.DiscoverExternalIpAsync();
+            }, CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
+
+            new("ChromeCast", ChromeCast.Init,
+                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
+
+            new("UpdateChecker", UpdateChecker.StartPeriodicUpdateCheck,
+                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
+
+            new("DesktopIcon", () => Task.Run(() =>
+                DesktopIconCreator.CreateDesktopIcon(
+                    AppFiles.ApplicationName, AppFiles.ServerExePath, AppFiles.AppIcon)),
+                CanDefer: true, Phase: 3),
+
+            .. callerTasks.Select((TaskDelegate taskDelegate, int i) =>
+                new StartupTask($"CallerTask_{i}", taskDelegate.Invoke,
+                    CanDefer: true, Phase: 3, DependsOn: ["Auth"])),
+
+            // ── PHASE 4: REGISTRATION (needs Auth + Networking) ────────
+            new("Register", () => Register.Init(),
+                CanDefer: true, Phase: 4, DependsOn: ["Auth", "Networking"]),
+        ];
     }
 
-    public static async Task Init(List<TaskDelegate> tasks)
+    public static async Task InitEssential(List<TaskDelegate> tasks)
     {
-        if (UserSettings.TryGetUserSettings(out Dictionary<string, string> settings))
-            UserSettings.ApplySettings(settings);
+        _callerTasks = tasks;
+        _allTasks = BuildStartupTasks(tasks);
 
-        await ApiInfo.RequestInfo();
+        List<StartupTask> phase1Tasks = _allTasks.Where(t => t.Phase == 1).ToList();
+        StartupTaskRunner runner = new(phase1Tasks);
 
-        List<TaskDelegate> startupTasks =
-        [
-            // new (ApiInfo.RequestInfo),
-            AppFiles.CreateAppFolders,
-            Auth.Init,
-            Networking.Networking.Discover,
-            ..tasks,
-            Register.Init,
-            Binaries.DownloadAll,
-            ChromeCast.Init,
-            UpdateChecker.StartPeriodicUpdateCheck,
+        await runner.RunAll();
 
-            delegate
+        _phase1Completed = [..runner.CompletedTasks];
+    }
+
+    public static async Task InitRemaining()
+    {
+        List<StartupTask> remainingTasks = _allTasks.Where(t => t.Phase > 1).ToList();
+        StartupTaskRunner runner = new(remainingTasks, _phase1Completed);
+
+        await runner.RunAll();
+
+        if (runner.DeferredTasks.Count > 0)
+        {
+            IsDegradedMode = true;
+            Logger.Setup("Some startup tasks were deferred — they will be retried in the background");
+            Logger.Setup(
+                $"  Deferred tasks: {string.Join(", ", runner.DeferredTasks.Select(t => t.Name))}");
+
+            DeferredTasks deferred = new()
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                    && OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362))
-                    return TrayIcon.Make();
-                return Task.CompletedTask;
-            },
-            delegate
-            {
-                DesktopIconCreator.CreateDesktopIcon(AppFiles.ApplicationName, AppFiles.ServerExePath,
-                    AppFiles.AppIcon);
-                return Task.CompletedTask;
-            }
-        ];
-
-        await RunStartup(startupTasks);
+                ApiKeysLoaded = _phase1Completed.Contains("ApiInfo"),
+                Authenticated = runner.CompletedTasks.Contains("Auth"),
+                NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
+                SeedsRun = runner.DeferredTasks.All(t => !t.Name.StartsWith("CallerTask_")),
+                Registered = runner.CompletedTasks.Contains("Register"),
+                CallerTasks = _callerTasks
+            };
+            _ = Task.Run(() => DegradedModeRecovery.StartRecoveryLoop(deferred));
+        }
 
         // Delay heavy initialization tasks to run in the background after server is ready
         _ = Task.Run(async () =>
@@ -71,18 +148,24 @@ public class Start
 
             // Initialize hardware acceleration detection in background
             await FFmpegHardwareConfig.InitializeAsync();
-            foreach (GpuAccelerator accelerator in FFmpegHardwareConfig.Accelerators)
-                Logger.Encoder(
-                    $"Found a dedicated GPU. Vendor: {accelerator.Vendor}, Accelerator: {accelerator.Accelerator}");
+            if (FFmpegHardwareConfig.Accelerators.Count > 0)
+            {
+                List<string> gpus = FFmpegHardwareConfig.Accelerators
+                    .Select(a => $"{a.Vendor}/{a.Accelerator}")
+                    .ToList();
+                Logger.Encoder($"GPU acceleration: {string.Join(", ", gpus)}", LogEventLevel.Debug);
+            }
 
             // Start queue workers after a short delay
             await Task.Delay(TimeSpan.FromSeconds(2));
-            await QueueRunner.Initialize();
+            if (QueueRunner.Current is not null)
+            {
+                await QueueRunner.Current.Initialize();
+            }
+            else
+            {
+                Logger.Setup("QueueRunner.Current is null — skipping Initialize from InitRemaining (will be initialized after host restart)", LogEventLevel.Warning);
+            }
         });
-    }
-
-    private static async Task RunStartup(List<TaskDelegate> startupTasks)
-    {
-        foreach (TaskDelegate task in startupTasks) await task.Invoke();
     }
 }

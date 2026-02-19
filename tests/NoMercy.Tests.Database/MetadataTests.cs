@@ -1,4 +1,4 @@
-﻿using NoMercy.Database.Models;
+﻿using NoMercy.Database.Models.Media;
 
 namespace NoMercy.Tests.Database;
 

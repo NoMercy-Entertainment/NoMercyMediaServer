@@ -3,13 +3,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO.Components;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
+using NoMercy.Api.DTOs.Media.Components;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
@@ -27,13 +28,14 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Authorize]
 [Route("api/v{version:apiVersion}/tv/{id:int}")] // match themoviedb.org API
 public class TvShowsController(
-    TvShowRepository tvShowRepository, 
+    TvShowRepository tvShowRepository,
     JobDispatcher jobDispatcher,
     MediaContext mediaContext
     ) : BaseController
 {
     [HttpGet]
-    public async Task<IActionResult> Tv(int id)
+    [ResponseCache(Duration = 120)]
+    public async Task<IActionResult> Tv(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -47,7 +49,7 @@ public class TvShowsController(
         if (tv is not null)
             return Ok(new InfoResponseDto
             {
-                Data = new(tv, country)
+                Data = new(tv, country, mediaContext)
             });
 
         TmdbTvClient tmdbTvClient = new(id, language: language);
@@ -65,12 +67,12 @@ public class TvShowsController(
     }
 
     [HttpDelete]
-    public async Task<IActionResult> DeleteTv(int id)
+    public async Task<IActionResult> DeleteTv(int id, CancellationToken ct = default)
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to delete shows");
 
-        await tvShowRepository.DeleteTvAsync(id);
+        await tvShowRepository.DeleteAsync(id, ct);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -81,13 +83,13 @@ public class TvShowsController(
 
     [HttpGet]
     [Route("available")]
-    public async Task<IActionResult> Available(int id)
+    public async Task<IActionResult> Available(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
 
-        bool available = await tvShowRepository.GetTvAvailableAsync(userId, id);
+        bool available = await tvShowRepository.GetTvAvailableAsync(userId, id, ct);
 
         if (!available)
             return NotFound(new StatusResponseDto<AvailableResponseDto>
@@ -113,7 +115,7 @@ public class TvShowsController(
 
     [HttpGet]
     [Route("watch")]
-    public async Task<IActionResult> Watch(int id)
+    public async Task<IActionResult> Watch(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -122,7 +124,7 @@ public class TvShowsController(
         string language = Language();
         string country = Country();
 
-        Tv? tv = await tvShowRepository.GetTvPlaylistAsync(userId, id, language, country);
+        Tv? tv = await tvShowRepository.GetPlaylistAsync(userId, id, language, country, ct);
 
         if (tv is null)
             return NotFoundResponse("Tv show not found");
@@ -149,13 +151,13 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("like")]
-    public async Task<IActionResult> Like(int id, [FromBody] LikeRequestDto request)
+    public async Task<IActionResult> Like(int id, [FromBody] LikeRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like tv shows");
 
-        bool success = await tvShowRepository.LikeTvAsync(id, userId, request.Value);
+        bool success = await tvShowRepository.LikeAsync(id, userId, request.Value, ct);
 
         if (!success)
             return UnprocessableEntityResponse("Tv show not found");
@@ -173,13 +175,13 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("watch-list")]
-    public async Task<IActionResult> AddToWatchList(int id, [FromBody] WatchListRequestDto request)
+    public async Task<IActionResult> AddToWatchList(int id, [FromBody] WatchListRequestDto request, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to manage watch list");
 
-        bool success = await tvShowRepository.AddToWatchListAsync(id, userId, request.Add);
+        bool success = await tvShowRepository.AddToWatchListAsync(id, userId, request.Add, ct);
 
         if (!success)
             return UnprocessableEntityResponse("Tv show not found");
@@ -193,7 +195,7 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("rescan")]
-    public async Task<IActionResult> Rescan(int id)
+    public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan tv shows");
@@ -204,14 +206,14 @@ public class TvShowsController(
             .Include(tv => tv.Library)
             .ThenInclude(library => library.FolderLibraries)
             .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         if (tv is null)
             return UnprocessableEntityResponse("Tv show not found");
-        
+
         try
         {
-            jobDispatcher.DispatchJob<RescanFilesJob>(id, tv.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(id, tv.LibraryId);
         }
         catch (Exception e)
         {
@@ -229,7 +231,7 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("refresh")]
-    public async Task<IActionResult> Refresh(int id)
+    public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh tv shows");
@@ -238,7 +240,7 @@ public class TvShowsController(
             .AsNoTracking()
             .Where(tv => tv.Id == id)
             .Include(tv => tv.Library)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         if (tv is null)
             return UnprocessableEntityResponse("Tv show not found");
@@ -251,11 +253,11 @@ public class TvShowsController(
 
         Library? tvLibrary = await mediaContext.Libraries
             .Where(f => f.Type == (isAnime ? "anime" : "tv"))
-            .FirstOrDefaultAsync() ?? await mediaContext.Libraries
+            .FirstOrDefaultAsync(ct) ?? await mediaContext.Libraries
             .Where(f => f.Type == "tv")
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
-        jobDispatcher.DispatchJob<AddShowJob>(id, tvLibrary?.Id ?? tv.Library.Id);
+        jobDispatcher.DispatchJob<ShowImportJob>(id, tvLibrary?.Id ?? tv.Library.Id);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -267,11 +269,11 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("add")]
-    public async Task<IActionResult> Add(int id)
+    public async Task<IActionResult> Add(int id, CancellationToken ct = default)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add tv shows");
-        
+
         TmdbTvClient tvClient = new(id);
         TmdbTvShowDetails? show = await tvClient.Details(true);
         if (show == null) return NotFoundResponse("Tv show not found");
@@ -280,16 +282,16 @@ public class TvShowsController(
 
         Library? library = await mediaContext.Libraries
             .Where(f => f.Type == (isAnime ? "anime" : "tv"))
-            .FirstOrDefaultAsync() ?? await mediaContext.Libraries
+            .FirstOrDefaultAsync(ct) ?? await mediaContext.Libraries
             .Where(f => f.Type == "tv")
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         if (library is null)
             return UnprocessableEntityResponse("No Tv library found");
-        
+
         try
         {
-            jobDispatcher.DispatchJob<AddShowJob>(id, library.Id);
+            jobDispatcher.DispatchJob<ShowImportJob>(id, library.Id);
         }
         catch (Exception e)
         {
@@ -304,19 +306,19 @@ public class TvShowsController(
             Args = [show.Name]
         });
     }
-    
+
     [HttpGet]
     [Route("missing")]
-    public async Task<IActionResult> Missing(int id)
+    public async Task<IActionResult> Missing(int id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view library");
         string language = Language();
-        
+
         IEnumerable<Episode> episodes = await tvShowRepository
-            .GetMissingLibraryShows(userId, id, language);
-        
+            .GetMissingLibraryShows(userId, id, language, ct);
+
         List<IGrouping<long, MissingEpisodeDto>> concat = episodes
             .Select(episode => new MissingEpisodeDto(episode))
             .OrderBy(episode => episode.SeasonNumber)
@@ -363,8 +365,8 @@ public class TvShowsController(
                         .WithItems(seasonGroup.Select(episode =>
                             Component.SeasonCard(new(episode))
                                 .WithWatch()))
-                        
+
                 }))));
     }
-    
+
 }

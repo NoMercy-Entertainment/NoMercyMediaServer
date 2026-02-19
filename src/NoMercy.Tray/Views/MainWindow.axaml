@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NoMercy.Tray.ViewModels"
+        xmlns:views="using:NoMercy.Tray.Views"
+        x:Class="NoMercy.Tray.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="NoMercy MediaServer"
+        Width="960" Height="640"
+        MinWidth="640" MinHeight="400"
+        WindowStartupLocation="CenterScreen">
+
+    <TabControl SelectedIndex="{Binding SelectedTabIndex}">
+        <TabItem Header="Dashboard">
+            <views:ServerControlView
+                DataContext="{Binding ServerControlViewModel}" />
+        </TabItem>
+        <TabItem Header="Logs">
+            <views:LogViewerView
+                DataContext="{Binding LogViewerViewModel}" />
+        </TabItem>
+    </TabControl>
+</Window>

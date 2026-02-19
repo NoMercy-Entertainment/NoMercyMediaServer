@@ -1,9 +1,9 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media;
-using NoMercy.NmSystem;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Controllers;
 
@@ -232,7 +232,7 @@ public class BaseController : Controller
     protected IActionResult GetPaginatedResponse<T>(IEnumerable<T> data, [FromQuery] PageRequestDto request)
     {
         List<T> newData = data.ToList();
-        bool hasMore = newData.Count() >= request.Take;
+        bool hasMore = newData.Count >= request.Take;
 
         newData = newData.Take(request.Take).ToList();
 

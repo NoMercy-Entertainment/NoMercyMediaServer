@@ -1,16 +1,22 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.Socket.music;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO.Components;
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
-using NoMercy.Networking.Dto;
+using NoMercy.Database.Models.Music;
+using NoMercy.Helpers.Extensions;
+using NoMercy.MediaProcessing.Images;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.Events.Music;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -20,59 +26,34 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/album")]
 public class AlbumsController : BaseController
 {
-    public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
+    private readonly IEventBus _eventBus;
 
-    public AlbumsController(MusicRepository musicService, MediaContext mediaContext)
+    public AlbumsController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
+        _eventBus = eventBus;
     }
 
     [HttpGet]
     [Route("/api/v{version:apiVersion}/music/albums/{letter}")]
     public async Task<IActionResult> Index(string letter)
     {
-        List<AlbumsResponseItemDto> albums = [];
         Guid userId = User.UserId();
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view albums");
 
         string language = Language();
 
-        foreach (Album album in _musicRepository.GetAlbumsAsync(userId, letter))
-        {
-            albums.Add(new(album, language));
-        }
+        List<AlbumCardDto> albumCards = await _musicRepository.GetAlbumCardsAsync(userId, letter, language);
 
-        List<AlbumTrack> tracks = await _musicRepository.GetAlbumTracksForIdsAsync(
-            albums.Select(a => a.Id).ToList());
-
-        if (tracks.Count == 0)
+        if (albumCards.Count == 0)
             return NotFoundResponse("Albums not found");
 
-        foreach (AlbumsResponseItemDto album in albums)
-        {
-            album.Tracks = tracks.Count(track => track.AlbumId == album.Id);
-        }
-        
         ComponentEnvelope response = Component.Grid()
-            .WithItems(albums
-                .Where(response => response.Tracks > 0)
-                .OrderBy(album => album.Name)
-                .Select(item => Component.MusicCard(new()
-                {
-                    Id = item.Id.ToString(),
-                    Name = item.Name,
-                    Cover = item.Cover,
-                    Type = "artist",
-                    Link = $"/music/album/{item.Id}",
-                    ColorPalette = null,
-                    Disambiguation = item.Disambiguation,
-                    Description = item.Description,
-                    Tracks = item.Tracks
-                })));
+            .WithItems(albumCards.Select(a => Component.MusicCard(new AlbumsResponseItemDto(a))));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -113,20 +94,18 @@ public class AlbumsController : BaseController
 
         await _musicRepository.LikeAlbumAsync(userId, album, request.Value);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "album", album.Id]
         });
 
-        MusicLikeEventDto musicLikeEventDto = new()
+        await _eventBus.PublishAsync(new MusicItemLikedEvent
         {
-            Id = album.Id,
-            Type = "album",
-            Liked = request.Value,
-            User = User.User()
-        };
-
-        OnLikeEvent?.Invoke(this, musicLikeEventDto);
+            UserId = User.UserId(),
+            ItemId = album.Id,
+            ItemType = "album",
+            Liked = request.Value
+        });
 
         return Ok(new StatusResponseDto<string>
         {
@@ -152,6 +131,113 @@ public class AlbumsController : BaseController
             Status = "ok",
             Message = "Rescan started",
             Args = []
+        });
+    }
+    
+    
+    [HttpPatch]
+    [Route("{id:guid}")]
+    public async Task<IActionResult> Edit(Guid id, [FromBody] CreatePlaylistRequestDto request)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to edit an album");
+        
+        Album? album = await _mediaContext.Albums
+            .FirstOrDefaultAsync(a => a.Id == id);
+        
+        if (album is null)
+            return NotFoundResponse("Album not found");
+        
+        string slug = album.Name.ToSlug();
+        string colorPalette = album._colorPalette;
+        string cover = album.Cover ?? "";
+        
+        if (request.Cover is not null)
+        {
+            cover = $"/{slug}.jpg";
+            string filePath = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+            
+            await using (FileStream stream = new(filePath, FileMode.Create))
+            {
+                string base64Data = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)").Groups["data"].Value;
+                byte[] binData = Convert.FromBase64String(base64Data);
+                await stream.WriteAsync(binData);
+            }
+            
+            colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
+        }
+        
+        album.Name = request.Name;
+        album.Description = request.Description;
+        album.Cover = cover;
+        album._colorPalette = colorPalette;
+
+        int result = await _mediaContext.SaveChangesAsync();
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music", "album", id]
+        });
+
+        return Ok(new StatusResponseDto<string>
+        {
+            Data = (result > 0 ? "Album updated successfully" : "No changes made").Localize(),
+            Status = "ok",
+        });
+    }
+    
+    [HttpPost]
+    [Route("{id:guid}/cover")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Cover(Guid id, IFormFile image)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to upload album covers");
+
+        Album? album = await _mediaContext.Albums
+            .Include(album => album.LibraryFolder)
+            .FirstOrDefaultAsync(album => album.Id == id);
+
+        if (album is null)
+            return NotFoundResponse("Album not found");
+
+        string slug = album.Name.ToSlug();
+
+        string libraryRootFolder = album.LibraryFolder.Path;
+        if (string.IsNullOrEmpty(libraryRootFolder))
+            return UnprocessableEntityResponse("Album library folder not found");
+
+        // save to album folder
+        string filePath = Path.Combine(libraryRootFolder, album.HostFolder.TrimStart('\\'), "cover.jpg");
+        Logger.App(filePath);
+        await using (FileStream stream = new(filePath, FileMode.Create))
+        {
+            await image.CopyToAsync(stream);
+        }
+
+        // save to app images folder
+        string filePath2 = Path.Combine(AppFiles.ImagesPath, "music", slug + ".jpg");
+        Logger.App(filePath2);
+        await using (FileStream stream = new(filePath2, FileMode.Create))
+        {
+            await image.CopyToAsync(stream);
+        }
+
+        album.Cover = $"/{slug}.jpg";
+        album._colorPalette = await CoverArtImageManagerManager
+            .ColorPalette("cover", new(filePath2));
+
+        await _mediaContext.SaveChangesAsync();
+        
+        return Ok(new StatusResponseDto<ImageUploadResponseDto>
+        {
+            Status = "ok",
+            Message = "Album cover updated",
+            Data = new()
+            {
+                Url = new($"/images/music/{slug}.jpg", UriKind.Relative),
+                ColorPalette = album.ColorPalette
+            }
         });
     }
 }

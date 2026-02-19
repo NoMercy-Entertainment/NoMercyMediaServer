@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 
 namespace NoMercy.Data.Jobs;
@@ -14,6 +14,9 @@ namespace NoMercy.Data.Jobs;
 [Serializable]
 public class CoverArtImageJob : IShouldQueue
 {
+    public string QueueName => "image";
+    public int Priority => 3;
+
     public MusicBrainzReleaseAppends? MusicBrainzRelease { get; set; }
 
     public CoverArtImageJob()

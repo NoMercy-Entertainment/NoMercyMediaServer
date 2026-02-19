@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Data.Repositories;
 
@@ -37,7 +38,6 @@ public record CarouselResponseItemDto
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artist.ArtistTrack
-            .Where(artistTrack => artistTrack.Track.Duration != null)
             .DistinctBy(artistTrack => artistTrack.Track.Name.ToLower())
             .Count();
     }
@@ -58,7 +58,6 @@ public record CarouselResponseItemDto
         Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = album.AlbumTrack
-            .Where(albumTrack => albumTrack.Track.Duration != null)
             .DistinctBy(albumTrack => albumTrack.Track.Name.ToLower())
             .Count();
     }
@@ -81,7 +80,6 @@ public record CarouselResponseItemDto
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
         Tracks = artistUser.Artist.ArtistTrack
-            .Where(artistTrack => artistTrack.Track.Duration != null)
             .DistinctBy(artistTrack => artistTrack.Track.Name.ToLower())
             .Count();
     }
@@ -102,7 +100,6 @@ public record CarouselResponseItemDto
         Link = new($"/music/album/{Id}", UriKind.Relative);
 
         Tracks = playlist.Album.AlbumTrack
-            .Where(albumTrack => albumTrack.Track.Duration != null)
             .DistinctBy(albumTrack => albumTrack.Track.Name.ToLower())
             .Count();
     }
@@ -116,11 +113,10 @@ public record CarouselResponseItemDto
         Description = playlist.Description;
         Id = playlist.Id.ToString();
         Name = playlist.Name;
-        Type = "playlists";
-        Link = new($"/music/playlist/{Id}", UriKind.Relative);
+        Type = "playlist";
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
 
         Tracks = playlist.Tracks
-            .Where(playlistTrack => playlistTrack.Track.Duration != null)
             .DistinctBy(playlistTrack => playlistTrack.Track.Name.ToLower())
             .Count();
     }
@@ -128,13 +124,87 @@ public record CarouselResponseItemDto
     public CarouselResponseItemDto(Track track)
     {
         ColorPalette = track.ColorPalette;
-        Cover = track.Cover is not null 
-            ? new Uri($"/images/music{track.Cover}", UriKind.Relative).ToString() 
+        Cover = track.Cover is not null
+            ? new Uri($"/images/music{track.Cover}", UriKind.Relative).ToString()
             : null;
         Folder = track.Folder ?? "";
         Id = track.Id.ToString();
         Name = track.Name;
         Type = "track";
         Link = new($"/music/tracks/{Id}", UriKind.Relative);
+    }
+
+    public CarouselResponseItemDto(MusicGenre genre)
+    {
+        Id = genre.Id.ToString();
+        Name = genre.Name.ToTitleCase();
+        Type = "genre";
+        Link = new($"/music/genres/{Id}", UriKind.Relative);
+
+        Tracks = genre.MusicGenreTracks.Count;
+    }
+
+    public CarouselResponseItemDto(ArtistCardDto artist)
+    {
+        ColorPalette = !string.IsNullOrEmpty(artist.ColorPalette)
+            ? Newtonsoft.Json.JsonConvert.DeserializeObject<IColorPalettes>(artist.ColorPalette)
+            : null;
+        Cover = artist.Cover ?? artist.ThumbImagePath;
+        Cover = Cover is not null
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            : null;
+        Disambiguation = artist.Disambiguation;
+        Description = artist.Description;
+        Folder = artist.Folder ?? "";
+        Id = artist.Id.ToString();
+        LibraryId = artist.LibraryId;
+        Name = artist.Name;
+        Type = "artist";
+        Link = new($"/music/artist/{Id}", UriKind.Relative);
+        Tracks = artist.TrackCount;
+    }
+
+    public CarouselResponseItemDto(AlbumCardDto album)
+    {
+        ColorPalette = !string.IsNullOrEmpty(album.ColorPalette)
+            ? Newtonsoft.Json.JsonConvert.DeserializeObject<IColorPalettes>(album.ColorPalette)
+            : null;
+        Cover = album.Cover is not null
+            ? new Uri($"/images/music{album.Cover}", UriKind.Relative).ToString()
+            : null;
+        Disambiguation = album.Disambiguation;
+        Description = album.Description;
+        Folder = album.Folder ?? "";
+        Id = album.Id.ToString();
+        LibraryId = album.LibraryId;
+        Name = album.Name;
+        Type = "album";
+        Link = new($"/music/album/{Id}", UriKind.Relative);
+        Tracks = album.TrackCount;
+    }
+
+    public CarouselResponseItemDto(PlaylistCardDto playlist)
+    {
+        ColorPalette = !string.IsNullOrEmpty(playlist.ColorPalette)
+            ? Newtonsoft.Json.JsonConvert.DeserializeObject<IColorPalettes>(playlist.ColorPalette)
+            : null;
+        Cover = playlist.Cover is not null
+            ? new Uri($"/images/music{playlist.Cover}", UriKind.Relative).ToString()
+            : null;
+        Description = playlist.Description;
+        Id = playlist.Id.ToString();
+        Name = playlist.Name;
+        Type = "playlist";
+        Link = new($"/music/playlists/{Id}", UriKind.Relative);
+        Tracks = playlist.TrackCount;
+    }
+
+    public CarouselResponseItemDto(MusicGenreCardDto genre)
+    {
+        Id = genre.Id.ToString();
+        Name = genre.Name.ToTitleCase();
+        Type = "genre";
+        Link = new($"/music/genres/{Id}", UriKind.Relative);
+        Tracks = genre.TrackCount;
     }
 }

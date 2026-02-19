@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using static NoMercy.Encoder.Core.IsoLanguageMapper;
@@ -9,6 +10,7 @@ namespace NoMercy.Encoder.Core;
 
 public static class HlsPlaylistGenerator
 {
+
     public static async Task Build(string basePath, string filename, List<string>? priorityLanguages = null)
     {
         priorityLanguages ??= ["eng", "jpn"];
@@ -21,9 +23,10 @@ public static class HlsPlaylistGenerator
                         Path.GetFileName(f).StartsWith("video_", StringComparison.InvariantCultureIgnoreCase))
             .ToArray();
 
-        IEnumerable<string> videoFiles = folders
+        List<string> videoFileList = folders
             .Where(f => Path.GetFileName(f).StartsWith("video_", StringComparison.InvariantCultureIgnoreCase))
-            .SelectMany(f => Directory.GetFiles(f, "*.m3u8"));
+            .SelectMany(f => Directory.GetFiles(f, "*.m3u8"))
+            .ToList();
 
         List<string> audioFiles = folders
             .Where(f => Path.GetFileName(f).StartsWith("audio_", StringComparison.InvariantCultureIgnoreCase))
@@ -60,7 +63,7 @@ public static class HlsPlaylistGenerator
         for (int index = 0; index < audioFiles.Count; index++)
         {
             string audioFile = audioFiles[index];
-            string folderName = Path.GetFileName(Path.GetDirectoryName(audioFile) ?? string.Empty) ?? string.Empty;
+            string folderName = Path.GetFileName(Path.GetDirectoryName(audioFile) ?? string.Empty);
             string[] parts = folderName.Split('_');
             string language = parts.Length > 1 ? parts[1] : "und";
             string codecName = parts.Length > 2 ? parts[2] : "aac";
@@ -89,82 +92,86 @@ public static class HlsPlaylistGenerator
             .Select(f => Path.GetFileName(f).ToLowerInvariant())
             .Any(name => name.EndsWith("_sdr") || name.Contains("_hdr"));
 
-        // Group video variants by resolution
-        var videoGroups = videoFiles
-            .Select(videoFile =>
+        // Probe video variants in parallel with bounded concurrency (global throttle)
+        List<Task<VideoVariantInfo>> probeTasks = videoFileList.Select(async videoFile =>
+        {
+            string folderName = Path.GetFileName(Path.GetDirectoryName(videoFile) ?? string.Empty) ?? string.Empty;
+
+            // folder name expected like: video_1920x1080[_TAG]
+            string resolution = "";
+            bool isSdr = true;
+            try
             {
-                string folderName = Path.GetFileName(Path.GetDirectoryName(videoFile) ?? string.Empty);
-
-                // folder name expected like: video_1920x1080[_TAG]
-                string resolution = "";
-                bool isSdr = true;
-                try
+                Match match = Regex.Match(folderName, @"video_(\d+)x(\d+)(?:_(.+))?", RegexOptions.IgnoreCase);
+                if (match.Success)
                 {
-                    Match match = Regex.Match(folderName, @"video_(\d+)x(\d+)(?:_(.+))?", RegexOptions.IgnoreCase);
-                    if (match.Success)
-                    {
-                        resolution = $"{match.Groups[1].Value}x{match.Groups[2].Value}";
-                        string tag = match.Groups[3].Value;
-                        if (!string.IsNullOrEmpty(tag) && tag.ToUpperInvariant().Contains("HDR"))
-                            isSdr = false;
-                    }
+                    resolution = $"{match.Groups[1].Value}x{match.Groups[2].Value}";
+                    string tag = match.Groups[3].Value;
+                    if (!string.IsNullOrEmpty(tag) && tag.ToUpperInvariant().Contains("HDR"))
+                        isSdr = false;
                 }
-                catch { }
+            }
+            catch (Exception ex) { Logger.App($"Failed to parse resolution from folder {folderName}: {ex.Message}"); }
 
-                // Simple folder name convention for HDR detection:
-                // If NO folders have _SDR or _HDR suffix at all, treat everything as SDR (preventive measure)
-                // Otherwise:
-                //   - Folders ending with _SDR are SDR versions
-                //   - All others (including _HDR or no suffix) are HDR versions
-                bool detectedHdr = hasExplicitSdrOrHdr; // Default to HDR only if explicit markers exist
-                string detectedReason = hasExplicitSdrOrHdr 
-                    ? "default (no _SDR suffix)" 
-                    : "no explicit _SDR/_HDR markers found, defaulting to SDR";
+            // Simple folder name convention for HDR detection:
+            // If NO folders have _SDR or _HDR suffix at all, treat everything as SDR (preventive measure)
+            // Otherwise:
+            //   - Folders ending with _SDR are SDR versions
+            //   - All others (including _HDR or no suffix) are HDR versions
+            bool detectedHdr = hasExplicitSdrOrHdr;
+            string detectedReason = hasExplicitSdrOrHdr
+                ? "default (no _SDR suffix)"
+                : "no explicit _SDR/_HDR markers found, defaulting to SDR";
 
-                if (!string.IsNullOrEmpty(folderName))
+            if (!string.IsNullOrEmpty(folderName))
+            {
+                string folderLower = folderName.ToLowerInvariant();
+                if (folderLower.EndsWith("_sdr"))
                 {
-                    string folderLower = folderName.ToLowerInvariant();
-                    if (folderLower.EndsWith("_sdr"))
-                    {
-                        detectedHdr = false;
-                        detectedReason = "folder ends with _SDR";
-                    }
-                    else if (folderLower.Contains("_hdr"))
-                    {
-                        detectedHdr = true;
-                        detectedReason = "folder contains _HDR";
-                    }
+                    detectedHdr = false;
+                    detectedReason = "folder ends with _SDR";
                 }
-
-                if (detectedHdr)
+                else if (folderLower.Contains("_hdr"))
                 {
-                    isSdr = false;
-                    try { Logger.App($"HDR: {folderName} - {detectedReason}"); } catch { }
+                    detectedHdr = true;
+                    detectedReason = "folder contains _HDR";
                 }
-                else
-                {
-                    try { Logger.App($"SDR: {folderName} - {detectedReason}"); } catch { }
-                }
+            }
 
-                // Get codec info for CODECS attribute (simplified - probe one file)
-                string profile = "";
-                string levelStr = "";
-                string frameRateStr = "";
+            if (detectedHdr)
+            {
+                isSdr = false;
+                Logger.App($"HDR: {folderName} - {detectedReason}");
+            }
+            else
+            {
+                Logger.App($"SDR: {folderName} - {detectedReason}");
+            }
+
+            // Get codec info for CODECS attribute (simplified - probe one file)
+            string profile = "";
+            string levelStr = "";
+            string frameRateStr = "";
+            double duration = 0;
+
+            await FfProbeThrottle.WaitAsync();
+            try
+            {
                 try
                 {
                     string folderPath = Path.Combine(basePath, folderName ?? string.Empty);
                     string probeTarget = videoFile;
-                    
+
                     // Try to get a .ts file for more accurate info
                     try
                     {
                         string? firstTs = Directory.EnumerateFiles(folderPath, "*.ts").FirstOrDefault();
                         if (!string.IsNullOrEmpty(firstTs)) probeTarget = firstTs;
                     }
-                    catch { }
+                    catch (Exception ex) { Logger.App($"Failed to enumerate .ts files in {folderPath}: {ex.Message}"); }
 
-                    string probeResult = Shell.ExecStdOutSync(AppFiles.FfProbePath,
-                        $"-v error -select_streams v:0 -show_entries stream=profile,level,r_frame_rate -of default=noprint_wrappers=1:nokey=1 \"{probeTarget}\"").Trim();
+                    string probeResult = (await Shell.ExecStdOutAsync(AppFiles.FfProbePath,
+                        $"-v error -select_streams v:0 -show_entries stream=profile,level,r_frame_rate -of default=noprint_wrappers=1:nokey=1 \"{probeTarget}\"")).Trim();
 
                     if (!string.IsNullOrEmpty(probeResult))
                     {
@@ -174,40 +181,50 @@ public static class HlsPlaylistGenerator
                         if (parts.Length > 2) frameRateStr = parts[2].Trim();
                     }
                 }
-                catch { }
+                catch (Exception ex) { Logger.App($"Failed to probe codec info for {videoFile}: {ex.Message}"); }
 
-                int level = int.TryParse(levelStr, out int l) ? l : 40;
-                string vCodecProfile = MapProfileToCodec(profile, level);
+                duration = await GetVideoDurationAsync(videoFile);
+            }
+            finally
+            {
+                FfProbeThrottle.Release();
+            }
 
-                // Parse frame rate (e.g., "24000/1001" or "30/1")
-                double frameRate = ParseFrameRate(frameRateStr);
-                
-                double duration = GetVideoDuration(videoFile);
-                long totalSize = GetTotalSize(Path.Combine(basePath, folderName ?? string.Empty));
+            int level = int.TryParse(levelStr, out int l) ? l : 40;
+            string vCodecProfile = MapProfileToCodec(profile, level);
 
-                double bandwidth = duration > 0 ? (totalSize * 8.0 / duration) : 0.0;
-                bandwidth = Math.Round(bandwidth);
-                long averageBandwidth = (long)bandwidth;
-                long maxBandwidth = (long)(bandwidth * 1.1); // 10% peak over average
-                bandwidth += 128000; // audio overhead estimate
+            // Parse frame rate (e.g., "24000/1001" or "30/1")
+            double frameRate = ParseFrameRate(frameRateStr);
 
-                // Target duration is typically ceil of max segment duration (usually 6-10 seconds)
-                int targetDuration = Math.Max(6, (int)Math.Ceiling(10.0));
+            long totalSize = GetTotalSize(Path.Combine(basePath, folderName ?? string.Empty));
 
-                return new
-                {
-                    Resolution = resolution,
-                    FolderName = folderName,
-                    VideoFile = videoFile,
-                    VCodecProfile = vCodecProfile,
-                    Bandwidth = (long)bandwidth,
-                    AverageBandwidth = averageBandwidth,
-                    MaxBandwidth = maxBandwidth,
-                    FrameRate = frameRate,
-                    TargetDuration = targetDuration,
-                    IsSdr = isSdr
-                };
-            })
+            double bandwidth = duration > 0 ? (totalSize * 8.0 / duration) : 0.0;
+            bandwidth = Math.Round(bandwidth);
+            long averageBandwidth = (long)bandwidth;
+            long maxBandwidth = (long)(bandwidth * 1.1); // 10% peak over average
+            bandwidth += 128000; // audio overhead estimate
+
+            // Target duration is typically ceil of max segment duration (usually 6-10 seconds)
+            int targetDuration = Math.Max(6, (int)Math.Ceiling(10.0));
+
+            return new VideoVariantInfo
+            {
+                Resolution = resolution,
+                FolderName = folderName!,
+                VideoFile = videoFile,
+                VCodecProfile = vCodecProfile,
+                Bandwidth = (long)bandwidth,
+                AverageBandwidth = averageBandwidth,
+                MaxBandwidth = maxBandwidth,
+                FrameRate = frameRate,
+                TargetDuration = targetDuration,
+                IsSdr = isSdr
+            };
+        }).ToList();
+
+        VideoVariantInfo[] probeResults = await Task.WhenAll(probeTasks);
+
+        var videoGroups = probeResults
             .Where(x => !string.IsNullOrEmpty(x.Resolution))
             .GroupBy(v => v.Resolution)
             .ToList();
@@ -284,21 +301,21 @@ public static class HlsPlaylistGenerator
             foreach (string segmentFile in segmentFiles)
             {
                 try { totalSize += new FileInfo(segmentFile).Length; }
-                catch { }
+                catch (Exception) { /* File may have been deleted between enumeration and access */ }
             }
 
             return totalSize;
         }
-        catch { return 0; }
+        catch (Exception) { return 0; }
     }
 
-    private static double GetVideoDuration(string videoPath)
+    private static async Task<double> GetVideoDurationAsync(string videoPath)
     {
         if (string.IsNullOrEmpty(videoPath) || !File.Exists(videoPath))
             return 0;
 
-        string output = Shell.ExecStdOutSync(AppFiles.FfProbePath,
-                $"-v error -select_streams 0 -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{videoPath}\"")
+        string output = (await Shell.ExecStdOutAsync(AppFiles.FfProbePath,
+                $"-v error -select_streams 0 -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{videoPath}\""))
             .Trim();
 
         string x = output.Replace("N/A", "0").Trim();
@@ -364,9 +381,23 @@ public static class HlsPlaylistGenerator
                 return rate;
             }
         }
-        catch { }
+        catch (Exception ex) { Logger.App($"Failed to parse frame rate '{frameRateStr}': {ex.Message}"); }
 
         return 0.0;
+    }
+
+    private sealed class VideoVariantInfo
+    {
+        public string Resolution { get; init; } = "";
+        public string FolderName { get; init; } = "";
+        public string VideoFile { get; init; } = "";
+        public string VCodecProfile { get; init; } = "";
+        public long Bandwidth { get; init; }
+        public long AverageBandwidth { get; init; }
+        public long MaxBandwidth { get; init; }
+        public double FrameRate { get; init; }
+        public int TargetDuration { get; init; }
+        public bool IsSdr { get; init; }
     }
 }
 

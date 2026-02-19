@@ -1,13 +1,13 @@
 name: 'Build RPM Packages'
-description: 'Build CentOS/RHEL/Fedora packages'
+description: 'Build CentOS/RHEL/Fedora packages with shared runtime'
 inputs:
   version:
     description: 'Package version'
     required: true
-  artifacts-path:
-    description: 'Path to build artifacts'
-    required: true
-    default: './output'
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '10.0.x'
   gpg-private-key:
     description: 'GPG private key for signing'
     required: true
@@ -15,6 +15,11 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Build shared runtime payload
+      uses: ./.github/actions/build-linux-installer-payload
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
     - name: Install RPM build dependencies
       shell: bash
       run: |
@@ -25,183 +30,184 @@ runs:
       shell: bash
       run: |
         VERSION="${{ inputs.version }}"
-        ARTIFACTS_PATH="${{ inputs.artifacts-path }}"
+        PAYLOAD_PATH="./installer-payload"
+        INSTALL_DIR="/opt/nomercy"
 
         # Setup RPM build environment
         mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
-        # Function to create RPM package
-        create_rpm_package() {
-          local name=$1
-          local friendly_name=$2
-          local bin_file=$3
-          local desktop_file=$4
+        # Copy payload as a tarball for RPM source
+        tar -czf ~/rpmbuild/SOURCES/nomercy-payload.tar.gz -C "${PAYLOAD_PATH}" .
 
-          # Validate source files exist
-          if [ ! -f "$ARTIFACTS_PATH/$bin_file" ]; then
-            echo "ERROR: Binary file not found: $ARTIFACTS_PATH/$bin_file"
-            return 1
-          fi
-          
-          if [ ! -f "./assets/linux/$desktop_file" ]; then
-            echo "ERROR: Desktop file not found: ./assets/linux/$desktop_file"
-            return 1
-          fi
+        # Copy desktop files and icon
+        cp ./assets/linux/NoMercy-MediaServer.desktop ~/rpmbuild/SOURCES/ 2>/dev/null || true
+        cp ./assets/linux/NoMercy-MediaServer-Service.desktop ~/rpmbuild/SOURCES/ 2>/dev/null || true
+        cp ./assets/icons/icon.png ~/rpmbuild/SOURCES/
 
-          # Copy source files to SOURCES
-          cp "$ARTIFACTS_PATH/$bin_file" ~/rpmbuild/SOURCES/
-          cp "./assets/linux/$desktop_file" ~/rpmbuild/SOURCES/
-          cp "./assets/icons/icon.png" ~/rpmbuild/SOURCES/
-
-          # Create spec file
-          cat > ~/rpmbuild/SPECS/"${name}".spec << EOF
-        Name: ${name}
-        Version: ${VERSION}
+        # Create spec file for unified package
+        cat > ~/rpmbuild/SPECS/nomercy.spec << 'SPEC_EOF'
+        Name: nomercy
+        Version: VERSIONPLACEHOLDER
         Release: 1%{?dist}
-        Summary: ${friendly_name}
+        Summary: NoMercy MediaServer - complete installation
         License: Proprietary
         URL: https://nomercy.tv
-        Source0: ${bin_file}
-        Source1: ${desktop_file}
+        Source0: nomercy-payload.tar.gz
+        Source1: NoMercy-MediaServer.desktop
         Source2: icon.png
         BuildArch: x86_64
         BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-        
-        # Dependencies for CentOS/RHEL/Fedora
+
         Requires: glibc
-        Requires: systemd
-  
+        Recommends: systemd
+
         %description
-        Modern Media Server Solution.
-        
-        NoMercy MediaServer provides a comprehensive media streaming and management
-        solution with support for various media formats and streaming protocols.
-  
+        Modern Media Server Solution with server, tray service, and CLI tool.
+        All components share a single .NET runtime for efficient disk usage.
+
         %prep
-        # No preparation needed for binary package
-        
+        %setup -q -c -T
+        tar xzf %{SOURCE0}
+
         %build
-        # No building needed for binary package
-        
+
         %install
         rm -rf %{buildroot}
-        
-        # Create directory structure
+
+        # Install shared runtime and executables
+        mkdir -p %{buildroot}/opt/nomercy
+        cp -R * %{buildroot}/opt/nomercy/
+        chmod 755 %{buildroot}/opt/nomercy/NoMercyMediaServer
+        chmod 755 %{buildroot}/opt/nomercy/NoMercyApp
+        chmod 755 %{buildroot}/opt/nomercy/NoMercyMediaServerService
+        chmod 755 %{buildroot}/opt/nomercy/nomercy
+
+        # Symlinks in /usr/bin
         mkdir -p %{buildroot}/usr/bin
+        ln -s /opt/nomercy/NoMercyMediaServer %{buildroot}/usr/bin/nomercymediaserver
+        ln -s /opt/nomercy/NoMercyApp %{buildroot}/usr/bin/nomercyapp
+        ln -s /opt/nomercy/NoMercyMediaServerService %{buildroot}/usr/bin/nomercymediaserverservice
+        ln -s /opt/nomercy/nomercy %{buildroot}/usr/bin/nomercy
+
+        # Desktop files
         mkdir -p %{buildroot}/usr/share/applications
+        install -m 644 %{SOURCE1} %{buildroot}/usr/share/applications/ 2>/dev/null || true
+
+        # Icon
         mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
+        install -m 644 %{SOURCE2} %{buildroot}/usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
+
+        # Systemd service files
         mkdir -p %{buildroot}/usr/lib/systemd/user
-        mkdir -p %{buildroot}/usr/share/doc/%{name}
-        
-        # Install files
-        install -m 755 %{SOURCE0} %{buildroot}/usr/bin/${name}
-        install -m 644 %{SOURCE1} %{buildroot}/usr/share/applications/
-        install -m 644 %{SOURCE2} %{buildroot}/usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-        
-        # Create systemd service file
-        cat > %{buildroot}/usr/lib/systemd/user/${name}.service << 'SERVICE_EOF'
+
+        cat > %{buildroot}/usr/lib/systemd/user/nomercymediaserver.service << 'SERVICE_EOF'
         [Unit]
-        Description=${friendly_name} Service
+        Description=NoMercy MediaServer
         After=network.target
-        
+
         [Service]
         Type=simple
-        ExecStart=/usr/bin/${name}
+        ExecStart=/opt/nomercy/NoMercyMediaServer
         Restart=on-failure
         RestartSec=5
-        
+
         [Install]
         WantedBy=default.target
         SERVICE_EOF
-        
-        # Create documentation
+
+        cat > %{buildroot}/usr/lib/systemd/user/nomercymediaserverservice.service << 'SERVICE_EOF'
+        [Unit]
+        Description=NoMercy MediaServer Service (Tray)
+        After=network.target
+
+        [Service]
+        Type=simple
+        ExecStart=/opt/nomercy/NoMercyMediaServerService
+        Restart=on-failure
+        RestartSec=5
+
+        [Install]
+        WantedBy=default.target
+        SERVICE_EOF
+
+        # Documentation
+        mkdir -p %{buildroot}/usr/share/doc/%{name}
         cat > %{buildroot}/usr/share/doc/%{name}/README << 'README_EOF'
-        ${friendly_name}
-        
-        This package contains the ${friendly_name} application.
-        
-        To start the service:
-        systemctl --user enable ${name}.service
-        systemctl --user start ${name}.service
-        
+        NoMercy MediaServer
+
+        To start the server:
+          systemctl --user enable nomercymediaserver.service
+          systemctl --user start nomercymediaserver.service
+
         For more information, visit: https://nomercy.tv
         README_EOF
-  
+
         %files
         %defattr(-,root,root,-)
-        %attr(755,root,root) /usr/bin/${name}
-        %attr(644,root,root) /usr/share/applications/${desktop_file}
-        %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/${friendly_name}.png
-        %attr(644,root,root) /usr/lib/systemd/user/${name}.service
+        /opt/nomercy
+        /usr/bin/nomercymediaserver
+        /usr/bin/nomercyapp
+        /usr/bin/nomercymediaserverservice
+        /usr/bin/nomercy
+        %attr(644,root,root) /usr/share/applications/*.desktop
+        %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
+        %attr(644,root,root) /usr/lib/systemd/user/nomercymediaserver.service
+        %attr(644,root,root) /usr/lib/systemd/user/nomercymediaserverservice.service
         %doc /usr/share/doc/%{name}/README
-        
+
         %post
-        # Update icon cache if available
         if command -v gtk-update-icon-cache >/dev/null 2>&1; then
             gtk-update-icon-cache -q /usr/share/icons/hicolor || true
         fi
-        
-        # Update desktop database if available  
         if command -v update-desktop-database >/dev/null 2>&1; then
             update-desktop-database /usr/share/applications || true
         fi
-        
-        # Reload systemd user daemon if systemd is available
         systemctl --user daemon-reload >/dev/null 2>&1 || true
-        
+
         %preun
-        # Stop and disable service if systemd is available
-        if [ "\$1" -eq 0 ] ; then
-            systemctl --user stop ${name}.service >/dev/null 2>&1 || true
-            systemctl --user disable ${name}.service >/dev/null 2>&1 || true
+        if [ "$1" -eq 0 ] ; then
+            systemctl --user stop nomercymediaserver.service >/dev/null 2>&1 || true
+            systemctl --user disable nomercymediaserver.service >/dev/null 2>&1 || true
+            systemctl --user stop nomercymediaserverservice.service >/dev/null 2>&1 || true
+            systemctl --user disable nomercymediaserverservice.service >/dev/null 2>&1 || true
         fi
-        
+
         %postun
-        # Update caches on removal
-        if [ "\$1" -eq 0 ] ; then
+        if [ "$1" -eq 0 ] ; then
             if command -v gtk-update-icon-cache >/dev/null 2>&1; then
                 gtk-update-icon-cache -q /usr/share/icons/hicolor || true
             fi
-            
             if command -v update-desktop-database >/dev/null 2>&1; then
                 update-desktop-database /usr/share/applications || true
             fi
         fi
-  
+
         %clean
         rm -rf %{buildroot}
-  
+
         %changelog
-        * $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - ${VERSION}-1
-        - Initial package release
-        - Added systemd user service support
-        - Included desktop integration
-        EOF
+        SPEC_EOF
 
-          # Build RPM
-          rpmbuild -bb ~/rpmbuild/SPECS/"${name}".spec
+        # Replace version placeholder and add changelog date
+        sed -i "s/VERSIONPLACEHOLDER/${VERSION}/g" ~/rpmbuild/SPECS/nomercy.spec
+        echo "* $(date '+%a %b %d %Y') NoMercy <support@nomercy.tv> - ${VERSION}-1" >> ~/rpmbuild/SPECS/nomercy.spec
+        echo "- Unified package with shared runtime" >> ~/rpmbuild/SPECS/nomercy.spec
 
-          # Copy to packages directory
-          mkdir -p packages/rpm/pool/x86_64
-          find ~/rpmbuild/RPMS -name "*.rpm" -exec cp {} packages/rpm/pool/x86_64/ \;
-          
-          echo "Successfully created RPM package for ${name}"
-        }
-        
-        # Build packages
-        create_rpm_package "nomercymediaserver" "NoMercy-MediaServer" "NoMercyMediaServer-linux-x64" "NoMercy-MediaServer.desktop"
-        create_rpm_package "nomercyapp" "NoMercy-App" "NoMercyApp-linux-x64" "NoMercy-App.desktop"
-        
+        # Build RPM
+        rpmbuild -bb ~/rpmbuild/SPECS/nomercy.spec
+
+        # Copy to packages directory
+        mkdir -p packages/rpm/pool/x86_64
+        find ~/rpmbuild/RPMS -name "*.rpm" -exec cp {} packages/rpm/pool/x86_64/ \;
+        echo "Successfully created nomercy RPM package"
+
         # Generate repo metadata
         createrepo_c packages/rpm
 
     - name: Sign RPM repository
       shell: bash
       run: |
-        # Import GPG private key for RPM signing
         echo "${{ inputs.gpg-private-key }}" | gpg --batch --import
-        
-        # Sign the repository metadata
         cd packages/rpm
         gpg --armor --detach-sig -o repodata/repomd.xml.asc repodata/repomd.xml
 

@@ -1,12 +1,11 @@
 // ReSharper disable MemberCanBeProtected.Global
 // ReSharper disable MemberCanBePrivate.Global
 
-using NoMercy.Encoder.Dto;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
-using VideoStream = FFMpegCore.VideoStream;
 
 namespace NoMercy.Encoder.Format.Video;
 
@@ -16,9 +15,9 @@ public abstract class BaseVideo : Classes
 
     public virtual CodecDto VideoCodec { get; set; } = VideoCodecs.H264;
 
-    protected internal FFMpegCore.VideoStream? VideoStream;
+    protected internal FfProbeVideoStream? VideoStream;
 
-    internal List<VideoStream> VideoStreams { get; set; } = [];
+    internal List<FfProbeVideoStream> VideoStreams { get; set; } = [];
 
     protected internal virtual bool BFramesSupport => false;
 
@@ -121,7 +120,7 @@ public abstract class BaseVideo : Classes
     {
         if (VideoStream is null)
             throw new("Video stream is null");
-        if (VideoStream.PixelFormat.Contains("hdr")) return true;
+        if (VideoStream.PixFmt?.Contains("hdr") == true) return true;
         if (string.IsNullOrEmpty(VideoStream.ColorSpace)) return false;
         if (VideoStream.ColorSpace.Contains(ColorSpaces.Bt2020)) return true;
         return false;

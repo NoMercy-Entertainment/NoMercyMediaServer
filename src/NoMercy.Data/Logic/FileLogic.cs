@@ -3,17 +3,22 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDisposable
+public partial class FileLogic(int id, Library library, MediaContext mediaContext) : IDisposable, IAsyncDisposable
 {
-    private readonly MediaContext _mediaContext = new();
+    private readonly MediaContext _mediaContext = mediaContext;
 
     private int Id { get; set; } = id;
     private Library Library { get; set; } = library;
@@ -38,14 +43,14 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
 
         switch (Library.Type)
         {
-            case "movie":
+            case Config.MovieMediaType:
                 await StoreMovie();
                 break;
-            case "tv":
-            case "anime":
+            case Config.TvMediaType:
+            case Config.AnimeMediaType:
                 await StoreTvShow();
                 break;
-            case "music":
+            case Config.MusicMediaType:
                 await StoreMusic();
                 break;
             default:
@@ -198,23 +203,23 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
     {
         switch (Library.Type)
         {
-            case "movie":
+            case Config.MovieMediaType:
                 Movie = await _mediaContext.Movies
                     .Where(m => m.Id == Id)
                     .FirstOrDefaultAsync();
-                Type = "movie";
+                Type = Config.MovieMediaType;
                 break;
-            case "tv":
+            case Config.TvMediaType:
                 Show = await _mediaContext.Tvs
                     .Where(t => t.Id == Id)
                     .FirstOrDefaultAsync();
-                Type = "tv";
+                Type = Config.TvMediaType;
                 break;
-            case "anime":
+            case Config.AnimeMediaType:
                 Show = await _mediaContext.Tvs
                     .Where(t => t.Id == Id)
                     .FirstOrDefaultAsync();
-                Type = "anime";
+                Type = Config.AnimeMediaType;
                 break;
         }
     }
@@ -225,9 +230,9 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
 
         int depth = Library.Type switch
         {
-            "movie" => 1,
-            "tv" => 2,
-            "anime" => 2,
+            Config.MovieMediaType => 1,
+            Config.TvMediaType => 2,
+            Config.AnimeMediaType => 2,
             _ => 1
         };
 
@@ -245,9 +250,9 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
     {
         string? folder = Library.Type switch
         {
-            "movie" => Movie?.Folder?.Replace("/", ""),
-            "tv" => Show?.Folder?.Replace("/", ""),
-            "anime" => Show?.Folder?.Replace("/", ""),
+            Config.MovieMediaType => Movie?.Folder?.Replace("/", ""),
+            Config.TvMediaType => Show?.Folder?.Replace("/", ""),
+            Config.AnimeMediaType => Show?.Folder?.Replace("/", ""),
             _ => ""
         };
 
@@ -260,6 +265,13 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
         foreach (Folder rootFolder in rootFolders)
         {
             string path = Path.Combine(rootFolder.Path, folder);
+
+            if (!Directory.Exists(path))
+            {
+                string? match = Str.FindMatchingDirectory(rootFolder.Path, folder);
+                if (match != null)
+                    path = match;
+            }
 
             if (Directory.Exists(path))
                 Folders.Add(new()
@@ -276,16 +288,10 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
     public void Dispose()
     {
         _mediaContext.Dispose();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 
     public async ValueTask DisposeAsync()
     {
         await _mediaContext.DisposeAsync();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

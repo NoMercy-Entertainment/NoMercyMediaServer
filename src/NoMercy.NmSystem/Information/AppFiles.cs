@@ -1,6 +1,7 @@
 // ReSharper disable MemberCanBePrivate.Global
 
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.NmSystem.Information;
 
@@ -20,6 +21,8 @@ public static class AppFiles
 
     public static string ConfigPath => Path.Combine(AppPath, "config");
     public static string TokenFile => Path.Combine(ConfigPath, "token.json");
+    public static string AuthKeysFile => Path.Combine(ConfigPath, "auth_keys.json");
+    public static string JwksCacheFile => Path.Combine(ConfigPath, "jwks_cache.json");
     public static string FolderRootsSeedFile => Path.Combine(ConfigPath, "folderRootsSeed.jsonc");
     public static string LibrariesSeedFile => Path.Combine(ConfigPath, "librariesSeed.jsonc");
     public static string EncoderProfilesSeedFile => Path.Combine(ConfigPath, "encoderProfilesSeed.jsonc");
@@ -57,7 +60,11 @@ public static class AppFiles
 
     public static string ServerExePath => Path.Combine(BinariesPath, "NoMercyMediaServer" + Info.ExecSuffix);
     public static string AppExePath => Path.Combine(BinariesPath, "NoMercyApp" + Info.ExecSuffix);
+    public static string ServiceExePath => Path.Combine(BinariesPath, "NoMercyMediaServerService" + Info.ExecSuffix);
+    public static string CliExePath => Path.Combine(BinariesPath, "nomercy" + Info.ExecSuffix);
     public static string ServerTempExePath => Path.Combine(BinariesPath, "NoMercyMediaServer_temp" + Info.ExecSuffix);
+    public static string ServiceTempExePath => Path.Combine(BinariesPath, "NoMercyMediaServerService_temp" + Info.ExecSuffix);
+    public static string CliTempExePath => Path.Combine(BinariesPath, "nomercy_temp" + Info.ExecSuffix);
 
     public static string CertPath => Path.Combine(RootPath, "certs");
     public static string CertFile => Path.Combine(CertPath, "cert.pem");
@@ -107,7 +114,7 @@ public static class AppFiles
 
         foreach (string path in AllPaths().Where(path => !Directory.Exists(path)))
         {
-            Logger.Setup($"Creating directory: {path}");
+            Logger.Setup($"Creating directory: {path}", LogEventLevel.Verbose);
             Directory.CreateDirectory(path);
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {

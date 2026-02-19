@@ -1,4 +1,5 @@
-using NoMercy.Queue;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
@@ -128,5 +129,61 @@ public class SerializationHelperTests
         // Assert
         Assert.Contains("hasExecuted", serialized); // Should be camelCase
         Assert.Contains("message", serialized);     // Should be camelCase
+    }
+
+    [Fact]
+    public void Deserialize_IShouldQueueJob_CanBeCastToInterface()
+    {
+        // Arrange — serialize a valid job implementing IShouldQueue
+        TestJob originalJob = new()
+        {
+            Message = "IShouldQueue cast test",
+            HasExecuted = false
+        };
+        string serialized = SerializationHelper.Serialize(originalJob);
+
+        // Act — deserialize as object (same as QueueWorker does)
+        object deserialized = SerializationHelper.Deserialize<object>(serialized);
+
+        // Assert — the safety gate: deserialized object IS an IShouldQueue
+        Assert.True(deserialized is IShouldQueue, "Deserialized job should implement IShouldQueue");
+        IShouldQueue queueable = (IShouldQueue)deserialized;
+        Assert.NotNull(queueable);
+    }
+
+    [Fact]
+    public void Deserialize_NonIShouldQueueType_FailsInterfaceCheck()
+    {
+        // Arrange — serialize a type that does NOT implement IShouldQueue
+        NotAJob notAJob = new() { Data = "not a real job" };
+        string serialized = SerializationHelper.Serialize(notAJob);
+
+        // Act — deserialize as object (same as QueueWorker does)
+        object deserialized = SerializationHelper.Deserialize<object>(serialized);
+
+        // Assert — the safety gate: deserialized object is NOT an IShouldQueue
+        Assert.False(deserialized is IShouldQueue, "Non-IShouldQueue type must not pass the interface check");
+    }
+
+    [Fact]
+    public async Task Deserialize_IShouldQueueJob_ExecutesSuccessfully()
+    {
+        // Arrange — round-trip a job through serialize/deserialize
+        TestJob originalJob = new()
+        {
+            Message = "Execute after deserialize",
+            HasExecuted = false
+        };
+        string serialized = SerializationHelper.Serialize(originalJob);
+
+        // Act — deserialize and execute via the IShouldQueue interface
+        object deserialized = SerializationHelper.Deserialize<object>(serialized);
+        Assert.True(deserialized is IShouldQueue);
+        IShouldQueue queueable = (IShouldQueue)deserialized;
+        await queueable.Handle();
+
+        // Assert — job actually ran
+        TestJob executedJob = (TestJob)deserialized;
+        Assert.True(executedJob.HasExecuted);
     }
 }

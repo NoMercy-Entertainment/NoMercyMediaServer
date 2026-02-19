@@ -1,0 +1,49 @@
+# NoMercy MediaServer - Runtime Only (AMD GPU)
+# Used by CI with pre-built self-contained binary in ./publish/
+
+FROM debian:bookworm-slim
+WORKDIR /app
+
+# Install AMD Mesa drivers and VAAPI libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    mesa-va-drivers \
+    mesa-vulkan-drivers \
+    libva2 \
+    libva-drm2 \
+    libva-x11-2 \
+    libdrm2 \
+    libdrm-amdgpu1 \
+    libicu72 \
+    libssl3 \
+    mediainfo \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user with video/render group access
+RUN groupadd -f video && groupadd -f render \
+    && useradd -m -o -u 1000 -G video,render nomercy
+
+# Create data directories
+RUN mkdir -p /data/config /data/cache /data/media /data/log \
+    && chown -R nomercy:nomercy /data
+
+# Copy self-contained binary
+COPY publish/NoMercyMediaServer .
+RUN chown -R nomercy:nomercy /app
+
+USER nomercy
+
+ENV ASPNETCORE_URLS=http://+:7626
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV HOME=/data
+ENV LIBVA_DRIVER_NAME=radeonsi
+ENV AMD_VULKAN_ICD=RADV
+
+EXPOSE 7626
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:7626/health || exit 1
+
+ENTRYPOINT ["./NoMercyMediaServer"]
+CMD ["--internal-port", "7626"]

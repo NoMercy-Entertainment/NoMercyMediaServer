@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
@@ -11,28 +10,29 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj"/>
         <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
         <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
         <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj"/>
         <ProjectReference Include="..\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj"/>
         <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj"/>
-        <ProjectReference Include="..\NoMercy.Queue\NoMercy.Queue.csproj"/>
+        <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core" Version="5.2.1"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.14.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.14.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10">
+        <PackageReference Include="Castle.Core"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.Common" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Moq" Version="4.20.72"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageReference Include="xunit" Version="2.9.3"/>
+        <PackageReference Include="Moq"/>
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="xunit"/>
     </ItemGroup>
 
 </Project>

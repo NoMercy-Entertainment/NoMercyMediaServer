@@ -1,7 +1,11 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Extensions;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
 
 namespace NoMercy.Data.Repositories;
 
@@ -45,11 +49,11 @@ public class LibraryRepository(MediaContext context)
 {
     private static readonly string[] Letters = ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
-    public Task<List<Library>> GetLibraries(Guid userId)
+    public Task<List<Library>> GetLibraries(Guid userId, CancellationToken ct = default)
     {
         return context.Libraries
             .AsNoTracking()
-            .Where(library => library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(library => library.FolderLibraries)
                 .ThenInclude(fl => fl.Folder)
                 .ThenInclude(f => f.EncoderProfileFolder)
@@ -59,15 +63,22 @@ public class LibraryRepository(MediaContext context)
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
             .OrderBy(library => library.Order)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<Library?> GetLibraryByIdAsync(Ulid libraryId, Guid userId, string language, string country, int take, int page)
+    /// <summary>
+    /// Gets a library with its movies and TV shows limited to <paramref name="take"/> items each.
+    /// The .Take(take) inside Include() is intentional: it limits items per-carousel (e.g. 10 for mobile, 6 for TV)
+    /// to prevent loading the entire library into memory. The <paramref name="page"/> parameter is currently unused.
+    /// Prefer <see cref="GetLibraryMovieCardsAsync"/> and <see cref="GetLibraryTvCardsAsync"/> for new code —
+    /// they use projection and proper Skip/Take pagination.
+    /// </summary>
+    public Task<Library?> GetLibraryByIdAsync(Ulid libraryId, Guid userId, string language, string country, int take, int page, CancellationToken ct = default)
     {
         return context.Libraries
             .AsNoTracking()
             .Where(library => library.Id == libraryId)
-            .Where(library => library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(library => library.LibraryMovies
                 .Where(lm => lm.Movie.VideoFiles.Any(v => v.Folder != null))
                 .Take(take))
@@ -78,7 +89,7 @@ public class LibraryRepository(MediaContext context)
                 .ThenInclude(m => m.VideoFiles.Where(v => v.Folder != null))
             .Include(library => library.LibraryMovies)
                 .ThenInclude(lm => lm.Movie)
-                .ThenInclude(m => m.Images.Where(i => i.Type == "logo").Take(1))
+                .ThenInclude(m => m.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en").Take(1))
             .Include(library => library.LibraryMovies)
                 .ThenInclude(lm => lm.Movie)
                 .ThenInclude(m => m.CertificationMovies
@@ -96,14 +107,14 @@ public class LibraryRepository(MediaContext context)
                 .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
             .Include(library => library.LibraryTvs)
                 .ThenInclude(lt => lt.Tv)
-                .ThenInclude(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
+                .ThenInclude(tv => tv.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en").Take(1))
             .Include(library => library.LibraryTvs)
                 .ThenInclude(lt => lt.Tv)
                 .ThenInclude(tv => tv.CertificationTvs
                     .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                     .Take(1))
                 .ThenInclude(c => c.Certification)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
     public readonly Func<MediaContext, Guid, Ulid, string, int, int, Expression<Func<Movie, object>>?, string?, IAsyncEnumerable<Movie>> GetLibraryMovies =
@@ -111,7 +122,7 @@ public class LibraryRepository(MediaContext context)
             context.Movies.AsNoTracking()
                 .Where(movie => movie.Library.Id == libraryId)
                 .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
-                .Where(libraryMovie => libraryMovie.VideoFiles.Count > 0)
+                .Where(libraryMovie => libraryMovie.VideoFiles.Any())
                 .Include(movie => movie.VideoFiles)
                 .Include(movie => movie.Media
                     .Where(media => media.Iso6391 == language || media.Iso6391 == "en")
@@ -154,7 +165,7 @@ public class LibraryRepository(MediaContext context)
     //         .AsNoTracking()
     //         .Where(movie => movieIds.Contains(movie.Id))
     //         .Include(movie => movie.VideoFiles.Where(v => v.Folder != null))
-    //         .Include(movie => movie.Images.Where(i => i.Type == "logo").Take(1))
+    //         .Include(movie => movie.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en").Take(1))
     //         .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
     //         .Include(movie => movie.CertificationMovies.Take(1))
     //             .ThenInclude(c => c.Certification)
@@ -167,9 +178,9 @@ public class LibraryRepository(MediaContext context)
                 .Where(tv => tv.Library.Id == libraryId)
                 .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId.Equals(userId)))
                 .Where(libraryTv => libraryTv.Episodes
-                    .Any(episode => episode.VideoFiles.Count > 0))
+                    .Any(episode => episode.VideoFiles.Any()))
                 .Include(tv => tv.Episodes
-                    .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0)
+                    .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Any())
                 )
                 .ThenInclude(episode => episode.VideoFiles)
                 .Include(tv => tv.Media
@@ -214,7 +225,7 @@ public class LibraryRepository(MediaContext context)
     //         .Where(tv => tvIds.Contains(tv.Id))
     //         .Include(tv => tv.Episodes.Where(e => e.SeasonNumber > 0 && e.VideoFiles.Any(v => v.Folder != null)))
     //             .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
-    //         .Include(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
+    //         .Include(tv => tv.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en").Take(1))
     //         .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
     //         .Include(tv => tv.CertificationTvs.Take(1))
     //             .ThenInclude(c => c.Certification)
@@ -222,13 +233,17 @@ public class LibraryRepository(MediaContext context)
     // }
 
     // Optimized query using projection - only fetches what NmCardDto needs
-    public Task<List<MovieCardDto>> GetLibraryMovieCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip)
+    public Task<List<MovieCardDto>> GetLibraryMovieCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip, CancellationToken ct = default)
+        => GetLibraryMovieCardsAsync(context, userId, libraryId, country, take, skip, ct);
+
+    public Task<List<MovieCardDto>> GetLibraryMovieCardsAsync(MediaContext mediaContext, Guid userId, Ulid libraryId, string country, int take, int skip, CancellationToken ct = default)
     {
-        return context.Movies
+        return mediaContext.Movies
             .AsNoTracking()
             .Where(movie => movie.Library.Id == libraryId)
-            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(movie => movie.VideoFiles.Any(v => v.Folder != null))
+            .Include(tv => tv.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en"))
             .OrderByDescending(movie => movie.CreatedAt)
             .Skip(skip)
             .Take(take)
@@ -240,7 +255,7 @@ public class LibraryRepository(MediaContext context)
                 Overview = movie.Overview,
                 Poster = movie.Poster,
                 Backdrop = movie.Backdrop,
-                Logo = movie.Images.Where(i => i.Type == "logo").Select(i => i.FilePath).FirstOrDefault(),
+                Logo = movie.Images.Select(i => i.FilePath).FirstOrDefault(),
                 ReleaseDate = movie.ReleaseDate,
                 CreatedAt = movie.CreatedAt,
                 ColorPalette = movie._colorPalette,
@@ -254,17 +269,21 @@ public class LibraryRepository(MediaContext context)
                     .Select(c => c.Certification.Iso31661)
                     .FirstOrDefault()
             })
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     // Optimized query using projection - only fetches what NmCardDto needs
-    public Task<List<TvCardDto>> GetLibraryTvCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip)
+    public Task<List<TvCardDto>> GetLibraryTvCardsAsync(Guid userId, Ulid libraryId, string country, int take, int skip, CancellationToken ct = default)
+        => GetLibraryTvCardsAsync(context, userId, libraryId, country, take, skip, ct);
+
+    public Task<List<TvCardDto>> GetLibraryTvCardsAsync(MediaContext mediaContext, Guid userId, Ulid libraryId, string country, int take, int skip, CancellationToken ct = default)
     {
-        return context.Tvs
+        return mediaContext.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
+            .Include(tv => tv.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en"))
             .OrderByDescending(tv => tv.CreatedAt)
             .Skip(skip)
             .Take(take)
@@ -276,12 +295,15 @@ public class LibraryRepository(MediaContext context)
                 Overview = tv.Overview,
                 Poster = tv.Poster,
                 Backdrop = tv.Backdrop,
-                Logo = tv.Images.Where(i => i.Type == "logo").Select(i => i.FilePath).FirstOrDefault(),
+                Logo = tv.Images.Select(i => i.FilePath).FirstOrDefault(),
                 FirstAirDate = tv.FirstAirDate,
                 CreatedAt = tv.CreatedAt,
                 ColorPalette = tv._colorPalette,
                 NumberOfEpisodes = tv.NumberOfEpisodes,
-                EpisodesWithVideo = tv.Episodes.Count(e => e.VideoFiles.Any(v => v.Folder != null)),
+                EpisodesWithVideo = tv.Episodes
+                    .Where(e=> e.SeasonNumber > 0)
+                    .Count(e => e.VideoFiles
+                        .Any(v => v.Folder != null)),
                 CertificationRating = tv.CertificationTvs
                     .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                     .Select(c => c.Certification.Rating)
@@ -291,23 +313,23 @@ public class LibraryRepository(MediaContext context)
                     .Select(c => c.Certification.Iso31661)
                     .FirstOrDefault()
             })
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     public Task<List<Movie>> GetPaginatedLibraryMovies(Guid userId, Ulid libraryId, string letter, string language,
-        string country, int take, int page, Expression<Func<Movie, object>>? orderByExpression = null, string? direction = null)
+        string country, int take, int page, CancellationToken ct = default)
     {
         return context.Movies
             .AsNoTracking()
             .Where(movie => movie.Library.Id == libraryId)
-            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(movie => movie.VideoFiles.Any(v => v.Folder != null))
             .Where(movie => (letter == "_" || letter == "#")
                 ? Letters.Any(p => movie.TitleSort.StartsWith(p.ToLower()))
                 : movie.TitleSort.StartsWith(letter.ToLower()))
             .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
             .Include(movie => movie.VideoFiles.Where(v => v.Folder != null))
-            .Include(movie => movie.Images.Where(i => i.Type == "logo").Take(1))
+            .Include(movie => movie.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en").Take(1))
             .Include(movie => movie.CertificationMovies
                 .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                 .Take(1))
@@ -315,16 +337,16 @@ public class LibraryRepository(MediaContext context)
             .OrderBy(movie => movie.TitleSort)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     public Task<List<Tv>> GetPaginatedLibraryShows(Guid userId, Ulid libraryId, string letter, string language,
-        string country, int take, int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null)
+        string country, int take, int page, Expression<Func<Tv, object>>? orderByExpression = null, string? direction = null, CancellationToken ct = default)
     {
         return context.Tvs
             .AsNoTracking()
             .Where(tv => tv.Library.Id == libraryId)
-            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
             .Where(tv => (letter == "_" || letter == "#")
                 ? Letters.Any(p => tv.TitleSort.StartsWith(p.ToLower()))
@@ -332,7 +354,7 @@ public class LibraryRepository(MediaContext context)
             .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
             .Include(tv => tv.Episodes.Where(e => e.SeasonNumber > 0 && e.VideoFiles.Any(v => v.Folder != null)))
                 .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
-            .Include(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
+            .Include(tv => tv.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en").Take(1))
             .Include(tv => tv.CertificationTvs
                 .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
                 .Take(1))
@@ -340,7 +362,110 @@ public class LibraryRepository(MediaContext context)
             .OrderBy(tv => tv.TitleSort)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
+    }
+
+    public Task<List<HomeMovieCardDto>> GetPaginatedLibraryMovieCardsAsync(Guid userId, Ulid libraryId, string letter,
+        string language, string country, int take, int page, CancellationToken ct = default)
+    {
+        return context.Movies
+            .AsNoTracking()
+            .Where(movie => movie.Library.Id == libraryId)
+            .ForUser(userId)
+            .Where(movie => movie.VideoFiles.Any(v => v.Folder != null))
+            .Where(movie => (letter == "_" || letter == "#")
+                ? Letters.Any(p => movie.TitleSort.StartsWith(p.ToLower()))
+                : movie.TitleSort.StartsWith(letter.ToLower()))
+            .OrderBy(movie => movie.TitleSort)
+            .Skip(page * take)
+            .Take(take)
+            .Select(movie => new HomeMovieCardDto
+            {
+                Id = movie.Id,
+                Title = movie.Title,
+                TitleSort = movie.TitleSort,
+                TranslatedTitle = movie.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Title)
+                    .FirstOrDefault(),
+                Overview = movie.Overview,
+                TranslatedOverview = movie.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Overview)
+                    .FirstOrDefault(),
+                Poster = movie.Poster,
+                Backdrop = movie.Backdrop,
+                Logo = movie.Images
+                    .Where(i => i.Type == "logo" && i.Iso6391 == "en")
+                    .Select(i => i.FilePath)
+                    .FirstOrDefault(),
+                ReleaseDate = movie.ReleaseDate,
+                CreatedAt = movie.CreatedAt,
+                ColorPalette = movie._colorPalette,
+                VideoFileCount = movie.VideoFiles.Count(v => v.Folder != null),
+                CertificationRating = movie.CertificationMovies
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Rating)
+                    .FirstOrDefault(),
+                CertificationCountry = movie.CertificationMovies
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Iso31661)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(ct);
+    }
+
+    public Task<List<HomeTvCardDto>> GetPaginatedLibraryTvCardsAsync(Guid userId, Ulid libraryId, string letter,
+        string language, string country, int take, int page, CancellationToken ct = default)
+    {
+        return context.Tvs
+            .AsNoTracking()
+            .Where(tv => tv.Library.Id == libraryId)
+            .ForUser(userId)
+            .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
+            .Where(tv => (letter == "_" || letter == "#")
+                ? Letters.Any(p => tv.TitleSort.StartsWith(p.ToLower()))
+                : tv.TitleSort.StartsWith(letter.ToLower()))
+            .OrderBy(tv => tv.TitleSort)
+            .Skip(page * take)
+            .Take(take)
+            .Select(tv => new HomeTvCardDto
+            {
+                Id = tv.Id,
+                Title = tv.Title,
+                TitleSort = tv.TitleSort,
+                TranslatedTitle = tv.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Title)
+                    .FirstOrDefault(),
+                Overview = tv.Overview,
+                TranslatedOverview = tv.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Overview)
+                    .FirstOrDefault(),
+                Poster = tv.Poster,
+                Backdrop = tv.Backdrop,
+                Logo = tv.Images
+                    .Where(i => i.Type == "logo" && i.Iso6391 == "en")
+                    .Select(i => i.FilePath)
+                    .FirstOrDefault(),
+                FirstAirDate = tv.FirstAirDate,
+                CreatedAt = tv.CreatedAt,
+                ColorPalette = tv._colorPalette,
+                NumberOfEpisodes = tv.NumberOfEpisodes,
+                EpisodesWithVideo = tv.Episodes
+                    .Where(e => e.SeasonNumber > 0)
+                    .Count(e => e.VideoFiles.Any(v => v.Folder != null)),
+                CertificationRating = tv.CertificationTvs
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Rating)
+                    .FirstOrDefault(),
+                CertificationCountry = tv.CertificationTvs
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Iso31661)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(ct);
     }
 
     public Task<Library?> GetLibraryByIdAsync(Ulid id)
@@ -381,7 +506,7 @@ public class LibraryRepository(MediaContext context)
     //         .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
     //         .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
     //         .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
-    //         .Include(tv => tv.Images.Where(i => i.Type == "logo").Take(1))
+    //         .Include(tv => tv.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en").Take(1))
     //         .Include(tv => tv.Episodes.Where(e => e.SeasonNumber > 0 && e.VideoFiles.Any(v => v.Folder != null)))
     //             .ThenInclude(e => e.VideoFiles.Where(v => v.Folder != null))
     //         .Include(tv => tv.CertificationTvs.Take(1))
@@ -403,16 +528,62 @@ public class LibraryRepository(MediaContext context)
                 .Include(tv => tv.KeywordTvs)
                 .ThenInclude(keywordTv => keywordTv.Keyword)
                 .Include(tv => tv.Episodes
-                    .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Count != 0))
+                    .Where(episode => episode.SeasonNumber > 0 && episode.VideoFiles.Any()))
                 .ThenInclude(episode => episode.VideoFiles)
                 .Include(tv => tv.CertificationTvs)
                 .ThenInclude(certificationTv => certificationTv.Certification)
                 .OrderBy(tv => EF.Functions.Random())
                 .FirstOrDefault());
     
-    public async Task<Tv?> GetRandomTvShow(Guid userId, string language)
+    public async Task<Tv?> GetRandomTvShow(Guid userId, string language, CancellationToken ct = default)
     {
         return await GetRandomTvShowQuery(context, userId, language);
+    }
+
+    public Task<HomeTvCardDto?> GetRandomTvCardAsync(Guid userId, string language, string country, CancellationToken ct = default)
+    {
+        return context.Tvs
+            .AsNoTracking()
+            .Where(tv => tv.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)))
+            .OrderBy(tv => EF.Functions.Random())
+            .Select(tv => new HomeTvCardDto
+            {
+                Id = tv.Id,
+                Title = tv.Title,
+                TitleSort = tv.TitleSort,
+                TranslatedTitle = tv.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Title)
+                    .FirstOrDefault(),
+                Overview = tv.Overview,
+                TranslatedOverview = tv.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Overview)
+                    .FirstOrDefault(),
+                Poster = tv.Poster,
+                Backdrop = tv.Backdrop,
+                Logo = tv.Images
+                    .Where(i => i.Type == "logo" && i.Iso6391 == "en")
+                    .Select(i => i.FilePath)
+                    .FirstOrDefault(),
+                FirstAirDate = tv.FirstAirDate,
+                CreatedAt = tv.CreatedAt,
+                ColorPalette = tv._colorPalette,
+                NumberOfEpisodes = tv.NumberOfEpisodes,
+                EpisodesWithVideo = tv.Episodes
+                    .Where(e => e.SeasonNumber > 0)
+                    .Count(e => e.VideoFiles.Any(v => v.Folder != null)),
+                CertificationRating = tv.CertificationTvs
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Rating)
+                    .FirstOrDefault(),
+                CertificationCountry = tv.CertificationTvs
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Iso31661)
+                    .FirstOrDefault()
+            })
+            .FirstOrDefaultAsync(ct);
     }
 
     private static readonly Func<MediaContext, Guid, string, Task<Movie?>> GetRandomMovieQuery =
@@ -433,9 +604,52 @@ public class LibraryRepository(MediaContext context)
                 .OrderBy(movie => EF.Functions.Random())
                 .FirstOrDefault());
 
-    public async Task<Movie?> GetRandomMovie(Guid userId, string language)
+    public async Task<Movie?> GetRandomMovie(Guid userId, string language, CancellationToken ct = default)
     {
         return await GetRandomMovieQuery(context, userId, language);
+    }
+
+    public Task<HomeMovieCardDto?> GetRandomMovieCardAsync(Guid userId, string language, string country, CancellationToken ct = default)
+    {
+        return context.Movies
+            .AsNoTracking()
+            .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(movie => movie.VideoFiles.Any(v => v.Folder != null))
+            .OrderBy(movie => EF.Functions.Random())
+            .Select(movie => new HomeMovieCardDto
+            {
+                Id = movie.Id,
+                Title = movie.Title,
+                TitleSort = movie.TitleSort,
+                TranslatedTitle = movie.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Title)
+                    .FirstOrDefault(),
+                Overview = movie.Overview,
+                TranslatedOverview = movie.Translations
+                    .Where(t => t.Iso6391 == language)
+                    .Select(t => t.Overview)
+                    .FirstOrDefault(),
+                Poster = movie.Poster,
+                Backdrop = movie.Backdrop,
+                Logo = movie.Images
+                    .Where(i => i.Type == "logo" && i.Iso6391 == "en")
+                    .Select(i => i.FilePath)
+                    .FirstOrDefault(),
+                ReleaseDate = movie.ReleaseDate,
+                CreatedAt = movie.CreatedAt,
+                ColorPalette = movie._colorPalette,
+                VideoFileCount = movie.VideoFiles.Count(v => v.Folder != null),
+                CertificationRating = movie.CertificationMovies
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Rating)
+                    .FirstOrDefault(),
+                CertificationCountry = movie.CertificationMovies
+                    .Where(c => c.Certification.Iso31661 == "US" || c.Certification.Iso31661 == country)
+                    .Select(c => c.Certification.Iso31661)
+                    .FirstOrDefault()
+            })
+            .FirstOrDefaultAsync(ct);
     }
 
     // public Task<Movie?> GetRandomMovie(Guid userId, string language)
@@ -445,7 +659,7 @@ public class LibraryRepository(MediaContext context)
     //         .Where(movie => movie.Library.LibraryUsers.Any(u => u.UserId == userId))
     //         .Where(movie => movie.VideoFiles.Any(v => v.Folder != null))
     //         .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
-    //         .Include(movie => movie.Images.Where(i => i.Type == "logo").Take(1))
+    //         .Include(movie => movie.Images.Where(i => i.Type == "logo" && i.Iso6391 == "en").Take(1))
     //         .Include(movie => movie.VideoFiles.Where(v => v.Folder != null))
     //         .Include(movie => movie.CertificationMovies.Take(1))
     //             .ThenInclude(c => c.Certification)

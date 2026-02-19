@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using System.Web;
 using Microsoft.AspNetCore.Http;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Database;
+using NoMercy.Database.Models.Users;
+using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
@@ -25,7 +27,8 @@ public class AccessLogMiddleware
         "/styles",
         "/scripts",
         "/favicon",
-        "/transcode"
+        "/transcode",
+        "/manage"
     ];
 
     private readonly string[] _ignoreExact =
@@ -111,6 +114,14 @@ public class AccessLogMiddleware
         }
 
         User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        if (user is null)
+        {
+            // User cache may not be populated yet during startup — try refreshing from DB
+            MediaContext mediaContext = context.RequestServices.GetRequiredService<MediaContext>();
+            ClaimsPrincipleExtensions.RefreshUsers(mediaContext);
+            user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        }
+
         if (user is null)
         {
             Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (User not found)");

@@ -1,15 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.NmSystem.Information;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
 public class StorageJob : IShouldQueue
 {
+    public string QueueName => "extras";
+    public int Priority => 1000;
+
     public List<StorageDto> Storage { get; set; } = [];
 
     public StorageJob()
@@ -127,13 +131,13 @@ public class StorageJob : IShouldQueue
 
             switch (library)
             {
-                case "movie":
+                case Config.MovieMediaType:
                     storage.Data.Movies += size;
                     break;
-                case "tv":
+                case Config.TvMediaType:
                     storage.Data.Shows += size;
                     break;
-                case "music":
+                case Config.MusicMediaType:
                     storage.Data.Music += size;
                     break;
             }

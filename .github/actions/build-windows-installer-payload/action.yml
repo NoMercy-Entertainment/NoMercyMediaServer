@@ -1,0 +1,93 @@
+name: 'Build Windows Installer Payload'
+description: 'Publish all projects into shared runtime directory for Windows installer'
+inputs:
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '10.0.x'
+outputs:
+  payload-path:
+    description: 'Path to the shared runtime output'
+    value: ./installer-payload
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Restore
+      shell: pwsh
+      run: dotnet restore NoMercy.Server.sln
+
+    - name: Publish Service (shared runtime)
+      shell: pwsh
+      run: |
+        dotnet publish ./src/NoMercy.Service/NoMercy.Service.csproj `
+          --configuration Release --runtime win-x64 --self-contained true `
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false `
+          --output ./installer-payload
+
+    - name: Publish Tray (shared runtime)
+      shell: pwsh
+      run: |
+        dotnet publish ./src/NoMercy.Tray/NoMercy.Tray.csproj `
+          --configuration Release --runtime win-x64 --self-contained true `
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false `
+          --output ./installer-payload
+
+    - name: Publish CLI (shared runtime)
+      shell: pwsh
+      run: |
+        dotnet publish ./src/NoMercy.Cli/NoMercy.Cli.csproj `
+          --configuration Release --runtime win-x64 --self-contained true `
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false `
+          --output ./installer-payload
+
+    - name: Pull App Files
+      uses: actions/checkout@v5
+      with:
+        repository: NoMercy-Entertainment/NoMercyApp
+        path: ./src/NoMercy.App/Resources/wwwroot
+        fetch-depth: 1
+        fetch-tags: false
+        ref: gh-pages
+
+    - name: Move App Files
+      shell: bash
+      run: |
+        rm -rf ./src/NoMercy.App/Resources/wwwroot/.git
+        cp -a ./src/NoMercy.App/Resources/wwwroot/. ./src/NoMercy.App/wwwroot/
+        rm -rf ./src/NoMercy.App/Resources/wwwroot
+        echo "App files copied to wwwroot:"
+        find ./src/NoMercy.App/wwwroot -type f | head -20 || true
+
+    - name: Copy InfiniFrame.js to wwwroot
+      shell: bash
+      run: |
+        mkdir -p ./src/NoMercy.App/wwwroot/_content/InfiniLore.InfiniFrame.Js
+        NUGET_CACHE="${HOME}/.nuget/packages"
+        INFINIFRAME_PKG=$(find "$NUGET_CACHE/infinilore.infiniframe.js" -maxdepth 1 -type d | sort -V | tail -1)
+        if [ -d "$INFINIFRAME_PKG/staticwebassets" ]; then
+          cp "$INFINIFRAME_PKG/staticwebassets/InfiniFrame.js" "./src/NoMercy.App/wwwroot/_content/InfiniLore.InfiniFrame.Js/"
+          echo "InfiniFrame.js copied from $INFINIFRAME_PKG"
+        else
+          echo "Warning: InfiniFrame.js not found in NuGet cache"
+          exit 1
+        fi
+
+    - name: Publish App (shared runtime)
+      shell: pwsh
+      run: |
+        dotnet publish ./src/NoMercy.App/NoMercy.App.csproj `
+          --configuration Release --runtime win-x64 --self-contained true `
+          /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false `
+          --output ./installer-payload
+
+    - name: List payload
+      shell: pwsh
+      run: |
+        $files = Get-ChildItem ./installer-payload -Recurse
+        Write-Host "Payload: $($files.Count) files, $(($files | Measure-Object -Property Length -Sum).Sum / 1MB)MB total"

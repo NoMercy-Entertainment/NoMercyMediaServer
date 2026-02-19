@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <ApplicationIcon>..\..\assets\icons\icon.ico</ApplicationIcon>
+        <Description>NoMercy MediaServer Service Application</Description>
+        <Product>NoMercy MediaServer</Product>
+        <AssemblyName>NoMercyMediaServerService</AssemblyName>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PublishSingleFile>true</PublishSingleFile>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <IsTestProject>false</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="NoMercy.Tests.Service" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" />
+        <PackageReference Include="Avalonia.Desktop" />
+        <PackageReference Include="Avalonia.Themes.Fluent" />
+        <PackageReference Include="Newtonsoft.Json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
+        <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\..\assets\icons\icon.png" Link="Assets\icon.png">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="..\..\assets\icons\icon.png" Link="Assets\icon.embedded.png">
+            <LogicalName>NoMercy.Tray.icon.png</LogicalName>
+        </EmbeddedResource>
+    </ItemGroup>
+
+</Project>

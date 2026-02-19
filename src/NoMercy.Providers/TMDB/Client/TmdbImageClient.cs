@@ -1,5 +1,6 @@
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using Serilog.Events;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -41,22 +42,18 @@ public abstract class TmdbImageClient : TmdbBaseClient
                 if (File.Exists(filePath))
                     return isSvg ? null : await Image.LoadAsync<Rgba32>(filePath);
 
-                using HttpClientHandler handler = new();
-                handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-
-                using HttpClient httpClient = new(handler);
-                httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-                httpClient.BaseAddress = new("https://image.tmdb.org/t/p/");
-                httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
-                httpClient.Timeout = TimeSpan.FromMinutes(5);
+                HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.TmdbImage);
 
                 string url = path.StartsWith("http") ? path : $"original{path}";
-                HttpResponseMessage response = await httpClient.GetAsync(url);
+                using HttpResponseMessage response = await httpClient.GetAsync(url);
 
                 if (!response.IsSuccessStatusCode) return null;
 
                 if (download is false)
-                    return isSvg ? null : Image.Load<Rgba32>(await response.Content.ReadAsStreamAsync());
+                {
+                    await using Stream contentStream = await response.Content.ReadAsStreamAsync();
+                    return isSvg ? null : Image.Load<Rgba32>(contentStream);
+                }
 
                 if (!File.Exists(filePath))
                     await File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());

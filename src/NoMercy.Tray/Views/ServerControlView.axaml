@@ -1,0 +1,350 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NoMercy.Tray.ViewModels"
+        x:Class="NoMercy.Tray.Views.ServerControlView"
+        x:DataType="vm:ServerControlViewModel">
+
+    <DockPanel Margin="16">
+        <!-- Title -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Server Control"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Foreground="#F9FAFB"
+                   Margin="0,0,0,16" />
+
+        <!-- Status indicator -->
+        <Border DockPanel.Dock="Top"
+                Background="#1F2937"
+                CornerRadius="8"
+                Padding="16"
+                Margin="0,0,0,16">
+            <Grid ColumnDefinitions="Auto,Auto,*"
+                  RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                <!-- Status row -->
+                <TextBlock Grid.Row="0" Grid.Column="0"
+                           Text="Status:"
+                           Foreground="#9CA3AF"
+                           FontSize="13"
+                           Margin="0,0,12,6"
+                           VerticalAlignment="Center" />
+                <Ellipse Grid.Row="0" Grid.Column="1"
+                         Width="10" Height="10"
+                         Margin="0,0,8,6"
+                         VerticalAlignment="Center">
+                    <Ellipse.Fill>
+                        <SolidColorBrush Color="{Binding StatusColor}" />
+                    </Ellipse.Fill>
+                </Ellipse>
+                <TextBlock Grid.Row="0" Grid.Column="2"
+                           Text="{Binding ServerStatus}"
+                           Foreground="#F9FAFB"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,6"
+                           VerticalAlignment="Center" />
+
+                <!-- Server Name -->
+                <TextBlock Grid.Row="1" Grid.Column="0"
+                           Text="Server:"
+                           Foreground="#9CA3AF"
+                           FontSize="13"
+                           Margin="0,0,12,6" />
+                <TextBlock Grid.Row="1" Grid.Column="2"
+                           Text="{Binding ServerName}"
+                           Foreground="#D1D5DB"
+                           FontSize="13"
+                           Margin="0,0,0,6" />
+
+                <!-- Version -->
+                <TextBlock Grid.Row="2" Grid.Column="0"
+                           Text="Version:"
+                           Foreground="#9CA3AF"
+                           FontSize="13"
+                           Margin="0,0,12,6" />
+                <TextBlock Grid.Row="2" Grid.Column="2"
+                           Text="{Binding Version}"
+                           Foreground="#D1D5DB"
+                           FontSize="13"
+                           Margin="0,0,0,6" />
+
+                <!-- Platform -->
+                <TextBlock Grid.Row="3" Grid.Column="0"
+                           Text="Platform:"
+                           Foreground="#9CA3AF"
+                           FontSize="13"
+                           Margin="0,0,12,6" />
+                <TextBlock Grid.Row="3" Grid.Column="2"
+                           Text="{Binding Platform}"
+                           Foreground="#D1D5DB"
+                           FontSize="13"
+                           Margin="0,0,0,6" />
+
+                <!-- Uptime -->
+                <TextBlock Grid.Row="4" Grid.Column="0"
+                           Text="Uptime:"
+                           Foreground="#9CA3AF"
+                           FontSize="13"
+                           Margin="0,0,12,0" />
+                <TextBlock Grid.Row="4" Grid.Column="2"
+                           Text="{Binding Uptime}"
+                           Foreground="#D1D5DB"
+                           FontSize="13" />
+            </Grid>
+        </Border>
+
+        <!-- Update banner -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding UpdateAvailable}"
+                Background="#1E3A5F"
+                CornerRadius="8"
+                Padding="16"
+                Margin="0,0,0,16">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding LatestVersion, StringFormat='Update available: v{0}'}"
+                           Foreground="#93C5FD"
+                           FontSize="13"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Content="Restart to update"
+                        Click="OnApplyUpdate"
+                        Background="#2563EB"
+                        Foreground="White"
+                        Padding="12,6"
+                        CornerRadius="4" />
+            </Grid>
+        </Border>
+
+        <!-- Auto-start toggle -->
+        <Border DockPanel.Dock="Top"
+                Background="#1F2937"
+                CornerRadius="8"
+                Padding="16"
+                Margin="0,0,0,16">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="Start on boot"
+                           Foreground="#D1D5DB"
+                           FontSize="13"
+                           VerticalAlignment="Center" />
+                <CheckBox x:Name="AutoStartCheckBox"
+                          Grid.Column="1"
+                          IsChecked="{Binding AutoStartEnabled}"
+                          Click="OnAutoStartToggle"
+                          VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- Action status -->
+        <TextBlock DockPanel.Dock="Bottom"
+                   Text="{Binding ActionStatus}"
+                   Foreground="#9CA3AF"
+                   FontSize="12"
+                   Margin="0,8,0,0"
+                   HorizontalAlignment="Center" />
+
+        <!-- Control buttons -->
+        <StackPanel DockPanel.Dock="Bottom"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Spacing="12"
+                    Margin="0,8,0,0">
+            <Button x:Name="OpenAppButton"
+                    Content="Open App"
+                    Width="120"
+                    HorizontalContentAlignment="Center"
+                    IsEnabled="{Binding IsServerRunning}"
+                    Click="OnOpenAppClick"
+                    Background="#7C3AED"
+                    Foreground="White" />
+
+            <Button x:Name="StartButton"
+                    Content="Start Server"
+                    Width="120"
+                    HorizontalContentAlignment="Center"
+                    IsEnabled="{Binding IsServerStopped}"
+                    Click="OnStartClick"
+                    Background="#16A34A"
+                    Foreground="White" />
+
+            <Button x:Name="StopButton"
+                    Content="Stop Server"
+                    Width="120"
+                    HorizontalContentAlignment="Center"
+                    IsEnabled="{Binding IsServerRunning}"
+                    Click="OnStopClick"
+                    Background="#DC2626"
+                    Foreground="White" />
+
+            <Button x:Name="RestartButton"
+                    Content="Restart Server"
+                    Width="120"
+                    HorizontalContentAlignment="Center"
+                    IsEnabled="{Binding IsServerRunning}"
+                    Click="OnRestartClick"
+                    Background="#2563EB"
+                    Foreground="White" />
+
+            <Button x:Name="RefreshButton"
+                    Content="Refresh"
+                    Width="120"
+                    HorizontalContentAlignment="Center"
+                    Click="OnRefreshClick" />
+        </StackPanel>
+
+        <!-- Settings panel -->
+        <ScrollViewer IsVisible="{Binding ConfigLoaded}">
+            <StackPanel Spacing="16" Margin="0,0,0,8">
+
+                <!-- Server Settings -->
+                <Border Background="#1F2937"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Server Settings"
+                                   Foreground="#F9FAFB"
+                                   FontSize="14"
+                                   FontWeight="SemiBold" />
+
+                        <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="Server Name"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <TextBox Grid.Row="0" Grid.Column="1"
+                                     Text="{Binding ConfigServerName}"
+                                     IsEnabled="{Binding IsServerRunning}"
+                                     Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="Internal Port"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <TextBlock Grid.Row="1" Grid.Column="1"
+                                       Text="{Binding InternalPort}"
+                                       Foreground="#D1D5DB" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0"
+                                       Text="External Port"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Grid.Column="1"
+                                       Text="{Binding ExternalPort}"
+                                       Foreground="#D1D5DB" FontSize="13"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Worker Settings -->
+                <Border Background="#1F2937"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Worker Settings"
+                                   Foreground="#F9FAFB"
+                                   FontSize="14"
+                                   FontWeight="SemiBold" />
+
+                        <Grid ColumnDefinitions="140,*"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="Library Workers"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="0" Grid.Column="1"
+                                           Value="{Binding LibraryWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="Import Workers"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="1" Grid.Column="1"
+                                           Value="{Binding ImportWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0"
+                                       Text="Extras Workers"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="2" Grid.Column="1"
+                                           Value="{Binding ExtrasWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="3" Grid.Column="0"
+                                       Text="Encoder Workers"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="3" Grid.Column="1"
+                                           Value="{Binding EncoderWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="4" Grid.Column="0"
+                                       Text="Cron Workers"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="4" Grid.Column="1"
+                                           Value="{Binding CronWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="5" Grid.Column="0"
+                                       Text="Image Workers"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="5" Grid.Column="1"
+                                           Value="{Binding ImageWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="6" Grid.Column="0"
+                                       Text="File Workers"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="6" Grid.Column="1"
+                                           Value="{Binding FileWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="7" Grid.Column="0"
+                                       Text="Music Workers"
+                                       Foreground="#9CA3AF" FontSize="13"
+                                       VerticalAlignment="Center" />
+                            <NumericUpDown Grid.Row="7" Grid.Column="1"
+                                           Value="{Binding MusicWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Save button -->
+                <Button x:Name="SaveConfigButton"
+                        Content="Save Configuration"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        IsEnabled="{Binding IsServerRunning}"
+                        Click="OnSaveConfigClick"
+                        Background="#16A34A"
+                        Foreground="White"
+                        Padding="12,8"
+                        CornerRadius="4" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

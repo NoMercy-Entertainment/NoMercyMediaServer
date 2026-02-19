@@ -1,10 +1,13 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Http;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
+using NoMercy.Database.Models.Users;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.MediaSources.OpticalMedia.Dto;
 using NoMercy.Networking;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Controllers.Socket;
@@ -13,7 +16,8 @@ public class RipperHub : ConnectionHub
 {
     private static readonly ConcurrentDictionary<string, Guid> CurrentDevices = new();
 
-    public RipperHub(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
+    public RipperHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory, ConnectedClients connectedClients)
+        : base(httpContextAccessor, contextFactory, connectedClients)
     {
     }
 

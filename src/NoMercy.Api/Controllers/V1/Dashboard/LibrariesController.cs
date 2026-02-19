@@ -3,19 +3,23 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.Dashboard.DTO;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Middleware;
+using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
-using FolderLibraryDto = NoMercy.Data.Repositories.FolderLibraryDto;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -72,7 +76,7 @@ public class LibrariesController(
                 PerfectSubtitleMatch = true,
                 Realtime = true,
                 SpecialSeasonName = "Specials",
-                Type = "movie",
+                Type = Config.MovieMediaType,
                 Order = 99
             };
             
@@ -241,7 +245,22 @@ public class LibrariesController(
         try
         {
             await libraryRepository.DeleteLibraryAsync(library);
-            
+
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new LibraryDeletedEvent
+                {
+                    LibraryId = library.Id,
+                    LibraryName = library.Title
+                });
+
+                foreach (FolderLibrary fl in library.FolderLibraries)
+                    await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
+                    {
+                        RequestPath = fl.FolderId
+                    });
+            }
+
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok", Message = "Successfully deleted {0} library.", Args = [library.Title]
@@ -313,12 +332,12 @@ public class LibrariesController(
         {
             foreach (LibraryMovie movie in library.LibraryMovies)
             {
-                jobDispatcher.DispatchJob<RescanFilesJob>(movie.MovieId, movie.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
             }
 
             foreach (LibraryTv show in library.LibraryTvs)
             {
-                jobDispatcher.DispatchJob<RescanFilesJob>(show.TvId, show.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
             }
         }
 
@@ -344,12 +363,12 @@ public class LibrariesController(
 
         foreach (LibraryMovie movie in library.LibraryMovies)
         {
-            jobDispatcher.DispatchJob<RescanFilesJob>(movie.MovieId, movie.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
         }
 
         foreach (LibraryTv show in library.LibraryTvs)
         {
-            jobDispatcher.DispatchJob<RescanFilesJob>(show.TvId, show.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
         }
 
         return Ok(new StatusResponseDto<List<dynamic>>
@@ -379,7 +398,7 @@ public class LibrariesController(
         
         foreach (Library library in librariesList)
         {
-            jobDispatcher.DispatchJob<RescanLibraryJob>(library.Id);
+            jobDispatcher.DispatchJob<LibraryRescanJob>(library.Id);
         }
 
         return Ok(new StatusResponseDto<List<string?>>
@@ -400,11 +419,59 @@ public class LibrariesController(
         if (library is null)
             return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Library not found" });
 
-        jobDispatcher.DispatchJob<RescanLibraryJob>(id);
+        jobDispatcher.DispatchJob<LibraryRescanJob>(id);
 
         return Ok(new StatusResponseDto<List<dynamic>>
         {
             Status = "ok", Message = "Rescanning {0} library.", Args = [library.Title]
+        });
+    }
+
+    [HttpPost]
+    [Route("scan-new")]
+    public async Task<IActionResult> ScanNewAll()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to scan all libraries");
+
+        List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
+
+        if (librariesList.Count == 0)
+        {
+            return NotFound(new StatusResponseDto<List<string?>>
+            {
+                Status = "error", Message = "No libraries found to scan.", Args = []
+            });
+        }
+
+        foreach (Library library in librariesList)
+        {
+            jobDispatcher.DispatchJob<LibraryScanJob>(library.Id);
+        }
+
+        return Ok(new StatusResponseDto<List<string?>>
+        {
+            Status = "ok", Message = "Scanning all libraries for new items."
+        });
+    }
+
+    [HttpPost]
+    [Route("{id:ulid}/scan-new")]
+    public async Task<IActionResult> ScanNew(Ulid id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to scan the library");
+
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
+
+        if (library is null)
+            return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Library not found" });
+
+        jobDispatcher.DispatchJob<LibraryScanJob>(id);
+
+        return Ok(new StatusResponseDto<List<dynamic>>
+        {
+            Status = "ok", Message = "Scanning {0} library for new items.", Args = [library.Title]
         });
     }
 
@@ -426,7 +493,14 @@ public class LibrariesController(
             
             await folderRepository.AddFolderAsync(folder);
             
-            DynamicStaticFilesMiddleware.AddPath(library.Id, folder.Path);
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
+                {
+                    RequestPath = library.Id,
+                    PhysicalPath = folder.Path
+                });
+            }
         }
         catch (Exception e)
         {
@@ -480,8 +554,18 @@ public class LibrariesController(
             folder.Path = request.Path;
             await folderRepository.UpdateFolderAsync(folder);
             
-            DynamicStaticFilesMiddleware.RemovePath(folder.Id);
-            DynamicStaticFilesMiddleware.AddPath(id, folder.Path);
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
+                {
+                    RequestPath = folder.Id
+                });
+                await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
+                {
+                    RequestPath = id,
+                    PhysicalPath = folder.Path
+                });
+            }
             
             return Ok(new StatusResponseDto<string>
             {
@@ -515,8 +599,14 @@ public class LibrariesController(
         {
             await folderRepository.DeleteFolderAsync(folder);
             
-            DynamicStaticFilesMiddleware.RemovePath(folder.Id);
-            
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
+                {
+                    RequestPath = folder.Id
+                });
+            }
+
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok", Message = "Successfully deleted folder {0}.", Args = [folder.Path]
@@ -634,7 +724,7 @@ public class LibrariesController(
         {
             await using MediaContext mediaContext = new();
 
-            FileRepository fileRepository = new();
+            FileRepository fileRepository = new(mediaContext);
             FileManager fileManager = new(fileRepository);
 
             await fileManager.MoveToLibraryFolder(request.Id, folder);

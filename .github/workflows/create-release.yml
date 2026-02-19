@@ -7,16 +7,49 @@ on:
         description: 'Version to release'
         required: true
         type: string
+      tag:
+        description: 'Git tag for the release (defaults to v{version})'
+        required: false
+        type: string
+      draft:
+        description: 'Create as draft release'
+        required: false
+        type: boolean
+        default: false
+      prerelease:
+        description: 'Mark as prerelease'
+        required: false
+        type: boolean
+        default: false
+      release-name:
+        description: 'Release title (defaults to NoMercy MediaServer v{version})'
+        required: false
+        type: string
 
 jobs:
   create_release:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Download all artifacts
+      - uses: actions/checkout@v5
+
+      - name: Download executable artifacts
         uses: actions/download-artifact@v5
         with:
           path: ./artifacts
+          pattern: '*-executables'
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: ./artifacts
+          pattern: '*-packages'
+
+      - name: Download installer artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: ./artifacts
+          pattern: '*-installer'
 
       - name: Combine artifacts
         run: |
@@ -34,51 +67,118 @@ jobs:
           find ./artifacts -path "*/rpm-packages/*" -name "*.rpm" -exec cp {} ./output/ \;
           find ./artifacts -path "*/arch-packages/*" -name "*.pkg.tar.zst" -exec cp {} ./output/ \;
 
+          # Copy Windows installer to release
+          find ./artifacts -path "*/windows-installer/*" -name "*-setup.exe" -exec cp {} ./output/ \;
+
+          # Copy macOS installer to release
+          find ./artifacts -path "*/macos-installer/*" -name "*.pkg" -exec cp {} ./output/ \;
+
           echo "=== Release artifacts ==="
           ls -la ./output/
 
-      - name: Get Short SHA
-        id: get_short_sha
-        run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-        
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ inputs.version }}
-          name: NoMercy MediaServer v${{ inputs.version }}
-          body: |
-            ## What's New
-            This release includes the latest features, improvements, and bug fixes for NoMercy MediaServer.
+      - name: Write release notes
+        run: |
+          VERSION="${{ inputs.version }}"
+          TAG="${{ inputs.tag || format('v{0}', inputs.version) }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          REPO="https://github.com/NoMercy-Entertainment/NoMercyMediaServer"
+          DL="${REPO}/releases/download/${TAG}"
 
-            ## Downloads
+          cat > ./release-notes.md << NOTES_END
+          ## Install
 
-            ### Binary Executables
-            - **Windows** (x64): `.exe` files
-            - **macOS** (x64): `.tar.gz` and `.dmg` files
-            - **Linux** (x64): Binary executables
+          | Platform | Download |
+          |----------|----------|
+          | **Windows** | [NoMercyMediaServer-${VERSION}-windows-x64-setup.exe](${DL}/NoMercyMediaServer-${VERSION}-windows-x64-setup.exe) |
+          | **macOS** | [NoMercyMediaServer-${VERSION}-macos-x64-setup.pkg](${DL}/NoMercyMediaServer-${VERSION}-macos-x64-setup.pkg) |
+          | **Linux** | [repo.nomercy.tv](https://repo.nomercy.tv) — see [setup instructions](${REPO}#installation) |
+          | **Docker** | See Docker section below |
 
-            ### Linux Packages
-            - **Debian/Ubuntu**: `.deb` packages
-            - **Fedora/RHEL/CentOS**: `.rpm` packages
-            - **Arch Linux**: `.pkg.tar.zst` packages
+          ## Docker
 
-            ### Package Repositories
-            For automatic updates, add our repository: https://repo.nomercy.tv
+          \`\`\`bash
+          # CPU only
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:latest
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:${VERSION}
 
-            ## Installation
-            Download the appropriate files for your platform and follow the installation instructions in our documentation.
+          # NVIDIA GPU
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:nvidia
 
-            ## Feedback
-            If you encounter any issues, please report them on our GitHub repository.
+          # Intel Quick Sync
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:intel
 
-            Build: ${{ steps.get_short_sha.outputs.short_sha }}
-          draft: false
-          prerelease: false
-          files: |
-            ./output/NoMercyMediaServer-*
-            ./output/NoMercyApp-*
-            ./output/*.deb
-            ./output/*.rpm
-            ./output/*.pkg.tar.zst
+          # AMD GPU
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:amd
+          \`\`\`
+
+          Or use Docker Compose — see \`docker-compose.yml\` (and GPU variants) in the repo.
+
+          ## What's New
+
+          Latest features, improvements, and bug fixes for NoMercy MediaServer.
+
+          ## All Assets
+
+          All standalone binaries and Linux packages (.deb, .rpm, .pkg.tar.zst) are available in the assets below.
+
+          ## Feedback
+
+          Found a bug? [Open an issue](${REPO}/issues).
+
+          ---
+          Build: \`${SHORT_SHA}\`
+          NOTES_END
+
+      - name: Create Release and Upload Assets
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.tag || format('v{0}', inputs.version) }}"
+          NAME="${{ inputs.release-name || format('NoMercy MediaServer v{0}', inputs.version) }}"
+
+          # Build gh release create flags
+          FLAGS=(--title "$NAME" --notes-file ./release-notes.md)
+
+          if [ "${{ inputs.draft }}" = "true" ]; then
+            FLAGS+=(--draft)
+          fi
+
+          if [ "${{ inputs.prerelease }}" = "true" ]; then
+            FLAGS+=(--prerelease)
+          fi
+
+          # Create the release (without files)
+          gh release create "$TAG" "${FLAGS[@]}" --target "$GITHUB_SHA"
+          echo "Release created: $TAG"
+
+          # Upload assets with retry logic
+          FAILED=0
+          for file in ./output/*; do
+            [ -f "$file" ] || continue
+            BASENAME=$(basename "$file")
+            echo "⬆️ Uploading $BASENAME..."
+
+            SUCCESS=false
+            for i in 1 2 3; do
+              if gh release upload "$TAG" "$file" --clobber 2>&1; then
+                echo "✅ Uploaded $BASENAME"
+                SUCCESS=true
+                break
+              else
+                echo "⚠️ Upload attempt $i/3 failed for $BASENAME"
+                sleep $((i * 2))
+              fi
+            done
+
+            if [ "$SUCCESS" != "true" ]; then
+              echo "❌ Failed to upload $BASENAME after 3 attempts"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::$FAILED asset(s) failed to upload"
+            exit 1
+          fi
+
+          echo "All assets uploaded successfully"

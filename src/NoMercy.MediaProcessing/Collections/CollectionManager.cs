@@ -1,4 +1,6 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -47,7 +49,7 @@ public class CollectionManager(
 
         await StoreTranslations(collectionAppends);
 
-        jobDispatcher.DispatchJob<AddCollectionExtraDataJob, TmdbCollectionAppends>(collectionAppends);
+        jobDispatcher.DispatchJob<CollectionExtrasJob, TmdbCollectionAppends>(collectionAppends);
 
         Logger.MovieDb($"Collection: {collectionAppends.Name}: Added to Library {library.Title}", LogEventLevel.Debug);
 

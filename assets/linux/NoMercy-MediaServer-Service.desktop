@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=NoMercy MediaServer
+GenericName=NoMercy MediaServer Service
+Comment=System tray control for NoMercy MediaServer
+Categories=AudioVideo;Video;Player;Network;
+Exec=nomercymediaserverservice
+Icon=NoMercy-MediaServer-Service
+Terminal=false
+StartupNotify=true
+StartupWMClass=NoMercyMediaServerService
+X-GNOME-UsesNotifications=true
+X-GNOME-Autostart-enabled=true
+Keywords=media;server;service;control;

@@ -5,13 +5,18 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder;
 using NoMercy.Encoder.Dto;
 using NoMercy.Encoder.Format.Rules;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using Serilog.Events;
 using SubtitlesParserV2;
@@ -51,27 +56,30 @@ public partial class FileManager(
 
         switch (library.Type)
         {
-            case "movie":
+            case Config.MovieMediaType:
                 await StoreMovie();
-                Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-                {
-                    QueryKey = ["libraries", library.Id.ToString()]
-                });
+                if (EventBusProvider.IsConfigured)
+                    await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                    {
+                        QueryKey = ["libraries", library.Id.ToString()]
+                    });
                 break;
-            case "tv":
-            case "anime":
+            case Config.TvMediaType:
+            case Config.AnimeMediaType:
                 await StoreTvShow();
-                Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-                {
-                    QueryKey = ["libraries", library.Id.ToString()]
-                });
+                if (EventBusProvider.IsConfigured)
+                    await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                    {
+                        QueryKey = ["libraries", library.Id.ToString()]
+                    });
                 break;
-            case "music":
+            case Config.MusicMediaType:
                 await StoreMusic();
-                Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-                {
-                    QueryKey = ["music"]
-                });
+                if (EventBusProvider.IsConfigured)
+                    await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                    {
+                        QueryKey = ["music"]
+                    });
                 break;
             default:
                 Logger.App("Unknown library type");
@@ -110,6 +118,13 @@ public partial class FileManager(
             foreach (FolderLibrary libraryFolder in tv.Library.FolderLibraries)
             {
                 string path = libraryFolder.Folder.Path + tv.Folder;
+                if (!Directory.Exists(path))
+                {
+                    string? match = Str.FindMatchingDirectory(libraryFolder.Folder.Path, tv.Folder.Replace("/", ""));
+                    if (match != null)
+                        path = match;
+                }
+
                 if (!Directory.Exists(path)) continue;
 
                 folderName = tv.Folder;
@@ -121,6 +136,13 @@ public partial class FileManager(
             foreach (FolderLibrary libraryFolder in movie.Library.FolderLibraries)
             {
                 string path = libraryFolder.Folder.Path + movie.Folder;
+                if (!Directory.Exists(path))
+                {
+                    string? match = Str.FindMatchingDirectory(libraryFolder.Folder.Path, movie.Folder.Replace("/", ""));
+                    if (match != null)
+                        path = match;
+                }
+
                 if (!Directory.Exists(path)) continue;
 
                 folderName = movie.Folder;
@@ -212,11 +234,11 @@ public partial class FileManager(
 
         if (items.Count == 0) return;
 
-        await Parallel.ForEachAsync(items, Config.ParallelOptions, async (item, _) =>
+        foreach (MediaFile item in items)
         {
             await StoreVideoItem(item);
-        });
-        
+        }
+
         Logger.App($"Found {items.Count} files for {Show?.Title}");
     }
 
@@ -327,8 +349,8 @@ public partial class FileManager(
             FolderSize = GetDirectorySize(hostFolder),
 
             Type = Movie?.Id is not null
-                ? Database.Models.MediaType.Movie
-                : Database.Models.MediaType.Tv,
+                ? Database.Models.Media.MediaType.Movie
+                : Database.Models.Media.MediaType.Tv,
 
             Audio = audio,
             Previews = previews,
@@ -584,9 +606,9 @@ public partial class FileManager(
 
     private static (int Width, int Height) GetImageDimensions(string filePath)
     {
-        Image image = Image.Load(filePath);
+        SixLabors.ImageSharp.ImageInfo info = Image.Identify(filePath);
 
-        return (image.Width, image.Height);
+        return (info.Width, info.Height);
     }
 
     private static (int Width, int Height) GetImageDimensionsFromVtt(string filePath)
@@ -738,8 +760,8 @@ public partial class FileManager(
 
         int depth = library.Type switch
         {
-            "movie" => 1,
-            "tv" or "anime" => 2,
+            Config.MovieMediaType => 1,
+            Config.TvMediaType or Config.AnimeMediaType => 2,
             _ => 0
         };
 
@@ -760,8 +782,8 @@ public partial class FileManager(
         List<Folder> folders = [];
         string? folder = library.Type switch
         {
-            "movie" => movie?.Folder?.Replace("/", ""),
-            "tv" or "anime" => show?.Folder?.Replace("/", ""),
+            Config.MovieMediaType => movie?.Folder?.Replace("/", ""),
+            Config.TvMediaType or Config.AnimeMediaType => show?.Folder?.Replace("/", ""),
             _ => ""
         };
 
@@ -771,7 +793,7 @@ public partial class FileManager(
             return folders;
         }
 
-        MediaContext mediaContext = new();
+        using MediaContext mediaContext = new();
         Folder[] rootFolders = mediaContext.FolderLibrary
             .Select(f => f.Folder)
             .ToArray();
@@ -779,6 +801,13 @@ public partial class FileManager(
         foreach (Folder rootFolder in rootFolders)
         {
             string path = Path.Combine(rootFolder.Path, folder);
+
+            if (!Directory.Exists(path))
+            {
+                string? match = Str.FindMatchingDirectory(rootFolder.Path, folder);
+                if (match != null)
+                    path = match;
+            }
 
             if (Directory.Exists(path))
                 folders.Add(new()

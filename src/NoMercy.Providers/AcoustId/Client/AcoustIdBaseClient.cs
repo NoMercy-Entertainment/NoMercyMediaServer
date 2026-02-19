@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.AcoustId.Models;
@@ -12,25 +11,18 @@ public class AcoustIdBaseClient : IDisposable
 {
     private readonly Uri _baseUrl = new("https://api.acoustid.org/v2/");
 
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client;
 
     protected AcoustIdBaseClient()
     {
-        _client.BaseAddress = _baseUrl;
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _client = HttpClientProvider.CreateClient(HttpClientNames.AcoustId);
+        _client.BaseAddress ??= _baseUrl;
     }
 
     protected AcoustIdBaseClient(Guid id)
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _client = HttpClientProvider.CreateClient(HttpClientNames.AcoustId);
+        _client.BaseAddress ??= _baseUrl;
         Id = id;
     }
 
@@ -70,26 +62,9 @@ public class AcoustIdBaseClient : IDisposable
 
             data = response.FromJson<T>();
 
-            int iteration = 0;
-
             if (data?.Results.Length > 0 && data.Results
                     .Any(fpResult => fpResult.Recordings is not null && fpResult.Recordings
                         .Any(recording => recording?.Title != null))) return data as T;
-
-            while (data?.Results.Length == 0 && data.Results
-                       .Any(fpResult => fpResult.Recordings is not null && fpResult.Recordings
-                           .Any(recording => recording?.Title == null)) && iteration < 10)
-            {
-                response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
-
-                await CacheController.Write(newUrl, response);
-
-                Logger.Request(response, LogEventLevel.Verbose);
-
-                data = response.FromJson<T>();
-
-                iteration++;
-            }
         }
         catch (Exception e)
         {
@@ -110,6 +85,6 @@ public class AcoustIdBaseClient : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

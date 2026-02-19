@@ -1,0 +1,62 @@
+name: 'Build Windows Installer'
+description: 'Build Windows installer using Inno Setup with shared runtime'
+inputs:
+  version:
+    description: 'Package version'
+    required: true
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '10.0.x'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Build shared runtime payload
+      uses: ./.github/actions/build-windows-installer-payload
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+
+    - name: Install Inno Setup
+      shell: pwsh
+      run: |
+        $InnoUrl = "https://files.jrsoftware.org/is/6/innosetup-6.7.0.exe"
+        $InstallerPath = "$env:TEMP\innosetup.exe"
+
+        Write-Host "Downloading Inno Setup 6.7.0..."
+        Invoke-WebRequest -Uri $InnoUrl -OutFile $InstallerPath -UseBasicParsing
+
+        Write-Host "Installing Inno Setup..."
+        Start-Process -FilePath $InstallerPath -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/DIR=C:\InnoSetup' -Wait -NoNewWindow
+
+        if (Test-Path "C:\InnoSetup\ISCC.exe") {
+          Write-Host "Inno Setup installed successfully"
+        } else {
+          Write-Error "Inno Setup installation failed - ISCC.exe not found"
+          exit 1
+        }
+
+    - name: Build Windows Installer
+      shell: pwsh
+      run: |
+        $Version = "${{ inputs.version }}"
+        $IssFile = "./src/NoMercy.Service/NoMercyMediaServer.iss"
+        $InnoCompiler = "C:\InnoSetup\ISCC.exe"
+
+        New-Item -ItemType Directory -Force -Path "./packages/windows" | Out-Null
+
+        & $InnoCompiler "/DVersion=$Version" "/O./packages/windows" $IssFile
+
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "Inno Setup compilation failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+
+        Write-Host "Windows installer created:"
+        Get-ChildItem "./packages/windows/"
+
+    - name: Upload Windows installer artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-installer
+        path: packages/windows/

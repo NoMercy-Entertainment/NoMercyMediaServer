@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using NoMercy.NmSystem.Information;
 
@@ -8,21 +6,23 @@ namespace NoMercy.Setup;
 
 public class TempServer
 {
-    public static IWebHost Start()
+    public static WebApplication Start()
     {
-        return WebHost.CreateDefaultBuilder()
-            .UseUrls("http://0.0.0.0:" + Config.InternalServerPort)
-            .Configure(app =>
-            {
-                app.Run(async context =>
-                {
-                    string code = context.Request.Query["code"].ToString();
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
 
-                    context.Response.Headers.Append("Content-Type", "text/html");
-                    await context.Response.WriteAsync("<script>window.close();</script>");
+        WebApplication app = builder.Build();
+        app.Urls.Add("http://0.0.0.0:" + Config.InternalServerPort);
+        app.Run(async context =>
+        {
+            string code = context.Request.Query["code"].ToString();
 
-                    await Auth.TokenByAuthorizationCode(code);
-                });
-            }).Build();
+            context.Response.Headers.Append("Content-Type", "text/html");
+            await context.Response.WriteAsync("<script>window.close();</script>");
+            await context.Response.CompleteAsync();
+
+            await Auth.TokenByAuthorizationCode(code);
+        });
+
+        return app;
     }
 }
