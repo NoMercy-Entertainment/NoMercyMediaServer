@@ -19,9 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN useradd -m -o -u 1000 nomercy \
-    && usermod -aG video,render nomercy
+# Create non-root user with video/render group access
+RUN groupadd -f video && groupadd -f render \
+    && useradd -m -o -u 1000 -G video,render nomercy
 
 # Create data directories
 RUN mkdir -p /data/config /data/cache /data/media /data/log \

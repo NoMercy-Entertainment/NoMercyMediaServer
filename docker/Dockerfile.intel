@@ -4,6 +4,9 @@
 FROM debian:bookworm-slim
 WORKDIR /app
 
+# Enable non-free-firmware repo for Intel media drivers
+RUN echo "deb http://deb.debian.org/debian bookworm non-free-firmware" >> /etc/apt/sources.list.d/non-free-firmware.list
+
 # Install Intel media drivers and VAAPI libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     intel-media-va-driver-non-free \
@@ -21,9 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN useradd -m -o -u 1000 nomercy \
-    && usermod -aG video,render nomercy
+# Create non-root user with video/render group access
+RUN groupadd -f video && groupadd -f render \
+    && useradd -m -o -u 1000 -G video,render nomercy
 
 # Create data directories
 RUN mkdir -p /data/config /data/cache /data/media /data/log \

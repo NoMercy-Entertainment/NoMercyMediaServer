@@ -4,15 +4,11 @@
 FROM nvidia/cuda:12.3.1-runtime-ubuntu22.04
 WORKDIR /app
 
-# Install NVIDIA codec libraries and dependencies
+# Install dependencies (CUDA runtime libs are already in the base image)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libicu70 \
     libssl3 \
-    libnvidia-encode-535 \
-    libnvidia-decode-535 \
-    libcudart12 \
-    libnpp12 \
     mediainfo \
     curl \
     && rm -rf /var/lib/apt/lists/*
