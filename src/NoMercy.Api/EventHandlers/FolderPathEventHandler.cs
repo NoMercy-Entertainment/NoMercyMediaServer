@@ -1,6 +1,8 @@
 using NoMercy.Api.Middleware;
+using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Library;
+using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.EventHandlers;
 
@@ -17,12 +19,20 @@ public class FolderPathEventHandler : IDisposable
     internal Task OnFolderPathAdded(FolderPathAddedEvent @event, CancellationToken ct)
     {
         DynamicStaticFilesMiddleware.AddPath(@event.RequestPath, @event.PhysicalPath);
+
+        using MediaContext mediaContext = new();
+        ClaimsPrincipleExtensions.RefreshFolderIds(mediaContext);
+
         return Task.CompletedTask;
     }
 
     internal Task OnFolderPathRemoved(FolderPathRemovedEvent @event, CancellationToken ct)
     {
         DynamicStaticFilesMiddleware.RemovePath(@event.RequestPath);
+
+        using MediaContext mediaContext = new();
+        ClaimsPrincipleExtensions.RefreshFolderIds(mediaContext);
+
         return Task.CompletedTask;
     }
 
