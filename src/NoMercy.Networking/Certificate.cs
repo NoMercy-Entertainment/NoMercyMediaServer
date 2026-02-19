@@ -78,10 +78,9 @@ public static class Certificate
 
             if (certificate.NotAfter < DateTime.Now.AddDays(30))
             {
-                // Cert is valid but expiring within 30 days — still valid for boot,
-                // renewal will be attempted separately
                 Logger.Certificate(
                     $"SSL cert expires {certificate.NotAfter:yyyy-MM-dd} — will attempt renewal");
+                return false; // Expiring soon — trigger renewal
             }
 
             return true;
