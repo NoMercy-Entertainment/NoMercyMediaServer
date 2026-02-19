@@ -86,7 +86,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ inputs.version }}${{ matrix.suffix }}
-            type=raw,value=latest${{ matrix.suffix }},enable=${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_call' }}
+            type=raw,value=latest${{ matrix.suffix }},enable=${{ inputs.push }}
             type=raw,value=${{ matrix.variant }},enable=${{ matrix.variant != 'cpu' }}
 
       - name: Build and push
