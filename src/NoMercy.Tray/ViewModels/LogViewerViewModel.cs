@@ -247,9 +247,12 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
                 });
             }, token, onConnected: () =>
             {
-                // Stream connected (or reconnected) — fetch log history
-                // to fill in any entries we missed while disconnected
-                Dispatcher.UIThread.Post(() => _ = RefreshLogsAsync(token));
+                Dispatcher.UIThread.Post(() =>
+                    StatusText = $"{FilteredEntries.Count} entries (streaming)");
+            }, onDisconnected: () =>
+            {
+                Dispatcher.UIThread.Post(() =>
+                    StatusText = $"{FilteredEntries.Count} entries (reconnecting...)");
             });
         }, token);
     }

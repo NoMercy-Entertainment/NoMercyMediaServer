@@ -126,7 +126,8 @@ public sealed class ServerConnection : IDisposable
     public async Task StreamLogsAsync(
         Action<LogEntryResponse> onEntry,
         CancellationToken cancellationToken,
-        Action? onConnected = null)
+        Action? onConnected = null,
+        Action? onDisconnected = null)
     {
         int retryDelay = 1000;
         const int MaxRetryDelay = 30000;
@@ -159,7 +160,12 @@ public sealed class ServerConnection : IDisposable
                 {
                     string? line = await reader.ReadLineAsync(cancellationToken);
 
-                    if (line is null) break;
+                    if (line is null)
+                    {
+                        onDisconnected?.Invoke();
+                        break;
+                    }
+
                     if (!line.StartsWith("data: ")) continue;
 
                     string json = line[6..];
@@ -175,6 +181,7 @@ public sealed class ServerConnection : IDisposable
             catch
             {
                 IsConnected = false;
+                onDisconnected?.Invoke();
             }
 
             if (cancellationToken.IsCancellationRequested) break;

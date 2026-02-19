@@ -1,3 +1,5 @@
+using System.IO;
+using System.Threading.Channels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -99,45 +101,46 @@ public class ManagementController(
 
         await Response.StartAsync(cancellationToken);
 
-        // Send backfill of recent log entries
-        List<LogEntry> recentLogs = await Logger.GetLogs(backfill);
-        foreach (LogEntry entry in recentLogs)
-        {
-            string json = JsonConvert.SerializeObject(entry);
-            await Response.WriteAsync($"data: {json}\n\n", cancellationToken);
-        }
-
-        await Response.Body.FlushAsync(cancellationToken);
-
-        // Subscribe to live log events
-        TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        CancellationTokenRegistration ctr = cancellationToken.Register(() => tcs.TrySetResult());
-
-        void OnLogEmitted(LogEntry entry)
-        {
-            try
+        // Bounded channel: drops oldest if client falls behind
+        Channel<LogEntry> channel = Channel.CreateBounded<LogEntry>(
+            new BoundedChannelOptions(500)
             {
-                string json = JsonConvert.SerializeObject(entry);
-                byte[] data = System.Text.Encoding.UTF8.GetBytes($"data: {json}\n\n");
-                Response.Body.WriteAsync(data, 0, data.Length, cancellationToken)
-                    .ContinueWith(t => Response.Body.FlushAsync(cancellationToken), cancellationToken);
-            }
-            catch
-            {
-                tcs.TrySetResult();
-            }
-        }
+                FullMode = BoundedChannelFullMode.DropOldest,
+                SingleReader = true,
+                SingleWriter = false
+            });
 
+        void OnLogEmitted(LogEntry entry) => channel.Writer.TryWrite(entry);
+
+        // Subscribe before backfill so no events are lost during backfill writes
         Logger.LogEmitted += OnLogEmitted;
 
         try
         {
-            await tcs.Task;
+            // Send backfill of recent log entries
+            List<LogEntry> recentLogs = await Logger.GetLogs(backfill);
+            foreach (LogEntry entry in recentLogs)
+            {
+                string json = JsonConvert.SerializeObject(entry);
+                await Response.WriteAsync($"data: {json}\n\n", cancellationToken);
+            }
+
+            await Response.Body.FlushAsync(cancellationToken);
+
+            // Consume live events from the channel
+            await foreach (LogEntry entry in channel.Reader.ReadAllAsync(cancellationToken))
+            {
+                string json = JsonConvert.SerializeObject(entry);
+                await Response.WriteAsync($"data: {json}\n\n", cancellationToken);
+                await Response.Body.FlushAsync(cancellationToken);
+            }
         }
+        catch (OperationCanceledException) { }
+        catch (IOException) { }
         finally
         {
             Logger.LogEmitted -= OnLogEmitted;
-            ctr.Dispose();
+            channel.Writer.TryComplete();
         }
     }
 

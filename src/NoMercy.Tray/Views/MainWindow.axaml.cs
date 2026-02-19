@@ -23,10 +23,10 @@ public partial class MainWindow : Window
         await _viewModel.ServerControlViewModel.RefreshStatusAsync();
         _viewModel.ServerControlViewModel.StartPolling();
 
-        await _viewModel.LogViewerViewModel.RefreshLogsAsync();
-
         if (_viewModel.LogViewerViewModel.AutoRefresh)
             _viewModel.LogViewerViewModel.StartAutoRefresh();
+        else
+            await _viewModel.LogViewerViewModel.RefreshLogsAsync();
     }
 
     private void OnWindowClosing(
