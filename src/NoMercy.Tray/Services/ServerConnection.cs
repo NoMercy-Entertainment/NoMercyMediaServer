@@ -134,21 +134,25 @@ public sealed class ServerConnection : IDisposable
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            IpcClient? streamClient = null;
             try
             {
-                // Ensure we have a connection before streaming
+                // Ensure server is reachable via the shared client
                 if (!IsConnected)
                     await ConnectAsync(cancellationToken);
 
-                if (_client is null)
+                if (!IsConnected)
                 {
-                    // ConnectAsync failed, wait and retry
                     await Task.Delay(retryDelay, cancellationToken);
                     retryDelay = Math.Min(retryDelay * 2, MaxRetryDelay);
                     continue;
                 }
 
-                using HttpResponseMessage response = await _client.GetStreamAsync(
+                // Use a dedicated IPC client for the long-lived stream
+                // so it doesn't interfere with (or get disposed by) the
+                // shared _client used for status polling / other requests.
+                streamClient = new IpcClient();
+                using HttpResponseMessage response = await streamClient.GetStreamAsync(
                     "/manage/logs/stream", cancellationToken);
                 using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 using StreamReader reader = new(stream);
@@ -162,6 +166,8 @@ public sealed class ServerConnection : IDisposable
 
                     if (line is null)
                     {
+                        // Server closed the stream (e.g. restart)
+                        IsConnected = false;
                         onDisconnected?.Invoke();
                         break;
                     }
@@ -182,6 +188,10 @@ public sealed class ServerConnection : IDisposable
             {
                 IsConnected = false;
                 onDisconnected?.Invoke();
+            }
+            finally
+            {
+                streamClient?.Dispose();
             }
 
             if (cancellationToken.IsCancellationRequested) break;
