@@ -4,8 +4,8 @@
 FROM debian:bookworm-slim
 WORKDIR /app
 
-# Enable non-free-firmware repo for Intel media drivers
-RUN echo "deb http://deb.debian.org/debian bookworm non-free-firmware" >> /etc/apt/sources.list.d/non-free-firmware.list
+# Enable non-free-firmware component for Intel media drivers (bookworm uses DEB822 format)
+RUN sed -i 's/Components: main/Components: main non-free-firmware/' /etc/apt/sources.list.d/debian.sources
 
 # Install Intel media drivers and VAAPI libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
