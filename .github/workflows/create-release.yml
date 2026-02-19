@@ -73,6 +73,9 @@ jobs:
           # Copy macOS installer to release
           find ./artifacts -path "*/macos-installer/*" -name "*.pkg" -exec cp {} ./output/ \;
 
+          # Copy Docker Compose files to release
+          cp ./docker-compose*.yml ./output/
+
           echo "=== Release artifacts ==="
           ls -la ./output/
 
