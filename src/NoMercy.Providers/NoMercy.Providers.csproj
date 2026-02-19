@@ -28,7 +28,6 @@
 
     <ItemGroup>
         <PackageReference Include="AcoustID.NET"/>
-        <PackageReference Include="Castle.Core"/>
         <PackageReference Include="ExtendedNumerics.BigRational" />
         <PackageReference Include="Microsoft.Extensions.Http" />
         <PackageReference Include="MusixmatchClientLib"/>

@@ -31,7 +31,7 @@
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
 
-        <Version>0.1.238</Version>
+        <Version>0.1.239</Version>
         <AssemblyVersion>$(Version).0</AssemblyVersion>
         <FileVersion>$(Version).0</FileVersion>
     </PropertyGroup>
@@ -41,7 +41,7 @@
         <PackageReference Include="Asp.Versioning.Mvc" />
         <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
         <PackageReference Include="AspNetCore.SwaggerUI.Themes" />
-        <PackageReference Include="Castle.Core" />
+        <PackageReference Include="CommandLineParser" />
         <PackageReference Include="H.NotifyIcon" />
         <PackageReference Include="I18N.DotNet" />
         <PackageReference Include="MediaBrowser.Model.Signed" />

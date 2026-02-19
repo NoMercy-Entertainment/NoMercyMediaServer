@@ -38,9 +38,8 @@ services:
       - render
     volumes:
       # Configuration and data persistence
-      - nomercy-config:/data/config
-      - nomercy-cache:/data/cache
-      - nomercy-log:/data/log
+      # The app stores all data under $HOME/.local/share/NoMercy/
+      - nomercy-data:/data/.local/share/NoMercy
       # Mount your media libraries (adjust paths as needed)
       # rw = read-write for metadata, thumbnails, and transcoding
       - /path/to/your/movies:/media/movies:rw
@@ -67,9 +66,5 @@ services:
       start_period: 60s
 
 volumes:
-  nomercy-config:
-    name: nomercy-config
-  nomercy-cache:
-    name: nomercy-cache
-  nomercy-log:
-    name: nomercy-log
+  nomercy-data:
+    name: nomercy-data

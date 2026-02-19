@@ -12,8 +12,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="BenchmarkDotNet" />
-        <PackageReference Include="Castle.Core"/>
         <PackageReference Include="HeyRed.ImageSharp.Heif"/>
         <PackageReference Include="LibHeif.Native"/>
         <PackageReference Include="LibreHardwareMonitorLib" />

@@ -22,11 +22,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core"/>
-        <PackageReference Include="Moq"/>
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Ulid" />
-        <PackageReference Include="xunit"/>
     </ItemGroup>
 
 </Project>
