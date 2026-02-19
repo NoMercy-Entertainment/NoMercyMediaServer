@@ -61,13 +61,15 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
             $"Content-Length: {contentLength}");
     }
 
-    [Fact]
-    public async Task CorsPreFlight_ReturnsSuccess_ForAllowedOrigin()
+    [Theory]
+    [InlineData("https://nomercy.tv")]
+    [InlineData("http://localhost:7625")]
+    public async Task CorsPreFlight_ReturnsSuccess_ForAllowedOrigin(string origin)
     {
         HttpClient client = _factory.CreateClient();
 
         HttpRequestMessage request = new(HttpMethod.Options, "/api/v1/setup/permissions");
-        request.Headers.Add("Origin", "https://nomercy.tv");
+        request.Headers.Add("Origin", origin);
         request.Headers.Add("Access-Control-Request-Method", "GET");
         request.Headers.Add("Access-Control-Request-Headers", "Authorization");
 
@@ -76,12 +78,12 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
         // Pre-flight should succeed (2xx or 204)
         Assert.True(
             (int)response.StatusCode >= 200 && (int)response.StatusCode < 300,
-            $"CORS pre-flight expected 2xx, got {(int)response.StatusCode}");
+            $"CORS pre-flight expected 2xx for {origin}, got {(int)response.StatusCode}");
 
         // Should include CORS headers
         Assert.True(
             response.Headers.Contains("Access-Control-Allow-Origin"),
-            "Response should contain Access-Control-Allow-Origin header");
+            $"Response should contain Access-Control-Allow-Origin header for {origin}");
     }
 
     [Fact]
@@ -107,7 +109,6 @@ public class MiddlewareOrderingTests : IClassFixture<NoMercyApiFactory>
     [InlineData("http://192.168.2.201:5502")]
     [InlineData("http://192.168.2.201:5503")]
     [InlineData("http://localhost")]
-    [InlineData("http://localhost:7625")]
     [InlineData("https://localhost")]
     public async Task CorsPreFlight_DevOrigins_NotAllowed_InNonDevMode(string devOrigin)
     {
