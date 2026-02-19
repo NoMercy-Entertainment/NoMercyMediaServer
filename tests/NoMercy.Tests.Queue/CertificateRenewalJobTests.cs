@@ -5,14 +5,14 @@ using Xunit;
 
 namespace NoMercy.Tests.Queue;
 
-public class CertificateRenewalJobTests
+public class CertificateRenewalCronJobTests
 {
     [Fact]
     public void CronExpression_ReturnsDaily2AM()
     {
         // Arrange
-        Mock<ILogger<CertificateRenewalJob>> logger = new();
-        CertificateRenewalJob job = new(logger.Object);
+        Mock<ILogger<CertificateRenewalCronJob>> logger = new();
+        CertificateRenewalCronJob job = new(logger.Object);
 
         // Act
         string cronExpression = job.CronExpression;
@@ -27,8 +27,8 @@ public class CertificateRenewalJobTests
     public void JobName_ReturnsCorrectName()
     {
         // Arrange
-        Mock<ILogger<CertificateRenewalJob>> logger = new();
-        CertificateRenewalJob job = new(logger.Object);
+        Mock<ILogger<CertificateRenewalCronJob>> logger = new();
+        CertificateRenewalCronJob job = new(logger.Object);
 
         // Act
         string jobName = job.JobName;
@@ -41,8 +41,8 @@ public class CertificateRenewalJobTests
     public async Task ExecuteAsync_LogsStartAndCompletion()
     {
         // Arrange
-        Mock<ILogger<CertificateRenewalJob>> loggerMock = new();
-        CertificateRenewalJob job = new(loggerMock.Object);
+        Mock<ILogger<CertificateRenewalCronJob>> loggerMock = new();
+        CertificateRenewalCronJob job = new(loggerMock.Object);
 
         // Act & Assert
         // Note: This test will fail in the test environment because Certificate.RenewSslCertificate()
@@ -70,24 +70,24 @@ public class CertificateRenewalJobTests
     }
 
     [Fact]
-    public void CertificateRenewalJob_ImplementsICronJobExecutor()
+    public void CertificateRenewalCronJob_ImplementsICronJobExecutor()
     {
         // Arrange
-        Mock<ILogger<CertificateRenewalJob>> logger = new();
+        Mock<ILogger<CertificateRenewalCronJob>> logger = new();
 
         // Act
-        CertificateRenewalJob job = new(logger.Object);
+        CertificateRenewalCronJob job = new(logger.Object);
 
         // Assert
         Assert.IsAssignableFrom<NoMercy.Queue.Interfaces.ICronJobExecutor>(job);
     }
 
     [Fact]
-    public void CertificateRenewalJob_HasRequiredProperties()
+    public void CertificateRenewalCronJob_HasRequiredProperties()
     {
         // Arrange
-        Mock<ILogger<CertificateRenewalJob>> logger = new();
-        CertificateRenewalJob job = new(logger.Object);
+        Mock<ILogger<CertificateRenewalCronJob>> logger = new();
+        CertificateRenewalCronJob job = new(logger.Object);
 
         // Act & Assert
         Assert.NotNull(job.CronExpression);

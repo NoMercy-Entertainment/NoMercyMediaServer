@@ -13,7 +13,7 @@ public class MusicJob : IShouldQueue, IDisposable, IAsyncDisposable
 {
     private readonly MediaContext _mediaContext = new();
 
-    public string QueueName => "queue";
+    public string QueueName => "import";
     public int Priority => 5;
 
     public string? Folder { get; set; }

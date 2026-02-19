@@ -303,7 +303,7 @@ public class SpecialsController(MediaContext mediaContext) : BaseController
         //
         //                 titles.Add(res[0].Title);
         //
-        //                 AddMovieJob addMovieJob = new AddMovieJob(id:res[0].Id, specialId:special.Id.ToString());
+        //                 MovieImportJob addMovieJob = new MovieImportJob(id:res[0].Id, specialId:special.Id.ToString());
         //                 JobDispatcher.Dispatch(addMovieJob, "queue", 5);
         //                 break;
         //             }
@@ -321,7 +321,7 @@ public class SpecialsController(MediaContext mediaContext) : BaseController
         //
         //                 titles.Add(res[0].Name);
         //
-        //                 AddShowJob addShowJob = new AddShowJob(id:res[0].Id, specialId:special.Id.ToString());
+        //                 ShowImportJob addShowJob = new ShowImportJob(id:res[0].Id, specialId:special.Id.ToString());
         //                 JobDispatcher.Dispatch(addShowJob, "queue", 5);
         //                 break;
         //             }

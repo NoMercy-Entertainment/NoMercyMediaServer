@@ -148,8 +148,8 @@ public class TasksController(MediaContext mediaContext) : BaseController
             .ThenBy(j => j.CreatedAt)
             .ToImmutableList();
 
-        List<EncodeVideoJob> encoderJobs = jobs
-            .Select(job => job.Payload.FromJson<EncodeVideoJob>())
+        List<VideoEncodeJob> encoderJobs = jobs
+            .Select(job => job.Payload.FromJson<VideoEncodeJob>())
             .Where(job => job is not null)
             .ToList()!;
 
@@ -192,11 +192,11 @@ public class TasksController(MediaContext mediaContext) : BaseController
                     ?.EncoderProfile.Name
             }).ToArray();
 
-        IEnumerable<EncodeVideoJob> runningJobs = encoderJobs
+        IEnumerable<VideoEncodeJob> runningJobs = encoderJobs
             .Where(j => j.Status == "running");
 
         if (EventBusProvider.IsConfigured)
-            foreach (EncodeVideoJob job in runningJobs)
+            foreach (VideoEncodeJob job in runningJobs)
                 _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
                 {
                     ProgressData = new Progress
@@ -214,7 +214,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
         });
     }
 
-    private static string GetTitle(List<Folder> folders, EncodeVideoJob j)
+    private static string GetTitle(List<Folder> folders, VideoEncodeJob j)
     {
         Movie? movie = folders.FirstOrDefault(f => f.Id == j.FolderId)
             ?.FolderLibraries.FirstOrDefault()

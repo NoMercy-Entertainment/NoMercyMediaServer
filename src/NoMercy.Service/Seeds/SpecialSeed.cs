@@ -111,7 +111,7 @@ public static class SpecialSeed
             bool exists = context.Movies.Any(x => x.Id == movie.Id);
             if (!exists)
             {
-                AddMovieJob j = new() { Id = movie.Id, LibraryId = movieLibrary.Id };
+                MovieImportJob j = new() { Id = movie.Id, LibraryId = movieLibrary.Id };
                 await j.Handle();
             }
         }
@@ -144,7 +144,7 @@ public static class SpecialSeed
             bool exists = context.Tvs.Any(x => x.Id == tv.Id);
             if (!exists)
             {
-                AddShowJob j = new() { Id = tv.Id, LibraryId = tvLibrary.Id };
+                ShowImportJob j = new() { Id = tv.Id, LibraryId = tvLibrary.Id };
                 await j.Handle();
             }
         }

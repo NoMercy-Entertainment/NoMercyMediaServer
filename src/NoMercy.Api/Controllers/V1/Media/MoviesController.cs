@@ -203,7 +203,7 @@ public class MoviesController(
 
         try
         {
-            jobDispatcher.DispatchJob<RescanFilesJob>(id, movie.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(id, movie.LibraryId);
         }
         catch (Exception e)
         {
@@ -236,7 +236,7 @@ public class MoviesController(
 
         try
         {
-            jobDispatcher.DispatchJob<AddMovieJob>(id, movie.Library.Id);
+            jobDispatcher.DispatchJob<MovieImportJob>(id, movie.Library.Id);
         }
         catch (Exception e)
         {
@@ -268,7 +268,7 @@ public class MoviesController(
 
         try
         {
-            jobDispatcher.DispatchJob<AddMovieJob>(id, library.Id);
+            jobDispatcher.DispatchJob<MovieImportJob>(id, library.Id);
         }
         catch (Exception e)
         {

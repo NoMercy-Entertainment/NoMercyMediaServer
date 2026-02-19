@@ -69,7 +69,7 @@ public class PersonManager(
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.TvShow);
         Logger.MovieDb($"Show {show.Name}: Crew stored", LogEventLevel.Debug);
 
-        jobDispatcher.DispatchJob<AddPersonExtraDataJob, TmdbPersonAppends>(peopleAppends, show.Name);
+        jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(peopleAppends, show.Name);
     }
 
     public async Task Store(TmdbSeasonAppends season)
@@ -218,7 +218,7 @@ public class PersonManager(
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Movie);
         Logger.MovieDb($"Movie: {movie.Title}: Crew stored", LogEventLevel.Debug);
 
-        jobDispatcher.DispatchJob<AddPersonExtraDataJob, TmdbPersonAppends>(peopleAppends, movie.Title);
+        jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(peopleAppends, movie.Title);
     }
 
     public Task Update(string showName, TmdbTvShowAppends show)

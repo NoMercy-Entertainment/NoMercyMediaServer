@@ -115,7 +115,7 @@ public class ShowManager(
 
         Logger.MovieDb($"Show {showAppends.Name}: Added to Library {library.Title}");
 
-        jobDispatcher.DispatchJob<AddShowExtraDataJob, TmdbTvShowAppends>(showAppends);
+        jobDispatcher.DispatchJob<ShowExtrasJob, TmdbTvShowAppends>(showAppends);
 
         return showAppends;
     }

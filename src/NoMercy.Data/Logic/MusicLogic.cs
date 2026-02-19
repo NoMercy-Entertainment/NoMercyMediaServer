@@ -309,7 +309,7 @@ public partial class MusicLogic : IAsyncDisposable
             foreach (MusicBrainzGenreDetails genre in musicBrainzRelease.MusicBrainzReleaseGroup.Genres ?? [])
                 await LinkGenreToReleaseGroup(musicBrainzRelease.MusicBrainzReleaseGroup, genre);
 
-            MusicDescriptionJob musicDescriptionJob = new(musicBrainzRelease.MusicBrainzReleaseGroup);
+            MusicMetadataJob musicDescriptionJob = new(musicBrainzRelease.MusicBrainzReleaseGroup);
             QueueRunner.Current!.Dispatcher.Dispatch(musicDescriptionJob);
         }
         catch (Exception e)
@@ -465,7 +465,7 @@ public partial class MusicLogic : IAsyncDisposable
             Logger.App(e.Message, LogEventLevel.Error);
         }
 
-        MusicDescriptionJob musicDescriptionJob = new() { MusicBrainzArtist = musicBrainzArtist };
+        MusicMetadataJob musicDescriptionJob = new() { MusicBrainzArtist = musicBrainzArtist };
         QueueRunner.Current!.Dispatcher.Dispatch(musicDescriptionJob);
 
         FanArtImagesJob fanartImagesJob = new(musicBrainzArtist);

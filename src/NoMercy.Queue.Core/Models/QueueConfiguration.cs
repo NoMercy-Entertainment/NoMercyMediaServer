@@ -4,12 +4,14 @@ public record QueueConfiguration
 {
     public Dictionary<string, int> WorkerCounts { get; init; } = new()
     {
-        ["queue"] = 1,
+        ["library"] = 1,
+        ["import"] = 1,
+        ["extras"] = 10,
         ["encoder"] = 2,
         ["cron"] = 1,
-        ["data"] = 10,
         ["image"] = 5,
-        ["file"] = 2
+        ["file"] = 2,
+        ["music"] = 1
     };
 
     public byte MaxAttempts { get; init; } = 3;

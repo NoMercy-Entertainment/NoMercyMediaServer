@@ -21,12 +21,14 @@ public static class ServiceRegistration
             {
                 WorkerCounts = new()
                 {
-                    [Config.QueueWorkers.Key] = Config.QueueWorkers.Value,
+                    [Config.LibraryWorkers.Key] = Config.LibraryWorkers.Value,
+                    [Config.ImportWorkers.Key] = Config.ImportWorkers.Value,
+                    [Config.ExtrasWorkers.Key] = Config.ExtrasWorkers.Value,
                     [Config.EncoderWorkers.Key] = Config.EncoderWorkers.Value,
                     [Config.CronWorkers.Key] = Config.CronWorkers.Value,
-                    [Config.DataWorkers.Key] = Config.DataWorkers.Value,
                     [Config.ImageWorkers.Key] = Config.ImageWorkers.Value,
-                    [Config.FileWorkers.Key] = Config.FileWorkers.Value
+                    [Config.FileWorkers.Key] = Config.FileWorkers.Value,
+                    [Config.MusicWorkers.Key] = Config.MusicWorkers.Value
                 }
             };
             return new(queueContext, configuration, configStore);

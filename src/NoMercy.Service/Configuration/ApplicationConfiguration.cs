@@ -37,9 +37,9 @@ public static class ApplicationConfiguration
     private static void ConfigureCronJobs(IApplicationBuilder app)
     {
         CronWorker cronWorker = app.ApplicationServices.GetRequiredService<CronWorker>();
-        cronWorker.RegisterJobWithSchedule<CertificateRenewalJob>("certificate-renewal", app.ApplicationServices);
-        
-        cronWorker.RegisterJobWithSchedule<TvPaletteCronJob>("tv-palette-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<CertificateRenewalCronJob>("certificate-renewal", app.ApplicationServices);
+
+        cronWorker.RegisterJobWithSchedule<ShowPaletteCronJob>("show-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<SeasonPaletteCronJob>("season-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<EpisodePaletteCronJob>("episode-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<MoviePaletteCronJob>("movie-palette-job", app.ApplicationServices);
@@ -50,7 +50,7 @@ public static class ApplicationConfiguration
         cronWorker.RegisterJobWithSchedule<RecommendationPaletteCronJob>("recommendation-palette-job", app.ApplicationServices);
         cronWorker.RegisterJobWithSchedule<SimilarPaletteCronJob>("similar-palette-job", app.ApplicationServices);
         
-        cronWorker.RegisterJobWithSchedule<FanartArtistImagesCronJob>("fanart-images-job", app.ApplicationServices);
+        cronWorker.RegisterJobWithSchedule<ArtistFanartCronJob>("artist-fanart-job", app.ApplicationServices);
         // cronWorker.RegisterJobWithSchedule<ArtistPaletteCronJob>("artist-palette-job", app.ApplicationServices);
         // cronWorker.RegisterJobWithSchedule<AlbumPaletteCronJob>("album-palette-job", app.ApplicationServices);
     }

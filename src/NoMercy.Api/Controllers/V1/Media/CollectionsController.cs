@@ -264,7 +264,7 @@ public class CollectionsController(
         {
             foreach (CollectionMovie collectionMovie in collection.CollectionMovies)
             {
-                jobDispatcher.DispatchJob<RescanFilesJob>(collectionMovie.MovieId, collectionMovie.Movie.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(collectionMovie.MovieId, collectionMovie.Movie.LibraryId);
             }
         }
         catch (Exception e)
@@ -302,7 +302,7 @@ public class CollectionsController(
         {
             foreach (CollectionMovie collectionMovie in collection.CollectionMovies)
             {
-                jobDispatcher.DispatchJob<AddMovieJob>(collectionMovie.MovieId, collectionMovie.Movie.LibraryId);
+                jobDispatcher.DispatchJob<MovieImportJob>(collectionMovie.MovieId, collectionMovie.Movie.LibraryId);
             }
         }
         catch (Exception e)
@@ -347,7 +347,7 @@ public class CollectionsController(
         {
             foreach (CollectionMovie collectionMovie in collection.CollectionMovies)
             {
-                jobDispatcher.DispatchJob<AddMovieJob>(collectionMovie.MovieId, collectionMovie.Movie.LibraryId);
+                jobDispatcher.DispatchJob<MovieImportJob>(collectionMovie.MovieId, collectionMovie.Movie.LibraryId);
             }
         }
         catch (Exception e)

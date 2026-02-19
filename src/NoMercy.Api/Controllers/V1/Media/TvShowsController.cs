@@ -213,7 +213,7 @@ public class TvShowsController(
 
         try
         {
-            jobDispatcher.DispatchJob<RescanFilesJob>(id, tv.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(id, tv.LibraryId);
         }
         catch (Exception e)
         {
@@ -257,7 +257,7 @@ public class TvShowsController(
             .Where(f => f.Type == "tv")
             .FirstOrDefaultAsync(ct);
 
-        jobDispatcher.DispatchJob<AddShowJob>(id, tvLibrary?.Id ?? tv.Library.Id);
+        jobDispatcher.DispatchJob<ShowImportJob>(id, tvLibrary?.Id ?? tv.Library.Id);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -291,7 +291,7 @@ public class TvShowsController(
 
         try
         {
-            jobDispatcher.DispatchJob<AddShowJob>(id, library.Id);
+            jobDispatcher.DispatchJob<ShowImportJob>(id, library.Id);
         }
         catch (Exception e)
         {

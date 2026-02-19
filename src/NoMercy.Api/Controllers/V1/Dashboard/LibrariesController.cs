@@ -332,12 +332,12 @@ public class LibrariesController(
         {
             foreach (LibraryMovie movie in library.LibraryMovies)
             {
-                jobDispatcher.DispatchJob<RescanFilesJob>(movie.MovieId, movie.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
             }
 
             foreach (LibraryTv show in library.LibraryTvs)
             {
-                jobDispatcher.DispatchJob<RescanFilesJob>(show.TvId, show.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
             }
         }
 
@@ -363,12 +363,12 @@ public class LibrariesController(
 
         foreach (LibraryMovie movie in library.LibraryMovies)
         {
-            jobDispatcher.DispatchJob<RescanFilesJob>(movie.MovieId, movie.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
         }
 
         foreach (LibraryTv show in library.LibraryTvs)
         {
-            jobDispatcher.DispatchJob<RescanFilesJob>(show.TvId, show.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
         }
 
         return Ok(new StatusResponseDto<List<dynamic>>
@@ -398,7 +398,7 @@ public class LibrariesController(
         
         foreach (Library library in librariesList)
         {
-            jobDispatcher.DispatchJob<RescanLibraryJob>(library.Id);
+            jobDispatcher.DispatchJob<LibraryRescanJob>(library.Id);
         }
 
         return Ok(new StatusResponseDto<List<string?>>
@@ -419,7 +419,7 @@ public class LibrariesController(
         if (library is null)
             return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Library not found" });
 
-        jobDispatcher.DispatchJob<RescanLibraryJob>(id);
+        jobDispatcher.DispatchJob<LibraryRescanJob>(id);
 
         return Ok(new StatusResponseDto<List<dynamic>>
         {
@@ -446,7 +446,7 @@ public class LibrariesController(
 
         foreach (Library library in librariesList)
         {
-            jobDispatcher.DispatchJob<ScanNewLibraryItemsJob>(library.Id);
+            jobDispatcher.DispatchJob<LibraryScanJob>(library.Id);
         }
 
         return Ok(new StatusResponseDto<List<string?>>
@@ -467,7 +467,7 @@ public class LibrariesController(
         if (library is null)
             return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Library not found" });
 
-        jobDispatcher.DispatchJob<ScanNewLibraryItemsJob>(id);
+        jobDispatcher.DispatchJob<LibraryScanJob>(id);
 
         return Ok(new StatusResponseDto<List<dynamic>>
         {

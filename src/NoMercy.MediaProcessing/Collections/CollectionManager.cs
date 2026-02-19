@@ -49,7 +49,7 @@ public class CollectionManager(
 
         await StoreTranslations(collectionAppends);
 
-        jobDispatcher.DispatchJob<AddCollectionExtraDataJob, TmdbCollectionAppends>(collectionAppends);
+        jobDispatcher.DispatchJob<CollectionExtrasJob, TmdbCollectionAppends>(collectionAppends);
 
         Logger.MovieDb($"Collection: {collectionAppends.Name}: Added to Library {library.Title}", LogEventLevel.Debug);
 

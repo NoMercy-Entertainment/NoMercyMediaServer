@@ -71,13 +71,14 @@ public static class Config
     public static bool UpdateAvailable { get; set; }
     public static string? LatestVersion { get; set; }
 
-    public static KeyValuePair<string, int> QueueWorkers { get; set; } = new("queue", 1);
+    public static KeyValuePair<string, int> LibraryWorkers { get; set; } = new("library", 1);
+    public static KeyValuePair<string, int> ImportWorkers { get; set; } = new("import", 1);
+    public static KeyValuePair<string, int> ExtrasWorkers { get; set; } = new("extras", 10);
     public static KeyValuePair<string, int> EncoderWorkers { get; set; } = new("encoder", 2);
     public static KeyValuePair<string, int> CronWorkers { get; set; } = new("cron", 1);
-    public static KeyValuePair<string, int> DataWorkers { get; set; } = new("data", 10);
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 5);
     public static KeyValuePair<string, int> FileWorkers { get; set; } = new("file", 2);
-    public static KeyValuePair<string, int> RequestWorkers { get; set; } = new("request", 15);
+    public static KeyValuePair<string, int> MusicWorkers { get; set; } = new("music", 1);
     
     public static readonly ParallelOptions ParallelOptions = new()
     {

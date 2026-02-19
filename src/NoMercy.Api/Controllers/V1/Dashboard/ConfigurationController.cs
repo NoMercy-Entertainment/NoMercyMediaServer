@@ -35,13 +35,14 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
             {
                 InternalServerPort = Config.InternalServerPort,
                 ExternalServerPort = Config.ExternalServerPort,
-                QueueWorkers = Config.QueueWorkers.Value,
+                LibraryWorkers = Config.LibraryWorkers.Value,
+                ImportWorkers = Config.ImportWorkers.Value,
+                ExtrasWorkers = Config.ExtrasWorkers.Value,
                 EncoderWorkers = Config.EncoderWorkers.Value,
                 CronWorkers = Config.CronWorkers.Value,
-                DataWorkers = Config.DataWorkers.Value,
                 ImageWorkers = Config.ImageWorkers.Value,
                 FileWorkers = Config.FileWorkers.Value,
-                RequestWorkers = Config.RequestWorkers.Value,
+                MusicWorkers = Config.MusicWorkers.Value,
                 ServerName = DeviceName(),
                 Swagger = Config.Swagger
             }
@@ -111,10 +112,22 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
                 .RunAsync();
         }
 
-        if (request.QueueWorkers is not null)
+        if (request.LibraryWorkers is not null)
         {
-            Config.QueueWorkers = new(Config.QueueWorkers.Key, (int)request.QueueWorkers);
-            await queueRunner.SetWorkerCount(Config.QueueWorkers.Key, (int)request.QueueWorkers, userId);
+            Config.LibraryWorkers = new(Config.LibraryWorkers.Key, (int)request.LibraryWorkers);
+            await queueRunner.SetWorkerCount(Config.LibraryWorkers.Key, (int)request.LibraryWorkers, userId);
+        }
+
+        if (request.ImportWorkers is not null)
+        {
+            Config.ImportWorkers = new(Config.ImportWorkers.Key, (int)request.ImportWorkers);
+            await queueRunner.SetWorkerCount(Config.ImportWorkers.Key, (int)request.ImportWorkers, userId);
+        }
+
+        if (request.ExtrasWorkers is not null)
+        {
+            Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, (int)request.ExtrasWorkers);
+            await queueRunner.SetWorkerCount(Config.ExtrasWorkers.Key, (int)request.ExtrasWorkers, userId);
         }
 
         if (request.EncoderWorkers is not null)
@@ -129,12 +142,6 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
             await queueRunner.SetWorkerCount(Config.CronWorkers.Key, (int)request.CronWorkers, userId);
         }
 
-        if (request.DataWorkers is not null)
-        {
-            Config.DataWorkers = new(Config.DataWorkers.Key, (int)request.DataWorkers);
-            await queueRunner.SetWorkerCount(Config.DataWorkers.Key, (int)request.DataWorkers, userId);
-        }
-
         if (request.ImageWorkers is not null)
         {
             Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
@@ -147,10 +154,10 @@ public class ConfigurationController(MediaContext mediaContext, QueueRunner queu
             await queueRunner.SetWorkerCount(Config.FileWorkers.Key, (int)request.FileWorkers, userId);
         }
 
-        if (request.RequestWorkers is not null)
+        if (request.MusicWorkers is not null)
         {
-            Config.RequestWorkers = new(Config.RequestWorkers.Key, (int)request.RequestWorkers);
-            await queueRunner.SetWorkerCount(Config.RequestWorkers.Key, (int)request.RequestWorkers, userId);
+            Config.MusicWorkers = new(Config.MusicWorkers.Key, (int)request.MusicWorkers);
+            await queueRunner.SetWorkerCount(Config.MusicWorkers.Key, (int)request.MusicWorkers, userId);
         }
 
         if (request.Swagger is not null)

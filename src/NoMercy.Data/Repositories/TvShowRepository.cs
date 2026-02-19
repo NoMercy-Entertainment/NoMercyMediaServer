@@ -231,7 +231,7 @@ public class TvShowRepository(MediaContext context)
         if (tvLibrary == null) return;
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<AddShowJob>(id, tvLibrary);
+        jobDispatcher.DispatchJob<ShowImportJob>(id, tvLibrary);
     }
 
     public Task DeleteAsync(int id, CancellationToken ct = default)

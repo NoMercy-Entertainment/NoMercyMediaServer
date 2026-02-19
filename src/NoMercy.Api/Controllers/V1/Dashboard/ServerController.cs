@@ -217,7 +217,7 @@ public class ServerController(
             {
                 Logger.App("Adding music files to library", LogEventLevel.Verbose);
                 string directoryPath = Path.GetFullPath(request.Files[0].Path);
-                jobDispatcher.DispatchJob<ProcessReleaseFolderJob>(
+                jobDispatcher.DispatchJob<ReleaseImportJob>(
                     library.Id,
                     request.FolderId,
                     request.Files[0].Id.ToGuid(),
@@ -229,7 +229,7 @@ public class ServerController(
             foreach (AddFile file in request.Files)
             {
                 string filePath = Path.GetFullPath(file.Path);
-                jobDispatcher.DispatchJob<EncodeVideoJob>(
+                jobDispatcher.DispatchJob<VideoEncodeJob>(
                     library.Id,
                     request.FolderId,
                     file.Id,

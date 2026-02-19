@@ -315,7 +315,7 @@ public partial class RecordingManager(
                     LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId
                 };
                 await artistRepository.StoreAsync(artistEntity);
-                jobDispatcher.DispatchJob<MusicDescriptionJob>(artist);
+                jobDispatcher.DispatchJob<MusicMetadataJob>(artist);
             }
             catch (Exception e)
             {
@@ -376,7 +376,7 @@ public partial class RecordingManager(
 
         Logger.MusicBrainz($"Recording {trackAppends.Title} stored", LogEventLevel.Verbose);
         
-        // jobDispatcher.DispatchJob<TrackLyricsJob>(insert);
+        // jobDispatcher.DispatchJob<LyricFetchJob>(insert);
     }
 
     private async Task LinkToArtist(Track insert, MusicBrainzArtistAppends[] artistAppends)

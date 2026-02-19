@@ -99,7 +99,7 @@ public class MovieManager(
 
         Logger.MovieDb($"Movie: {movieAppends.Title}: Added to Library {library.Title}");
 
-        jobDispatcher.DispatchJob<AddMovieExtraDataJob, TmdbMovieAppends>(movieAppends);
+        jobDispatcher.DispatchJob<MovieExtrasJob, TmdbMovieAppends>(movieAppends);
 
         return movieAppends;
     }

@@ -179,7 +179,7 @@ public class FileWatcherEventHandler : IDisposable
         Logger.System($"FileWatcher: Movie '{movie.Title}' found on TMDB (ID: {movie.Id}), dispatching job", LogEventLevel.Information);
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<AddMovieJob>(movie.Id, @event.LibraryId);
+        jobDispatcher.DispatchJob<MovieImportJob>(movie.Id, @event.LibraryId);
     }
 
     private static async Task HandleTvFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)
@@ -206,7 +206,7 @@ public class FileWatcherEventHandler : IDisposable
         Logger.System($"FileWatcher: TV Show '{show.Name}' found on TMDB (ID: {show.Id}), dispatching job", LogEventLevel.Information);
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<AddShowJob>(show.Id, @event.LibraryId);
+        jobDispatcher.DispatchJob<ShowImportJob>(show.Id, @event.LibraryId);
     }
 
     private static void HandleMusicFolder(FileCreatedEvent @event, MediaFolderExtend mediaFolder)

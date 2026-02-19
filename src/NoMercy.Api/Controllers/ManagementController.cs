@@ -223,13 +223,14 @@ public class ManagementController(
             InternalPort = Config.InternalServerPort,
             ExternalPort = Config.ExternalServerPort,
             ServerName = serverNameConfig?.Value ?? Environment.MachineName,
-            QueueWorkers = Config.QueueWorkers.Value,
+            LibraryWorkers = Config.LibraryWorkers.Value,
+            ImportWorkers = Config.ImportWorkers.Value,
+            ExtrasWorkers = Config.ExtrasWorkers.Value,
             EncoderWorkers = Config.EncoderWorkers.Value,
             CronWorkers = Config.CronWorkers.Value,
-            DataWorkers = Config.DataWorkers.Value,
             ImageWorkers = Config.ImageWorkers.Value,
             FileWorkers = Config.FileWorkers.Value,
-            RequestWorkers = Config.RequestWorkers.Value,
+            MusicWorkers = Config.MusicWorkers.Value,
             Swagger = Config.Swagger
         });
     }
@@ -238,10 +239,22 @@ public class ManagementController(
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateConfig([FromBody] ManagementConfigUpdateDto request)
     {
-        if (request.QueueWorkers is not null)
+        if (request.LibraryWorkers is not null)
         {
-            Config.QueueWorkers = new(Config.QueueWorkers.Key, (int)request.QueueWorkers);
-            await queueRunner.SetWorkerCount(Config.QueueWorkers.Key, (int)request.QueueWorkers, null);
+            Config.LibraryWorkers = new(Config.LibraryWorkers.Key, (int)request.LibraryWorkers);
+            await queueRunner.SetWorkerCount(Config.LibraryWorkers.Key, (int)request.LibraryWorkers, null);
+        }
+
+        if (request.ImportWorkers is not null)
+        {
+            Config.ImportWorkers = new(Config.ImportWorkers.Key, (int)request.ImportWorkers);
+            await queueRunner.SetWorkerCount(Config.ImportWorkers.Key, (int)request.ImportWorkers, null);
+        }
+
+        if (request.ExtrasWorkers is not null)
+        {
+            Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, (int)request.ExtrasWorkers);
+            await queueRunner.SetWorkerCount(Config.ExtrasWorkers.Key, (int)request.ExtrasWorkers, null);
         }
 
         if (request.EncoderWorkers is not null)
@@ -256,12 +269,6 @@ public class ManagementController(
             await queueRunner.SetWorkerCount(Config.CronWorkers.Key, (int)request.CronWorkers, null);
         }
 
-        if (request.DataWorkers is not null)
-        {
-            Config.DataWorkers = new(Config.DataWorkers.Key, (int)request.DataWorkers);
-            await queueRunner.SetWorkerCount(Config.DataWorkers.Key, (int)request.DataWorkers, null);
-        }
-
         if (request.ImageWorkers is not null)
         {
             Config.ImageWorkers = new(Config.ImageWorkers.Key, (int)request.ImageWorkers);
@@ -274,10 +281,10 @@ public class ManagementController(
             await queueRunner.SetWorkerCount(Config.FileWorkers.Key, (int)request.FileWorkers, null);
         }
 
-        if (request.RequestWorkers is not null)
+        if (request.MusicWorkers is not null)
         {
-            Config.RequestWorkers = new(Config.RequestWorkers.Key, (int)request.RequestWorkers);
-            await queueRunner.SetWorkerCount(Config.RequestWorkers.Key, (int)request.RequestWorkers, null);
+            Config.MusicWorkers = new(Config.MusicWorkers.Key, (int)request.MusicWorkers);
+            await queueRunner.SetWorkerCount(Config.MusicWorkers.Key, (int)request.MusicWorkers, null);
         }
 
         if (request.ServerName is not null)

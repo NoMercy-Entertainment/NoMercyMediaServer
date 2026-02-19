@@ -107,7 +107,7 @@ public class ArtistManager(
         };
 
         await artistRepository.StoreAsync(artist);
-        jobDispatcher.DispatchJob<MusicDescriptionJob>(artistCredit);
+        jobDispatcher.DispatchJob<MusicMetadataJob>(artistCredit);
         
         await LinkToLibrary(artistCredit, library);
         await LinkToRelease(artistCredit, releaseAppends);
@@ -175,7 +175,7 @@ public class ArtistManager(
         };
 
         await artistRepository.StoreAsync(artist);
-        jobDispatcher.DispatchJob<MusicDescriptionJob>(artistCredit);
+        jobDispatcher.DispatchJob<MusicMetadataJob>(artistCredit);
 
         await LinkToLibrary(artistCredit, library);
         await LinkToTrack(artistCredit, track);

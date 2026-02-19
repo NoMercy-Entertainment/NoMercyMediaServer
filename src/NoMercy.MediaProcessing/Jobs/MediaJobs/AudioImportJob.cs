@@ -25,7 +25,7 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class AudioImportJob : AbstractMusicFolderJob
 {
-    public override string QueueName => "queue";
+    public override string QueueName => "import";
     public override int Priority => 6;
 
     private MediaFolderExtend? _rootFolder;
@@ -97,7 +97,7 @@ public class AudioImportJob : AbstractMusicFolderJob
                     albumLibrary, folderLibrary, files, musicBrainzArtistClient, artistManager, jobDispatcher, musicBrainzRecordingClient,
                     recordingManager);
 
-                jobDispatcher.DispatchJob<MusicDescriptionJob>(singleRelease.MusicBrainzReleaseGroup);
+                jobDispatcher.DispatchJob<MusicMetadataJob>(singleRelease.MusicBrainzReleaseGroup);
                 await SendRefresh(["music", "start"]);
             }
 
@@ -181,7 +181,7 @@ public class AudioImportJob : AbstractMusicFolderJob
                 folderLibrary, matchingFiles, musicBrainzArtistClient, artistManager, jobDispatcher, musicBrainzRecordingClient,
                 recordingManager);
 
-            jobDispatcher.DispatchJob<MusicDescriptionJob>(release.MusicBrainzReleaseGroup);
+            jobDispatcher.DispatchJob<MusicMetadataJob>(release.MusicBrainzReleaseGroup);
             await SendRefresh(["music", "start"]);
 
             if (wasEmpty)
@@ -228,7 +228,7 @@ public class AudioImportJob : AbstractMusicFolderJob
             MusicBrainzArtistAppends? artistDetails = await musicBrainzArtistClient.WithAllAppends(artistCredit.MusicBrainzArtist.Id);
             if (artistDetails is null) continue;
             await artistManager.Store(artistDetails, release, albumLibrary, folderLibrary);
-            jobDispatcher.DispatchJob<MusicDescriptionJob>(artistDetails);
+            jobDispatcher.DispatchJob<MusicMetadataJob>(artistDetails);
             await SendRefresh(["music", "artist", artistDetails.Id]);
         }
         
@@ -278,7 +278,7 @@ public class AudioImportJob : AbstractMusicFolderJob
                 MusicBrainzArtistAppends? artistDetails = await musicBrainzArtistClient.WithAllAppends(artistCredit.MusicBrainzArtist.Id);
                 if (artistDetails is null) continue;
                 await artistManager.Store(artistDetails, albumLibrary, folderLibrary, _rootFolder!, musicBrainzTrack);
-                jobDispatcher.DispatchJob<MusicDescriptionJob>(artistDetails);
+                jobDispatcher.DispatchJob<MusicMetadataJob>(artistDetails);
                 await SendRefresh(["music", "artist", artistDetails.Id]);
             }
         }

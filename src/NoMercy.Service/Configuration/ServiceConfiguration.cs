@@ -219,9 +219,9 @@ public static class ServiceConfiguration
 
     private static void ConfigureCronJobs(IServiceCollection services)
     {
-        services.RegisterCronJob<CertificateRenewalJob>("certificate-renewal");
+        services.RegisterCronJob<CertificateRenewalCronJob>("certificate-renewal");
 
-        services.RegisterCronJob<TvPaletteCronJob>("tv-palette-job");
+        services.RegisterCronJob<ShowPaletteCronJob>("show-palette-job");
         services.RegisterCronJob<SeasonPaletteCronJob>("season-palette-job");
         services.RegisterCronJob<EpisodePaletteCronJob>("episode-palette-job");
         services.RegisterCronJob<MoviePaletteCronJob>("movie-palette-job");
@@ -232,7 +232,7 @@ public static class ServiceConfiguration
         services.RegisterCronJob<RecommendationPaletteCronJob>("recommendation-palette-job");
         services.RegisterCronJob<SimilarPaletteCronJob>("similar-palette-job");
 
-        services.RegisterCronJob<FanartArtistImagesCronJob>("fanart-images-job");
+        services.RegisterCronJob<ArtistFanartCronJob>("artist-fanart-job");
     }
     
 

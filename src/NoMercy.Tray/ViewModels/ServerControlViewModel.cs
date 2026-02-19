@@ -29,13 +29,14 @@ public class ServerControlViewModel : INotifyPropertyChanged
     private string _configServerName = string.Empty;
     private int _internalPort;
     private int _externalPort;
-    private int _queueWorkers;
+    private int _libraryWorkers;
+    private int _importWorkers;
+    private int _extrasWorkers;
     private int _encoderWorkers;
     private int _cronWorkers;
-    private int _dataWorkers;
     private int _imageWorkers;
     private int _fileWorkers;
-    private int _requestWorkers;
+    private int _musicWorkers;
 
     public string ServerStatus
     {
@@ -139,10 +140,22 @@ public class ServerControlViewModel : INotifyPropertyChanged
         set { _externalPort = value; OnPropertyChanged(); }
     }
 
-    public int QueueWorkers
+    public int LibraryWorkers
     {
-        get => _queueWorkers;
-        set { _queueWorkers = value; OnPropertyChanged(); }
+        get => _libraryWorkers;
+        set { _libraryWorkers = value; OnPropertyChanged(); }
+    }
+
+    public int ImportWorkers
+    {
+        get => _importWorkers;
+        set { _importWorkers = value; OnPropertyChanged(); }
+    }
+
+    public int ExtrasWorkers
+    {
+        get => _extrasWorkers;
+        set { _extrasWorkers = value; OnPropertyChanged(); }
     }
 
     public int EncoderWorkers
@@ -157,12 +170,6 @@ public class ServerControlViewModel : INotifyPropertyChanged
         set { _cronWorkers = value; OnPropertyChanged(); }
     }
 
-    public int DataWorkers
-    {
-        get => _dataWorkers;
-        set { _dataWorkers = value; OnPropertyChanged(); }
-    }
-
     public int ImageWorkers
     {
         get => _imageWorkers;
@@ -175,10 +182,10 @@ public class ServerControlViewModel : INotifyPropertyChanged
         set { _fileWorkers = value; OnPropertyChanged(); }
     }
 
-    public int RequestWorkers
+    public int MusicWorkers
     {
-        get => _requestWorkers;
-        set { _requestWorkers = value; OnPropertyChanged(); }
+        get => _musicWorkers;
+        set { _musicWorkers = value; OnPropertyChanged(); }
     }
 
     public ServerControlViewModel(
@@ -360,13 +367,14 @@ public class ServerControlViewModel : INotifyPropertyChanged
         ConfigServerName = config.ServerName ?? string.Empty;
         InternalPort = config.InternalPort;
         ExternalPort = config.ExternalPort;
-        QueueWorkers = config.QueueWorkers;
+        LibraryWorkers = config.LibraryWorkers;
+        ImportWorkers = config.ImportWorkers;
+        ExtrasWorkers = config.ExtrasWorkers;
         EncoderWorkers = config.EncoderWorkers;
         CronWorkers = config.CronWorkers;
-        DataWorkers = config.DataWorkers;
         ImageWorkers = config.ImageWorkers;
         FileWorkers = config.FileWorkers;
-        RequestWorkers = config.RequestWorkers;
+        MusicWorkers = config.MusicWorkers;
         ConfigLoaded = true;
     }
 
@@ -385,13 +393,14 @@ public class ServerControlViewModel : INotifyPropertyChanged
                 new
                 {
                     server_name = ConfigServerName,
-                    queue_workers = QueueWorkers,
+                    library_workers = LibraryWorkers,
+                    import_workers = ImportWorkers,
+                    extras_workers = ExtrasWorkers,
                     encoder_workers = EncoderWorkers,
                     cron_workers = CronWorkers,
-                    data_workers = DataWorkers,
                     image_workers = ImageWorkers,
                     file_workers = FileWorkers,
-                    request_workers = RequestWorkers
+                    music_workers = MusicWorkers
                 },
                 cancellationToken);
 

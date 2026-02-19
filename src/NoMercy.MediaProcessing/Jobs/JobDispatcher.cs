@@ -105,14 +105,14 @@ public class JobDispatcher
     }
 
     public virtual void DispatchJob<TJob>(MusicBrainzReleaseGroup musicBrainzReleaseGroup)
-        where TJob : MusicDescriptionJob, new()
+        where TJob : MusicMetadataJob, new()
     {
         TJob job = new() { MusicBrainzReleaseGroup = musicBrainzReleaseGroup };
         Dispatcher.Dispatch(job);
     }
 
     public virtual void DispatchJob<TJob>(MusicBrainzArtist musicBrainzArtist)
-        where TJob : MusicDescriptionJob, new()
+        where TJob : MusicMetadataJob, new()
     {
         TJob job = new() { MusicBrainzArtist = musicBrainzArtist };
         Dispatcher.Dispatch(job);
@@ -128,7 +128,7 @@ public class JobDispatcher
         string inputFolder,
         string inputFile
     )
-        where TJob : EncodeMusicJob, new()
+        where TJob : MusicEncodeJob, new()
     {
         TJob job = new()
         {

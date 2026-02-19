@@ -2,11 +2,11 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
-public class EncodeVideoJobCleanupTests : IDisposable
+public class VideoEncodeJobCleanupTests : IDisposable
 {
     private readonly string _testDir;
 
-    public EncodeVideoJobCleanupTests()
+    public VideoEncodeJobCleanupTests()
     {
         _testDir = Path.Combine(Path.GetTempPath(), "NoMercy_Test_" + Guid.NewGuid().ToString("N"));
     }
@@ -30,7 +30,7 @@ public class EncodeVideoJobCleanupTests : IDisposable
         Directory.CreateDirectory(subDir);
         File.WriteAllText(Path.Combine(subDir, "eng.vtt"), "subtitle data");
 
-        EncodeVideoJob.CleanupPartialOutput(_testDir);
+        VideoEncodeJob.CleanupPartialOutput(_testDir);
 
         Assert.False(Directory.Exists(_testDir));
     }
@@ -41,7 +41,7 @@ public class EncodeVideoJobCleanupTests : IDisposable
         string nonExistent = Path.Combine(_testDir, "does_not_exist");
 
         Exception? exception = Record.Exception(() =>
-            EncodeVideoJob.CleanupPartialOutput(nonExistent));
+            VideoEncodeJob.CleanupPartialOutput(nonExistent));
 
         Assert.Null(exception);
     }
@@ -61,7 +61,7 @@ public class EncodeVideoJobCleanupTests : IDisposable
         Directory.CreateDirectory(thumbsDir);
         File.WriteAllText(Path.Combine(thumbsDir, "sprite.jpg"), "sprite data");
 
-        EncodeVideoJob.CleanupPartialOutput(_testDir);
+        VideoEncodeJob.CleanupPartialOutput(_testDir);
 
         Assert.False(Directory.Exists(_testDir));
     }
@@ -71,7 +71,7 @@ public class EncodeVideoJobCleanupTests : IDisposable
     {
         Directory.CreateDirectory(_testDir);
 
-        EncodeVideoJob.CleanupPartialOutput(_testDir);
+        VideoEncodeJob.CleanupPartialOutput(_testDir);
 
         Assert.False(Directory.Exists(_testDir));
     }

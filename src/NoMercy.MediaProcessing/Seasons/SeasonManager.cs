@@ -60,7 +60,7 @@ public class SeasonManager(
         await seasonRepository.StoreAsync(seasons);
         Logger.MovieDb($"Show {show.Name}: Seasons stored", LogEventLevel.Debug);
 
-        jobDispatcher.DispatchJob<AddSeasonExtraDataJob, TmdbSeasonAppends>(seasonAppends, show.Name);
+        jobDispatcher.DispatchJob<SeasonExtrasJob, TmdbSeasonAppends>(seasonAppends, show.Name);
 
         return seasonAppends;
     }

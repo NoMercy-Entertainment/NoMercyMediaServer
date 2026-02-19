@@ -321,7 +321,7 @@ public class LibraryManager(
         IEnumerable<TmdbMovie> res = paginatedMovieResponse?.Results ?? [];
         if (res.Count() is 0) return;
 
-        jobDispatcher.DispatchJob<AddMovieJob>(res.First().Id, _library);
+        jobDispatcher.DispatchJob<MovieImportJob>(res.First().Id, _library);
     }
 
     private async Task ProcessTvFolder(MediaFolderExtend folderExtend)
@@ -340,14 +340,14 @@ public class LibraryManager(
         IEnumerable<TmdbTvShow> res = paginatedTvShowResponse?.Results ?? [];
         if (!res.Any()) return;
 
-        jobDispatcher.DispatchJob<AddShowJob>(res.First().Id, _library);
+        jobDispatcher.DispatchJob<ShowImportJob>(res.First().Id, _library);
     }
 
     private void ProcessMusicFolder(MediaFolderExtend baseFolderExtend)
     {
         if (_library is null) return;
 
-        jobDispatcher.DispatchJob<ProcessReleaseFolderJob>(baseFolderExtend.Path, _library.Id);
+        jobDispatcher.DispatchJob<ReleaseImportJob>(baseFolderExtend.Path, _library.Id);
     }
 
     private int GetDepth()

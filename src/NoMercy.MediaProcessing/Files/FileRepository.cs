@@ -490,7 +490,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                         Type = "info"
                     });
                 }
-                AddMovieJob job = new()
+                MovieImportJob job = new()
                 {
                     LibraryId = libraryId,
                     Id = movie.Id
@@ -534,7 +534,7 @@ public class FileRepository(MediaContext context) : IFileRepository
             });
         }
 
-        AddShowJob job = new()
+        ShowImportJob job = new()
         {
             LibraryId = libraryId,
             Id = showId,
