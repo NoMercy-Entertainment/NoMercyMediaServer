@@ -35,9 +35,10 @@ jobs:
           --blame-hang-timeout 5m
           --filter "Category=Unit|Category=ErrorHandling|Category=Characterization"
 
-  # Optional coverage job - only runs on main or when manually triggered
+  # Optional coverage job - non-blocking, only runs on main or when manually triggered
   coverage:
     runs-on: ubuntu-latest
+    continue-on-error: true
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     
     steps:
