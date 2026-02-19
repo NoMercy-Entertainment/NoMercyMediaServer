@@ -16,13 +16,7 @@ permissions:
   actions: read
 
 jobs:
-  test:
-    uses: ./.github/workflows/test.yml
-    with:
-      dotnet-version: "10.0.x"
-
   prepare:
-    needs: test
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
