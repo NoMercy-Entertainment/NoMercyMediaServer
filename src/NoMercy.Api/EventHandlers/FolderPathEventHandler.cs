@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Events;
@@ -8,10 +9,12 @@ namespace NoMercy.Api.EventHandlers;
 
 public class FolderPathEventHandler : IDisposable
 {
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public FolderPathEventHandler(IEventBus eventBus)
+    public FolderPathEventHandler(IEventBus eventBus, IDbContextFactory<MediaContext> contextFactory)
     {
+        _contextFactory = contextFactory;
         _subscriptions.Add(eventBus.Subscribe<FolderPathAddedEvent>(OnFolderPathAdded));
         _subscriptions.Add(eventBus.Subscribe<FolderPathRemovedEvent>(OnFolderPathRemoved));
     }
@@ -20,7 +23,7 @@ public class FolderPathEventHandler : IDisposable
     {
         DynamicStaticFilesMiddleware.AddPath(@event.RequestPath, @event.PhysicalPath);
 
-        using MediaContext mediaContext = new();
+        using MediaContext mediaContext = _contextFactory.CreateDbContext();
         ClaimsPrincipleExtensions.RefreshFolderIds(mediaContext);
 
         return Task.CompletedTask;
@@ -30,7 +33,7 @@ public class FolderPathEventHandler : IDisposable
     {
         DynamicStaticFilesMiddleware.RemovePath(@event.RequestPath);
 
-        using MediaContext mediaContext = new();
+        using MediaContext mediaContext = _contextFactory.CreateDbContext();
         ClaimsPrincipleExtensions.RefreshFolderIds(mediaContext);
 
         return Task.CompletedTask;
