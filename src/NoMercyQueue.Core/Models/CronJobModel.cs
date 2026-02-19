@@ -1,4 +1,4 @@
-namespace NoMercy.Queue.Core.Models;
+namespace NoMercyQueue.Core.Models;
 
 public class CronJobModel
 {

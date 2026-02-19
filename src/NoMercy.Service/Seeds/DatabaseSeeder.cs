@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Queue.Workers;
+using NoMercyQueue.Workers;
 using Serilog.Events;
 
 namespace NoMercy.Service.Seeds;

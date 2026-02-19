@@ -1,5 +1,5 @@
 using NCrontab;
-namespace NoMercy.Queue.Services;
+namespace NoMercyQueue.Services;
 
 public class CronService
 {

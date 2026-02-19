@@ -1,6 +1,6 @@
 using System.Reflection;
-using NoMercy.Queue;
-using NoMercy.Queue.Core.Models;
+using NoMercyQueue;
+using NoMercyQueue.Core.Models;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;

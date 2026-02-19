@@ -6,7 +6,7 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
 
 namespace NoMercy.Data.Jobs;

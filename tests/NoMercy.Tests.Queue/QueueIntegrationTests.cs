@@ -1,8 +1,9 @@
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Queue;
-using NoMercy.Queue.Core.Models;
-using IQueueContext = NoMercy.Queue.Core.Interfaces.IQueueContext;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
+using IQueueContext = NoMercyQueue.Core.Interfaces.IQueueContext;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 

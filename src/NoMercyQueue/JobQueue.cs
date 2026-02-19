@@ -1,12 +1,11 @@
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
-using Serilog.Events;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 
-namespace NoMercy.Queue;
+namespace NoMercyQueue;
 
-public class JobQueue(IQueueContext context, byte maxAttempts = 3)
+public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQueue>? logger = null)
 {
     private const int MaxDbRetryAttempts = 5;
     private const int BaseRetryDelayMs = 2000;
@@ -73,7 +72,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3)
                 return ReserveJob(name, currentJobId, attempt + 1);
             }
 
-            Logger.Queue(e.Message, LogEventLevel.Error);
+            logger?.LogError("{Message}", e.Message);
         }
 
         return null;
@@ -120,7 +119,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3)
             }
             else
             {
-                Logger.Queue(e.Message, LogEventLevel.Error);
+                logger?.LogError("{Message}", e.Message);
             }
         }
     }
@@ -170,7 +169,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3)
             }
             else
             {
-                Logger.Queue(e.Message, LogEventLevel.Error);
+                logger?.LogError("{Message}", e.Message);
             }
         }
     }

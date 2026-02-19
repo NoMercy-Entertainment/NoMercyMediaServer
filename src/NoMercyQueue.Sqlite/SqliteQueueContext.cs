@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
-using NoMercy.Queue.Sqlite.Entities;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
+using NoMercyQueue.Sqlite.Entities;
 
-namespace NoMercy.Queue.Sqlite;
+namespace NoMercyQueue.Sqlite;
 
 public class SqliteQueueContext : IQueueContext
 {

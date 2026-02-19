@@ -1,5 +1,5 @@
 using System.Reflection;
-using NoMercy.Queue;
+using NoMercyQueue;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -27,7 +27,7 @@ public class WorkerCountRaceConditionTests
     public void QueueRunner_SourceCode_SpawnWorkerUsesLock()
     {
         // HIGH-16: SpawnWorker must lock before adding to worker instances list
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         // Extract SpawnWorker method body (not SpawnWorkerThread)
@@ -41,7 +41,7 @@ public class WorkerCountRaceConditionTests
     public void QueueRunner_SourceCode_QueueWorkerCompletedUsesLock()
     {
         // HIGH-16: QueueWorkerCompleted must lock before removing from worker instances list
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         string methodBody = ExtractMethodBody(
@@ -55,7 +55,7 @@ public class WorkerCountRaceConditionTests
     public void QueueRunner_SourceCode_UpdateRunningWorkerCountsUsesLock()
     {
         // HIGH-16: UpdateRunningWorkerCounts must lock before reading worker counts
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         string methodBody = ExtractMethodBody(source, "UpdateRunningWorkerCounts");
@@ -68,7 +68,7 @@ public class WorkerCountRaceConditionTests
     {
         // HIGH-16: Verify the old pattern of local `i += 1` counter is gone.
         // The worker count should be read atomically from the actual list each iteration.
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         string methodBody = ExtractMethodBody(source, "UpdateRunningWorkerCounts");
@@ -82,7 +82,7 @@ public class WorkerCountRaceConditionTests
     public void QueueRunner_SourceCode_GetWorkerIndexUsesLock()
     {
         // HIGH-16: GetWorkerIndex accesses the worker list and must be synchronized
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         string methodBody = ExtractMethodBody(source, "GetWorkerIndex");
@@ -94,7 +94,7 @@ public class WorkerCountRaceConditionTests
     public void QueueRunner_SourceCode_SetWorkerCountUsesLock()
     {
         // HIGH-16: SetWorkerCount modifies the Workers dictionary and must be synchronized
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         string methodBody = ExtractMethodBody(source, "SetWorkerCount");
@@ -107,7 +107,7 @@ public class WorkerCountRaceConditionTests
     {
         // HIGH-16: Start/Stop/Restart take snapshots under lock to avoid
         // iterating a list that another thread may modify
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         // Start method should snapshot under lock

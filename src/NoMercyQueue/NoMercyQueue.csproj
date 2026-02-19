@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -10,14 +10,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
-        <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
-        <ProjectReference Include="..\NoMercy.Queue.Core\NoMercy.Queue.Core.csproj" />
+        <ProjectReference Include="..\NoMercyQueue.Core\NoMercyQueue.Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core"/>
         <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="NCrontab" />
         <PackageReference Include="Newtonsoft.Json" />
     </ItemGroup>

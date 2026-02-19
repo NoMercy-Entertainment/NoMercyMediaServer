@@ -13,8 +13,8 @@
         <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
         <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
         <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
-        <ProjectReference Include="..\NoMercy.Queue\NoMercy.Queue.csproj"/>
-        <ProjectReference Include="..\NoMercy.Queue.Core\NoMercy.Queue.Core.csproj"/>
+        <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj"/>
+        <ProjectReference Include="..\NoMercyQueue.Core\NoMercyQueue.Core.csproj"/>
     </ItemGroup>
 
 </Project>

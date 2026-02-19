@@ -11,7 +11,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\NoMercy.Queue.Core\NoMercy.Queue.Core.csproj" />
+        <ProjectReference Include="..\NoMercyQueue.Core\NoMercyQueue.Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>

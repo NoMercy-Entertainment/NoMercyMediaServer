@@ -1,26 +1,26 @@
-using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
-using Serilog.Events;
-using CoreIShouldQueue = NoMercy.Queue.Core.Interfaces.IShouldQueue;
+using Microsoft.Extensions.Logging;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 
-namespace NoMercy.Queue;
+namespace NoMercyQueue;
 
 public class JobDispatcher : IJobDispatcher
 {
     private readonly JobQueue _queue;
+    private readonly ILogger<JobDispatcher> _logger;
 
-    public JobDispatcher(JobQueue queue)
+    public JobDispatcher(JobQueue queue, ILogger<JobDispatcher> logger)
     {
         _queue = queue;
+        _logger = logger;
     }
 
-    public void Dispatch(CoreIShouldQueue job)
+    public void Dispatch(IShouldQueue job)
     {
         Dispatch(job, job.QueueName, job.Priority);
     }
 
-    public void Dispatch(CoreIShouldQueue job, string onQueue, int priority)
+    public void Dispatch(IShouldQueue job, string onQueue, int priority)
     {
         QueueJobModel jobData = new()
         {
@@ -36,7 +36,7 @@ public class JobDispatcher : IJobDispatcher
         }
         catch (Exception e)
         {
-            Logger.Queue(e.Message, LogEventLevel.Error);
+            _logger.LogError("{Message}", e.Message);
         }
     }
 }

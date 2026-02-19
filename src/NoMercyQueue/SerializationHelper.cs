@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace NoMercy.Queue;
+namespace NoMercyQueue;
 
 public static class SerializationHelper
 {

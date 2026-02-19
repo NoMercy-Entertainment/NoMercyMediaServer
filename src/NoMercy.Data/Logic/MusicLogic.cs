@@ -17,7 +17,7 @@ using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercy.Queue;
+using NoMercyQueue;
 using Serilog.Events;
 
 namespace NoMercy.Data.Logic;

@@ -1,8 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NoMercy.Queue.Extensions;
-using NoMercy.Queue.Interfaces;
-using NoMercy.Queue.Workers;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
+using NoMercyQueue.Extensions;
+using NoMercyQueue.Workers;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -94,7 +95,7 @@ public class CronWorkerRegistrationTests
 
     private static CronWorker CreateCronWorker(ServiceProvider provider)
     {
-        return new(provider, provider.GetRequiredService<ILogger<CronWorker>>());
+        return new(provider, provider.GetRequiredService<ILogger<CronWorker>>(), new StubQueueContext());
     }
 
     private class TestCronJobA : ICronJobExecutor
@@ -109,5 +110,27 @@ public class CronWorkerRegistrationTests
         public string CronExpression => "0 12 * * *";
         public string JobName => "Test Job B";
         public Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class StubQueueContext : IQueueContext
+    {
+        public void AddJob(QueueJobModel job) { }
+        public void RemoveJob(QueueJobModel job) { }
+        public QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId) => null;
+        public QueueJobModel? FindJob(int id) => null;
+        public bool JobExists(string payload) => false;
+        public void UpdateJob(QueueJobModel job) { }
+        public void ResetAllReservedJobs() { }
+        public void AddFailedJob(FailedJobModel failedJob) { }
+        public void RemoveFailedJob(FailedJobModel failedJob) { }
+        public FailedJobModel? FindFailedJob(int id) => null;
+        public IReadOnlyList<FailedJobModel> GetFailedJobs(long? failedJobId = null) => [];
+        public IReadOnlyList<CronJobModel> GetEnabledCronJobs() => [];
+        public CronJobModel? FindCronJobByName(string name) => null;
+        public void AddCronJob(CronJobModel cronJob) { }
+        public void UpdateCronJob(CronJobModel cronJob) { }
+        public void RemoveCronJob(CronJobModel cronJob) { }
+        public void SaveChanges() { }
+        public void Dispose() { }
     }
 }

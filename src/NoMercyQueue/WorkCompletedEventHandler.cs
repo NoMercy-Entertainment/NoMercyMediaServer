@@ -1,3 +1,3 @@
-namespace NoMercy.Queue;
+namespace NoMercyQueue;
 
 public delegate void WorkCompletedEventHandler(object sender, EventArgs e);

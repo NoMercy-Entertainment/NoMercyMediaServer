@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace NoMercy.Queue.Sqlite.Entities;
+namespace NoMercyQueue.Sqlite.Entities;
 
 [PrimaryKey(nameof(Id))]
 [Index(nameof(Name), IsUnique = true)]

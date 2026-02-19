@@ -1,9 +1,9 @@
 using System.Reflection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Queue;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 

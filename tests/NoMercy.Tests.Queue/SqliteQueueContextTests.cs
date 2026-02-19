@@ -1,6 +1,6 @@
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
-using NoMercy.Queue.Sqlite;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
+using NoMercyQueue.Sqlite;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;

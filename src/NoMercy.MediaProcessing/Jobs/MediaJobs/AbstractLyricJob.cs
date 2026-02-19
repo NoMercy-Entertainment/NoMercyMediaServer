@@ -1,5 +1,5 @@
 using NoMercy.Database.Models.Music;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 

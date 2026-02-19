@@ -1,5 +1,5 @@
 // ReSharper disable MemberCanBePrivate.Global
-namespace NoMercy.Queue;
+namespace NoMercyQueue;
 
 public class CronExpressionBuilder
 {

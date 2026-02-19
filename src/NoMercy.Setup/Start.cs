@@ -2,7 +2,7 @@ using NoMercy.Encoder.Core;
 using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
-using NoMercy.Queue;
+using NoMercyQueue;
 using Serilog.Events;
 using AppFiles = NoMercy.NmSystem.Information.AppFiles;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;

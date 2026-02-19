@@ -1,6 +1,6 @@
-using NoMercy.Queue.Core.Models;
+using NoMercyQueue.Core.Models;
 
-namespace NoMercy.Queue.Core.Interfaces;
+namespace NoMercyQueue.Core.Interfaces;
 
 public interface IQueueContext : IDisposable
 {

@@ -1,4 +1,4 @@
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.Queue.TestHelpers;
 

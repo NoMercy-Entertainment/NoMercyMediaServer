@@ -12,7 +12,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Queue.Workers;
+using NoMercyQueue.Workers;
 using QRCoder;
 using Serilog.Events;
 

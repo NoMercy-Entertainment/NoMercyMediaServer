@@ -4,7 +4,7 @@ using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.NmSystem.Information;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Data.Jobs;
 

@@ -4,7 +4,7 @@
 
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Dto;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 

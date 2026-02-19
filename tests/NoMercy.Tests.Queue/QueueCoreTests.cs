@@ -1,6 +1,8 @@
-using NoMercy.Queue;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 using Xunit;
 
 namespace NoMercy.Tests.Queue;
@@ -262,14 +264,7 @@ public class QueueCoreTests
 
         Assert.Equal(3, config.MaxAttempts);
         Assert.Equal(1000, config.PollingIntervalMs);
-        Assert.Equal(1, config.WorkerCounts["library"]);
-        Assert.Equal(1, config.WorkerCounts["import"]);
-        Assert.Equal(10, config.WorkerCounts["extras"]);
-        Assert.Equal(2, config.WorkerCounts["encoder"]);
-        Assert.Equal(1, config.WorkerCounts["cron"]);
-        Assert.Equal(5, config.WorkerCounts["image"]);
-        Assert.Equal(2, config.WorkerCounts["file"]);
-        Assert.Equal(1, config.WorkerCounts["music"]);
+        Assert.Empty(config.WorkerCounts);
     }
 
     [Fact]
@@ -323,7 +318,7 @@ public class QueueCoreTests
             MaxAttempts = 5
         };
 
-        QueueRunner runner = new(context, config);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
         Assert.NotNull(runner);
         Assert.NotNull(runner.Dispatcher);
@@ -338,7 +333,7 @@ public class QueueCoreTests
         QueueConfiguration config = new();
         TestConfigStore store = new();
 
-        QueueRunner runner = new(context, config, store);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance, store);
 
         Assert.NotNull(runner);
     }
@@ -350,7 +345,7 @@ public class QueueCoreTests
         TestQueueContext context = new();
         QueueConfiguration config = new();
 
-        QueueRunner runner = new(context, config);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
         // Current may be overwritten by parallel tests constructing other QueueRunners,
         // so just verify the constructor sets it to a non-null value
@@ -364,7 +359,7 @@ public class QueueCoreTests
         TestQueueContext context = new();
         QueueConfiguration config = new();
 
-        QueueRunner runner = new(context, config);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
         // Should have all 5 default worker types
         IReadOnlyDictionary<string, Thread> threads = runner.GetActiveWorkerThreads();
@@ -377,10 +372,16 @@ public class QueueCoreTests
     {
         // QDC-08: Verify SetWorkerCount persists via IConfigurationStore
         TestQueueContext context = new();
-        QueueConfiguration config = new();
+        QueueConfiguration config = new()
+        {
+            WorkerCounts = new()
+            {
+                ["import"] = 1
+            }
+        };
         TestConfigStore store = new();
 
-        QueueRunner runner = new(context, config);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
         bool result = await runner.SetWorkerCount("import", 4, Guid.NewGuid());
 
@@ -394,7 +395,7 @@ public class QueueCoreTests
         TestQueueContext context = new();
         QueueConfiguration config = new();
 
-        QueueRunner runner = new(context, config);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
         bool result = await runner.SetWorkerCount("nonexistent", 4, Guid.NewGuid());
 
@@ -490,7 +491,7 @@ public class QueueCoreTests
     // Test implementations
     // =========================================================================
 
-    private sealed class TestJob : NoMercy.Queue.Core.Interfaces.IShouldQueue
+    private sealed class TestJob : NoMercyQueue.Core.Interfaces.IShouldQueue
     {
         public string QueueName => "test-queue";
         public int Priority => 5;

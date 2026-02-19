@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Queue;
+using NoMercyQueue;
 using NoMercy.Service.Configuration;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup;

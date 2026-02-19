@@ -1,9 +1,12 @@
 using System.Reflection;
-using NoMercy.Queue;
-using NoMercy.Queue.Core.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
-using IJobDispatcher = NoMercy.Queue.Core.Interfaces.IJobDispatcher;
+using IJobDispatcher = NoMercyQueue.Core.Interfaces.IJobDispatcher;
 
 namespace NoMercy.Tests.Queue;
 
@@ -13,7 +16,7 @@ public class JobDispatcherTests
     {
         TestQueueContextAdapter adapter = new();
         JobQueue queue = new(adapter);
-        JobDispatcher dispatcher = new(queue);
+        JobDispatcher dispatcher = new(queue, NullLogger<JobDispatcher>.Instance);
         return (dispatcher, adapter);
     }
 

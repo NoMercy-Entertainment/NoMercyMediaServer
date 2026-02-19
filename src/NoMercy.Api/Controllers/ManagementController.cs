@@ -12,7 +12,7 @@ using NoMercy.NmSystem.SystemCalls;
 using Newtonsoft.Json;
 using NoMercy.Networking.Discovery;
 using NoMercy.Plugins.Abstractions;
-using NoMercy.Queue;
+using NoMercyQueue;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.FileSystem;
 using NoMercy.Setup;

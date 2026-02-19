@@ -5,8 +5,8 @@ using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
-using NoMercy.Queue;
-using NoMercy.Queue.Interfaces;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
 using Image = NoMercy.Database.Models.Media.Image;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;

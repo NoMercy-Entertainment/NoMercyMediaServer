@@ -79,7 +79,7 @@ public class CertificateRenewalCronJobTests
         CertificateRenewalCronJob job = new(logger.Object);
 
         // Assert
-        Assert.IsAssignableFrom<NoMercy.Queue.Interfaces.ICronJobExecutor>(job);
+        Assert.IsAssignableFrom<NoMercyQueue.Core.Interfaces.ICronJobExecutor>(job);
     }
 
     [Fact]

@@ -1,11 +1,11 @@
-using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Queue.Core.Models;
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 using Exception = System.Exception;
 
-namespace NoMercy.Queue.Workers;
+namespace NoMercyQueue.Workers;
 
-public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? runner = null)
+public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? runner = null, ILogger<QueueWorker>? logger = null)
 {
     private long? _currentJobId;
     private bool _isRunning = true;
@@ -40,16 +40,16 @@ public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? r
                         _currentJobId = null;
                         OnWorkCompleted(EventArgs.Empty);
 
-                        Logger.Queue(
-                            $"QueueWorker {name} - {CurrentIndex}: Job {job.Id} of Type {classInstance} processed successfully.",
-                            LogEventLevel.Verbose);
+                        logger?.LogTrace(
+                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {ClassInstance} processed successfully",
+                            name, CurrentIndex, job.Id, classInstance);
                     }
                     else
                     {
                         string typeName = jobWithArguments?.GetType().FullName ?? "null";
-                        Logger.Queue(
-                            $"QueueWorker {name} - {CurrentIndex}: Job {job.Id} deserialized to {typeName} which does not implement IShouldQueue — rejecting.",
-                            LogEventLevel.Error);
+                        logger?.LogError(
+                            "QueueWorker {Name} - {CurrentIndex}: Job {JobId} deserialized to {TypeName} which does not implement IShouldQueue — rejecting",
+                            name, CurrentIndex, job.Id, typeName);
 
                         queue.FailJob(job, new InvalidOperationException(
                             $"Job payload deserialized to {typeName} which does not implement IShouldQueue"));
@@ -62,9 +62,9 @@ public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? r
 
                     _currentJobId = null;
 
-                    Logger.Queue(
-                        $"QueueWorker {name} - {CurrentIndex}: Job {job.Id} of Type {job.Payload} failed with error: {ex}",
-                        LogEventLevel.Error);
+                    logger?.LogError(
+                        "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {Payload} failed with error: {Error}",
+                        name, CurrentIndex, job.Id, job.Payload, ex);
                 }
 
                 Thread.Sleep(1000);
@@ -85,7 +85,7 @@ public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? r
 
     public void Stop()
     {
-        Logger.Queue($"QueueWorker {name} - {CurrentIndex}: stopped", LogEventLevel.Information);
+        logger?.LogInformation("QueueWorker {Name} - {CurrentIndex}: stopped", name, CurrentIndex);
         _isRunning = false;
     }
 

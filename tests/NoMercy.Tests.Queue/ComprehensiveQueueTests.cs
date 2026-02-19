@@ -1,12 +1,14 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Queue;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
-using NoMercy.Queue.Sqlite;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
+using NoMercyQueue.Sqlite;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
-using IShouldQueue = NoMercy.Queue.Core.Interfaces.IShouldQueue;
+using IShouldQueue = NoMercyQueue.Core.Interfaces.IShouldQueue;
 
 namespace NoMercy.Tests.Queue;
 
@@ -783,7 +785,7 @@ public class ComprehensiveQueueTests
         {
             (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
             _jobQueue = new(_adapter);
-            _dispatcher = new(_jobQueue);
+            _dispatcher = new(_jobQueue, NullLogger<JobDispatcher>.Instance);
         }
 
         public void Dispose()
@@ -940,7 +942,7 @@ public class ComprehensiveQueueTests
                 }
             };
 
-            QueueRunner runner = new(adapter, config);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
 
             Assert.NotNull(runner.Dispatcher);
         }
@@ -951,7 +953,7 @@ public class ComprehensiveQueueTests
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new();
 
-            QueueRunner runner = new(adapter, config);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
 
             // Current may be overwritten by parallel tests constructing other QueueRunners,
             // so just verify the constructor sets it to a non-null value
@@ -971,7 +973,7 @@ public class ComprehensiveQueueTests
                 }
             };
 
-            QueueRunner runner = new(adapter, config);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
 
             Assert.Empty(runner.GetActiveWorkerThreads());
         }
@@ -988,7 +990,7 @@ public class ComprehensiveQueueTests
                 }
             };
 
-            QueueRunner runner = new(adapter, config);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
             bool result = await runner.SetWorkerCount("queue", 5, Guid.NewGuid());
 
             Assert.True(result);
@@ -1000,7 +1002,7 @@ public class ComprehensiveQueueTests
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new();
 
-            QueueRunner runner = new(adapter, config);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
             bool result = await runner.SetWorkerCount("nonexistent", 5, Guid.NewGuid());
 
             Assert.False(result);
@@ -1019,7 +1021,7 @@ public class ComprehensiveQueueTests
                 }
             };
 
-            QueueRunner runner = new(adapter, config, store);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance, store);
             await runner.SetWorkerCount("encoder", 8, Guid.NewGuid());
 
             Assert.True(store.HasKey("encoderRunners"));
@@ -1038,7 +1040,7 @@ public class ComprehensiveQueueTests
                 }
             };
 
-            QueueRunner runner = new(adapter, config, configurationStore: null);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance, configurationStore: null);
             bool result = await runner.SetWorkerCount("queue", 4, null);
 
             Assert.True(result);
@@ -1049,7 +1051,7 @@ public class ComprehensiveQueueTests
         {
             TestQueueContextAdapter adapter = new();
             QueueConfiguration config = new();
-            QueueRunner runner = new(adapter, config);
+            QueueRunner runner = new(adapter, config, NullLoggerFactory.Instance);
 
             TestJob job = new() { Message = "via runner dispatcher" };
             runner.Dispatcher.Dispatch(job);
@@ -1449,7 +1451,7 @@ public class ComprehensiveQueueTests
         {
             TestQueueContextAdapter adapter = new();
             JobQueue queue = new(adapter);
-            JobDispatcher dispatcher = new(queue);
+            JobDispatcher dispatcher = new(queue, NullLogger<JobDispatcher>.Instance);
 
             Assert.IsAssignableFrom<IJobDispatcher>(dispatcher);
         }
@@ -1459,7 +1461,7 @@ public class ComprehensiveQueueTests
         {
             TestQueueContextAdapter adapter = new();
             JobQueue queue = new(adapter);
-            IJobDispatcher dispatcher = new JobDispatcher(queue);
+            IJobDispatcher dispatcher = new JobDispatcher(queue, NullLogger<JobDispatcher>.Instance);
 
             TestJob job = new() { Message = "interface dispatch" };
             dispatcher.Dispatch(job);
@@ -1472,7 +1474,7 @@ public class ComprehensiveQueueTests
         {
             TestQueueContextAdapter adapter = new();
             JobQueue queue = new(adapter);
-            IJobDispatcher dispatcher = new JobDispatcher(queue);
+            IJobDispatcher dispatcher = new JobDispatcher(queue, NullLogger<JobDispatcher>.Instance);
 
             TestJob job = new() { Message = "explicit dispatch" };
             dispatcher.Dispatch(job, "custom", 50);
@@ -1491,18 +1493,11 @@ public class ComprehensiveQueueTests
     public class QueueConfigurationTests
     {
         [Fact]
-        public void DefaultConfiguration_HasAllExpectedQueues()
+        public void DefaultConfiguration_HasEmptyWorkerCounts()
         {
             QueueConfiguration config = new();
 
-            Assert.Contains("library", config.WorkerCounts.Keys);
-            Assert.Contains("import", config.WorkerCounts.Keys);
-            Assert.Contains("extras", config.WorkerCounts.Keys);
-            Assert.Contains("encoder", config.WorkerCounts.Keys);
-            Assert.Contains("cron", config.WorkerCounts.Keys);
-            Assert.Contains("image", config.WorkerCounts.Keys);
-            Assert.Contains("file", config.WorkerCounts.Keys);
-            Assert.Contains("music", config.WorkerCounts.Keys);
+            Assert.Empty(config.WorkerCounts);
         }
 
         [Fact]

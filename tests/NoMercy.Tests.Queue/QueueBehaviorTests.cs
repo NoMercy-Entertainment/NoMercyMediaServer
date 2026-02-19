@@ -1,8 +1,8 @@
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Queue;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
@@ -94,7 +94,7 @@ public class QueueBehaviorTests : IDisposable
         Assert.Equal(1, attempt1.Attempts);
         try
         {
-            NoMercy.Queue.IShouldQueue exec1 = (NoMercy.Queue.IShouldQueue)SerializationHelper.Deserialize<object>(attempt1.Payload);
+            NoMercyQueue.Core.Interfaces.IShouldQueue exec1 = (NoMercyQueue.Core.Interfaces.IShouldQueue)SerializationHelper.Deserialize<object>(attempt1.Payload);
             await exec1.Handle();
         }
         catch (Exception ex)
@@ -110,7 +110,7 @@ public class QueueBehaviorTests : IDisposable
         Assert.Equal(2, attempt2.Attempts);
         try
         {
-            NoMercy.Queue.IShouldQueue exec2 = (NoMercy.Queue.IShouldQueue)SerializationHelper.Deserialize<object>(attempt2.Payload);
+            NoMercyQueue.Core.Interfaces.IShouldQueue exec2 = (NoMercyQueue.Core.Interfaces.IShouldQueue)SerializationHelper.Deserialize<object>(attempt2.Payload);
             await exec2.Handle();
         }
         catch (Exception ex)

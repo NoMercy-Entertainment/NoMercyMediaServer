@@ -1,4 +1,4 @@
-namespace NoMercy.Queue.Core.Interfaces;
+namespace NoMercyQueue.Core.Interfaces;
 
 public interface IShouldQueue
 {

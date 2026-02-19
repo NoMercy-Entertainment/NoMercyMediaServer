@@ -1,5 +1,5 @@
 using Xunit;
-using NoMercy.Queue;
+using NoMercyQueue;
 using NCrontab;
 
 namespace NoMercy.Tests.Queue;

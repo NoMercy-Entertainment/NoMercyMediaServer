@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.NmSystem.Information;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 using NoMercy.Queue.MediaServer.Configuration;
 
 namespace NoMercy.Queue.MediaServer;
@@ -17,6 +19,7 @@ public static class ServiceRegistration
         {
             IQueueContext queueContext = sp.GetRequiredService<IQueueContext>();
             IConfigurationStore configStore = sp.GetRequiredService<IConfigurationStore>();
+            ILoggerFactory loggerFactory = sp.GetRequiredService<ILoggerFactory>();
             QueueConfiguration configuration = new()
             {
                 WorkerCounts = new()
@@ -31,7 +34,7 @@ public static class ServiceRegistration
                     [Config.MusicWorkers.Key] = Config.MusicWorkers.Value
                 }
             };
-            return new(queueContext, configuration, configStore);
+            return new(queueContext, configuration, loggerFactory, configStore);
         });
         services.AddSingleton<JobDispatcher>(sp => sp.GetRequiredService<QueueRunner>().Dispatcher);
 

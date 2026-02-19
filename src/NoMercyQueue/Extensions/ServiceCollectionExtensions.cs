@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
-using NoMercy.Queue.Interfaces;
-using NoMercy.Queue.Workers;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Workers;
 
-namespace NoMercy.Queue.Extensions;
+namespace NoMercyQueue.Extensions;
 
 public static class ServiceCollectionExtensions
 {

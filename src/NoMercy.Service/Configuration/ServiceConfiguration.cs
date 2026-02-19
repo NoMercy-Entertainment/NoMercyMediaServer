@@ -40,7 +40,7 @@ using NoMercy.Providers.Helpers;
 using NoMercy.Events;
 using NoMercy.Events.Audit;
 using NoMercy.Plugins;
-using NoMercy.Queue.Extensions;
+using NoMercyQueue.Extensions;
 using NoMercy.Queue.MediaServer;
 using NoMercy.Queue.MediaServer.Jobs;
 using NoMercy.Service.Extensions;

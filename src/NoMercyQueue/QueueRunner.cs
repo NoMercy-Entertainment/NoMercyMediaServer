@@ -1,11 +1,10 @@
 using System.Collections.Concurrent;
-using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
-using NoMercy.Queue.Workers;
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
+using NoMercyQueue.Workers;
 
-namespace NoMercy.Queue;
+namespace NoMercyQueue;
 
 public class QueueRunner
 {
@@ -22,6 +21,7 @@ public class QueueRunner
     private readonly JobQueue _jobQueue;
     public readonly JobDispatcher Dispatcher;
     private readonly IConfigurationStore? _configurationStore;
+    private readonly ILogger<QueueRunner> _logger;
 
     /// <summary>
     /// Static accessor for non-DI code paths (jobs, logic classes).
@@ -29,11 +29,12 @@ public class QueueRunner
     /// </summary>
     public static QueueRunner? Current { get; private set; }
 
-    public QueueRunner(IQueueContext queueContext, QueueConfiguration configuration, IConfigurationStore? configurationStore = null)
+    public QueueRunner(IQueueContext queueContext, QueueConfiguration configuration, ILoggerFactory loggerFactory, IConfigurationStore? configurationStore = null)
     {
         _configurationStore = configurationStore;
-        _jobQueue = new(queueContext, configuration.MaxAttempts);
-        Dispatcher = new(_jobQueue);
+        _logger = loggerFactory.CreateLogger<QueueRunner>();
+        _jobQueue = new(queueContext, configuration.MaxAttempts, loggerFactory.CreateLogger<JobQueue>());
+        Dispatcher = new(_jobQueue, loggerFactory.CreateLogger<JobDispatcher>());
 
         _workers = new();
         foreach (KeyValuePair<string, int> entry in configuration.WorkerCounts)
@@ -48,7 +49,7 @@ public class QueueRunner
     {
         if (_isInitialized)
         {
-            Logger.Queue("QueueRunner.Initialize() skipped — already initialized", LogEventLevel.Debug);
+            _logger.LogDebug("QueueRunner.Initialize() skipped — already initialized");
             return;
         }
 
@@ -65,7 +66,7 @@ public class QueueRunner
                 workerCount++;
             }
 
-        Logger.Queue($"Queue workers initialized: {workerCount} workers spawned", LogEventLevel.Debug);
+        _logger.LogDebug("Queue workers initialized: {WorkerCount} workers spawned", workerCount);
 
         // Signal that queue workers are ready, allowing cron jobs to start execution
         CronWorker.SignalQueueWorkersReady();
@@ -84,9 +85,7 @@ public class QueueRunner
             }
             catch (Exception ex)
             {
-                Logger.Queue(
-                    $"Worker {name} crashed: {ex.Message}",
-                    LogEventLevel.Error);
+                _logger.LogError("Worker {Name} crashed: {Message}", name, ex.Message);
             }
             finally
             {
@@ -253,9 +252,8 @@ public class QueueRunner
         }, token);
 
         workerTask.ContinueWith(
-            t => Logger.Queue(
-                $"UpdateRunningWorkerCounts for {name} failed: {t.Exception?.GetBaseException().Message}",
-                LogEventLevel.Error),
+            t => _logger.LogError("UpdateRunningWorkerCounts for {Name} failed: {Message}",
+                name, t.Exception?.GetBaseException().Message),
             TaskContinuationOptions.OnlyOnFaulted);
     }
 
@@ -275,7 +273,7 @@ public class QueueRunner
             await _configurationStore.SetValueAsync($"{name}Runners", max.ToString(), userId);
         }
 
-        Logger.Queue($"Setting queue {name} to {max} workers", LogEventLevel.Information);
+        _logger.LogInformation("Setting queue {Name} to {Max} workers", name, max);
 
         CancellationToken token;
         lock (_workersLock)

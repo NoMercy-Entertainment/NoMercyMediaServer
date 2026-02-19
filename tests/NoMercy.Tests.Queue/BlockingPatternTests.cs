@@ -1,10 +1,10 @@
 using System.Reflection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Queue;
+using NoMercyQueue;
 using NoMercy.Queue.MediaServer;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
@@ -134,7 +134,7 @@ public class BlockingPatternTests : IDisposable
     public void JobQueue_SourceCode_NoBlockingPatterns()
     {
         // Static analysis: Verify JobQueue.cs contains no .Wait() or .Result calls.
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/JobQueue.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/JobQueue.cs");
         string source = File.ReadAllText(sourceFile);
 
         // Check for .Result pattern (but exclude comments and string literals)

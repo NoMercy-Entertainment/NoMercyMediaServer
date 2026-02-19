@@ -12,7 +12,7 @@ using NoMercy.MediaProcessing.Jobs.PaletteJobs;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.Helpers;
 using NoMercy.Queue.MediaServer.Jobs;
-using NoMercy.Queue.Workers;
+using NoMercyQueue.Workers;
 using NoMercy.Service.Extensions;
 using NoMercy.Service.Configuration.Swagger;
 

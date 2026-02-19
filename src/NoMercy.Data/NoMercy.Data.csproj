@@ -16,7 +16,7 @@
         <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj"/>
         <ProjectReference Include="..\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj"/>
         <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj"/>
-        <ProjectReference Include="..\NoMercy.Queue\NoMercy.Queue.csproj"/>
+        <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

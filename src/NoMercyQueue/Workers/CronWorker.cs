@@ -1,21 +1,20 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using NoMercy.Database;
-using NoMercy.Database.Models.Queue;
-using NoMercy.Queue.Interfaces;
-using NoMercy.Queue.Services;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
+using NoMercyQueue.Services;
 
-namespace NoMercy.Queue.Workers;
+namespace NoMercyQueue.Workers;
 
 public class CronWorker : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CronWorker> _logger;
+    private readonly IQueueContext _queueContext;
     private readonly Dictionary<string, Type> _registeredJobs = new();
-    private readonly List<CronJob> _codeDefinedJobs = [];
+    private readonly List<CronJobModel> _codeDefinedJobs = [];
     private readonly Dictionary<string, CancellationTokenSource> _jobCancellationTokens = new();
     private readonly Dictionary<string, Task> _jobTasks = new();
 
@@ -48,18 +47,19 @@ public class CronWorker : BackgroundService
             DatabaseReadyTcs.TrySetResult(false);
     }
 
-    public CronWorker(IServiceProvider serviceProvider, ILogger<CronWorker> logger)
+    public CronWorker(IServiceProvider serviceProvider, ILogger<CronWorker> logger, IQueueContext queueContext)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _queueContext = queueContext;
     }
 
     public void RegisterJob<T>(string jobType, string name, string cronExpression, object? parameters = null)
         where T : class, ICronJobExecutor
     {
         _registeredJobs[jobType] = typeof(T);
-        
-        CronJob job = new()
+
+        CronJobModel job = new()
         {
             Name = name,
             CronExpression = cronExpression,
@@ -68,9 +68,9 @@ public class CronWorker : BackgroundService
             IsEnabled = true,
             NextRun = CronService.GetNextOccurrence(cronExpression, DateTime.Now)
         };
-        
+
         _codeDefinedJobs.Add(job);
-        
+
         // Start individual worker for this job
         StartJobWorker(job);
     }
@@ -88,7 +88,7 @@ public class CronWorker : BackgroundService
 
         // Individual registration logged at trace — summary logged in ExecuteAsync
 
-        CronJob job = new()
+        CronJobModel job = new()
         {
             Name = executor.JobName,
             CronExpression = executor.CronExpression,
@@ -100,12 +100,12 @@ public class CronWorker : BackgroundService
         };
 
         _codeDefinedJobs.Add(job);
-        
+
         // Start individual worker for this job
         StartJobWorker(job);
     }
 
-    private void StartJobWorker(CronJob job)
+    private void StartJobWorker(CronJobModel job)
     {
         if (_jobCancellationTokens.TryGetValue(job.JobType, out CancellationTokenSource? existingCts))
         {
@@ -122,7 +122,7 @@ public class CronWorker : BackgroundService
         // Per-job start logged at trace level only
     }
 
-    private async Task JobWorkerLoop(CronJob job, CancellationToken cancellationToken)
+    private async Task JobWorkerLoop(CronJobModel job, CancellationToken cancellationToken)
     {
         // Wait for queue workers to be ready before starting cron job execution
         try
@@ -158,7 +158,7 @@ public class CronWorker : BackgroundService
                             job.Name, job.NextRun);
 
                         // Update database if this is a database job
-                        await UpdateDatabaseJob(job, cancellationToken);
+                        UpdateDatabaseJob(job);
                     }
                 }
 
@@ -173,14 +173,14 @@ public class CronWorker : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in job worker for: {JobName}", job.Name);
-                
+
                 // Continue running even if there's an error
                 await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
             }
         }
     }
 
-    private async Task<bool> ExecuteJob(CronJob job, DateTime currentTime, CancellationToken cancellationToken)
+    private async Task<bool> ExecuteJob(CronJobModel job, DateTime currentTime, CancellationToken cancellationToken)
     {
         try
         {
@@ -192,7 +192,7 @@ public class CronWorker : BackgroundService
 
             using IServiceScope scope = _serviceProvider.CreateScope();
             ICronJobExecutor executor = (ICronJobExecutor)scope.ServiceProvider.GetRequiredService(jobExecutorType);
-            
+
             using CancellationTokenSource timeoutCts = new(TimeSpan.FromMinutes(30));
             using CancellationTokenSource combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
@@ -216,21 +216,17 @@ public class CronWorker : BackgroundService
         }
     }
 
-    private async Task UpdateDatabaseJob(CronJob job, CancellationToken cancellationToken)
+    private void UpdateDatabaseJob(CronJobModel job)
     {
         try
         {
-            using IServiceScope scope = _serviceProvider.CreateScope();
-            await using QueueContext dbContext = scope.ServiceProvider.GetRequiredService<QueueContext>();
-
-            CronJob? dbJob = await dbContext.CronJobs
-                .FirstOrDefaultAsync(j => j.JobType == job.JobType, cancellationToken);
+            CronJobModel? dbJob = _queueContext.FindCronJobByName(job.Name);
 
             if (dbJob != null)
             {
                 dbJob.LastRun = job.LastRun;
                 dbJob.NextRun = job.NextRun;
-                await dbContext.SaveChangesAsync(cancellationToken);
+                _queueContext.UpdateCronJob(dbJob);
             }
         }
         catch (Exception ex)
@@ -253,7 +249,7 @@ public class CronWorker : BackgroundService
             if (dbReady)
             {
                 _logger.LogDebug("Database ready — loading database job workers");
-                await StartDatabaseJobWorkers(stoppingToken);
+                StartDatabaseJobWorkers();
             }
             else
             {
@@ -281,18 +277,13 @@ public class CronWorker : BackgroundService
         }
     }
 
-    private async Task StartDatabaseJobWorkers(CancellationToken cancellationToken)
+    private void StartDatabaseJobWorkers()
     {
         try
         {
-            using IServiceScope scope = _serviceProvider.CreateScope();
-            await using QueueContext dbContext = scope.ServiceProvider.GetRequiredService<QueueContext>();
+            IReadOnlyList<CronJobModel> dbJobs = _queueContext.GetEnabledCronJobs();
 
-            List<CronJob> dbJobs = await dbContext.CronJobs
-                .Where(j => j.IsEnabled)
-                .ToListAsync(cancellationToken);
-
-            foreach (CronJob job in dbJobs)
+            foreach (CronJobModel job in dbJobs)
             {
                 if (_registeredJobs.ContainsKey(job.JobType))
                 {

@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
-using NoMercy.Queue.Core.Interfaces;
-using NoMercy.Queue.Core.Models;
+using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Models;
 
 namespace NoMercy.Queue.MediaServer;
 

@@ -22,7 +22,7 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
-using NoMercy.Queue;
+using NoMercyQueue;
 using NoMercy.Queue.MediaServer;
 
 

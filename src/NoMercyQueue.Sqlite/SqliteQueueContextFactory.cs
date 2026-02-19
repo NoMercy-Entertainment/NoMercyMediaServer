@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Queue.Core.Interfaces;
+using NoMercyQueue.Core.Interfaces;
 
-namespace NoMercy.Queue.Sqlite;
+namespace NoMercyQueue.Sqlite;
 
 public static class SqliteQueueContextFactory
 {

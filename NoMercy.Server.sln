@@ -23,7 +23,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Data", "src\NoMercy
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.MediaProcessing", "src\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj", "{B6124942-5D33-4050-AEE0-45EAE7507469}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Queue", "src\NoMercy.Queue\NoMercy.Queue.csproj", "{41D4358A-80AF-4D38-90C0-22E1BA00E9F0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercyQueue", "src\NoMercyQueue\NoMercyQueue.csproj", "{41D4358A-80AF-4D38-90C0-22E1BA00E9F0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Src", "Src", "{1A749650-7DB2-4431-93FB-EF950256BC5B}"
 EndProject
@@ -65,9 +65,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tests.Plugins", "te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Plugins", "src\NoMercy.Plugins\NoMercy.Plugins.csproj", "{370DD02C-CE94-466D-917F-2FCD3A47C5D5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Queue.Core", "src\NoMercy.Queue.Core\NoMercy.Queue.Core.csproj", "{C195CE41-4430-48F0-A80E-C867E2118283}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercyQueue.Core", "src\NoMercyQueue.Core\NoMercyQueue.Core.csproj", "{C195CE41-4430-48F0-A80E-C867E2118283}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Queue.Sqlite", "src\NoMercy.Queue.Sqlite\NoMercy.Queue.Sqlite.csproj", "{7E2789CE-36F8-4F55-B75B-AD7446CA8497}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercyQueue.Sqlite", "src\NoMercyQueue.Sqlite\NoMercyQueue.Sqlite.csproj", "{7E2789CE-36F8-4F55-B75B-AD7446CA8497}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Queue.MediaServer", "src\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj", "{8DD421D1-E5D0-469F-9937-7B1751A313B3}"
 EndProject

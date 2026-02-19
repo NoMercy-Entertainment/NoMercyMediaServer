@@ -4,8 +4,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Information;
-using NoMercy.Queue;
-using NoMercy.Queue.Interfaces;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 

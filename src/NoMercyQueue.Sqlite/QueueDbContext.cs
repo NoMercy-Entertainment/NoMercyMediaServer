@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Queue.Sqlite.Entities;
+using NoMercyQueue.Sqlite.Entities;
 
-namespace NoMercy.Queue.Sqlite;
+namespace NoMercyQueue.Sqlite;
 
 internal class QueueDbContext : DbContext
 {

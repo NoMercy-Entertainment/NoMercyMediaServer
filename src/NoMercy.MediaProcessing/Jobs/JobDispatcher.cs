@@ -4,8 +4,8 @@ using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercy.Queue;
-using QueueJobDispatcher = NoMercy.Queue.JobDispatcher;
+using NoMercyQueue;
+using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
 
 namespace NoMercy.MediaProcessing.Jobs;
 

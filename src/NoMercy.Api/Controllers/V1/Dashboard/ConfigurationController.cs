@@ -11,7 +11,7 @@ using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
-using NoMercy.Queue;
+using NoMercyQueue;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;

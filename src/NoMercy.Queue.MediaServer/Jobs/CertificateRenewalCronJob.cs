@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Networking;
-using NoMercy.Queue.Interfaces;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Queue.MediaServer.Jobs;
 

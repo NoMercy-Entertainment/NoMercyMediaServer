@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
 using System.Reflection;
-using NoMercy.Queue;
-using NoMercy.Queue.Core.Models;
+using Microsoft.Extensions.Logging.Abstractions;
+using NoMercyQueue;
+using NoMercyQueue.Core.Models;
 using NoMercy.Tests.Queue.TestHelpers;
 using Xunit;
 
@@ -18,7 +19,7 @@ public class QueueRunnerFireAndForgetTests
     public void QueueRunner_SourceCode_NoUnobservedGetAwaiter()
     {
         // CRIT-08: Verify QueueRunner.cs no longer calls .GetAwaiter() without await
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         string[] lines = source.Split('\n');
@@ -36,7 +37,7 @@ public class QueueRunnerFireAndForgetTests
     {
         // CRIT-08: Verify QueueRunner.cs no longer wraps Thread creation in Task.Run
         // The pattern Task.Run(() => new Thread(() => ...).Start()) is redundant
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         Assert.DoesNotContain("Task.Run(() => new Thread", source);
@@ -46,7 +47,7 @@ public class QueueRunnerFireAndForgetTests
     public void QueueRunner_SourceCode_WorkerThreadsHaveExceptionHandling()
     {
         // CRIT-08: Verify that worker thread spawning includes try-catch
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         // SpawnWorkerThread should contain try-catch for exception handling
@@ -59,7 +60,7 @@ public class QueueRunnerFireAndForgetTests
     {
         // CRIT-08: Verify that spawned threads are background threads
         // so they don't prevent server shutdown
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         Assert.Contains("IsBackground = true", source);
@@ -70,7 +71,7 @@ public class QueueRunnerFireAndForgetTests
     {
         // CRIT-08: Verify that spawned threads have descriptive names
         // for debugging and diagnostics
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         Assert.Contains("Name = $\"QueueWorker-", source);
@@ -98,7 +99,7 @@ public class QueueRunnerFireAndForgetTests
         // CRIT-08: Verify active workers are queryable via public method
         TestQueueContextAdapter context = new();
         QueueConfiguration config = new();
-        QueueRunner runner = new(context, config);
+        QueueRunner runner = new(context, config, NullLoggerFactory.Instance);
 
         IReadOnlyDictionary<string, Thread> workers = runner.GetActiveWorkerThreads();
         Assert.NotNull(workers);
@@ -127,7 +128,7 @@ public class QueueRunnerFireAndForgetTests
     public void QueueRunner_SourceCode_UpdateWorkerCountsHasErrorLogging()
     {
         // CRIT-08: Verify that UpdateRunningWorkerCounts logs errors from fire-and-forget tasks
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         // Should use ContinueWith(OnlyOnFaulted) or similar error observation
@@ -138,7 +139,7 @@ public class QueueRunnerFireAndForgetTests
     public void QueueRunner_SourceCode_WorkerThreadsCleanUpOnExit()
     {
         // CRIT-08: Verify worker threads remove themselves from tracking on exit
-        string sourceFile = FindSourceFile("src/NoMercy.Queue/QueueRunner.cs");
+        string sourceFile = FindSourceFile("src/NoMercyQueue/QueueRunner.cs");
         string source = File.ReadAllText(sourceFile);
 
         // Should have finally block that removes from ActiveWorkerThreads

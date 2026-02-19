@@ -28,10 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NoMercy.Queue\NoMercy.Queue.csproj" />
-    <ProjectReference Include="..\..\src\NoMercy.Queue.Core\NoMercy.Queue.Core.csproj" />
+    <ProjectReference Include="..\..\src\NoMercyQueue\NoMercyQueue.csproj" />
+    <ProjectReference Include="..\..\src\NoMercyQueue.Core\NoMercyQueue.Core.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj" />
-    <ProjectReference Include="..\..\src\NoMercy.Queue.Sqlite\NoMercy.Queue.Sqlite.csproj" />
+    <ProjectReference Include="..\..\src\NoMercyQueue.Sqlite\NoMercyQueue.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj" />
   </ItemGroup>
 
