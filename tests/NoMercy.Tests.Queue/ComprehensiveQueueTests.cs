@@ -1495,12 +1495,14 @@ public class ComprehensiveQueueTests
         {
             QueueConfiguration config = new();
 
-            Assert.Contains("queue", config.WorkerCounts.Keys);
-            Assert.Contains("data", config.WorkerCounts.Keys);
+            Assert.Contains("library", config.WorkerCounts.Keys);
+            Assert.Contains("import", config.WorkerCounts.Keys);
+            Assert.Contains("extras", config.WorkerCounts.Keys);
             Assert.Contains("encoder", config.WorkerCounts.Keys);
             Assert.Contains("cron", config.WorkerCounts.Keys);
             Assert.Contains("image", config.WorkerCounts.Keys);
             Assert.Contains("file", config.WorkerCounts.Keys);
+            Assert.Contains("music", config.WorkerCounts.Keys);
         }
 
         [Fact]

@@ -262,12 +262,14 @@ public class QueueCoreTests
 
         Assert.Equal(3, config.MaxAttempts);
         Assert.Equal(1000, config.PollingIntervalMs);
-        Assert.Equal(1, config.WorkerCounts["queue"]);
-        Assert.Equal(10, config.WorkerCounts["data"]);
+        Assert.Equal(1, config.WorkerCounts["library"]);
+        Assert.Equal(1, config.WorkerCounts["import"]);
+        Assert.Equal(10, config.WorkerCounts["extras"]);
         Assert.Equal(2, config.WorkerCounts["encoder"]);
         Assert.Equal(1, config.WorkerCounts["cron"]);
         Assert.Equal(5, config.WorkerCounts["image"]);
         Assert.Equal(2, config.WorkerCounts["file"]);
+        Assert.Equal(1, config.WorkerCounts["music"]);
     }
 
     [Fact]
@@ -279,16 +281,16 @@ public class QueueCoreTests
             PollingIntervalMs = 500,
             WorkerCounts = new()
             {
-                ["queue"] = 2,
-                ["data"] = 6,
+                ["import"] = 2,
+                ["extras"] = 6,
                 ["encoder"] = 4
             }
         };
 
         Assert.Equal(5, config.MaxAttempts);
         Assert.Equal(500, config.PollingIntervalMs);
-        Assert.Equal(2, config.WorkerCounts["queue"]);
-        Assert.Equal(6, config.WorkerCounts["data"]);
+        Assert.Equal(2, config.WorkerCounts["import"]);
+        Assert.Equal(6, config.WorkerCounts["extras"]);
         Assert.Equal(4, config.WorkerCounts["encoder"]);
     }
 
@@ -380,7 +382,7 @@ public class QueueCoreTests
 
         QueueRunner runner = new(context, config);
 
-        bool result = await runner.SetWorkerCount("queue", 4, Guid.NewGuid());
+        bool result = await runner.SetWorkerCount("import", 4, Guid.NewGuid());
 
         Assert.True(result);
     }

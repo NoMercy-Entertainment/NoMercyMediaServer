@@ -86,13 +86,14 @@ public class ManagementControllerTests : IClassFixture<NoMercyApiFactory>
 
         Assert.True(root.TryGetProperty("external_port", out _));
         Assert.True(root.TryGetProperty("server_name", out _));
-        Assert.True(root.TryGetProperty("queue_workers", out _));
+        Assert.True(root.TryGetProperty("library_workers", out _));
+        Assert.True(root.TryGetProperty("import_workers", out _));
+        Assert.True(root.TryGetProperty("extras_workers", out _));
         Assert.True(root.TryGetProperty("encoder_workers", out _));
         Assert.True(root.TryGetProperty("cron_workers", out _));
-        Assert.True(root.TryGetProperty("data_workers", out _));
         Assert.True(root.TryGetProperty("image_workers", out _));
         Assert.True(root.TryGetProperty("file_workers", out _));
-        Assert.True(root.TryGetProperty("request_workers", out _));
+        Assert.True(root.TryGetProperty("music_workers", out _));
         Assert.True(root.TryGetProperty("swagger", out _));
     }
 
