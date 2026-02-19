@@ -5,12 +5,16 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'docker/**'
+      - '.github/**'
     branches:
       - dev
   pull_request:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'docker/**'
+      - '.github/**'
     branches:
       - dev
   workflow_dispatch:
