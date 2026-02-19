@@ -1,5 +1,5 @@
-using FFMpegCore;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
 
@@ -11,8 +11,8 @@ public class BaseAudio : Classes
 
     public virtual CodecDto AudioCodec { get; set; } = AudioCodecs.Aac;
 
-    protected internal AudioStream? AudioStream;
-    internal List<AudioStream> AudioStreams { get; set; } = [];
+    protected internal FfProbeAudioStream? AudioStream;
+    internal List<FfProbeAudioStream> AudioStreams { get; set; } = [];
 
     private string? _language;
 
@@ -221,7 +221,7 @@ public class BaseAudio : Classes
         List<BaseAudio> streams = [];
 
         foreach (string allowedLanguage in AllowedLanguages.Append("und"))
-        foreach (AudioStream stream in AudioStreams.Where(audioStream =>
+        foreach (FfProbeAudioStream stream in AudioStreams.Where(audioStream =>
                      audioStream.Language is null || audioStream.Language == allowedLanguage))
         {
             BaseAudio newStream = (BaseAudio)MemberwiseClone();

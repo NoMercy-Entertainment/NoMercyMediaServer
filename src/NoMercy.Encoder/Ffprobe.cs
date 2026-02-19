@@ -14,7 +14,14 @@ public class Ffprobe
 {
     private readonly string _filename;
     private FfprobeSourceData SourceData { get; set; } = new();
-    private string Error { get; set; } = string.Empty;
+    public string Error { get; private set; } = string.Empty;
+
+    public string FilePath => _filename;
+    public TimeSpan Duration => Format.Duration ?? TimeSpan.Zero;
+    public VideoStream? PrimaryVideoStream => VideoStreams.FirstOrDefault();
+    public AudioStream? PrimaryAudioStream => AudioStreams.FirstOrDefault();
+    public SubtitleStream? PrimarySubtitleStream => SubtitleStreams.FirstOrDefault();
+    public ImageStream? PrimaryImageStream => ImageStreams.FirstOrDefault();
     
     /// <summary>
     /// Timeout for ffprobe execution in milliseconds. Default is 30 seconds.
@@ -37,6 +44,11 @@ public class Ffprobe
     public Ffprobe(string filename)
     {
         _filename = filename;
+    }
+
+    public static async Task<Ffprobe> CreateAsync(string file, CancellationToken ct = default)
+    {
+        return await new Ffprobe(file).GetStreamData();
     }
     
     public Task<Ffprobe> GetStreamData()

@@ -43,6 +43,10 @@ public class VideoStream
     [JsonProperty("is_hdr")] public bool IsHdr  { get; set; }
     [JsonProperty("bitrate")] public long? BitRate { get; set; }
 
+    public VideoStream()
+    {
+    }
+
     public VideoStream(FfprobeSourceDataStream ffprobeSourceDataStream)
     {
         Index = ffprobeSourceDataStream.Index;

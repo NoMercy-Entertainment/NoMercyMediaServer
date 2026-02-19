@@ -14,7 +14,6 @@
     <ItemGroup>
         <PackageReference Include="BenchmarkDotNet" />
         <PackageReference Include="Castle.Core"/>
-        <PackageReference Include="FFMpegCore.Extensions.System.Drawing.Common" />
         <PackageReference Include="HeyRed.ImageSharp.Heif"/>
         <PackageReference Include="LibHeif.Native"/>
         <PackageReference Include="LibreHardwareMonitorLib" />

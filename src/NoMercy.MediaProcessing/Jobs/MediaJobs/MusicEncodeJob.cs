@@ -74,8 +74,8 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
                 BuildAudioStreams(profile, ref container, FoundTrack, FolderMetaData.MusicBrainzRelease);
 
-                VideoAudioFile ffmpeg = new FfMpeg()
-                    .Open(MediaFile.Path);
+                VideoAudioFile ffmpeg = await new FfMpeg()
+                    .OpenAsync(MediaFile.Path);
 
                 ffmpeg.SetBasePath(FolderMetaData.BasePath);
                 ffmpeg.SetTitle(MediaFile.Name);

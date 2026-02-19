@@ -1,7 +1,7 @@
 using System.Text;
-using FFMpegCore;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -14,9 +14,9 @@ public class BaseImage : Classes
 
     private CodecDto ImageCodec { get; set; } = ImageCodecs.Png;
 
-    protected internal VideoStream? ImageStream;
+    protected internal FfProbeImageStream? ImageStream;
 
-    internal List<VideoStream> ImageStreams { get; set; } = [];
+    internal List<FfProbeImageStream> ImageStreams { get; set; } = [];
 
     private protected virtual string[] InitialParameters => [];
     private protected virtual string[] AvailableContainers => [];
@@ -79,7 +79,7 @@ public class BaseImage : Classes
 
     public bool VideoIsHdr()
     {
-        return ImageStream?.PixelFormat.Contains("hdr") ?? false;
+        return false;
     }
 
     public BaseImage SetScale(string scale)

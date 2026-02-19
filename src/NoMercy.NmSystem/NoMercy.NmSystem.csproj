@@ -19,7 +19,6 @@
         <PackageReference Include="DeviceId.Mac" />
         <PackageReference Include="DeviceId.Windows" />
         <PackageReference Include="DeviceId.Windows.Mmi" />
-        <PackageReference Include="FFMpegCore" />
         <PackageReference Include="Humanizer" />
         <PackageReference Include="Humanizer.Core" />
         <PackageReference Include="I18N.DotNet"/>

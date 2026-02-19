@@ -23,7 +23,6 @@
 
     <ItemGroup>
         <PackageReference Include="Castle.Core"/>
-        <PackageReference Include="FFMpegCore" />
         <PackageReference Include="Moq"/>
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Ulid" />

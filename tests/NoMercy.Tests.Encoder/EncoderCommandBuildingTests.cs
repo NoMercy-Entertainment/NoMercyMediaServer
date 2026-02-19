@@ -1,4 +1,3 @@
-using FFMpegCore;
 using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Audio;
@@ -56,34 +55,36 @@ public class EncoderCommandBuildingTests : IDisposable
         };
     }
 
-    private static VideoStream CreateVideoStream(
+    private static FfProbeVideoStream CreateVideoStream(
         int width, int height,
         string pixelFormat = "yuv420p", string colorSpace = "bt709",
         int index = 0)
     {
-        VideoStream stream = new();
-        typeof(VideoStream).GetProperty("Width")!.SetValue(stream, width);
-        typeof(VideoStream).GetProperty("Height")!.SetValue(stream, height);
-        typeof(VideoStream).GetProperty("PixelFormat")!.SetValue(stream, pixelFormat);
-        typeof(VideoStream).GetProperty("ColorSpace")!.SetValue(stream, colorSpace);
-        typeof(VideoStream).GetProperty("Index")!.SetValue(stream, index);
-        typeof(VideoStream).GetProperty("CodecName")!.SetValue(stream, "h264");
-        return stream;
+        return new()
+        {
+            Width = width,
+            Height = height,
+            PixFmt = pixelFormat,
+            ColorSpace = colorSpace,
+            Index = index,
+            CodecName = "h264"
+        };
     }
 
-    private static AudioStream CreateAudioStream(
+    private static FfProbeAudioStream CreateAudioStream(
         string language = "eng", int channels = 2,
         int sampleRate = 48000, long bitRate = 128000,
         int index = 1)
     {
-        AudioStream stream = new();
-        typeof(AudioStream).GetProperty("Language")!.SetValue(stream, language);
-        typeof(AudioStream).GetProperty("Channels")!.SetValue(stream, channels);
-        typeof(AudioStream).GetProperty("SampleRateHz")!.SetValue(stream, sampleRate);
-        typeof(AudioStream).GetProperty("BitRate")!.SetValue(stream, bitRate);
-        typeof(AudioStream).GetProperty("Index")!.SetValue(stream, index);
-        typeof(AudioStream).GetProperty("CodecName")!.SetValue(stream, "aac");
-        return stream;
+        return new()
+        {
+            Language = language,
+            Channels = channels,
+            SampleRate = sampleRate,
+            BitRate = bitRate,
+            Index = index,
+            CodecName = "aac"
+        };
     }
 
     private Hls CreateHlsContainer(FfProbeData probeData, BaseVideo videoCodec, BaseAudio audioCodec)

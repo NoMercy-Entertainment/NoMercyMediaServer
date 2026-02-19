@@ -1,6 +1,6 @@
-using FFMpegCore;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -13,8 +13,8 @@ public class BaseSubtitle : Classes
 
     public CodecDto SubtitleCodec { get; set; } = SubtitleCodecs.Webvtt;
 
-    protected internal SubtitleStream? SubtitleStream;
-    internal List<SubtitleStream> SubtitleStreams { get; set; } = [];
+    protected internal FfProbeSubtitleStream? SubtitleStream;
+    internal List<FfProbeSubtitleStream> SubtitleStreams { get; set; } = [];
 
     public string Language => SubtitleStream?.Language ?? "und";
     private string[] AllowedLanguages { get; set; } = ["eng"];
@@ -145,7 +145,7 @@ public class BaseSubtitle : Classes
         {
             if (SubtitleStreams.All(stream => stream.Language != allowedLanguage)) continue;
 
-            foreach (SubtitleStream? stream in SubtitleStreams.Where(stream => stream.Language == allowedLanguage))
+            foreach (FfProbeSubtitleStream? stream in SubtitleStreams.Where(stream => stream.Language == allowedLanguage))
             {
                 BaseSubtitle newStream = (BaseSubtitle)MemberwiseClone();
 
@@ -159,7 +159,7 @@ public class BaseSubtitle : Classes
 
                 if (newStream.SubtitleStream!.CodecName == newStream.SubtitleCodec.SimpleValue) continue;
 
-                List<SubtitleStream> subTitleStreams = SubtitleStreams
+                List<FfProbeSubtitleStream> subTitleStreams = SubtitleStreams
                     .Where(s => s.Language == stream.Language)
                     .ToList();
 

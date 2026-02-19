@@ -32,6 +32,10 @@ public class AudioStream
     
     [JsonProperty("tags")] public Dictionary<string,string> Tags { get; set; } = new();
     
+    public AudioStream()
+    {
+    }
+
     public AudioStream(FfprobeSourceDataStream ffprobeSourceDataStream)
     {
         Index = ffprobeSourceDataStream.Index;

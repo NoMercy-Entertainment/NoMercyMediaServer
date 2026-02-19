@@ -71,9 +71,9 @@ public partial class FfMpeg : Classes
         return FfProbePath;
     }
 
-    public VideoAudioFile Open(string path)
+    public async Task<VideoAudioFile> OpenAsync(string path)
     {
-        FfProbeData ffprobe = FfProbe.Create(path);
+        FfProbeData ffprobe = await FfProbe.CreateAsync(path);
 
         if (ffprobe.VideoStreams.Count(s => s.CodecName != "mjpeg") > 0)
             return new VideoFile(ffprobe, FfmpegPath);
@@ -101,10 +101,10 @@ public partial class FfMpeg : Classes
         public double Remaining { get; set; }
     }
 
-    public VideoAudioFile Open(FolderAndFile? videoFile)
+    public async Task<VideoAudioFile> OpenAsync(FolderAndFile? videoFile)
     {
         string inputFile = $"{videoFile?.HostFolder}{videoFile?.Filename}";
-        return Open(inputFile);
+        return await OpenAsync(inputFile);
     }
 
     public static async Task<string> ExecStdErrOut(string args, string? cwd = null, string? executable = null)

@@ -73,7 +73,7 @@ public partial class MusicLogic : IAsyncDisposable
             try
             {
                 Logger.App($"Analyzing File: {file.Name}", LogEventLevel.Debug);
-                FfProbeData ffProbeData = FfProbe.Create(file.Path);
+                FfProbeData ffProbeData = await FfProbe.CreateAsync(file.Path, cancellationToken);
 
                 AcoustIdFingerprintRecording? fingerPrintRecording = await MatchTrack(file, ffProbeData);
                 if (fingerPrintRecording is not null)
@@ -503,7 +503,7 @@ public partial class MusicLogic : IAsyncDisposable
         if (file is not null)
         {
             Logger.App($"File Match: {file}", LogEventLevel.Verbose);
-            FfProbeData ffProbeData = FfProbe.Create(file);
+            FfProbeData ffProbeData = await FfProbe.CreateAsync(file);
             string folder = mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "") ??
                             string.Empty;
 

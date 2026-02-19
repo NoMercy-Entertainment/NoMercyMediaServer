@@ -83,8 +83,8 @@ public class VideoEncodeJob : AbstractEncoderJob
                     .SetFilename("thumbs_:framesize:");
                 container.AddStream(sprite);
 
-                VideoAudioFile ffmpeg = new FfMpeg()
-                    .Open(InputFile);
+                VideoAudioFile ffmpeg = await new FfMpeg()
+                    .OpenAsync(InputFile);
 
                 ffmpeg.SetBasePath(fileMetadata.Path);
                 ffmpeg.SetTitle(fileMetadata.Title);

@@ -929,24 +929,22 @@ public class FileRepository(MediaContext context) : IFileRepository
         int highestScore = 0;
         object lockObject = new();
 
-        await Parallel.ForEachAsync(matchedReleases, Config.ParallelOptions, (release, _) =>
+        await Parallel.ForEachAsync(matchedReleases, Config.ParallelOptions, async (release, cancellationToken) =>
         {
-            int score = CalculateMatchScore(release, mediaFiles);
+            int score = await CalculateMatchScoreAsync(release, mediaFiles);
             lock (lockObject)
             {
-                if (score < highestScore) return ValueTask.CompletedTask;
+                if (score < highestScore) return;
                 highestScore = score;
                 if (highestScore == mediaFiles.Count)
                     bestRelease = release;
             }
-
-            return ValueTask.CompletedTask;
         });
 
         return bestRelease;
     }
 
-    private static int CalculateMatchScore(
+    private static async Task<int> CalculateMatchScoreAsync(
         MusicBrainzReleaseAppends release,
         ConcurrentBag<MediaFile> localFiles
     )
@@ -955,17 +953,17 @@ public class FileRepository(MediaContext context) : IFileRepository
 
         if (release.Media.Length == 0) return 0;
 
-        Parallel.ForEach(release.Media, Config.ParallelOptions, media =>
+        await Parallel.ForEachAsync(release.Media, Config.ParallelOptions, async (media, cancellationToken) =>
         {
             if (media.Tracks.Length == 0 || media.TrackCount == 0)
                 return;
 
-            Parallel.ForEach(localFiles, Config.ParallelOptions, file =>
+            await Parallel.ForEachAsync(localFiles, Config.ParallelOptions, async (file, ct) =>
             {
                 try
                 {
                     file.TagFile ??= TagFile.Create(file.Path);
-                    file.FFprobe ??= FfProbe.Create(file.Path);
+                    file.FFprobe ??= await FfProbe.CreateAsync(file.Path, ct);
 
                     int trackIndex = localFiles.ToList().IndexOf(file);
                     bool isMatch = media.Tracks.Any(track =>
@@ -977,7 +975,7 @@ public class FileRepository(MediaContext context) : IFileRepository
                     });
 
                     if (!isMatch) return;
-                    score = Interlocked.Increment(ref score);
+                    Interlocked.Increment(ref score);
                 }
                 catch (Exception ex)
                 {
