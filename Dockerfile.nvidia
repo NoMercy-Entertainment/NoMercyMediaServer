@@ -83,7 +83,7 @@ RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh \
     && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
 
 # Create non-root user for security
-RUN useradd -m -u 1000 nomercy
+RUN useradd -m -o -u 1000 nomercy
 
 # Create data directories
 RUN mkdir -p /data/config /data/cache /data/media /data/log \

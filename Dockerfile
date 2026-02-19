@@ -67,7 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
-RUN useradd -m -u 1000 nomercy
+RUN useradd -m -o -u 1000 nomercy
 
 # Create data directories
 RUN mkdir -p /data/config /data/cache /data/media /data/log \
