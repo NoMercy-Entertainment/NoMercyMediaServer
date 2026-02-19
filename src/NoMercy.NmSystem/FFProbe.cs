@@ -152,13 +152,24 @@ public static class FfProbe
                 Logger.App($"ffprobe failed for {file}: {ex.Message} (attempt {attempt}/{MaxRetries})", LogEventLevel.Warning);
                 if (attempt < MaxRetries)
                 {
-                    await Task.Delay(500, ct);
+                    int delayMs = IsResourceExhaustionError(ex) ? 2000 * attempt : 500;
+                    await Task.Delay(delayMs, ct);
                     continue;
                 }
             }
         }
 
         return string.Empty;
+    }
+
+    private static bool IsResourceExhaustionError(Exception ex)
+    {
+        // Win32 ERROR_COMMITMENT_LIMIT (paging file too small) and similar resource errors
+        return ex is System.ComponentModel.Win32Exception win32Ex
+            ? win32Ex.NativeErrorCode is 1455 or 8 // ERROR_COMMITMENT_LIMIT or ERROR_NOT_ENOUGH_MEMORY
+            : ex.Message.Contains("paging file", StringComparison.OrdinalIgnoreCase)
+              || ex.Message.Contains("wisselbestand", StringComparison.OrdinalIgnoreCase)
+              || ex.Message.Contains("not enough memory", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<string> RunFfprobe(string file, CancellationToken ct)

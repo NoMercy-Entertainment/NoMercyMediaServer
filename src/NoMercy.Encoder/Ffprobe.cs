@@ -143,12 +143,13 @@ public class Ffprobe
             }
             catch (Exception ex)
             {
-                Logger.Encoder($"ffprobe execution failed for {_filename}: {ex.Message} (attempt {attempt}/{MaxRetries})", 
+                Logger.Encoder($"ffprobe execution failed for {_filename}: {ex.Message} (attempt {attempt}/{MaxRetries})",
                     LogEventLevel.Warning);
-                
+
                 if (attempt < MaxRetries)
                 {
-                    await Task.Delay(500, ct);
+                    int delayMs = IsResourceExhaustionError(ex) ? 2000 * attempt : 500;
+                    await Task.Delay(delayMs, ct);
                     continue;
                 }
                 
@@ -159,6 +160,15 @@ public class Ffprobe
         }
         
         return (string.Empty, "ffprobe failed after maximum retries");
+    }
+
+    private static bool IsResourceExhaustionError(Exception ex)
+    {
+        return ex is System.ComponentModel.Win32Exception win32Ex
+            ? win32Ex.NativeErrorCode is 1455 or 8
+            : ex.Message.Contains("paging file", StringComparison.OrdinalIgnoreCase)
+              || ex.Message.Contains("wisselbestand", StringComparison.OrdinalIgnoreCase)
+              || ex.Message.Contains("not enough memory", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<(string, string)> ExecStdErrOut(CancellationToken ct = default)

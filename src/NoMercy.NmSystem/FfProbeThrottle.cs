@@ -7,7 +7,7 @@ namespace NoMercy.NmSystem;
 /// </summary>
 public static class FfProbeThrottle
 {
-    public static int MaxConcurrentProbes { get; } = Math.Clamp(Environment.ProcessorCount, 2, 16);
+    public static int MaxConcurrentProbes { get; } = Math.Clamp(Environment.ProcessorCount / 2, 2, 8);
 
     private static readonly SemaphoreSlim Semaphore = new(MaxConcurrentProbes, MaxConcurrentProbes);
 
