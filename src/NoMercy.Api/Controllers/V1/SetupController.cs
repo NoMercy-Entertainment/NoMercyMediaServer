@@ -2,12 +2,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.V1.Dashboard.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO;
-using NoMercy.Data.Repositories;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
-using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.DTOs.Media;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Music;
+using NoMercy.Helpers.Extensions;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.Services;
 using NoMercy.Database;
 using NoMercy.NmSystem.Extensions;
@@ -23,11 +23,7 @@ namespace NoMercy.Api.Controllers.V1;
 public class SetupController(
     MediaContext context,
     SetupService setupService,
-    LibraryRepository libraryRepository,
-    MusicRepository musicRepository,
-    HomeService homeService, 
-    CollectionRepository collectionRepository,
-    SpecialRepository specialRepository
+    HomeService homeService
 ) : BaseController
 {
     [HttpGet("libraries")]
@@ -49,6 +45,7 @@ public class SetupController(
     
     [HttpGet]
     [Route("server-info")]
+    [ResponseCache(NoStore = true, Duration = 0)]
     public IActionResult ServerInfo()
     {
         if (!User.IsAllowed())
@@ -125,6 +122,7 @@ public class SetupController(
     [HttpGet]
     [AllowAnonymous]
     [Route("/status")]
+    [ResponseCache(Duration = 30)]
     public IActionResult Status()
     {
         return Ok(new

@@ -1,105 +1,124 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Jobs.Dto;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercyQueue;
+using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
 
 namespace NoMercy.MediaProcessing.Jobs;
 
 public class JobDispatcher
 {
-    public void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string id, string inputFile)
+    private readonly QueueJobDispatcher? _dispatcher;
+
+    public JobDispatcher(QueueJobDispatcher dispatcher)
+    {
+        _dispatcher = dispatcher;
+    }
+
+    public JobDispatcher()
+    {
+        _dispatcher = QueueRunner.Current?.Dispatcher;
+    }
+
+    private QueueJobDispatcher Dispatcher =>
+        _dispatcher ?? throw new InvalidOperationException(
+            "JobDispatcher requires a QueueRunner instance. Ensure QueueRunner is initialized before dispatching jobs.");
+
+    public virtual void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string id, string inputFile)
         where TJob : AbstractEncoderJob, new()
     {
         TJob job = new() { LibraryId = libraryId, FolderId = folderId, Id = id, InputFile = inputFile };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, Guid releaseId, string filePath)
+    public virtual void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, Guid releaseId, string filePath)
         where TJob : AbstractMusicFolderJob, new()
     {
         TJob job = new() { LibraryId = libraryId, ReleaseId = releaseId, InputFolder = filePath };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string filePath)
+    public virtual void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string filePath)
         where TJob : AbstractMusicFolderJob, new()
     {
         TJob job = new() { LibraryId = libraryId, FolderId = folderId, InputFolder = filePath };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(int id, Ulid libraryId)
+    public virtual void DispatchJob<TJob>(int id, Ulid libraryId)
         where TJob : AbstractMediaJob, new()
     {
         TJob job = new() { Id = id, LibraryId = libraryId };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(Ulid libraryId)
+    public virtual void DispatchJob<TJob>(Ulid libraryId)
         where TJob : AbstractMediaJob, new()
     {
         TJob job = new() { LibraryId = libraryId };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(int id, Library library, int? priority = null)
+    public virtual void DispatchJob<TJob>(int id, Library library, int? priority = null)
         where TJob : AbstractMediaJob, new()
     {
         TJob job = new() { Id = id, LibraryId = library.Id };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, priority ?? job.Priority);
+        Dispatcher.Dispatch(job, job.QueueName, priority ?? job.Priority);
     }
 
-    internal void DispatchJob<TJob, TChild>(TChild data)
+    internal virtual void DispatchJob<TJob, TChild>(TChild data)
         where TJob : AbstractMediaExraDataJob<TChild>, new()
     {
         TJob job = new() { Storage = data };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    internal void DispatchJob<TJob, TChild>(IEnumerable<TChild> data, string name)
+    internal virtual void DispatchJob<TJob, TChild>(IEnumerable<TChild> data, string name)
         where TJob : AbstractShowExtraDataJob<TChild, string>, new()
     {
         TJob job = new() { Storage = data, Name = name };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(string baseFolderPath, Ulid libraryId)
+    public virtual void DispatchJob<TJob>(string baseFolderPath, Ulid libraryId)
         where TJob : AbstractMusicFolderJob, new()
     {
         TJob job = new() { InputFolder = baseFolderPath, LibraryId = libraryId };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(Ulid libraryId, Guid id, Folder baseFolder, MediaFolderExtend mediaFolder)
+    public virtual void DispatchJob<TJob>(Ulid libraryId, Guid id, Folder baseFolder, MediaFolderExtend mediaFolder)
         where TJob : AbstractReleaseJob, new()
     {
         TJob job = new() { LibraryId = libraryId, Id = id, BaseFolder = baseFolder, MediaFolder = mediaFolder };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(Guid id1, Guid? id2 = null, Guid? id3 = null)
+    public virtual void DispatchJob<TJob>(Guid id1, Guid? id2 = null, Guid? id3 = null)
         where TJob : AbstractFanArtDataJob, new()
     {
         TJob job = new() { Id1 = id1, Id2 = id2, Id3 = id3 };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(MusicBrainzReleaseGroup musicBrainzReleaseGroup)
-        where TJob : MusicDescriptionJob, new()
+    public virtual void DispatchJob<TJob>(MusicBrainzReleaseGroup musicBrainzReleaseGroup)
+        where TJob : MusicMetadataJob, new()
     {
         TJob job = new() { MusicBrainzReleaseGroup = musicBrainzReleaseGroup };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(MusicBrainzArtist musicBrainzArtist)
-        where TJob : MusicDescriptionJob, new()
+    public virtual void DispatchJob<TJob>(MusicBrainzArtist musicBrainzArtist)
+        where TJob : MusicMetadataJob, new()
     {
         TJob job = new() { MusicBrainzArtist = musicBrainzArtist };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(
+    public virtual void DispatchJob<TJob>(
         Guid id,
         Ulid folderId,
         FolderMetadata folderMetaData,
@@ -109,7 +128,7 @@ public class JobDispatcher
         string inputFolder,
         string inputFile
     )
-        where TJob : EncodeMusicJob, new()
+        where TJob : MusicEncodeJob, new()
     {
         TJob job = new()
         {
@@ -119,13 +138,13 @@ public class JobDispatcher
             MediaFile = mediaFile, LibraryId = libraryId,
             InputFolder = inputFolder, InputFile = inputFile
         };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 
-    public void DispatchJob<TJob>(Track track)
+    public virtual void DispatchJob<TJob>(Track track)
         where TJob : AbstractLyricJob, new()
     {
         TJob job = new() { Track = track };
-        Queue.JobDispatcher.Dispatch(job, job.QueueName, job.Priority);
+        Dispatcher.Dispatch(job);
     }
 }

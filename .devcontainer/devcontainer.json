@@ -7,6 +7,18 @@
 	"workspaceFolder": "/workspaces/NoMercyMediaServer",
 	"workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/NoMercyMediaServer,type=bind,consistency=cached",
 
+	// Temporarily disabled due to SQLite I/O issues with WSL2 bind mounts
+	// "mounts": [
+	// 	"source=${localEnv:LOCALAPPDATA}/NoMercy_dev,target=/home/vscode/.local/share/NoMercy_dev,type=bind,consistency=cached"
+	// ],
+
+	// Mount host Claude credentials so CLI and VS Code extension are pre-authenticated
+	// Mount host NoMercy_dev config (tokens, encoder profiles) - only config dir to avoid SQLite I/O issues
+	"mounts": [
+		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached",
+		"source=${localEnv:LOCALAPPDATA}/NoMercy_dev/config,target=/home/vscode/.local/share/NoMercy_dev/config,type=bind,consistency=cached"
+	],
+
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [5000, 5001, 5173, 7626, 443],
 	"portsAttributes": {
@@ -31,16 +43,18 @@
 	},
 
 	// Set up shell configuration and restore dependencies
-	"postCreateCommand": "bash .devcontainer/setup-environment.sh && dotnet restore",
+	"postCreateCommand": "bash .devcontainer/setup-environment.sh && mkdir -p /home/vscode/.local && sudo chown -R vscode:vscode /home/vscode/.local && dotnet restore && sudo chown -R vscode:vscode /home/vscode/.local/share/claude",
 
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"ms-dotnettools.csharp",
+				"ms-dotnettools.csdevkit",
 				"ms-dotnettools.vscode-dotnet-runtime",
 				"formulahendry.code-runner",
-				"GitHub.copilot"
+				"GitHub.copilot",
+				"anthropic.claude-code"
 			]
 		}
 	},

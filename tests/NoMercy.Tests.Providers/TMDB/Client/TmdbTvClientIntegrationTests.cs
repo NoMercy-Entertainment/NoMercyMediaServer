@@ -12,7 +12,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 ///     Tests real API interactions with TMDB TV endpoints
 /// </summary>
 [Trait("Category", "Integration")]
-[Collection("TmdbIntegration")]
+[Collection("TmdbApi")]
 public class TmdbTvClientIntegrationTests : TmdbTestBase
 {
     [Fact]

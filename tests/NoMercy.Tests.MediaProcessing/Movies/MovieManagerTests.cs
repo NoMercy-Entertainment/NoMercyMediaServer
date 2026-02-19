@@ -1,5 +1,8 @@
 using Moq;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Movies;
 using NoMercy.NmSystem.Information;

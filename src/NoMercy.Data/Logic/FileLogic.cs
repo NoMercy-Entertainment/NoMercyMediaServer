@@ -3,18 +3,22 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDisposable
+public partial class FileLogic(int id, Library library, MediaContext mediaContext) : IDisposable, IAsyncDisposable
 {
-    private readonly MediaContext _mediaContext = new();
+    private readonly MediaContext _mediaContext = mediaContext;
 
     private int Id { get; set; } = id;
     private Library Library { get; set; } = library;
@@ -262,6 +266,13 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
         {
             string path = Path.Combine(rootFolder.Path, folder);
 
+            if (!Directory.Exists(path))
+            {
+                string? match = Str.FindMatchingDirectory(rootFolder.Path, folder);
+                if (match != null)
+                    path = match;
+            }
+
             if (Directory.Exists(path))
                 Folders.Add(new()
                 {
@@ -277,16 +288,10 @@ public partial class FileLogic(int id, Library library) : IDisposable, IAsyncDis
     public void Dispose()
     {
         _mediaContext.Dispose();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 
     public async ValueTask DisposeAsync()
     {
         await _mediaContext.DisposeAsync();
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

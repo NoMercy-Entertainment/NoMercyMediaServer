@@ -2,7 +2,7 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -29,8 +29,5 @@ public abstract class AbstractShowExtraDataJob<T, TS> : IShouldQueue
     public void Dispose()
     {
         _storage = null;
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

@@ -1,4 +1,5 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.TvShows;
 
 namespace NoMercy.MediaProcessing.Seasons;
 

@@ -2,9 +2,9 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
-using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.People;
 
@@ -14,10 +14,11 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Tags(tags: "Media People")]
 [ApiVersion(1.0)]
 [Authorize]
-public class PeopleController : BaseController
+public class PeopleController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     [Route("api/v{version:apiVersion}/person")] // match themoviedb.org API
+    [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page"])]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
         Guid userId = User.UserId();
@@ -26,16 +27,15 @@ public class PeopleController : BaseController
 
         string language = Language();
 
-        await using MediaContext mediaContext = new();
-
         List<PeopleResponseItemDto> people = await PeopleResponseDto
-            .GetPeople(userId, language, request.Take, request.Page);
+            .GetPeople(mediaContext, userId, language, request.Take, request.Page);
 
         return GetPaginatedResponse(people, request);
     }
 
     [HttpGet]
     [Route("/api/v{version:apiVersion}/person/{id:int}")] // match themoviedb.org API
+    [ResponseCache(Duration = 300)]
     public async Task<IActionResult> Show(int id)
     {
         if (!User.IsAllowed())
@@ -51,7 +51,7 @@ public class PeopleController : BaseController
 
         return Ok(new PersonResponseDto
         {
-            Data = new(personAppends, country)
+            Data = new(personAppends, country, mediaContext)
         });
     }
 }

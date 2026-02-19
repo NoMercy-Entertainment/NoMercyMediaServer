@@ -7,6 +7,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Claude credentials (mounted from host, never commit)
+.devcontainer/config/claude-credentials.json
+
 # User-specific files
 *.rsuser
 *.suo
@@ -398,11 +401,6 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
-### DotnetCore ###
-# .NET Core build folders
-bin/
-obj/
-
 # Common node modules locations
 /node_modules
 /wwwroot/node_modules
@@ -589,6 +587,8 @@ arch-packages/
 *.sqlite
 *.sqlite3
 *.db
+!src/NoMercy.Queue.Sqlite/
+!src/NoMercy.Queue.Sqlite/**
 
 # Environment and configuration with sensitive data
 .env
@@ -601,7 +601,6 @@ build.log
 
 # IDE and Editor specific
 .run/
-.claude/
 .vscode-test/
 
 # macOS specific
@@ -628,3 +627,11 @@ openapi-*.json
 .gpg-keys/
 *.gpg
 *.asc
+
+### DotnetCore ###
+# .NET Core build folders
+bin/
+obj/
+
+src/**/bin/
+src/**/obj/

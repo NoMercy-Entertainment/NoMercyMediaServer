@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.Lrclib.Client;
 using NoMercy.Providers.MusixMatch.Client;

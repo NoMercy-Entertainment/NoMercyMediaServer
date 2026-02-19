@@ -2,13 +2,15 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 
@@ -18,7 +20,7 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/userData")]
-public class UserDataController(HomeRepository homeRepository, MediaContext mediaContext) : BaseController
+public class UserDataController(HomeRepository homeRepository, MediaContext mediaContext, IEventBus eventBus) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -39,6 +41,7 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
 
     [HttpGet]
     [Route("continue")]
+    [ResponseCache(NoStore = true)]
     public async Task<IActionResult> ContinueWatching()
     {
         Guid userId = User.UserId();
@@ -75,7 +78,6 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "You do not have permission to remove continue watching"
             });
 
-        await using MediaContext mediaContext = new();
 
         List<UserData>? userData = body.Type switch
         {
@@ -114,6 +116,11 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
         mediaContext.UserData.RemoveRange(userData);
         await mediaContext.SaveChangesAsync();
 
+        await eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["continue-watching"]
+        });
+
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
@@ -133,7 +140,6 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "You do not have permission to view watched"
             });
 
-        await using MediaContext mediaContext = new();
 
         UserData? userData = body.Type switch
         {
@@ -188,7 +194,6 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
                 Message = "You do not have permission to view favorites"
             });
 
-        await using MediaContext mediaContext = new();
 
         UserData? userData = body.Type switch
         {

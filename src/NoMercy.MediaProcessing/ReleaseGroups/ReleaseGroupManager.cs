@@ -1,4 +1,4 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;

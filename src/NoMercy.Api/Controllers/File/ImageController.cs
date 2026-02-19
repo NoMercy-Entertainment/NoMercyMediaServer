@@ -8,6 +8,8 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using Serilog.Events;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.Api.Controllers.File;
 
@@ -29,7 +31,10 @@ public class ImageController : Controller
             string filePath = Path.Join(folder, path.Replace("/", ""));
             try
             {
-                if (!System.IO.File.Exists(filePath) && type == "original") await TmdbImageClient.Download("/" + path)!;
+                if (!System.IO.File.Exists(filePath) && type == "original")
+                {
+                    using Image<Rgba32>? downloadedImage = await TmdbImageClient.Download("/" + path)!;
+                }
             }
             catch (Exception)
             {
@@ -42,7 +47,7 @@ public class ImageController : Controller
             long originalFileSize = fileInfo.Length;
             string originalMimeType = MimeUtility.GetMimeMapping(filePath);
 
-            bool emptyArguments = (request.Width is null && request.Type is null && request.Quality is 100) | true;
+            bool emptyArguments = request.Width is null && request.Type is null && request.Quality is 100;
 
             if (emptyArguments || path.Contains(".svg") ||
                 (originalFileSize < request.Width && originalMimeType == request.Format.DefaultMimeType))

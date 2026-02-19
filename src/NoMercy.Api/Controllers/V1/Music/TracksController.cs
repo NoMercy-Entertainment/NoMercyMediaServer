@@ -2,15 +2,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.Socket.music;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
-using NoMercy.Networking.Dto;
-using NoMercy.NmSystem;
+using NoMercy.Database.Models.Music;
+using NoMercy.Helpers.Extensions;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.Events.Music;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.NoMercy.Client;
 
 namespace NoMercy.Api.Controllers.V1.Music;
@@ -21,14 +22,15 @@ namespace NoMercy.Api.Controllers.V1.Music;
 [Route("api/v{version:apiVersion}/music/tracks")]
 public class TracksController : BaseController
 {
-    public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
+    private readonly IEventBus _eventBus;
 
-    public TracksController(MusicRepository musicService, MediaContext mediaContext)
+    public TracksController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
+        _eventBus = eventBus;
     }
 
     [HttpGet]
@@ -42,7 +44,7 @@ public class TracksController : BaseController
 
         string language = Language();
 
-        foreach (TrackUser track in _musicRepository.GetTracksAsync(userId))
+        foreach (TrackUser track in _musicRepository.GetTracks(userId))
             tracks.Add(new(track.Track, language));
 
         if (tracks.Count == 0)
@@ -76,29 +78,26 @@ public class TracksController : BaseController
 
         await _musicRepository.LikeTrackAsync(userId, track, request.Value);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "album", track.AlbumTrack.FirstOrDefault()?.Album.Id]
         });
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist", track.ArtistTrack.FirstOrDefault()?.Artist.Id]
         });
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
-            QueryKey = ["music","tracks"]
-
+            QueryKey = ["music", "tracks"]
         });
         
-        MusicLikeEventDto musicLikeEventDto = new()
+        await _eventBus.PublishAsync(new MusicItemLikedEvent
         {
-            Id = track.Id,
-            Type = "track",
-            Liked = request.Value,
-            User = User.User()
-        };
-
-        OnLikeEvent?.Invoke(this, musicLikeEventDto);
+            UserId = User.UserId(),
+            ItemId = track.Id,
+            ItemType = "track",
+            Liked = request.Value
+        });
 
         return Ok(new StatusResponseDto<string>
         {

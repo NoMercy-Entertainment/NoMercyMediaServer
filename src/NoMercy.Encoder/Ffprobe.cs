@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using NoMercy.Encoder.Dto;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -13,7 +14,14 @@ public class Ffprobe
 {
     private readonly string _filename;
     private FfprobeSourceData SourceData { get; set; } = new();
-    private string Error { get; set; } = string.Empty;
+    public string Error { get; private set; } = string.Empty;
+
+    public string FilePath => _filename;
+    public TimeSpan Duration => Format.Duration ?? TimeSpan.Zero;
+    public VideoStream? PrimaryVideoStream => VideoStreams.FirstOrDefault();
+    public AudioStream? PrimaryAudioStream => AudioStreams.FirstOrDefault();
+    public SubtitleStream? PrimarySubtitleStream => SubtitleStreams.FirstOrDefault();
+    public ImageStream? PrimaryImageStream => ImageStreams.FirstOrDefault();
     
     /// <summary>
     /// Timeout for ffprobe execution in milliseconds. Default is 30 seconds.
@@ -36,6 +44,11 @@ public class Ffprobe
     public Ffprobe(string filename)
     {
         _filename = filename;
+    }
+
+    public static async Task<Ffprobe> CreateAsync(string file, CancellationToken ct = default)
+    {
+        return await new Ffprobe(file).GetStreamData();
     }
     
     public Task<Ffprobe> GetStreamData()
@@ -130,12 +143,13 @@ public class Ffprobe
             }
             catch (Exception ex)
             {
-                Logger.Encoder($"ffprobe execution failed for {_filename}: {ex.Message} (attempt {attempt}/{MaxRetries})", 
+                Logger.Encoder($"ffprobe execution failed for {_filename}: {ex.Message} (attempt {attempt}/{MaxRetries})",
                     LogEventLevel.Warning);
-                
+
                 if (attempt < MaxRetries)
                 {
-                    await Task.Delay(500, ct);
+                    int delayMs = IsResourceExhaustionError(ex) ? 2000 * attempt : 500;
+                    await Task.Delay(delayMs, ct);
                     continue;
                 }
                 
@@ -148,16 +162,26 @@ public class Ffprobe
         return (string.Empty, "ffprobe failed after maximum retries");
     }
 
+    private static bool IsResourceExhaustionError(Exception ex)
+    {
+        return ex is System.ComponentModel.Win32Exception win32Ex
+            ? win32Ex.NativeErrorCode is 1455 or 8
+            : ex.Message.Contains("paging file", StringComparison.OrdinalIgnoreCase)
+              || ex.Message.Contains("wisselbestand", StringComparison.OrdinalIgnoreCase)
+              || ex.Message.Contains("not enough memory", StringComparison.OrdinalIgnoreCase);
+    }
+
     private async Task<(string, string)> ExecStdErrOut(CancellationToken ct = default)
     {
         Process? ffprobe = null;
-        
+
+        await FfProbeThrottle.WaitAsync(ct);
         try
         {
             // Create a timeout token that will cancel after ExecutionTimeoutMs
             using CancellationTokenSource timeoutCts = new(ExecutionTimeoutMs);
             using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
-            
+
             ffprobe = new();
 
             ffprobe.StartInfo = new()
@@ -181,7 +205,14 @@ public class Ffprobe
             bool exited = ffprobe.WaitForExit(ExecutionTimeoutMs);
             if (!exited)
             {
-                ffprobe.Kill(entireProcessTree: true);
+                try
+                {
+                    ffprobe.Kill(entireProcessTree: true);
+                }
+                catch (InvalidOperationException)
+                {
+                    // Process already exited between WaitForExit and Kill — safe to ignore
+                }
                 throw new OperationCanceledException("ffprobe process did not exit within timeout period");
             }
 
@@ -189,6 +220,7 @@ public class Ffprobe
         }
         finally
         {
+            FfProbeThrottle.Release();
             ffprobe?.Dispose();
         }
     }

@@ -1,10 +1,13 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -12,12 +15,21 @@ using NoMercy.NmSystem.SystemCalls;
 namespace NoMercy.Encoder;
 
 [Serializable]
-public class FfMpeg : Classes
+public partial class FfMpeg : Classes
 {
+    [GeneratedRegex(@"Duration:\s(\d{2}):(\d{2}):(\d{2})\.(\d+)")]
+    private static partial Regex DurationRegex();
+
+    [GeneratedRegex(@"[\r\n]+")]
+    private static partial Regex NewlineSplitRegex();
+
+    [GeneratedRegex(@"(\d{2}):(\d{2}):(\d{2})\.(\d+)")]
+    private static partial Regex TimeRegex();
+
     internal string FfProbePath { get; set; } = AppFiles.FfProbePath;
     internal string FfmpegPath { get; set; } = AppFiles.FfmpegPath;
 
-    private static readonly Dictionary<int, Process> FfmpegProcess = new();
+    internal static readonly ConcurrentDictionary<int, Process> FfmpegProcess = new();
 
     public FfMpeg()
     {
@@ -59,9 +71,9 @@ public class FfMpeg : Classes
         return FfProbePath;
     }
 
-    public VideoAudioFile Open(string path)
+    public async Task<VideoAudioFile> OpenAsync(string path)
     {
-        FfProbeData ffprobe = FfProbe.Create(path);
+        FfProbeData ffprobe = await FfProbe.CreateAsync(path);
 
         if (ffprobe.VideoStreams.Count(s => s.CodecName != "mjpeg") > 0)
             return new VideoFile(ffprobe, FfmpegPath);
@@ -89,38 +101,49 @@ public class FfMpeg : Classes
         public double Remaining { get; set; }
     }
 
-    public VideoAudioFile Open(FolderAndFile? videoFile)
+    public async Task<VideoAudioFile> OpenAsync(FolderAndFile? videoFile)
     {
         string inputFile = $"{videoFile?.HostFolder}{videoFile?.Filename}";
-        return Open(inputFile);
+        return await OpenAsync(inputFile);
     }
 
     public static async Task<string> ExecStdErrOut(string args, string? cwd = null, string? executable = null)
     {
-        Process ffmpeg = new();
-
-        ffmpeg.StartInfo = new()
+        Process ffmpeg = new()
         {
-            WindowStyle = ProcessWindowStyle.Hidden,
-            FileName = executable ?? AppFiles.FfmpegPath,
-            WorkingDirectory = cwd,
-            Arguments = args,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardInput = true
+            StartInfo = new()
+            {
+                WindowStyle = ProcessWindowStyle.Hidden,
+                FileName = executable ?? AppFiles.FfmpegPath,
+                WorkingDirectory = cwd,
+                Arguments = args,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardInput = true
+            }
         };
 
         ffmpeg.Start();
-        FfmpegProcess.Add(ffmpeg.Id, ffmpeg);
+        FfmpegProcess.TryAdd(ffmpeg.Id, ffmpeg);
 
-        string error = await ffmpeg.StandardError.ReadToEndAsync();
-
-        FfmpegProcess.Remove(ffmpeg.Id);
-        ffmpeg.Close();
-
-        return error;
+        try
+        {
+            string error = await ffmpeg.StandardError.ReadToEndAsync();
+            await ffmpeg.WaitForExitAsync();
+            return error;
+        }
+        finally
+        {
+            FfmpegProcess.TryRemove(ffmpeg.Id, out _);
+            if (!ffmpeg.HasExited)
+            {
+                try { ffmpeg.Kill(entireProcessTree: true); }
+                catch { /* process may have exited between check and kill */ }
+            }
+            ffmpeg.Dispose();
+        }
     }
 
     public static async Task<string> Run(string args, string cwd, ProgressMeta meta)
@@ -142,90 +165,129 @@ public class FfMpeg : Classes
         };
 
         ffmpeg.Start();
-        FfmpegProcess.Add(ffmpeg.Id, ffmpeg);
+        FfmpegProcess.TryAdd(ffmpeg.Id, ffmpeg);
 
-        ffmpeg.BeginOutputReadLine();
-        ffmpeg.BeginErrorReadLine();
-
-        StringBuilder output = new();
-        StringBuilder output2 = new();
-        TimeSpan totalDuration = TimeSpan.Zero;
-        bool durationFound = false;
-        bool hasOutput = false;
-        TimeSpan currentTime;
-
-        Regex durationRegex = new(@"Duration:\s(\d{2}):(\d{2}):(\d{2})\.(\d+)");
-
-        StringBuilder error = new();
-
-        ffmpeg.ErrorDataReceived += (_, e) =>
+        try
         {
-            if (e.Data != null && !durationFound)
-            {
-                // Extract duration from the log
-                Match durationMatch = durationRegex.Match(e.Data);
-                if (durationMatch.Success)
-                {
-                    int hours = int.Parse(durationMatch.Groups[1].Value);
-                    int minutes = int.Parse(durationMatch.Groups[2].Value);
-                    int seconds = int.Parse(durationMatch.Groups[3].Value);
-                    int milliseconds = int.Parse(durationMatch.Groups[4].Value);
+            ffmpeg.BeginOutputReadLine();
+            ffmpeg.BeginErrorReadLine();
 
-                    totalDuration = new(0, hours, minutes, seconds, milliseconds * 10);
-                    durationFound = true;
+            StringBuilder output = new();
+            StringBuilder output2 = new();
+            TimeSpan totalDuration = TimeSpan.Zero;
+            bool durationFound = false;
+            bool hasOutput = false;
+            TimeSpan currentTime;
+            ProgressThrottle progressThrottle = new(500);
+
+            StringBuilder error = new();
+
+            ffmpeg.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null && !durationFound)
+                {
+                    // Extract duration from the log
+                    Match durationMatch = DurationRegex().Match(e.Data);
+                    if (durationMatch.Success)
+                    {
+                        int hours = int.Parse(durationMatch.Groups[1].Value);
+                        int minutes = int.Parse(durationMatch.Groups[2].Value);
+                        int seconds = int.Parse(durationMatch.Groups[3].Value);
+                        int milliseconds = int.Parse(durationMatch.Groups[4].Value);
+
+                        totalDuration = new(0, hours, minutes, seconds, milliseconds * 10);
+                        durationFound = true;
+                    }
+                    else
+                    {
+                        error.AppendLine(e.Data);
+                    }
                 }
                 else
                 {
                     error.AppendLine(e.Data);
                 }
-            }
-            else
+            };
+
+            ffmpeg.OutputDataReceived += (_, e) =>
             {
-                error.AppendLine(e.Data);
-            }
-        };
-
-        ffmpeg.OutputDataReceived += (_, e) =>
-        {
-            hasOutput = true;
-            try
-            {
-                if (e.Data == null) return;
-
-                output.AppendLine(e.Data);
-                output2.AppendLine(e.Data);
-
-                // Only parse and send when we have a complete progress block
-                if (!e.Data.StartsWith("progress=")) return;
-
-                ProgressData? parsedData = ParseOutputData(output2.ToString(), totalDuration);
-                if (parsedData == null)
+                hasOutput = true;
+                try
                 {
-                    output2.Clear();
-                    return;
-                }
+                    if (e.Data == null) return;
 
-                double progress = parsedData.ProgressPercentage;
-                currentTime = parsedData.CurrentTime;
-                double speed = parsedData.Speed;
-                double fps = parsedData.Fps;
-                int frame = parsedData.Frame;
-                string bitrate = parsedData.Bitrate;
-                double remaining = parsedData.Remaining;
-                string remainingHms = TimeSpan.FromSeconds(remaining).ToString(@"d\:hh\:mm\:ss");
-                string thumbnail = GetThumbnail(meta);
+                    output.AppendLine(e.Data);
+                    output2.AppendLine(e.Data);
 
-                // Check if this is the final progress block
-                if (e.Data.Trim() == "progress=end")
-                {
-                    Progress progressData = new()
+                    // Only parse and send when we have a complete progress block
+                    if (!e.Data.StartsWith("progress=")) return;
+
+                    ProgressData? parsedData = ParseOutputData(output2.ToString(), totalDuration);
+                    if (parsedData == null)
                     {
-                        Percentage = 100.0,
-                        Status = "completed",
+                        output2.Clear();
+                        return;
+                    }
+
+                    double progress = parsedData.ProgressPercentage;
+                    currentTime = parsedData.CurrentTime;
+                    double speed = parsedData.Speed;
+                    double fps = parsedData.Fps;
+                    int frame = parsedData.Frame;
+                    string bitrate = parsedData.Bitrate;
+                    double remaining = parsedData.Remaining;
+                    string remainingHms = TimeSpan.FromSeconds(remaining).ToString(@"d\:hh\:mm\:ss");
+
+                    // Check if this is the final progress block — always send
+                    if (e.Data.Trim() == "progress=end")
+                    {
+                        string thumbnail = GetThumbnail(meta);
+                        Progress progressData = new()
+                        {
+                            Percentage = 100.0,
+                            Status = "completed",
+                            CurrentTime = currentTime.TotalSeconds,
+                            Duration = totalDuration.TotalSeconds,
+                            Remaining = 0,
+                            RemainingHms = "0:00:00:00",
+                            Fps = fps,
+                            Speed = speed,
+                            Frame = frame,
+                            Bitrate = bitrate,
+                            HasGpu = meta.HasGpu,
+                            IsHdr = meta.IsHdr,
+                            VideoStreams = meta.VideoStreams,
+                            AudioStreams = meta.AudioStreams,
+                            SubtitleStreams = meta.SubtitleStreams,
+                            Thumbnail = thumbnail,
+                            Title = meta.Title,
+                            Id = meta.Id,
+                            Message = $"Encoding {meta.Type}",
+                            ProgressId = ffmpeg.Id
+                        };
+                        progressData.RemainingSplit = new int[] { 0, 0, 0, 0 };
+                        if (EventBusProvider.IsConfigured)
+                            _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent { ProgressData = progressData });
+                        output2.Clear();
+                        return;
+                    }
+
+                    // Throttle running progress updates to max 2/sec (500ms interval)
+                    if (!progressThrottle.ShouldSend())
+                    {
+                        output2.Clear();
+                        return;
+                    }
+
+                    string runningThumbnail = GetThumbnail(meta);
+                    Progress progressDataRunning = new()
+                    {
+                        Percentage = progress,
+                        Status = "running",
                         CurrentTime = currentTime.TotalSeconds,
                         Duration = totalDuration.TotalSeconds,
-                        Remaining = 0,
-                        RemainingHms = "0:00:00:00",
+                        Remaining = remaining,
+                        RemainingHms = remainingHms,
                         Fps = fps,
                         Speed = speed,
                         Frame = frame,
@@ -235,80 +297,59 @@ public class FfMpeg : Classes
                         VideoStreams = meta.VideoStreams,
                         AudioStreams = meta.AudioStreams,
                         SubtitleStreams = meta.SubtitleStreams,
-                        Thumbnail = thumbnail,
+                        Thumbnail = runningThumbnail,
                         Title = meta.Title,
                         Id = meta.Id,
                         Message = $"Encoding {meta.Type}",
                         ProgressId = ffmpeg.Id
                     };
-                    progressData.RemainingSplit = new int[] { 0, 0, 0, 0 };
-                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progressData);
+                    progressDataRunning.RemainingSplit = progressDataRunning.RemainingHms
+                        .Split(":").Select(s => int.TryParse(s, out int v) ? v : 0).ToArray();
+                    if (progressDataRunning.Speed > 0 && EventBusProvider.IsConfigured)
+                    {
+                        _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent { ProgressData = progressDataRunning });
+                    }
                     output2.Clear();
-                    return;
                 }
-
-                Progress progressDataRunning = new()
+                catch (Exception ex)
                 {
-                    Percentage = progress,
-                    Status = "running",
-                    CurrentTime = currentTime.TotalSeconds,
-                    Duration = totalDuration.TotalSeconds,
-                    Remaining = remaining,
-                    RemainingHms = remainingHms,
-                    Fps = fps,
-                    Speed = speed,
-                    Frame = frame,
-                    Bitrate = bitrate,
-                    HasGpu = meta.HasGpu,
-                    IsHdr = meta.IsHdr,
-                    VideoStreams = meta.VideoStreams,
-                    AudioStreams = meta.AudioStreams,
-                    SubtitleStreams = meta.SubtitleStreams,
-                    Thumbnail = thumbnail,
-                    Title = meta.Title,
-                    Id = meta.Id,
-                    Message = $"Encoding {meta.Type}",
-                    ProgressId = ffmpeg.Id
-                };
-                progressDataRunning.RemainingSplit = progressDataRunning.RemainingHms
-                    .Split(":").Select(s => int.TryParse(s, out int v) ? v : 0).ToArray();
-                if (progressDataRunning.Speed > 0)
-                {
-                    Networking.Networking.SendToAll("encoder-progress", "dashboardHub", progressDataRunning);
+                    Logger.Encoder($"Error processing output: {ex.Message}");
                 }
-                output2.Clear();
-            }
-            catch (Exception ex)
-            {
-                Logger.Encoder($"Error processing output: {ex.Message}");
-            }
-        };
+            };
 
-        await ffmpeg.WaitForExitAsync();
+            await ffmpeg.WaitForExitAsync();
 
-        FfmpegProcess.Remove(ffmpeg.Id);
-        ffmpeg.Close();
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
+                {
+                    ProgressData = new Progress { Status = "completed", Id = meta.Id }
+                });
 
-        Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
+            if (!hasOutput && error.Length > 0)
+                throw new(error.ToString());
+
+            return output.ToString();
+        }
+        finally
         {
-            Status = "completed",
-            Id = meta.Id
-        });
-
-        if (!hasOutput && error.Length > 0)
-            throw new(error.ToString());
-
-        return output.ToString();
+            FfmpegProcess.TryRemove(ffmpeg.Id, out _);
+            if (!ffmpeg.HasExited)
+            {
+                try { ffmpeg.Kill(entireProcessTree: true); }
+                catch { /* process may have exited between check and kill */ }
+            }
+            ffmpeg.Dispose();
+        }
     }
 
-    private static ProgressData? ParseOutputData(string output, TimeSpan totalDuration)
+    internal static ProgressData? ParseOutputData(string output, TimeSpan totalDuration)
     {
         try
         {
             double progressPercentage = 0.0;
             TimeSpan currentTime = TimeSpan.Zero;
 
-            string[] lines = Regex.Split(output, "[\r\n]+");
+            string[] lines = NewlineSplitRegex().Split(output);
             Dictionary<string, string> parsedValues = new();
 
             foreach (string line in lines)
@@ -325,8 +366,7 @@ public class FfMpeg : Classes
 
             parsedValues["totalDuration"] = totalDuration.ToString();
 
-            Regex progressRegex = new(@"(\d{2}):(\d{2}):(\d{2})\.(\d+)");
-            Match progressMatch = progressRegex.Match(parsedValues.GetValueOrDefault("out_time", string.Empty));
+            Match progressMatch = TimeRegex().Match(parsedValues.GetValueOrDefault("out_time", string.Empty));
 
             if (progressMatch.Success)
             {
@@ -392,7 +432,7 @@ public class FfMpeg : Classes
 
     public static async Task<string> GetFingerprint(string file)
     {
-        Process process1 = new()
+        using Process process1 = new()
         {
             StartInfo =
             {
@@ -424,41 +464,49 @@ public class FfMpeg : Classes
 
     public static async Task<string> GetDuration(string file)
     {
-        Process process2 = new()
+        await FfProbeThrottle.WaitAsync();
+        try
         {
-            StartInfo =
+            using Process process2 = new()
             {
-                FileName = AppFiles.FfProbePath,
-                Arguments = "-i \"" + file +
-                            "\" -hide_banner -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
-                WindowStyle = ProcessWindowStyle.Hidden,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            }
-        };
+                StartInfo =
+                {
+                    FileName = AppFiles.FfProbePath,
+                    Arguments = "-i \"" + file +
+                                "\" -hide_banner -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
 
-        process2.Start();
+            process2.Start();
 
-        using StreamReader outputReader2 = process2.StandardOutput;
-        using StreamReader errorReader2 = process2.StandardError;
+            using StreamReader outputReader2 = process2.StandardOutput;
+            using StreamReader errorReader2 = process2.StandardError;
 
-        // Read both streams simultaneously
-        Task<string> outputTask2 = outputReader2.ReadToEndAsync();
-        Task<string> errorTask2 = errorReader2.ReadToEndAsync();
+            // Read both streams simultaneously
+            Task<string> outputTask2 = outputReader2.ReadToEndAsync();
+            Task<string> errorTask2 = errorReader2.ReadToEndAsync();
 
-        await Task.WhenAll(outputTask2, errorTask2);
-        string time = await outputTask2;
-        await process2.WaitForExitAsync();
+            await Task.WhenAll(outputTask2, errorTask2);
+            string time = await outputTask2;
+            await process2.WaitForExitAsync();
 
-        if (string.IsNullOrEmpty(time)) throw new("Failed to get duration");
+            if (string.IsNullOrEmpty(time)) throw new("Failed to get duration");
 
-        if (time.Contains("N/A")) throw new("Failed to get duration");
+            if (time.Contains("N/A")) throw new("Failed to get duration");
 
-        if (time.Contains("Duration")) time = time.Split("Duration: ")[1].Split(",")[0];
+            if (time.Contains("Duration")) time = time.Split("Duration: ")[1].Split(",")[0];
 
-        return time.Trim();
+            return time.Trim();
+        }
+        finally
+        {
+            FfProbeThrottle.Release();
+        }
     }
 
 
@@ -472,8 +520,8 @@ public class FfMpeg : Classes
         }
         else
         {
-            Process.Start("kill", $"-STOP {process.Id}");
-            await Task.Delay(0);
+            using Process? killProc = Process.Start("kill", $"-STOP {process.Id}");
+            killProc?.WaitForExit();
         }
 
         return true;
@@ -489,8 +537,8 @@ public class FfMpeg : Classes
             }
             else
             {
-                Process.Start("kill", $"-CONT {process.Id}");
-                await Task.Delay(0);
+                using Process? killProc = Process.Start("kill", $"-CONT {process.Id}");
+                killProc?.WaitForExit();
             }
 
             return true;

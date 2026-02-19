@@ -1,31 +1,31 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Information;
-using NoMercy.Queue;
-using NoMercy.Queue.Interfaces;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 
 public class AlbumPaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<AlbumPaletteCronJob> _logger;
+    private readonly MediaContext _context;
 
     public string CronExpression => new CronExpressionBuilder().Daily();
     public string JobName => "Album ColorPalette Job";
 
-    public AlbumPaletteCronJob(ILogger<AlbumPaletteCronJob> logger)
+    public AlbumPaletteCronJob(ILogger<AlbumPaletteCronJob> logger, MediaContext context)
     {
         _logger = logger;
+        _context = context;
     }
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        await using MediaContext context = new();
-
-        List<Album[]> albums = context.Albums
+        List<Album[]> albums = _context.Albums
             .Where(x => string.IsNullOrEmpty(x._colorPalette) && x.Cover != null)
             .Include(x => x.Images)
             .OrderByDescending(x => x.UpdatedAt)
@@ -33,7 +33,7 @@ public class AlbumPaletteCronJob : ICronJobExecutor
             .ToList()
             .Chunk(5)
             .ToList();
-        
+
         _logger.LogTrace("Found {Count} album chunks to process", albums.Count);
 
         foreach (Album[] albumChunk in albums)
@@ -53,7 +53,7 @@ public class AlbumPaletteCronJob : ICronJobExecutor
                 }
             }
 
-            await context.SaveChangesAsync(cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
         }
 
         _logger.LogTrace("Album palette job completed, updated: {Count}", albums.Sum(x => x.Length));

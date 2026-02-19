@@ -5,18 +5,25 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.Dashboard.DTO;
-using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Music;
+using NoMercy.Database.Models.Queue;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder;
 using NoMercy.Encoder.Core;
-using NoMercy.Helpers;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
-using NoMercy.Queue;
+using NoMercyQueue;
+using NoMercy.Queue.MediaServer;
 
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -26,7 +33,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/tasks", Order = 10)]
-public class TasksController : BaseController
+public class TasksController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -133,7 +140,6 @@ public class TasksController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view encoder queue");
 
-        await using MediaContext mediaContext = new();
         await using QueueContext queueContext = new();
 
         ImmutableList<QueueJob> jobs = queueContext.QueueJobs
@@ -142,8 +148,8 @@ public class TasksController : BaseController
             .ThenBy(j => j.CreatedAt)
             .ToImmutableList();
 
-        List<EncodeVideoJob> encoderJobs = jobs
-            .Select(job => job.Payload.FromJson<EncodeVideoJob>())
+        List<VideoEncodeJob> encoderJobs = jobs
+            .Select(job => job.Payload.FromJson<VideoEncodeJob>())
             .Where(job => job is not null)
             .ToList()!;
 
@@ -186,17 +192,21 @@ public class TasksController : BaseController
                     ?.EncoderProfile.Name
             }).ToArray();
 
-        IEnumerable<EncodeVideoJob> runningJobs = encoderJobs
+        IEnumerable<VideoEncodeJob> runningJobs = encoderJobs
             .Where(j => j.Status == "running");
 
-        foreach (EncodeVideoJob job in runningJobs)
-            Networking.Networking.SendToAll("encoder-progress", "dashboardHub", new Progress
-            {
-                Id = job.Id,
-                Status = "running",
-                Title = GetTitle(folders, job),
-                Message = "Encoding video"
-            });
+        if (EventBusProvider.IsConfigured)
+            foreach (VideoEncodeJob job in runningJobs)
+                _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
+                {
+                    ProgressData = new Progress
+                    {
+                        Id = job.Id,
+                        Status = "running",
+                        Title = GetTitle(folders, job),
+                        Message = "Encoding video"
+                    }
+                });
 
         return Ok(new DataResponseDto<QueueJobDto[]>
         {
@@ -204,7 +214,7 @@ public class TasksController : BaseController
         });
     }
 
-    private static string GetTitle(List<Folder> folders, EncodeVideoJob j)
+    private static string GetTitle(List<Folder> folders, VideoEncodeJob j)
     {
         Movie? movie = folders.FirstOrDefault(f => f.Id == j.FolderId)
             ?.FolderLibraries.FirstOrDefault()
@@ -286,7 +296,8 @@ public class TasksController : BaseController
             return UnauthorizedResponse("You do not have permission to retry failed jobs");
 
         await using QueueContext queueContext = new();
-        JobQueue jobQueue = new(queueContext);
+        using EfQueueContextAdapter adapter = new(queueContext);
+        JobQueue jobQueue = new(adapter);
 
         if (id.HasValue)
         {

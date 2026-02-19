@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -52,12 +52,13 @@ public static class UserSettings
         }
     }
 
-    public static void ApplySettings(Dictionary<string, string> settings)
+    public static void ApplySettings(Dictionary<string, string> settings, bool silent = false)
     {
         using MediaContext mediaContext = new();
         foreach (KeyValuePair<string, string> setting in settings)
         {
-            Logger.App($"Configuration: {setting.Key} = {setting.Value}");
+            if (!silent)
+                Logger.App($"Configuration: {setting.Key} = {setting.Value}");
             
             switch (setting.Key)
             {
@@ -85,8 +86,14 @@ public static class UserSettings
                         }).On(c => c.Key)
                         .Run();
                     break;
-                case "queueRunners":
-                    Config.QueueWorkers = new(Config.QueueWorkers.Key, setting.Value.ToInt());
+                case "libraryRunners":
+                    Config.LibraryWorkers = new(Config.LibraryWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "importRunners" or "queueRunners":
+                    Config.ImportWorkers = new(Config.ImportWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "extrasRunners" or "dataRunners":
+                    Config.ExtrasWorkers = new(Config.ExtrasWorkers.Key, setting.Value.ToInt());
                     break;
                 case "encoderRunners":
                     Config.EncoderWorkers = new(Config.EncoderWorkers.Key, setting.Value.ToInt());
@@ -94,14 +101,14 @@ public static class UserSettings
                 case "cronRunners":
                     Config.CronWorkers = new(Config.CronWorkers.Key, setting.Value.ToInt());
                     break;
-                case "dataRunners":
-                    Config.DataWorkers = new(Config.DataWorkers.Key, setting.Value.ToInt());
-                    break;
                 case "imageRunners":
                     Config.ImageWorkers = new(Config.ImageWorkers.Key, setting.Value.ToInt());
                     break;
-                case "requestRunners":
-                    Config.RequestWorkers = new(Config.RequestWorkers.Key, setting.Value.ToInt());
+                case "fileRunners":
+                    Config.FileWorkers = new(Config.FileWorkers.Key, setting.Value.ToInt());
+                    break;
+                case "musicRunners":
+                    Config.MusicWorkers = new(Config.MusicWorkers.Key, setting.Value.ToInt());
                     break;
                 case "swagger":
                     Config.Swagger = setting.Value.ToBoolean();

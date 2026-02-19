@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Media;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Music;
+using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Api.Services;

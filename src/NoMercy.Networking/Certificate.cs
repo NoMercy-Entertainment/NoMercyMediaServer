@@ -13,17 +13,26 @@ namespace NoMercy.Networking;
 
 public static class Certificate
 {
+    public static bool HasValidCertificate()
+    {
+        return File.Exists(AppFiles.CertFile) && File.Exists(AppFiles.KeyFile);
+    }
+
     public static void KestrelConfig(KestrelServerOptions options)
     {
-        options.ConfigureEndpointDefaults(listenOptions => 
-            listenOptions.UseHttps(HttpsConnectionAdapterOptions()));
-        
         options.AddServerHeader = false;
-        options.Limits.MaxRequestBodySize = null;
-        options.Limits.MaxRequestBufferSize = null;
-        options.Limits.MaxConcurrentConnections = null;
-        options.Limits.MaxConcurrentUpgradedConnections = null;
-        options.AddServerHeader = false;
+        options.Limits.MaxRequestBodySize = 100L * 1024 * 1024 * 1024; // 100GB — 4K remux support
+        options.Limits.MaxRequestBufferSize = null; // Kestrel manages adaptively
+        options.Limits.MaxConcurrentConnections = 1000; // Many streaming clients
+        options.Limits.MaxConcurrentUpgradedConnections = 500; // WebSocket/SignalR
+    }
+
+    public static void ConfigureHttpsListener(ListenOptions listenOptions)
+    {
+        if (HasValidCertificate())
+        {
+            listenOptions.UseHttps(HttpsConnectionAdapterOptions());
+        }
     }
     
     private static HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()
@@ -58,61 +67,95 @@ public static class Certificate
         if (!File.Exists(AppFiles.CertFile))
             return false;
 
-        X509Certificate2 certificate = CombinePublicAndPrivateCerts();
+        try
+        {
+            X509Certificate2 certificate = CombinePublicAndPrivateCerts();
 
-        if (!certificate.Verify())
+            // Don't call certificate.Verify() — it may trigger OCSP/CRL network calls
+            // which fail when Cloudflare or the internet is down. Just check the expiry date.
+            if (certificate.NotAfter <= DateTime.Now)
+                return false; // Actually expired
+
+            if (certificate.NotAfter < DateTime.Now.AddDays(30))
+            {
+                Logger.Certificate(
+                    $"SSL cert expires {certificate.NotAfter:yyyy-MM-dd} — will attempt renewal");
+                return false; // Expiring soon — trigger renewal
+            }
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Logger.Certificate($"Failed to validate certificate: {e.Message}",
+                Serilog.Events.LogEventLevel.Warning);
             return false;
-
-        return certificate.NotAfter >= DateTime.Now - TimeSpan.FromDays(30);
+        }
     }
 
-    public static async Task RenewSslCertificate(int maxRetries = 3, int delaySeconds = 5)
+    private static readonly int[] CertBackoffSeconds = [2, 5, 15, 30, 60];
+
+    public static async Task RenewSslCertificate(int maxRetries = 5)
     {
-        bool hasExistingCert = File.Exists(AppFiles.CertFile);
         if (ValidateSslCertificate())
         {
             Logger.Certificate("SSL Certificate is valid");
             return;
         }
 
+        bool hasExistingCert = File.Exists(AppFiles.CertFile);
+
         Logger.Certificate(!hasExistingCert
             ? "Generating SSL Certificate..."
             : "Renewing SSL Certificate...");
 
-        using HttpClient client = DnsHttpClient.WithDns();
-        client.BaseAddress = new(Config.ApiServerBaseUrl);
-        client.Timeout = TimeSpan.FromMinutes(10);
-        client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
+        try
+        {
+            using HttpClient client = DnsHttpClient.WithDns();
+            client.BaseAddress = new(Config.ApiServerBaseUrl);
+            client.Timeout = TimeSpan.FromMinutes(10);
+            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+            client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
 
-        string serverUrl = $"certificate?id={Info.DeviceId}";
-        if (hasExistingCert)
-            serverUrl = $"renew-certificate?id={Info.DeviceId}";
+            string serverUrl = $"certificate?id={Info.DeviceId}";
+            if (hasExistingCert)
+                serverUrl = $"renew-certificate?id={Info.DeviceId}";
 
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
-            try
-            {
-                if (await FetchCertificate(maxRetries, delaySeconds, client, serverUrl, attempt, hasExistingCert))
-                    return;
-            }
-            catch (HttpRequestException ex) when (attempt < maxRetries)
-            {
-                Logger.Certificate(
-                    $"Request failed: {ex.Message}, retrying in {delaySeconds} seconds (attempt {attempt}/{maxRetries})");
-                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
-            }
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+                try
+                {
+                    if (await FetchCertificate(maxRetries, client, serverUrl, attempt, hasExistingCert))
+                        return;
+                }
+                catch (HttpRequestException ex) when (attempt < maxRetries)
+                {
+                    int delay = CertBackoffSeconds[Math.Min(attempt - 1, CertBackoffSeconds.Length - 1)];
+                    Logger.Certificate(
+                        $"Request failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})");
+                    await Task.Delay(TimeSpan.FromSeconds(delay));
+                }
+        }
+        catch (Exception ex) when (hasExistingCert)
+        {
+            // Cert exists on disk but renewal failed (Cloudflare down, network issue, etc.)
+            // The existing cert is usable — don't block boot
+            Logger.Certificate(
+                $"Certificate renewal failed: {ex.Message}. Using existing certificate.",
+                Serilog.Events.LogEventLevel.Warning);
+        }
     }
 
-    private static async Task<bool> FetchCertificate(int maxRetries, int delaySeconds, HttpClient client, string serverUrl,
+    private static async Task<bool> FetchCertificate(int maxRetries, HttpClient client, string serverUrl,
         int attempt, bool hasExistingCert)
     {
-        HttpResponseMessage response = await client.GetAsync(serverUrl);
+        using HttpResponseMessage response = await client.GetAsync(serverUrl);
         if (response.StatusCode == System.Net.HttpStatusCode.GatewayTimeout)
         {
             if (attempt == maxRetries)
                 throw new HttpRequestException("Max retries reached for certificate renewal");
 
-            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+            int delay = CertBackoffSeconds[Math.Min(attempt - 1, CertBackoffSeconds.Length - 1)];
+            await Task.Delay(TimeSpan.FromSeconds(delay));
             return false;
         }
 

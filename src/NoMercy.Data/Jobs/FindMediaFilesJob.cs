@@ -1,17 +1,23 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Logic;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Networking.Dto;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
 public class FindMediaFilesJob : IShouldQueue
 {
+    public string QueueName => "import";
+    public int Priority => 5;
+
     public int Id { get; set; }
     public Library? Library { get; set; }
 
@@ -50,7 +56,7 @@ public class FindMediaFilesJob : IShouldQueue
 
         if (library == null) return;
 
-        await using FileLogic file = new(Id, library);
+        await using FileLogic file = new(Id, library, context);
         await file.Process();
 
         if (file.Files.Count > 0)
@@ -76,15 +82,17 @@ public class FindMediaFilesJob : IShouldQueue
                 await context.SaveChangesAsync();
             }
 
-            Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-            {
-                QueryKey = ["libraries", library.Id.ToString()]
-            });
+            if (EventBusProvider.IsConfigured)
+                await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                {
+                    QueryKey = ["libraries", library.Id.ToString()]
+                });
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = [library.Type == Config.MovieMediaType ? Config.MovieMediaType : Config.TvMediaType, Id]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = [library.Type == Config.MovieMediaType ? Config.MovieMediaType : Config.TvMediaType, Id]
+            });
     }
 }

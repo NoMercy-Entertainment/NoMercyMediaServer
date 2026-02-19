@@ -1,6 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Database;
@@ -14,17 +15,24 @@ public class MediaContext : DbContext
 
     public MediaContext()
     {
-        
+
     }
+
+    [DbFunction("normalize_search", IsBuiltIn = true)]
+    public static string NormalizeSearch(string? input)
+        => throw new NotSupportedException("This method is for EF Core query translation only.");
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
         options.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
             o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
-        
-        options.EnableSensitiveDataLogging();
-        
-        options.AddInterceptors(new EntityBaseUpdatedAtInterceptor());
+
+        if (Config.IsDev)
+            options.EnableSensitiveDataLogging();
+
+        options.AddInterceptors(
+            new EntityBaseUpdatedAtInterceptor(),
+            new SqliteNormalizeSearchInterceptor());
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -41,11 +49,8 @@ public class MediaContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Model.GetEntityTypes()
-            .SelectMany(t => t.GetProperties())
-            .Where(p => p.ClrType == typeof(Ulid))
-            .ToList()
-            .ForEach(p => p.SetElementType(typeof(string)));
+        modelBuilder.HasDbFunction(
+            typeof(MediaContext).GetMethod(nameof(NormalizeSearch), [typeof(string)])!);
 
         modelBuilder.Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
@@ -65,6 +70,30 @@ public class MediaContext : DbContext
         modelBuilder.Entity<Crew>()
             .Property(t => t.JobId)
             .IsRequired(false);
+
+        modelBuilder.Entity<Metadata>()
+            .HasOne(m => m.AudioTrack)
+            .WithOne()
+            .HasForeignKey<Metadata>(m => m.AudioTrackId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Track>()
+            .HasOne(t => t.Metadata)
+            .WithMany()
+            .HasForeignKey(t => t.MetadataId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Model.GetEntityTypes()
+            .SelectMany(t => t.GetProperties())
+            .Where(p => p.ClrType == typeof(string))
+            .ToList()
+            .ForEach(p =>
+            {
+                MaxLengthAttribute? maxLengthAttr = p.PropertyInfo
+                    ?.GetCustomAttribute<MaxLengthAttribute>();
+                if (maxLengthAttr is not null)
+                    p.SetMaxLength(maxLengthAttr.Length);
+            });
 
         List<IMutableEntityType> entityTypes = modelBuilder.Model.GetEntityTypes()
             .Where(t => t.ClrType.IsSubclassOf(typeof(Timestamps)) || t.ClrType == typeof(Timestamps))

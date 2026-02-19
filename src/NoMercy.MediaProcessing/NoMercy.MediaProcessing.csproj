@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
@@ -11,19 +10,25 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="NoMercy.Tests.MediaProcessing"/>
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj"/>
         <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
         <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
         <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj"/>
         <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
         <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj"/>
-        <ProjectReference Include="..\NoMercy.Queue\NoMercy.Queue.csproj"/>
+        <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Castle.Core" Version="5.2.1"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageReference Include="Stowage" Version="2.0.1" />
-        <PackageReference Include="SubtitlesParserV2" Version="2.3.0" />
-        <PackageReference Include="TagLibSharp" Version="2.3.0"/>
+        <PackageReference Include="Castle.Core"/>
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Stowage" />
+        <PackageReference Include="SubtitlesParserV2" />
+        <PackageReference Include="TagLibSharp"/>
     </ItemGroup>
 </Project>

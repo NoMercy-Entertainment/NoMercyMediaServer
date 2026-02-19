@@ -6,5 +6,7 @@ public enum NatStatus
     Unknown,
     Open,
     Closed,
-    Filtered
+    Filtered,
+    HolePunched,
+    Tunneled
 }

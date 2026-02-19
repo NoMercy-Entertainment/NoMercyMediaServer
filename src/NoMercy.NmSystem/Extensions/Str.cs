@@ -25,24 +25,29 @@ public static partial class Str
 
     private static int LevenshteinDistance(string s1, string s2)
     {
-        int[,] dp = new int[s1.Length + 1, s2.Length + 1];
+        // Single-row algorithm: O(n) space instead of O(n*m)
+        int[] prev = new int[s2.Length + 1];
+        int[] curr = new int[s2.Length + 1];
 
-        for (int i = 0; i <= s1.Length; i++)
-            dp[i, 0] = i;
         for (int j = 0; j <= s2.Length; j++)
-            dp[0, j] = j;
+            prev[j] = j;
 
         for (int i = 1; i <= s1.Length; i++)
-        for (int j = 1; j <= s2.Length; j++)
         {
-            int cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
-            dp[i, j] = Math.Min(Math.Min(
-                    dp[i - 1, j] + 1, // Deletion
-                    dp[i, j - 1] + 1), // Insertion
-                dp[i - 1, j - 1] + cost); // Substitution
+            curr[0] = i;
+            for (int j = 1; j <= s2.Length; j++)
+            {
+                int cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
+                curr[j] = Math.Min(Math.Min(
+                        prev[j] + 1,       // Deletion
+                        curr[j - 1] + 1),  // Insertion
+                    prev[j - 1] + cost);    // Substitution
+            }
+
+            (prev, curr) = (curr, prev);
         }
 
-        return dp[s1.Length, s2.Length];
+        return prev[s2.Length];
     }
 
     public static List<T> SortByMatchPercentage<T>(IEnumerable<T> array, Func<T, string> keySelector, string match)
@@ -100,6 +105,21 @@ public static partial class Str
 
     [GeneratedRegex(@"\d+")]
     public static partial Regex MatchNumbers();
+
+    [GeneratedRegex(@"[\.\s\-_]S\d{1,2}(?:E\d+)?(?:[\.\s\-_]|$)", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchSeasonTag();
+
+    [GeneratedRegex(@"^S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchEpisodePrefix();
+
+    [GeneratedRegex(@"[\.\s\-_]S(\d{1,2})E(\d+)", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchSeasonEpisode();
+
+    [GeneratedRegex(@"\(.*?\)")]
+    public static partial Regex RemoveParenthesizedString();
+
+    [GeneratedRegex(@"[\-\.\s]+Episode\s*(\d+)", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchEpisodeWord();
 
     [GeneratedRegex("/[^a-zA-Z0-9]/")]
     public static partial Regex IsAlphaNumeric();
@@ -289,19 +309,38 @@ public static partial class Str
         // Replace whitespace with dots
         name = Regex.Replace(name, @"\s+", ".");
 
-        // Replace special characters and symbols
-        name = name
-            .Replace("‐", "-") // Hyphen
-            .Replace("–", "-") // En dash
-            .Replace("—", "-") // Em dash
-            .Replace("−", "-") // Minus sign
-            .Replace("°", ".Degrees")
-            .Replace("&", "and")
-            .Replace("!", ".")
-            .Replace("’", ".")
-            .Replace("?", ".")
-            .Replace("~", ".")
-            .Replace("`", ".");
+        // Replace special characters and symbols in a single pass
+        StringBuilder sb = new(name.Length + 16);
+        foreach (char c in name)
+        {
+            switch (c)
+            {
+                case '\u2010': // Hyphen
+                case '\u2013': // En dash
+                case '\u2014': // Em dash
+                case '\u2212': // Minus sign
+                    sb.Append('-');
+                    break;
+                case '\u00B0': // Degree sign
+                    sb.Append(".Degrees");
+                    break;
+                case '&':
+                    sb.Append("and");
+                    break;
+                case '!':
+                case '\'':
+                case '?':
+                case '~':
+                case '`':
+                    sb.Append('.');
+                    break;
+                default:
+                    sb.Append(c);
+                    break;
+            }
+        }
+
+        name = sb.ToString();
 
         // Replace any remaining non-ASCII characters with dots
         name = Regex.Replace(name, @"[^\u0000-\u007F\u00C0-\u017F\u0100-\u024F]+", ".");
@@ -351,6 +390,28 @@ public static partial class Str
     public static string CleanFileName(this string? self)
     {
         return _cleanFileName(self);
+    }
+
+    public static string NormalizeForComparison(this string name)
+    {
+        name = name.Replace("&", "and");
+        return Regex.Replace(name, @"[^a-zA-Z0-9]", "").ToLowerInvariant();
+    }
+
+    public static string? FindMatchingDirectory(string rootPath, string expectedFolderName)
+    {
+        if (!Directory.Exists(rootPath)) return null;
+
+        string normalizedExpected = expectedFolderName.NormalizeForComparison();
+
+        foreach (string dir in Directory.EnumerateDirectories(rootPath))
+        {
+            string dirName = Path.GetFileName(dir) ?? "";
+            if (dirName.NormalizeForComparison() == normalizedExpected)
+                return dir;
+        }
+
+        return null;
     }
 
     public static string TitleSort(this object self, int? parseYear)
@@ -446,19 +507,25 @@ public static partial class Str
         // Normalize to FormD to separate characters and diacritics
         string normalized = input.Normalize(NormalizationForm.FormD);
 
-        // Remove diacritics
-        StringBuilder stringBuilder = new();
+        // Remove diacritics and normalize dashes in a single pass
+        StringBuilder stringBuilder = new(normalized.Length);
         foreach (char c in normalized)
-            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-                stringBuilder.Append(c);
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark)
+                continue;
 
-        // Replace variations of dashes with a standard dash
-        string result = stringBuilder.ToString()
-            .Replace("‐", "-") // Hyphen
-            .Replace("–", "-") // En dash
-            .Replace("—", "-") // Em dash
-            .Replace("−", "-") // Minus sign
-            .ToLowerInvariant(); // Convert to lowercase
+            char appended = c switch
+            {
+                '\u2010' => '-', // Hyphen
+                '\u2013' => '-', // En dash
+                '\u2014' => '-', // Em dash
+                '\u2212' => '-', // Minus sign
+                _ => c
+            };
+            stringBuilder.Append(char.ToLowerInvariant(appended));
+        }
+
+        string result = stringBuilder.ToString();
 
         // Remove non-alphanumeric characters (optional)
         result = Regex.Replace(result, @"[^a-zA-Z0-9\s-]", "");

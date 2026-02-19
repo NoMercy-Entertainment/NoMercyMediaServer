@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media;
+using NoMercy.Database;
 using NoMercy.Networking;
+using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster.Models.ChromecastStatus;
 using Sharpcaster.Models.Media;
@@ -11,8 +14,12 @@ namespace NoMercy.Api.Controllers.Socket;
 
 public class CastHub : ConnectionHub
 {
-    public CastHub(IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
+    private readonly IClientMessenger _clientMessenger;
+
+    public CastHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory, ConnectedClients connectedClients, IClientMessenger clientMessenger)
+        : base(httpContextAccessor, contextFactory, connectedClients)
     {
+        _clientMessenger = clientMessenger;
     }
 
     public class TimeData
@@ -135,126 +142,126 @@ public class CastHub : ConnectionHub
 
     public void Play()
     {
-        Networking.Networking.SendToAll("Play", "castHub");
+        _clientMessenger.SendToAll("Play", "castHub");
     }
 
     public void Pause()
     {
-        Networking.Networking.SendToAll("Pause", "castHub");
+        _clientMessenger.SendToAll("Pause", "castHub");
     }
 
     public void Time(TimeData time)
     {
-        Networking.Networking.SendToAll("Time", "castHub", time);
+        _clientMessenger.SendToAll("Time", "castHub", time);
     }
 
     public void Ended()
     {
-        Networking.Networking.SendToAll("Ended", "castHub");
+        _clientMessenger.SendToAll("Ended", "castHub");
     }
 
     public void Volume(int volume)
     {
-        Networking.Networking.SendToAll("Volume", "castHub", volume);
+        _clientMessenger.SendToAll("Volume", "castHub", volume);
     }
 
     public void Muted(bool muted)
     {
-        Networking.Networking.SendToAll("Muted", "castHub", muted);
+        _clientMessenger.SendToAll("Muted", "castHub", muted);
     }
 
     public void Item(PlaylistItem item)
     {
-        Networking.Networking.SendToAll("Item", "castHub", item);
+        _clientMessenger.SendToAll("Item", "castHub", item);
     }
 
     public void Playlist(PlaylistItem[] item)
     {
-        Networking.Networking.SendToAll("Playlist", "castHub", item);
+        _clientMessenger.SendToAll("Playlist", "castHub", item);
     }
 
     public void SubtitleTracks(TextTrack[] subtitleTracks)
     {
-        Networking.Networking.SendToAll("SubtitleTracks", "castHub", subtitleTracks);
+        _clientMessenger.SendToAll("SubtitleTracks", "castHub", subtitleTracks);
     }
 
     public void CurrentSubtitleTrack(TextTrack subtitleTrack)
     {
-        Networking.Networking.SendToAll("CurrentSubtitleTrack", "castHub", subtitleTrack);
+        _clientMessenger.SendToAll("CurrentSubtitleTrack", "castHub", subtitleTrack);
     }
 
     public void AudioTracks(AudioTrack[] audioTrack)
     {
-        Networking.Networking.SendToAll("AudioTracks", "castHub", audioTrack);
+        _clientMessenger.SendToAll("AudioTracks", "castHub", audioTrack);
     }
 
     public void CurrentAudioTrack(AudioTrack audioTrack)
     {
-        Networking.Networking.SendToAll("CurrentAudioTrack", "castHub", audioTrack);
+        _clientMessenger.SendToAll("CurrentAudioTrack", "castHub", audioTrack);
     }
 
     public void GetPlayerState()
     {
-        Networking.Networking.SendToAll("GetPlayerState", "castHub");
+        _clientMessenger.SendToAll("GetPlayerState", "castHub");
     }
 
     public void PlayerState(CastPlayerState state)
     {
-        Networking.Networking.SendToAll("MusicPlayerState", "castHub", state);
+        _clientMessenger.SendToAll("MusicPlayerState", "castHub", state);
     }
 
     public void SetAudioTrack(int audioTrack)
     {
-        Networking.Networking.SendToAll("SetAudioTrack", "castHub", audioTrack);
+        _clientMessenger.SendToAll("SetAudioTrack", "castHub", audioTrack);
     }
 
     public void SetSubtitleTrack(int subtitleTrack)
     {
-        Networking.Networking.SendToAll("SetSubtitleTrack", "castHub", subtitleTrack);
+        _clientMessenger.SendToAll("SetSubtitleTrack", "castHub", subtitleTrack);
     }
 
     public void SetPlaylistItem(int item)
     {
-        Networking.Networking.SendToAll("SetPlaylistItem", "castHub", item);
+        _clientMessenger.SendToAll("SetPlaylistItem", "castHub", item);
     }
 
     public void SetVolume(int volume)
     {
-        Networking.Networking.SendToAll("SetVolume", "castHub", volume);
+        _clientMessenger.SendToAll("SetVolume", "castHub", volume);
     }
 
     public void SetMuted(bool muted)
     {
-        Networking.Networking.SendToAll("SetMuted", "castHub", muted);
+        _clientMessenger.SendToAll("SetMuted", "castHub", muted);
     }
 
     public void SetSeek(int time)
     {
-        Networking.Networking.SendToAll("SetSeek", "castHub", time);
+        _clientMessenger.SendToAll("SetSeek", "castHub", time);
     }
 
     public void SetNext()
     {
-        Networking.Networking.SendToAll("SetNext", "castHub");
+        _clientMessenger.SendToAll("SetNext", "castHub");
     }
 
     public void SetPrevious()
     {
-        Networking.Networking.SendToAll("SetPrevious", "castHub");
+        _clientMessenger.SendToAll("SetPrevious", "castHub");
     }
 
     public void SetPlay()
     {
-        Networking.Networking.SendToAll("SetPlay", "castHub");
+        _clientMessenger.SendToAll("SetPlay", "castHub");
     }
 
     public void SetPause()
     {
-        Networking.Networking.SendToAll("SetPause", "castHub");
+        _clientMessenger.SendToAll("SetPause", "castHub");
     }
 
     public void SetStop()
     {
-        Networking.Networking.SendToAll("SetStop", "castHub");
+        _clientMessenger.SendToAll("SetStop", "castHub");
     }
 }

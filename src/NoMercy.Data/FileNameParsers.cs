@@ -1,7 +1,9 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Providers.TMDB.Models.Episode;

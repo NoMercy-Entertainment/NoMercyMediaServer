@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Users;
+using NoMercy.Helpers.Extensions;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Api.Middleware;
@@ -121,7 +121,6 @@ public class HubErrorLoggingFilter : IHubFilter
 
             throw new HubException($"An error occurred calling '{methodName}': {ex.Message}");
         }
-        return await next(invocationContext);
     }
 }
 

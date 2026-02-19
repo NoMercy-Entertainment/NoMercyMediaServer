@@ -8,7 +8,7 @@ NoMercy MediaServer is a self-hosted media streaming platform built with .NET 9.
 ### Service-Oriented Modular Design
 The codebase follows a layered architecture with distinct service boundaries:
 
-- **NoMercy.Server**: Main ASP.NET Core host with Kestrel, handles web API and SignalR hubs
+- **NoMercy.Service**: Main ASP.NET Core host with Kestrel, handles web API and SignalR hubs
 - **NoMercy.Api**: RESTful controllers with versioned endpoints (`/api/v1/`, `/api/v2/`)  
 - **NoMercy.Database**: Entity Framework Core with SQLite, dual contexts (`MediaContext`, `QueueContext`)
 - **NoMercy.Encoder**: FFmpeg abstraction layer with fluent video/audio encoding pipeline
@@ -30,7 +30,7 @@ The codebase follows a layered architecture with distinct service boundaries:
 dotnet build
 
 # Run main server with custom ports
-dotnet run --project src/NoMercy.Server -- --internal-port=7626 --external-port=443
+dotnet run --project src/NoMercy.Service -- --internal-port=7626 --external-port=443
 
 # Test suites (xUnit-based)
 dotnet test tests/NoMercy.Tests.Database    # Database integration tests

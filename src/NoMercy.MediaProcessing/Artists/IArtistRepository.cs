@@ -1,4 +1,4 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 
 namespace NoMercy.MediaProcessing.Artists;
 

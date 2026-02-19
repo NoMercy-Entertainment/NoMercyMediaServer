@@ -35,8 +35,8 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         _fileProvider = fileProvider;
         _options = options;
         _logger = logger;
-        _contentTypeProvider = new FileExtensionContentTypeProvider();
-        _assetCache = new ConcurrentDictionary<string, CachedAsset>(StringComparer.OrdinalIgnoreCase);
+        _contentTypeProvider = new();
+        _assetCache = new(StringComparer.OrdinalIgnoreCase);
 
         // Pre-build injection strings
         _scriptsToInject = BuildScriptInjection(options.InjectScripts, options.MinifyInjections);

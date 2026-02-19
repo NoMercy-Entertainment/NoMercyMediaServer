@@ -1,17 +1,29 @@
+using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.NmSystem;
 
 public static class UpdateChecker
 {
+    private static readonly HttpClient HttpClient = new();
+    private const string GithubReleasesUrl = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyMediaServer/releases/latest";
+
+    static UpdateChecker()
+    {
+        HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+    }
+
     public static Task StartPeriodicUpdateCheck()
     {
         Task.Run(async () =>
         {
             while (true)
             {
+                bool available = await IsUpdateAvailableAsync();
+                Config.UpdateAvailable = available;
                 await Task.Delay(TimeSpan.FromHours(6));
-                Config.UpdateAvailable = IsUpdateAvailable();
             }
 
             // ReSharper disable once FunctionNeverReturns
@@ -20,20 +32,47 @@ public static class UpdateChecker
         return Task.CompletedTask;
     }
 
-    public static bool IsUpdateAvailable()
+    public static async Task<bool> IsUpdateAvailableAsync()
     {
         try
         {
-            return false;
+            using HttpResponseMessage response = await HttpClient.GetAsync(GithubReleasesUrl);
+            response.EnsureSuccessStatusCode();
+
+            string json = await response.Content.ReadAsStringAsync();
+            LatestReleaseInfo? release = JsonConvert.DeserializeObject<LatestReleaseInfo>(json);
+
+            if (release is null || string.IsNullOrEmpty(release.TagName))
+                return false;
+
+            string latestVersion = release.TagName.StartsWith("v")
+                ? release.TagName[1..]
+                : release.TagName;
+
+            string currentVersion = Software.GetReleaseVersion();
+
+            Config.LatestVersion = latestVersion;
+
+            if (string.Equals(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (Version.TryParse(latestVersion, out Version? latest) &&
+                Version.TryParse(currentVersion, out Version? current))
+            {
+                return latest > current;
+            }
+
+            return !string.Equals(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception e)
         {
+            Logger.Setup($"Update check failed: {e.Message}", LogEventLevel.Debug);
             return false;
         }
     }
 
-    private class UpdateCheckResult
+    private class LatestReleaseInfo
     {
-        public bool UpdateAvailable { get; set; }
+        [JsonProperty("tag_name")] public string TagName { get; set; } = string.Empty;
     }
 }

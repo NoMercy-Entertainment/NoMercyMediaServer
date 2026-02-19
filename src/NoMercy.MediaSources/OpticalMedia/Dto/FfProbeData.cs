@@ -1,4 +1,3 @@
-using FFMpegCore.Builders.MetaData;
 using Newtonsoft.Json;
 
 namespace NoMercy.MediaSources.OpticalMedia.Dto;

@@ -38,7 +38,7 @@ public class MusixMatchMusixMatchTrack
     [JsonProperty("lyrics_id")] public long LyricsId { get; set; }
     [JsonProperty("subtitle_id")] public long SubtitleId { get; set; }
     [JsonProperty("album_id")] public long AlbumId { get; set; }
-    [JsonProperty("album_name")] public long AlbumName { get; set; }
+    [JsonProperty("album_name")] public string? AlbumName { get; set; }
     [JsonProperty("album_vanity_id")] public string AlbumVanityId { get; set; } = string.Empty;
     [JsonProperty("artist_id")] public long ArtistId { get; set; }
     [JsonProperty("artist_mbid")] public Guid ArtistMbid { get; set; }

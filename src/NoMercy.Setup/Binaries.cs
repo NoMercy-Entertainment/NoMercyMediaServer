@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.FileSystem;
@@ -16,7 +17,7 @@ namespace NoMercy.Setup;
 public static class Binaries
 {
     private static readonly HttpClient HttpClient = new();
-    
+
     private const string GithubMediaServerApiUrl    = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyMediaServer/releases/latest";
     private const string GithubFfmpegApiUrl         = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyFFMpeg/releases/latest";
     private const string GithubTesseractApiUrl      = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyTesseract/releases/latest";
@@ -30,6 +31,17 @@ public static class Binaries
         HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
     }
 
+    private static bool ExistsInInstalledDirectory(string executableName)
+    {
+        string? ownDir = Path.GetDirectoryName(
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+
+        if (ownDir is null)
+            return false;
+
+        return File.Exists(Path.Combine(ownDir, executableName));
+    }
+
     public static Task DownloadAll()
     {
         return Task.Run(async () =>
@@ -37,11 +49,14 @@ public static class Binaries
             Logger.Setup("Downloading Binaries");
 
             await DownloadApp();
+            await DownloadService();
+            await DownloadCli();
+            await DownloadServerUpdate();
             await DownloadFfmpeg();
             await DownloadCloudflared();
             await DownloadYtdlp();
             await DownloadWhisperModels(AppFiles.WhisperModel);
-            
+
             string currentCulture = CultureInfo.CurrentCulture.EnglishLanguageTag();
             await DownloadTesseractData(["eng", "jpn", currentCulture]);
         });
@@ -68,7 +83,7 @@ public static class Binaries
     {
         try
         {
-            HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
+            using HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
 
             response.EnsureSuccessStatusCode();
 
@@ -77,17 +92,23 @@ public static class Binaries
             return jsonResponse.FromJson<GithubReleaseResponse>() ?? new GithubReleaseResponse();
         } catch (Exception e)
         {
-            Logger.Setup($"Error fetching release info from {apiUrl}: {e.Message}", LogEventLevel.Error);
+            Logger.Setup($"Error fetching release info from {apiUrl}: {e.Message}", LogEventLevel.Warning);
             return new();
         }
     }
     
     private static async Task DownloadApp()
     {
+        if (ExistsInInstalledDirectory("NoMercyApp" + Info.ExecSuffix))
+        {
+            Logger.Setup("App found in installed directory, skipping download", LogEventLevel.Verbose);
+            return;
+        }
+
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for App release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for App release.", LogEventLevel.Warning);
             return;
         }
 
@@ -124,7 +145,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable NoMercyApp asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable NoMercyApp asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
         
@@ -135,12 +156,193 @@ public static class Binaries
         await FilePermissions.SetExecutionPermissions(path);
     }
 
+    private static async Task DownloadService()
+    {
+        if (ExistsInInstalledDirectory("NoMercyMediaServerService" + Info.ExecSuffix))
+        {
+            Logger.Setup("Service found in installed directory, skipping download", LogEventLevel.Verbose);
+            return;
+        }
+
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
+        if (releaseInfo.Assets.Length == 0)
+        {
+            Logger.Setup("No assets found for Service release.", LogEventLevel.Warning);
+            return;
+        }
+
+        if (CheckLocalVersion(releaseInfo, AppFiles.ServiceExePath, out string version))
+        {
+            Logger.Setup($"Service is already up to date (version {version})", LogEventLevel.Verbose);
+            return;
+        }
+
+        await Downloader.DeleteSourceDownload(AppFiles.ServiceExePath);
+
+        Uri? downloadUrl = null;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServerService-windows-x64.exe", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServerService-linux-arm64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServerService-linux-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServerService-macos-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+
+        if (downloadUrl == null)
+        {
+            Logger.Setup("No suitable NoMercyMediaServerService asset found for the current platform.", LogEventLevel.Warning);
+            return;
+        }
+
+        string path = await Downloader.DownloadFile("NoMercyMediaServerService", downloadUrl, AppFiles.ServiceExePath);
+
+        await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
+
+        await FilePermissions.SetExecutionPermissions(path);
+    }
+
+    private static async Task DownloadCli()
+    {
+        if (ExistsInInstalledDirectory("nomercy" + Info.ExecSuffix))
+        {
+            Logger.Setup("CLI found in installed directory, skipping download", LogEventLevel.Verbose);
+            return;
+        }
+
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
+        if (releaseInfo.Assets.Length == 0)
+        {
+            Logger.Setup("No assets found for CLI release.", LogEventLevel.Warning);
+            return;
+        }
+
+        if (CheckLocalVersion(releaseInfo, AppFiles.CliExePath, out string version))
+        {
+            Logger.Setup($"CLI is already up to date (version {version})", LogEventLevel.Verbose);
+            return;
+        }
+
+        await Downloader.DeleteSourceDownload(AppFiles.CliExePath);
+
+        Uri? downloadUrl = null;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("nomercy-windows-x64.exe", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("nomercy-linux-arm64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("nomercy-linux-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("nomercy-macos-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+
+        if (downloadUrl == null)
+        {
+            Logger.Setup("No suitable nomercy CLI asset found for the current platform.", LogEventLevel.Warning);
+            return;
+        }
+
+        string path = await Downloader.DownloadFile("nomercy", downloadUrl, AppFiles.CliExePath);
+
+        await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
+
+        await FilePermissions.SetExecutionPermissions(path);
+    }
+
+    private static async Task DownloadServerUpdate()
+    {
+        GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
+        if (releaseInfo.Assets.Length == 0)
+        {
+            Logger.Setup("No assets found for Server release.", LogEventLevel.Warning);
+            return;
+        }
+
+        string latestVersion = releaseInfo.TagName.StartsWith("v")
+            ? releaseInfo.TagName[1..]
+            : releaseInfo.TagName;
+
+        string currentVersion = Software.GetReleaseVersion();
+
+        if (string.Equals(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.Setup($"Server is already up to date (version {currentVersion})", LogEventLevel.Verbose);
+            return;
+        }
+
+        Logger.Setup($"Server update available: {currentVersion} -> {latestVersion}");
+
+        await Downloader.DeleteSourceDownload(AppFiles.ServerTempExePath);
+
+        Uri? downloadUrl = null;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServer-windows-x64.exe", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServer-linux-arm64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServer-linux-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            downloadUrl = releaseInfo.Assets
+                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServer-macos-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+        }
+
+        if (downloadUrl == null)
+        {
+            Logger.Setup("No suitable NoMercyMediaServer asset found for the current platform.", LogEventLevel.Warning);
+            return;
+        }
+
+        string path = await Downloader.DownloadFile("NoMercyMediaServer Update", downloadUrl, AppFiles.ServerTempExePath);
+
+        await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
+
+        await FilePermissions.SetExecutionPermissions(path);
+
+        Logger.Setup($"Server update staged at {AppFiles.ServerTempExePath}");
+    }
+
     private static async Task DownloadFfmpeg()
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubFfmpegApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for FFMpeg release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for FFMpeg release.", LogEventLevel.Warning);
             return;
         }
 
@@ -184,7 +386,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable FFMpeg asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable FFMpeg asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
         
@@ -205,7 +407,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubYtdlpApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for yt-dlp release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for yt-dlp release.", LogEventLevel.Warning);
             return;
         }
         
@@ -242,7 +444,7 @@ public static class Binaries
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable yt-dlp asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable yt-dlp asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
         
@@ -260,7 +462,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubCloudflaredApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for cloudflared release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for cloudflared release.", LogEventLevel.Warning);
             return;
         }
         
@@ -289,18 +491,18 @@ public static class Binaries
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
         {
-            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-amd64.tgz"))?.BrowserDownloadUrl;
+            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-arm64.tgz"))?.BrowserDownloadUrl;
             needsExtraction = true;
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
         {
-            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-arm64.tgz"))?.BrowserDownloadUrl;
+            downloadUrl = releaseInfo.Assets.FirstOrDefault(a => a.Name.Equals("cloudflared-darwin-amd64.tgz"))?.BrowserDownloadUrl;
             needsExtraction = true;
         }
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable cloudflared asset found for the current platform.", LogEventLevel.Error);
+            Logger.Setup("No suitable cloudflared asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
         
@@ -337,7 +539,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubWhisperModelApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for WhisperGmmlModels release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for WhisperGmmlModels release.", LogEventLevel.Warning);
             return;
         }
         
@@ -349,14 +551,14 @@ public static class Binaries
         
         await Downloader.DeleteSourceDownload(destinationPath);
         
-        IEnumerable<Uri> downloadUrls = releaseInfo.Assets
+        List<Uri> downloadUrls = releaseInfo.Assets
             .Where(a => a.Name.Contains(modelName, StringComparison.OrdinalIgnoreCase))
             .Select(a => a.BrowserDownloadUrl)
             .ToList();
 
-        if (!downloadUrls.Any())
+        if (downloadUrls.Count == 0)
         {
-            Logger.Setup($"No assets found for model {modelName} in WhisperGmmlModels release.", LogEventLevel.Error);
+            Logger.Setup($"No assets found for model {modelName} in WhisperGmmlModels release.", LogEventLevel.Warning);
             return;
         }
 
@@ -366,7 +568,7 @@ public static class Binaries
             paths.Add(await Downloader.DownloadFile("WhisperGmmlModels", downloadUrl));
         }
 
-        if (downloadUrls.Count() > 1)
+        if (downloadUrls.Count > 1)
         {
             string outputPath = await ConcatenateModelParts(modelName, downloadUrls);
             
@@ -409,7 +611,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubTesseractApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for TesseractData release.", LogEventLevel.Error);
+            Logger.Setup("No assets found for TesseractData release.", LogEventLevel.Warning);
             return;
         }
 

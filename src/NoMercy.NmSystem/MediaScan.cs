@@ -27,8 +27,6 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     public MediaScan()
     {
-        FFMpegCore.GlobalFFOptions.Configure(options =>
-            options.BinaryFolder = Path.Combine(AppFiles.BinariesPath, "ffmpeg"));
     }
 
     public MediaScan EnableFileListing()
@@ -58,27 +56,27 @@ public class MediaScan : IDisposable, IAsyncDisposable
         return this;
     }
 
-    public Task<ConcurrentBag<MediaFolderExtend>> Process(string rootFolder, int depth = 0)
+    public async Task<ConcurrentBag<MediaFolderExtend>> Process(string rootFolder, int depth = 0)
     {
         rootFolder = Path.GetFullPath(rootFolder);
         return !_fileListingEnabled
-            ? Task.Run(() => ScanFoldersOnly(rootFolder, depth))
-            : Task.Run(() => ScanFolder(rootFolder, depth));
+            ? await Task.Run(() => ScanFoldersOnly(rootFolder, depth))
+            : await ScanFolderAsync(rootFolder, depth);
     }
 
-    private ConcurrentBag<MediaFolderExtend> ScanFolder(string folderPath, int depth)
+    private async Task<ConcurrentBag<MediaFolderExtend>> ScanFolderAsync(string folderPath, int depth)
     {
         folderPath = Path.GetFullPath(folderPath);
 
         ConcurrentBag<MediaFolderExtend> folders = [];
 
         if (depth < 0) return folders;
-        
+
         // Ensure the path is a directory before proceeding
         if (!Directory.Exists(folderPath))
             return folders;
 
-        ConcurrentBag<MediaFile> files = Files(folderPath);
+        ConcurrentBag<MediaFile> files = await FilesAsync(folderPath);
 
         MovieFile movieFile1 = _movieDetector.GetInfo(folderPath);
         movieFile1.Year ??= folderPath.TryGetYear();
@@ -114,7 +112,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
             }
             if (directories is null) return folders;
 
-            Parallel.ForEach(directories, Config.ParallelOptions, (directory, _) =>
+            await Parallel.ForEachAsync(directories, Config.ParallelOptions, async (directory, cancellationToken) =>
             {
                 string folderName = Path.GetFileName(directory);
 
@@ -133,7 +131,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     return;
                 }
 
-                ConcurrentBag<MediaFile> files2 = depth - 1 > 0 ? Files(directory) : [];
+                ConcurrentBag<MediaFile> files2 = depth - 1 > 0 ? await FilesAsync(directory) : [];
 
                 MovieFile movieFile = _movieDetector.GetInfo(directory);
                 movieFile.Year ??= directory.TryGetYear();
@@ -158,7 +156,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                         : null,
 
                     SubFolders = depth - 1 > 0
-                        ? ScanFolder(directory, depth - 1)
+                        ? await ScanFolderAsync(directory, depth - 1)
                         : []
                 });
             });
@@ -251,12 +249,12 @@ public class MediaScan : IDisposable, IAsyncDisposable
         }
     }
 
-    private ConcurrentBag<MediaFile> Files(string folderPath)
+    private async Task<ConcurrentBag<MediaFile>> FilesAsync(string folderPath)
     {
         ConcurrentBag<MediaFile> files = [];
         try
         {
-            Parallel.ForEach(Directory.GetFiles(folderPath), Config.ParallelOptions, (file, _) =>
+            await Parallel.ForEachAsync(Directory.GetFiles(folderPath), Config.ParallelOptions, async (file, cancellationToken) =>
             {
                 file = Path.GetFullPath(file.ToUtf8());
 
@@ -275,16 +273,6 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 if (!isVideoFile && !isAudioFile && !isSubtitleFile) return;
 
                 MovieFile? movieFile = isVideoFile || isAudioFile ? _movieDetector.GetInfo(file) : null;
-                // AnimeInfo animeInfo = AnimeParser.ParseAnimeFilename(file);
-                //
-                // if (movieFile is not null)
-                // {
-                //     movieFile.Year ??= Str.MatchYearRegex()
-                //         .Match(file).Value;
-                //     movieFile.Title ??= animeInfo.Name;
-                //     movieFile.Season ??= animeInfo.Season;
-                //     movieFile.Episode ??= animeInfo.Episode;
-                // }
 
                 FfProbeData? ffprobe = null;
                 TagFile? tagFile = null;
@@ -292,7 +280,7 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 {
                     if (isVideoFile || isAudioFile)
                     {
-                        ffprobe = FfProbe.Create(file);
+                        ffprobe = await FfProbe.CreateAsync(file, cancellationToken);
                         if (isAudioFile)
                             tagFile = TagFile.Create(file);
                     }
@@ -300,7 +288,6 @@ public class MediaScan : IDisposable, IAsyncDisposable
                 catch (Exception e)
                 {
                     Logger.App(e.Message, LogEventLevel.Fatal);
-                    // return;
                 }
 
                 MovieFileExtend movieFileExtend = new()
@@ -331,14 +318,12 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     Parsed = movieFileExtend,
                     FFprobe = ffprobe,
                     TagFile = tagFile
-                    // FingerPint = fingerPrint
                 };
 
                 files.Add(res);
             });
 
             ConcurrentBag<MediaFile> response = files
-                // .Where(f => f.Name is not "")
                 .OrderBy(f => f.Name)
                 .ToConcurrentBag();
 
@@ -354,17 +339,10 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 
     public ValueTask DisposeAsync()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
-
         return ValueTask.CompletedTask;
     }
 

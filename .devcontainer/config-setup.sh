@@ -25,14 +25,8 @@ export_config() {
         echo "⚠ No Claude settings found to export"
     fi
     
-    # Export Claude credentials (be careful with this!)
-    if [ -f ~/.claude/.credentials.json ]; then
-        cp ~/.claude/.credentials.json .devcontainer/config/claude-credentials.json
-        chmod 600 .devcontainer/config/claude-credentials.json
-        echo "✓ Exported Claude credentials (restricted access)"
-    else
-        echo "⚠ No Claude credentials found to export"
-    fi
+    # Note: Claude credentials are handled via devcontainer mount (~/.claude)
+    # No need to export/import credentials manually
     
     # Create environment setup file
     cat > .devcontainer/config/shell-aliases.sh << 'EOF'
@@ -70,12 +64,8 @@ import_config() {
         echo "✓ Imported Claude settings (permissions, preferences)"
     fi
     
-    # Import Claude credentials (if present)
-    if [ -f ".devcontainer/config/claude-credentials.json" ]; then
-        cp .devcontainer/config/claude-credentials.json ~/.claude/.credentials.json
-        chmod 600 ~/.claude/.credentials.json
-        echo "✓ Imported Claude credentials"
-    fi
+    # Note: Claude credentials are handled via devcontainer mount (~/.claude)
+    # No need to import credentials manually
     
     # Apply shell configuration
     if [ -f ".devcontainer/config/shell-aliases.sh" ]; then

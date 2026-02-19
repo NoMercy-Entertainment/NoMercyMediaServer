@@ -3,6 +3,11 @@ name: 'Package Building Workflow'
 on:
   workflow_call:
     inputs:
+      ref:
+        description: 'Git ref to checkout'
+        required: false
+        type: string
+        default: 'main'
       version:
         description: 'Package version'
         required: true
@@ -14,52 +19,41 @@ on:
 
 jobs:
   build_packages:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        package-type: [deb, rpm, arch]
+        package-type: [deb, rpm, arch, windows-installer, macos-installer]
+        os: [ubuntu-latest]
+        include:
+          - package-type: windows-installer
+            os: windows-latest
+          - package-type: macos-installer
+            os: macos-latest
+        exclude:
+          - package-type: windows-installer
+            os: ubuntu-latest
+          - package-type: macos-installer
+            os: ubuntu-latest
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: main
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
           fetch-tags: true
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v5
-        with:
-          path: ./artifacts
-
-      - name: Prepare executables
-        run: |
-          mkdir -p ./output
-          
-          # Copy all artifacts to output directory
-          find ./artifacts -name "*.tar.gz" -exec cp {} ./output/ \;
-          find ./artifacts -name "*.dmg" -exec cp {} ./output/ \;
-          find ./artifacts -name "*-linux-x64" -exec cp {} ./output/ \;
-          find ./artifacts -name "*-windows-x64.exe" -exec cp {} ./output/ \;
-          find ./artifacts -name "*-macos-x64" -exec cp {} ./output/ \;
-
-      - name: Make Linux executables executable
-        run: |
-          chmod +x ./output/NoMercyMediaServer-linux-x64 2>/dev/null || true
-          chmod +x ./output/NoMercyApp-linux-x64 2>/dev/null || true
 
       - name: Build DEB packages
         if: matrix.package-type == 'deb'
         uses: ./.github/actions/build-deb-packages
         with:
           version: ${{ inputs.version }}
-          artifacts-path: './output'
 
       - name: Build RPM packages
         if: matrix.package-type == 'rpm'
         uses: ./.github/actions/build-rpm-packages
         with:
           version: ${{ inputs.version }}
-          artifacts-path: './output'
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Build Arch packages
@@ -67,4 +61,15 @@ jobs:
         uses: ./.github/actions/build-arch-packages
         with:
           version: ${{ inputs.version }}
-          artifacts-path: './output'
+
+      - name: Build Windows installer
+        if: matrix.package-type == 'windows-installer'
+        uses: ./.github/actions/build-windows-installer
+        with:
+          version: ${{ inputs.version }}
+
+      - name: Build macOS installer
+        if: matrix.package-type == 'macos-installer'
+        uses: ./.github/actions/build-macos-installer
+        with:
+          version: ${{ inputs.version }}

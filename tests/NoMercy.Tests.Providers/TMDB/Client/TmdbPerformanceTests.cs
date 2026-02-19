@@ -9,7 +9,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Performance tests for TMDB clients
 /// Measures response times and throughput under various conditions
 /// </summary>
-[Collection("Performance")]
+[Collection("TmdbApi")]
 public class TmdbPerformanceTests : TmdbTestBase
 {
     private const int PerformanceThresholdMs = 6000; // 6 seconds max for mocked calls

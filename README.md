@@ -151,7 +151,7 @@ dotnet restore
 dotnet build
 
 # Run the server
-dotnet run --project src/NoMercy.Server
+dotnet run --project src/NoMercy.Service
 ```
 
 ## Usage

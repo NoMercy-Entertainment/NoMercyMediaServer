@@ -5,21 +5,19 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO.Components;
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Music;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.Networking.Dto;
-using NoMercy.NmSystem;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using CarouselResponseItemDto = NoMercy.Data.Repositories.CarouselResponseItemDto;
-
 namespace NoMercy.Api.Controllers.V1.Music;
 
 [ApiController]
@@ -31,11 +29,13 @@ public class PlaylistsController : BaseController
 {
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
+    private readonly IEventBus _eventBus;
 
-    public PlaylistsController(MusicRepository musicService, MediaContext mediaContext)
+    public PlaylistsController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
+        _eventBus = eventBus;
     }
 
     [HttpGet]
@@ -45,15 +45,10 @@ public class PlaylistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view playlists");
 
-        List<CarouselResponseItemDto> playlists = [];
-        playlists.AddRange(await _musicRepository.GetCarouselPlaylistsAsync(userId));
-
-        List<MusicCardData> musicCards = playlists
-            .Select(p => new MusicCardData(p))
-            .ToList();
+        List<PlaylistCardDto> playlistCards = await _musicRepository.GetPlaylistCardsAsync(userId);
 
         ComponentEnvelope response = Component.Grid()
-            .WithItems(musicCards.Select(Component.MusicCard));
+            .WithItems(playlistCards.Select(p => Component.MusicCard(new MusicCardData(p))));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -140,6 +135,11 @@ public class PlaylistsController : BaseController
             .ThenInclude(pt => pt.Track)
             .First(p => p.Name == request.Name && p.UserId == User.UserId());
 
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
+        {
+            QueryKey = ["music-playlists"]
+        });
+
         return Ok(new StatusResponseDto<Playlist>()
         {
             Data = playlist,
@@ -185,8 +185,8 @@ public class PlaylistsController : BaseController
         playlist._colorPalette = colorPalette;
 
         int result = await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "playlists", id]
         });
@@ -204,12 +204,12 @@ public class PlaylistsController : BaseController
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to delete a playlist");
-        
+
         int result = await _mediaContext.Playlists
             .Where(p => p.Id == id && p.UserId == User.UserId())
             .ExecuteDeleteAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music-playlists"]
         });
@@ -229,9 +229,7 @@ public class PlaylistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to upload playlist covers");
 
-        await using MediaContext mediaContext = new();
-
-        Playlist? playlist = await mediaContext.Playlists
+        Playlist? playlist = await _mediaContext.Playlists
             .Where(pt => pt.UserId == User.UserId())
             .FirstOrDefaultAsync(playlist => playlist.Id == id);
 
@@ -247,18 +245,18 @@ public class PlaylistsController : BaseController
         {
             await image.CopyToAsync(stream);
         }
-        
+
         playlist.Cover = $"/{slug}.jpg";
         playlist._colorPalette = await CoverArtImageManagerManager
             .ColorPalette("cover", new(filePath2));
-        
-        await mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _mediaContext.SaveChangesAsync();
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "playlists", playlist.Id]
         });
-        
+
         return Ok(new StatusResponseDto<ImageUploadResponseDto>
         {
             Status = "ok",
@@ -286,8 +284,8 @@ public class PlaylistsController : BaseController
 
         _mediaContext.PlaylistTrack.Add(playlistTrack);
         int result = await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "playlists", id]
         });
@@ -316,8 +314,8 @@ public class PlaylistsController : BaseController
         _mediaContext.PlaylistTrack.Remove(playlistTrack);
         
         int result = await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "playlists", id]
         });

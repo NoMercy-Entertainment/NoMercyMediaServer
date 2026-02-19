@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.TvShows;
 
 namespace NoMercy.MediaProcessing.Episodes;
 
@@ -8,23 +9,22 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
 {
     public Task StoreEpisodes(IEnumerable<Episode> episodes)
     {
-        lock(context)
-            return context.Episodes.UpsertRange(episodes.ToArray())
-                .On(e => new { e.Id })
-                .WhenMatched((es, ei) => new()
-                {
-                    Id = ei.Id,
-                    Title = ei.Title,
-                    AirDate = ei.AirDate,
-                    EpisodeNumber = ei.EpisodeNumber,
-                    Overview = ei.Overview,
-                    ProductionCode = ei.ProductionCode,
-                    SeasonNumber = ei.SeasonNumber,
-                    Still = ei.Still,
-                    TvId = ei.TvId,
-                    SeasonId = ei.SeasonId,
-                })
-                .RunAsync();
+        return context.Episodes.UpsertRange(episodes.ToArray())
+            .On(e => new { e.Id })
+            .WhenMatched((es, ei) => new()
+            {
+                Id = ei.Id,
+                Title = ei.Title,
+                AirDate = ei.AirDate,
+                EpisodeNumber = ei.EpisodeNumber,
+                Overview = ei.Overview,
+                ProductionCode = ei.ProductionCode,
+                SeasonNumber = ei.SeasonNumber,
+                Still = ei.Still,
+                TvId = ei.TvId,
+                SeasonId = ei.SeasonId,
+            })
+            .RunAsync();
     }
 
     public Task StoreEpisodeTranslations(List<Translation> translations)

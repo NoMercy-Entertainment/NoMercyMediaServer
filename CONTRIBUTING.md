@@ -68,7 +68,7 @@ dotnet test
 ### Running the Server
 
 ```bash
-dotnet run --project src/NoMercy.Server
+dotnet run --project src/NoMercy.Service
 ```
 
 ## Commit Messages

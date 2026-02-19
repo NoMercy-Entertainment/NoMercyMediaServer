@@ -12,6 +12,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests client behavior under various failure conditions
 /// </summary>
 [Trait("Category", "ErrorHandling")]
+[Collection("TmdbApi")]
 public class TmdbSearchErrorHandlingTests : TmdbTestBase
 {
     #region Invalid Query Tests

@@ -15,24 +15,14 @@ public class MusicBrainzBaseClient : IDisposable
 
     protected MusicBrainzBaseClient()
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+        _client = HttpClientProvider.CreateClient(HttpClientNames.MusicBrainz);
+        _client.BaseAddress ??= _baseUrl;
     }
 
     protected MusicBrainzBaseClient(Guid id)
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+        _client = HttpClientProvider.CreateClient(HttpClientNames.MusicBrainz);
+        _client.BaseAddress ??= _baseUrl;
         Id = id;
     }
 
@@ -85,6 +75,6 @@ public class MusicBrainzBaseClient : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

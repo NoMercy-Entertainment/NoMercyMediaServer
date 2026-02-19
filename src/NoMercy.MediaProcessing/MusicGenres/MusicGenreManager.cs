@@ -1,4 +1,4 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.Providers.MusicBrainz.Models;
 

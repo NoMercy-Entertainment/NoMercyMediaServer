@@ -3,9 +3,11 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Data.Jobs;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Music;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.Networking.Dto;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -15,13 +17,14 @@ using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercy.Queue;
+using NoMercyQueue;
 using Serilog.Events;
 
 namespace NoMercy.Data.Logic;
 
 public partial class MusicLogic : IAsyncDisposable
 {
+    private readonly MediaContext _mediaContext;
     private AcoustIdFingerprint? FingerPrint { get; set; }
     private ConcurrentBag<MediaFile>? Files { get; set; }
     private MediaFolderExtend ListPath { get; set; }
@@ -32,8 +35,9 @@ public partial class MusicLogic : IAsyncDisposable
     private Library Library { get; set; }
     private Folder? Folder { get; set; }
 
-    public MusicLogic(Library library, MediaFolderExtend listPath)
+    public MusicLogic(Library library, MediaFolderExtend listPath, MediaContext mediaContext)
     {
+        _mediaContext = mediaContext;
         Library = library;
         ListPath = listPath;
 
@@ -69,7 +73,7 @@ public partial class MusicLogic : IAsyncDisposable
             try
             {
                 Logger.App($"Analyzing File: {file.Name}", LogEventLevel.Debug);
-                FfProbeData ffProbeData = FfProbe.Create(file.Path);
+                FfProbeData ffProbeData = await FfProbe.CreateAsync(file.Path, cancellationToken);
 
                 AcoustIdFingerprintRecording? fingerPrintRecording = await MatchTrack(file, ffProbeData);
                 if (fingerPrintRecording is not null)
@@ -270,8 +274,8 @@ public partial class MusicLogic : IAsyncDisposable
     private async Task<MusicBrainzReleaseAppends?> StoreReleaseGroups(MusicBrainzReleaseAppends musicBrainzRelease)
     {
         Logger.App($"Storing Release Group: {musicBrainzRelease.MusicBrainzReleaseGroup.Title}", LogEventLevel.Verbose);
-        MediaContext mediaContext = new();
-        bool hasReleaseGroup = mediaContext.ReleaseGroups
+
+        bool hasReleaseGroup = _mediaContext.ReleaseGroups
             .AsNoTracking()
             .Any(r => r.Id == musicBrainzRelease.MusicBrainzReleaseGroup.Id);
 
@@ -290,7 +294,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         try
         {
-            await mediaContext.ReleaseGroups.Upsert(insert)
+            await _mediaContext.ReleaseGroups.Upsert(insert)
                 .On(e => new { e.Id })
                 .WhenMatched((s, i) => new()
                 {
@@ -305,8 +309,8 @@ public partial class MusicLogic : IAsyncDisposable
             foreach (MusicBrainzGenreDetails genre in musicBrainzRelease.MusicBrainzReleaseGroup.Genres ?? [])
                 await LinkGenreToReleaseGroup(musicBrainzRelease.MusicBrainzReleaseGroup, genre);
 
-            MusicDescriptionJob musicDescriptionJob = new(musicBrainzRelease.MusicBrainzReleaseGroup);
-            JobDispatcher.Dispatch(musicDescriptionJob, "data", 2);
+            MusicMetadataJob musicDescriptionJob = new(musicBrainzRelease.MusicBrainzReleaseGroup);
+            QueueRunner.Current!.Dispatcher.Dispatch(musicDescriptionJob);
         }
         catch (Exception e)
         {
@@ -325,8 +329,8 @@ public partial class MusicLogic : IAsyncDisposable
         MusicBrainzMedia? media = musicBrainzRelease.Media.FirstOrDefault(m => m.Tracks.Length > 0);
         if (media is null) return null;
 
-        MediaContext mediaContext = new();
-        bool hasAlbum = mediaContext.Albums
+
+        bool hasAlbum = _mediaContext.Albums
             .AsNoTracking()
             .Any(a => a.Id == musicBrainzRelease.Id && a.Cover != null);
 
@@ -356,7 +360,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         try
         {
-            await mediaContext.Albums.Upsert(insert)
+            await _mediaContext.Albums.Upsert(insert)
                 .On(e => new { e.Id })
                 .WhenMatched((s, i) => new()
                 {
@@ -378,15 +382,16 @@ public partial class MusicLogic : IAsyncDisposable
                 await LinkGenreToRelease(musicBrainzRelease, genre);
 
             CoverArtImageJob coverArtImageJob = new(musicBrainzRelease);
-            JobDispatcher.Dispatch(coverArtImageJob, "image", 3);
+            QueueRunner.Current!.Dispatcher.Dispatch(coverArtImageJob);
 
             FanArtImagesJob fanartImagesJob = new(musicBrainzRelease);
-            JobDispatcher.Dispatch(fanartImagesJob, "image", 2);
+            QueueRunner.Current!.Dispatcher.Dispatch(fanartImagesJob);
 
-            Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-            {
-                QueryKey = ["music", "album", musicBrainzRelease.Id.ToString()]
-            });
+            if (EventBusProvider.IsConfigured)
+                await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+                {
+                    QueryKey = ["music", "album", musicBrainzRelease.Id.ToString()]
+                });
         }
         catch (Exception e)
         {
@@ -402,8 +407,8 @@ public partial class MusicLogic : IAsyncDisposable
     private async Task StoreArtist(MusicBrainzArtistDetails musicBrainzArtist)
     {
         Logger.App($"Processing Artist: {musicBrainzArtist.Name}", LogEventLevel.Verbose);
-        MediaContext mediaContext = new();
-        bool hasArtist = mediaContext.Artists
+
+        bool hasArtist = _mediaContext.Artists
             .AsNoTracking()
             .Any(a => a.Id == musicBrainzArtist.Id);
 
@@ -428,7 +433,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         try
         {
-            await mediaContext.Artists.Upsert(insert)
+            await _mediaContext.Artists.Upsert(insert)
                 .On(e => new { e.Id })
                 .WhenMatched((s, i) => new()
                 {
@@ -460,24 +465,25 @@ public partial class MusicLogic : IAsyncDisposable
             Logger.App(e.Message, LogEventLevel.Error);
         }
 
-        MediaProcessing.Jobs.JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<MusicDescriptionJob>(musicBrainzArtist);
+        MusicMetadataJob musicDescriptionJob = new() { MusicBrainzArtist = musicBrainzArtist };
+        QueueRunner.Current!.Dispatcher.Dispatch(musicDescriptionJob);
 
         FanArtImagesJob fanartImagesJob = new(musicBrainzArtist);
-        JobDispatcher.Dispatch(fanartImagesJob, "image", 2);
+        QueueRunner.Current!.Dispatcher.Dispatch(fanartImagesJob);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["music", "artist", musicBrainzArtist.Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "artist", musicBrainzArtist.Id.ToString()]
+            });
     }
 
     private async Task<MusicBrainzTrack?> StoreTrack(MusicBrainzReleaseAppends musicBrainzRelease,
         MusicBrainzTrack musicBrainzTrack, MusicBrainzMedia musicBrainzMedia, MediaFile mediaFile)
     {
         Logger.App($"Processing Track: {musicBrainzTrack.Title}", LogEventLevel.Verbose);
-        MediaContext mediaContext = new();
-        bool hasTrack = mediaContext.Tracks
+
+        bool hasTrack = _mediaContext.Tracks
             .AsNoTracking()
             .Any(t => t.Id == musicBrainzTrack.Id && t.Filename != null && t.Duration != null);
 
@@ -497,7 +503,7 @@ public partial class MusicLogic : IAsyncDisposable
         if (file is not null)
         {
             Logger.App($"File Match: {file}", LogEventLevel.Verbose);
-            FfProbeData ffProbeData = FfProbe.Create(file);
+            FfProbeData ffProbeData = await FfProbe.CreateAsync(file);
             string folder = mediaFile.Parsed?.FilePath.Replace(Path.DirectorySeparatorChar + mediaFile.Name, "") ??
                             string.Empty;
 
@@ -513,7 +519,7 @@ public partial class MusicLogic : IAsyncDisposable
 
         try
         {
-            await mediaContext.Tracks.Upsert(insert)
+            await _mediaContext.Tracks.Upsert(insert)
                 .On(e => new { e.Id })
                 .WhenMatched((ts, ti) => new()
                 {
@@ -583,8 +589,8 @@ public partial class MusicLogic : IAsyncDisposable
             ReleaseGroupId = musicBrainzRelease.MusicBrainzReleaseGroup.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.AlbumReleaseGroup.Upsert(insert)
+
+        await _mediaContext.AlbumReleaseGroup.Upsert(insert)
             .On(e => new { e.AlbumId, e.ReleaseGroupId })
             .WhenMatched((s, i) => new()
             {
@@ -604,8 +610,8 @@ public partial class MusicLogic : IAsyncDisposable
             ReleaseGroupId = musicBrainzRelease.MusicBrainzReleaseGroup.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.ArtistReleaseGroup.Upsert(insert)
+
+        await _mediaContext.ArtistReleaseGroup.Upsert(insert)
             .On(e => new { e.ArtistId, e.ReleaseGroupId })
             .WhenMatched((s, i) => new()
             {
@@ -624,8 +630,8 @@ public partial class MusicLogic : IAsyncDisposable
             LibraryId = Library.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.AlbumLibrary.Upsert(insert)
+
+        await _mediaContext.AlbumLibrary.Upsert(insert)
             .On(e => new { e.AlbumId, e.LibraryId })
             .WhenMatched((s, i) => new()
             {
@@ -644,8 +650,8 @@ public partial class MusicLogic : IAsyncDisposable
             LibraryId = Library.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.ArtistLibrary.Upsert(insert)
+
+        await _mediaContext.ArtistLibrary.Upsert(insert)
             .On(e => new { e.ArtistId, e.LibraryId })
             .WhenMatched((s, i) => new()
             {
@@ -666,8 +672,8 @@ public partial class MusicLogic : IAsyncDisposable
             TrackId = track.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.AlbumTrack.Upsert(insert)
+
+        await _mediaContext.AlbumTrack.Upsert(insert)
             .On(e => new { e.AlbumId, e.TrackId })
             .WhenMatched((s, i) => new()
             {
@@ -687,8 +693,8 @@ public partial class MusicLogic : IAsyncDisposable
             ArtistId = musicBrainzArtistMusicBrainzArtist.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.AlbumArtist.Upsert(insert)
+
+        await _mediaContext.AlbumArtist.Upsert(insert)
             .On(e => new { e.AlbumId, e.ArtistId })
             .WhenMatched((s, i) => new()
             {
@@ -708,8 +714,8 @@ public partial class MusicLogic : IAsyncDisposable
             TrackId = musicBrainzTrack.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.ArtistTrack.Upsert(insert)
+
+        await _mediaContext.ArtistTrack.Upsert(insert)
             .On(e => new { e.ArtistId, e.TrackId })
             .WhenMatched((s, i) => new()
             {
@@ -729,8 +735,8 @@ public partial class MusicLogic : IAsyncDisposable
             ReleaseGroupId = musicBrainzReleaseGroup.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.MusicGenreReleaseGroup.Upsert(insert)
+
+        await _mediaContext.MusicGenreReleaseGroup.Upsert(insert)
             .On(e => new { e.GenreId, e.ReleaseGroupId })
             .WhenMatched((s, i) => new()
             {
@@ -745,7 +751,7 @@ public partial class MusicLogic : IAsyncDisposable
     {
         Logger.App($"Linking Genre to Artist: {musicBrainzArtist.Name}", LogEventLevel.Verbose);
 
-        bool genreExists = new MediaContext().MusicGenres
+        bool genreExists = _mediaContext.MusicGenres
             .AsNoTracking()
             .Any(g => g.Id == musicBrainzGenre.Id);
 
@@ -758,7 +764,7 @@ public partial class MusicLogic : IAsyncDisposable
                 Name = musicBrainzGenre.Name
             };
 
-            await new MediaContext().MusicGenres.Upsert(genreInsert)
+            await _mediaContext.MusicGenres.Upsert(genreInsert)
                 .On(e => new { e.Id })
                 .WhenMatched((s, i) => new()
                 {
@@ -774,8 +780,8 @@ public partial class MusicLogic : IAsyncDisposable
             ArtistId = musicBrainzArtist.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.ArtistMusicGenre.Upsert(insert)
+
+        await _mediaContext.ArtistMusicGenre.Upsert(insert)
             .On(e => new { e.MusicGenreId, e.ArtistId })
             .WhenMatched((s, i) => new()
             {
@@ -794,8 +800,8 @@ public partial class MusicLogic : IAsyncDisposable
             AlbumId = artist.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.AlbumMusicGenre.Upsert(insert)
+
+        await _mediaContext.AlbumMusicGenre.Upsert(insert)
             .On(e => new { e.MusicGenreId, e.AlbumId })
             .WhenMatched((s, i) => new()
             {
@@ -814,8 +820,8 @@ public partial class MusicLogic : IAsyncDisposable
             TrackId = musicBrainzTrack.Id
         };
 
-        MediaContext mediaContext = new();
-        await mediaContext.MusicGenreTrack.Upsert(insert)
+
+        await _mediaContext.MusicGenreTrack.Upsert(insert)
             .On(e => new { e.GenreId, e.TrackId })
             .WhenMatched((s, i) => new()
             {

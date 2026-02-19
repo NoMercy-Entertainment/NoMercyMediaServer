@@ -18,6 +18,8 @@ public static class Logger
     private static LogEventLevel _maxLogLevel = LogEventLevel.Debug;
     private const string ConsoleTemplate = "{Time} {ConsoleType} | {@Message:lj}{NewLine}{Exception}";
 
+    public static event Action<LogEntry>? LogEmitted;
+
     public class LogType
     {
         [JsonProperty("name")] public string Name { get; }
@@ -209,6 +211,16 @@ public static class Logger
             .ForContext("Level", logLevel)
             .ForContext("ConsoleType", type.Name)
             .Write(logLevel, "{@Message}", message.ToJson());
+
+        LogEmitted?.Invoke(new LogEntry
+        {
+            Type = logType,
+            Color = colorHex,
+            Message = message?.ToString() ?? string.Empty,
+            LogLevel = logLevel,
+            Time = DateTime.UtcNow,
+            ThreadId = Environment.CurrentManagedThreadId
+        });
     }
 
     // Generic entry point

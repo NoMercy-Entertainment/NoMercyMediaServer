@@ -2,13 +2,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.Controllers.V1.Media;
-using NoMercy.Api.Controllers.V1.Media.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO.Components;
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.DTOs.Media;
+using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Music;
+using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Music;
 
@@ -34,7 +33,8 @@ public class GenresController : BaseController
 
         Guid userId = User.UserId();
 
-        IEnumerable<NmGenreCardDto> genres = (await _genreRepository.GetMusicGenresAsync(userId))
+        List<MusicGenreCardDto> genreCards = await _genreRepository.GetMusicGenreCardsAsync(userId);
+        IEnumerable<NmGenreCardDto> genres = genreCards
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 
@@ -43,7 +43,7 @@ public class GenresController : BaseController
 
         return Ok(ComponentResponse.From(response));
     }
-    
+
     [HttpGet]
     [Route("letter/{letter}")]
     public async Task<IActionResult> LibraryByLetter(Ulid libraryId, string letter, [FromQuery] PageRequestDto request)
@@ -53,7 +53,8 @@ public class GenresController : BaseController
 
         Guid userId = User.UserId();
 
-        IEnumerable<NmGenreCardDto> genres = (await _genreRepository.GetPaginatedMusicGenresAsync(userId, letter, request.Take, request.Page))
+        List<MusicGenreCardDto> genreCards = await _genreRepository.GetPaginatedMusicGenreCardsAsync(userId, letter, request.Take, request.Page);
+        IEnumerable<NmGenreCardDto> genres = genreCards
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 

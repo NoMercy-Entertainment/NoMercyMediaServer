@@ -3,6 +3,11 @@ name: 'Build Executables Workflow'
 on:
   workflow_call:
     inputs:
+      ref:
+        description: 'Git ref to checkout and build'
+        required: false
+        type: string
+        default: 'main'
       dotnet-version:
         description: '.NET version to use'
         required: false
@@ -18,14 +23,14 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        project: [Server, App]
+        project: [Service, App, Tray, Cli]
     outputs:
       artifact-names: ${{ steps.set-names.outputs.names }}
 
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: main
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
           fetch-tags: true
 

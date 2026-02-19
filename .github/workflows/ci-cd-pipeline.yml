@@ -21,6 +21,7 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
   pages: write
   id-token: write
   actions: read
@@ -56,10 +57,21 @@ jobs:
     with:
       version: ${{ needs.version_management.outputs.version }}
 
-  # Step 5: Create Release (includes executables AND Linux packages)
+  # Step 5: Build and push Docker images to ghcr.io (reuses linux binary from build_executables)
+  build_docker_images:
+    needs: [version_management, build_executables]
+    if: needs.version_management.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/build-docker-images.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      version: ${{ needs.version_management.outputs.version }}
+
+  # Step 6: Create Release (includes executables AND Linux packages)
   # The nomercy-packages repo will automatically detect new releases and deploy
   create_release:
-    needs: [version_management, build_executables, build_packages]
+    needs: [version_management, build_executables, build_packages, build_docker_images]
     if: needs.version_management.outputs.should_deploy == 'true'
     uses: ./.github/workflows/create-release.yml
     secrets: inherit

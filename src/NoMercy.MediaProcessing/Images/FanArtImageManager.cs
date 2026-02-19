@@ -1,10 +1,10 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using Serilog.Events;
-using Image = NoMercy.Database.Models.Image;
+using Image = NoMercy.Database.Models.Media.Image;
 
 namespace NoMercy.MediaProcessing.Images;
 

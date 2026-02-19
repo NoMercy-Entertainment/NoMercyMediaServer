@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Extensions;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.Users;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Data.Repositories;
@@ -27,11 +29,11 @@ public class CollectionListDto
 
 public class CollectionRepository(MediaContext context)
 {
-    public async Task<List<Collection>> GetCollectionsAsync(Guid userId, string language, int take, int page)
+    public async Task<List<Collection>> GetCollectionsAsync(Guid userId, string language, int take, int page, CancellationToken ct = default)
     {
         List<Collection> collections = await context.Collections
             .AsNoTracking()
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)))
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
             .Include(collection => collection.Images.Where(i => i.Type == "logo").Take(1))
@@ -45,16 +47,16 @@ public class CollectionRepository(MediaContext context)
             .OrderBy(collection => collection.TitleSort)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return collections;
     }
 
-    public async Task<List<CollectionListDto>> GetCollectionsListAsync(Guid userId, string language, string country, int take, int page)
+    public async Task<List<CollectionListDto>> GetCollectionsListAsync(Guid userId, string language, string country, int take, int page, CancellationToken ct = default)
     {
         return await context.Collections
             .AsNoTracking()
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)))
             .OrderBy(collection => collection.TitleSort)
             .Skip(page * take)
@@ -96,7 +98,7 @@ public class CollectionRepository(MediaContext context)
                     .Select(cm => cm.Certification.Iso31661)
                     .FirstOrDefault()
             })
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
     // public Task<Collection?> GetCollectionAsync(Guid userId, int id, string? language, string country)
@@ -129,18 +131,18 @@ public class CollectionRepository(MediaContext context)
     //         .FirstOrDefaultAsync();
     // }
     
-    public Task<Collection?> GetCollectionAsync(Guid userId, int id, string? language, string country)
+    public async Task<Collection?> GetCollectionAsync(Guid userId, int id, string? language, string country, CancellationToken ct = default)
     {
-        return context.Collections
+        // Query 1: Core collection data — metadata, translations, images
+        // Removed: Library.LibraryUsers Include (only needed in WHERE clause, not consumed by DTO)
+        // Movie cast/crew split to Query 2 to reduce round-trips
+        Collection? collection = await context.Collections
             .AsNoTracking()
             .Where(collection => collection.Id == id)
-            .Where(collection => collection.Library.LibraryUsers
-                .FirstOrDefault(u => u.UserId.Equals(userId)) != null)
+            .ForUser(userId)
             .Include(collection => collection.CollectionUser
                 .Where(x => x.UserId.Equals(userId))
             )
-            .Include(collection => collection.Library)
-            .ThenInclude(library => library.LibraryUsers)
             .Include(collection => collection.CollectionMovies)
             .ThenInclude(movie => movie.Movie)
             .ThenInclude(movie => movie.Translations
@@ -166,22 +168,6 @@ public class CollectionRepository(MediaContext context)
             .ThenInclude(genreMovie => genreMovie.Genre)
             .Include(collection => collection.CollectionMovies)
             .ThenInclude(movie => movie.Movie)
-            .ThenInclude(movie => movie.Cast)
-            .ThenInclude(genreMovie => genreMovie.Person)
-            .Include(collection => collection.CollectionMovies)
-            .ThenInclude(movie => movie.Movie)
-            .ThenInclude(movie => movie.Cast)
-            .ThenInclude(genreMovie => genreMovie.Role)
-            .Include(collection => collection.CollectionMovies)
-            .ThenInclude(movie => movie.Movie)
-            .ThenInclude(movie => movie.Crew)
-            .ThenInclude(genreMovie => genreMovie.Job)
-            .Include(collection => collection.CollectionMovies)
-            .ThenInclude(movie => movie.Movie)
-            .ThenInclude(movie => movie.Crew)
-            .ThenInclude(genreMovie => genreMovie.Person)
-            .Include(collection => collection.CollectionMovies)
-            .ThenInclude(movie => movie.Movie)
             .ThenInclude(movie => movie.Images
                 .Where(image =>
                     (image.Type == "logo" && image.Iso6391 == "en")
@@ -191,6 +177,10 @@ public class CollectionRepository(MediaContext context)
                 .OrderByDescending(image => image.VoteAverage)
                 .Take(30)
             )
+            .Include(collection => collection.CollectionMovies)
+                .ThenInclude(movie => movie.Movie)
+                .ThenInclude(movie => movie.KeywordMovies)
+                .ThenInclude(keywordMovie => keywordMovie.Keyword)
             .Include(collection => collection.Translations
                 .Where(translation => translation.Iso6391 == language))
             .Include(collection => collection.Images
@@ -201,19 +191,95 @@ public class CollectionRepository(MediaContext context)
                 )
                 .OrderByDescending(image => image.VoteAverage)
             )
-            
-            .Include(collection => collection.CollectionMovies)
-                .ThenInclude(movie => movie.Movie)
-                .ThenInclude(movie => movie.KeywordMovies)
-                .ThenInclude(keywordMovie => keywordMovie.Keyword)
-            .FirstOrDefaultAsync();
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(ct);
+
+        if (collection is null) return null;
+
+        // Query 2: Movie-level cast/crew — loaded separately to reduce query complexity
+        List<int> movieIds = collection.CollectionMovies.Select(cm => cm.MovieId).ToList();
+        List<Movie> moviesWithCastCrew = await context.Movies.AsNoTracking()
+            .Where(m => movieIds.Contains(m.Id))
+            .Include(m => m.Cast)
+                .ThenInclude(c => c.Person)
+            .Include(m => m.Cast)
+                .ThenInclude(c => c.Role)
+            .Include(m => m.Crew)
+                .ThenInclude(c => c.Person)
+            .Include(m => m.Crew)
+                .ThenInclude(c => c.Job)
+            .AsSplitQuery()
+            .ToListAsync(ct);
+
+        // Merge movie cast/crew into the main query results
+        Dictionary<int, Movie> movieLookup = moviesWithCastCrew.ToDictionary(m => m.Id);
+        foreach (CollectionMovie cm in collection.CollectionMovies)
+        {
+            if (movieLookup.TryGetValue(cm.MovieId, out Movie? loaded))
+            {
+                cm.Movie.Cast = loaded.Cast;
+                cm.Movie.Crew = loaded.Crew;
+            }
+        }
+
+        return collection;
     }
-    
-    public Task<List<Collection>> GetCollectionItems(Guid userId, string? language, string country, int take = 1, int page = 0)
+
+    public Task<List<CollectionListDto>> GetCollectionItemCardsAsync(Guid userId, string? language, string country, int take = 1, int page = 0, CancellationToken ct = default)
     {
         return context.Collections
             .AsNoTracking()
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
+            .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)))
+            .OrderBy(collection => collection.TitleSort)
+            .Skip(page * take)
+            .Take(take)
+            .Select(collection => new CollectionListDto
+            {
+                Id = collection.Id,
+                Title = collection.Title,
+                TitleSort = collection.TitleSort ?? collection.Title,
+                TranslatedTitle = collection.Translations.FirstOrDefault(t => t.Iso6391 == language) != null
+                    ? collection.Translations.First(t => t.Iso6391 == language).Title
+                    : null,
+                TranslatedOverview = collection.Translations.FirstOrDefault(t => t.Iso6391 == language) != null
+                    ? collection.Translations.First(t => t.Iso6391 == language).Overview
+                    : null,
+                Overview = collection.Overview,
+                ColorPalette = collection.ColorPalette!,
+                Poster = collection.Poster,
+                Backdrop = collection.Backdrop,
+                Logo = collection.Images.FirstOrDefault(i => i.Type == "logo") != null
+                    ? collection.Images.First(i => i.Type == "logo").FilePath
+                    : null,
+                CreatedAt = collection.CreatedAt,
+                FirstMovieYear = collection.CollectionMovies
+                    .Where(cm => cm.Movie.ReleaseDate != null)
+                    .OrderBy(cm => cm.Movie.ReleaseDate)
+                    .Select(cm => cm.Movie.ReleaseDate!.Value.Year)
+                    .FirstOrDefault(),
+                TotalMovies = collection.CollectionMovies.Count,
+                MoviesWithVideo = collection.CollectionMovies.Count(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)),
+                CertificationRating = collection.CollectionMovies
+                    .SelectMany(cm => cm.Movie.CertificationMovies)
+                    .Where(cm => cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country)
+                    .Select(cm => cm.Certification.Rating)
+                    .FirstOrDefault(),
+                CertificationCountry = collection.CollectionMovies
+                    .SelectMany(cm => cm.Movie.CertificationMovies)
+                    .Where(cm => cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country)
+                    .Select(cm => cm.Certification.Iso31661)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(ct);
+    }
+
+    public Task<List<Collection>> GetCollectionItems(Guid userId, string? language, string country, int take = 1, int page = 0, CancellationToken ct = default)
+    {
+        return context.Collections
+            .AsNoTracking()
+            .AsSplitQuery()
+            .ForUser(userId)
             .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)))
             .Include(collection => collection.CollectionUser.Where(x => x.UserId == userId))
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
@@ -236,15 +302,16 @@ public class CollectionRepository(MediaContext context)
             .OrderBy(c => c.TitleSort)
             .Skip(page * take)
             .Take(take)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public Task<Collection?> GetAvailableCollectionAsync(Guid userId, int id)
+    public Task<Collection?> GetAvailableCollectionAsync(Guid userId, int id, CancellationToken ct = default)
     {
         return context.Collections
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(collection => collection.Id == id)
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any(v => v.Folder != null)))
             .Include(collection => collection.CollectionMovies)
                 .ThenInclude(cm => cm.Movie)
@@ -254,15 +321,16 @@ public class CollectionRepository(MediaContext context)
                 .ThenInclude(cm => cm.Movie)
                 .ThenInclude(m => m.VideoFiles.Where(v => v.Folder != null))
                 .ThenInclude(v => v.UserData.Where(ud => ud.UserId == userId))
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
-    public Task<Collection?> GetCollectionPlaylistAsync(Guid userId, int id, string language, string country)
+    public Task<Collection?> GetCollectionPlaylistAsync(Guid userId, int id, string language, string country, CancellationToken ct = default)
     {
         return context.Collections
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(collection => collection.Id == id)
-            .Where(collection => collection.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .ForUser(userId)
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
             .Include(collection => collection.Images.Where(i => i.Type == "logo").Take(1))
             .Include(collection => collection.CollectionMovies)
@@ -288,15 +356,15 @@ public class CollectionRepository(MediaContext context)
                     .Where(cert => cert.Certification.Iso31661 == "US" || cert.Certification.Iso31661 == country)
                     .Take(1))
                 .ThenInclude(cert => cert.Certification)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<bool> LikeCollectionAsync(int id, Guid userId, bool like)
+    public async Task<bool> LikeAsync(int id, Guid userId, bool like, CancellationToken ct = default)
     {
         Collection? collection = await context.Collections
             .AsNoTracking()
             .Where(collection => collection.Id == id)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(ct);
 
         if (collection is null) return false;
 
@@ -316,22 +384,22 @@ public class CollectionRepository(MediaContext context)
             CollectionUser? collectionUser = await context.CollectionUser
                 .Where(collectionUser =>
                     collectionUser.CollectionId == collection.Id && collectionUser.UserId.Equals(userId))
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(ct);
 
             if (collectionUser is not null) context.CollectionUser.Remove(collectionUser);
 
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(ct);
         }
 
         return true;
     }
 
-    public async Task<bool> AddToWatchListAsync(int collectionId, Guid userId, bool add = true)
+    public async Task<bool> AddToWatchListAsync(int collectionId, Guid userId, bool add = true, CancellationToken ct = default)
     {
         Collection? collection = await context.Collections
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == collectionId);
-    
+            .FirstOrDefaultAsync(c => c.Id == collectionId, ct);
+
         if (collection is null)
             return false;
     
@@ -343,13 +411,13 @@ public class CollectionRepository(MediaContext context)
                 .Include(cm => cm.Movie)
                     .ThenInclude(m => m.VideoFiles)
                 .OrderBy(cm => cm.Movie.TitleSort)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(ct);
     
             if (firstMovieWithVideo?.Movie?.VideoFiles.FirstOrDefault(vf => vf.Folder != null) is { } videoFile)
             {
                 // Check if userdata already exists for this video file
                 UserData? existingUserData = await context.UserData
-                    .FirstOrDefaultAsync(ud => ud.UserId == userId && ud.VideoFileId == videoFile.Id);
+                    .FirstOrDefaultAsync(ud => ud.UserId == userId && ud.VideoFileId == videoFile.Id, ct);
     
                 if (existingUserData is null)
                 {
@@ -370,12 +438,19 @@ public class CollectionRepository(MediaContext context)
             // Remove all userdata for this collection
             List<UserData> userDataToRemove = await context.UserData
                 .Where(ud => ud.UserId == userId && ud.CollectionId == collectionId)
-                .ToListAsync();
+                .ToListAsync(ct);
     
             context.UserData.RemoveRange(userDataToRemove);
         }
     
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(ct);
         return true;
+    }
+    
+    public Task DeleteAsync(int id, CancellationToken ct = default)
+    {
+        return context.Collections
+            .Where(collection => collection.Id == id)
+            .ExecuteDeleteAsync(ct);
     }
 }

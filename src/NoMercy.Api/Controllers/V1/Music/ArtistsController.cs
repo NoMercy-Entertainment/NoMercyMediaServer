@@ -4,17 +4,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.Socket.music;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Controllers.V1.Media.DTO.Components;
-using NoMercy.Api.Controllers.V1.Music.DTO;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Media.Components;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Music;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.Networking.Dto;
-using NoMercy.NmSystem;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.Events.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -30,14 +30,14 @@ public class ArtistsController : BaseController
 {
     private readonly MusicRepository _musicRepository;
     private readonly MediaContext _mediaContext;
+    private readonly IEventBus _eventBus;
 
-    public ArtistsController(MusicRepository musicService, MediaContext mediaContext)
+    public ArtistsController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
+        _eventBus = eventBus;
     }
-
-    public static event EventHandler<MusicLikeEventDto>? OnLikeEvent;
 
     [HttpGet]
     [Route("/api/v{version:apiVersion}/music/artists/{letter}")]
@@ -47,33 +47,10 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
 
-        List<ArtistsResponseItemDto> artists = [];
+        List<ArtistCardDto> artistCards = await _musicRepository.GetArtistCardsAsync(userId, letter);
 
-        foreach (Artist artist in _musicRepository.GetArtistsAsync(userId, letter))
-            artists.Add(new(artist));
-
-        List<ArtistTrack> tracks = await _musicRepository.GetArtistTracksForCollectionAsync(
-            artists.Select(a => a.Id).ToList());
-
-        foreach (ArtistsResponseItemDto artist in artists)
-            artist.Tracks = tracks.Count(track => track.ArtistId == artist.Id);
-        
         ComponentEnvelope response = Component.Grid()
-            .WithItems(artists
-                .Where(response => response.Tracks > 0)
-                .OrderBy(artist => artist.Name)
-                .Select(item => Component.MusicCard(item)));
-                // {
-                //     Id = item.Id.ToString(),
-                //     Name = item.Name,
-                //     Cover = item.Cover,
-                //     Type = "artist",
-                //     Link = $"/music/artist/{item.Id}",
-                //     ColorPalette = null,
-                //     Disambiguation = item.Disambiguation,
-                //     Description = item.Description,
-                //     Tracks = item.Tracks
-                // })));
+            .WithItems(artistCards.Select(a => Component.MusicCard(new ArtistsResponseItemDto(a))));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -107,8 +84,7 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like artists");
 
-        await using MediaContext mediaContext = new();
-        Artist? artist = await mediaContext.Artists
+        Artist? artist = await _mediaContext.Artists
             .AsNoTracking()
             .Where(artistUser => artistUser.Id == id)
             .FirstOrDefaultAsync();
@@ -118,20 +94,18 @@ public class ArtistsController : BaseController
 
         await _musicRepository.LikeArtistAsync(userId, artist, request.Value);
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist", artist.Id]
         });
 
-        MusicLikeEventDto musicLikeEventDto = new()
+        await _eventBus.PublishAsync(new MusicItemLikedEvent
         {
-            Id = artist.Id,
-            Type = "artist",
-            Liked = request.Value,
-            User = User.User()
-        };
-
-        OnLikeEvent?.Invoke(this, musicLikeEventDto);
+            UserId = User.UserId(),
+            ItemId = artist.Id,
+            ItemType = "artist",
+            Liked = request.Value
+        });
 
         return Ok(new StatusResponseDto<string>
         {
@@ -152,8 +126,6 @@ public class ArtistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan artists");
 
-        await using MediaContext mediaContext = new();
-
         return Ok(new StatusResponseDto<string>
         {
             Status = "ok",
@@ -172,8 +144,8 @@ public class ArtistsController : BaseController
         int result = await _mediaContext.Artists
             .Where(p => p.Id == id)
             .ExecuteDeleteAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist"]
         });
@@ -223,8 +195,8 @@ public class ArtistsController : BaseController
         artist._colorPalette = colorPalette;
 
         int result = await _mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist", id]
         });
@@ -244,9 +216,7 @@ public class ArtistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to upload artist covers");
 
-        await using MediaContext mediaContext = new();
-
-        Artist? artist = await mediaContext.Artists
+        Artist? artist = await _mediaContext.Artists
             .Include(artist => artist.LibraryFolder)
             .FirstOrDefaultAsync(artist => artist.Id == id);
 
@@ -274,18 +244,18 @@ public class ArtistsController : BaseController
         {
             await image.CopyToAsync(stream);
         }
-        
+
         artist.Cover = $"/{slug}.jpg";
         artist._colorPalette = await CoverArtImageManagerManager
             .ColorPalette("cover", new(filePath2));
-        
-        await mediaContext.SaveChangesAsync();
-        
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
+
+        await _mediaContext.SaveChangesAsync();
+
+        await _eventBus.PublishAsync(new LibraryRefreshEvent
         {
             QueryKey = ["music", "artist", artist.Id]
         });
-        
+
         return Ok(new StatusResponseDto<ImageUploadResponseDto>
         {
             Status = "ok",

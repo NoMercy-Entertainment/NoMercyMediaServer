@@ -10,11 +10,33 @@ namespace NoMercy.Providers.Helpers;
 
 public static class CacheController
 {
+    private const long MaxCacheSizeBytes = 500_000_000; // 500MB
+    private const int MaxLockEntries = 10_000;
+
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks = new();
 
     private static SemaphoreSlim GetLock(string path)
     {
-        return FileLocks.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
+        if (FileLocks.Count > MaxLockEntries)
+        {
+            PruneLocks();
+        }
+
+        return FileLocks.GetOrAdd(path, _ => new(1, 1));
+    }
+
+    private static void PruneLocks()
+    {
+        foreach (KeyValuePair<string, SemaphoreSlim> entry in FileLocks)
+        {
+            if (entry.Value.CurrentCount == 1)
+            {
+                if (FileLocks.TryRemove(entry.Key, out SemaphoreSlim? removed))
+                {
+                    removed.Dispose();
+                }
+            }
+        }
     }
 
     public static string GenerateFileName(string url)
@@ -105,6 +127,7 @@ public static class CacheController
             try
             {
                 await File.WriteAllTextAsync(fullname, data);
+                PruneCache();
                 return;
             }
             catch (Exception) when (retry < 10)
@@ -119,5 +142,37 @@ public static class CacheController
         }
 
         Logger.App($"CacheController: Failed to write {fullname}");
+    }
+
+    internal static void PruneCache()
+    {
+        PruneCache(AppFiles.ApiCachePath, MaxCacheSizeBytes);
+    }
+
+    internal static void PruneCache(string cachePath, long maxSizeBytes)
+    {
+        DirectoryInfo cacheDir = new(cachePath);
+        if (cacheDir.Exists == false) return;
+
+        FileInfo[] files = cacheDir.GetFiles()
+            .OrderBy(f => f.CreationTime)
+            .ToArray();
+
+        long totalSize = files.Sum(f => f.Length);
+
+        foreach (FileInfo file in files)
+        {
+            if (totalSize <= maxSizeBytes) break;
+
+            try
+            {
+                totalSize -= file.Length;
+                file.Delete();
+            }
+            catch (Exception)
+            {
+                // File may be locked by another operation
+            }
+        }
     }
 }
