@@ -49,10 +49,66 @@ public class StartupOptions
     [Option("dsn", Required = false, HelpText = "Sentry DSN.")]
     public string? SentryDsn { get; set; }
 
+    /// <summary>
+    /// Apply environment variable overrides for options not set via CLI.
+    /// Environment variables use NOMERCY_ prefix:
+    ///   NOMERCY_DEV=true, NOMERCY_LOG_LEVEL=Debug,
+    ///   NOMERCY_INTERNAL_PORT=7626, NOMERCY_EXTERNAL_PORT=7626,
+    ///   NOMERCY_INTERNAL_IP=192.168.1.100, NOMERCY_EXTERNAL_IP=1.2.3.4,
+    ///   NOMERCY_PIPE_NAME=MyPipe, NOMERCY_SEED=true
+    /// </summary>
+    private void ApplyEnvironmentVariables()
+    {
+        if (!Development)
+            Development = GetEnvBool("NOMERCY_DEV");
+
+        if (LogLevel == nameof(LogEventLevel.Information))
+        {
+            string? envLogLevel = Environment.GetEnvironmentVariable("NOMERCY_LOG_LEVEL");
+            if (!string.IsNullOrEmpty(envLogLevel))
+                LogLevel = envLogLevel;
+        }
+
+        if (!ShouldSeed)
+            ShouldSeed = GetEnvBool("NOMERCY_SEED");
+
+        if (InternalPort == 0)
+        {
+            string? envPort = Environment.GetEnvironmentVariable("NOMERCY_INTERNAL_PORT");
+            if (!string.IsNullOrEmpty(envPort) && int.TryParse(envPort, out int port))
+                InternalPort = port;
+        }
+
+        if (ExternalPort == 0)
+        {
+            string? envPort = Environment.GetEnvironmentVariable("NOMERCY_EXTERNAL_PORT");
+            if (!string.IsNullOrEmpty(envPort) && int.TryParse(envPort, out int port))
+                ExternalPort = port;
+        }
+
+        if (string.IsNullOrEmpty(InternalIp))
+            InternalIp = Environment.GetEnvironmentVariable("NOMERCY_INTERNAL_IP");
+
+        if (string.IsNullOrEmpty(ExternalIp))
+            ExternalIp = Environment.GetEnvironmentVariable("NOMERCY_EXTERNAL_IP");
+
+        if (string.IsNullOrEmpty(PipeName))
+            PipeName = Environment.GetEnvironmentVariable("NOMERCY_PIPE_NAME");
+
+    }
+
+    private static bool GetEnvBool(string name)
+    {
+        string? value = Environment.GetEnvironmentVariable(name);
+        return value is "1" or "true" or "True" or "TRUE";
+    }
+
     public void ApplySettings()
     {
+        ApplyEnvironmentVariables();
+
         Dictionary<string, string> options = new();
-        
+
         DatabaseSeeder.ShouldSeedMarvel = ShouldSeed;
         if (Development)
         {

@@ -37,8 +37,14 @@ services:
       - TZ=UTC
       - PUID=1000
       - PGID=1000
-      # Uncomment for development mode
-      # - ASPNETCORE_ENVIRONMENT=Development
+      # Server configuration (all optional, env vars override CLI args)
+      # - NOMERCY_INTERNAL_IP=192.168.1.100   # Host LAN IP (required in Docker)
+      # - NOMERCY_EXTERNAL_IP=1.2.3.4         # Public IP (auto-detected via UPnP/API)
+      # - NOMERCY_INTERNAL_PORT=7626           # Server port
+      # - NOMERCY_EXTERNAL_PORT=7626           # External port (if different from internal)
+      # - NOMERCY_LOG_LEVEL=Information        # Verbose, Debug, Information, Warning, Error, Fatal
+      # - NOMERCY_DEV=true                     # Development mode
+      # - NOMERCY_SEED=true                    # Seed database with sample data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7626/health"]
       interval: 30s
@@ -56,24 +62,3 @@ services:
 volumes:
   nomercy-data:
     name: nomercy-data
-
-# =============================================================================
-# Example configurations:
-# =============================================================================
-#
-# 1. With Traefik reverse proxy:
-#    Add labels to the nomercy service:
-#
-#    labels:
-#      - "traefik.enable=true"
-#      - "traefik.http.routers.nomercy.rule=Host(`media.yourdomain.com`)"
-#      - "traefik.http.services.nomercy.loadbalancer.server.port=7626"
-#
-# 2. With external network:
-#
-#    networks:
-#      - proxy
-#
-#    networks:
-#      proxy:
-#        external: true
