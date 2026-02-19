@@ -448,7 +448,7 @@ public class ShowManager(
 
         List<Company> companies = companiesDict.Values.ToList();
 
-        List<CompanyTv> companyTvs = show.ProductionCompanies
+        List<CompanyTv> companyTvs = companies
             .Select(company => new CompanyTv
             {
                 CompanyId = company.Id,

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
@@ -365,28 +366,27 @@ public class MovieManager(
         
         TmdbTvClient showClient = new(movie.Id);
 
-        List<Company> companies = [];
+        ConcurrentDictionary<int, Company> companiesDict = new();
 
         await Parallel.ForEachAsync(movie.ProductionCompanies, Config.ParallelOptions, async (productionCompany, _) =>
         {
             TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(productionCompany.Id);
             if (nw == null) return;
 
-            if (companies.All(n => n.Id != nw.Id))
+            companiesDict.TryAdd(nw.Id, new()
             {
-                companies.Add(new()
-                {
-                    Id = nw.Id,
-                    Name = nw.Name,
-                    Logo = nw.LogoPath,
-                    OriginCountry = nw.OriginCountry,
-                    Headquarters = nw.Headquarters,
-                    Homepage = nw.Homepage,
-                });
-            }
+                Id = nw.Id,
+                Name = nw.Name,
+                Logo = nw.LogoPath,
+                OriginCountry = nw.OriginCountry,
+                Headquarters = nw.Headquarters,
+                Homepage = nw.Homepage,
+            });
         });
+
+        List<Company> companies = companiesDict.Values.ToList();
         
-        List<CompanyMovie> companyMovies = movie.ProductionCompanies
+        List<CompanyMovie> companyMovies = companies
             .Select(company => new CompanyMovie
             {
                 CompanyId = company.Id,
