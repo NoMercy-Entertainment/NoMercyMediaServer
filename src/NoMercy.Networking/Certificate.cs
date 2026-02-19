@@ -33,6 +33,12 @@ public static class Certificate
         {
             listenOptions.UseHttps(HttpsConnectionAdapterOptions());
         }
+        else
+        {
+            // Without TLS, HTTP/2 requires prior-knowledge (h2c) and HTTP/3 requires QUIC/TLS.
+            // Fall back to HTTP/1.1 only to avoid empty-reply issues from protocol mismatches.
+            listenOptions.Protocols = HttpProtocols.Http1;
+        }
     }
     
     private static HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()

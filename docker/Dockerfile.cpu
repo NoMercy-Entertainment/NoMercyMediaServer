@@ -31,7 +31,6 @@ RUN chown -R nomercy:nomercy /app
 
 USER nomercy
 
-ENV ASPNETCORE_URLS=http://+:7626
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV HOME=/data
