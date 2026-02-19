@@ -16,17 +16,17 @@ public static class MusicGenresSeed
 
         Logger.Setup("Adding Music Genres", LogEventLevel.Verbose);
 
-        MusicBrainzGenreClient musicBrainzGenreClient = new();
-
-        MusicGenre[] genres = (await musicBrainzGenreClient.All()).ToList()
-            .ConvertAll<MusicGenre>(genre => new()
-            {
-                Id = genre.Id,
-                Name = genre.Name
-            }).ToArray();
-        
         try
         {
+            MusicBrainzGenreClient musicBrainzGenreClient = new();
+
+            MusicGenre[] genres = (await musicBrainzGenreClient.All()).ToList()
+                .ConvertAll<MusicGenre>(genre => new()
+                {
+                    Id = genre.Id,
+                    Name = genre.Name
+                }).ToArray();
+
             await dbContext.MusicGenres.UpsertRange(genres)
                 .On(v => new { v.Id })
                 .WhenMatched(v => new()
