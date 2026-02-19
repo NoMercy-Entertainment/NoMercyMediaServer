@@ -5,6 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
+using NoMercy.Networking;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Setup;
@@ -76,11 +77,14 @@ public static class ApplicationConfiguration
             app.UseDeveloperExceptionPage();
         }
 
-        app.UseHsts();
-        app.UseWhen(
-            context => !context.Request.Path.StartsWithSegments("/manage"),
-            branch => branch.UseHttpsRedirection()
-        );
+        if (Certificate.HasValidCertificate())
+        {
+            app.UseHsts();
+            app.UseWhen(
+                context => !context.Request.Path.StartsWithSegments("/manage"),
+                branch => branch.UseHttpsRedirection()
+            );
+        }
         app.UseResponseCompression();
         app.UseResponseCaching();
 

@@ -164,7 +164,7 @@ public static class Logger
             .DefaultEnrich()
             .WriteTo.Logger(lc =>
             {
-                if (!Console.IsOutputRedirected) lc.SinkConsole();
+                lc.SinkConsole();
             });
     }
 
