@@ -1,7 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.EventHandlers;
 using NoMercy.Api.Services.Music;
-using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.Networking.Messaging;
@@ -49,8 +47,8 @@ public static class EventHandlerExtensions
         services.AddSingleton<FolderPathEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
-            IDbContextFactory<MediaContext> contextFactory = sp.GetRequiredService<IDbContextFactory<MediaContext>>();
-            return new(eventBus, contextFactory);
+            IServiceScopeFactory scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+            return new(eventBus, scopeFactory);
         });
 
         services.AddSingleton<MusicLikeEventHandler>(sp =>

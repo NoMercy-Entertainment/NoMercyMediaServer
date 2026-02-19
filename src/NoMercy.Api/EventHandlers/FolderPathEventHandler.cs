@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Events;
@@ -9,12 +10,12 @@ namespace NoMercy.Api.EventHandlers;
 
 public class FolderPathEventHandler : IDisposable
 {
-    private readonly IDbContextFactory<MediaContext> _contextFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly List<IDisposable> _subscriptions = [];
 
-    public FolderPathEventHandler(IEventBus eventBus, IDbContextFactory<MediaContext> contextFactory)
+    public FolderPathEventHandler(IEventBus eventBus, IServiceScopeFactory scopeFactory)
     {
-        _contextFactory = contextFactory;
+        _scopeFactory = scopeFactory;
         _subscriptions.Add(eventBus.Subscribe<FolderPathAddedEvent>(OnFolderPathAdded));
         _subscriptions.Add(eventBus.Subscribe<FolderPathRemovedEvent>(OnFolderPathRemoved));
     }
@@ -23,7 +24,9 @@ public class FolderPathEventHandler : IDisposable
     {
         DynamicStaticFilesMiddleware.AddPath(@event.RequestPath, @event.PhysicalPath);
 
-        using MediaContext mediaContext = _contextFactory.CreateDbContext();
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+        using MediaContext mediaContext = contextFactory.CreateDbContext();
         ClaimsPrincipleExtensions.RefreshFolderIds(mediaContext);
 
         return Task.CompletedTask;
@@ -33,7 +36,9 @@ public class FolderPathEventHandler : IDisposable
     {
         DynamicStaticFilesMiddleware.RemovePath(@event.RequestPath);
 
-        using MediaContext mediaContext = _contextFactory.CreateDbContext();
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+        using MediaContext mediaContext = contextFactory.CreateDbContext();
         ClaimsPrincipleExtensions.RefreshFolderIds(mediaContext);
 
         return Task.CompletedTask;
