@@ -1,0 +1,51 @@
+# NoMercy MediaServer - Runtime Only (Intel QSV)
+# Used by CI with pre-built self-contained binary in ./publish/
+
+FROM debian:bookworm-slim
+WORKDIR /app
+
+# Install Intel media drivers and VAAPI libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    intel-media-va-driver-non-free \
+    intel-opencl-icd \
+    libmfx1 \
+    libvpl2 \
+    libva2 \
+    libva-drm2 \
+    libva-x11-2 \
+    libdrm2 \
+    libdrm-intel1 \
+    libicu72 \
+    libssl3 \
+    mediainfo \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -o -u 1000 nomercy \
+    && usermod -aG video,render nomercy
+
+# Create data directories
+RUN mkdir -p /data/config /data/cache /data/media /data/log \
+    && chown -R nomercy:nomercy /data
+
+# Copy self-contained binary
+COPY publish/NoMercyMediaServer .
+RUN chown -R nomercy:nomercy /app
+
+USER nomercy
+
+ENV ASPNETCORE_URLS=http://+:7626
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV HOME=/data
+ENV LIBVA_DRIVER_NAME=iHD
+ENV LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
+
+EXPOSE 7626
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:7626/health || exit 1
+
+ENTRYPOINT ["./NoMercyMediaServer"]
+CMD ["--internal-port", "7626"]

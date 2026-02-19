@@ -57,9 +57,9 @@ jobs:
     with:
       version: ${{ needs.version_management.outputs.version }}
 
-  # Step 5: Build and push Docker images to ghcr.io
+  # Step 5: Build and push Docker images to ghcr.io (reuses linux binary from build_executables)
   build_docker_images:
-    needs: version_management
+    needs: [version_management, build_executables]
     if: needs.version_management.outputs.should_deploy == 'true'
     uses: ./.github/workflows/build-docker-images.yml
     permissions:

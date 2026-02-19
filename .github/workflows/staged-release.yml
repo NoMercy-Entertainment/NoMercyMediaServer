@@ -82,7 +82,7 @@ jobs:
       ref: ${{ needs.prepare.outputs.branch }}
 
   build_docker_images:
-    needs: prepare
+    needs: [prepare, build_executables]
     uses: ./.github/workflows/build-docker-images.yml
     permissions:
       contents: read
