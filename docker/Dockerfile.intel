@@ -9,7 +9,7 @@ RUN sed -i 's/Components: main/Components: main non-free-firmware/' /etc/apt/sou
 
 # Install Intel media drivers and VAAPI libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    intel-media-va-driver-non-free \
+    intel-media-va-driver \
     intel-opencl-icd \
     libmfx1 \
     libvpl2 \
