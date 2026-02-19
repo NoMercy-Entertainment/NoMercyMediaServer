@@ -79,6 +79,26 @@ jobs:
           | **Windows** | [NoMercyMediaServer-${VERSION}-windows-x64-setup.exe](${DL}/NoMercyMediaServer-${VERSION}-windows-x64-setup.exe) |
           | **macOS** | [NoMercyMediaServer-${VERSION}-macos-x64-setup.pkg](${DL}/NoMercyMediaServer-${VERSION}-macos-x64-setup.pkg) |
           | **Linux** | [repo.nomercy.tv](https://repo.nomercy.tv) — see [setup instructions](${REPO}#installation) |
+          | **Docker** | See Docker section below |
+
+          ## Docker
+
+          \`\`\`bash
+          # CPU only
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:latest
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:${VERSION}
+
+          # NVIDIA GPU
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:nvidia
+
+          # Intel Quick Sync
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:intel
+
+          # AMD GPU
+          docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:amd
+          \`\`\`
+
+          Or use Docker Compose — see \`docker-compose.yml\` (and GPU variants) in the repo.
 
           ## What's New
 

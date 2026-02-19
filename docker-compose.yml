@@ -16,10 +16,11 @@
 services:
   nomercy:
     container_name: nomercy-mediaserver
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: nomercy/mediaserver:latest
+    image: ghcr.io/nomercy-entertainment/nomercymediaserver:latest
+    # To build locally instead of pulling from registry, uncomment:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "7626:7626"

@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
   actions: read
 
 jobs:
@@ -80,8 +81,19 @@ jobs:
       version: ${{ needs.prepare.outputs.version }}
       ref: ${{ needs.prepare.outputs.branch }}
 
+  build_docker_images:
+    needs: prepare
+    uses: ./.github/workflows/build-docker-images.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.branch }}
+      push: false
+
   create_release:
-    needs: [prepare, build_executables, build_packages]
+    needs: [prepare, build_executables, build_packages, build_docker_images]
     uses: ./.github/workflows/create-release.yml
     secrets: inherit
     with:

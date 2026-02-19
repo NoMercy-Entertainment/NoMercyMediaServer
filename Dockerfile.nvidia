@@ -12,31 +12,34 @@ WORKDIR /src
 
 # Copy solution and project files first (better layer caching)
 COPY NoMercy.Server.sln ./
-COPY src/NoMercy.Server/NoMercy.Server.csproj src/NoMercy.Server/
+COPY src/NoMercy.Service/NoMercy.Service.csproj src/NoMercy.Service/
 COPY src/NoMercy.Api/NoMercy.Api.csproj src/NoMercy.Api/
 COPY src/NoMercy.App/NoMercy.App.csproj src/NoMercy.App/
 COPY src/NoMercy.Data/NoMercy.Data.csproj src/NoMercy.Data/
 COPY src/NoMercy.Database/NoMercy.Database.csproj src/NoMercy.Database/
 COPY src/NoMercy.Encoder/NoMercy.Encoder.csproj src/NoMercy.Encoder/
+COPY src/NoMercy.Events/NoMercy.Events.csproj src/NoMercy.Events/
 COPY src/NoMercy.Globals/NoMercy.Globals.csproj src/NoMercy.Globals/
 COPY src/NoMercy.Helpers/NoMercy.Helpers.csproj src/NoMercy.Helpers/
 COPY src/NoMercy.MediaProcessing/NoMercy.MediaProcessing.csproj src/NoMercy.MediaProcessing/
 COPY src/NoMercy.MediaSources/NoMercy.MediaSources.csproj src/NoMercy.MediaSources/
 COPY src/NoMercy.Networking/NoMercy.Networking.csproj src/NoMercy.Networking/
 COPY src/NoMercy.NmSystem/NoMercy.NmSystem.csproj src/NoMercy.NmSystem/
+COPY src/NoMercy.Plugins/NoMercy.Plugins.csproj src/NoMercy.Plugins/
+COPY src/NoMercy.Plugins.Abstractions/NoMercy.Plugins.Abstractions.csproj src/NoMercy.Plugins.Abstractions/
 COPY src/NoMercy.Providers/NoMercy.Providers.csproj src/NoMercy.Providers/
-COPY src/NoMercy.Queue/NoMercy.Queue.csproj src/NoMercy.Queue/
+COPY src/NoMercy.Queue.MediaServer/NoMercy.Queue.MediaServer.csproj src/NoMercy.Queue.MediaServer/
 COPY src/NoMercy.Setup/NoMercy.Setup.csproj src/NoMercy.Setup/
 
 # Restore dependencies
-RUN dotnet restore src/NoMercy.Server/NoMercy.Server.csproj
+RUN dotnet restore src/NoMercy.Service/NoMercy.Service.csproj
 
 # Copy everything else
 COPY src/ src/
 COPY assets/ assets/
 
 # Build and publish
-RUN dotnet publish src/NoMercy.Server/NoMercy.Server.csproj \
+RUN dotnet publish src/NoMercy.Service/NoMercy.Service.csproj \
     -c Release \
     -o /app/publish \
     --no-restore \
