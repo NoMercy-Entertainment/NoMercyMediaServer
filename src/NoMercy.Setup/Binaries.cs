@@ -81,19 +81,53 @@ public static class Binaries
     
     private static async Task<GithubReleaseResponse> GetLatestReleaseInfo(string apiUrl)
     {
-        try
+        int attempt = 0;
+        TimeSpan backoff = TimeSpan.FromSeconds(30);
+
+        while (true)
         {
-            using HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
+            attempt++;
+            try
+            {
+                using HttpResponseMessage response = await HttpClient.GetAsync(apiUrl);
 
-            response.EnsureSuccessStatusCode();
+                if (response.StatusCode is System.Net.HttpStatusCode.Forbidden
+                    or System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    TimeSpan waitTime = backoff;
 
-            string jsonResponse = await response.Content.ReadAsStringAsync();
+                    if (response.Headers.TryGetValues("X-RateLimit-Reset", out IEnumerable<string>? values))
+                    {
+                        string? resetValue = values.FirstOrDefault();
+                        if (resetValue is not null && long.TryParse(resetValue, out long resetUnix))
+                        {
+                            DateTimeOffset resetTime = DateTimeOffset.FromUnixTimeSeconds(resetUnix);
+                            TimeSpan untilReset = resetTime - DateTimeOffset.UtcNow;
+                            if (untilReset > TimeSpan.Zero)
+                                waitTime = untilReset + TimeSpan.FromSeconds(2);
+                        }
+                    }
 
-            return jsonResponse.FromJson<GithubReleaseResponse>() ?? new GithubReleaseResponse();
-        } catch (Exception e)
-        {
-            Logger.Setup($"Error fetching release info from {apiUrl}: {e.Message}", LogEventLevel.Warning);
-            return new();
+                    Logger.Setup(
+                        $"GitHub API rate limited (attempt {attempt}), waiting {waitTime.TotalSeconds:F0}s to retry: {apiUrl}",
+                        LogEventLevel.Warning);
+
+                    await Task.Delay(waitTime);
+                    backoff = TimeSpan.FromSeconds(Math.Min(backoff.TotalSeconds * 2, 600));
+                    continue;
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                string jsonResponse = await response.Content.ReadAsStringAsync();
+
+                return jsonResponse.FromJson<GithubReleaseResponse>() ?? new GithubReleaseResponse();
+            }
+            catch (Exception e)
+            {
+                Logger.Setup($"Error fetching release info from {apiUrl}: {e.Message}", LogEventLevel.Warning);
+                return new();
+            }
         }
     }
     
@@ -342,7 +376,10 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubFfmpegApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for FFMpeg release.", LogEventLevel.Warning);
+            if (!File.Exists(AppFiles.FfmpegPath))
+                throw new InvalidOperationException("FFmpeg is not installed and release info could not be fetched. Will retry.");
+
+            Logger.Setup("No assets found for FFMpeg release, keeping existing binaries.", LogEventLevel.Warning);
             return;
         }
 
@@ -396,10 +433,11 @@ public static class Binaries
         foreach (string file in files)
         {
             await FileAttributes.SetCreatedAttribute(file, releaseInfo.PublishedAt);
+            await FilePermissions.SetExecutionPermissions(file);
         }
-        
+
         await Downloader.DeleteSourceDownload(path);
-        
+
     }
     
     private static async Task DownloadYtdlp()
@@ -449,9 +487,11 @@ public static class Binaries
         }
         
         string outputPath = await Downloader.DownloadFile("yt-dlp", downloadUrl, AppFiles.YtdlpPath);
-        
+
         await FileAttributes.SetCreatedAttribute(outputPath, releaseInfo.PublishedAt);
-        
+
+        await FilePermissions.SetExecutionPermissions(outputPath);
+
         Logger.Setup($"Downloaded yt-dlp to {outputPath}");
     }
 
@@ -516,6 +556,7 @@ public static class Binaries
             foreach (string file in files)
             {
                 await FileAttributes.SetCreatedAttribute(file, releaseInfo.PublishedAt);
+                await FilePermissions.SetExecutionPermissions(file);
             }
             await Downloader.DeleteSourceDownload(path);
         }
