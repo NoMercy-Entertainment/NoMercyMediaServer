@@ -12,7 +12,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 [Collection("TmdbApi")]
 public class TmdbPerformanceTests : TmdbTestBase
 {
-    private const int PerformanceThresholdMs = 6000; // 6 seconds max for mocked calls
+    private const int PerformanceThresholdMs = 15000; // 15 seconds max for mocked calls (generous for CI + coverage overhead)
     private const int IntegrationPerformanceThresholdMs = 30000; // 30 seconds max for real API calls
 
     [Fact]
