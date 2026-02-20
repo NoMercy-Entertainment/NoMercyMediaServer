@@ -46,7 +46,7 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                     FileName = AppFiles.CloudflareDPath,
                     Arguments = $"tunnel run --token {Config.CloudflareTunnelToken}",
                     UseShellExecute = false,
-                    WorkingDirectory = AppFiles.BinariesPath,
+                    WorkingDirectory = AppFiles.DependenciesPath,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true

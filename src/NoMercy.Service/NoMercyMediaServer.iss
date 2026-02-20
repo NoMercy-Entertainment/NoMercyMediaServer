@@ -35,6 +35,14 @@ Name: "app"; Description: "NoMercy App (desktop media interface)"; Types: full
 Name: "service"; Description: "NoMercy Launcher (system tray control)"; Types: full
 Name: "cli"; Description: "NoMercy CLI (command-line tool)"; Types: full
 
+[Dirs]
+; Writable directory for external dependencies (FFmpeg, cloudflared, yt-dlp, etc.)
+; The server downloads these at runtime and needs write access
+Name: "{app}\binaries"; Permissions: users-modify
+Name: "{app}\binaries\ffmpeg"; Permissions: users-modify
+Name: "{app}\binaries\tesseract"; Permissions: users-modify
+Name: "{app}\binaries\tesseract\tessdata"; Permissions: users-modify
+
 [Files]
 ; Shared runtime and dependencies (always installed with server)
 Source: "..\..\installer-payload\*.dll"; DestDir: "{app}"; Components: server; Flags: ignoreversion

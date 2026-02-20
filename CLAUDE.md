@@ -271,7 +271,7 @@ All providers implement async patterns with retry logic and rate limiting.
 - Always access the server via its registered domain, never via `localhost`
 - From inside the container, always use the external URL with proper CA verification:
   ```bash
-  curl --cacert ~/.local/share/NoMercy_dev/root/certs/ca.pem https://{external-ip-dashed}.{device-id}.nomercy.tv:7626/...
+  curl --cacert ~/.local/share/NoMercy_dev/security/certs/ca.pem https://{external-ip-dashed}.{device-id}.nomercy.tv:7626/...
   ```
 
 ### Security - Mandatory

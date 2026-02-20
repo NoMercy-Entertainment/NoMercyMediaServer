@@ -31,15 +31,29 @@ public static class Binaries
         HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
     }
 
+    /// <summary>
+    /// Returns true when the binary exists in an installer directory (not the binaries path).
+    /// This prevents redundant downloads when binaries were installed by an installer.
+    /// </summary>
     private static bool ExistsInInstalledDirectory(string executableName)
     {
+        // Check the Launcher's install directory (set for installer deployments only)
+        string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
+        if (!string.IsNullOrEmpty(installDir) && File.Exists(Path.Combine(installDir, executableName)))
+            return true;
+
+        // Also check the server's own directory, but only if it differs from the binaries path
+        // (otherwise this is a standalone deployment and we DO want to download updates)
         string? ownDir = Path.GetDirectoryName(
             Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
 
-        if (ownDir is null)
-            return false;
+        if (ownDir is not null &&
+            !string.Equals(Path.GetFullPath(ownDir), Path.GetFullPath(AppFiles.BinariesPath),
+                StringComparison.OrdinalIgnoreCase) &&
+            File.Exists(Path.Combine(ownDir, executableName)))
+            return true;
 
-        return File.Exists(Path.Combine(ownDir, executableName));
+        return false;
     }
 
     public static Task DownloadAll()
@@ -329,6 +343,14 @@ public static class Binaries
             return;
         }
 
+        // Installer deployment: the installer handles updates, don't download to binaries path
+        string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
+        if (!string.IsNullOrEmpty(installDir))
+        {
+            Logger.Setup($"Server update available: {currentVersion} -> {latestVersion} (use installer to update)");
+            return;
+        }
+
         string? onDiskVersion = Software.GetFileVersion(AppFiles.ServerExePath);
         if (onDiskVersion is not null &&
             string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase))
@@ -560,7 +582,7 @@ public static class Binaries
         
         if (needsExtraction)
         {
-            List<string> files = await Archiving.ExtractArchive(path, AppFiles.BinariesPath);
+            List<string> files = await Archiving.ExtractArchive(path, AppFiles.DependenciesPath);
             foreach (string file in files)
             {
                 await FileAttributes.SetCreatedAttribute(file, releaseInfo.PublishedAt);
@@ -644,7 +666,7 @@ public static class Binaries
     
         foreach (Uri partUrl in partUrls)
         {
-            string partPath = Path.Combine(AppFiles.BinariesPath, Path.GetFileName(partUrl.ToString()));
+            string partPath = Path.Combine(AppFiles.DependenciesPath, Path.GetFileName(partUrl.ToString()));
 
             await using FileStream partStream = new(partPath, FileMode.Open, FileAccess.Read);
             await partStream.CopyToAsync(destinationStream);

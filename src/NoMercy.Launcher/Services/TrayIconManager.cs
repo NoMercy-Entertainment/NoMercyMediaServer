@@ -391,8 +391,7 @@ public class TrayIconManager
                 : "Show on Startup: Off";
     }
 
-    private static string TraySettingsFile =>
-        Path.Combine(AppFiles.ConfigPath, "tray_settings.json");
+    private static string TraySettingsFile => AppFiles.TraySettingsFile;
 
     private static bool LoadShowOnStartup()
     {

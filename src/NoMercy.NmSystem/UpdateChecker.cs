@@ -60,6 +60,23 @@ public static class UpdateChecker
             }
 
             string? onDiskVersion = Software.GetFileVersion(AppFiles.ServerExePath);
+
+            // Also check the installed binary (e.g. Program Files) if available
+            if (onDiskVersion is null || !string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
+                if (!string.IsNullOrEmpty(installDir))
+                {
+                    string installedExe = Path.Combine(installDir, "NoMercyMediaServer" + Information.Info.ExecSuffix);
+                    string? installedVersion = Software.GetFileVersion(installedExe);
+                    if (installedVersion is not null &&
+                        string.Equals(latestVersion, installedVersion, StringComparison.OrdinalIgnoreCase))
+                    {
+                        onDiskVersion = installedVersion;
+                    }
+                }
+            }
+
             Config.RestartNeeded = onDiskVersion is not null &&
                                    string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase);
 

@@ -37,8 +37,7 @@ public class ApiInfo
 
     public static bool KeysLoaded { get; private set; }
 
-    internal static string CacheFilePath =>
-        Path.Combine(AppFiles.ConfigPath, "api_keys.json");
+    internal static string CacheFilePath => AppFiles.ApiKeysFile;
 
     private static readonly int[] BackoffSeconds = [30, 60, 300, 900, 1800];
 

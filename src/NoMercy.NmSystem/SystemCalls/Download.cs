@@ -19,7 +19,7 @@ public static class Download
         Logger.System($"Downloading {name}", LogEventLevel.Verbose);
 
         string baseName = outputName ?? Path.GetFileName(url.ToString());
-        string filePath = Path.Combine(AppFiles.BinariesPath, baseName);
+        string filePath = Path.Combine(AppFiles.DependenciesPath, baseName);
 
         using HttpResponseMessage result = await HttpClient.GetAsync(url);
         byte[] content = await result.Content.ReadAsByteArrayAsync();

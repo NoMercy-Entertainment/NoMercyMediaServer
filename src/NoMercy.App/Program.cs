@@ -123,20 +123,16 @@ internal class Program
 
     private static string GetBrowserDataPath()
     {
-        string baseDir;
-        if (OperatingSystem.IsWindows())
-            baseDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "NoMercy", "browser");
-        else if (OperatingSystem.IsMacOS())
-            baseDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "Application Support", "NoMercy", "browser");
-        else
-            baseDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".local", "share", "NoMercy", "browser");
+        // Match the path computed by AppFiles.BrowserPath so the server and app
+        // share the same browser-data directory without requiring a project reference
+        // to NmSystem (which would bloat the lightweight App executable).
+        string appDataPath = Environment.OSVersion.Platform == PlatformID.Unix
+            ? Path.Combine(
+                Environment.GetEnvironmentVariable("HOME") ?? "/home/current",
+                ".local/share")
+            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
+        string baseDir = Path.Combine(appDataPath, "NoMercy", "browser");
         Directory.CreateDirectory(baseDir);
         return baseDir;
     }

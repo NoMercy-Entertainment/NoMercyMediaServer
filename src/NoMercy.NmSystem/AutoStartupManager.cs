@@ -66,7 +66,16 @@ public class AutoStartupManager
     /// </summary>
     internal static string? ResolveLauncherPath()
     {
-        // 1. Same directory as the running server process
+        // 1. Installer directory (set by the Launcher when it starts the server)
+        string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
+        if (!string.IsNullOrEmpty(installDir))
+        {
+            string candidate = Path.Combine(installDir, "NoMercyLauncher" + Info.ExecSuffix);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        // 2. Same directory as the running server process
         string? processDir = Path.GetDirectoryName(Environment.ProcessPath);
         if (!string.IsNullOrEmpty(processDir))
         {
@@ -75,7 +84,7 @@ public class AutoStartupManager
                 return candidate;
         }
 
-        // 2. Standard download location
+        // 3. Standard download location
         if (File.Exists(AppFiles.LauncherExePath))
             return AppFiles.LauncherExePath;
 

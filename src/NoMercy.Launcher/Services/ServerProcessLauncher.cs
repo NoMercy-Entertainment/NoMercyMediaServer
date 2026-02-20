@@ -23,14 +23,22 @@ public class ServerProcessLauncher
         if (IsServerProcessRunning)
             return Task.FromResult(false);
 
+        // Prefer the binary next to the Launcher (installer deployment),
+        // then fall back to the binaries path (standalone deployment)
         ProcessStartInfo? startInfo =
-            CreateProductionStartInfo()
-            ?? CreateInstalledStartInfo()
+            CreateInstalledStartInfo()
+            ?? CreateProductionStartInfo()
             ?? CreateDevBinaryStartInfo()
             ?? CreateDotnetRunStartInfo();
 
         if (startInfo is null)
             return Task.FromResult(false);
+
+        // Tell the server it's running from an installed deployment so it
+        // skips binary downloads (the installer handles updates)
+        string? installDir = GetInstallDirectory();
+        if (installDir is not null)
+            startInfo.Environment["NOMERCY_INSTALL_DIR"] = installDir;
 
         _serverProcess = new()
         {
@@ -53,8 +61,8 @@ public class ServerProcessLauncher
             return Task.FromResult(false);
 
         ProcessStartInfo? startInfo =
-            CreateAppProductionStartInfo()
-            ?? CreateAppInstalledStartInfo()
+            CreateAppInstalledStartInfo()
+            ?? CreateAppProductionStartInfo()
             ?? CreateAppDevBinaryStartInfo()
             ?? CreateAppDotnetRunStartInfo();
 
@@ -147,6 +155,27 @@ public class ServerProcessLauncher
 
         if (File.Exists(tempPath))
             await ApplyUpdateAsync();
+    }
+
+    /// <summary>
+    /// Returns the Launcher's directory only if it's an installer deployment
+    /// (i.e., running from a different directory than the binaries path).
+    /// Returns null for standalone deployments where everything is in the binaries path.
+    /// </summary>
+    private static string? GetInstallDirectory()
+    {
+        string? ownDir = Path.GetDirectoryName(
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+
+        if (ownDir is null)
+            return null;
+
+        // If the Launcher is in the binaries path, this is a standalone deployment
+        if (string.Equals(Path.GetFullPath(ownDir), Path.GetFullPath(AppFiles.BinariesPath),
+                StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        return ownDir;
     }
 
     private static ProcessStartInfo? CreateProductionStartInfo()
