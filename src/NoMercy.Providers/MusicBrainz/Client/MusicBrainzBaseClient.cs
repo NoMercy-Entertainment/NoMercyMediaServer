@@ -30,7 +30,7 @@ public class MusicBrainzBaseClient : IDisposable
 
     private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 40, Interval = 1000, Start = true });
+        return _queue ??= new(new() { Concurrent = 1, Interval = 1100, Start = true });
     }
 
     protected Guid Id { get; private set; }
@@ -56,17 +56,12 @@ public class MusicBrainzBaseClient : IDisposable
 
             data = response.FromJson<T>();
         }
-        catch (Exception e)
+        catch (Exception e) when (retry < 10 &&
+            (e.Message.Contains("429") || e.Message.Contains("503")))
         {
-            if (e.Message.Contains("503"))
-            {
-                Task.Delay(5000).Wait();
-                return await Get<T>(url, query, priority, retry + 1);
-            }
-
-            if (retry == 10) throw;
-
-            Task.Delay(5000).Wait();
+            int delay = (int)Math.Pow(2, retry + 1) * 1000;
+            Logger.App($"Rate limited ({newUrl}), retrying in {delay / 1000}s (attempt {retry + 1}/10)", LogEventLevel.Debug);
+            await Task.Delay(delay);
             return await Get<T>(url, query, priority, retry + 1);
         }
 
