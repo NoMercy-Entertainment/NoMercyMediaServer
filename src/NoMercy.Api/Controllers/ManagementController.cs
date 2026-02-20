@@ -154,38 +154,38 @@ public class ManagementController(
     [HttpPost("restart")]
     public IActionResult Restart()
     {
-        return Ok(new { status = "ok", message = "Restart is not yet implemented" });
+        appLifetime.StopApplication();
+        return Ok(new { status = "ok", message = "Server is restarting" });
     }
 
     [HttpPost("update")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult ApplyUpdate()
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DownloadUpdate()
     {
-        string tempPath = AppFiles.ServerTempExePath;
-
-        if (!System.IO.File.Exists(tempPath))
-            return NotFound(new { status = "error", message = "No update has been downloaded" });
-
         try
         {
-            string currentPath = AppFiles.ServerExePath;
+            string tempPath = AppFiles.ServerTempExePath;
 
-            if (System.IO.File.Exists(currentPath))
-                System.IO.File.Delete(currentPath);
+            if (System.IO.File.Exists(tempPath))
+            {
+                Logger.Setup("Update already staged, skipping download.");
+                return Ok(new { status = "ok", message = "Update already staged.", path = tempPath });
+            }
 
-            System.IO.File.Move(tempPath, currentPath);
+            Logger.Setup("Downloading server update on demand...");
+            await Binaries.DownloadServerUpdate();
 
-            FilePermissions.SetExecutionPermissions(currentPath).GetAwaiter().GetResult();
+            if (!System.IO.File.Exists(tempPath))
+                return StatusCode(500, new { status = "error", message = "Download completed but staged file not found. Server may already be up to date." });
 
-            Logger.Setup("Server update applied. Restart required to use the new version.");
-
-            return Ok(new { status = "ok", message = "Update applied. Restart the server to use the new version." });
+            Logger.Setup($"Server update staged at {tempPath}");
+            return Ok(new { status = "ok", message = "Update downloaded and staged.", path = tempPath });
         }
         catch (Exception e)
         {
-            Logger.Setup($"Failed to apply update: {e.Message}", Serilog.Events.LogEventLevel.Error);
-            return StatusCode(500, new { status = "error", message = $"Failed to apply update: {e.Message}" });
+            Logger.Setup($"Failed to download update: {e.Message}", Serilog.Events.LogEventLevel.Error);
+            return StatusCode(500, new { status = "error", message = $"Failed to download update: {e.Message}" });
         }
     }
 

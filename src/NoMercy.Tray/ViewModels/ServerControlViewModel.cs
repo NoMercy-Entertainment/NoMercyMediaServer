@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using NoMercy.Tray.Models;
 using NoMercy.Tray.Services;
@@ -288,18 +289,39 @@ public class ServerControlViewModel : INotifyPropertyChanged
         if (IsActionInProgress) return;
 
         IsActionInProgress = true;
-        ActionStatus = "Restarting server...";
+        ActionStatus = "Stopping server...";
 
         try
         {
-            bool success = await _serverConnection
-                .PostAsync("/manage/restart");
+            bool stopSent = await _serverConnection.PostAsync("/manage/stop");
+            if (!stopSent)
+            {
+                ActionStatus = "Failed to send stop command";
+                return;
+            }
 
-            ActionStatus = success
-                ? "Restart command sent"
-                : "Failed to send restart command";
+            ActionStatus = "Waiting for server to exit...";
+            bool exited = await _processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
+            if (!exited)
+            {
+                ActionStatus = "Server did not stop in time";
+                return;
+            }
 
-            await Task.Delay(2000);
+            _serverConnection.IsConnected = false;
+
+            ActionStatus = "Starting server...";
+            bool started = await _processLauncher.StartServerAsync();
+            if (!started)
+            {
+                ActionStatus = "Failed to start server";
+                return;
+            }
+
+            ActionStatus = "Waiting for server to come back up...";
+            await WaitForServerReadyAsync(TimeSpan.FromSeconds(30));
+
+            ActionStatus = "Server restarted";
             await RefreshStatusAsync();
         }
         finally
@@ -323,28 +345,55 @@ public class ServerControlViewModel : INotifyPropertyChanged
         if (IsActionInProgress) return;
 
         IsActionInProgress = true;
-        ActionStatus = "Applying update...";
+        ActionStatus = "Downloading update...";
 
         try
         {
-            bool success = await _serverConnection
-                .PostAsync("/manage/update");
-
-            if (success)
+            bool downloaded = await _serverConnection.PostAsync("/manage/update");
+            if (!downloaded)
             {
-                ActionStatus = "Update applied. Restarting server...";
-                await Task.Delay(1000);
-
-                await _serverConnection
-                    .PostAsync("/manage/restart");
-
-                await Task.Delay(3000);
-                await RefreshStatusAsync();
+                ActionStatus = "Failed to download update";
+                return;
             }
-            else
+
+            ActionStatus = "Stopping server...";
+            bool stopSent = await _serverConnection.PostAsync("/manage/stop");
+            if (!stopSent)
             {
-                ActionStatus = "Failed to apply update";
+                ActionStatus = "Failed to send stop command";
+                return;
             }
+
+            ActionStatus = "Waiting for server to exit...";
+            bool exited = await _processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
+            if (!exited)
+            {
+                ActionStatus = "Server did not stop in time";
+                return;
+            }
+
+            _serverConnection.IsConnected = false;
+
+            ActionStatus = "Applying update...";
+            await _processLauncher.ApplyUpdateAsync();
+
+            ActionStatus = "Starting updated server...";
+            bool started = await _processLauncher.StartServerAsync();
+            if (!started)
+            {
+                ActionStatus = "Failed to start server";
+                return;
+            }
+
+            ActionStatus = "Waiting for server to come back up...";
+            await WaitForServerReadyAsync(TimeSpan.FromSeconds(30));
+
+            ActionStatus = "Update complete";
+            await RefreshStatusAsync();
+        }
+        catch (FileNotFoundException)
+        {
+            ActionStatus = "No staged update file found";
         }
         finally
         {
@@ -488,6 +537,38 @@ public class ServerControlViewModel : INotifyPropertyChanged
         _pollCts?.Cancel();
         _pollCts?.Dispose();
         _pollCts = null;
+    }
+
+    private async Task WaitForServerReadyAsync(TimeSpan timeout)
+    {
+        using CancellationTokenSource cts = new(timeout);
+
+        while (!cts.Token.IsCancellationRequested)
+        {
+            try
+            {
+                await _serverConnection.ConnectAsync(cts.Token);
+                if (_serverConnection.IsConnected)
+                    return;
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch
+            {
+                // Server not ready yet
+            }
+
+            try
+            {
+                await Task.Delay(1000, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
     }
 
     internal static string FormatStatusDisplay(string status)
