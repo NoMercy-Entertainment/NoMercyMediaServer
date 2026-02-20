@@ -67,12 +67,12 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "Calculated new version: $NEW_VERSION"
 
-      - name: Update version in csproj
+      - name: Update version in Directory.Build.props
         if: steps.check-changes.outputs.has_source_changes == 'true'
         run: |
           NEW_VERSION="${{ steps.calc-version.outputs.new_version }}"
-          sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" src/NoMercy.Service/NoMercy.Service.csproj
-          echo "Updated NoMercy.Service.csproj to version $NEW_VERSION"
+          sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" Directory.Build.props
+          echo "Updated Directory.Build.props to version $NEW_VERSION"
 
       - name: Get Version
         id: get-version
@@ -140,7 +140,7 @@ jobs:
           NEW_VERSION="${{ steps.get-version.outputs.version }}"
 
           # Stage the version change locally (don't push to dev yet)
-          git add src/NoMercy.Service/NoMercy.Service.csproj
+          git add Directory.Build.props
           git commit -m "chore: bump version to $NEW_VERSION" || true
 
           # Store the current dev state
@@ -155,8 +155,8 @@ jobs:
           git merge --squash origin/dev
 
           # Also include the version bump we made locally
-          git checkout $DEV_HEAD -- src/NoMercy.Service/NoMercy.Service.csproj
-          git add src/NoMercy.Service/NoMercy.Service.csproj
+          git checkout $DEV_HEAD -- Directory.Build.props
+          git add Directory.Build.props
 
           # Read changelog from file
           CHANGELOG=$(cat /tmp/changelog.txt)
