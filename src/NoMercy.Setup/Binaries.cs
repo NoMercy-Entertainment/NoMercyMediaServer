@@ -329,6 +329,14 @@ public static class Binaries
             return;
         }
 
+        string? onDiskVersion = Software.GetFileVersion(AppFiles.ServerExePath);
+        if (onDiskVersion is not null &&
+            string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.Setup($"Server binary on disk is already {onDiskVersion} (running {currentVersion}), restart needed to apply");
+            return;
+        }
+
         Logger.Setup($"Server update available: {currentVersion} -> {latestVersion}");
 
         await Downloader.DeleteSourceDownload(AppFiles.ServerTempExePath);

@@ -54,7 +54,14 @@ public static class UpdateChecker
             Config.LatestVersion = latestVersion;
 
             if (string.Equals(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                Config.RestartNeeded = false;
                 return false;
+            }
+
+            string? onDiskVersion = Software.GetFileVersion(AppFiles.ServerExePath);
+            Config.RestartNeeded = onDiskVersion is not null &&
+                                   string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase);
 
             if (Version.TryParse(latestVersion, out Version? latest) &&
                 Version.TryParse(currentVersion, out Version? current))

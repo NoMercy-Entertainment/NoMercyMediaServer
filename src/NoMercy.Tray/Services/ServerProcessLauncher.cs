@@ -141,6 +141,14 @@ public class ServerProcessLauncher
         await FilePermissions.SetExecutionPermissions(currentPath);
     }
 
+    public async Task ApplyUpdateIfStagedAsync()
+    {
+        string tempPath = AppFiles.ServerTempExePath;
+
+        if (File.Exists(tempPath))
+            await ApplyUpdateAsync();
+    }
+
     private static ProcessStartInfo? CreateProductionStartInfo()
     {
         string exePath = AppFiles.ServerExePath;

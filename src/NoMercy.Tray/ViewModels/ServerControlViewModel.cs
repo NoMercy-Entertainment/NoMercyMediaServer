@@ -24,6 +24,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
     private string _statusColor = "#EF4444";
     private bool _autoStartEnabled;
     private bool _updateAvailable;
+    private bool _restartNeeded;
     private string _latestVersion = string.Empty;
 
     private bool _configLoaded;
@@ -109,6 +110,12 @@ public class ServerControlViewModel : INotifyPropertyChanged
     {
         get => _updateAvailable;
         set { _updateAvailable = value; OnPropertyChanged(); }
+    }
+
+    public bool RestartNeeded
+    {
+        get => _restartNeeded;
+        set { _restartNeeded = value; OnPropertyChanged(); }
     }
 
     public string LatestVersion
@@ -253,6 +260,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         AutoStartEnabled = status.AutoStart;
         UpdateAvailable = status.UpdateAvailable;
+        RestartNeeded = status.RestartNeeded;
         LatestVersion = status.LatestVersion ?? string.Empty;
 
         if (!ConfigLoaded)
@@ -375,7 +383,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             _serverConnection.IsConnected = false;
 
             ActionStatus = "Applying update...";
-            await _processLauncher.ApplyUpdateAsync();
+            await _processLauncher.ApplyUpdateIfStagedAsync();
 
             ActionStatus = "Starting updated server...";
             bool started = await _processLauncher.StartServerAsync();
