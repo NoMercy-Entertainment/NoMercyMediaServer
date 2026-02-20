@@ -34,10 +34,6 @@
         <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
         <DebugType>None</DebugType>
         <DebugSymbols>false</DebugSymbols>
-
-        <Version>0.0.1</Version>
-        <AssemblyVersion>$(Version).0</AssemblyVersion>
-        <FileVersion>$(Version).0</FileVersion>
     </PropertyGroup>
 
     <ItemGroup>
