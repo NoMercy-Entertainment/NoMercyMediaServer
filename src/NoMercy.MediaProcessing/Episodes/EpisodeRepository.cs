@@ -63,7 +63,19 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
 
     public Task StoreEpisodeImages(IEnumerable<Image> images)
     {
-        return context.Images.UpsertRange(images.ToArray())
+        int[] episodeIds = context.Episodes
+            .Select(e => e.Id)
+            .ToArray()
+            .Where(e => images.Any(i => e == i.EpisodeId))
+            .ToArray();
+
+        List<Image> filteredImages = images
+            .Where(i => i.EpisodeId is not null && episodeIds.Contains(i.EpisodeId.Value))
+            .ToList();
+
+        if (filteredImages.Count == 0) return Task.CompletedTask;
+
+        return context.Images.UpsertRange(filteredImages.ToArray())
             .On(v => new { v.FilePath, v.EpisodeId })
             .WhenMatched((ts, ti) => new()
             {

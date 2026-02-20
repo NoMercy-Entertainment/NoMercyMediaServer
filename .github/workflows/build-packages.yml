@@ -43,6 +43,14 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Override version in Directory.Build.props
+        if: inputs.version != ''
+        shell: bash
+        run: |
+          perl -i -pe 's|<Version>.*?</Version>|<Version>${{ inputs.version }}</Version>|' Directory.Build.props
+          echo "Injected version ${{ inputs.version }} into Directory.Build.props"
+          grep '<Version>' Directory.Build.props
+
       - name: Build DEB packages
         if: matrix.package-type == 'deb'
         uses: ./.github/actions/build-deb-packages

@@ -84,12 +84,29 @@ public class PersonRepository(MediaContext context) : IPersonRepository
 
     public Task StoreCast(IEnumerable<Cast> cast, Type type)
     {
+        Cast[] castArray = cast.ToArray();
+
+        if (type == Type.Episode)
+        {
+            int[] episodeIds = context.Episodes
+                .Select(e => e.Id)
+                .ToArray()
+                .Where(e => castArray.Any(c => c.EpisodeId == e))
+                .ToArray();
+
+            castArray = castArray
+                .Where(c => c.EpisodeId is not null && episodeIds.Contains(c.EpisodeId.Value))
+                .ToArray();
+
+            if (castArray.Length == 0) return Task.CompletedTask;
+        }
+
         Role[] roles = context.Roles
-            .Where(role => cast.Select(r => r.CreditId)
+            .Where(role => castArray.Select(r => r.CreditId)
                 .Contains(role.CreditId))
             .ToArray();
 
-        cast = cast.Select(c =>
+        castArray = castArray.Select(c =>
         {
             c.RoleId = roles.First(r => r.CreditId == c.CreditId).Id;
             return c;
@@ -97,10 +114,10 @@ public class PersonRepository(MediaContext context) : IPersonRepository
 
         UpsertCommandBuilder<Cast> query = type switch
         {
-            Type.Movie => context.Casts.UpsertRange(cast).On(c2 => new { c2.CreditId, c2.MovieId, c2.RoleId }),
-            Type.TvShow => context.Casts.UpsertRange(cast).On(c2 => new { c2.CreditId, c2.TvId, c2.RoleId }),
-            Type.Season => context.Casts.UpsertRange(cast).On(c2 => new { c2.CreditId, c2.SeasonId, c2.RoleId }),
-            Type.Episode => context.Casts.UpsertRange(cast).On(c2 => new { c2.CreditId, c2.EpisodeId, c2.RoleId }),
+            Type.Movie => context.Casts.UpsertRange(castArray).On(c2 => new { c2.CreditId, c2.MovieId, c2.RoleId }),
+            Type.TvShow => context.Casts.UpsertRange(castArray).On(c2 => new { c2.CreditId, c2.TvId, c2.RoleId }),
+            Type.Season => context.Casts.UpsertRange(castArray).On(c2 => new { c2.CreditId, c2.SeasonId, c2.RoleId }),
+            Type.Episode => context.Casts.UpsertRange(castArray).On(c2 => new { c2.CreditId, c2.EpisodeId, c2.RoleId }),
             _ => throw new ArgumentOutOfRangeException()
         };
 
@@ -119,12 +136,29 @@ public class PersonRepository(MediaContext context) : IPersonRepository
 
     public async Task StoreCrew(IEnumerable<Crew> crew, Type type)
     {
+        Crew[] crewArray = crew.ToArray();
+
+        if (type == Type.Episode)
+        {
+            int[] episodeIds = context.Episodes
+                .Select(e => e.Id)
+                .ToArray()
+                .Where(e => crewArray.Any(c => c.EpisodeId == e))
+                .ToArray();
+
+            crewArray = crewArray
+                .Where(c => c.EpisodeId is not null && episodeIds.Contains(c.EpisodeId.Value))
+                .ToArray();
+
+            if (crewArray.Length == 0) return;
+        }
+
         Job[] jobs = context.Jobs
-            .Where(job => crew.Select(c => c.CreditId)
+            .Where(job => crewArray.Select(c => c.CreditId)
                 .Contains(job.CreditId))
             .ToArray();
 
-        crew = crew.Select(c =>
+        crewArray = crewArray.Select(c =>
         {
             c.JobId = jobs.First(j => j.CreditId == c.CreditId).Id;
             return c;
@@ -134,10 +168,10 @@ public class PersonRepository(MediaContext context) : IPersonRepository
         {
             UpsertCommandBuilder<Crew> query = type switch
             {
-                Type.Movie => context.Crews.UpsertRange(crew).On(c2 => new { c2.CreditId, c2.MovieId, c2.JobId }),
-                Type.TvShow => context.Crews.UpsertRange(crew).On(c2 => new { c2.CreditId, c2.TvId, c2.JobId }),
-                Type.Season => context.Crews.UpsertRange(crew).On(c2 => new { c2.CreditId, c2.SeasonId, c2.JobId }),
-                Type.Episode => context.Crews.UpsertRange(crew).On(c2 => new { c2.CreditId, c2.EpisodeId, c2.JobId }),
+                Type.Movie => context.Crews.UpsertRange(crewArray).On(c2 => new { c2.CreditId, c2.MovieId, c2.JobId }),
+                Type.TvShow => context.Crews.UpsertRange(crewArray).On(c2 => new { c2.CreditId, c2.TvId, c2.JobId }),
+                Type.Season => context.Crews.UpsertRange(crewArray).On(c2 => new { c2.CreditId, c2.SeasonId, c2.JobId }),
+                Type.Episode => context.Crews.UpsertRange(crewArray).On(c2 => new { c2.CreditId, c2.EpisodeId, c2.JobId }),
                 _ => throw new ArgumentOutOfRangeException()
             };
 
