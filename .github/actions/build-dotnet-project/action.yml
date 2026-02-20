@@ -225,6 +225,7 @@ runs:
           "./output/$PROJECT_NAME.app" \
           ./output \
           --overwrite \
+          --no-code-sign \
           --dmg-title="$PROJECT_NAME" \
           --window-size 500 300 \
           --icon-size 128 \

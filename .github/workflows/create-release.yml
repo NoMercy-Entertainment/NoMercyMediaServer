@@ -150,9 +150,14 @@ jobs:
             FLAGS+=(--prerelease)
           fi
 
-          # Create the release (without files)
-          gh release create "$TAG" "${FLAGS[@]}" --target "$GITHUB_SHA"
-          echo "Release created: $TAG"
+          # Create or update the release
+          if gh release view "$TAG" &>/dev/null; then
+            echo "Release $TAG already exists, updating..."
+            gh release edit "$TAG" "${FLAGS[@]}"
+          else
+            gh release create "$TAG" "${FLAGS[@]}" --target "$GITHUB_SHA"
+          fi
+          echo "Release ready: $TAG"
 
           # Upload assets with retry logic
           FAILED=0
