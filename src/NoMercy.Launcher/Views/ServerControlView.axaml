@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:NoMercy.Tray.ViewModels"
-        x:Class="NoMercy.Tray.Views.ServerControlView"
+        xmlns:vm="using:NoMercy.Launcher.ViewModels"
+        x:Class="NoMercy.Launcher.Views.ServerControlView"
         x:DataType="vm:ServerControlViewModel">
 
     <DockPanel Margin="16">

@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
-namespace NoMercy.Tray.Services;
+namespace NoMercy.Launcher.Services;
 
 public enum ServerState
 {
@@ -55,7 +55,7 @@ public static class TrayIconFactory
         }
 
         Stream? resourceStream = typeof(TrayIconFactory).Assembly
-            .GetManifestResourceStream("NoMercy.Tray.icon.png");
+            .GetManifestResourceStream("NoMercy.Launcher.icon.png");
 
         if (resourceStream is not null)
         {

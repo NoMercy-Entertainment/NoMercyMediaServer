@@ -62,7 +62,7 @@ runs:
         Recommends: systemd
 
         %description
-        Modern Media Server Solution with server, tray service, and CLI tool.
+        Modern Media Server Solution with server, launcher, and CLI tool.
         All components share a single .NET runtime for efficient disk usage.
 
         %prep
@@ -79,14 +79,14 @@ runs:
         cp -R * %{buildroot}/opt/nomercy/
         chmod 755 %{buildroot}/opt/nomercy/NoMercyMediaServer
         chmod 755 %{buildroot}/opt/nomercy/NoMercyApp
-        chmod 755 %{buildroot}/opt/nomercy/NoMercyMediaServerService
+        chmod 755 %{buildroot}/opt/nomercy/NoMercyLauncher
         chmod 755 %{buildroot}/opt/nomercy/nomercy
 
         # Symlinks in /usr/bin
         mkdir -p %{buildroot}/usr/bin
         ln -s /opt/nomercy/NoMercyMediaServer %{buildroot}/usr/bin/nomercymediaserver
         ln -s /opt/nomercy/NoMercyApp %{buildroot}/usr/bin/nomercyapp
-        ln -s /opt/nomercy/NoMercyMediaServerService %{buildroot}/usr/bin/nomercymediaserverservice
+        ln -s /opt/nomercy/NoMercyLauncher %{buildroot}/usr/bin/nomercylauncher
         ln -s /opt/nomercy/nomercy %{buildroot}/usr/bin/nomercy
 
         # Desktop files
@@ -115,14 +115,14 @@ runs:
         WantedBy=default.target
         SERVICE_EOF
 
-        cat > %{buildroot}/usr/lib/systemd/user/nomercymediaserverservice.service << 'SERVICE_EOF'
+        cat > %{buildroot}/usr/lib/systemd/user/nomercylauncher.service << 'SERVICE_EOF'
         [Unit]
-        Description=NoMercy MediaServer Service (Tray)
+        Description=NoMercy Launcher
         After=network.target
 
         [Service]
         Type=simple
-        ExecStart=/opt/nomercy/NoMercyMediaServerService
+        ExecStart=/opt/nomercy/NoMercyLauncher
         Restart=on-failure
         RestartSec=5
 
@@ -147,12 +147,12 @@ runs:
         /opt/nomercy
         /usr/bin/nomercymediaserver
         /usr/bin/nomercyapp
-        /usr/bin/nomercymediaserverservice
+        /usr/bin/nomercylauncher
         /usr/bin/nomercy
         %attr(644,root,root) /usr/share/applications/*.desktop
         %attr(644,root,root) /usr/share/icons/hicolor/scalable/apps/NoMercy-MediaServer.png
         %attr(644,root,root) /usr/lib/systemd/user/nomercymediaserver.service
-        %attr(644,root,root) /usr/lib/systemd/user/nomercymediaserverservice.service
+        %attr(644,root,root) /usr/lib/systemd/user/nomercylauncher.service
         %doc /usr/share/doc/%{name}/README
 
         %post
@@ -168,8 +168,8 @@ runs:
         if [ "$1" -eq 0 ] ; then
             systemctl --user stop nomercymediaserver.service >/dev/null 2>&1 || true
             systemctl --user disable nomercymediaserver.service >/dev/null 2>&1 || true
-            systemctl --user stop nomercymediaserverservice.service >/dev/null 2>&1 || true
-            systemctl --user disable nomercymediaserverservice.service >/dev/null 2>&1 || true
+            systemctl --user stop nomercylauncher.service >/dev/null 2>&1 || true
+            systemctl --user disable nomercylauncher.service >/dev/null 2>&1 || true
         fi
 
         %postun

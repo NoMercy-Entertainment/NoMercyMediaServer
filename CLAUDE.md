@@ -54,7 +54,7 @@ dotnet test --collect:"XPlat Code Coverage" --settings tests/coverletArgs.runset
 ```
 src/
 ├── NoMercy.Service/        # ASP.NET Core host, entry point, Kestrel
-├── NoMercy.Tray/           # System tray UI app
+├── NoMercy.Launcher/       # Launcher UI app
 ├── NoMercy.Api/            # REST controllers (v1, v2), SignalR hubs
 ├── NoMercy.Database/       # EF Core contexts (MediaContext, QueueContext), SQLite
 ├── NoMercy.Encoder/        # FFmpeg abstraction, fluent encoding pipeline

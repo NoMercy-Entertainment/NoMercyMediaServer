@@ -2,9 +2,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using NoMercy.Tray.Services;
+using NoMercy.Launcher.Services;
 
-namespace NoMercy.Tray;
+namespace NoMercy.Launcher;
 
 public class App : Application
 {

@@ -1,10 +1,10 @@
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
-using NoMercy.Tray.Models;
-using NoMercy.Tray.Services;
+using NoMercy.Launcher.Models;
+using NoMercy.Launcher.Services;
 
-namespace NoMercy.Tray.ViewModels;
+namespace NoMercy.Launcher.ViewModels;
 
 public class ServerControlViewModel : INotifyPropertyChanged
 {

@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using NoMercy.Tray.Services;
+using NoMercy.Launcher.Services;
 
-namespace NoMercy.Tray.ViewModels;
+namespace NoMercy.Launcher.ViewModels;
 
 public class MainViewModel : INotifyPropertyChanged
 {

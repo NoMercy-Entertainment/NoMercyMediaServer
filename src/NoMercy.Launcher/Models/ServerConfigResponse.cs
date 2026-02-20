@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace NoMercy.Tray.Models;
+namespace NoMercy.Launcher.Models;
 
 public class ServerConfigResponse
 {

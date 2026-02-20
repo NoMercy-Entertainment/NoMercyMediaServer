@@ -6,10 +6,10 @@ using Avalonia.Threading;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
-using NoMercy.Tray.Models;
-using NoMercy.Tray.Services;
+using NoMercy.Launcher.Models;
+using NoMercy.Launcher.Services;
 
-namespace NoMercy.Tray.ViewModels;
+namespace NoMercy.Launcher.ViewModels;
 
 public partial class LogViewerViewModel : INotifyPropertyChanged
 {

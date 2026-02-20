@@ -60,10 +60,10 @@ public static class AppFiles
 
     public static string ServerExePath => Path.Combine(BinariesPath, "NoMercyMediaServer" + Info.ExecSuffix);
     public static string AppExePath => Path.Combine(BinariesPath, "NoMercyApp" + Info.ExecSuffix);
-    public static string ServiceExePath => Path.Combine(BinariesPath, "NoMercyMediaServerService" + Info.ExecSuffix);
+    public static string LauncherExePath => Path.Combine(BinariesPath, "NoMercyLauncher" + Info.ExecSuffix);
     public static string CliExePath => Path.Combine(BinariesPath, "nomercy" + Info.ExecSuffix);
     public static string ServerTempExePath => Path.Combine(BinariesPath, "NoMercyMediaServer_temp" + Info.ExecSuffix);
-    public static string ServiceTempExePath => Path.Combine(BinariesPath, "NoMercyMediaServerService_temp" + Info.ExecSuffix);
+    public static string LauncherTempExePath => Path.Combine(BinariesPath, "NoMercyLauncher_temp" + Info.ExecSuffix);
     public static string CliTempExePath => Path.Combine(BinariesPath, "nomercy_temp" + Info.ExecSuffix);
 
     public static string CertPath => Path.Combine(RootPath, "certs");

@@ -30,10 +30,10 @@ runs:
           /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false \
           --output ./installer-payload
 
-    - name: Publish Tray (shared runtime)
+    - name: Publish Launcher (shared runtime)
       shell: bash
       run: |
-        dotnet publish ./src/NoMercy.Tray/NoMercy.Tray.csproj \
+        dotnet publish ./src/NoMercy.Launcher/NoMercy.Launcher.csproj \
           --configuration Release --runtime linux-x64 --self-contained true \
           /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false \
           --output ./installer-payload

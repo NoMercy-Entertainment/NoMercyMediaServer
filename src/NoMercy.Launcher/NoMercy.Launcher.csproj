@@ -5,9 +5,9 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <ApplicationIcon>..\..\assets\icons\icon.ico</ApplicationIcon>
-        <Description>NoMercy MediaServer Service Application</Description>
-        <Product>NoMercy MediaServer</Product>
-        <AssemblyName>NoMercyMediaServerService</AssemblyName>
+        <Description>NoMercy MediaServer Launcher</Description>
+        <Product>NoMercy Launcher</Product>
+        <AssemblyName>NoMercyLauncher</AssemblyName>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PublishSingleFile>true</PublishSingleFile>
@@ -47,7 +47,7 @@
 
     <ItemGroup>
         <EmbeddedResource Include="..\..\assets\icons\icon.png" Link="Assets\icon.embedded.png">
-            <LogicalName>NoMercy.Tray.icon.png</LogicalName>
+            <LogicalName>NoMercy.Launcher.icon.png</LogicalName>
         </EmbeddedResource>
     </ItemGroup>
 

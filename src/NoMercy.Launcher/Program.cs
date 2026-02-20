@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Linq;
 using Avalonia;
 
-namespace NoMercy.Tray;
+namespace NoMercy.Launcher;
 
 public static class Program
 {

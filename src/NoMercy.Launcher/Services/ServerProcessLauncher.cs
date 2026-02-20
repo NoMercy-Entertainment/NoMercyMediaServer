@@ -3,7 +3,7 @@ using System.Reflection;
 using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
 
-namespace NoMercy.Tray.Services;
+namespace NoMercy.Launcher.Services;
 
 public class ServerProcessLauncher
 {

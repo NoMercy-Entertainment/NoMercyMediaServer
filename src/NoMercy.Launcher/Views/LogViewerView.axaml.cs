@@ -4,10 +4,10 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using NoMercy.Tray.Models;
-using NoMercy.Tray.ViewModels;
+using NoMercy.Launcher.Models;
+using NoMercy.Launcher.ViewModels;
 
-namespace NoMercy.Tray.Views;
+namespace NoMercy.Launcher.Views;
 
 public partial class LogViewerView : UserControl
 {

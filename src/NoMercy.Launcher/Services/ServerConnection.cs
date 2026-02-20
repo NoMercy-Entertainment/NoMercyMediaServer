@@ -1,9 +1,9 @@
 using System.Text;
 using Newtonsoft.Json;
 using NoMercy.Networking;
-using NoMercy.Tray.Models;
+using NoMercy.Launcher.Models;
 
-namespace NoMercy.Tray.Services;
+namespace NoMercy.Launcher.Services;
 
 public sealed class ServerConnection : IDisposable
 {

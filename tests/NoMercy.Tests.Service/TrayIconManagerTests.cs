@@ -1,5 +1,5 @@
 using Xunit;
-using NoMercy.Tray.Services;
+using NoMercy.Launcher.Services;
 
 namespace NoMercy.Tests.Service;
 

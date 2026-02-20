@@ -1,7 +1,7 @@
 using Avalonia.Controls;
-using NoMercy.Tray.ViewModels;
+using NoMercy.Launcher.ViewModels;
 
-namespace NoMercy.Tray.Views;
+namespace NoMercy.Launcher.Views;
 
 public partial class MainWindow : Window
 {

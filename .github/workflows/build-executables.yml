@@ -23,7 +23,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        project: [Service, App, Tray, Cli]
+        project: [Service, App, Launcher, Cli]
     outputs:
       artifact-names: ${{ steps.set-names.outputs.names }}
 

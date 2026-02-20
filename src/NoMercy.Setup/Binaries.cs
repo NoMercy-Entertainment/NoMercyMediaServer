@@ -49,7 +49,7 @@ public static class Binaries
             Logger.Setup("Downloading Binaries");
 
             await DownloadApp();
-            await DownloadService();
+            await DownloadLauncher();
             await DownloadCli();
             await DownloadServerUpdate();
             await DownloadFfmpeg();
@@ -190,59 +190,59 @@ public static class Binaries
         await FilePermissions.SetExecutionPermissions(path);
     }
 
-    private static async Task DownloadService()
+    private static async Task DownloadLauncher()
     {
-        if (ExistsInInstalledDirectory("NoMercyMediaServerService" + Info.ExecSuffix))
+        if (ExistsInInstalledDirectory("NoMercyLauncher" + Info.ExecSuffix))
         {
-            Logger.Setup("Service found in installed directory, skipping download", LogEventLevel.Verbose);
+            Logger.Setup("Launcher found in installed directory, skipping download", LogEventLevel.Verbose);
             return;
         }
 
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for Service release.", LogEventLevel.Warning);
+            Logger.Setup("No assets found for Launcher release.", LogEventLevel.Warning);
             return;
         }
 
-        if (CheckLocalVersion(releaseInfo, AppFiles.ServiceExePath, out string version))
+        if (CheckLocalVersion(releaseInfo, AppFiles.LauncherExePath, out string version))
         {
-            Logger.Setup($"Service is already up to date (version {version})", LogEventLevel.Verbose);
+            Logger.Setup($"Launcher is already up to date (version {version})", LogEventLevel.Verbose);
             return;
         }
 
-        await Downloader.DeleteSourceDownload(AppFiles.ServiceExePath);
+        await Downloader.DeleteSourceDownload(AppFiles.LauncherExePath);
 
         Uri? downloadUrl = null;
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             downloadUrl = releaseInfo.Assets
-                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServerService-windows-x64.exe", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+                .FirstOrDefault(a => a.Name.Equals("NoMercyLauncher-windows-x64.exe", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
         {
             downloadUrl = releaseInfo.Assets
-                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServerService-linux-arm64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+                .FirstOrDefault(a => a.Name.Equals("NoMercyLauncher-linux-arm64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.ProcessArchitecture == Architecture.X64)
         {
             downloadUrl = releaseInfo.Assets
-                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServerService-linux-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+                .FirstOrDefault(a => a.Name.Equals("NoMercyLauncher-linux-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             downloadUrl = releaseInfo.Assets
-                .FirstOrDefault(a => a.Name.Equals("NoMercyMediaServerService-macos-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
+                .FirstOrDefault(a => a.Name.Equals("NoMercyLauncher-macos-x64", StringComparison.OrdinalIgnoreCase))?.BrowserDownloadUrl;
         }
 
         if (downloadUrl == null)
         {
-            Logger.Setup("No suitable NoMercyMediaServerService asset found for the current platform.", LogEventLevel.Warning);
+            Logger.Setup("No suitable NoMercyLauncher asset found for the current platform.", LogEventLevel.Warning);
             return;
         }
 
-        string path = await Downloader.DownloadFile("NoMercyMediaServerService", downloadUrl, AppFiles.ServiceExePath);
+        string path = await Downloader.DownloadFile("NoMercyLauncher", downloadUrl, AppFiles.LauncherExePath);
 
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
 

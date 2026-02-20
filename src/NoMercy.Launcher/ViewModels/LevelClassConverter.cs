@@ -1,7 +1,7 @@
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 
-namespace NoMercy.Tray.ViewModels;
+namespace NoMercy.Launcher.ViewModels;
 
 public static class LevelColorConverter
 {

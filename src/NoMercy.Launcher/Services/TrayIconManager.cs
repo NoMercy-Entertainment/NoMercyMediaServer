@@ -3,11 +3,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Information;
-using NoMercy.Tray.Models;
-using NoMercy.Tray.ViewModels;
-using NoMercy.Tray.Views;
+using NoMercy.Launcher.Models;
+using NoMercy.Launcher.ViewModels;
+using NoMercy.Launcher.Views;
 
-namespace NoMercy.Tray.Services;
+namespace NoMercy.Launcher.Services;
 
 public class TrayIconManager
 {

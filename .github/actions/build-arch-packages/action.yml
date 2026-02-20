@@ -42,13 +42,13 @@ runs:
         cp -R "${PAYLOAD_PATH}/"* "${pkg_dir}/pkg${INSTALL_DIR}/"
         chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyMediaServer"
         chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyApp"
-        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyMediaServerService"
+        chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/NoMercyLauncher"
         chmod 755 "${pkg_dir}/pkg${INSTALL_DIR}/nomercy"
 
         # Symlinks in /usr/bin
         ln -s "${INSTALL_DIR}/NoMercyMediaServer" "${pkg_dir}/pkg/usr/bin/nomercymediaserver"
         ln -s "${INSTALL_DIR}/NoMercyApp" "${pkg_dir}/pkg/usr/bin/nomercyapp"
-        ln -s "${INSTALL_DIR}/NoMercyMediaServerService" "${pkg_dir}/pkg/usr/bin/nomercymediaserverservice"
+        ln -s "${INSTALL_DIR}/NoMercyLauncher" "${pkg_dir}/pkg/usr/bin/nomercylauncher"
         ln -s "${INSTALL_DIR}/nomercy" "${pkg_dir}/pkg/usr/bin/nomercy"
 
         # Desktop files

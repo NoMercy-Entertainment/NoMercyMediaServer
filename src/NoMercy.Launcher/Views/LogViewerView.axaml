@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:NoMercy.Tray.ViewModels"
-        xmlns:m="using:NoMercy.Tray.Models"
-        x:Class="NoMercy.Tray.Views.LogViewerView"
+        xmlns:vm="using:NoMercy.Launcher.ViewModels"
+        xmlns:m="using:NoMercy.Launcher.Models"
+        x:Class="NoMercy.Launcher.Views.LogViewerView"
         x:DataType="vm:LogViewerViewModel">
 
     <UserControl.Styles>

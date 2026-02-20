@@ -46,13 +46,13 @@ runs:
         cp -R "${PAYLOAD_PATH}/"* "${PACKAGE_ROOT}${INSTALL_DIR}/"
         chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/NoMercyMediaServer"
         chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/NoMercyApp"
-        chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/NoMercyMediaServerService"
+        chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/NoMercyLauncher"
         chmod 755 "${PACKAGE_ROOT}${INSTALL_DIR}/nomercy"
 
         # Create symlinks in /usr/bin
         ln -s "${INSTALL_DIR}/NoMercyMediaServer" "${PACKAGE_ROOT}/usr/bin/nomercymediaserver"
         ln -s "${INSTALL_DIR}/NoMercyApp" "${PACKAGE_ROOT}/usr/bin/nomercyapp"
-        ln -s "${INSTALL_DIR}/NoMercyMediaServerService" "${PACKAGE_ROOT}/usr/bin/nomercymediaserverservice"
+        ln -s "${INSTALL_DIR}/NoMercyLauncher" "${PACKAGE_ROOT}/usr/bin/nomercylauncher"
         ln -s "${INSTALL_DIR}/nomercy" "${PACKAGE_ROOT}/usr/bin/nomercy"
 
         # Copy desktop files
@@ -83,21 +83,21 @@ runs:
         EOF
         chmod 644 "${PACKAGE_ROOT}/usr/lib/systemd/user/nomercymediaserver.service"
 
-        cat > "${PACKAGE_ROOT}/usr/lib/systemd/user/nomercymediaserverservice.service" << 'EOF'
+        cat > "${PACKAGE_ROOT}/usr/lib/systemd/user/nomercylauncher.service" << 'EOF'
         [Unit]
-        Description=NoMercy MediaServer Service (Tray)
+        Description=NoMercy Launcher
         After=network.target
 
         [Service]
         Type=simple
-        ExecStart=/opt/nomercy/NoMercyMediaServerService
+        ExecStart=/opt/nomercy/NoMercyLauncher
         Restart=on-failure
         RestartSec=5
 
         [Install]
         WantedBy=default.target
         EOF
-        chmod 644 "${PACKAGE_ROOT}/usr/lib/systemd/user/nomercymediaserverservice.service"
+        chmod 644 "${PACKAGE_ROOT}/usr/lib/systemd/user/nomercylauncher.service"
 
         # Copyright file
         cat > "${PACKAGE_ROOT}/usr/share/doc/nomercy/copyright" << EOF
@@ -120,7 +120,7 @@ runs:
         Architecture: amd64
         Maintainer: NoMercy Entertainment <support@nomercy.tv>
         Description: NoMercy MediaServer - complete installation
-         Modern Media Server Solution with server, tray service, and CLI tool.
+         Modern Media Server Solution with server, launcher, and CLI tool.
         Depends: libc6 (>= 2.31), libgcc-s1, libssl3 | libssl1.1
         Recommends: systemd
         Priority: optional
@@ -151,8 +151,8 @@ runs:
         if command -v systemctl >/dev/null 2>&1; then
             systemctl --user stop nomercymediaserver.service >/dev/null 2>&1 || true
             systemctl --user disable nomercymediaserver.service >/dev/null 2>&1 || true
-            systemctl --user stop nomercymediaserverservice.service >/dev/null 2>&1 || true
-            systemctl --user disable nomercymediaserverservice.service >/dev/null 2>&1 || true
+            systemctl --user stop nomercylauncher.service >/dev/null 2>&1 || true
+            systemctl --user disable nomercylauncher.service >/dev/null 2>&1 || true
         fi
         exit 0
         EOF

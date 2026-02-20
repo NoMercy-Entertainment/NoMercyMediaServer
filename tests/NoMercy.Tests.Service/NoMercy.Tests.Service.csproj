@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\NoMercy.Tray\NoMercy.Tray.csproj" />
+    <ProjectReference Include="..\..\src\NoMercy.Launcher\NoMercy.Launcher.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,5 @@
-using NoMercy.Tray.Services;
-using NoMercy.Tray.ViewModels;
+using NoMercy.Launcher.Services;
+using NoMercy.Launcher.ViewModels;
 using Xunit;
 
 namespace NoMercy.Tests.Service;

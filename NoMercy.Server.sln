@@ -71,7 +71,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercyQueue.Sqlite", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Queue.MediaServer", "src\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj", "{8DD421D1-E5D0-469F-9937-7B1751A313B3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tray", "src\NoMercy.Tray\NoMercy.Tray.csproj", "{A067E37C-15C8-4CB7-9726-799DD4217ED9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Launcher", "src\NoMercy.Launcher\NoMercy.Launcher.csproj", "{A067E37C-15C8-4CB7-9726-799DD4217ED9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoMercy.Tests.Service", "tests\NoMercy.Tests.Service\NoMercy.Tests.Service.csproj", "{EEE32088-14AC-4862-9AA0-7A2B125D2404}"
 EndProject

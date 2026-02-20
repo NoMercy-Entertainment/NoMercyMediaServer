@@ -1,5 +1,5 @@
 using Newtonsoft.Json;
-using NoMercy.Tray.Models;
+using NoMercy.Launcher.Models;
 using Xunit;
 
 namespace NoMercy.Tests.Service;

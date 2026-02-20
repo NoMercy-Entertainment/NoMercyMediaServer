@@ -43,7 +43,7 @@ Source: "..\..\installer-payload\*.json"; DestDir: "{app}"; Components: server; 
 ; Main executables per component
 Source: "..\..\installer-payload\NoMercyMediaServer.exe"; DestDir: "{app}"; Components: server; Flags: ignoreversion
 Source: "..\..\installer-payload\NoMercyApp.exe"; DestDir: "{app}"; Components: app; Flags: ignoreversion
-Source: "..\..\installer-payload\NoMercyMediaServerService.exe"; DestDir: "{app}"; Components: service; Flags: ignoreversion
+Source: "..\..\installer-payload\NoMercyLauncher.exe"; DestDir: "{app}"; Components: service; Flags: ignoreversion
 Source: "..\..\installer-payload\nomercy.exe"; DestDir: "{app}"; Components: cli; Flags: ignoreversion
 
 ; Icon
@@ -51,9 +51,9 @@ Source: "..\..\assets\icons\icon.ico"; DestDir: "{app}"; DestName: "icon.ico"; F
 
 [Icons]
 Name: "{group}\NoMercy MediaServer"; Filename: "{app}\NoMercyMediaServer.exe"; IconFilename: "{app}\icon.ico"
-Name: "{group}\NoMercy MediaServer"; Filename: "{app}\NoMercyMediaServerService.exe"; IconFilename: "{app}\icon.ico"; Components: service
+Name: "{group}\NoMercy MediaServer"; Filename: "{app}\NoMercyLauncher.exe"; IconFilename: "{app}\icon.ico"; Components: service
 Name: "{group}\{cm:UninstallProgram,NoMercy MediaServer}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\NoMercy MediaServer"; Filename: "{app}\NoMercyMediaServerService.exe"; IconFilename: "{app}\icon.ico"; Components: service; Tasks: desktopicon
+Name: "{autodesktop}\NoMercy MediaServer"; Filename: "{app}\NoMercyLauncher.exe"; IconFilename: "{app}\icon.ico"; Components: service; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Components: service
@@ -63,7 +63,7 @@ Name: "addtopath"; Description: "Add CLI to system PATH"; GroupDescription: "CLI
 [Run]
 Filename: "sc.exe"; Parameters: "create NoMercyMediaServer binPath= ""{app}\NoMercyMediaServer.exe"" start= auto DisplayName= ""NoMercy MediaServer"""; Flags: runhidden; Tasks: installservice
 Filename: "sc.exe"; Parameters: "start NoMercyMediaServer"; Flags: runhidden; Tasks: installservice
-Filename: "{app}\NoMercyMediaServerService.exe"; Description: "Launch NoMercy MediaServer"; Flags: nowait postinstall skipifsilent; Components: service
+Filename: "{app}\NoMercyLauncher.exe"; Description: "Launch NoMercy MediaServer"; Flags: nowait postinstall skipifsilent; Components: service
 
 [UninstallRun]
 Filename: "sc.exe"; Parameters: "stop NoMercyMediaServer"; Flags: runhidden; Tasks: installservice

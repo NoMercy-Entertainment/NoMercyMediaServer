@@ -4,7 +4,7 @@ author: 'NoMercy Entertainment'
 
 inputs:
   project:
-    description: 'Project name (Service, App, Tray, Cli)'
+    description: 'Project name (Service, App, Launcher, Cli)'
     required: true
   dotnet-version:
     description: '.NET version to use'
@@ -92,8 +92,8 @@ runs:
           PROJECT_NAME="NoMercyMediaServer"
         elif [ "${{ inputs.project }}" == "Cli" ]; then
           PROJECT_NAME="nomercy"
-        elif [ "${{ inputs.project }}" == "Tray" ]; then
-          PROJECT_NAME="NoMercyMediaServerService"
+        elif [ "${{ inputs.project }}" == "Launcher" ]; then
+          PROJECT_NAME="NoMercyLauncher"
         else
           PROJECT_NAME="NoMercy${{ inputs.project }}"
         fi
@@ -165,8 +165,8 @@ runs:
         # Set correct project names based on actual target names
         if [ "${{ inputs.project }}" == "Service" ]; then
           PROJECT_NAME="NoMercyMediaServer"
-        elif [ "${{ inputs.project }}" == "Tray" ]; then
-          PROJECT_NAME="NoMercyMediaServerService"
+        elif [ "${{ inputs.project }}" == "Launcher" ]; then
+          PROJECT_NAME="NoMercyLauncher"
         else
           PROJECT_NAME="NoMercy${{ inputs.project }}"
         fi
@@ -179,7 +179,7 @@ runs:
         # Copy appropriate Info.plist based on project
         if [ "${{ inputs.project }}" == "Service" ]; then
           cp ./assets/macos/Info.plist "./output/$PROJECT_NAME.app/Contents/"
-        elif [ "${{ inputs.project }}" == "Tray" ]; then
+        elif [ "${{ inputs.project }}" == "Launcher" ]; then
           cp ./assets/macos/Info.plist.service "./output/$PROJECT_NAME.app/Contents/Info.plist"
         else
           cp ./assets/macos/Info.plist.app "./output/$PROJECT_NAME.app/Contents/Info.plist"
@@ -212,8 +212,8 @@ runs:
         # Set correct project names based on actual target names
         if [ "${{ inputs.project }}" == "Service" ]; then
           PROJECT_NAME="NoMercyMediaServer"
-        elif [ "${{ inputs.project }}" == "Tray" ]; then
-          PROJECT_NAME="NoMercyMediaServerService"
+        elif [ "${{ inputs.project }}" == "Launcher" ]; then
+          PROJECT_NAME="NoMercyLauncher"
         else
           PROJECT_NAME="NoMercy${{ inputs.project }}"
         fi

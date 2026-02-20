@@ -6,7 +6,7 @@
     <string>tv.nomercy.mediaserver.service</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Applications/NoMercy MediaServer.app/Contents/MacOS/NoMercyMediaServerService</string>
+        <string>/Applications/NoMercy MediaServer.app/Contents/MacOS/NoMercyLauncher</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
