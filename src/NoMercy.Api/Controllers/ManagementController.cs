@@ -58,6 +58,7 @@ public class ManagementController(
             IsDev = Config.IsDev,
             AutoStart = AutoStartupManager.IsEnabled(),
             UpdateAvailable = Config.UpdateAvailable,
+            RestartNeeded = Config.RestartNeeded,
             LatestVersion = Config.LatestVersion,
             SetupPhase = setupState.CurrentPhase.ToString(),
             InternalAddress = networkDiscovery.InternalAddress,
@@ -171,6 +172,17 @@ public class ManagementController(
             {
                 Logger.Setup("Update already staged, skipping download.");
                 return Ok(new { status = "ok", message = "Update already staged.", path = tempPath });
+            }
+
+            string? onDiskVersion = Software.GetFileVersion(AppFiles.ServerExePath);
+            string runningVersion = Software.GetReleaseVersion();
+            if (onDiskVersion is not null &&
+                Version.TryParse(onDiskVersion, out Version? diskVer) &&
+                Version.TryParse(runningVersion, out Version? runVer) &&
+                diskVer > runVer)
+            {
+                Logger.Setup($"Binary on disk is already {onDiskVersion} (running {runningVersion}), restart will apply the update.");
+                return Ok(new { status = "ok", message = $"Binary on disk is already {onDiskVersion}, restart needed." });
             }
 
             Logger.Setup("Downloading server update on demand...");

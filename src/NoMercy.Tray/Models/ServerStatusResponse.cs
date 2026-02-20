@@ -15,6 +15,7 @@ public class ServerStatusResponse
     [JsonProperty("is_dev")] public bool IsDev { get; set; }
     [JsonProperty("auto_start")] public bool AutoStart { get; set; }
     [JsonProperty("update_available")] public bool UpdateAvailable { get; set; }
+    [JsonProperty("restart_needed")] public bool RestartNeeded { get; set; }
     [JsonProperty("latest_version")] public string? LatestVersion { get; set; }
     [JsonProperty("setup_phase")] public string? SetupPhase { get; set; }
     [JsonProperty("internal_address")] public string? InternalAddress { get; set; }
