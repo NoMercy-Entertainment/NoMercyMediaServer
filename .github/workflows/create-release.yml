@@ -90,7 +90,7 @@ jobs:
           REPO="https://github.com/NoMercy-Entertainment/NoMercyMediaServer"
           DL="${REPO}/releases/download/${TAG}"
 
-          cat > ./release-notes.md << NOTES_END
+          cat > /tmp/release-notes.md << NOTES_END
           ## Install
 
           | Platform | Download |
@@ -217,7 +217,7 @@ jobs:
           NAME="${{ inputs.release-name || format('NoMercy MediaServer v{0}', inputs.version) }}"
 
           # Build gh release create flags
-          FLAGS=(--title "$NAME" --notes-file ./release-notes.md)
+          FLAGS=(--title "$NAME" --notes-file /tmp/release-notes.md)
 
           if [ "${{ inputs.draft }}" = "true" ]; then
             FLAGS+=(--draft)
