@@ -7,12 +7,17 @@ on:
         description: 'Git ref to checkout and build'
         required: false
         type: string
-        default: 'main'
+        default: ''
       dotnet-version:
         description: '.NET version to use'
         required: false
         type: string
         default: '10.0.x'
+      version:
+        description: 'Version to inject into Directory.Build.props before building (optional)'
+        required: false
+        type: string
+        default: ''
     outputs:
       artifact-names:
         description: 'Names of uploaded artifacts'
@@ -30,9 +35,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Override version in Directory.Build.props
+        if: inputs.version != ''
+        shell: bash
+        run: |
+          perl -i -pe 's|<Version>.*?</Version>|<Version>${{ inputs.version }}</Version>|' Directory.Build.props
+          echo "Injected version ${{ inputs.version }} into Directory.Build.props"
+          grep '<Version>' Directory.Build.props
 
       - name: Build ${{ matrix.project }}
         uses: ./.github/actions/build-dotnet-project

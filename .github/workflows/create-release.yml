@@ -32,6 +32,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Download executable artifacts
         uses: actions/download-artifact@v5
@@ -132,6 +135,80 @@ jobs:
           Build: \`${SHORT_SHA}\`
           NOTES_END
 
+      - name: Squash merge to main and bump version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          NEW_VERSION="${{ inputs.version }}"
+          TAG="${{ inputs.tag || format('v{0}', inputs.version) }}"
+
+          # Fetch latest state of both branches
+          git fetch origin main dev
+
+          # Generate changelog from commits since last tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.201")
+
+          # Get commits since last tag, excluding version bump commits
+          COMMITS=$(git log "$LATEST_TAG"..origin/dev --pretty=format:"%s" -- src/ | grep -v "^chore: bump version" || true)
+
+          # Initialize changelog sections
+          FEATURES=""
+          FIXES=""
+          REFACTOR=""
+          OTHER=""
+
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+
+            # Extract message without scope for cleaner output
+            MSG=$(echo "$line" | sed -E 's/^[a-z]+(\([^)]+\))?:\s*//')
+
+            if [[ "$line" =~ ^feat ]]; then
+              FEATURES="${FEATURES}- ${MSG}"$'\n'
+            elif [[ "$line" =~ ^fix ]]; then
+              FIXES="${FIXES}- ${MSG}"$'\n'
+            elif [[ "$line" =~ ^refactor ]]; then
+              REFACTOR="${REFACTOR}- ${MSG}"$'\n'
+            elif [[ ! "$line" =~ ^(chore|docs|style|test|ci) ]]; then
+              OTHER="${OTHER}- ${MSG}"$'\n'
+            fi
+          done <<< "$COMMITS"
+
+          # Build changelog body
+          CHANGELOG=""
+          [[ -n "$FEATURES" ]] && CHANGELOG="${CHANGELOG}### Features"$'\n'"${FEATURES}"$'\n'
+          [[ -n "$FIXES" ]] && CHANGELOG="${CHANGELOG}### Fixes"$'\n'"${FIXES}"$'\n'
+          [[ -n "$REFACTOR" ]] && CHANGELOG="${CHANGELOG}### Refactoring"$'\n'"${REFACTOR}"$'\n'
+          [[ -n "$OTHER" ]] && CHANGELOG="${CHANGELOG}### Other"$'\n'"${OTHER}"$'\n'
+
+          # Fallback if no categorized commits
+          if [[ -z "$CHANGELOG" ]]; then
+            CHANGELOG="Maintenance release with various improvements."
+          fi
+
+          echo "Generated changelog:"
+          echo "$CHANGELOG"
+
+          # Checkout main and squash merge dev
+          git checkout main
+          git reset --hard origin/main
+          git merge --squash origin/dev
+
+          # Update version in Directory.Build.props
+          sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" Directory.Build.props
+          git add -A
+
+          # Create the squash commit with version and changelog
+          git commit -m "release: v$NEW_VERSION" -m "$CHANGELOG"
+
+          # Push to main
+          git push origin main
+
+          echo "Squash merged dev into main as v$NEW_VERSION"
+
       - name: Create Release and Upload Assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -150,12 +227,12 @@ jobs:
             FLAGS+=(--prerelease)
           fi
 
-          # Create or update the release
+          # Create release targeting main (where the squash merge commit is)
           if gh release view "$TAG" &>/dev/null; then
             echo "Release $TAG already exists, updating..."
             gh release edit "$TAG" "${FLAGS[@]}"
           else
-            gh release create "$TAG" "${FLAGS[@]}" --target "$GITHUB_SHA"
+            gh release create "$TAG" "${FLAGS[@]}" --target main
           fi
           echo "Release ready: $TAG"
 
@@ -164,22 +241,22 @@ jobs:
           for file in ./output/*; do
             [ -f "$file" ] || continue
             BASENAME=$(basename "$file")
-            echo "⬆️ Uploading $BASENAME..."
+            echo "Uploading $BASENAME..."
 
             SUCCESS=false
             for i in 1 2 3; do
               if gh release upload "$TAG" "$file" --clobber 2>&1; then
-                echo "✅ Uploaded $BASENAME"
+                echo "Uploaded $BASENAME"
                 SUCCESS=true
                 break
               else
-                echo "⚠️ Upload attempt $i/3 failed for $BASENAME"
+                echo "Upload attempt $i/3 failed for $BASENAME"
                 sleep $((i * 2))
               fi
             done
 
             if [ "$SUCCESS" != "true" ]; then
-              echo "❌ Failed to upload $BASENAME after 3 attempts"
+              echo "Failed to upload $BASENAME after 3 attempts"
               FAILED=$((FAILED + 1))
             fi
           done
@@ -190,3 +267,13 @@ jobs:
           fi
 
           echo "All assets uploaded successfully"
+
+      - name: Sync dev branch to match main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git checkout dev
+          git reset --hard main
+          git push --force-with-lease origin dev
+
+          echo "Synced dev to match main"

@@ -7,7 +7,7 @@ on:
         description: 'Git ref to checkout'
         required: false
         type: string
-        default: 'main'
+        default: ''
       version:
         description: 'Package version'
         required: true
@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
           fetch-tags: true
 

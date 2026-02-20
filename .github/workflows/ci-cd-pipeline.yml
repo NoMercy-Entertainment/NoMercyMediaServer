@@ -37,20 +37,21 @@ jobs:
     with:
       dotnet-version: "10.0.x"
 
-  # Step 2: Version Management and squash merge to main
+  # Step 2: Calculate next version (no commits or pushes)
   version_management:
     needs: test
     if: github.ref == 'refs/heads/dev' && github.event_name != 'pull_request'
     uses: ./.github/workflows/version-and-release-management.yml
     secrets: inherit
 
-  # Step 3: Build Executables from main branch
+  # Step 3: Build Executables from dev with version override
   build_executables:
     needs: version_management
     if: needs.version_management.outputs.should_deploy == 'true'
     uses: ./.github/workflows/build-executables.yml
     with:
       dotnet-version: "10.0.x"
+      version: ${{ needs.version_management.outputs.version }}
 
   # Step 4: Build Linux Packages (before release so packages are included)
   build_packages:
@@ -72,8 +73,8 @@ jobs:
     with:
       version: ${{ needs.version_management.outputs.version }}
 
-  # Step 6: Create Release (includes executables AND Linux packages)
-  # The nomercy-packages repo will automatically detect new releases and deploy
+  # Step 6: Create Release, squash merge to main, and sync dev
+  # Only runs after ALL builds succeed — version bump is atomic with release
   create_release:
     needs: [version_management, build_executables, build_packages, build_docker_images]
     if: needs.version_management.outputs.should_deploy == 'true'
