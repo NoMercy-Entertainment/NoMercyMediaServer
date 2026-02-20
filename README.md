@@ -120,6 +120,9 @@ sudo pacman -Sy nomercymediaserver
 Run NoMercy MediaServer in a container:
 
 ```bash
+# Set your host LAN IP (required for container ↔ host communication)
+export HOST_IP=$(hostname -I | awk '{print $1}')
+
 # CPU only
 docker compose up -d
 
@@ -134,7 +137,8 @@ docker compose -f docker-compose.amd.yml up -d
 ```
 
 > [!IMPORTANT]
-> Edit the compose file to update the media volume paths before running.
+> - Export `HOST_IP` before running — the compose files use it for `NOMERCY_INTERNAL_IP`
+> - Edit the compose file to update the media volume paths
 
 ### Option 4: Build from Source
 

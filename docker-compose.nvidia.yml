@@ -39,6 +39,13 @@ services:
       - TZ=UTC
       - PUID=1000
       - PGID=1000
+      - NOMERCY_INTERNAL_IP=${HOST_IP}  # Host LAN IP (required in Docker)
+      # - NOMERCY_EXTERNAL_IP=1.2.3.4         # Public IP (auto-detected via UPnP/API)
+      # - NOMERCY_INTERNAL_PORT=7626           # Server port
+      # - NOMERCY_EXTERNAL_PORT=7626           # External port (if different from internal)
+      # - NOMERCY_LOG_LEVEL=Information        # Verbose, Debug, Information, Warning, Error, Fatal
+      # - NOMERCY_DEV=true                     # Development mode
+      # - NOMERCY_SEED=true                    # Seed database with sample data
       # NVIDIA environment
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
