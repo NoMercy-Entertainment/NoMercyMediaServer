@@ -9,7 +9,7 @@ public sealed class ServerConnection : IDisposable
 {
     private IpcClient? _client;
 
-    public bool IsConnected { get; private set; }
+    public bool IsConnected { get; internal set; }
 
     public async Task<bool> ConnectAsync(
         CancellationToken cancellationToken = default)

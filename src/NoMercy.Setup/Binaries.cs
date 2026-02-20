@@ -308,7 +308,7 @@ public static class Binaries
         await FilePermissions.SetExecutionPermissions(path);
     }
 
-    private static async Task DownloadServerUpdate()
+    public static async Task DownloadServerUpdate()
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)

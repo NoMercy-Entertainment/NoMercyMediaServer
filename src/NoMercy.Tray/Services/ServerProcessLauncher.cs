@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using NoMercy.NmSystem.FileSystem;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Tray.Services;
@@ -86,6 +87,58 @@ public class ServerProcessLauncher
         }
 
         return Task.FromResult(true);
+    }
+
+    public async Task<bool> WaitForServerExitAsync(TimeSpan timeout)
+    {
+        using CancellationTokenSource cts = new(timeout);
+
+        if (_serverProcess is not null)
+        {
+            try
+            {
+                await _serverProcess.WaitForExitAsync(cts.Token);
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
+
+        // Server wasn't started by the Tray — poll until it's gone
+        while (!cts.Token.IsCancellationRequested)
+        {
+            if (!IsServerProcessRunning)
+                return true;
+
+            try
+            {
+                await Task.Delay(500, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return !IsServerProcessRunning;
+            }
+        }
+
+        return !IsServerProcessRunning;
+    }
+
+    public async Task ApplyUpdateAsync()
+    {
+        string tempPath = AppFiles.ServerTempExePath;
+        string currentPath = AppFiles.ServerExePath;
+
+        if (!File.Exists(tempPath))
+            throw new FileNotFoundException("No staged update found.", tempPath);
+
+        if (File.Exists(currentPath))
+            File.Delete(currentPath);
+
+        File.Move(tempPath, currentPath);
+
+        await FilePermissions.SetExecutionPermissions(currentPath);
     }
 
     private static ProcessStartInfo? CreateProductionStartInfo()
