@@ -32,7 +32,7 @@ Name: "custom"; Description: "Custom installation"; Flags: iscustom
 [Components]
 Name: "server"; Description: "NoMercy MediaServer"; Types: full server custom; Flags: fixed
 Name: "app"; Description: "NoMercy App (desktop media interface)"; Types: full
-Name: "service"; Description: "NoMercy MediaServer Service (system tray control)"; Types: full
+Name: "service"; Description: "NoMercy Launcher (system tray control)"; Types: full
 Name: "cli"; Description: "NoMercy CLI (command-line tool)"; Types: full
 
 [Files]

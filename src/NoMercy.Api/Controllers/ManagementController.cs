@@ -57,6 +57,7 @@ public class ManagementController(
             StartTime = Info.StartTime,
             IsDev = Config.IsDev,
             AutoStart = AutoStartupManager.IsEnabled(),
+            IsDocker = Screen.IsDocker,
             UpdateAvailable = Config.UpdateAvailable,
             RestartNeeded = Config.RestartNeeded,
             LatestVersion = Config.LatestVersion,
