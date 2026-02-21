@@ -90,8 +90,10 @@ public class MusicHub : ConnectionHub
         // Normal playlist handling
         if (playerState?.CurrentItem is null || playerState.Playlist.Count == 0)
             await HandleNewPlayerState(user, type, listId, item, playlist);
-        else if (IsCurrentPlaylist(playerState, type, listId, item.Id))
+        else if (IsSamePlaylistAndTrack(playerState, type, listId, item.Id))
             await HandleExistingPlaylistState(user, playerState);
+        else if (IsSamePlaylist(playerState, type, listId))
+            await HandleTrackReorder(user, playerState, item);
         else
             await HandlePlaylistChange(user, playerState, type, listId, item, playlist);
     }
@@ -118,10 +120,14 @@ public class MusicHub : ConnectionHub
         return device;
     }
 
-    private static bool IsCurrentPlaylist(MusicPlayerState state, string type, Guid listId, Guid itemId)
+    private static bool IsSamePlaylist(MusicPlayerState state, string type, Guid listId)
     {
-        return state.CurrentItem is not null && state.CurrentList.ToString().Contains($"{type}/{listId}") &&
-               state.CurrentItem?.Id == itemId;
+        return state.CurrentItem is not null && state.CurrentList.ToString().Contains($"{type}/{listId}");
+    }
+
+    private static bool IsSamePlaylistAndTrack(MusicPlayerState state, string type, Guid listId, Guid itemId)
+    {
+        return IsSamePlaylist(state, type, listId) && state.CurrentItem?.Id == itemId;
     }
 
     private async Task HandleExistingPlaylistState(User user, MusicPlayerState state)
