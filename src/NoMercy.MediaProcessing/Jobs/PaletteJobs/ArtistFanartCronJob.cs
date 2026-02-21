@@ -16,7 +16,7 @@ public class ArtistFanartCronJob : ICronJobExecutor
     private readonly ILogger<ArtistFanartCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryHours(4);
     public string JobName => "Fanart ColorPalette Job";
 
     public ArtistFanartCronJob(ILogger<ArtistFanartCronJob> logger, MediaContext context)
@@ -31,34 +31,42 @@ public class ArtistFanartCronJob : ICronJobExecutor
             .Where(i => string.IsNullOrEmpty(i._colorPalette) &&
                         i.Site != null &&
                         i.Site.StartsWith("https://assets.fanart.tv"))
-            .Take(5000)
+            .Take(25)
             .ToList()
             .Chunk(5)
             .ToList();
 
-        _logger.LogTrace("Found {Count} image chunks to process", imagesWithoutPalette.Count);
-
-        foreach (Image[] imageChunk in imagesWithoutPalette)
+        if (imagesWithoutPalette.Count == 0)
         {
-            _logger.LogTrace("Processing image chunk of size: {Size}", imageChunk.Length);
+            _logger.LogTrace("No fanart images need palette processing");
+        }
+        else
+        {
+            _logger.LogTrace("Found {Count} image chunks to process", imagesWithoutPalette.Count);
 
-            foreach (Image image in imageChunk)
+            foreach (Image[] imageChunk in imagesWithoutPalette)
             {
-                try
+                if (cancellationToken.IsCancellationRequested) break;
+
+                foreach (Image image in imageChunk)
                 {
-                    image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
+                    try
+                    {
+                        image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
+                    }
+                    catch (Exception)
+                    {
+                        image._colorPalette = "{}";
+                    }
                 }
-                catch (Exception)
-                {
-                    image._colorPalette = "{}";
-                }
+
+                await _context.SaveChangesAsync(cancellationToken);
             }
 
-            await _context.SaveChangesAsync(cancellationToken);
+            _logger.LogTrace("Fanart Images job completed, updated: {Count}", imagesWithoutPalette.Sum(x => x.Length));
         }
 
-
-        _logger.LogTrace("Fanart Images job completed, updated: {Count}", imagesWithoutPalette.Count);
+        if (cancellationToken.IsCancellationRequested) return;
 
         List<Artist[]> artists = _context.Artists
             .Include(artist => artist.AlbumArtist)
@@ -73,16 +81,22 @@ public class ArtistFanartCronJob : ICronJobExecutor
             )
             .OrderByDescending(artist => artist.UpdatedAt)
 
-            .Take(5000)
+            .Take(25)
             .ToList()
             .Chunk(5)
             .ToList();
+
+        if (artists.Count == 0)
+        {
+            _logger.LogTrace("No artists need fanart processing");
+            return;
+        }
 
         _logger.LogTrace("Found {Count} artist chunks to process", artists.Count);
 
         foreach (Artist[] artistChunk in artists)
         {
-            _logger.LogTrace("Processing artist chunk of size: {Size}", artistChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             foreach (Artist artist in artistChunk)
             {
@@ -90,10 +104,9 @@ public class ArtistFanartCronJob : ICronJobExecutor
             }
 
             await _context.SaveChangesAsync(cancellationToken);
-
         }
 
-        _logger.LogTrace("Fanart Artist images job completed, updated: {Count}", artists.Count);
+        _logger.LogTrace("Fanart Artist images job completed, updated: {Count}", artists.Sum(x => x.Length));
     }
 
     private async Task ProcessImages(Artist artist, CancellationToken cancellationToken)

@@ -13,7 +13,7 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
     private readonly ILogger<RecommendationPaletteCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryMinutes(30);
     public string JobName => "Recommendations ColorPalette Job";
 
     public RecommendationPaletteCronJob(ILogger<RecommendationPaletteCronJob> logger, MediaContext context)
@@ -27,16 +27,18 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
         List<Recommendation[]> recommendations = _context.Recommendations
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.TvFrom != null ? x.TvFrom.UpdatedAt : x.MovieFrom!.UpdatedAt)
-            .Take(5000)
+            .Take(100)
             .ToList()
-            .Chunk(5)
+            .Chunk(10)
             .ToList();
+
+        if (recommendations.Count == 0) return;
 
         _logger.LogTrace("Found {Count} recommendation chunks to process", recommendations.Count);
 
         foreach (Recommendation[] recommendationChunk in recommendations)
         {
-            _logger.LogTrace("Processing recommendation chunk of size: {Size}", recommendationChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             await Parallel.ForEachAsync(recommendationChunk, Config.ParallelOptions, async (recommendation, _) =>
             {

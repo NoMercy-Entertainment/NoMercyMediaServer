@@ -9,6 +9,7 @@ public class MainViewModel : INotifyPropertyChanged
     private int _selectedTabIndex;
 
     public ServerControlViewModel ServerControlViewModel { get; }
+    public StartupArgumentsViewModel StartupArgumentsViewModel { get; }
     public LogViewerViewModel LogViewerViewModel { get; }
 
     public int SelectedTabIndex
@@ -22,6 +23,7 @@ public class MainViewModel : INotifyPropertyChanged
         ServerProcessLauncher processLauncher)
     {
         ServerControlViewModel = new(serverConnection, processLauncher);
+        StartupArgumentsViewModel = new();
         LogViewerViewModel = new(serverConnection);
     }
 

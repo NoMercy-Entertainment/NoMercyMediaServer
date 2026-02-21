@@ -14,7 +14,7 @@ public class ImagePaletteCronJob : ICronJobExecutor
     private readonly ILogger<ImagePaletteCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().EveryHour();
+    public string CronExpression => new CronExpressionBuilder().EveryMinutes(15);
     public string JobName => "Image ColorPalette Job";
 
     public ImagePaletteCronJob(ILogger<ImagePaletteCronJob> logger, MediaContext context)
@@ -33,18 +33,20 @@ public class ImagePaletteCronJob : ICronJobExecutor
             .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
                         e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(5000)
+            .Take(100)
             .ToList()
-            .Chunk(5)
+            .Chunk(10)
             .ToList();
+
+        if (images.Count == 0) return;
 
         _logger.LogTrace("Found {Count} image chunks to process", images.Count);
 
         foreach (Image[] imageChunk in images)
         {
-            _logger.LogTrace("Processing image chunk of size: {Size}", imageChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
-            await Parallel.ForEachAsync(imageChunk, Config.ParallelOptions, async (image, _) =>
+            await Parallel.ForEachAsync(imageChunk, cancellationToken, async (image, token) =>
             {
                 try
                 {

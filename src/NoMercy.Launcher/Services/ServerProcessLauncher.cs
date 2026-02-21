@@ -18,7 +18,7 @@ public class ServerProcessLauncher
 
     public Process? ServerProcess => _serverProcess;
 
-    public Task<bool> StartServerAsync()
+    public Task<bool> StartServerAsync(string? extraArguments = null)
     {
         if (IsServerProcessRunning)
             return Task.FromResult(false);
@@ -33,6 +33,13 @@ public class ServerProcessLauncher
 
         if (startInfo is null)
             return Task.FromResult(false);
+
+        // Append user-configured startup arguments
+        if (!string.IsNullOrWhiteSpace(extraArguments))
+        {
+            foreach (string arg in ParseArguments(extraArguments))
+                startInfo.ArgumentList.Add(arg);
+        }
 
         // Tell the server it's running from an installed deployment so it
         // skips binary downloads (the installer handles updates)
@@ -379,5 +386,50 @@ public class ServerProcessLauncher
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Splits a command-line string into individual arguments,
+    /// respecting double-quoted segments.
+    /// </summary>
+    internal static List<string> ParseArguments(string input)
+    {
+        List<string> args = [];
+        int i = 0;
+
+        while (i < input.Length)
+        {
+            // Skip whitespace
+            while (i < input.Length && char.IsWhiteSpace(input[i]))
+                i++;
+
+            if (i >= input.Length)
+                break;
+
+            if (input[i] == '"')
+            {
+                // Quoted argument
+                i++;
+                int start = i;
+                while (i < input.Length && input[i] != '"')
+                    i++;
+
+                args.Add(input[start..i]);
+
+                if (i < input.Length)
+                    i++; // skip closing quote
+            }
+            else
+            {
+                // Unquoted argument
+                int start = i;
+                while (i < input.Length && !char.IsWhiteSpace(input[i]))
+                    i++;
+
+                args.Add(input[start..i]);
+            }
+        }
+
+        return args;
     }
 }

@@ -319,7 +319,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
             _serverConnection.IsConnected = false;
 
             ActionStatus = "Starting server...";
-            bool started = await _processLauncher.StartServerAsync();
+            string extraArgs = LauncherSettings.Load().StartupArguments;
+            bool started = await _processLauncher.StartServerAsync(extraArgs);
             if (!started)
             {
                 ActionStatus = "Failed to start server";
@@ -386,7 +387,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
             await _processLauncher.ApplyUpdateIfStagedAsync();
 
             ActionStatus = "Starting updated server...";
-            bool started = await _processLauncher.StartServerAsync();
+            string updateExtraArgs = LauncherSettings.Load().StartupArguments;
+            bool started = await _processLauncher.StartServerAsync(updateExtraArgs);
             if (!started)
             {
                 ActionStatus = "Failed to start server";
@@ -507,7 +509,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         try
         {
-            bool started = await _processLauncher.StartServerAsync();
+            string extraArgs = LauncherSettings.Load().StartupArguments;
+            bool started = await _processLauncher.StartServerAsync(extraArgs);
 
             ActionStatus = started
                 ? "Server process launched"

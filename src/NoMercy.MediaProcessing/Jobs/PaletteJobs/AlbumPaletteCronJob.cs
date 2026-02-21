@@ -14,7 +14,7 @@ public class AlbumPaletteCronJob : ICronJobExecutor
     private readonly ILogger<AlbumPaletteCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryHours(2);
     public string JobName => "Album ColorPalette Job";
 
     public AlbumPaletteCronJob(ILogger<AlbumPaletteCronJob> logger, MediaContext context)
@@ -29,16 +29,18 @@ public class AlbumPaletteCronJob : ICronJobExecutor
             .Where(x => string.IsNullOrEmpty(x._colorPalette) && x.Cover != null)
             .Include(x => x.Images)
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(5000)
+            .Take(50)
             .ToList()
             .Chunk(5)
             .ToList();
+
+        if (albums.Count == 0) return;
 
         _logger.LogTrace("Found {Count} album chunks to process", albums.Count);
 
         foreach (Album[] albumChunk in albums)
         {
-            _logger.LogTrace("Processing album chunk of size: {Size}", albumChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             foreach (Album album in albumChunk)
             {

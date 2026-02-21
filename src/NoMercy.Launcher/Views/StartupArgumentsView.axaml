@@ -1,0 +1,193 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NoMercy.Launcher.ViewModels"
+        x:Class="NoMercy.Launcher.Views.StartupArgumentsView"
+        x:DataType="vm:StartupArgumentsViewModel">
+
+    <DockPanel Margin="16">
+        <!-- Title -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Startup Arguments"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Foreground="#F9FAFB"
+                   Margin="0,0,0,16" />
+
+        <!-- Save status -->
+        <TextBlock DockPanel.Dock="Bottom"
+                   Text="{Binding SaveStatus}"
+                   Foreground="#9CA3AF"
+                   FontSize="12"
+                   Margin="0,8,0,0"
+                   HorizontalAlignment="Center" />
+
+        <!-- Save button -->
+        <Button DockPanel.Dock="Bottom"
+                x:Name="SaveButton"
+                Content="Save"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Click="OnSaveClick"
+                Background="#16A34A"
+                Foreground="White"
+                Padding="12,8"
+                CornerRadius="4"
+                Margin="0,8,0,0" />
+
+        <ScrollViewer>
+            <StackPanel Spacing="16">
+
+                <!-- Description -->
+                <Border Background="#1F2937"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Extra command-line arguments passed to the media server on startup."
+                                   Foreground="#D1D5DB"
+                                   FontSize="13"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="Enter arguments exactly as you would on the command line. Changes take effect on the next server start."
+                                   Foreground="#9CA3AF"
+                                   FontSize="12"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Arguments text box -->
+                <Border Background="#1F2937"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Arguments"
+                                   Foreground="#F9FAFB"
+                                   FontSize="14"
+                                   FontWeight="SemiBold" />
+
+                        <TextBox Text="{Binding StartupArguments}"
+                                 Watermark="e.g. --dev --loglevel Debug --seed"
+                                 FontFamily="Consolas, Courier New, monospace"
+                                 MinHeight="80"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Available flags reference -->
+                <Border Background="#1F2937"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Available Flags"
+                                   Foreground="#F9FAFB"
+                                   FontSize="14"
+                                   FontWeight="SemiBold" />
+
+                        <Grid ColumnDefinitions="180,*"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                              Margin="0,4,0,0">
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="--dev, -d"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Grid.Row="0" Grid.Column="1"
+                                       Text="Development mode"
+                                       Foreground="#9CA3AF" FontSize="12"
+                                       Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="--loglevel, -l"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Grid.Row="1" Grid.Column="1"
+                                       Text="Log level (Verbose, Debug, Information, Warning, Error, Fatal)"
+                                       Foreground="#9CA3AF" FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0"
+                                       Text="--seed"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Grid.Row="2" Grid.Column="1"
+                                       Text="Seed database with sample data"
+                                       Foreground="#9CA3AF" FontSize="12"
+                                       Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="3" Grid.Column="0"
+                                       Text="--internal-port, -i"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Grid.Row="3" Grid.Column="1"
+                                       Text="Internal server port"
+                                       Foreground="#9CA3AF" FontSize="12"
+                                       Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="4" Grid.Column="0"
+                                       Text="--external-port, -x"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Grid.Row="4" Grid.Column="1"
+                                       Text="External server port"
+                                       Foreground="#9CA3AF" FontSize="12"
+                                       Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="5" Grid.Column="0"
+                                       Text="--internal-ip"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Grid.Row="5" Grid.Column="1"
+                                       Text="Internal IP address override"
+                                       Foreground="#9CA3AF" FontSize="12"
+                                       Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="6" Grid.Column="0"
+                                       Text="--external-ip"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Grid.Row="6" Grid.Column="1"
+                                       Text="External IP address override"
+                                       Foreground="#9CA3AF" FontSize="12"
+                                       Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="7" Grid.Column="0"
+                                       Text="--pipe-name"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Grid.Row="7" Grid.Column="1"
+                                       Text="Named pipe / Unix socket name for IPC"
+                                       Foreground="#9CA3AF" FontSize="12"
+                                       Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="8" Grid.Column="0"
+                                       Text="--sentry"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Grid.Row="8" Grid.Column="1"
+                                       Text="Enable Sentry error tracking"
+                                       Foreground="#9CA3AF" FontSize="12"
+                                       Margin="0,0,0,4" />
+
+                            <TextBlock Grid.Row="9" Grid.Column="0"
+                                       Text="--dsn"
+                                       Foreground="#D1D5DB" FontSize="12"
+                                       FontFamily="Consolas, Courier New, monospace" />
+                            <TextBlock Grid.Row="9" Grid.Column="1"
+                                       Text="Sentry DSN (Data Source Name)"
+                                       Foreground="#9CA3AF" FontSize="12" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

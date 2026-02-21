@@ -12,7 +12,7 @@ public class PersonPaletteCronJob : ICronJobExecutor
     private readonly ILogger<PersonPaletteCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryMinutes(30);
     public string JobName => "Person ColorPalette Job";
 
     public PersonPaletteCronJob(ILogger<PersonPaletteCronJob> logger, MediaContext context)
@@ -26,16 +26,18 @@ public class PersonPaletteCronJob : ICronJobExecutor
         List<Person[]> people = _context.People
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(5000)
+            .Take(100)
             .ToList()
-            .Chunk(5)
+            .Chunk(10)
             .ToList();
 
-        _logger.LogTrace("Found {Count} similar chunks to process", people.Count);
+        if (people.Count == 0) return;
+
+        _logger.LogTrace("Found {Count} person chunks to process", people.Count);
 
         foreach (Person[] peopleChunk in people)
         {
-            _logger.LogTrace("Processing similar chunk of size: {Size}", peopleChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             foreach (Person person in peopleChunk)
             {

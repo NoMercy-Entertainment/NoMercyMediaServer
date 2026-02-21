@@ -58,7 +58,8 @@
       "Bash(tasklist:*)",
       "Bash(netstat:*)",
       "Bash(dotnet --version:*)",
-      "Bash(dotnet:*)"
+      "Bash(dotnet:*)",
+      "Bash(gh run watch:*)"
     ],
     "deny": []
   },

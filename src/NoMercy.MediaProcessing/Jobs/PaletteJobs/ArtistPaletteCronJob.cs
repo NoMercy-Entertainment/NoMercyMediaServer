@@ -13,7 +13,7 @@ public class ArtistPaletteCronJob : ICronJobExecutor
     private readonly ILogger<ArtistPaletteCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().EveryMinute();
+    public string CronExpression => new CronExpressionBuilder().EveryHours(2);
     public string JobName => "Artist ColorPalette Job";
 
     public ArtistPaletteCronJob(ILogger<ArtistPaletteCronJob> logger, MediaContext context)
@@ -27,16 +27,18 @@ public class ArtistPaletteCronJob : ICronJobExecutor
         List<Artist[]> artists = _context.Artists
             .Where(x => string.IsNullOrEmpty(x._colorPalette) && x.Cover != null)
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(5000)
+            .Take(50)
             .ToList()
             .Chunk(5)
             .ToList();
+
+        if (artists.Count == 0) return;
 
         _logger.LogTrace("Found {Count} artist chunks to process", artists.Count);
 
         foreach (Artist[] artistChunk in artists)
         {
-            _logger.LogTrace("Processing artist chunk of size: {Size}", artistChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             foreach (Artist artist in artistChunk)
             {

@@ -12,7 +12,7 @@ public class ShowPaletteCronJob : ICronJobExecutor
     private readonly ILogger<ShowPaletteCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryMinutes(10);
     public string JobName => "Tv ColorPalette Job";
 
     public ShowPaletteCronJob(ILogger<ShowPaletteCronJob> logger, MediaContext context)
@@ -26,16 +26,18 @@ public class ShowPaletteCronJob : ICronJobExecutor
         List<Tv[]> tvs = _context.Tvs
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(5000)
+            .Take(50)
             .ToList()
-            .Chunk(5)
+            .Chunk(10)
             .ToList();
+
+        if (tvs.Count == 0) return;
 
         _logger.LogTrace("Found {Count} tv chunks to process", tvs.Count);
 
         foreach (Tv[] tvChunk in tvs)
         {
-            _logger.LogTrace("Processing tv chunk of size: {Size}", tvChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             foreach (Tv tv in tvChunk)
             {

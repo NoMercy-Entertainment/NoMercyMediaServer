@@ -62,10 +62,18 @@ public class ImageController : Controller
             if (System.IO.File.Exists(cachedImagePath))
                 return PhysicalFile(cachedImagePath, request.Format.DefaultMimeType);
 
-            (byte[] magickImage, string mimeType) = Images.ResizeMagickNet(filePath, request);
-            await System.IO.File.WriteAllBytesAsync(cachedImagePath, magickImage);
+            try
+            {
+                (byte[] magickImage, string mimeType) = Images.ResizeMagickNet(filePath, request);
+                await System.IO.File.WriteAllBytesAsync(cachedImagePath, magickImage);
 
-            return File(magickImage, mimeType);
+                return File(magickImage, mimeType);
+            }
+            catch (Exception e)
+            {
+                Logger.App($"Image conversion failed for {filePath}: {e.Message}", LogEventLevel.Warning);
+                return PhysicalFile(filePath, originalMimeType);
+            }
         }
         catch (Exception e)
         {

@@ -1,8 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
-using Newtonsoft.Json;
-using NoMercy.NmSystem.Information;
 using NoMercy.Launcher.Models;
 using NoMercy.Launcher.ViewModels;
 using NoMercy.Launcher.Views;
@@ -160,7 +158,8 @@ public class TrayIconManager
                 if (!_autoStartAttempted && !_isDev)
                 {
                     _autoStartAttempted = true;
-                    await _processLauncher.StartServerAsync();
+                    string extraArgs = LauncherSettings.Load().StartupArguments;
+                    await _processLauncher.StartServerAsync(extraArgs);
                 }
 
                 SetState(
@@ -372,7 +371,8 @@ public class TrayIconManager
 
     private async void OnStartServer(object? sender, EventArgs e)
     {
-        await _processLauncher.StartServerAsync();
+        string extraArgs = LauncherSettings.Load().StartupArguments;
+        await _processLauncher.StartServerAsync(extraArgs);
     }
 
     private async void OnStopServer(object? sender, EventArgs e)
@@ -391,39 +391,16 @@ public class TrayIconManager
                 : "Show on Startup: Off";
     }
 
-    private static string TraySettingsFile => AppFiles.TraySettingsFile;
-
     private static bool LoadShowOnStartup()
     {
-        try
-        {
-            if (!File.Exists(TraySettingsFile)) return false;
-            string json = File.ReadAllText(TraySettingsFile);
-            TraySettings? settings = JsonConvert.DeserializeObject<TraySettings>(json);
-            return settings?.ShowOnStartup ?? false;
-        }
-        catch
-        {
-            return false;
-        }
+        return LauncherSettings.Load().ShowOnStartup;
     }
 
     private static void SaveShowOnStartup(bool value)
     {
-        try
-        {
-            string directory = Path.GetDirectoryName(TraySettingsFile)!;
-            if (!Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
-
-            TraySettings settings = new() { ShowOnStartup = value };
-            string json = JsonConvert.SerializeObject(settings, Formatting.Indented);
-            File.WriteAllText(TraySettingsFile, json);
-        }
-        catch
-        {
-            // Ignore write failures
-        }
+        TraySettings settings = LauncherSettings.Load();
+        settings.ShowOnStartup = value;
+        LauncherSettings.Save(settings);
     }
 
     private void OnQuit(object? sender, EventArgs e)

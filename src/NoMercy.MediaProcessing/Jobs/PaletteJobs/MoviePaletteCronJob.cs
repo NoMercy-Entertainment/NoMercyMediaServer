@@ -12,7 +12,7 @@ public class MoviePaletteCronJob : ICronJobExecutor
     private readonly ILogger<MoviePaletteCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryMinutes(10);
     public string JobName => "Movie ColorPalette Job";
 
     public MoviePaletteCronJob(ILogger<MoviePaletteCronJob> logger, MediaContext context)
@@ -26,16 +26,18 @@ public class MoviePaletteCronJob : ICronJobExecutor
         List<Movie[]> movies = _context.Movies
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(5000)
+            .Take(50)
             .ToList()
-            .Chunk(5)
+            .Chunk(10)
             .ToList();
+
+        if (movies.Count == 0) return;
 
         _logger.LogTrace("Found {Count} movie chunks to process", movies.Count);
 
         foreach (Movie[] movieChunk in movies)
         {
-            _logger.LogTrace("Processing movie chunk of size: {Size}", movieChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             foreach (Movie movie in movieChunk)
             {

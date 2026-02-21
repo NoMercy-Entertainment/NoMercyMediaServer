@@ -12,7 +12,7 @@ public class SimilarPaletteCronJob : ICronJobExecutor
     private readonly ILogger<SimilarPaletteCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryMinutes(30);
     public string JobName => "Similar ColorPalette Job";
 
     public SimilarPaletteCronJob(ILogger<SimilarPaletteCronJob> logger, MediaContext context)
@@ -26,16 +26,18 @@ public class SimilarPaletteCronJob : ICronJobExecutor
         List<Similar[]> similars = _context.Similar
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.TvFrom != null ? x.TvFrom.UpdatedAt : x.MovieFrom!.UpdatedAt)
-            .Take(5000)
+            .Take(100)
             .ToList()
-            .Chunk(5)
+            .Chunk(10)
             .ToList();
+
+        if (similars.Count == 0) return;
 
         _logger.LogTrace("Found {Count} similar chunks to process", similars.Count);
 
         foreach (Similar[] similarChunk in similars)
         {
-            _logger.LogTrace("Processing similar chunk of size: {Size}", similarChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             foreach (Similar similar in similarChunk)
             {

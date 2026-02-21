@@ -233,6 +233,8 @@ public static class ServiceConfiguration
         services.RegisterCronJob<SimilarPaletteCronJob>("similar-palette-job");
 
         services.RegisterCronJob<ArtistFanartCronJob>("artist-fanart-job");
+        services.RegisterCronJob<ArtistPaletteCronJob>("artist-palette-job");
+        services.RegisterCronJob<AlbumPaletteCronJob>("album-palette-job");
     }
     
 

@@ -12,7 +12,7 @@ public class CollectionPaletteCronJob : ICronJobExecutor
     private readonly ILogger<CollectionPaletteCronJob> _logger;
     private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryMinutes(30);
     public string JobName => "Collection ColorPalette Job";
 
     public CollectionPaletteCronJob(ILogger<CollectionPaletteCronJob> logger, MediaContext context)
@@ -26,16 +26,18 @@ public class CollectionPaletteCronJob : ICronJobExecutor
         List<Collection[]> collections = _context.Collections
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(5000)
+            .Take(100)
             .ToList()
-            .Chunk(5)
+            .Chunk(10)
             .ToList();
+
+        if (collections.Count == 0) return;
 
         _logger.LogTrace("Found {Count} collection chunks to process", collections.Count);
 
         foreach (Collection[] collectionChunk in collections)
         {
-            _logger.LogTrace("Processing collection chunk of size: {Size}", collectionChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             foreach (Collection collection in collectionChunk)
             {
