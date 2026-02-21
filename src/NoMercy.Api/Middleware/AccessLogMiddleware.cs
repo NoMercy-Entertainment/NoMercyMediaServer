@@ -59,7 +59,11 @@ public class AccessLogMiddleware
         bool ignoreExactRoute = _ignoreExact
             .Any(route => context.Request.Path.ToString().Equals(route));
 
-        if (ignoreStart || ignoreExactRoute)
+        // Skip logging for file access paths (folder ID prefix)
+        bool isFolderPath = ClaimsPrincipleExtensions.FolderIds
+            .Any(x => path.StartsWith("/" + x, StringComparison.OrdinalIgnoreCase));
+
+        if (ignoreStart || ignoreExactRoute || isFolderPath)
         {
             await _next(context);
             return;
@@ -103,12 +107,6 @@ public class AccessLogMiddleware
             .Any(route => context.Request.Path.ToString().Equals(route));
 
         if (ignoreIfAuthenticated)
-        {
-            await _next(context);
-            return;
-        }
-
-        if (ClaimsPrincipleExtensions.FolderIds.Any(x => path.StartsWith("/" + x)))
         {
             await _next(context);
             return;
