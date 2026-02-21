@@ -21,11 +21,13 @@ public static class Download
         string baseName = outputName ?? Path.GetFileName(url.ToString());
         string filePath = Path.Combine(AppFiles.DependenciesPath, baseName);
 
-        using HttpResponseMessage result = await HttpClient.GetAsync(url);
-        byte[] content = await result.Content.ReadAsByteArrayAsync();
+        using HttpResponseMessage result = await HttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        result.EnsureSuccessStatusCode();
 
-        await File.WriteAllBytesAsync(filePath, content);
-        
+        await using Stream contentStream = await result.Content.ReadAsStreamAsync();
+        await using FileStream fileStream = new(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
+        await contentStream.CopyToAsync(fileStream);
+
         Logger.System($"Downloaded {name} to {filePath}", LogEventLevel.Verbose);
 
         return filePath;

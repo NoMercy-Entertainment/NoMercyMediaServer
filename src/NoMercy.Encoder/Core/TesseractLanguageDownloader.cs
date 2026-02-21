@@ -53,18 +53,19 @@ public static class TesseractLanguageDownloader
         {
             string downloadUrl = $"{RepositoryBaseUrl}/{languageFileName}";
             
-            using HttpResponseMessage response = await HttpClient.GetAsync(downloadUrl);
-            
+            using HttpResponseMessage response = await HttpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 Logger.Encoder($"Language file not found in repository: {languageFileName}", LogEventLevel.Warning);
                 return false;
             }
-            
+
             response.EnsureSuccessStatusCode();
-            
-            byte[] fileData = await response.Content.ReadAsByteArrayAsync();
-            await File.WriteAllBytesAsync(localFilePath, fileData);
+
+            await using Stream contentStream = await response.Content.ReadAsStreamAsync();
+            await using FileStream fileStream = new(localFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
+            await contentStream.CopyToAsync(fileStream);
             
             Logger.Encoder($"Successfully downloaded Tesseract language file: {languageFileName}");
             return true;
