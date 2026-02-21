@@ -23,7 +23,6 @@ public class ResponseCacheAttributeTests
     [InlineData(typeof(TvShowsController), "Tv", 120)]
     [InlineData(typeof(ConfigurationController), "Languages", 3600)]
     [InlineData(typeof(ConfigurationController), "Countries", 3600)]
-    [InlineData(typeof(ServerController), "ServerInfo", 3600)]
     [InlineData(typeof(ServerController), "ServerPaths", 3600)]
     [InlineData(typeof(SetupController), "Status", 30)]
     public void CacheableEndpoint_HasResponseCacheAttribute_WithCorrectDuration(
@@ -45,6 +44,7 @@ public class ResponseCacheAttributeTests
     [InlineData(typeof(SearchController), "SearchMusic")]
     [InlineData(typeof(SearchController), "SearchVideo")]
     [InlineData(typeof(ServerController), "Resources")]
+    [InlineData(typeof(ServerController), "ServerInfo")]
     [InlineData(typeof(SetupController), "ServerInfo")]
     public void RealTimeEndpoint_HasResponseCacheNoStore(Type controllerType, string methodName)
     {

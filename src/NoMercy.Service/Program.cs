@@ -733,6 +733,12 @@ public static class Program
                 });
             }
 
+            // Health check endpoint — HTTP only, localhost only (for Docker HEALTHCHECK)
+            kestrelOptions.Listen(IPAddress.Loopback, Config.InternalServerPort + 1, listenOptions =>
+            {
+                listenOptions.Protocols = HttpProtocols.Http1;
+            });
+
             // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS)
             if (Software.IsWindows)
             {

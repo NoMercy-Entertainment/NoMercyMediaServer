@@ -343,6 +343,14 @@ public static class Binaries
             return;
         }
 
+        if (Version.TryParse(latestVersion, out Version? latest) &&
+            Version.TryParse(currentVersion, out Version? current) &&
+            latest <= current)
+        {
+            Logger.Setup($"Server is already up to date (running {currentVersion}, latest release {latestVersion})", LogEventLevel.Verbose);
+            return;
+        }
+
         // Installer deployment: the installer handles updates, don't download to binaries path
         string? installDir = Environment.GetEnvironmentVariable("NOMERCY_INSTALL_DIR");
         if (!string.IsNullOrEmpty(installDir))

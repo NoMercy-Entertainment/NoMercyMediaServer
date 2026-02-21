@@ -321,7 +321,7 @@ public class ServerController(
 
     [HttpGet]
     [Route("info")]
-    [ResponseCache(Duration = 3600)]
+    [ResponseCache(NoStore = true)]
     public IActionResult ServerInfo()
     {
         if (!User.IsAllowed())

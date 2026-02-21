@@ -37,7 +37,7 @@ ENV NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
 EXPOSE 7626
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:7626/health || exit 1
+    CMD curl -f http://localhost:7627/health || exit 1
 
 ENTRYPOINT ["./NoMercyMediaServer"]
 CMD ["--internal-port", "7626"]
