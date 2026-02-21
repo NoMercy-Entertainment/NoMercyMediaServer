@@ -21,7 +21,7 @@ public class ImageController : Controller
     {
         try
         {
-            Response.Headers.Append("Expires", DateTime.Now.AddDays(30) + " GMT");
+            Response.Headers.Append("Expires", DateTime.UtcNow.AddDays(30).ToString("R"));
             Response.Headers.Append("Cache-Control", "public, max-age=2592000");
             Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
