@@ -77,6 +77,28 @@ public sealed class ServerConnection : IDisposable
         }
     }
 
+    public async Task<(bool Success, string? Body)> PostWithBodyAsync(
+        string path,
+        CancellationToken cancellationToken = default)
+    {
+        if (_client is null) return (false, null);
+
+        try
+        {
+            using HttpResponseMessage response = await _client.PostAsync(
+                path, null, cancellationToken);
+
+            string body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            return (response.IsSuccessStatusCode, body);
+        }
+        catch (Exception ex)
+        {
+            IsConnected = false;
+            return (false, ex.Message);
+        }
+    }
+
     public async Task<bool> PostAsync<T>(
         string path,
         T body,

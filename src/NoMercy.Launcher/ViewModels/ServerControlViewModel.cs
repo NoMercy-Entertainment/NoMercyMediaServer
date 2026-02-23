@@ -355,59 +355,98 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         IsActionInProgress = true;
         ActionStatus = "Downloading update...";
+        LauncherLog.Info("Update started: requesting server to download update");
 
         try
         {
-            bool downloaded = await _serverConnection.PostAsync("/manage/update");
+            (bool downloaded, string? downloadBody) =
+                await _serverConnection.PostWithBodyAsync("/manage/update");
+
+            LauncherLog.Info($"POST /manage/update => success={downloaded}, body={downloadBody}");
+
             if (!downloaded)
             {
-                ActionStatus = "Failed to download update";
+                string reason = ExtractMessage(downloadBody) ?? "Server returned an error";
+                LauncherLog.Error($"Download step failed: {reason}");
+                ActionStatus = $"Failed to download update: {reason}";
                 return;
             }
 
             ActionStatus = "Stopping server...";
+            LauncherLog.Info("Sending stop command");
             bool stopSent = await _serverConnection.PostAsync("/manage/stop");
             if (!stopSent)
             {
+                LauncherLog.Error("Failed to send stop command via IPC");
                 ActionStatus = "Failed to send stop command";
                 return;
             }
 
             ActionStatus = "Waiting for server to exit...";
+            LauncherLog.Info("Waiting for server process to exit (30s timeout)");
             bool exited = await _processLauncher.WaitForServerExitAsync(TimeSpan.FromSeconds(30));
             if (!exited)
             {
+                LauncherLog.Error("Server did not exit within 30 seconds");
                 ActionStatus = "Server did not stop in time";
                 return;
             }
 
+            LauncherLog.Info("Server process exited");
             _serverConnection.IsConnected = false;
 
             ActionStatus = "Applying update...";
+            LauncherLog.Info("Applying staged update binary");
             await _processLauncher.ApplyUpdateIfStagedAsync();
+            LauncherLog.Info("Binary replacement complete");
 
             ActionStatus = "Starting updated server...";
             string updateExtraArgs = LauncherSettings.Load().StartupArguments;
+            LauncherLog.Info($"Starting server with args: {updateExtraArgs}");
             bool started = await _processLauncher.StartServerAsync(updateExtraArgs);
             if (!started)
             {
+                LauncherLog.Error("Failed to start server process after update");
                 ActionStatus = "Failed to start server";
                 return;
             }
 
             ActionStatus = "Waiting for server to come back up...";
+            LauncherLog.Info("Waiting for server to become ready (30s timeout)");
             await WaitForServerReadyAsync(TimeSpan.FromSeconds(30));
 
+            LauncherLog.Info("Update complete");
             ActionStatus = "Update complete";
             await RefreshStatusAsync();
         }
-        catch (FileNotFoundException)
+        catch (FileNotFoundException ex)
         {
+            LauncherLog.Error("No staged update file found", ex);
             ActionStatus = "No staged update file found";
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error("Update failed", ex);
+            ActionStatus = $"Update failed: {ex.Message}";
         }
         finally
         {
             IsActionInProgress = false;
+        }
+    }
+
+    private static string? ExtractMessage(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+
+        try
+        {
+            dynamic? obj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+            return obj?.message?.ToString();
+        }
+        catch
+        {
+            return null;
         }
     }
 

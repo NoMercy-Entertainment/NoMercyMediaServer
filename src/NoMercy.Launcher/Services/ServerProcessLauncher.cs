@@ -144,21 +144,53 @@ public class ServerProcessLauncher
     {
         string tempPath = AppFiles.ServerTempExePath;
         string currentPath = AppFiles.ServerExePath;
+        string backupPath = currentPath + ".bak";
+
+        LauncherLog.Info($"ApplyUpdate: temp={tempPath}, current={currentPath}");
 
         if (!File.Exists(tempPath))
+        {
+            LauncherLog.Error($"Staged update not found at {tempPath}");
             throw new FileNotFoundException("No staged update found.", tempPath);
+        }
 
+        // Backup current binary before replacing
         if (File.Exists(currentPath))
-            File.Delete(currentPath);
+        {
+            LauncherLog.Info($"Backing up current binary to {backupPath}");
+            if (File.Exists(backupPath)) File.Delete(backupPath);
+            File.Move(currentPath, backupPath);
+        }
 
-        File.Move(tempPath, currentPath);
+        try
+        {
+            File.Move(tempPath, currentPath);
+            await FilePermissions.SetExecutionPermissions(currentPath);
+            LauncherLog.Info("Binary replacement successful");
 
-        await FilePermissions.SetExecutionPermissions(currentPath);
+            // Clean up backup on success
+            if (File.Exists(backupPath)) File.Delete(backupPath);
+        }
+        catch (Exception ex)
+        {
+            LauncherLog.Error("Binary replacement failed, attempting rollback", ex);
+
+            // Rollback: restore backup if move failed
+            if (File.Exists(backupPath) && !File.Exists(currentPath))
+            {
+                File.Move(backupPath, currentPath);
+                LauncherLog.Info("Rollback successful");
+            }
+
+            throw;
+        }
     }
 
     public async Task ApplyUpdateIfStagedAsync()
     {
         string tempPath = AppFiles.ServerTempExePath;
+
+        LauncherLog.Info($"Checking for staged update at {tempPath}: exists={File.Exists(tempPath)}");
 
         if (File.Exists(tempPath))
             await ApplyUpdateAsync();
