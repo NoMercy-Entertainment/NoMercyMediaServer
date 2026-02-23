@@ -272,13 +272,16 @@ public class SpecialRepository(MediaContext context)
             .FirstOrDefaultAsync(ct);
     }
 
-    public static Task<List<SpecialMovieProjection>> GetSpecialMovieProjectionsAsync(
+    public static async Task<List<SpecialMovieProjection>> GetSpecialMovieProjectionsAsync(
         MediaContext ctx, Guid userId, IEnumerable<int> movieIds, string country, CancellationToken ct = default)
     {
-        return ctx.Movies
+        List<int> ids = movieIds.ToList();
+        if (ids.Count == 0) return [];
+
+        // Scalar fields only — no nested .ToList()/.ToArray() to avoid SQLite APPLY
+        List<SpecialMovieProjection> movies = await ctx.Movies
             .AsNoTracking()
-            .AsSplitQuery()
-            .Where(movie => movieIds.Contains(movie.Id))
+            .Where(movie => ids.Contains(movie.Id))
             .Select(movie => new SpecialMovieProjection
             {
                 Id = movie.Id,
@@ -303,86 +306,145 @@ public class SpecialRepository(MediaContext context)
                 CertificationCountry = movie.CertificationMovies
                     .Where(cm => cm.Certification.Iso31661 == country || cm.Certification.Iso31661 == "US")
                     .Select(cm => cm.Certification.Iso31661)
-                    .FirstOrDefault(),
-                Genres = movie.GenreMovies.Select(gm => new SpecialGenreProjection
-                {
-                    Id = gm.GenreId,
-                    Name = gm.Genre.Name
-                }).ToList(),
-                Backdrops = movie.Images
-                    .Where(i => i.Type == "backdrop" && (i.Iso6391 == "en" || i.Iso6391 == null))
-                    .OrderByDescending(i => i.VoteAverage)
-                    .Take(2)
-                    .Select(i => new SpecialImageProjection
-                    {
-                        Id = i.Id,
-                        Site = i.Site,
-                        FilePath = i.FilePath,
-                        Width = i.Width ?? 0,
-                        Type = i.Type,
-                        Height = i.Height ?? 0,
-                        Iso6391 = i.Iso6391,
-                        VoteAverage = i.VoteAverage ?? 0,
-                        VoteCount = i.VoteCount ?? 0,
-                        ColorPalette = i._colorPalette
-                    }).ToList(),
-                Posters = movie.Images
-                    .Where(i => i.Type == "poster" && (i.Iso6391 == "en" || i.Iso6391 == null))
-                    .OrderByDescending(i => i.VoteAverage)
-                    .Take(2)
-                    .Select(i => new SpecialImageProjection
-                    {
-                        Id = i.Id,
-                        Site = i.Site,
-                        FilePath = i.FilePath,
-                        Width = i.Width ?? 0,
-                        Type = i.Type,
-                        Height = i.Height ?? 0,
-                        Iso6391 = i.Iso6391,
-                        VoteAverage = i.VoteAverage ?? 0,
-                        VoteCount = i.VoteCount ?? 0,
-                        ColorPalette = i._colorPalette
-                    }).ToList(),
-                Cast = movie.Cast
-                    .OrderBy(c => c.Role.Order)
-                    .Take(15)
-                    .Select(c => new SpecialCastProjection
-                    {
-                        PersonId = c.Person.Id,
-                        PersonName = c.Person.Name,
-                        PersonProfile = c.Person.Profile,
-                        PersonKnownForDepartment = c.Person.KnownForDepartment,
-                        PersonColorPalette = c.Person._colorPalette,
-                        PersonDeathDay = c.Person.DeathDay,
-                        PersonGender = c.Person.Gender,
-                        Character = c.Role.Character,
-                        Order = c.Role.Order
-                    }).ToList(),
-                Crew = movie.Crew
-                    .Take(15)
-                    .Select(c => new SpecialCrewProjection
-                    {
-                        PersonId = c.Person.Id,
-                        PersonName = c.Person.Name,
-                        PersonProfile = c.Person.Profile,
-                        PersonKnownForDepartment = c.Person.KnownForDepartment,
-                        PersonColorPalette = c.Person._colorPalette,
-                        PersonDeathDay = c.Person.DeathDay,
-                        PersonGender = c.Person.Gender,
-                        Task = c.Job.Task,
-                        Order = c.Job.Order
-                    }).ToList()
+                    .FirstOrDefault()
             })
             .ToListAsync(ct);
+
+        if (movies.Count == 0) return movies;
+
+        ILookup<int, SpecialGenreProjection> genresLookup = (await ctx.Movies
+            .AsNoTracking()
+            .Where(m => ids.Contains(m.Id))
+            .SelectMany(m => m.GenreMovies, (m, gm) => new { MovieId = m.Id, Id = gm.GenreId, Name = gm.Genre.Name })
+            .ToListAsync(ct))
+            .ToLookup(x => x.MovieId, x => new SpecialGenreProjection { Id = x.Id, Name = x.Name });
+
+        var rawImages = await ctx.Movies
+            .AsNoTracking()
+            .Where(m => ids.Contains(m.Id))
+            .SelectMany(m => m.Images, (m, i) => new
+            {
+                MovieId = m.Id,
+                i.Id,
+                i.Site,
+                i.FilePath,
+                Width = i.Width ?? 0,
+                i.Type,
+                Height = i.Height ?? 0,
+                i.Iso6391,
+                VoteAverage = i.VoteAverage ?? 0,
+                VoteCount = i.VoteCount ?? 0,
+                ColorPalette = i._colorPalette
+            })
+            .Where(i => (i.Type == "backdrop" || i.Type == "poster") && (i.Iso6391 == "en" || i.Iso6391 == null))
+            .ToListAsync(ct);
+
+        Dictionary<int, List<SpecialImageProjection>> backdropsByMovie = rawImages
+            .Where(i => i.Type == "backdrop")
+            .GroupBy(i => i.MovieId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(i => i.VoteAverage).Take(2)
+                .Select(i => new SpecialImageProjection
+                {
+                    Id = i.Id, Site = i.Site, FilePath = i.FilePath, Width = i.Width,
+                    Type = i.Type, Height = i.Height, Iso6391 = i.Iso6391,
+                    VoteAverage = i.VoteAverage, VoteCount = i.VoteCount, ColorPalette = i.ColorPalette
+                }).ToList());
+
+        Dictionary<int, List<SpecialImageProjection>> postersByMovie = rawImages
+            .Where(i => i.Type == "poster")
+            .GroupBy(i => i.MovieId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(i => i.VoteAverage).Take(2)
+                .Select(i => new SpecialImageProjection
+                {
+                    Id = i.Id, Site = i.Site, FilePath = i.FilePath, Width = i.Width,
+                    Type = i.Type, Height = i.Height, Iso6391 = i.Iso6391,
+                    VoteAverage = i.VoteAverage, VoteCount = i.VoteCount, ColorPalette = i.ColorPalette
+                }).ToList());
+
+        ILookup<int, SpecialCastProjection> castLookup = (await ctx.Movies
+            .AsNoTracking()
+            .Where(m => ids.Contains(m.Id))
+            .SelectMany(m => m.Cast, (m, c) => new
+            {
+                MovieId = m.Id,
+                PersonId = c.Person.Id,
+                PersonName = c.Person.Name,
+                PersonProfile = c.Person.Profile,
+                PersonKnownForDepartment = c.Person.KnownForDepartment,
+                PersonColorPalette = c.Person._colorPalette,
+                PersonDeathDay = c.Person.DeathDay,
+                PersonGender = c.Person.Gender,
+                Character = c.Role.Character,
+                Order = c.Role.Order
+            })
+            .ToListAsync(ct))
+            .GroupBy(x => x.MovieId)
+            .SelectMany(g => g.OrderBy(x => x.Order).Take(15), (g, x) => new
+            {
+                g.Key,
+                Cast = new SpecialCastProjection
+                {
+                    PersonId = x.PersonId, PersonName = x.PersonName, PersonProfile = x.PersonProfile,
+                    PersonKnownForDepartment = x.PersonKnownForDepartment, PersonColorPalette = x.PersonColorPalette,
+                    PersonDeathDay = x.PersonDeathDay, PersonGender = x.PersonGender,
+                    Character = x.Character, Order = x.Order
+                }
+            })
+            .ToLookup(x => x.Key, x => x.Cast);
+
+        ILookup<int, SpecialCrewProjection> crewLookup = (await ctx.Movies
+            .AsNoTracking()
+            .Where(m => ids.Contains(m.Id))
+            .SelectMany(m => m.Crew, (m, c) => new
+            {
+                MovieId = m.Id,
+                PersonId = c.Person.Id,
+                PersonName = c.Person.Name,
+                PersonProfile = c.Person.Profile,
+                PersonKnownForDepartment = c.Person.KnownForDepartment,
+                PersonColorPalette = c.Person._colorPalette,
+                PersonDeathDay = c.Person.DeathDay,
+                PersonGender = c.Person.Gender,
+                Task = c.Job.Task,
+                Order = c.Job.Order
+            })
+            .ToListAsync(ct))
+            .GroupBy(x => x.MovieId)
+            .SelectMany(g => g.Take(15), (g, x) => new
+            {
+                g.Key,
+                Crew = new SpecialCrewProjection
+                {
+                    PersonId = x.PersonId, PersonName = x.PersonName, PersonProfile = x.PersonProfile,
+                    PersonKnownForDepartment = x.PersonKnownForDepartment, PersonColorPalette = x.PersonColorPalette,
+                    PersonDeathDay = x.PersonDeathDay, PersonGender = x.PersonGender,
+                    Task = x.Task, Order = x.Order
+                }
+            })
+            .ToLookup(x => x.Key, x => x.Crew);
+
+        foreach (SpecialMovieProjection movie in movies)
+        {
+            movie.Genres = genresLookup[movie.Id].ToList();
+            movie.Backdrops = backdropsByMovie.GetValueOrDefault(movie.Id, []);
+            movie.Posters = postersByMovie.GetValueOrDefault(movie.Id, []);
+            movie.Cast = castLookup[movie.Id].ToList();
+            movie.Crew = crewLookup[movie.Id].ToList();
+        }
+
+        return movies;
     }
 
-    public static Task<List<SpecialTvProjection>> GetSpecialTvProjectionsAsync(
+    public static async Task<List<SpecialTvProjection>> GetSpecialTvProjectionsAsync(
         MediaContext ctx, Guid userId, IEnumerable<int> tvIds, string country, CancellationToken ct = default)
     {
-        return ctx.Tvs
+        List<int> ids = tvIds.ToList();
+        if (ids.Count == 0) return [];
+
+        // Scalar fields only — no nested .ToList()/.ToArray() to avoid SQLite APPLY
+        List<SpecialTvProjection> tvs = await ctx.Tvs
             .AsNoTracking()
-            .AsSplitQuery()
-            .Where(tv => tvIds.Contains(tv.Id))
+            .Where(tv => ids.Contains(tv.Id))
             .Select(tv => new SpecialTvProjection
             {
                 Id = tv.Id,
@@ -401,11 +463,6 @@ public class SpecialRepository(MediaContext context)
                     .FirstOrDefault(),
                 NumberOfEpisodes = tv.Episodes.Count(e => e.SeasonNumber > 0),
                 HaveEpisodes = tv.Episodes.Count(e => e.SeasonNumber > 0 && e.VideoFiles.Any()),
-                EpisodeIds = tv.Episodes.Select(e => e.Id).ToArray(),
-                EpisodeDurations = tv.Episodes
-                    .Where(e => e.SeasonNumber > 0)
-                    .Select(e => e.VideoFiles.Select(vf => vf.Duration).FirstOrDefault())
-                    .ToList(),
                 CertificationRating = tv.CertificationTvs
                     .Where(ct2 => ct2.Certification.Iso31661 == country || ct2.Certification.Iso31661 == "US")
                     .Select(ct2 => ct2.Certification.Rating)
@@ -413,77 +470,156 @@ public class SpecialRepository(MediaContext context)
                 CertificationCountry = tv.CertificationTvs
                     .Where(ct2 => ct2.Certification.Iso31661 == country || ct2.Certification.Iso31661 == "US")
                     .Select(ct2 => ct2.Certification.Iso31661)
-                    .FirstOrDefault(),
-                Genres = tv.GenreTvs.Select(gt => new SpecialGenreProjection
-                {
-                    Id = gt.GenreId,
-                    Name = gt.Genre.Name
-                }).ToList(),
-                Backdrops = tv.Images
-                    .Where(i => i.Type == "backdrop" && (i.Iso6391 == "en" || i.Iso6391 == null))
-                    .OrderByDescending(i => i.VoteAverage)
-                    .Take(2)
-                    .Select(i => new SpecialImageProjection
-                    {
-                        Id = i.Id,
-                        Site = i.Site,
-                        FilePath = i.FilePath,
-                        Width = i.Width ?? 0,
-                        Type = i.Type,
-                        Height = i.Height ?? 0,
-                        Iso6391 = i.Iso6391,
-                        VoteAverage = i.VoteAverage ?? 0,
-                        VoteCount = i.VoteCount ?? 0,
-                        ColorPalette = i._colorPalette
-                    }).ToList(),
-                Posters = tv.Images
-                    .Where(i => i.Type == "poster" && (i.Iso6391 == "en" || i.Iso6391 == null))
-                    .OrderByDescending(i => i.VoteAverage)
-                    .Take(2)
-                    .Select(i => new SpecialImageProjection
-                    {
-                        Id = i.Id,
-                        Site = i.Site,
-                        FilePath = i.FilePath,
-                        Width = i.Width ?? 0,
-                        Type = i.Type,
-                        Height = i.Height ?? 0,
-                        Iso6391 = i.Iso6391,
-                        VoteAverage = i.VoteAverage ?? 0,
-                        VoteCount = i.VoteCount ?? 0,
-                        ColorPalette = i._colorPalette
-                    }).ToList(),
-                Cast = tv.Cast
-                    .OrderBy(c => c.Role.Order)
-                    .Take(15)
-                    .Select(c => new SpecialCastProjection
-                    {
-                        PersonId = c.Person.Id,
-                        PersonName = c.Person.Name,
-                        PersonProfile = c.Person.Profile,
-                        PersonKnownForDepartment = c.Person.KnownForDepartment,
-                        PersonColorPalette = c.Person._colorPalette,
-                        PersonDeathDay = c.Person.DeathDay,
-                        PersonGender = c.Person.Gender,
-                        Character = c.Role.Character,
-                        Order = c.Role.Order
-                    }).ToList(),
-                Crew = tv.Crew
-                    .Take(15)
-                    .Select(c => new SpecialCrewProjection
-                    {
-                        PersonId = c.Person.Id,
-                        PersonName = c.Person.Name,
-                        PersonProfile = c.Person.Profile,
-                        PersonKnownForDepartment = c.Person.KnownForDepartment,
-                        PersonColorPalette = c.Person._colorPalette,
-                        PersonDeathDay = c.Person.DeathDay,
-                        PersonGender = c.Person.Gender,
-                        Task = c.Job.Task,
-                        Order = c.Job.Order
-                    }).ToList()
+                    .FirstOrDefault()
             })
             .ToListAsync(ct);
+
+        if (tvs.Count == 0) return tvs;
+
+        var allEpisodes = await ctx.Tvs
+            .AsNoTracking()
+            .Where(tv => ids.Contains(tv.Id))
+            .SelectMany(tv => tv.Episodes, (tv, e) => new
+            {
+                TvId = tv.Id,
+                EpisodeId = e.Id,
+                e.SeasonNumber,
+                Duration = e.VideoFiles.Select(vf => vf.Duration).FirstOrDefault()
+            })
+            .ToListAsync(ct);
+
+        Dictionary<int, int[]> episodeIdsByTv = allEpisodes
+            .GroupBy(x => x.TvId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.EpisodeId).ToArray());
+
+        Dictionary<int, List<string?>> episodeDurationsByTv = allEpisodes
+            .Where(x => x.SeasonNumber > 0)
+            .GroupBy(x => x.TvId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Duration).ToList());
+
+        ILookup<int, SpecialGenreProjection> genresLookup = (await ctx.Tvs
+            .AsNoTracking()
+            .Where(tv => ids.Contains(tv.Id))
+            .SelectMany(tv => tv.GenreTvs, (tv, gt) => new { TvId = tv.Id, Id = gt.GenreId, Name = gt.Genre.Name })
+            .ToListAsync(ct))
+            .ToLookup(x => x.TvId, x => new SpecialGenreProjection { Id = x.Id, Name = x.Name });
+
+        var rawImages = await ctx.Tvs
+            .AsNoTracking()
+            .Where(tv => ids.Contains(tv.Id))
+            .SelectMany(tv => tv.Images, (tv, i) => new
+            {
+                TvId = tv.Id,
+                i.Id,
+                i.Site,
+                i.FilePath,
+                Width = i.Width ?? 0,
+                i.Type,
+                Height = i.Height ?? 0,
+                i.Iso6391,
+                VoteAverage = i.VoteAverage ?? 0,
+                VoteCount = i.VoteCount ?? 0,
+                ColorPalette = i._colorPalette
+            })
+            .Where(i => (i.Type == "backdrop" || i.Type == "poster") && (i.Iso6391 == "en" || i.Iso6391 == null))
+            .ToListAsync(ct);
+
+        Dictionary<int, List<SpecialImageProjection>> backdropsByTv = rawImages
+            .Where(i => i.Type == "backdrop")
+            .GroupBy(i => i.TvId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(i => i.VoteAverage).Take(2)
+                .Select(i => new SpecialImageProjection
+                {
+                    Id = i.Id, Site = i.Site, FilePath = i.FilePath, Width = i.Width,
+                    Type = i.Type, Height = i.Height, Iso6391 = i.Iso6391,
+                    VoteAverage = i.VoteAverage, VoteCount = i.VoteCount, ColorPalette = i.ColorPalette
+                }).ToList());
+
+        Dictionary<int, List<SpecialImageProjection>> postersByTv = rawImages
+            .Where(i => i.Type == "poster")
+            .GroupBy(i => i.TvId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(i => i.VoteAverage).Take(2)
+                .Select(i => new SpecialImageProjection
+                {
+                    Id = i.Id, Site = i.Site, FilePath = i.FilePath, Width = i.Width,
+                    Type = i.Type, Height = i.Height, Iso6391 = i.Iso6391,
+                    VoteAverage = i.VoteAverage, VoteCount = i.VoteCount, ColorPalette = i.ColorPalette
+                }).ToList());
+
+        ILookup<int, SpecialCastProjection> castLookup = (await ctx.Tvs
+            .AsNoTracking()
+            .Where(tv => ids.Contains(tv.Id))
+            .SelectMany(tv => tv.Cast, (tv, c) => new
+            {
+                TvId = tv.Id,
+                PersonId = c.Person.Id,
+                PersonName = c.Person.Name,
+                PersonProfile = c.Person.Profile,
+                PersonKnownForDepartment = c.Person.KnownForDepartment,
+                PersonColorPalette = c.Person._colorPalette,
+                PersonDeathDay = c.Person.DeathDay,
+                PersonGender = c.Person.Gender,
+                Character = c.Role.Character,
+                Order = c.Role.Order
+            })
+            .ToListAsync(ct))
+            .GroupBy(x => x.TvId)
+            .SelectMany(g => g.OrderBy(x => x.Order).Take(15), (g, x) => new
+            {
+                g.Key,
+                Cast = new SpecialCastProjection
+                {
+                    PersonId = x.PersonId, PersonName = x.PersonName, PersonProfile = x.PersonProfile,
+                    PersonKnownForDepartment = x.PersonKnownForDepartment, PersonColorPalette = x.PersonColorPalette,
+                    PersonDeathDay = x.PersonDeathDay, PersonGender = x.PersonGender,
+                    Character = x.Character, Order = x.Order
+                }
+            })
+            .ToLookup(x => x.Key, x => x.Cast);
+
+        ILookup<int, SpecialCrewProjection> crewLookup = (await ctx.Tvs
+            .AsNoTracking()
+            .Where(tv => ids.Contains(tv.Id))
+            .SelectMany(tv => tv.Crew, (tv, c) => new
+            {
+                TvId = tv.Id,
+                PersonId = c.Person.Id,
+                PersonName = c.Person.Name,
+                PersonProfile = c.Person.Profile,
+                PersonKnownForDepartment = c.Person.KnownForDepartment,
+                PersonColorPalette = c.Person._colorPalette,
+                PersonDeathDay = c.Person.DeathDay,
+                PersonGender = c.Person.Gender,
+                Task = c.Job.Task,
+                Order = c.Job.Order
+            })
+            .ToListAsync(ct))
+            .GroupBy(x => x.TvId)
+            .SelectMany(g => g.Take(15), (g, x) => new
+            {
+                g.Key,
+                Crew = new SpecialCrewProjection
+                {
+                    PersonId = x.PersonId, PersonName = x.PersonName, PersonProfile = x.PersonProfile,
+                    PersonKnownForDepartment = x.PersonKnownForDepartment, PersonColorPalette = x.PersonColorPalette,
+                    PersonDeathDay = x.PersonDeathDay, PersonGender = x.PersonGender,
+                    Task = x.Task, Order = x.Order
+                }
+            })
+            .ToLookup(x => x.Key, x => x.Crew);
+
+        foreach (SpecialTvProjection tv in tvs)
+        {
+            tv.EpisodeIds = episodeIdsByTv.GetValueOrDefault(tv.Id, []);
+            tv.EpisodeDurations = episodeDurationsByTv.GetValueOrDefault(tv.Id, []);
+            tv.Genres = genresLookup[tv.Id].ToList();
+            tv.Backdrops = backdropsByTv.GetValueOrDefault(tv.Id, []);
+            tv.Posters = postersByTv.GetValueOrDefault(tv.Id, []);
+            tv.Cast = castLookup[tv.Id].ToList();
+            tv.Crew = crewLookup[tv.Id].ToList();
+        }
+
+        return tvs;
     }
 
     public Task<Special?> GetSpecialAsync(Guid userId, Ulid id, CancellationToken ct = default)
