@@ -21,6 +21,7 @@ public class RecommendationCandidateDto
 public class UserAffinitySourceDto
 {
     public int ItemId { get; set; }
+    public string Title { get; set; } = string.Empty;
     public string MediaType { get; set; } = string.Empty;
     public int? Rating { get; set; }
     public int? TimeWatched { get; set; }
@@ -310,6 +311,7 @@ public class RecommendationRepository
             .Select(m => new
             {
                 m.Id,
+                m.Title,
                 m.Runtime,
                 Rating = m.UserData
                     .Where(ud => ud.UserId == userId && ud.Rating != null)
@@ -344,6 +346,7 @@ public class RecommendationRepository
         return movies.Select(m => new UserAffinitySourceDto
         {
             ItemId = m.Id,
+            Title = m.Title,
             MediaType = Config.MovieMediaType,
             Rating = m.Rating,
             TimeWatched = m.TimeWatched,
@@ -363,6 +366,7 @@ public class RecommendationRepository
             .Select(t => new
             {
                 t.Id,
+                t.Title,
                 t.Duration,
                 Rating = t.UserData
                     .Where(ud => ud.UserId == userId && ud.Rating != null)
@@ -396,6 +400,7 @@ public class RecommendationRepository
         return tvShows.Select(t => new UserAffinitySourceDto
         {
             ItemId = t.Id,
+            Title = t.Title,
             MediaType = Config.TvMediaType,
             Rating = t.Rating,
             TimeWatched = t.TimeWatched,

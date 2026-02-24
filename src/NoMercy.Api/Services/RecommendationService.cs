@@ -110,7 +110,19 @@ public class RecommendationService
                     : null,
                 MediaType = c.MediaType,
                 Score = ScoreCandidate(c, profile, combinedGenreMap),
-                SourceCount = c.SourceCount
+                SourceCount = c.SourceCount,
+                BecauseYouHave = c.SourceIds
+                    .Where(id => profile.SourceItems.ContainsKey(id))
+                    .OrderByDescending(id => profile.SourceItems[id].Rating ?? 0)
+                    .ThenByDescending(id => profile.SourceItems[id].TimeWatched ?? 0)
+                    .Take(3)
+                    .Select(id => new RecommendationSourceDto
+                    {
+                        Id = id,
+                        Name = profile.SourceItems[id].Title,
+                        Type = profile.SourceItems[id].MediaType
+                    })
+                    .ToList()
             })
             .Where(s => s.Poster != null)
             .ToList();
