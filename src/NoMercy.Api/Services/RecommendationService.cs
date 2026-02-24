@@ -38,6 +38,11 @@ public class RecommendationService
             await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await _recommendationRepository.GetUnownedTvRecommendationsAsync(context, userId, ct);
         }, ct);
+        Task<List<RecommendationCandidateDto>> animeRecsTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+            return await _recommendationRepository.GetUnownedAnimeRecommendationsAsync(context, userId, ct);
+        }, ct);
         Task<List<RecommendationCandidateDto>> movieSimTask = Task.Run(async () =>
         {
             await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
@@ -48,22 +53,29 @@ public class RecommendationService
             await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await _recommendationRepository.GetUnownedTvSimilarAsync(context, userId, ct);
         }, ct);
+        Task<List<RecommendationCandidateDto>> animeSimTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+            return await _recommendationRepository.GetUnownedAnimeSimilarAsync(context, userId, ct);
+        }, ct);
         Task<UserAffinityProfile> affinityTask = GetOrBuildAffinityProfileAsync(userId, ct);
 
-        await Task.WhenAll(movieRecsTask, tvRecsTask, movieSimTask, tvSimTask, affinityTask);
+        await Task.WhenAll(movieRecsTask, tvRecsTask, animeRecsTask, movieSimTask, tvSimTask, animeSimTask, affinityTask);
 
         // Phase 2: Merge candidates (same MediaId+MediaType from Recommendation + Similar = higher frequency)
         List<RecommendationCandidateDto> allCandidates = MergeCandidates(
-            movieRecsTask.Result, tvRecsTask.Result, movieSimTask.Result, tvSimTask.Result);
+            movieRecsTask.Result, tvRecsTask.Result, animeRecsTask.Result,
+            movieSimTask.Result, tvSimTask.Result, animeSimTask.Result);
 
         UserAffinityProfile profile = affinityTask.Result;
 
         // Phase 3: Get genre maps for source items
+        // Anime candidates also use TvFromId (same Tv table), so include both tv and anime source IDs
         List<int> allSourceMovieIds = allCandidates
             .Where(c => c.MediaType == Config.MovieMediaType)
             .SelectMany(c => c.SourceIds).Distinct().ToList();
         List<int> allSourceTvIds = allCandidates
-            .Where(c => c.MediaType == Config.TvMediaType)
+            .Where(c => c.MediaType == Config.TvMediaType || c.MediaType == Config.AnimeMediaType)
             .SelectMany(c => c.SourceIds).Distinct().ToList();
 
         Task<Dictionary<int, List<int>>> movieGenreMapTask = Task.Run(async () =>
@@ -83,7 +95,7 @@ public class RecommendationService
         foreach (KeyValuePair<int, List<int>> kv in tvGenreMapTask.Result)
             combinedGenreMap[kv.Key] = kv.Value;
 
-        // Phase 4: Score and rank
+        // Phase 4: Score all candidates
         List<ScoredRecommendationDto> scored = allCandidates
             .Select(c => new ScoredRecommendationDto
             {
@@ -101,11 +113,16 @@ public class RecommendationService
                 SourceCount = c.SourceCount
             })
             .Where(s => s.Poster != null)
-            .OrderByDescending(s => s.Score)
-            .Take(take)
             .ToList();
 
-        return scored;
+        // Deduplicate by MediaId — same TMDB ID may appear as both tv and anime; keep highest-scored
+        List<ScoredRecommendationDto> deduped = scored
+            .GroupBy(s => s.MediaId)
+            .Select(g => g.OrderByDescending(s => s.Score).First())
+            .ToList();
+
+        // Phase 5: Diversity selection — guarantee floor representation per media type
+        return SelectWithDiversity(deduped, take);
     }
 
     public async Task<List<ScoredRecommendationDto>> GetHomeRecommendationCarouselAsync(
@@ -271,6 +288,48 @@ public class RecommendationService
         _cache.Set(cacheKey, profile, cacheOptions);
 
         return profile;
+    }
+
+    /// <summary>
+    /// Guarantees a minimum floor of (take / typeCount) results per media type,
+    /// then fills remaining slots with the highest-scored items from any type.
+    /// </summary>
+    private static List<ScoredRecommendationDto> SelectWithDiversity(
+        List<ScoredRecommendationDto> scored, int take)
+    {
+        Dictionary<string, Queue<ScoredRecommendationDto>> byType = scored
+            .GroupBy(s => s.MediaType)
+            .ToDictionary(
+                g => g.Key,
+                g => new Queue<ScoredRecommendationDto>(g.OrderByDescending(s => s.Score)));
+
+        int typeCount = byType.Count;
+        if (typeCount <= 1)
+            return scored.OrderByDescending(s => s.Score).Take(take).ToList();
+
+        // Give each type a guaranteed floor of (take / typeCount) slots
+        int floorSlots = take / typeCount;
+        List<ScoredRecommendationDto> result = [];
+        foreach (Queue<ScoredRecommendationDto> queue in byType.Values)
+        {
+            int toTake = Math.Min(floorSlots, queue.Count);
+            for (int i = 0; i < toTake; i++)
+                result.Add(queue.Dequeue());
+        }
+
+        // Fill remaining slots with best-scored items from any type
+        int remaining = take - result.Count;
+        if (remaining > 0)
+        {
+            List<ScoredRecommendationDto> overflow = byType.Values
+                .SelectMany(q => q)
+                .OrderByDescending(s => s.Score)
+                .Take(remaining)
+                .ToList();
+            result.AddRange(overflow);
+        }
+
+        return result.OrderByDescending(s => s.Score).ToList();
     }
 
     internal record UserAffinityProfile

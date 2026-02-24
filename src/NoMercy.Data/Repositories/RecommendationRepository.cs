@@ -84,6 +84,7 @@ public class RecommendationRepository
             .AsNoTracking()
             .Where(r => r.TvFromId != null && r.TvToId == null)
             .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(r => r.TvFrom!.Library.Type != Config.AnimeMediaType)
             .Select(r => r.MediaId)
             .Distinct()
             .ToListAsync(ct);
@@ -93,6 +94,7 @@ public class RecommendationRepository
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context.Recommendations
             .AsNoTracking()
             .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null && r.TvToId == null)
+            .Where(r => r.TvFrom!.Library.Type != Config.AnimeMediaType)
             .Select(r => new { r.MediaId, r.Title, r.TitleSort, r.Overview, r.Poster, r.Backdrop, r._colorPalette, r.TvFromId })
             .ToListAsync(ct)
             .ContinueWith(t => t.Result
@@ -112,6 +114,51 @@ public class RecommendationRepository
                             Backdrop = first.Backdrop,
                             ColorPalette = first._colorPalette,
                             MediaType = Config.TvMediaType,
+                            SourceCount = g.Select(r => r.TvFromId).Distinct().Count(),
+                            SourceIds = g.Select(r => r.TvFromId!.Value).Distinct().ToList()
+                        };
+                    }), ct);
+
+        return metadataMap.Values.ToList();
+    }
+
+    public async Task<List<RecommendationCandidateDto>> GetUnownedAnimeRecommendationsAsync(
+        MediaContext context, Guid userId, CancellationToken ct = default)
+    {
+        List<int> mediaIds = await context.Recommendations
+            .AsNoTracking()
+            .Where(r => r.TvFromId != null && r.TvToId == null)
+            .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(r => r.TvFrom!.Library.Type == Config.AnimeMediaType)
+            .Select(r => r.MediaId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (mediaIds.Count == 0) return [];
+
+        Dictionary<int, RecommendationCandidateDto> metadataMap = await context.Recommendations
+            .AsNoTracking()
+            .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null && r.TvToId == null)
+            .Where(r => r.TvFrom!.Library.Type == Config.AnimeMediaType)
+            .Select(r => new { r.MediaId, r.Title, r.TitleSort, r.Overview, r.Poster, r.Backdrop, r._colorPalette, r.TvFromId })
+            .ToListAsync(ct)
+            .ContinueWith(t => t.Result
+                .GroupBy(r => r.MediaId)
+                .ToDictionary(
+                    g => g.Key,
+                    g =>
+                    {
+                        var first = g.First();
+                        return new RecommendationCandidateDto
+                        {
+                            MediaId = g.Key,
+                            Title = first.Title,
+                            TitleSort = first.TitleSort,
+                            Overview = first.Overview,
+                            Poster = first.Poster,
+                            Backdrop = first.Backdrop,
+                            ColorPalette = first._colorPalette,
+                            MediaType = Config.AnimeMediaType,
                             SourceCount = g.Select(r => r.TvFromId).Distinct().Count(),
                             SourceIds = g.Select(r => r.TvFromId!.Value).Distinct().ToList()
                         };
@@ -170,6 +217,7 @@ public class RecommendationRepository
             .AsNoTracking()
             .Where(s => s.TvFromId != null && s.TvToId == null)
             .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(s => s.TvFrom!.Library.Type != Config.AnimeMediaType)
             .Select(s => s.MediaId)
             .Distinct()
             .ToListAsync(ct);
@@ -179,6 +227,7 @@ public class RecommendationRepository
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context.Similar
             .AsNoTracking()
             .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null && s.TvToId == null)
+            .Where(s => s.TvFrom!.Library.Type != Config.AnimeMediaType)
             .Select(s => new { s.MediaId, s.Title, s.TitleSort, s.Overview, s.Poster, s.Backdrop, s._colorPalette, s.TvFromId })
             .ToListAsync(ct)
             .ContinueWith(t => t.Result
@@ -198,6 +247,51 @@ public class RecommendationRepository
                             Backdrop = first.Backdrop,
                             ColorPalette = first._colorPalette,
                             MediaType = Config.TvMediaType,
+                            SourceCount = g.Select(s => s.TvFromId).Distinct().Count(),
+                            SourceIds = g.Select(s => s.TvFromId!.Value).Distinct().ToList()
+                        };
+                    }), ct);
+
+        return metadataMap.Values.ToList();
+    }
+
+    public async Task<List<RecommendationCandidateDto>> GetUnownedAnimeSimilarAsync(
+        MediaContext context, Guid userId, CancellationToken ct = default)
+    {
+        List<int> mediaIds = await context.Similar
+            .AsNoTracking()
+            .Where(s => s.TvFromId != null && s.TvToId == null)
+            .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(s => s.TvFrom!.Library.Type == Config.AnimeMediaType)
+            .Select(s => s.MediaId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (mediaIds.Count == 0) return [];
+
+        Dictionary<int, RecommendationCandidateDto> metadataMap = await context.Similar
+            .AsNoTracking()
+            .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null && s.TvToId == null)
+            .Where(s => s.TvFrom!.Library.Type == Config.AnimeMediaType)
+            .Select(s => new { s.MediaId, s.Title, s.TitleSort, s.Overview, s.Poster, s.Backdrop, s._colorPalette, s.TvFromId })
+            .ToListAsync(ct)
+            .ContinueWith(t => t.Result
+                .GroupBy(s => s.MediaId)
+                .ToDictionary(
+                    g => g.Key,
+                    g =>
+                    {
+                        var first = g.First();
+                        return new RecommendationCandidateDto
+                        {
+                            MediaId = g.Key,
+                            Title = first.Title,
+                            TitleSort = first.TitleSort,
+                            Overview = first.Overview,
+                            Poster = first.Poster,
+                            Backdrop = first.Backdrop,
+                            ColorPalette = first._colorPalette,
+                            MediaType = Config.AnimeMediaType,
                             SourceCount = g.Select(s => s.TvFromId).Distinct().Count(),
                             SourceIds = g.Select(s => s.TvFromId!.Value).Distinct().ToList()
                         };
