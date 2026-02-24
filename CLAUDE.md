@@ -79,6 +79,31 @@ src/
 - **QueueContext**: Job processing and background tasks
 - Both use SQLite with connection pooling and query splitting
 
+### SQLite Query Restrictions
+**NEVER** use `g.First()`, `g.Last()`, or element-access patterns inside `GroupBy().Select()` projections in EF Core queries. SQLite does not support the SQL `APPLY` operator that EF Core generates for these patterns, causing `System.InvalidOperationException: Translating this query requires the SQL APPLY operation`.
+
+**Bad** (triggers APPLY):
+```csharp
+context.Items.GroupBy(r => r.MediaId).Select(g => new Dto
+{
+    Title = g.First().Title,  // APPLY required
+    Count = g.Count()
+});
+```
+
+**Good** (two-step: flat query + client-side grouping):
+```csharp
+// Step 1: Flat projection server-side
+var rows = await context.Items
+    .Select(r => new { r.MediaId, r.Title, r.SourceId })
+    .ToListAsync(ct);
+// Step 2: Group in memory
+var result = rows.GroupBy(r => r.MediaId)
+    .Select(g => new Dto { Title = g.First().Title, Count = g.Count() });
+```
+
+Also avoid projecting nested `.ToList()` inside `.Select()` (e.g. `GenreIds = m.GenreMovies.Select(g => g.GenreId).ToList()`) — fetch join-table data in a separate query and combine client-side.
+
 ### FFmpeg Encoding Pipeline
 Uses fluent API pattern:
 ```csharp

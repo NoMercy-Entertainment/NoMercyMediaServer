@@ -230,7 +230,8 @@ public class FileRepository(MediaContext context) : IFileRepository
         ConcurrentBag<FileItem> fileList)
     {
         string rawFileName = Path.GetFileNameWithoutExtension(file.Name);
-        string? extractedYear = rawFileName.TryGetYear();
+        string cleanedForYear = Str.RemoveBracketedString().Replace(rawFileName, string.Empty);
+        string? extractedYear = cleanedForYear.TryGetYear();
         
         string title = file.FullName.Replace("v2", "");
         title = Str.RemoveBracketedString().Replace(title, string.Empty);
@@ -1049,6 +1050,49 @@ public class FileRepository(MediaContext context) : IFileRepository
                 .SetProperty(vf => vf.HostFolder, newHostFolder)
                 .SetProperty(vf => vf.Filename, newFilename)
                 .SetProperty(vf => vf.Folder, newFolder));
+    }
+
+    public async Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId)
+    {
+        List<Ulid> metadataIds = await _context.VideoFiles
+            .Where(vf => vf.MovieId == movieId && vf.MetadataId != null)
+            .Select(vf => vf.MetadataId!.Value)
+            .ToListAsync();
+
+        await _context.VideoFiles
+            .Where(vf => vf.MovieId == movieId)
+            .ExecuteDeleteAsync();
+
+        if (metadataIds.Count > 0)
+        {
+            await _context.Metadata
+                .Where(m => metadataIds.Contains(m.Id))
+                .ExecuteDeleteAsync();
+        }
+    }
+
+    public async Task DeleteVideoFilesAndMetadataByTvIdAsync(int tvId)
+    {
+        List<int> episodeIds = await _context.Episodes
+            .Where(e => e.TvId == tvId)
+            .Select(e => e.Id)
+            .ToListAsync();
+
+        List<Ulid> metadataIds = await _context.VideoFiles
+            .Where(vf => vf.EpisodeId != null && episodeIds.Contains(vf.EpisodeId.Value) && vf.MetadataId != null)
+            .Select(vf => vf.MetadataId!.Value)
+            .ToListAsync();
+
+        await _context.VideoFiles
+            .Where(vf => vf.EpisodeId != null && episodeIds.Contains(vf.EpisodeId.Value))
+            .ExecuteDeleteAsync();
+
+        if (metadataIds.Count > 0)
+        {
+            await _context.Metadata
+                .Where(m => metadataIds.Contains(m.Id))
+                .ExecuteDeleteAsync();
+        }
     }
 
     public List<DirectoryTree> GetDirectoryTree(string folder = "")

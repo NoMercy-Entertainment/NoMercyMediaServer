@@ -357,6 +357,7 @@ public static class ServiceConfiguration
         services.AddScoped<MediaProcessingPersonRepository>();
         services.AddScoped<IPersonRepository, MediaProcessingPersonRepository>();
         services.AddScoped<SpecialRepository>();
+        services.AddScoped<RecommendationRepository>();
 
         // Add Managers
         // services.AddScoped<EncoderManager>();
@@ -368,6 +369,7 @@ public static class ServiceConfiguration
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();
         services.AddScoped<HomeService>();
+        services.AddScoped<RecommendationService>();
         services.AddScoped<SetupService>();
 
         services.AddMediaServerQueue();

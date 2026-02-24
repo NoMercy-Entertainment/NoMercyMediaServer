@@ -328,7 +328,6 @@ public static partial class Str
                     sb.Append("and");
                     break;
                 case '!':
-                case '\'':
                 case '?':
                 case '~':
                 case '`':

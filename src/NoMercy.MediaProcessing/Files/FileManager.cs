@@ -45,6 +45,19 @@ public partial class FileManager(
         Id = id;
 
         await MediaType(id, library);
+
+        // Remove all existing file records to avoid lingering stale entries
+        switch (library.Type)
+        {
+            case Config.MovieMediaType:
+                await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
+                break;
+            case Config.TvMediaType:
+            case Config.AnimeMediaType:
+                await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
+                break;
+        }
+
         Folders = Paths(library, Movie, Show);
 
         foreach (Folder folder in Folders)

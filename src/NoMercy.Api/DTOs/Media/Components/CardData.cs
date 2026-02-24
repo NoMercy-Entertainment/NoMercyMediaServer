@@ -489,6 +489,21 @@ public record CardData
         }
     }
 
+    public CardData(ScoredRecommendationDto rec)
+    {
+        Id = rec.MediaId;
+        Title = rec.Title ?? string.Empty;
+        TitleSort = rec.TitleSort ?? string.Empty;
+        Overview = rec.Overview;
+        Poster = rec.Poster;
+        Backdrop = rec.Backdrop;
+        Type = rec.MediaType;
+        Link = new($"/{rec.MediaType}/{rec.MediaId}", UriKind.Relative);
+        NumberOfItems = 0;
+        HaveItems = 0;
+        ColorPalette = rec.ColorPalette;
+    }
+
     public CardData(TvCardDto tv, string country, bool watch = false)
     {
         Id = tv.Id;

@@ -15,4 +15,6 @@ public interface IFileRepository
     Task<int> DeleteVideoFilesByHostFolderAsync(string hostFolder);
     Task<int> DeleteMetadataByHostFolderAsync(string hostFolder);
     Task<int> UpdateVideoFilePathsAsync(string oldHostFolder, string oldFilename, string newHostFolder, string newFilename);
+    Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId);
+    Task DeleteVideoFilesAndMetadataByTvIdAsync(int tvId);
 }
