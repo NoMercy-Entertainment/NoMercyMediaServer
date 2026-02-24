@@ -15,5 +15,5 @@ public record ScoredRecommendationDto
     [JsonProperty("media_type")] public string MediaType { get; set; } = string.Empty;
     [JsonProperty("score")] public double Score { get; set; }
     [JsonProperty("source_count")] public int SourceCount { get; set; }
-    [JsonProperty("link")] public Uri Link => new($"/{MediaType}/{MediaId}", UriKind.Relative);
+    [JsonProperty("link")] public Uri Link => new($"/{(MediaType != "movie" ? "tv" : "movie" )}/{MediaId}", UriKind.Relative);
 }

@@ -56,6 +56,15 @@ public class ShowRepository(MediaContext context) : IShowRepository
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.CreatedAt, t => tv.CreatedAt));
 
         await context.SaveChangesAsync();
+
+        // Link any existing recommendation/similar rows that reference this show as their target
+        await context.Recommendations
+            .Where(r => r.MediaId == tv.Id && r.TvToId == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.TvToId, tv.Id));
+
+        await context.Similar
+            .Where(r => r.MediaId == tv.Id && r.TvToId == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.TvToId, tv.Id));
     }
 
     public Task LinkToLibrary(Library library, Tv tv)
