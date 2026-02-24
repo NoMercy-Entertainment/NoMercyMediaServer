@@ -24,7 +24,7 @@ public class RecommendationService
         _cache = cache;
     }
 
-    public async Task<List<ScoredRecommendationDto>> GetPersonalizedRecommendationsAsync(
+    public async Task<List<RecommendationDto>> GetPersonalizedRecommendationsAsync(
         Guid userId, int take = 50, CancellationToken ct = default)
     {
         // Phase 1: Parallel queries with separate DbContexts
@@ -96,10 +96,10 @@ public class RecommendationService
             combinedGenreMap[kv.Key] = kv.Value;
 
         // Phase 4: Score all candidates
-        List<ScoredRecommendationDto> scored = allCandidates
-            .Select(c => new ScoredRecommendationDto
+        List<RecommendationDto> scored = allCandidates
+            .Select(c => new RecommendationDto
             {
-                MediaId = c.MediaId,
+                Id = c.MediaId,
                 Title = c.Title,
                 TitleSort = c.TitleSort,
                 Overview = c.Overview,
@@ -108,7 +108,7 @@ public class RecommendationService
                 ColorPalette = !string.IsNullOrEmpty(c.ColorPalette)
                     ? JsonConvert.DeserializeObject<IColorPalettes>(c.ColorPalette)
                     : null,
-                MediaType = c.MediaType,
+                Type = c.MediaType,
                 Score = ScoreCandidate(c, profile, combinedGenreMap),
                 SourceCount = c.SourceCount,
                 BecauseYouHave = c.SourceIds
@@ -119,17 +119,21 @@ public class RecommendationService
                     .Select(id => new RecommendationSourceDto
                     {
                         Id = id,
-                        Name = profile.SourceItems[id].Title,
-                        Type = profile.SourceItems[id].MediaType
+                        Title = profile.SourceItems[id].Title,
+                        Poster = profile.SourceItems[id].Poster,
+                        Type = profile.SourceItems[id].MediaType,
+                        ColorPalette = !string.IsNullOrEmpty(profile.SourceItems[id].ColorPalette)
+                            ? JsonConvert.DeserializeObject<IColorPalettes>(profile.SourceItems[id].ColorPalette)
+                            : null
                     })
                     .ToList()
             })
             .Where(s => s.Poster != null)
             .ToList();
 
-        // Deduplicate by MediaId — same TMDB ID may appear as both tv and anime; keep highest-scored
-        List<ScoredRecommendationDto> deduped = scored
-            .GroupBy(s => s.MediaId)
+        // Deduplicate by Id — same TMDB ID may appear as both tv and anime; keep highest-scored
+        List<RecommendationDto> deduped = scored
+            .GroupBy(s => s.Id)
             .Select(g => g.OrderByDescending(s => s.Score).First())
             .ToList();
 
@@ -137,7 +141,7 @@ public class RecommendationService
         return SelectWithDiversity(deduped, take);
     }
 
-    public async Task<List<ScoredRecommendationDto>> GetHomeRecommendationCarouselAsync(
+    public async Task<List<RecommendationDto>> GetHomeRecommendationCarouselAsync(
         Guid userId, int take = 36, CancellationToken ct = default)
     {
         return await GetPersonalizedRecommendationsAsync(userId, take, ct);
@@ -306,14 +310,14 @@ public class RecommendationService
     /// Guarantees a minimum floor of (take / typeCount) results per media type,
     /// then fills remaining slots with the highest-scored items from any type.
     /// </summary>
-    private static List<ScoredRecommendationDto> SelectWithDiversity(
-        List<ScoredRecommendationDto> scored, int take)
+    private static List<RecommendationDto> SelectWithDiversity(
+        List<RecommendationDto> scored, int take)
     {
-        Dictionary<string, Queue<ScoredRecommendationDto>> byType = scored
-            .GroupBy(s => s.MediaType)
+        Dictionary<string, Queue<RecommendationDto>> byType = scored
+            .GroupBy(s => s.Type)
             .ToDictionary(
                 g => g.Key,
-                g => new Queue<ScoredRecommendationDto>(g.OrderByDescending(s => s.Score)));
+                g => new Queue<RecommendationDto>(g.OrderByDescending(s => s.Score)));
 
         int typeCount = byType.Count;
         if (typeCount <= 1)
@@ -321,8 +325,8 @@ public class RecommendationService
 
         // Give each type a guaranteed floor of (take / typeCount) slots
         int floorSlots = take / typeCount;
-        List<ScoredRecommendationDto> result = [];
-        foreach (Queue<ScoredRecommendationDto> queue in byType.Values)
+        List<RecommendationDto> result = [];
+        foreach (Queue<RecommendationDto> queue in byType.Values)
         {
             int toTake = Math.Min(floorSlots, queue.Count);
             for (int i = 0; i < toTake; i++)
@@ -333,7 +337,7 @@ public class RecommendationService
         int remaining = take - result.Count;
         if (remaining > 0)
         {
-            List<ScoredRecommendationDto> overflow = byType.Values
+            List<RecommendationDto> overflow = byType.Values
                 .SelectMany(q => q)
                 .OrderByDescending(s => s.Score)
                 .Take(remaining)

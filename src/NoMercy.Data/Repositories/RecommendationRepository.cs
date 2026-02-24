@@ -22,6 +22,8 @@ public class UserAffinitySourceDto
 {
     public int ItemId { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string? Poster { get; set; }
+    public string ColorPalette { get; set; } = string.Empty;
     public string MediaType { get; set; } = string.Empty;
     public int? Rating { get; set; }
     public int? TimeWatched { get; set; }
@@ -312,6 +314,8 @@ public class RecommendationRepository
             {
                 m.Id,
                 m.Title,
+                m.Poster,
+                m._colorPalette,
                 m.Runtime,
                 Rating = m.UserData
                     .Where(ud => ud.UserId == userId && ud.Rating != null)
@@ -347,6 +351,8 @@ public class RecommendationRepository
         {
             ItemId = m.Id,
             Title = m.Title,
+            Poster = m.Poster,
+            ColorPalette = m._colorPalette,
             MediaType = Config.MovieMediaType,
             Rating = m.Rating,
             TimeWatched = m.TimeWatched,
@@ -367,6 +373,8 @@ public class RecommendationRepository
             {
                 t.Id,
                 t.Title,
+                t.Poster,
+                t._colorPalette,
                 t.Duration,
                 Rating = t.UserData
                     .Where(ud => ud.UserId == userId && ud.Rating != null)
@@ -401,6 +409,8 @@ public class RecommendationRepository
         {
             ItemId = t.Id,
             Title = t.Title,
+            Poster = t.Poster,
+            ColorPalette = t._colorPalette,
             MediaType = Config.TvMediaType,
             Rating = t.Rating,
             TimeWatched = t.TimeWatched,

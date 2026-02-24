@@ -137,7 +137,7 @@ public class HomeService
             await using MediaContext context = await _contextFactory.CreateDbContextAsync();
             return await _homeRepository.GetTvCountAsync(context, userId);
         });
-        Task<List<ScoredRecommendationDto>> recommendationsTask =
+        Task<List<RecommendationDto>> recommendationsTask =
             _recommendationService.GetHomeRecommendationCarouselAsync(userId, Config.MaximumCardsInCarousel);
 
         await Task.WhenAll(continueWatchingTask, genreItemsTask, librariesTask, animeCountTask, movieCountTask, tvCountTask, recommendationsTask);
@@ -148,7 +148,7 @@ public class HomeService
         int animeCount = animeCountTask.Result;
         int movieCount = movieCountTask.Result;
         int tvCount = tvCountTask.Result;
-        List<ScoredRecommendationDto> personalRecommendations = recommendationsTask.Result;
+        List<RecommendationDto> personalRecommendations = recommendationsTask.Result;
 
         // Phase 2: Collect genre source data (sync, fast - just shuffling IDs)
         List<GenreSourceData> genreSourceList = [];

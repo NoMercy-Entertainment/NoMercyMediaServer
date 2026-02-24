@@ -489,16 +489,16 @@ public record CardData
         }
     }
 
-    public CardData(ScoredRecommendationDto rec)
+    public CardData(RecommendationDto rec)
     {
-        Id = rec.MediaId;
+        Id = rec.Id;
         Title = rec.Title ?? string.Empty;
         TitleSort = rec.TitleSort ?? string.Empty;
         Overview = rec.Overview;
         Poster = rec.Poster;
         Backdrop = rec.Backdrop;
-        Type = rec.MediaType;
-        Link = new($"/{rec.MediaType}/{rec.MediaId}", UriKind.Relative);
+        Type = rec.Type;
+        Link = new($"/{rec.Type}/{rec.Id}", UriKind.Relative);
         NumberOfItems = 0;
         HaveItems = 0;
         ColorPalette = rec.ColorPalette;

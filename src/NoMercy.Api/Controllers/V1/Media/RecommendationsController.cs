@@ -26,7 +26,7 @@ public class RecommendationsController(
 
         Guid userId = User.UserId();
 
-        List<ScoredRecommendationDto> recommendations = await recommendationService
+        List<RecommendationDto> recommendations = await recommendationService
             .GetPersonalizedRecommendationsAsync(userId, take, ct);
 
         return Ok(new { data = recommendations });
