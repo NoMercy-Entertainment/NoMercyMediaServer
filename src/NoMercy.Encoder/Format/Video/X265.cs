@@ -27,8 +27,8 @@ public class X265 : BaseVideo
     [
         VideoCodecs.H265,
         VideoCodecs.H265Nvenc,
-        // VideoCodecs.H265Qsv,
-        // VideoCodecs.H265Amf,
+        VideoCodecs.H265Qsv,
+        VideoCodecs.H265Amf,
         VideoCodecs.H265Videotoolbox
     ];
 
