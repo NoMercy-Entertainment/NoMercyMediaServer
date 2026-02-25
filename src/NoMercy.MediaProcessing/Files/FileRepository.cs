@@ -1104,7 +1104,9 @@ public class FileRepository(MediaContext context) : IFileRepository
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 DriveInfo[] driveInfo = DriveInfo.GetDrives();
-                return driveInfo.Select(d => new DirectoryTree(d.RootDirectory.ToString(), ""))
+                return driveInfo
+                    .Where(d => d.IsReady)
+                    .Select(d => new DirectoryTree(d.RootDirectory.ToString(), ""))
                     .OrderBy(file => file.Path)
                     .ToList();
             }
@@ -1114,7 +1116,20 @@ public class FileRepository(MediaContext context) : IFileRepository
 
         if (!Directory.Exists(folder)) return array;
 
-        string[] directories = Directory.GetDirectories(folder);
+        string[] directories;
+        try
+        {
+            directories = Directory.GetDirectories(folder);
+        }
+        catch (IOException)
+        {
+            return array;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return array;
+        }
+
         array = directories.Select(d => new DirectoryTree(folder, d))
             .OrderBy(file => file.Path)
             .ToList();

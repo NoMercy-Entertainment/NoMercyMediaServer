@@ -244,7 +244,10 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailablePresets.Contains(value))
-            throw new($"Wrong preset value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailablePresets)}");
+        {
+            Logger.Encoder($"Skipping preset '{value}' for {VideoCodec.Name}, available presets are {string.Join(", ", AvailablePresets)}", LogEventLevel.Warning);
+            return this;
+        }
         Preset = value;
         return this;
     }
@@ -254,7 +257,10 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableProfiles.Contains(value))
-            throw new($"Wrong profile value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailableProfiles)}");
+        {
+            Logger.Encoder($"Skipping profile '{value}' for {VideoCodec.Name}, available profiles are {string.Join(", ", AvailableProfiles)}", LogEventLevel.Warning);
+            return this;
+        }
         Profile = value;
         return this;
     }
@@ -264,7 +270,10 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableTune.Contains(value))
-            throw new($"Wrong tune value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailableTune)}");
+        {
+            Logger.Encoder($"Skipping tune '{value}' for {VideoCodec.Name}, available tunes are {string.Join(", ", AvailableTune)}", LogEventLevel.Warning);
+            return this;
+        }
         Tune = value;
         return this;
     }
@@ -274,7 +283,10 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableLevels.Contains(value))
-            throw new($"Wrong level value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailableLevels)}");
+        {
+            Logger.Encoder($"Skipping level '{value}' for {VideoCodec.Name}, available levels are {string.Join(", ", AvailableLevels)}", LogEventLevel.Warning);
+            return this;
+        }
         Level = value;
         return this;
     }

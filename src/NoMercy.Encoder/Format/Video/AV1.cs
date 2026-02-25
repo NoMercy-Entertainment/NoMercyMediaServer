@@ -109,22 +109,29 @@ public class Av1 : BaseVideo
         get
         {
             if (VideoCodecs.Av1Nvenc.Value == VideoCodec.Value)
-            {
                 return
                 [
                     VideoTunes.Hq, VideoTunes.Li,
                     VideoTunes.Ull, VideoTunes.Lossless
                 ];
-            }
             else if (VideoCodecs.Av1Amf.Value == VideoCodec.Value)
-            {
-            }
+                return
+                [
+                    VideoTunes.Hq, VideoTunes.Li,
+                    VideoTunes.Ull, VideoTunes.Lossless
+                ];
             else if (VideoCodecs.Av1Qsv.Value == VideoCodec.Value)
-            {
-            }
+                return
+                [
+                    VideoTunes.Hq, VideoTunes.Li,
+                    VideoTunes.Ull, VideoTunes.Lossless
+                ];
             else if (VideoCodecs.Av1Videotoolbox.Value == VideoCodec.Value)
-            {
-            }
+                return
+                [
+                    VideoTunes.Hq, VideoTunes.Li,
+                    VideoTunes.Ull, VideoTunes.Lossless
+                ];
 
             return
             [

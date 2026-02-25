@@ -1052,31 +1052,35 @@ public class EncoderCommandBuildingTests : IDisposable
     }
 
     [Fact]
-    public void X264_SetPreset_Invalid_Throws()
+    public void X264_SetPreset_Invalid_IsIgnored()
     {
         X264 video = new();
-        Assert.Throws<Exception>(() => video.SetPreset("invalid_preset"));
+        video.SetPreset("invalid_preset");
+        Assert.Equal(string.Empty, video.Preset);
     }
 
     [Fact]
-    public void X264_SetProfile_Invalid_Throws()
+    public void X264_SetProfile_Invalid_IsIgnored()
     {
         X264 video = new();
-        Assert.Throws<Exception>(() => video.SetProfile("invalid_profile"));
+        video.SetProfile("invalid_profile");
+        Assert.Equal(string.Empty, video.Profile);
     }
 
     [Fact]
-    public void X264_SetTune_Invalid_Throws()
+    public void X264_SetTune_Invalid_IsIgnored()
     {
         X264 video = new();
-        Assert.Throws<Exception>(() => video.SetTune("invalid_tune"));
+        video.SetTune("invalid_tune");
+        Assert.Equal(string.Empty, video.Tune);
     }
 
     [Fact]
-    public void X264_SetLevel_Invalid_Throws()
+    public void X264_SetLevel_Invalid_IsIgnored()
     {
         X264 video = new();
-        Assert.Throws<Exception>(() => video.SetLevel("99"));
+        video.SetLevel("99");
+        Assert.Equal(string.Empty, video.Level);
     }
 
     [Fact]

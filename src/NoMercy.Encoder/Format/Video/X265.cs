@@ -109,22 +109,29 @@ public class X265 : BaseVideo
         get
         {
             if (VideoCodecs.H265Nvenc.Value == VideoCodec.Value)
-            {
                 return
                 [
                     VideoTunes.Hq, VideoTunes.Li,
                     VideoTunes.Ull, VideoTunes.Lossless
                 ];
-            }
             else if (VideoCodecs.H265Amf.Value == VideoCodec.Value)
-            {
-            }
+                return
+                [
+                    VideoTunes.Hq, VideoTunes.Li,
+                    VideoTunes.Ull, VideoTunes.Lossless
+                ];
             else if (VideoCodecs.H265Qsv.Value == VideoCodec.Value)
-            {
-            }
+                return
+                [
+                    VideoTunes.Hq, VideoTunes.Li,
+                    VideoTunes.Ull, VideoTunes.Lossless
+                ];
             else if (VideoCodecs.H265Videotoolbox.Value == VideoCodec.Value)
-            {
-            }
+                return
+                [
+                    VideoTunes.Hq, VideoTunes.Li,
+                    VideoTunes.Ull, VideoTunes.Lossless
+                ];
 
             return
             [
