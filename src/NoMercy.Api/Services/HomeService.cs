@@ -19,21 +19,18 @@ public class HomeService
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly LibraryRepository _libraryRepository;
     private readonly HomeRepository _homeRepository;
-    private readonly RecommendationService _recommendationService;
 
     public HomeService(
         HomeRepository homeRepository,
         LibraryRepository libraryRepository,
         MediaContext mediaContext,
-        IDbContextFactory<MediaContext> contextFactory,
-        RecommendationService recommendationService
+        IDbContextFactory<MediaContext> contextFactory
     )
     {
         _homeRepository = homeRepository;
         _libraryRepository = libraryRepository;
         _mediaContext = mediaContext;
         _contextFactory = contextFactory;
-        _recommendationService = recommendationService;
     }
 
     public async Task<List<GenreRowDto<GenreRowItemDto>>> GetHomePageContent(
@@ -137,10 +134,7 @@ public class HomeService
             await using MediaContext context = await _contextFactory.CreateDbContextAsync();
             return await _homeRepository.GetTvCountAsync(context, userId);
         });
-        Task<List<RecommendationDto>> recommendationsTask =
-            _recommendationService.GetHomeRecommendationCarouselAsync(userId, Config.MaximumCardsInCarousel);
-
-        await Task.WhenAll(continueWatchingTask, genreItemsTask, librariesTask, animeCountTask, movieCountTask, tvCountTask, recommendationsTask);
+        await Task.WhenAll(continueWatchingTask, genreItemsTask, librariesTask, animeCountTask, movieCountTask, tvCountTask);
 
         HashSet<UserData> continueWatching = continueWatchingTask.Result;
         List<GenreHomeDto> genreItems = genreItemsTask.Result;
@@ -148,7 +142,6 @@ public class HomeService
         int animeCount = animeCountTask.Result;
         int movieCount = movieCountTask.Result;
         int tvCount = tvCountTask.Result;
-        List<RecommendationDto> personalRecommendations = recommendationsTask.Result;
 
         // Phase 2: Collect genre source data (sync, fast - just shuffling IDs)
         List<GenreSourceData> genreSourceList = [];
@@ -276,12 +269,8 @@ public class HomeService
             );
         }
 
-        // Navigation chain: continue → recommended → library_* → genre_*
-        bool hasRecommendations = personalRecommendations.Count > 0;
-        string afterContinueId = hasRecommendations
-            ? "recommended"
-            : libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}" : null!;
-        string beforeLibrariesId = hasRecommendations ? "recommended" : "continue";
+        // Navigation chain: continue → library_* → genre_*
+        string afterContinueId = libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}" : null!;
 
         // Continue watching carousel
         components.Add(
@@ -294,31 +283,12 @@ public class HomeService
                 .Build()
         );
 
-        // Recommended for You carousel
-        if (hasRecommendations)
-        {
-            string? recommendedNextId = libraryCarousels.Count > 0
-                ? $"library_{libraryCarousels[0].Id}"
-                : genreCarousels.Count > 0 ? $"genre_{genreCarousels[0].Id}" : null;
-
-            components.Add(
-                Component.Carousel()
-                    .WithId("recommended")
-                    .WithNavigation("continue", recommendedNextId)
-                    .WithTitle("Recommended for You".Localize())
-                    .WithMoreLink(new Uri("/recommendations", UriKind.Relative))
-                    .WithItems(personalRecommendations.Select(rec =>
-                        Component.Card(new CardData(rec)).Build()))
-                    .Build()
-            );
-        }
-
         // Library carousels
         for (int i = 0; i < libraryCarousels.Count; i++)
         {
             GenreCarouselData lib = libraryCarousels[i];
 
-            string prevId = i == 0 ? beforeLibrariesId : $"library_{libraryCarousels[i - 1].Id}";
+            string prevId = i == 0 ? "continue" : $"library_{libraryCarousels[i - 1].Id}";
             string? nextId = i == libraryCarousels.Count - 1
                 ? genreCarousels.Count > 0 ? $"genre_{genreCarousels[0].Id}" : null
                 : $"library_{libraryCarousels[i + 1].Id}";
@@ -341,10 +311,10 @@ public class HomeService
             GenreCarouselData genre = genreCarousels[i];
 
             string prevId = i == 0
-                ? libraryCarousels.Count > 0 ? $"library_{libraryCarousels[^1].Id}" : beforeLibrariesId
+                ? libraryCarousels.Count > 0 ? $"library_{libraryCarousels[^1].Id}" : "continue"
                 : $"genre_{genreCarousels[i - 1].Id}";
             string nextId = i == genreCarousels.Count - 1
-                ? libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}" : beforeLibrariesId
+                ? libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}" : "continue"
                 : $"genre_{genreCarousels[i + 1].Id}";
 
             components.Add(

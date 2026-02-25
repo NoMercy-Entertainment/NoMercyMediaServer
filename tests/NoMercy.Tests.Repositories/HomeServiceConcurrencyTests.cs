@@ -1,6 +1,5 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
@@ -27,10 +26,7 @@ public class HomeServiceConcurrencyTests : IDisposable
         MediaContext mainContext = _factory.CreateDbContext();
         HomeRepository homeRepository = new();
         LibraryRepository libraryRepository = new(mainContext);
-        RecommendationRepository recommendationRepository = new();
-        IMemoryCache memoryCache = new MemoryCache(new MemoryCacheOptions());
-        RecommendationService recommendationService = new(recommendationRepository, _factory, memoryCache);
-        HomeService service = new(homeRepository, libraryRepository, mainContext, _factory, recommendationService);
+        HomeService service = new(homeRepository, libraryRepository, mainContext, _factory);
 
         Exception? exception = await Record.ExceptionAsync(async () =>
         {
@@ -47,10 +43,7 @@ public class HomeServiceConcurrencyTests : IDisposable
         MediaContext mainContext = _factory.CreateDbContext();
         HomeRepository homeRepository = new();
         LibraryRepository libraryRepository = new(mainContext);
-        RecommendationRepository recommendationRepository = new();
-        IMemoryCache memoryCache = new MemoryCache(new MemoryCacheOptions());
-        RecommendationService recommendationService = new(recommendationRepository, _factory, memoryCache);
-        HomeService service = new(homeRepository, libraryRepository, mainContext, _factory, recommendationService);
+        HomeService service = new(homeRepository, libraryRepository, mainContext, _factory);
 
         for (int i = 0; i < 3; i++)
         {
