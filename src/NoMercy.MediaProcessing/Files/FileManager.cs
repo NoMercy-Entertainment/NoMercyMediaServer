@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -46,18 +47,6 @@ public partial class FileManager(
 
         await MediaType(id, library);
 
-        // Remove all existing file records to avoid lingering stale entries
-        switch (library.Type)
-        {
-            case Config.MovieMediaType:
-                await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
-                break;
-            case Config.TvMediaType:
-            case Config.AnimeMediaType:
-                await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
-                break;
-        }
-
         Folders = Paths(library, Movie, Show);
 
         foreach (Folder folder in Folders)
@@ -67,19 +56,53 @@ public partial class FileManager(
             if (!files.IsEmpty) Files.AddRange(files);
         }
 
+        // Wrap delete + insert in a transaction so old records are preserved if insert fails
+        await using IDbContextTransaction transaction = await fileRepository.BeginTransactionAsync();
+        try
+        {
+            // Remove all existing file records to avoid lingering stale entries
+            switch (library.Type)
+            {
+                case Config.MovieMediaType:
+                    await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
+                    break;
+                case Config.TvMediaType:
+                case Config.AnimeMediaType:
+                    await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
+                    break;
+            }
+
+            switch (library.Type)
+            {
+                case Config.MovieMediaType:
+                    await StoreMovie();
+                    break;
+                case Config.TvMediaType:
+                case Config.AnimeMediaType:
+                    await StoreTvShow();
+                    break;
+                case Config.MusicMediaType:
+                    await StoreMusic();
+                    break;
+                default:
+                    Logger.App("Unknown library type");
+                    break;
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+        // Publish refresh events only after successful commit
         switch (library.Type)
         {
             case Config.MovieMediaType:
-                await StoreMovie();
-                if (EventBusProvider.IsConfigured)
-                    await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-                    {
-                        QueryKey = ["libraries", library.Id.ToString()]
-                    });
-                break;
             case Config.TvMediaType:
             case Config.AnimeMediaType:
-                await StoreTvShow();
                 if (EventBusProvider.IsConfigured)
                     await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
                     {
@@ -87,15 +110,11 @@ public partial class FileManager(
                     });
                 break;
             case Config.MusicMediaType:
-                await StoreMusic();
                 if (EventBusProvider.IsConfigured)
                     await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
                     {
                         QueryKey = ["music"]
                     });
-                break;
-            default:
-                Logger.App("Unknown library type");
                 break;
         }
     }
@@ -270,52 +289,45 @@ public partial class FileManager(
         Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
         if (folder == null) return;
 
-        try
+        string fileName = Path.DirectorySeparatorChar + Path.GetFileName(item.Path);
+        string hostFolder = item.Path.Replace(fileName, "");
+        string baseFolder = (Path.DirectorySeparatorChar + (Movie?.Folder ?? Show?.Folder ?? "").Replace("/", "")
+                                                         + item.Path.Replace(folder.Path, "")).Replace(fileName, "");
+
+        List<Subtitle> subtitles = GetSubtitles(hostFolder);
+
+        List<IVideoTrack> tracks = GetExtraFiles(hostFolder);
+
+        Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
+
+        Metadata metadata = await MakeMetadata(item, fileName, baseFolder, hostFolder, tracks);
+
+        Ulid metadataId = await fileRepository.StoreMetadata(metadata);
+
+        Logger.App($"Storing video file: {episode?.Id}, {Movie?.Id}", LogEventLevel.Verbose);
+        VideoFile videoFile = new()
         {
-            string fileName = Path.DirectorySeparatorChar + Path.GetFileName(item.Path);
-            string hostFolder = item.Path.Replace(fileName, "");
-            string baseFolder = (Path.DirectorySeparatorChar + (Movie?.Folder ?? Show?.Folder ?? "").Replace("/", "")
-                                                             + item.Path.Replace(folder.Path, "")).Replace(fileName, "");
+            EpisodeId = episode?.Id,
+            MovieId = Movie?.Id,
+            Folder = baseFolder.Replace("\\", "/"),
+            HostFolder = hostFolder.Replace("\\", "/"),
+            Filename = fileName.Replace("\\", "/"),
 
-            List<Subtitle> subtitles = GetSubtitles(hostFolder);
+            Share = folder.Id.ToString() ?? "",
+            Duration = Regex.Replace(
+                Regex.Replace(item.FFprobe?.Duration.ToString() ?? ""
+                    , "\\.\\d+", ""), "^00:", ""),
+            // Chapters = JsonConvert.SerializeObject(item.FFprobe?.Chapters ?? []),
+            Chapters = "",
+            Languages = JsonConvert.SerializeObject(item.FFprobe?.AudioStreams.Select(stream => stream.Language)
+                .Where(stream => stream != null && stream != "und")),
+            Quality = item.FFprobe?.VideoStreams.FirstOrDefault()?.Width.ToString() ?? "",
+            Subtitles = JsonConvert.SerializeObject(subtitles),
+            Tracks = tracks.ToArray(),
+            MetadataId = metadataId
+        };
 
-            List<IVideoTrack> tracks = GetExtraFiles(hostFolder);
-
-            Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
-
-            Metadata metadata = await MakeMetadata(item, fileName, baseFolder, hostFolder, tracks);
-
-            Ulid metadataId = await fileRepository.StoreMetadata(metadata);
-
-            Logger.App($"Storing video file: {episode?.Id}, {Movie?.Id}", LogEventLevel.Verbose);
-            VideoFile videoFile = new()
-            {
-                EpisodeId = episode?.Id,
-                MovieId = Movie?.Id,
-                Folder = baseFolder.Replace("\\", "/"),
-                HostFolder = hostFolder.Replace("\\", "/"),
-                Filename = fileName.Replace("\\", "/"),
-
-                Share = folder.Id.ToString() ?? "",
-                Duration = Regex.Replace(
-                    Regex.Replace(item.FFprobe?.Duration.ToString() ?? ""
-                        , "\\.\\d+", ""), "^00:", ""),
-                // Chapters = JsonConvert.SerializeObject(item.FFprobe?.Chapters ?? []),
-                Chapters = "",
-                Languages = JsonConvert.SerializeObject(item.FFprobe?.AudioStreams.Select(stream => stream.Language)
-                    .Where(stream => stream != null && stream != "und")),
-                Quality = item.FFprobe?.VideoStreams.FirstOrDefault()?.Width.ToString() ?? "",
-                Subtitles = JsonConvert.SerializeObject(subtitles),
-                Tracks = tracks.ToArray(),
-                MetadataId = metadataId
-            };
-
-            await fileRepository.StoreVideoFile(videoFile);
-        }
-        catch (Exception e)
-        {
-            Logger.App(e.Message, LogEventLevel.Error);
-        }
+        await fileRepository.StoreVideoFile(videoFile);
     }
 
     private async Task<Metadata> MakeMetadata(MediaFile item, string fileName, string baseFolder, string hostFolder,

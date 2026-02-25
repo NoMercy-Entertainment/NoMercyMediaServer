@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.Storage;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
@@ -8,6 +9,7 @@ namespace NoMercy.MediaProcessing.Files;
 
 public interface IFileRepository
 {
+    Task<IDbContextTransaction> BeginTransactionAsync();
     Task StoreVideoFile(VideoFile videoFile);
     Task<Ulid> StoreMetadata(Metadata metadata);
     Task<Episode?> GetEpisode(int? showId, MediaFile item);

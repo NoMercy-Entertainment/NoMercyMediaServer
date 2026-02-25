@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MovieFileLibrary;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -36,9 +37,14 @@ public class FileRepository(MediaContext context) : IFileRepository
 {
     private readonly MediaContext _context = context;
 
-    public Task StoreVideoFile(VideoFile videoFile)
+    public Task<IDbContextTransaction> BeginTransactionAsync()
     {
-        return _context.VideoFiles.Upsert(videoFile)
+        return _context.Database.BeginTransactionAsync();
+    }
+
+    public async Task StoreVideoFile(VideoFile videoFile)
+    {
+        await _context.VideoFiles.Upsert(videoFile)
             .On(vf => vf.Filename)
             .WhenMatched((vs, vi) => new()
             {
@@ -83,11 +89,17 @@ public class FileRepository(MediaContext context) : IFileRepository
             })
             .RunAsync();
 
-        return _context.Metadata
+        Ulid id = await _context.Metadata
             .Where(m => m.Filename == metadata.Filename)
             .Where(m => m.HostFolder == metadata.HostFolder)
             .Select(m => m.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync();
+
+        if (id == default)
+            throw new InvalidOperationException(
+                $"Metadata upsert succeeded but record not found for Filename={metadata.Filename}, HostFolder={metadata.HostFolder}");
+
+        return id;
     }
 
     public async Task<Episode?> GetEpisode(int? showId, MediaFile item)
