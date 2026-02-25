@@ -24,6 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     pciutils \
     procps \
+    sqlite3 \
+    htop \
+    nvtop \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user with video/render group access

@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     pciutils \
     procps \
+    sqlite3 \
+    htop \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

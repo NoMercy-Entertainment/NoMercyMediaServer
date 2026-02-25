@@ -50,6 +50,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Media info
     mediainfo \
     curl \
+    sqlite3 \
+    htop \
+    nvtop \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
