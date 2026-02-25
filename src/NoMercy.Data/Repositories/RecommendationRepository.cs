@@ -344,10 +344,11 @@ public class RecommendationRepository
 
         if (specificKeywordIds.Count == 0) return [];
 
-        // Step 1: Flat server-side query — find KeywordTv rows matching specific movie keywords on unowned TV shows
+        // Step 1: Flat server-side query — find KeywordTv rows matching specific movie keywords on unowned TV shows (excluding anime)
         var keywordTvRows = await context.KeywordTv
             .AsNoTracking()
             .Where(kt => specificKeywordIds.Contains(kt.KeywordId))
+            .Where(kt => context.Tvs.Any(t => t.Id == kt.TvId && t.Library.Type != Config.AnimeMediaType))
             .Where(kt => !context.Tvs.Any(t => t.Id == kt.TvId && t.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Select(kt => new { kt.TvId, kt.KeywordId })
             .ToListAsync(ct);
@@ -397,6 +398,94 @@ public class RecommendationRepository
                     Backdrop = meta.Backdrop,
                     ColorPalette = meta.Palette,
                     MediaType = Config.TvMediaType,
+                    SourceMediaType = Config.MovieMediaType,
+                    SourceCount = sourceMovieIds.Count,
+                    SourceIds = sourceMovieIds
+                };
+            })
+            .ToList();
+    }
+
+    public async Task<List<RecommendationCandidateDto>> GetKeywordCrossTypeAnimeCandidatesAsync(
+        MediaContext context, Guid userId,
+        Dictionary<int, List<int>> movieKeywordMap,
+        int minSharedKeywords = 3, int maxCandidates = 100,
+        int maxKeywordFrequency = 50,
+        CancellationToken ct = default)
+    {
+        if (movieKeywordMap.Count == 0) return [];
+
+        HashSet<int> ownedMovieKeywordIds = movieKeywordMap.Values
+            .SelectMany(kws => kws)
+            .ToHashSet();
+
+        if (ownedMovieKeywordIds.Count == 0) return [];
+
+        HashSet<int> commonKeywordIds = (await context.KeywordTv
+            .AsNoTracking()
+            .Where(kt => ownedMovieKeywordIds.Contains(kt.KeywordId))
+            .GroupBy(kt => kt.KeywordId)
+            .Where(g => g.Count() > maxKeywordFrequency)
+            .Select(g => g.Key)
+            .ToListAsync(ct))
+            .ToHashSet();
+
+        HashSet<int> specificKeywordIds = ownedMovieKeywordIds
+            .Where(id => !commonKeywordIds.Contains(id))
+            .ToHashSet();
+
+        if (specificKeywordIds.Count == 0) return [];
+
+        var keywordTvRows = await context.KeywordTv
+            .AsNoTracking()
+            .Where(kt => specificKeywordIds.Contains(kt.KeywordId))
+            .Where(kt => context.Tvs.Any(t => t.Id == kt.TvId && t.Library.Type == Config.AnimeMediaType))
+            .Where(kt => !context.Tvs.Any(t => t.Id == kt.TvId && t.Library.LibraryUsers.Any(u => u.UserId == userId)))
+            .Select(kt => new { kt.TvId, kt.KeywordId })
+            .ToListAsync(ct);
+
+        var tvKeywordGroups = keywordTvRows
+            .GroupBy(r => r.TvId)
+            .Where(g => g.Count() >= minSharedKeywords)
+            .OrderByDescending(g => g.Count())
+            .Take(maxCandidates)
+            .ToList();
+
+        if (tvKeywordGroups.Count == 0) return [];
+
+        List<int> qualifyingTvIds = tvKeywordGroups.Select(g => g.Key).ToList();
+
+        var tvMetadata = await context.Tvs
+            .AsNoTracking()
+            .Where(t => qualifyingTvIds.Contains(t.Id))
+            .Select(t => new { t.Id, t.Title, t.TitleSort, t.Overview, t.Poster, t.Backdrop, t._colorPalette })
+            .ToListAsync(ct);
+
+        Dictionary<int, (string Title, string TitleSort, string? Overview, string? Poster, string? Backdrop, string Palette)> metaMap =
+            tvMetadata.ToDictionary(t => t.Id, t => (t.Title, t.TitleSort, t.Overview, t.Poster, t.Backdrop, t._colorPalette));
+
+        return tvKeywordGroups
+            .Where(g => metaMap.ContainsKey(g.Key))
+            .Select(g =>
+            {
+                var meta = metaMap[g.Key];
+                HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
+                List<int> sourceMovieIds = movieKeywordMap
+                    .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
+                    .Select(kv => kv.Key)
+                    .Distinct()
+                    .ToList();
+
+                return new RecommendationCandidateDto
+                {
+                    MediaId = g.Key,
+                    Title = meta.Title,
+                    TitleSort = meta.TitleSort,
+                    Overview = meta.Overview,
+                    Poster = meta.Poster,
+                    Backdrop = meta.Backdrop,
+                    ColorPalette = meta.Palette,
+                    MediaType = Config.AnimeMediaType,
                     SourceMediaType = Config.MovieMediaType,
                     SourceCount = sourceMovieIds.Count,
                     SourceIds = sourceMovieIds
@@ -564,6 +653,7 @@ public class RecommendationRepository
         var tvShows = await context.Tvs
             .AsNoTracking()
             .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(t => t.Library.Type != Config.AnimeMediaType)
             .Where(t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
             .Select(t => new
             {
@@ -608,6 +698,66 @@ public class RecommendationRepository
             Poster = t.Poster,
             ColorPalette = t._colorPalette,
             MediaType = Config.TvMediaType,
+            Rating = t.Rating,
+            TimeWatched = t.TimeWatched,
+            Duration = t.Duration,
+            IsFavorited = t.IsFavorited,
+            GenreIds = genreMap.GetValueOrDefault(t.Id, []),
+            KeywordIds = keywordMap.GetValueOrDefault(t.Id, [])
+        }).ToList();
+    }
+
+    public async Task<List<UserAffinitySourceDto>> GetUserAnimeAffinityDataAsync(
+        MediaContext context, Guid userId, CancellationToken ct = default)
+    {
+        var animeShows = await context.Tvs
+            .AsNoTracking()
+            .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
+            .Where(t => t.Library.Type == Config.AnimeMediaType)
+            .Where(t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
+            .Select(t => new
+            {
+                t.Id,
+                t.Title,
+                t.Poster,
+                t._colorPalette,
+                t.Duration,
+                Rating = t.UserData
+                    .Where(ud => ud.UserId == userId && ud.Rating != null)
+                    .Select(ud => ud.Rating)
+                    .FirstOrDefault(),
+                TimeWatched = t.UserData
+                    .Where(ud => ud.UserId == userId)
+                    .OrderByDescending(ud => ud.Time)
+                    .Select(ud => ud.Time)
+                    .FirstOrDefault(),
+                IsFavorited = t.TvUser.Any(tu => tu.UserId == userId)
+            })
+            .ToListAsync(ct);
+
+        if (animeShows.Count == 0) return [];
+
+        List<int> animeIds = animeShows.Select(t => t.Id).ToList();
+
+        Dictionary<int, List<int>> genreMap = await context.GenreTv
+            .AsNoTracking()
+            .Where(gt => animeIds.Contains(gt.TvId))
+            .GroupBy(gt => gt.TvId)
+            .ToDictionaryAsync(g => g.Key, g => g.Select(gt => gt.GenreId).ToList(), ct);
+
+        Dictionary<int, List<int>> keywordMap = await context.KeywordTv
+            .AsNoTracking()
+            .Where(kt => animeIds.Contains(kt.TvId))
+            .GroupBy(kt => kt.TvId)
+            .ToDictionaryAsync(g => g.Key, g => g.Select(kt => kt.KeywordId).ToList(), ct);
+
+        return animeShows.Select(t => new UserAffinitySourceDto
+        {
+            ItemId = t.Id,
+            Title = t.Title,
+            Poster = t.Poster,
+            ColorPalette = t._colorPalette,
+            MediaType = Config.AnimeMediaType,
             Rating = t.Rating,
             TimeWatched = t.TimeWatched,
             Duration = t.Duration,

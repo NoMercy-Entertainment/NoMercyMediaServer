@@ -89,6 +89,7 @@ public class RecommendationService
         // Phase 1b: Cross-type keyword candidates — extract keyword maps from high-signal sources
         Dictionary<int, List<int>> movieKeywordMap = new();
         Dictionary<int, List<int>> tvKeywordMap = new();
+        Dictionary<int, List<int>> animeKeywordMap = new();
 
         foreach (KeyValuePair<int, UserAffinitySourceDto> kv in profile.SourceItems)
         {
@@ -103,12 +104,18 @@ public class RecommendationService
 
             if (src.MediaType == Config.MovieMediaType)
                 movieKeywordMap[src.ItemId] = src.KeywordIds;
+            else if (src.MediaType == Config.AnimeMediaType)
+                animeKeywordMap[src.ItemId] = src.KeywordIds;
             else
                 tvKeywordMap[src.ItemId] = src.KeywordIds;
         }
 
-        // Cross-type: "tv" filter needs crossTypeTv (TV found via movie keywords),
-        // "movie" filter needs crossTypeMovie (movies found via TV keywords), anime skips cross-type
+        // Cross-type: use keywords from one type to find candidates in another
+        // Anime uses its own keywords to find anime candidates via the TV keyword path (anime is stored as TV)
+        Dictionary<int, List<int>> nonMovieKeywordMap = tvKeywordMap
+            .Concat(animeKeywordMap)
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+
         Task<List<RecommendationCandidateDto>> crossTypeTvTask = wantTv && movieKeywordMap.Count > 0
             ? Task.Run(async () =>
             {
@@ -118,22 +125,31 @@ public class RecommendationService
             }, ct)
             : Task.FromResult(new List<RecommendationCandidateDto>());
 
-        Task<List<RecommendationCandidateDto>> crossTypeMovieTask = wantMovie && tvKeywordMap.Count > 0
+        Task<List<RecommendationCandidateDto>> crossTypeMovieTask = wantMovie && nonMovieKeywordMap.Count > 0
             ? Task.Run(async () =>
             {
                 await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(ct);
                 return await _recommendationRepository.GetKeywordCrossTypeMovieCandidatesAsync(
-                    ctx, userId, tvKeywordMap, minSharedKeywords: 3, maxCandidates: 100, ct: ct);
+                    ctx, userId, nonMovieKeywordMap, minSharedKeywords: 3, maxCandidates: 100, ct: ct);
             }, ct)
             : Task.FromResult(new List<RecommendationCandidateDto>());
 
-        await Task.WhenAll(crossTypeTvTask, crossTypeMovieTask);
+        Task<List<RecommendationCandidateDto>> crossTypeAnimeTask = wantAnime && movieKeywordMap.Count > 0
+            ? Task.Run(async () =>
+            {
+                await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(ct);
+                return await _recommendationRepository.GetKeywordCrossTypeAnimeCandidatesAsync(
+                    ctx, userId, movieKeywordMap, minSharedKeywords: 3, maxCandidates: 100, ct: ct);
+            }, ct)
+            : Task.FromResult(new List<RecommendationCandidateDto>());
+
+        await Task.WhenAll(crossTypeTvTask, crossTypeMovieTask, crossTypeAnimeTask);
 
         // Phase 2: Merge candidates (same MediaId+MediaType from Recommendation + Similar + Keywords = higher frequency)
         List<RecommendationCandidateDto> allCandidates = MergeCandidates(
             movieRecsTask.Result, tvRecsTask.Result, animeRecsTask.Result,
             movieSimTask.Result, tvSimTask.Result, animeSimTask.Result,
-            crossTypeTvTask.Result, crossTypeMovieTask.Result);
+            crossTypeTvTask.Result, crossTypeMovieTask.Result, crossTypeAnimeTask.Result);
 
         // Phase 3: Get genre maps for source items — use actual source type from profile, not candidate type
         HashSet<int> allSourceIds = allCandidates.SelectMany(c => c.SourceIds).ToHashSet();
@@ -630,11 +646,17 @@ public class RecommendationService
             await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
             return await _recommendationRepository.GetUserTvAffinityDataAsync(context, userId, ct);
         }, ct);
+        Task<List<UserAffinitySourceDto>> animeAffinityTask = Task.Run(async () =>
+        {
+            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+            return await _recommendationRepository.GetUserAnimeAffinityDataAsync(context, userId, ct);
+        }, ct);
 
-        await Task.WhenAll(movieAffinityTask, tvAffinityTask);
+        await Task.WhenAll(movieAffinityTask, tvAffinityTask, animeAffinityTask);
 
         List<UserAffinitySourceDto> allSources = movieAffinityTask.Result
-            .Concat(tvAffinityTask.Result).ToList();
+            .Concat(tvAffinityTask.Result)
+            .Concat(animeAffinityTask.Result).ToList();
 
         Dictionary<int, double> genreScores = new();
         Dictionary<int, UserAffinitySourceDto> sourceMap = new();
