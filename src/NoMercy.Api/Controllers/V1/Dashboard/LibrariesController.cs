@@ -490,17 +490,8 @@ public class LibrariesController(
         try
         {
             Folder folder = new() { Id = Ulid.NewUlid(), Path = request.Path };
-            
+
             await folderRepository.AddFolderAsync(folder);
-            
-            if (EventBusProvider.IsConfigured)
-            {
-                await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
-                {
-                    RequestPath = library.Id,
-                    PhysicalPath = folder.Path
-                });
-            }
         }
         catch (Exception e)
         {
@@ -511,7 +502,7 @@ public class LibrariesController(
         }
 
         Folder? pathAsync = await folderRepository.GetFolderByPathAsync(request.Path);
-        
+
         if (pathAsync is null)
         {
             return NotFound(new StatusResponseDto<string>
@@ -522,11 +513,20 @@ public class LibrariesController(
 
         FolderLibrary folderLibrary = new()
         {
-            LibraryId = library.Id, 
+            LibraryId = library.Id,
             FolderId = pathAsync.Id
         };
-        
+
         await folderRepository.AddFolderLibraryAsync(folderLibrary);
+
+        if (EventBusProvider.IsConfigured)
+        {
+            await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
+            {
+                RequestPath = pathAsync.Id,
+                PhysicalPath = pathAsync.Path
+            });
+        }
 
         return Ok(new StatusResponseDto<FolderLibrary>
         {
@@ -562,7 +562,7 @@ public class LibrariesController(
                 });
                 await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
                 {
-                    RequestPath = id,
+                    RequestPath = folder.Id,
                     PhysicalPath = folder.Path
                 });
             }

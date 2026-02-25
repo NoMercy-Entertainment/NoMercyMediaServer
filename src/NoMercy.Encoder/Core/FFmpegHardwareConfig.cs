@@ -176,6 +176,16 @@ public static class FFmpegHardwareConfig
             }
     }
 
+    private static bool IsKnownGpuVendor(string value)
+    {
+        return value.Contains("NVIDIA", StringComparison.InvariantCultureIgnoreCase) ||
+               value.Contains("AMD", StringComparison.InvariantCultureIgnoreCase) ||
+               value.Contains("Advanced Micro Devices", StringComparison.InvariantCultureIgnoreCase) ||
+               value.Contains("Radeon", StringComparison.InvariantCultureIgnoreCase) ||
+               value.Contains("ATI", StringComparison.InvariantCultureIgnoreCase) ||
+               value.Contains("Intel", StringComparison.InvariantCultureIgnoreCase);
+    }
+
     private static bool IsDedicatedGpuAvailable()
     {
         if (OperatingSystem.IsWindows())
@@ -187,15 +197,13 @@ public static class FFmpegHardwareConfig
                 foreach (ManagementBaseObject? managementBaseObject in results)
                 {
                     ManagementObject? obj = (ManagementObject)managementBaseObject;
-                    object? adapterRam = obj["AdapterRAM"];
-                    if (adapterRam == null || (uint)adapterRam <= 0) continue;
-
                     string caption = obj["Caption"]?.ToString() ?? string.Empty;
-                    if (caption.Contains("NVIDIA", StringComparison.InvariantCultureIgnoreCase) ||
-                        caption.Contains("AMD", StringComparison.InvariantCultureIgnoreCase) ||
-                        caption.Contains("Intel",
-                            StringComparison
-                                .InvariantCultureIgnoreCase))
+                    string adapterCompatibility = obj["AdapterCompatibility"]?.ToString() ?? string.Empty;
+
+                    // Check both Caption and AdapterCompatibility for vendor detection.
+                    // Caption may say "Radeon RX 580 Series" without "AMD" prefix,
+                    // while AdapterCompatibility reliably returns "Advanced Micro Devices, Inc."
+                    if (IsKnownGpuVendor(caption) || IsKnownGpuVendor(adapterCompatibility))
                         return true;
                 }
             }
@@ -218,9 +226,8 @@ public static class FFmpegHardwareConfig
             {
                 string result = Shell.ExecStdOutSync("system_profiler", "SPDisplaysDataType");
 
-                return result.Contains("NVIDIA", StringComparison.InvariantCultureIgnoreCase) ||
-                       result.Contains("AMD", StringComparison.InvariantCultureIgnoreCase) ||
-                       result.Contains("Intel", StringComparison.InvariantCultureIgnoreCase);
+                if (IsKnownGpuVendor(result))
+                    return true;
             }
             catch (Exception e)
             {
