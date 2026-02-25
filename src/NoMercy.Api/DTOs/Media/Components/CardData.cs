@@ -498,7 +498,7 @@ public record CardData
         Poster = rec.Poster;
         Backdrop = rec.Backdrop;
         Type = rec.Type;
-        Link = new($"/{rec.Type}/{rec.Id}", UriKind.Relative);
+        Link = rec.Link;
         NumberOfItems = 0;
         HaveItems = 0;
         ColorPalette = rec.ColorPalette;

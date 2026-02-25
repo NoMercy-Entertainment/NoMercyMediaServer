@@ -173,7 +173,7 @@ public sealed class ServerConnection : IDisposable
                 // Use a dedicated IPC client for the long-lived stream
                 // so it doesn't interfere with (or get disposed by) the
                 // shared _client used for status polling / other requests.
-                streamClient = new IpcClient();
+                streamClient = new();
                 using HttpResponseMessage response = await streamClient.GetStreamAsync(
                     "/manage/logs/stream", cancellationToken);
                 using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);

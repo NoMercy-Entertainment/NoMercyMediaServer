@@ -27,9 +27,9 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
         options.AddSecurityDefinition("Keycloak", new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.OAuth2,
-            Flows = new OpenApiOAuthFlows
+            Flows = new()
             {
-                Implicit = new OpenApiOAuthFlow
+                Implicit = new()
                 {
                     AuthorizationUrl = new($"{Config.AuthBaseUrl}protocol/openid-connect/auth"),
                     Scopes = new Dictionary<string, string>
@@ -41,10 +41,10 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
             }
         });
 
-        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+        options.AddSecurityRequirement(document => new()
         {
-            { new OpenApiSecuritySchemeReference("Keycloak", document), [] },
-            { new OpenApiSecuritySchemeReference("Bearer", document), [] }
+            { new("Keycloak", document), [] },
+            { new("Bearer", document), [] }
         });
     }
 

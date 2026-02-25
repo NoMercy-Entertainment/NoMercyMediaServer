@@ -144,7 +144,7 @@ internal static partial class LogsCommand
 
     private static void PrintSessionSeparator()
     {
-        string separator = new string('-', 60);
+        string separator = new('-', 60);
         Console.WriteLine();
         Console.WriteLine($"{"",16}{"Server Restart".PadLeft(14)} | {separator}".Pastel(Color.DarkGray));
         Console.WriteLine();

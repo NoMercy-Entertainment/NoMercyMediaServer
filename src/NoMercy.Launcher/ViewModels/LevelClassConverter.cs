@@ -8,11 +8,11 @@ public static class LevelColorConverter
     public static FuncValueConverter<string, IBrush> Instance { get; } =
         new(level => level?.ToLowerInvariant() switch
         {
-            "fatal" => new SolidColorBrush(Color.Parse("#DC2626")),
-            "error" => new SolidColorBrush(Color.Parse("#EF4444")),
-            "warning" => new SolidColorBrush(Color.Parse("#EAB308")),
-            "debug" => new SolidColorBrush(Color.Parse("#6B7280")),
-            "verbose" => new SolidColorBrush(Color.Parse("#4B5563")),
+            "fatal" => new(Color.Parse("#DC2626")),
+            "error" => new(Color.Parse("#EF4444")),
+            "warning" => new(Color.Parse("#EAB308")),
+            "debug" => new(Color.Parse("#6B7280")),
+            "verbose" => new(Color.Parse("#4B5563")),
             _ => new SolidColorBrush(Color.Parse("#D1D5DB"))
         });
 }

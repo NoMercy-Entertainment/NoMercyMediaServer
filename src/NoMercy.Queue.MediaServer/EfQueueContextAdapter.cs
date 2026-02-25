@@ -29,7 +29,7 @@ public class EfQueueContextAdapter : IQueueContext
     /// </summary>
     public EfQueueContextAdapter()
     {
-        _contextFactory = static () => new QueueContext();
+        _contextFactory = static () => new();
         _ownsContext = true;
     }
 

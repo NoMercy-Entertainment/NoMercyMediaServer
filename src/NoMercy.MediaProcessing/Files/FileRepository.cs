@@ -286,7 +286,7 @@ public class FileRepository(MediaContext context) : IFileRepository
         Match epMatch = Str.MatchEpisodePrefix().Match(cleanedFileName);
         if (epMatch.Success)
         {
-            return new MovieFile(title)
+            return new(title)
             {
                 Title = ExtractTitleFromFolder(file),
                 Season = int.Parse(epMatch.Groups[1].Value),
@@ -309,7 +309,7 @@ public class FileRepository(MediaContext context) : IFileRepository
             if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
                 showTitle = ExtractTitleFromFolder(file);
 
-            return new MovieFile(title)
+            return new(title)
             {
                 Title = showTitle,
                 Season = 1,
@@ -330,7 +330,7 @@ public class FileRepository(MediaContext context) : IFileRepository
             if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
                 showTitle = ExtractTitleFromFolder(file);
 
-            return new MovieFile(title)
+            return new(title)
             {
                 Title = showTitle,
                 Season = int.Parse(seasonEpMatch.Groups[1].Value),

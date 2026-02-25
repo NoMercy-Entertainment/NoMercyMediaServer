@@ -212,7 +212,7 @@ public static class Logger
             .ForContext("ConsoleType", type.Name)
             .Write(logLevel, "{@Message}", message.ToJson());
 
-        LogEmitted?.Invoke(new LogEntry
+        LogEmitted?.Invoke(new()
         {
             Type = logType,
             Color = colorHex,

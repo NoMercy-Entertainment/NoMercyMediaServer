@@ -141,7 +141,7 @@ public class FileWatcherEventHandler : IDisposable
             else
             {
                 Logger.System($"FileWatcher: No matching records found for rename, treating as new content", LogEventLevel.Debug);
-                await OnFileCreated(new FileCreatedEvent
+                await OnFileCreated(new()
                 {
                     FolderPath = newHostFolder,
                     LibraryId = @event.LibraryId,

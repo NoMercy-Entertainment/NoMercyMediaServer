@@ -52,7 +52,7 @@ public class MusicPlaybackService
                 await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
                 IDbContextFactory<MediaContext> factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
                 await using MediaContext ctx = await factory.CreateDbContextAsync();
-                await ctx.MusicPlays.AddAsync(new MusicPlay(user.Id, playerState.CurrentItem.Id));
+                await ctx.MusicPlays.AddAsync(new(user.Id, playerState.CurrentItem.Id));
                 await ctx.SaveChangesAsync();
                 await PublishProgressEventAsync(user.Id, playerState);
             }

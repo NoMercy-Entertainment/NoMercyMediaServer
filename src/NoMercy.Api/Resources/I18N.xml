@@ -509,4 +509,8 @@
     <Key>Response status code does not indicate success: 400 (Bad Request).</Key>
     <Value lang="nl">Responsstatuscode geeft geen succes aan: 400 (Ongeldig verzoek).</Value>
   </Entry>
+  <Entry>
+    <Key>Recommended for You</Key>
+    <Value lang="nl">Recommended for You</Value>
+  </Entry>
 </I18N>

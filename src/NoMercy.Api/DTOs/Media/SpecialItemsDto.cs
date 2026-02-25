@@ -231,7 +231,7 @@ public record SpecialItemsDto
             Link = new($"/genre/{g.Id}", UriKind.Relative)
         });
 
-        Rating = new Certification
+        Rating = new()
         {
             Rating = movie.CertificationRating ?? string.Empty,
             Iso31661 = movie.CertificationCountry ?? string.Empty
@@ -336,7 +336,7 @@ public record SpecialItemsDto
             Link = new($"/genre/{g.Id}", UriKind.Relative)
         });
 
-        Rating = new Certification
+        Rating = new()
         {
             Rating = tv.CertificationRating ?? string.Empty,
             Iso31661 = tv.CertificationCountry ?? string.Empty

@@ -1052,7 +1052,7 @@ public class MusicRepository(MediaContext mediaContext, IDbContextFactory<MediaC
         (List<ArtistCardDto> favArtists, List<AlbumCardDto> favAlbums, List<PlaylistCardDto> playlists) = favoritesTask.Result;
         (List<ArtistCardDto> latestArtists, List<MusicGenreCardDto> latestGenres, List<AlbumCardDto> latestAlbums) = latestTask.Result;
 
-        return new MusicStartPageData
+        return new()
         {
             TopArtist = topArtist,
             TopAlbum = topAlbum,

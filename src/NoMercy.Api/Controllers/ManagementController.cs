@@ -64,7 +64,7 @@ public class ManagementController(
             SetupPhase = setupState.CurrentPhase.ToString(),
             InternalAddress = networkDiscovery.InternalAddress,
             ExternalAddress = networkDiscovery.ExternalAddress,
-            AppStatus = new AppProcessStatusDto
+            AppStatus = new()
             {
                 Running = appProcessManager.IsRunning,
                 Pid = appProcessManager.ProcessId

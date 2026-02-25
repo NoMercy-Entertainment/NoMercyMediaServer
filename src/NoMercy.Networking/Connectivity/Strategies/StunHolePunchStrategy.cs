@@ -31,7 +31,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         try
         {
             int localPort = Config.StunPort;
-            _stunSocket = new UdpClient(localPort);
+            _stunSocket = new(localPort);
 
             // Send STUN binding request to first server
             IPEndPoint? firstResult = await SendStunBindingRequest(StunServers[0].Host, StunServers[0].Port, ct);
@@ -76,7 +76,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             Logger.Setup($"STUN discovered public endpoint: {Config.StunPublicIp}:{Config.StunPublicPort}");
 
             // Start keep-alive to maintain NAT mapping
-            _keepAliveTimer = new Timer(async _ =>
+            _keepAliveTimer = new(async _ =>
             {
                 try
                 {
@@ -107,7 +107,7 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
         {
             IPAddress[] addresses = await Dns.GetHostAddressesAsync(host, ct);
             IPAddress serverAddress = addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork)
-                ?? throw new Exception($"Could not resolve {host}");
+                ?? throw new($"Could not resolve {host}");
             IPEndPoint serverEndpoint = new(serverAddress, port);
 
             // Build STUN binding request (RFC 5389)
@@ -131,10 +131,10 @@ public class StunHolePunchStrategy : IConnectivityStrategy, IDisposable
             foreach (StunAttribute attr in response.Attributes)
             {
                 if (attr.Value is XorMappedAddressStunAttributeValue { Address: not null } xorMapped)
-                    return new IPEndPoint(xorMapped.Address, xorMapped.Port);
+                    return new(xorMapped.Address, xorMapped.Port);
 
                 if (attr.Value is MappedAddressStunAttributeValue { Address: not null } mapped)
-                    return new IPEndPoint(mapped.Address, mapped.Port);
+                    return new(mapped.Address, mapped.Port);
             }
 
             return null;
