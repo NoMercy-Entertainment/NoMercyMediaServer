@@ -92,7 +92,7 @@ public class RecommendationRepository
             .AsNoTracking()
             .Where(r => r.TvFromId != null)
             .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(r => r.TvFrom!.Library.Type != Config.AnimeMediaType)
+            .Where(r => r.TvFrom!.MediaType != Config.AnimeMediaType)
             .Where(r => !context.Tvs.Any(t => t.Id == r.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Select(r => r.MediaId)
             .Distinct()
@@ -103,7 +103,7 @@ public class RecommendationRepository
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context.Recommendations
             .AsNoTracking()
             .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
-            .Where(r => r.TvFrom!.Library.Type != Config.AnimeMediaType)
+            .Where(r => r.TvFrom!.MediaType != Config.AnimeMediaType)
             .Select(r => new { r.MediaId, r.Title, r.TitleSort, r.Overview, r.Poster, r.Backdrop, r._colorPalette, r.TvFromId })
             .ToListAsync(ct)
             .ContinueWith(t => t.Result
@@ -138,7 +138,7 @@ public class RecommendationRepository
             .AsNoTracking()
             .Where(r => r.TvFromId != null)
             .Where(r => r.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(r => r.TvFrom!.Library.Type == Config.AnimeMediaType)
+            .Where(r => r.TvFrom!.MediaType == Config.AnimeMediaType)
             .Where(r => !context.Tvs.Any(t => t.Id == r.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Select(r => r.MediaId)
             .Distinct()
@@ -149,7 +149,7 @@ public class RecommendationRepository
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context.Recommendations
             .AsNoTracking()
             .Where(r => mediaIds.Contains(r.MediaId) && r.TvFromId != null)
-            .Where(r => r.TvFrom!.Library.Type == Config.AnimeMediaType)
+            .Where(r => r.TvFrom!.MediaType == Config.AnimeMediaType)
             .Select(r => new { r.MediaId, r.Title, r.TitleSort, r.Overview, r.Poster, r.Backdrop, r._colorPalette, r.TvFromId })
             .ToListAsync(ct)
             .ContinueWith(t => t.Result
@@ -228,7 +228,7 @@ public class RecommendationRepository
             .AsNoTracking()
             .Where(s => s.TvFromId != null)
             .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(s => s.TvFrom!.Library.Type != Config.AnimeMediaType)
+            .Where(s => s.TvFrom!.MediaType != Config.AnimeMediaType)
             .Where(s => !context.Tvs.Any(t => t.Id == s.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Select(s => s.MediaId)
             .Distinct()
@@ -239,7 +239,7 @@ public class RecommendationRepository
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context.Similar
             .AsNoTracking()
             .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
-            .Where(s => s.TvFrom!.Library.Type != Config.AnimeMediaType)
+            .Where(s => s.TvFrom!.MediaType != Config.AnimeMediaType)
             .Select(s => new { s.MediaId, s.Title, s.TitleSort, s.Overview, s.Poster, s.Backdrop, s._colorPalette, s.TvFromId })
             .ToListAsync(ct)
             .ContinueWith(t => t.Result
@@ -274,7 +274,7 @@ public class RecommendationRepository
             .AsNoTracking()
             .Where(s => s.TvFromId != null)
             .Where(s => s.TvFrom!.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(s => s.TvFrom!.Library.Type == Config.AnimeMediaType)
+            .Where(s => s.TvFrom!.MediaType == Config.AnimeMediaType)
             .Where(s => !context.Tvs.Any(t => t.Id == s.MediaId && t.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Select(s => s.MediaId)
             .Distinct()
@@ -285,7 +285,7 @@ public class RecommendationRepository
         Dictionary<int, RecommendationCandidateDto> metadataMap = await context.Similar
             .AsNoTracking()
             .Where(s => mediaIds.Contains(s.MediaId) && s.TvFromId != null)
-            .Where(s => s.TvFrom!.Library.Type == Config.AnimeMediaType)
+            .Where(s => s.TvFrom!.MediaType == Config.AnimeMediaType)
             .Select(s => new { s.MediaId, s.Title, s.TitleSort, s.Overview, s.Poster, s.Backdrop, s._colorPalette, s.TvFromId })
             .ToListAsync(ct)
             .ContinueWith(t => t.Result
@@ -348,7 +348,7 @@ public class RecommendationRepository
         var keywordTvRows = await context.KeywordTv
             .AsNoTracking()
             .Where(kt => specificKeywordIds.Contains(kt.KeywordId))
-            .Where(kt => context.Tvs.Any(t => t.Id == kt.TvId && t.Library.Type != Config.AnimeMediaType))
+            .Where(kt => context.Tvs.Any(t => t.Id == kt.TvId && t.MediaType != Config.AnimeMediaType))
             .Where(kt => !context.Tvs.Any(t => t.Id == kt.TvId && t.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Select(kt => new { kt.TvId, kt.KeywordId })
             .ToListAsync(ct);
@@ -439,7 +439,7 @@ public class RecommendationRepository
         var keywordTvRows = await context.KeywordTv
             .AsNoTracking()
             .Where(kt => specificKeywordIds.Contains(kt.KeywordId))
-            .Where(kt => context.Tvs.Any(t => t.Id == kt.TvId && t.Library.Type == Config.AnimeMediaType))
+            .Where(kt => context.Tvs.Any(t => t.Id == kt.TvId && t.MediaType == Config.AnimeMediaType))
             .Where(kt => !context.Tvs.Any(t => t.Id == kt.TvId && t.Library.LibraryUsers.Any(u => u.UserId == userId)))
             .Select(kt => new { kt.TvId, kt.KeywordId })
             .ToListAsync(ct);
@@ -653,7 +653,7 @@ public class RecommendationRepository
         var tvShows = await context.Tvs
             .AsNoTracking()
             .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(t => t.Library.Type != Config.AnimeMediaType)
+            .Where(t => t.MediaType != Config.AnimeMediaType)
             .Where(t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
             .Select(t => new
             {
@@ -713,7 +713,7 @@ public class RecommendationRepository
         var animeShows = await context.Tvs
             .AsNoTracking()
             .Where(t => t.Library.LibraryUsers.Any(u => u.UserId == userId))
-            .Where(t => t.Library.Type == Config.AnimeMediaType)
+            .Where(t => t.MediaType == Config.AnimeMediaType)
             .Where(t => t.Episodes.Any(e => e.SeasonNumber > 0 && e.VideoFiles.Any()))
             .Select(t => new
             {

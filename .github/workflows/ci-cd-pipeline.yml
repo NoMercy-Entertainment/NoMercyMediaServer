@@ -72,6 +72,7 @@ jobs:
       packages: write
     with:
       version: ${{ needs.version_management.outputs.version }}
+      ref: ${{ github.sha }}
 
   # Step 6: Create Release, squash merge to main, and sync dev
   # Only runs after ALL builds succeed — version bump is atomic with release

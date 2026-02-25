@@ -4,8 +4,9 @@
 FROM debian:bookworm-slim
 WORKDIR /app
 
-# Install AMD Mesa drivers and VAAPI libraries
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install AMD Mesa drivers and VAAPI libraries (enable contrib for nvtop)
+RUN sed -i 's/Components: main/Components: main contrib/' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y --no-install-recommends \
     mesa-va-drivers \
     mesa-vulkan-drivers \
     libva2 \

@@ -98,36 +98,40 @@ public class RecommendationsController(
 
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
-        int animeShowCount = await context.Tvs
+        // Count by Library.Type (container level)
+        int animeByLibraryType = await context.Tvs
             .CountAsync(t => t.Library.Type == Config.AnimeMediaType, ct);
+
+        // Count by Tv.MediaType (per-show Kitsu.io detection)
+        int animeByMediaType = await context.Tvs
+            .CountAsync(t => t.MediaType == Config.AnimeMediaType, ct);
 
         int totalRecsWithTv = await context.Recommendations
             .CountAsync(r => r.TvFromId != null, ct);
 
-        int animeRecs = await context.Recommendations
+        int animeRecsByMediaType = await context.Recommendations
             .CountAsync(r => r.TvFromId != null
-                && context.Tvs.Any(t => t.Id == r.TvFromId && t.Library.Type == Config.AnimeMediaType), ct);
+                && context.Tvs.Any(t => t.Id == r.TvFromId && t.MediaType == Config.AnimeMediaType), ct);
 
         int totalSimWithTv = await context.Similar
             .CountAsync(s => s.TvFromId != null, ct);
 
-        int animeSim = await context.Similar
+        int animeSimByMediaType = await context.Similar
             .CountAsync(s => s.TvFromId != null
-                && context.Tvs.Any(t => t.Id == s.TvFromId && t.Library.Type == Config.AnimeMediaType), ct);
+                && context.Tvs.Any(t => t.Id == s.TvFromId && t.MediaType == Config.AnimeMediaType), ct);
 
         List<string> libraryTypes = await context.Libraries
             .Select(l => l.Title + " (" + l.Type + ")")
             .ToListAsync(ct);
 
-        // Sample: first 5 anime show IDs
+        // Sample: first 5 anime show IDs (by Tv.MediaType)
         List<int> sampleAnimeIds = await context.Tvs
-            .Where(t => t.Library.Type == Config.AnimeMediaType)
+            .Where(t => t.MediaType == Config.AnimeMediaType)
             .OrderBy(t => t.Id)
             .Take(5)
             .Select(t => t.Id)
             .ToListAsync(ct);
 
-        // Check if those IDs have any recs/similar
         int sampleRecsCount = sampleAnimeIds.Count > 0
             ? await context.Recommendations.CountAsync(r => sampleAnimeIds.Contains(r.TvFromId!.Value), ct)
             : 0;
@@ -135,11 +139,12 @@ public class RecommendationsController(
         return Ok(new
         {
             libraries = libraryTypes,
-            animeShowCount,
+            animeByLibraryType,
+            animeByMediaType,
             totalRecsWithTv,
-            animeRecs,
+            animeRecsByMediaType,
             totalSimWithTv,
-            animeSim,
+            animeSimByMediaType,
             sampleAnimeIds,
             sampleRecsCount
         });
