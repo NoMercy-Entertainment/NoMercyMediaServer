@@ -511,6 +511,10 @@
   </Entry>
   <Entry>
     <Key>Recommended for You</Key>
-    <Value lang="nl">Recommended for You</Value>
+    <Value lang="nl">Aanbevolen voor jou</Value>
+  </Entry>
+  <Entry>
+    <Key>Scanning {0} library for new items.</Key>
+    <Value lang="nl">{0} bibliotheek scannen op nieuwe items.</Value>
   </Entry>
 </I18N>

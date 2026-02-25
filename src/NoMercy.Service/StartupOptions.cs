@@ -66,7 +66,7 @@ public class StartupOptions
         {
             string? envLogLevel = Environment.GetEnvironmentVariable("NOMERCY_LOG_LEVEL");
             if (!string.IsNullOrEmpty(envLogLevel))
-                LogLevel = envLogLevel;
+                LogLevel = envLogLevel.Trim();
         }
 
         if (!ShouldSeed)
