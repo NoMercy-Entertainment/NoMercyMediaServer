@@ -8,9 +8,11 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.TV;
+using Serilog.Events;
 
 namespace NoMercy.Api.Services;
 
@@ -83,6 +85,11 @@ public class RecommendationService
         Task<UserAffinityProfile> affinityTask = GetOrBuildAffinityProfileAsync(userId, ct);
 
         await Task.WhenAll(movieRecsTask, tvRecsTask, animeRecsTask, movieSimTask, tvSimTask, animeSimTask, affinityTask);
+
+        Logger.App($"Recommendations [{mediaTypeFilter}]: recs={animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count}, " +
+                   $"similar={animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count}, " +
+                   $"affinity sources={affinityTask.Result.SourceItems.Count}",
+            LogEventLevel.Debug);
 
         UserAffinityProfile profile = affinityTask.Result;
 
@@ -205,6 +212,9 @@ public class RecommendationService
             .GroupBy(s => s.Id)
             .Select(g => g.OrderByDescending(s => s.Score).First())
             .ToList();
+
+        Logger.App($"Recommendations [{mediaTypeFilter}]: merged={allCandidates.Count}, scored={scored.Count}, deduped={deduped.Count}",
+            LogEventLevel.Debug);
 
         // Phase 5: Diversity selection — guarantee floor representation per media type
         return SelectWithDiversity(deduped, take);
