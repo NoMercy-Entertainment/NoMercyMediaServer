@@ -21,6 +21,7 @@ public class DashboardHub : ConnectionHub
     {
         await base.OnConnectedAsync();
         Logger.Socket("Dashboard client connected");
+        LogBroadcaster.StartBroadcasting(_clientMessenger);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -39,6 +40,9 @@ public class DashboardHub : ConnectionHub
     public void StopResources()
     {
         if (ConnectedClients.Clients.Values.All(x => x.Endpoint != "/dashboardHub"))
+        {
             ResourceMonitor.StopBroadcasting();
+            LogBroadcaster.StopBroadcasting();
+        }
     }
 }

@@ -9,11 +9,7 @@ public static class LogReader
 {
     public static async Task<List<LogEntry>> GetLogsAsync(
         string logDirectoryPath,
-        int limit = 10,
-        int page = 1,
-        string? typeFilter = null,
-        string? levelFilter = null,
-        string? messageFilter = null)
+        Func<LogEntry, bool>? filter = null)
     {
         if (!Directory.Exists(logDirectoryPath))
             throw new DirectoryNotFoundException($"Log directory not found: {logDirectoryPath}");
@@ -22,17 +18,10 @@ public static class LogReader
         List<LogEntry> logEntries = [];
 
         IEnumerable<Task<IEnumerable<LogEntry>>> tasks = logFiles.Select(fileInfo =>
-            ProcessFileAsync(fileInfo.FullName, typeFilter, levelFilter, messageFilter));
+            ProcessFileAsync(fileInfo.FullName, filter));
         IEnumerable<LogEntry>[] results = await Task.WhenAll(tasks);
 
         foreach (IEnumerable<LogEntry> entries in results) logEntries.AddRange(entries);
-
-        logEntries = logEntries
-            .OrderByDescending(entry => entry.Time)
-            .Skip((page - 1) * limit)
-            .Take(limit)
-            .OrderBy(entry => entry.Time)
-            .ToList();
 
         return logEntries;
     }
@@ -46,9 +35,7 @@ public static class LogReader
 
     private static async Task<IEnumerable<LogEntry>> ProcessFileAsync(
         string filePath,
-        string? typeFilter,
-        string? levelFilter,
-        string? messageFilter)
+        Func<LogEntry, bool>? filter)
     {
         List<LogEntry> logEntries = new();
         FileInfo fileInfo = new(filePath);
@@ -68,15 +55,12 @@ public static class LogReader
                 try
                 {
                     LogEntry? logEntry = JsonSerializer.Deserialize<LogEntry>(line);
-                    if (logEntry != null &&
-                        (typeFilter == null || logEntry.Type == typeFilter) &&
-                        (levelFilter == null || logEntry.Level == levelFilter) &&
-                        (messageFilter == null || logEntry.Message.Contains(messageFilter)))
+                    if (logEntry != null && (filter == null || filter(logEntry)))
                         logEntries.Add(logEntry);
                 }
-                catch (JsonException jsonEx)
+                catch (JsonException)
                 {
-                    Logger.App($"Error deserializing line in file {filePath}: {jsonEx.Message}", LogEventLevel.Error);
+                    // Skip malformed lines
                 }
         }
         catch (Exception ex)

@@ -291,10 +291,12 @@ public static class Logger
     public static async Task<List<LogEntry>> GetLogs(int limit = 10, Func<LogEntry, bool>? filter = null)
     {
         string logDirectoryPath = AppFiles.LogPath;
-        List<LogEntry> logs = await LogReader.GetLogsAsync(logDirectoryPath, limit);
+        List<LogEntry> logs = await LogReader.GetLogsAsync(logDirectoryPath, filter: filter);
 
-        if (filter != null) logs = logs.Where(filter).ToList();
-
-        return logs;
+        return logs
+            .OrderByDescending(entry => entry.Time)
+            .Take(limit)
+            .OrderBy(entry => entry.Time)
+            .ToList();
     }
 }

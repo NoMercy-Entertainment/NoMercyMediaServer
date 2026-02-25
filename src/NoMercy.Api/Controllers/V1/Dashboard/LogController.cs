@@ -2,7 +2,6 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.SystemCalls;
@@ -18,18 +17,21 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 public class LogController : BaseController
 {
     [HttpGet]
-    public async Task<IActionResult> GetLogs([FromQuery] GetLogsRequestDto request)
+    public async Task<IActionResult> GetLogs(
+        [FromQuery] int limit = 50,
+        [FromQuery] string[]? types = null,
+        [FromQuery] string[]? levels = null,
+        [FromQuery] string? filter = null)
     {
-        List<LogEntry> logs = await Logger.GetLogs(request.Limit, entry =>
+        List<LogEntry> logs = await Logger.GetLogs(limit, entry =>
         {
-            bool typeMatch = request.Types == null || request.Types.Length == 0 ||
-                             request.Types.Any(t => string.Equals(t, entry.Type, StringComparison.OrdinalIgnoreCase));
-            bool levelMatch = request.Levels == null || request.Levels.Length == 0 ||
-                              request.Levels.Contains(entry.Level.ToString(), StringComparer.OrdinalIgnoreCase);
+            bool typeMatch = types == null || types.Length == 0 ||
+                             types.Any(t => string.Equals(t, entry.Type, StringComparison.OrdinalIgnoreCase));
+            bool levelMatch = levels == null || levels.Length == 0 ||
+                              levels.Contains(entry.Level.ToString(), StringComparer.OrdinalIgnoreCase);
 
-            if (!string.IsNullOrEmpty(request.Filter))
+            if (!string.IsNullOrEmpty(filter))
             {
-                string filter = request.Filter.ToLower();
                 return typeMatch && levelMatch &&
                        entry.Message.Contains(filter, StringComparison.CurrentCultureIgnoreCase);
             }

@@ -166,7 +166,12 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
                 return;
             }
 
-            List<LogEntry> diskLogs = await LogReader.GetLogsAsync(logPath, _tailCount);
+            List<LogEntry> diskLogs = await LogReader.GetLogsAsync(logPath);
+            diskLogs = diskLogs
+                .OrderByDescending(e => e.Time)
+                .Take(_tailCount)
+                .OrderBy(e => e.Time)
+                .ToList();
 
             LogEntries.Clear();
             foreach (LogEntry entry in diskLogs)
