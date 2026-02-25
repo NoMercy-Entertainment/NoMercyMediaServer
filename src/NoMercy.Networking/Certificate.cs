@@ -117,6 +117,10 @@ public static class Certificate
 
         try
         {
+            if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
+                throw new InvalidOperationException(
+                    "No access token available for certificate request — re-authentication required");
+
             using HttpClient client = DnsHttpClient.WithDns();
             client.BaseAddress = new(Config.ApiServerBaseUrl);
             client.Timeout = TimeSpan.FromMinutes(10);
@@ -133,11 +137,12 @@ public static class Certificate
                     if (await FetchCertificate(maxRetries, client, serverUrl, attempt, hasExistingCert))
                         return;
                 }
-                catch (HttpRequestException ex) when (attempt < maxRetries)
+                catch (Exception ex) when (attempt < maxRetries &&
+                    (ex is HttpRequestException || ex is InvalidOperationException))
                 {
                     int delay = CertBackoffSeconds[Math.Min(attempt - 1, CertBackoffSeconds.Length - 1)];
                     Logger.Certificate(
-                        $"Request failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})");
+                        $"Certificate attempt failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})");
                     await Task.Delay(TimeSpan.FromSeconds(delay));
                 }
         }
@@ -168,7 +173,15 @@ public static class Certificate
         response.EnsureSuccessStatusCode();
         string content = await response.Content.ReadAsStringAsync();
         ApiResponse<CertificateResponse> data = content.FromJson<ApiResponse<CertificateResponse>>()
-                                                ?? throw new("Failed to deserialize JSON");
+                                                ?? throw new("Failed to deserialize certificate JSON");
+
+        if (data.Data is null)
+            throw new InvalidOperationException(
+                $"Certificate API returned no data (status: {data.Status ?? "unknown"}, message: {data.Message ?? "none"})");
+
+        if (string.IsNullOrEmpty(data.Data.PrivateKey) || string.IsNullOrEmpty(data.Data.Certificate))
+            throw new InvalidOperationException(
+                $"Certificate API returned incomplete data (status: {data.Status ?? "unknown"})");
 
         if (File.Exists(AppFiles.KeyFile))
             File.Delete(AppFiles.KeyFile);

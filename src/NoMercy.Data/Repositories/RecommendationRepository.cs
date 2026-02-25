@@ -380,7 +380,7 @@ public class RecommendationRepository
             .Where(g => metaMap.ContainsKey(g.Key))
             .Select(g =>
             {
-                var meta = metaMap[g.Key];
+                (string Title, string TitleSort, string? Overview, string? Poster, string? Backdrop, string Palette) meta = metaMap[g.Key];
                 HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
                 List<int> sourceMovieIds = movieKeywordMap
                     .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
@@ -468,7 +468,7 @@ public class RecommendationRepository
             .Where(g => metaMap.ContainsKey(g.Key))
             .Select(g =>
             {
-                var meta = metaMap[g.Key];
+                (string Title, string TitleSort, string? Overview, string? Poster, string? Backdrop, string Palette) meta = metaMap[g.Key];
                 HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
                 List<int> sourceMovieIds = movieKeywordMap
                     .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
@@ -560,7 +560,7 @@ public class RecommendationRepository
             .Where(g => metaMap.ContainsKey(g.Key))
             .Select(g =>
             {
-                var meta = metaMap[g.Key];
+                (string Title, string TitleSort, string? Overview, string? Poster, string? Backdrop, string Palette) meta = metaMap[g.Key];
                 HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
                 List<int> sourceTvIds = tvKeywordMap
                     .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))

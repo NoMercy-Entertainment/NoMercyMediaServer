@@ -224,15 +224,15 @@ public static class HlsPlaylistGenerator
 
         VideoVariantInfo[] probeResults = await Task.WhenAll(probeTasks);
 
-        var videoGroups = probeResults
+        List<IGrouping<string, VideoVariantInfo>> videoGroups = probeResults
             .Where(x => !string.IsNullOrEmpty(x.Resolution))
             .GroupBy(v => v.Resolution)
             .ToList();
 
-        foreach (var group in videoGroups)
+        foreach (IGrouping<string, VideoVariantInfo> group in videoGroups)
         {
             // Order HDR/SDR so SDR appears first if present
-            foreach (var video in group.OrderByDescending(v => v.IsSdr))
+            foreach (VideoVariantInfo video in group.OrderByDescending(v => v.IsSdr))
             {
                 foreach (string audioGroup in audioGroups.Keys)
                 {
@@ -254,31 +254,32 @@ public static class HlsPlaylistGenerator
                         codecs = audioCodec;
 
                     // Build complete STREAM-INF tag with all metadata
-                    string streamInf = $"#EXT-X-STREAM-INF:BANDWIDTH={video.Bandwidth}";
-                    streamInf += $",AVERAGE-BANDWIDTH={video.AverageBandwidth}";
-                    streamInf += $",RESOLUTION={video.Resolution}";
+                    StringBuilder streamInf = new();
+                    streamInf.Append($"#EXT-X-STREAM-INF:BANDWIDTH={video.Bandwidth}");
+                    streamInf.Append($",AVERAGE-BANDWIDTH={video.AverageBandwidth}");
+                    streamInf.Append($",RESOLUTION={video.Resolution}");
                     
                     if (video.FrameRate > 0)
-                        streamInf += $",FRAME-RATE={video.FrameRate:F3}";
+                        streamInf.Append($",FRAME-RATE={video.FrameRate:F3}");
                     
-                    streamInf += $",CODECS=\"{codecs}\"";
-                    streamInf += $",AUDIO=\"audio_{audioGroup}\"";
+                    streamInf.Append($",CODECS=\"{codecs}\"");
+                    streamInf.Append($",AUDIO=\"audio_{audioGroup}\"");
                     
                     // Add VIDEO-RANGE and COLOUR-SPACE
                     if (video.IsSdr)
                     {
-                        streamInf += ",VIDEO-RANGE=SDR,COLOUR-SPACE=BT.709";
+                        streamInf.Append(",VIDEO-RANGE=SDR,COLOUR-SPACE=BT.709");
                     }
                     else
                     {
-                        streamInf += ",VIDEO-RANGE=PQ,COLOUR-SPACE=BT.2020";
+                        streamInf.Append(",VIDEO-RANGE=PQ,COLOUR-SPACE=BT.2020");
                         // Extended HDR metadata for PQ (HDR10)
-                        streamInf += ",REQ-VIDEO-LAYOUT=BYTE";
+                        streamInf.Append(",REQ-VIDEO-LAYOUT=BYTE");
                     }
                     
-                    streamInf += $",NAME=\"{streamName}\"";
+                    streamInf.Append($",NAME=\"{streamName}\"");
                     
-                    masterPlaylist.AppendLine(streamInf);
+                    masterPlaylist.AppendLine(streamInf.ToString());
                     masterPlaylist.AppendLine($"{video.FolderName}/{Path.GetFileName(video.VideoFile)}");
                     masterPlaylist.AppendLine();
                 }

@@ -113,8 +113,21 @@ public static class DegradedModeRecovery
                 {
                     try
                     {
+                        // Ensure token is still valid before attempting registration
+                        if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
+                        {
+                            Logger.App("Access token missing before deferred registration — re-authenticating",
+                                LogEventLevel.Warning);
+                            tasks.Authenticated = await Auth.InitWithFallback();
+                        }
+
                         await Register.Init();
                         tasks.Registered = true;
+                    }
+                    catch (InvalidOperationException e) when (e.Message.Contains("cooldown"))
+                    {
+                        // Cooldown active — will retry on next loop iteration
+                        Logger.App($"Deferred registration deferred: {e.Message}", LogEventLevel.Debug);
                     }
                     catch (Exception e)
                     {

@@ -62,10 +62,21 @@ public static class Register
     private const int DefaultMaxRetries = 5;
     private static readonly int[] BackoffSeconds = [2, 5, 15, 30, 60];
     private static readonly SemaphoreSlim InitLock = new(1, 1);
+    private static DateTime _lastFailureUtc = DateTime.MinValue;
+    private static readonly TimeSpan FailureCooldown = TimeSpan.FromSeconds(60);
     public static bool IsRegistered { get; private set; }
 
     public static async Task Init(int maxRetries = DefaultMaxRetries)
     {
+        // Prevent rapid retries after a recent failure
+        TimeSpan sinceLastFailure = DateTime.UtcNow - _lastFailureUtc;
+        if (sinceLastFailure < FailureCooldown)
+        {
+            Logger.Register(
+                $"Registration failed recently, cooling down for {(FailureCooldown - sinceLastFailure).TotalSeconds:F0}s");
+            throw new InvalidOperationException("Registration on cooldown after recent failure");
+        }
+
         if (!await InitLock.WaitAsync(0))
         {
             Logger.Register("Registration already in progress, skipping duplicate call");
@@ -78,6 +89,11 @@ public static class Register
             await AssignServerWithRetry(maxRetries);
             await Certificate.RenewSslCertificate();
             IsRegistered = true;
+        }
+        catch
+        {
+            _lastFailureUtc = DateTime.UtcNow;
+            throw;
         }
         finally
         {
