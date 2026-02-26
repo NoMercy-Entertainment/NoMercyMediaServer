@@ -517,4 +517,8 @@
     <Key>Scanning {0} library for new items.</Key>
     <Value lang="nl">{0} bibliotheek scannen op nieuwe items.</Value>
   </Entry>
+  <Entry>
+    <Key>Successfully retrieved {0} special.</Key>
+    <Value lang="nl">Successfully retrieved {0} special.</Value>
+  </Entry>
 </I18N>

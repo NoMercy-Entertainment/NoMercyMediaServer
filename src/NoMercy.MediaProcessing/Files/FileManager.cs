@@ -60,16 +60,21 @@ public partial class FileManager(
         await using IDbContextTransaction transaction = await fileRepository.BeginTransactionAsync();
         try
         {
-            // Remove all existing file records to avoid lingering stale entries
-            switch (library.Type)
+            // Only clear all existing records during a full rescan (no filter).
+            // When a filter is set (e.g. after encoding a single episode), we just upsert
+            // the new files without deleting the rest of the show's records.
+            if (Filter is null)
             {
-                case Config.MovieMediaType:
-                    await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
-                    break;
-                case Config.TvMediaType:
-                case Config.AnimeMediaType:
-                    await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
-                    break;
+                switch (library.Type)
+                {
+                    case Config.MovieMediaType:
+                        await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
+                        break;
+                    case Config.TvMediaType:
+                    case Config.AnimeMediaType:
+                        await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
+                        break;
+                }
             }
 
             switch (library.Type)

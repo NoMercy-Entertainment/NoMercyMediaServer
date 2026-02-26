@@ -58,6 +58,25 @@ public class VideoHub : ConnectionHub
 
         if (user is null) return;
 
+        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
+
+        bool videoFileExists = await mediaContext.VideoFiles.AnyAsync(v => v.Id == request.VideoId);
+        if (!videoFileExists) return;
+
+        int? movieId = request.PlaylistType == Config.MovieMediaType ? request.TmdbId : null;
+        int? tvId = request.PlaylistType == Config.TvMediaType ? request.TmdbId : null;
+        int? collectionId = request.PlaylistType == Config.CollectionMediaType
+            ? int.Parse(request.PlaylistId)
+            : null;
+        Ulid? specialId = request.PlaylistType == Config.SpecialMediaType
+            ? Ulid.Parse(request.PlaylistId)
+            : null;
+
+        if (movieId is not null && !await mediaContext.Movies.AnyAsync(m => m.Id == movieId)) return;
+        if (tvId is not null && !await mediaContext.Tvs.AnyAsync(t => t.Id == tvId)) return;
+        if (collectionId is not null && !await mediaContext.Collections.AnyAsync(c => c.Id == collectionId)) return;
+        if (specialId is not null && !await mediaContext.Specials.AnyAsync(s => s.Id == specialId)) return;
+
         UserData userdata = new()
         {
             Audio = request.Audio,
@@ -67,21 +86,11 @@ public class VideoHub : ConnectionHub
             Type = request.PlaylistType,
             Time = request.Time,
             VideoFileId = request.VideoId,
-            MovieId = request.PlaylistType == Config.MovieMediaType 
-                ? request.TmdbId
-                : null,
-            TvId = request.PlaylistType == Config.TvMediaType
-                ? request.TmdbId
-                : null,
-            CollectionId = request.PlaylistType == Config.CollectionMediaType
-                ? int.Parse(request.PlaylistId) 
-                : null,
-            SpecialId = request.PlaylistType == Config.SpecialMediaType
-                ? Ulid.Parse(request.PlaylistId) 
-                : null
+            MovieId = movieId,
+            TvId = tvId,
+            CollectionId = collectionId,
+            SpecialId = specialId
         };
-
-        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
 
         UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(userdata);
 
