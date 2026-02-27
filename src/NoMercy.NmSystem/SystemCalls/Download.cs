@@ -14,12 +14,20 @@ public static class Download
         
     }
 
-    public static async Task<string> DownloadFile(string name, Uri url, string? outputName = null)
+    public static async Task<string> DownloadFile(string name, Uri url, string? outputPath = null)
     {
         Logger.System($"Downloading {name}", LogEventLevel.Verbose);
 
-        string baseName = outputName ?? Path.GetFileName(url.ToString());
-        string filePath = Path.Combine(AppFiles.DependenciesPath, baseName);
+        string filePath;
+        if (outputPath is not null && Path.IsPathRooted(outputPath))
+        {
+            filePath = outputPath;
+        }
+        else
+        {
+            string baseName = outputPath ?? Path.GetFileName(url.ToString());
+            filePath = Path.Combine(AppFiles.DependenciesPath, baseName);
+        }
 
         using HttpResponseMessage result = await HttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
         result.EnsureSuccessStatusCode();

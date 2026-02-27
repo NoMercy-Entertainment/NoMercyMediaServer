@@ -187,13 +187,32 @@ public class ManagementController(
             }
 
             Logger.Setup("Downloading server update on demand...");
-            await Binaries.DownloadServerUpdate();
+            ServerUpdateResult result = await Binaries.DownloadServerUpdate();
 
-            if (!System.IO.File.Exists(tempPath))
-                return StatusCode(500, new { status = "error", message = "Download completed but staged file not found. Server may already be up to date." });
+            switch (result)
+            {
+                case ServerUpdateResult.AlreadyUpToDate:
+                    return Ok(new { status = "ok", message = "Server is already up to date." });
 
-            Logger.Setup($"Server update staged at {tempPath}");
-            return Ok(new { status = "ok", message = "Update downloaded and staged.", path = tempPath });
+                case ServerUpdateResult.UseInstaller:
+                    return Ok(new { status = "ok", message = "This is an installer deployment. Use the installer to update." });
+
+                case ServerUpdateResult.RestartNeeded:
+                    return Ok(new { status = "ok", message = "Binary on disk is already the latest version, restart needed to apply." });
+
+                case ServerUpdateResult.NoAssetFound:
+                    return StatusCode(500, new { status = "error", message = "No suitable update asset found for the current platform." });
+
+                case ServerUpdateResult.Downloaded:
+                    if (!System.IO.File.Exists(tempPath))
+                        return StatusCode(500, new { status = "error", message = "Download completed but staged file not found." });
+
+                    Logger.Setup($"Server update staged at {tempPath}");
+                    return Ok(new { status = "ok", message = "Update downloaded and staged.", path = tempPath });
+
+                default:
+                    return StatusCode(500, new { status = "error", message = "Unexpected update result." });
+            }
         }
         catch (Exception e)
         {

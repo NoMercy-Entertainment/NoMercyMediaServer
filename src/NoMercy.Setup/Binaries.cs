@@ -14,6 +14,15 @@ using HttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Setup;
 
+public enum ServerUpdateResult
+{
+    Downloaded,
+    AlreadyUpToDate,
+    UseInstaller,
+    RestartNeeded,
+    NoAssetFound
+}
+
 public static class Binaries
 {
     private static readonly HttpClient HttpClient = new();
@@ -322,13 +331,13 @@ public static class Binaries
         await FilePermissions.SetExecutionPermissions(path);
     }
 
-    public static async Task DownloadServerUpdate()
+    public static async Task<ServerUpdateResult> DownloadServerUpdate()
     {
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubMediaServerApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
             Logger.Setup("No assets found for Server release.", LogEventLevel.Warning);
-            return;
+            return ServerUpdateResult.NoAssetFound;
         }
 
         string latestVersion = releaseInfo.TagName.StartsWith("v")
@@ -340,7 +349,7 @@ public static class Binaries
         if (string.Equals(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
         {
             Logger.Setup($"Server is already up to date (version {currentVersion})", LogEventLevel.Verbose);
-            return;
+            return ServerUpdateResult.AlreadyUpToDate;
         }
 
         if (Version.TryParse(latestVersion, out Version? latest) &&
@@ -348,7 +357,7 @@ public static class Binaries
             latest <= current)
         {
             Logger.Setup($"Server is already up to date (running {currentVersion}, latest release {latestVersion})", LogEventLevel.Verbose);
-            return;
+            return ServerUpdateResult.AlreadyUpToDate;
         }
 
         // Installer deployment: the installer handles updates, don't download to binaries path
@@ -356,7 +365,7 @@ public static class Binaries
         if (!string.IsNullOrEmpty(installDir))
         {
             Logger.Setup($"Server update available: {currentVersion} -> {latestVersion} (use installer to update)");
-            return;
+            return ServerUpdateResult.UseInstaller;
         }
 
         string? onDiskVersion = Software.GetFileVersion(AppFiles.ServerExePath);
@@ -364,7 +373,7 @@ public static class Binaries
             string.Equals(latestVersion, onDiskVersion, StringComparison.OrdinalIgnoreCase))
         {
             Logger.Setup($"Server binary on disk is already {onDiskVersion} (running {currentVersion}), restart needed to apply");
-            return;
+            return ServerUpdateResult.RestartNeeded;
         }
 
         Logger.Setup($"Server update available: {currentVersion} -> {latestVersion}");
@@ -397,7 +406,7 @@ public static class Binaries
         if (downloadUrl == null)
         {
             Logger.Setup("No suitable NoMercyMediaServer asset found for the current platform.", LogEventLevel.Warning);
-            return;
+            return ServerUpdateResult.NoAssetFound;
         }
 
         string path = await Downloader.DownloadFile("NoMercyMediaServer Update", downloadUrl, AppFiles.ServerTempExePath);
@@ -407,6 +416,7 @@ public static class Binaries
         await FilePermissions.SetExecutionPermissions(path);
 
         Logger.Setup($"Server update staged at {AppFiles.ServerTempExePath}");
+        return ServerUpdateResult.Downloaded;
     }
 
     private static async Task DownloadFfmpeg()
