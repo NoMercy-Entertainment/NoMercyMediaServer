@@ -36,4 +36,5 @@ public class MusicPlayerState
     [JsonProperty("timestamp")] public long Timestamp { get; set; }
     [JsonProperty("volume_percentage")] public int VolumePercentage { get; set; }
     [JsonProperty("seek_offset")] public int SeekOffset { get; set; }
+    [JsonIgnore] public DateTime IgnoreCurrentTimeUntil { get; set; }
 }

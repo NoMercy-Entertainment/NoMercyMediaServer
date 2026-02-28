@@ -42,8 +42,7 @@ public class SpecialController(SpecialRepository specialRepository, MediaContext
             ComponentEnvelope response = Component.Grid()
                 .WithItems(cardItems.Select(item => Component.Card()
                     .WithData(item)
-                    ))
-                ;
+                    ));
 
             return Ok(ComponentResponse.From(response));
         }

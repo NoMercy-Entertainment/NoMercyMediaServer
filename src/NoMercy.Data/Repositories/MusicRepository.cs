@@ -972,7 +972,7 @@ public class MusicRepository(MediaContext mediaContext, IDbContextFactory<MediaC
             .ToListAsync(ct);
     }
 
-    public Task<List<SearchTrackCardDto>> SearchTrackCardsAsync(List<Guid> trackIds, string country, CancellationToken ct = default)
+    public Task<List<SearchTrackCardDto>> SearchTrackCardsAsync(List<Guid> trackIds, Guid userId, string country, CancellationToken ct = default)
     {
         return mediaContext.Tracks
             .AsNoTracking()
@@ -991,7 +991,7 @@ public class MusicRepository(MediaContext mediaContext, IDbContextFactory<MediaC
                 TrackNumber = track.TrackNumber,
                 Quality = track.Quality,
                 UpdatedAt = track.UpdatedAt,
-                Favorite = track.TrackUser.Any(),
+                Favorite = track.TrackUser.Any(tu => tu.UserId == userId),
                 AlbumId = track.AlbumTrack.Select(at => at.AlbumId.ToString()).FirstOrDefault(),
                 AlbumName = track.AlbumTrack.Select(at => at.Album.Name).FirstOrDefault(),
                 AlbumCover = track.AlbumTrack.Select(at => at.Album.Cover).FirstOrDefault(),

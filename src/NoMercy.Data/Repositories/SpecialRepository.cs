@@ -29,8 +29,10 @@ public class SpecialDetailDto
 {
     public Ulid Id { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string TitleSort { get; set; } = string.Empty;
     public string? Overview { get; set; }
     public string? Backdrop { get; set; }
+    public string? Logo { get; set; }
     public string? Poster { get; set; }
     public string ColorPalette { get; set; } = string.Empty;
     public bool Favorite { get; set; }
@@ -171,14 +173,15 @@ public class SpecialRepository(MediaContext context)
     {
         return context.Specials
             .AsNoTracking()
+            .AsSingleQuery()
             .OrderBy(special => special.TitleSort)
             .Skip(page * take)
             .Take(take)
             .Select(special => new SpecialCardDto
             {
                 Id = special.Id,
-                Title = special.Title,
-                TitleSort = special.TitleSort,
+                Title = special.Title ?? string.Empty,
+                TitleSort = special.TitleSort ?? special.Title ?? string.Empty,
                 Overview = special.Overview,
                 Poster = special.Poster,
                 Backdrop = special.Backdrop,
@@ -208,14 +211,15 @@ public class SpecialRepository(MediaContext context)
     {
         return context.Specials
             .AsNoTracking()
+            .AsSingleQuery()
             .OrderBy(special => special.TitleSort)
             .Skip(page * take)
             .Take(take)
             .Select(special => new SpecialCardDto
             {
                 Id = special.Id,
-                Title = special.Title,
-                TitleSort = special.TitleSort,
+                Title = special.Title ?? string.Empty,
+                TitleSort = special.TitleSort ?? special.Title ?? string.Empty,
                 Overview = special.Overview,
                 Poster = special.Poster,
                 Backdrop = special.Backdrop,
@@ -250,9 +254,11 @@ public class SpecialRepository(MediaContext context)
             .Select(special => new SpecialDetailDto
             {
                 Id = special.Id,
-                Title = special.Title,
+                Title = special.Title ?? string.Empty,
+                TitleSort = special.TitleSort ?? special.Title ?? string.Empty,
                 Overview = special.Overview,
                 Backdrop = special.Backdrop,
+                Logo = special.Logo,
                 Poster = special.Poster,
                 ColorPalette = special._colorPalette,
                 Favorite = special.SpecialUser.Any(su => su.UserId == userId),

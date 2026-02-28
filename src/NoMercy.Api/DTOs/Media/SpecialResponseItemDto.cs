@@ -14,8 +14,9 @@ public record SpecialResponseItemDto
     [JsonProperty("title")] public string Title { get; set; }
     [JsonProperty("overview")] public string? Overview { get; set; }
     [JsonProperty("backdrop")] public string? Backdrop { get; set; }
+    [JsonProperty("logo")] public string? Logo { get; set; }
     [JsonProperty("poster")] public string? Poster { get; set; }
-    [JsonProperty("titleSort")] public string? TitleSort { get; set; }
+    [JsonProperty("titleSort")] public string TitleSort { get; set; }
     [JsonProperty("type")] public string Type { get; set; }
     [JsonProperty("media_type")] public string MediaType { get; set; }
     [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
@@ -94,6 +95,7 @@ public record SpecialResponseItemDto
         Overview = special.Overview;
         Backdrop = special.Backdrop?.Replace("https://storage.nomercy.tv/laravel", "");
         Poster = special.Poster;
+        Logo = special.Logo;
         TitleSort = special.Title.TitleSort();
         Type = "specials";
         MediaType = "specials";
@@ -133,6 +135,7 @@ public record SpecialResponseItemDto
         Title = special.Title;
         Overview = special.Overview;
         Backdrop = special.Backdrop?.Replace("https://storage.nomercy.tv/laravel", "");
+        Logo = special.Logo;
         Poster = special.Poster;
         TitleSort = special.Title.TitleSort();
         Type = "specials";
@@ -224,6 +227,7 @@ public record SpecialResponseItemDto
         Overview = detail.Overview;
         Backdrop = detail.Backdrop?.Replace("https://storage.nomercy.tv/laravel", "");
         Poster = detail.Poster;
+        Logo = detail.Logo;
         TitleSort = detail.Title.TitleSort();
         Type = "specials";
         MediaType = "specials";

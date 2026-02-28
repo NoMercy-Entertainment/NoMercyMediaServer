@@ -103,7 +103,9 @@ public class MusicHub : ConnectionHub
     {
         Device device = GetCurrentDevice(user);
         MusicPlayerState musicPlayerState = MusicPlayerStateFactory.Create(device, item, playlist, type, listId);
+        musicPlayerState.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
 
+        _musicPlaybackService.RemoveTimer(user.Id);
         _musicPlayerStateManager.UpdateState(user.Id, musicPlayerState);
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, musicPlayerState);
@@ -144,11 +146,15 @@ public class MusicHub : ConnectionHub
 
     private async Task HandleTrackReorder(User user, MusicPlayerState state, PlaylistTrackDto item)
     {
+        // Stop the old timer before modifying state to prevent race conditions
+        _musicPlaybackService.RemoveTimer(user.Id);
+
         // Check if it's the current item
         if (state.CurrentItem?.Id == item.Id)
         {
             // Already playing this track, just restart it
             state.Time = 0;
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             state.PlayState = true;
             UpdateActionsDisallows(state);
             _musicPlaybackService.StartPlaybackTimer(user);
@@ -181,6 +187,7 @@ public class MusicHub : ConnectionHub
             // The remaining playlist continues naturally from here
             state.CurrentItem = item;
             state.Time = 0;
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             state.PlayState = true;
             state.Duration = item.Duration.ToMilliSeconds();
         }
@@ -188,22 +195,23 @@ public class MusicHub : ConnectionHub
         {
             // Check if track is in backlog (going backwards)
             int backlogIndex = state.Backlog.FindIndex(t => t.Id == item.Id);
-            
+
             if (backlogIndex != -1)
             {
                 // Track is in backlog - going backwards
                 // Remove it from backlog
                 state.Backlog.RemoveAt(backlogIndex);
-                
+
                 // Add current item to backlog
                 if (state.CurrentItem != null)
                 {
                     state.Backlog.Add(state.CurrentItem);
                 }
-                
+
                 // Set the selected track as current
                 state.CurrentItem = item;
                 state.Time = 0;
+                state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
                 state.PlayState = true;
                 state.Duration = item.Duration.ToMilliSeconds();
             }
@@ -223,6 +231,8 @@ public class MusicHub : ConnectionHub
     private async Task HandlePlaylistChange(User user, MusicPlayerState state, string type, Guid listId,
         PlaylistTrackDto item, List<PlaylistTrackDto> playlist)
     {
+        _musicPlaybackService.RemoveTimer(user.Id);
+
         UpdateDeviceInfo(state);
         UpdatePlaylistInfo(state, type, listId, item, playlist);
         UpdateActionsDisallows(state);
@@ -254,6 +264,7 @@ public class MusicHub : ConnectionHub
         state.CurrentList = new($"/music/{type}/{listId}", UriKind.Relative);
         state.Backlog.Add(item);
         state.Time = 0;
+        state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         state.Duration = item.Duration.ToMilliSeconds();
     }
 
@@ -324,6 +335,8 @@ public class MusicHub : ConnectionHub
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
+            if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil) return;
+
             playerState.Time = time * 1000;
 
             await _musicPlaybackService.UpdatePlaybackState(user, playerState);

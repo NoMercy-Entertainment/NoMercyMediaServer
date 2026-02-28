@@ -81,6 +81,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             state.CurrentItem = state.Playlist.First();
             state.Playlist.RemoveAt(0);
             state.Time = 0;
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         }
         else
         {
@@ -99,6 +100,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
             case "one":
                 // If repeat one, play the same item again
                 state.Time = 0;
+                state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
                 musicPlaybackService.StartPlaybackTimer(user);
                 break;
             case "all":
@@ -110,6 +112,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
                     state.CurrentItem = state.Playlist.First();
                     state.Playlist.RemoveAt(0);
                     state.Time = 0;
+                    state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
                     state.PlayState = true;
                     musicPlaybackService.StartPlaybackTimer(user);
                 }
@@ -139,6 +142,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         if (state.Time > 3000)
         {
             state.Time = 0;
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             return;
         }
 
@@ -147,6 +151,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         if (state.Backlog.Count == 0)
         {
             state.Time = 0;
+            state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
             return;
         }
 
@@ -159,6 +164,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         state.CurrentItem = state.Backlog.Last();
         state.Backlog.RemoveAt(state.Backlog.Count - 1);
         state.Time = 0;
+        state.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
         state.PlayState = true;
         musicPlaybackService.StartPlaybackTimer(user);
     }

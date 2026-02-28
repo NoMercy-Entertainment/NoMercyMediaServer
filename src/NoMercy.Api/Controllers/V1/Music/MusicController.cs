@@ -218,6 +218,7 @@ public class MusicController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to search music");
 
+        Guid userId = User.UserId();
         string country = Country();
         string normalizedQuery = request.Query.NormalizeSearch();
 
@@ -255,7 +256,7 @@ public class MusicController : BaseController
             ? await _musicRepository.GetPlaylistCardsByIdsAsync(playlistIds)
             : [];
         List<SearchTrackCardDto> tracks = trackIds.Count > 0
-            ? await _musicRepository.SearchTrackCardsAsync(trackIds, country)
+            ? await _musicRepository.SearchTrackCardsAsync(trackIds, userId, country)
             : [];
 
         if (artists.Count == 0 && albums.Count == 0 && playlistCards.Count == 0 && tracks.Count == 0)
