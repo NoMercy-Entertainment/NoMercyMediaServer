@@ -37,4 +37,5 @@ public class MusicPlayerState
     [JsonProperty("volume_percentage")] public int VolumePercentage { get; set; }
     [JsonProperty("seek_offset")] public int SeekOffset { get; set; }
     [JsonIgnore] public DateTime IgnoreCurrentTimeUntil { get; set; }
+    [JsonIgnore] public bool CrossfadeSignalSent { get; set; }
 }

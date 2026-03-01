@@ -7,6 +7,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Events;
 using NoMercy.Events.Playback;
 using NoMercy.Networking.Messaging;
+using NoMercy.Api.DTOs.Music;
 using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Api.Services.Music;
@@ -31,6 +32,7 @@ public class MusicPlaybackService
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
     private const int TimerInterval = 100;
+    private const int CrossfadeLeewayMs = 10000; // Send PrepareCrossfade 10s before track end (gives time to buffer)
 
     internal void StartPlaybackTimer(User user)
     {
@@ -55,6 +57,15 @@ public class MusicPlaybackService
                 await ctx.MusicPlays.AddAsync(new(user.Id, playerState.CurrentItem.Id));
                 await ctx.SaveChangesAsync();
                 await PublishProgressEventAsync(user.Id, playerState);
+            }
+
+            // Send crossfade signal to clients ~10s before track ends
+            if (playerState.Time >= duration - CrossfadeLeewayMs && !playerState.CrossfadeSignalSent)
+            {
+                playerState.CrossfadeSignalSent = true;
+                PlaylistTrackDto? nextItem = PeekNextTrack(playerState);
+                if (nextItem != null)
+                    await SendPrepareCrossfadeSignal(user, nextItem);
             }
 
             if (playerState.Time >= duration) await HandleTrackCompletion(user, playerState);
@@ -82,6 +93,7 @@ public class MusicPlaybackService
         }
 
         UpdateStateBasedOnRepeatMode(state, currentIndex);
+        state.CrossfadeSignalSent = false; // Reset for next track
 
         await UpdatePlaybackState(user, state);
         StartPlaybackTimer(user);
@@ -156,6 +168,30 @@ public class MusicPlaybackService
             MediaIdentifier = state.CurrentItem.Id.ToString(),
             MediaType = "music"
         });
+    }
+
+    private static PlaylistTrackDto? PeekNextTrack(MusicPlayerState state)
+    {
+        if (state.Repeat == "one") return null; // Same track restarts, no crossfade
+
+        if (state.Playlist.Count > 0)
+            return state.Playlist.First();
+
+        if (state.Repeat == "all" && state.Backlog.Count > 0)
+            return state.Backlog.First(); // Will loop around
+
+        return null; // No next track (playback will stop)
+    }
+
+    private async Task SendPrepareCrossfadeSignal(User user, PlaylistTrackDto nextItem)
+    {
+        var payload = new
+        {
+            next_item = nextItem,
+            crossfade_duration_ms = 3000,
+            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+        await _clientMessenger.SendTo("PrepareCrossfade", "musicHub", user.Id, payload);
     }
 
     private void UpdateStateBasedOnRepeatMode(MusicPlayerState state, int currentIndex)

@@ -65,12 +65,14 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
     {
         int seekTime = int.Parse(data?.ToString() ?? "0") * 1000;
         state.Time = seekTime;
+        state.CrossfadeSignalSent = false; // User seeked, invalidate any pending crossfade
     }
 
     private void HandleNext(User user, MusicPlayerState state)
     {
         if (state.CurrentItem == null) return;
         musicPlaybackService.RemoveTimer(user.Id);
+        state.CrossfadeSignalSent = false; // Reset for new track
 
         // Add current item to backlog
         state.Backlog.Add(state.CurrentItem);
@@ -137,6 +139,7 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
     private void HandlePrevious(User user, MusicPlayerState state)
     {
         if (state.CurrentItem == null) return;
+        state.CrossfadeSignalSent = false; // Reset for new/restarted track
 
         // If we're more than 3 seconds into the song, restart it
         if (state.Time > 3000)
