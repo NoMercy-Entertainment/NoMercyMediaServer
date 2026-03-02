@@ -50,7 +50,7 @@ public class NmCardDto
             : movie.Overview;
         Poster = movie.Poster;
         Backdrop = movie.Backdrop;
-        Logo = movie.Images.FirstOrDefault()?.FilePath;
+        Logo = movie.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
         TitleSort = movie.Title.TitleSort(movie.ReleaseDate);
         Year = movie.ReleaseDate.ParseYear();
         Type = Config.MovieMediaType;
@@ -88,7 +88,7 @@ public class NmCardDto
             : tv.Overview;
         Poster = tv.Poster;
         Backdrop = tv.Backdrop;
-        Logo = tv.Images.FirstOrDefault()?.FilePath;
+        Logo = tv.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
         TitleSort = tv.Title.TitleSort(tv.FirstAirDate);
         Year = tv.FirstAirDate.ParseYear();
         Type = Config.TvMediaType;

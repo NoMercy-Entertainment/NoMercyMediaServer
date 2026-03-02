@@ -16,6 +16,9 @@ on:
       GPG_PRIVATE_KEY:
         description: 'GPG private key for signing'
         required: true
+      APP_REPO_TOKEN:
+        description: 'PAT for accessing the private NoMercyApp repo'
+        required: true
 
 jobs:
   build_packages:
@@ -56,6 +59,7 @@ jobs:
         uses: ./.github/actions/build-deb-packages
         with:
           version: ${{ inputs.version }}
+          app-repo-token: ${{ secrets.APP_REPO_TOKEN }}
 
       - name: Build RPM packages
         if: matrix.package-type == 'rpm'
@@ -63,21 +67,25 @@ jobs:
         with:
           version: ${{ inputs.version }}
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          app-repo-token: ${{ secrets.APP_REPO_TOKEN }}
 
       - name: Build Arch packages
         if: matrix.package-type == 'arch'
         uses: ./.github/actions/build-arch-packages
         with:
           version: ${{ inputs.version }}
+          app-repo-token: ${{ secrets.APP_REPO_TOKEN }}
 
       - name: Build Windows installer
         if: matrix.package-type == 'windows-installer'
         uses: ./.github/actions/build-windows-installer
         with:
           version: ${{ inputs.version }}
+          app-repo-token: ${{ secrets.APP_REPO_TOKEN }}
 
       - name: Build macOS installer
         if: matrix.package-type == 'macos-installer'
         uses: ./.github/actions/build-macos-installer
         with:
           version: ${{ inputs.version }}
+          app-repo-token: ${{ secrets.APP_REPO_TOKEN }}

@@ -22,6 +22,10 @@ on:
       artifact-names:
         description: 'Names of uploaded artifacts'
         value: ${{ jobs.build_executables.outputs.artifact-names }}
+    secrets:
+      APP_REPO_TOKEN:
+        description: 'PAT for accessing the private NoMercyApp repo'
+        required: true
 
 jobs:
   build_executables:
@@ -52,6 +56,7 @@ jobs:
         with:
           project: ${{ matrix.project }}
           dotnet-version: ${{ inputs.dotnet-version }}
+          app-repo-token: ${{ secrets.APP_REPO_TOKEN }}
 
       - name: Set artifact names
         id: set-names

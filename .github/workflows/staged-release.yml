@@ -63,6 +63,7 @@ jobs:
   build_executables:
     needs: prepare
     uses: ./.github/workflows/build-executables.yml
+    secrets: inherit
     with:
       dotnet-version: "10.0.x"
       ref: ${{ needs.prepare.outputs.branch }}

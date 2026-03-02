@@ -5,6 +5,10 @@ inputs:
     description: '.NET version to use'
     required: false
     default: '10.0.x'
+  app-repo-token:
+    description: 'Token for accessing the private NoMercyApp repo'
+    required: false
+    default: ''
 outputs:
   payload-path:
     description: 'Path to the shared runtime output'
@@ -50,6 +54,7 @@ runs:
       uses: actions/checkout@v5
       with:
         repository: NoMercy-Entertainment/NoMercyApp
+        token: ${{ inputs.app-repo-token || github.token }}
         path: ./src/NoMercy.App/Resources/wwwroot
         fetch-depth: 1
         fetch-tags: false

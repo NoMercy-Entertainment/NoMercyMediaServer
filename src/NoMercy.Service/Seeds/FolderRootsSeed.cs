@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.Middleware;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -34,5 +36,11 @@ public static class FolderRootsSeed
         {
             Logger.Setup(e.Message, LogEventLevel.Fatal);
         }
+
+        // Register seeded folders with the middleware so they can serve files over HTTP
+        foreach (Folder folder in folders.Where(f => Directory.Exists(f.Path)))
+            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+
+        ClaimsPrincipleExtensions.RefreshFolderIds(dbContext);
     }
 }

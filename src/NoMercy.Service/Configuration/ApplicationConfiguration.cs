@@ -5,6 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using NoMercy.Api.Controllers.Socket;
 using NoMercy.Api.Hubs;
 using NoMercy.Api.Middleware;
+using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
@@ -187,6 +188,10 @@ public static class ApplicationConfiguration
             List<Folder> folderLibraries = mediaContext.Folders.ToList();
             foreach (Folder folder in folderLibraries.Where(folder => Directory.Exists(folder.Path)))
                 DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+
+            // Refresh the cached folder IDs so AccessLogMiddleware allows
+            // requests through before the background seeder finishes.
+            ClaimsPrincipleExtensions.RefreshFolderIds(mediaContext);
         }
         catch (Microsoft.Data.Sqlite.SqliteException)
         {

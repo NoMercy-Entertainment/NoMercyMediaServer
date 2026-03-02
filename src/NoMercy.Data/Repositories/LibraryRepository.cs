@@ -295,7 +295,7 @@ public class LibraryRepository(MediaContext context)
                 Overview = tv.Overview,
                 Poster = tv.Poster,
                 Backdrop = tv.Backdrop,
-                Logo = tv.Images.Select(i => i.FilePath).FirstOrDefault(),
+                Logo = tv.Images.Where(i => i.Type == "logo").Select(i => i.FilePath).FirstOrDefault(),
                 FirstAirDate = tv.FirstAirDate,
                 CreatedAt = tv.CreatedAt,
                 ColorPalette = tv._colorPalette,

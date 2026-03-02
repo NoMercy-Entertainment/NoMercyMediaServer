@@ -11,6 +11,10 @@ inputs:
   gpg-private-key:
     description: 'GPG private key for signing'
     required: true
+  app-repo-token:
+    description: 'Token for accessing the private NoMercyApp repo'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -19,6 +23,7 @@ runs:
       uses: ./.github/actions/build-linux-installer-payload
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
+        app-repo-token: ${{ inputs.app-repo-token }}
 
     - name: Install RPM build dependencies
       shell: bash

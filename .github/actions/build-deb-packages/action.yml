@@ -8,6 +8,10 @@ inputs:
     description: '.NET version to use'
     required: false
     default: '10.0.x'
+  app-repo-token:
+    description: 'Token for accessing the private NoMercyApp repo'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -16,6 +20,7 @@ runs:
       uses: ./.github/actions/build-linux-installer-payload
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
+        app-repo-token: ${{ inputs.app-repo-token }}
 
     - name: Install DEB build dependencies
       shell: bash

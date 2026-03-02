@@ -15,6 +15,7 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.Api.Middleware;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.NmSystem.Information;
@@ -33,7 +34,8 @@ public class LibrariesController(
     EncoderRepository encoderRepository,
     FolderRepository folderRepository,
     JobDispatcher jobDispatcher,
-    LanguageRepository languageRepository
+    LanguageRepository languageRepository,
+    IDbContextFactory<MediaContext> mediaContextFactory
 ) : BaseController
 {
     [HttpGet]
@@ -245,6 +247,15 @@ public class LibrariesController(
         try
         {
             await libraryRepository.DeleteLibraryAsync(library);
+
+            // Remove all associated folders from the middleware immediately
+            foreach (FolderLibrary fl in library.FolderLibraries)
+                DynamicStaticFilesMiddleware.RemovePath(fl.FolderId);
+
+            await using (MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync())
+            {
+                ClaimsPrincipleExtensions.RefreshFolderIds(refreshContext);
+            }
 
             if (EventBusProvider.IsConfigured)
             {
@@ -519,6 +530,11 @@ public class LibrariesController(
 
         await folderRepository.AddFolderLibraryAsync(folderLibrary);
 
+        // Register the folder with the middleware directly so it can serve files immediately
+        DynamicStaticFilesMiddleware.AddPath(pathAsync.Id, pathAsync.Path);
+        await using MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync();
+        ClaimsPrincipleExtensions.RefreshFolderIds(refreshContext);
+
         if (EventBusProvider.IsConfigured)
         {
             await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
@@ -530,8 +546,8 @@ public class LibrariesController(
 
         return Ok(new StatusResponseDto<FolderLibrary>
         {
-            Status = "ok", 
-            Message = "Successfully added folder to {0} library.", 
+            Status = "ok",
+            Message = "Successfully added folder to {0} library.",
             Args = [pathAsync.Path],
             Data = folderLibrary
         });
@@ -553,7 +569,15 @@ public class LibrariesController(
         {
             folder.Path = request.Path;
             await folderRepository.UpdateFolderAsync(folder);
-            
+
+            // Update the middleware directly so it can serve files from the new path immediately
+            DynamicStaticFilesMiddleware.RemovePath(folder.Id);
+            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+            await using (MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync())
+            {
+                ClaimsPrincipleExtensions.RefreshFolderIds(refreshContext);
+            }
+
             if (EventBusProvider.IsConfigured)
             {
                 await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
@@ -566,7 +590,7 @@ public class LibrariesController(
                     PhysicalPath = folder.Path
                 });
             }
-            
+
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok", Message = "Successfully updated folder {0}.", Args = [folder.Path]
@@ -598,7 +622,14 @@ public class LibrariesController(
         try
         {
             await folderRepository.DeleteFolderAsync(folder);
-            
+
+            // Remove the folder from the middleware immediately
+            DynamicStaticFilesMiddleware.RemovePath(folder.Id);
+            await using (MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync())
+            {
+                ClaimsPrincipleExtensions.RefreshFolderIds(refreshContext);
+            }
+
             if (EventBusProvider.IsConfigured)
             {
                 await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
