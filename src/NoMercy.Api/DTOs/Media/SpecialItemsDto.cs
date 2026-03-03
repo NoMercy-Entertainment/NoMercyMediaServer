@@ -228,7 +228,7 @@ public record SpecialItemsDto
         {
             Id = g.Id,
             Name = g.Name,
-            Link = new($"/genre/{g.Id}", UriKind.Relative)
+            Link = new($"/genres/{g.Id}", UriKind.Relative)
         });
 
         Rating = new()
@@ -333,7 +333,7 @@ public record SpecialItemsDto
         {
             Id = g.Id,
             Name = g.Name,
-            Link = new($"/genre/{g.Id}", UriKind.Relative)
+            Link = new($"/genres/{g.Id}", UriKind.Relative)
         });
 
         Rating = new()

@@ -39,7 +39,7 @@ public record GenreCardData
         Title = genre.Name;
         TitleSort = genre.Name;
         Type = "genre";
-        Link = new($"/genre/{genre.Id}", UriKind.Relative);
+        Link = new($"/genres/{genre.Id}", UriKind.Relative);
         NumberOfItems = genre.GenreMovies.Count + genre.GenreTvShows.Count;
         HaveItems = genre.GenreMovies.Count(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
                     + genre.GenreTvShows.Count(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)));
@@ -63,7 +63,7 @@ public record GenreCardData
         Title = dto.Name.ToTitleCase();
         TitleSort = dto.Name.ToTitleCase();
         Type = "genre";
-        Link = new($"/genre/{dto.Id}", UriKind.Relative);
+        Link = new($"/genres/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
         HaveItems = dto.MoviesWithVideo + dto.TvShowsWithVideo;
     }

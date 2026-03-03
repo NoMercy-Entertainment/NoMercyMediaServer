@@ -310,7 +310,7 @@ public record CardData
         Title = genre.Name;
         TitleSort = genre.Name;
         Type = "genre";
-        Link = new($"/genre/{genre.Id}", UriKind.Relative);
+        Link = new($"/genres/{genre.Id}", UriKind.Relative);
         NumberOfItems = genre.GenreMovies.Count + genre.GenreTvShows.Count;
         HaveItems = genre.GenreMovies.Count(genreMovie => genreMovie.Movie.VideoFiles
                         .Any(v => v.Folder != null))

@@ -18,35 +18,35 @@ public record GenreDto
     {
         Id = 0;
         Name = string.Empty;
-        Link = new("/genre/0", UriKind.Relative);
+        Link = new("/genres/0", UriKind.Relative);
     }
 
     public GenreDto(GenreMovie genreMovie)
     {
         Id = genreMovie.GenreId;
         Name = genreMovie.Genre.Name;
-        Link = new($"/genre/{Id}", UriKind.Relative);
+        Link = new($"/genres/{Id}", UriKind.Relative);
     }
 
     public GenreDto(GenreTv genreTv)
     {
         Id = genreTv.GenreId;
         Name = genreTv.Genre.Name;
-        Link = new($"/genre/{Id}", UriKind.Relative);
+        Link = new($"/genres/{Id}", UriKind.Relative);
     }
 
     public GenreDto(Genre genreMovie)
     {
         Id = genreMovie.Id;
         Name = genreMovie.Name;
-        Link = new($"/genre/{Id}", UriKind.Relative);
+        Link = new($"/genres/{Id}", UriKind.Relative);
     }
 
     public GenreDto(TmdbGenre tmdbGenreMovie)
     {
         Id = tmdbGenreMovie.Id;
         Name = tmdbGenreMovie.Name ?? string.Empty;
-        Link = new($"/genre/{Id}", UriKind.Relative);
+        Link = new($"/genres/{Id}", UriKind.Relative);
     }
 
     public GenreDto(ArtistMusicGenre artistMusicGenre)

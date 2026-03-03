@@ -92,7 +92,7 @@ public class HomeService
             select new GenreRowDto<GenreRowItemDto>
             {
                 Title = name,
-                MoreLink = new($"/genre/{genre.Id}", UriKind.Relative),
+                MoreLink = new($"/genres/{genre.Id}", UriKind.Relative),
                 Id = genre.Id.ToString(),
                 Source = genre.GenreMovies.Select(movie => new HomeSourceDto(movie.MovieId, Config.MovieMediaType))
                     .Concat(genre.GenreTvShows.Select(tv => new HomeSourceDto(tv.TvId, Config.TvMediaType)))
@@ -162,7 +162,7 @@ public class HomeService
             movieIds.AddRange(source.Where(s => s.MediaType == Config.MovieMediaType).Select(s => s.Id));
 
             genreSourceList.Add(new(genre.Id.ToString(), name,
-                new($"/genre/{genre.Id}", UriKind.Relative), source));
+                new($"/genres/{genre.Id}", UriKind.Relative), source));
         }
 
         // Phase 3: Fetch genre media data AND library card data in parallel
@@ -461,7 +461,7 @@ public class HomeService
             movieIds.AddRange(source.Where(s => s.MediaType == Config.MovieMediaType).Select(s => s.Id));
 
             genreSourceList.Add(new(genre.Id.ToString(), name,
-                new($"/genre/{genre.Id}", UriKind.Relative), source));
+                new($"/genres/{genre.Id}", UriKind.Relative), source));
         }
 
         // Fetch data
