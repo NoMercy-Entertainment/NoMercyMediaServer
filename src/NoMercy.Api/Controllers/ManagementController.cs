@@ -205,10 +205,14 @@ public class ManagementController(
 
                 case ServerUpdateResult.Downloaded:
                     if (!System.IO.File.Exists(tempPath))
-                        return StatusCode(500, new { status = "error", message = "Download completed but staged file not found." });
+                    {
+                        Logger.Setup($"Server update staged file missing at {tempPath} after successful download", Serilog.Events.LogEventLevel.Error);
+                        return StatusCode(500, new { status = "error", message = $"Download completed but staged file not found at {tempPath}. This may be caused by antivirus software quarantining the file." });
+                    }
 
-                    Logger.Setup($"Server update staged at {tempPath}");
-                    return Ok(new { status = "ok", message = "Update downloaded and staged.", path = tempPath });
+                    long fileSize = new System.IO.FileInfo(tempPath).Length;
+                    Logger.Setup($"Server update staged at {tempPath} ({fileSize} bytes)");
+                    return Ok(new { status = "ok", message = "Update downloaded and staged.", path = tempPath, size = fileSize });
 
                 default:
                     return StatusCode(500, new { status = "error", message = "Unexpected update result." });

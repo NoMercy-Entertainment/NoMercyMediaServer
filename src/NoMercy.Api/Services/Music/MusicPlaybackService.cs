@@ -31,8 +31,11 @@ public class MusicPlaybackService
     }
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
+    private readonly ConcurrentDictionary<Guid, Timer> _broadcastTimers = new();
     private const int TimerInterval = 100;
     private const int CrossfadeLeewayMs = 10000; // Send PrepareCrossfade 10s before track end (gives time to buffer)
+    private const int BroadcastDebounceMs = 150;
+    private const int MinPlayTimeForRecordMs = 10_000;
 
     internal void StartPlaybackTimer(User user)
     {
@@ -49,7 +52,8 @@ public class MusicPlaybackService
 
             int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
 
-            if (playerState.Time >= (duration / 2) && playerState.Time < (duration / 2) + TimerInterval)
+            if (playerState.Time >= (duration / 2) && playerState.Time < (duration / 2) + TimerInterval
+                && playerState.Time >= MinPlayTimeForRecordMs)
             {
                 await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
                 IDbContextFactory<MediaContext> factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
@@ -77,6 +81,20 @@ public class MusicPlaybackService
     public void RemoveTimer(Guid userId)
     {
         if (_timers.TryRemove(userId, out Timer? timer)) timer.Dispose();
+    }
+
+    public void DebouncedUpdatePlaybackState(User user, MusicPlayerState state)
+    {
+        if (_broadcastTimers.TryRemove(user.Id, out Timer? existing))
+            existing.Dispose();
+
+        Timer timer = new(async _ =>
+        {
+            _broadcastTimers.TryRemove(user.Id, out Timer? _);
+            await UpdatePlaybackState(user, state);
+        }, null, BroadcastDebounceMs, Timeout.Infinite);
+
+        _broadcastTimers[user.Id] = timer;
     }
 
     private async Task HandleTrackCompletion(User user, MusicPlayerState state)

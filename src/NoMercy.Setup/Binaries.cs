@@ -411,11 +411,31 @@ public static class Binaries
 
         string path = await Downloader.DownloadFile("NoMercyMediaServer Update", downloadUrl, AppFiles.ServerTempExePath);
 
+        // Wait for the file to become available (antivirus scanning can briefly lock/quarantine it)
+        bool fileReady = false;
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            if (File.Exists(path) && new FileInfo(path).Length > 0)
+            {
+                fileReady = true;
+                break;
+            }
+
+            Logger.Setup($"Waiting for staged update file to become available (attempt {attempt + 1}/5)...", LogEventLevel.Debug);
+            await Task.Delay(1000);
+        }
+
+        if (!fileReady)
+        {
+            Logger.Setup($"Staged update file not available at {path} after download", LogEventLevel.Error);
+            return ServerUpdateResult.NoAssetFound;
+        }
+
         await FileAttributes.SetCreatedAttribute(path, releaseInfo.PublishedAt);
 
         await FilePermissions.SetExecutionPermissions(path);
 
-        Logger.Setup($"Server update staged at {AppFiles.ServerTempExePath}");
+        Logger.Setup($"Server update staged at {path} ({new FileInfo(path).Length} bytes)");
         return ServerUpdateResult.Downloaded;
     }
 

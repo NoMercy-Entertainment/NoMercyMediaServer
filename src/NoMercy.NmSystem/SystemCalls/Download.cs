@@ -29,28 +29,55 @@ public static class Download
             filePath = Path.Combine(AppFiles.DependenciesPath, baseName);
         }
 
+        string? directory = Path.GetDirectoryName(filePath);
+        if (directory is not null && !Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
+
         using HttpResponseMessage result = await HttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
         result.EnsureSuccessStatusCode();
 
-        await using Stream contentStream = await result.Content.ReadAsStreamAsync();
-        await using FileStream fileStream = new(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
-        await contentStream.CopyToAsync(fileStream);
+        long? expectedLength = result.Content.Headers.ContentLength;
 
-        Logger.System($"Downloaded {name} to {filePath}", LogEventLevel.Verbose);
+        await using (Stream contentStream = await result.Content.ReadAsStreamAsync())
+        await using (FileStream fileStream = new(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
+        {
+            await contentStream.CopyToAsync(fileStream);
+            await fileStream.FlushAsync();
+        }
+
+        // Verify the file was written successfully
+        if (!File.Exists(filePath))
+            throw new IOException($"Download of {name} completed but file not found at {filePath}");
+
+        long actualLength = new FileInfo(filePath).Length;
+        if (actualLength == 0)
+        {
+            File.Delete(filePath);
+            throw new IOException($"Download of {name} produced an empty file at {filePath}");
+        }
+
+        if (expectedLength.HasValue && actualLength != expectedLength.Value)
+        {
+            Logger.System(
+                $"Download of {name}: size mismatch (expected {expectedLength.Value} bytes, got {actualLength} bytes)",
+                LogEventLevel.Warning);
+        }
+
+        Logger.System($"Downloaded {name} to {filePath} ({actualLength} bytes)", LogEventLevel.Verbose);
 
         return filePath;
     }
 
-    public static async Task DeleteSourceDownload(string filePath)
+    public static Task DeleteSourceDownload(string filePath)
     {
         try
         {
-            if(!File.Exists(filePath)) return;
-            
+            if (!File.Exists(filePath)) return Task.CompletedTask;
+
             if (Locking.IsFileLocked(filePath)) Locking.CloseApplicationLockingFile(filePath);
 
             File.Delete(filePath);
-            
+
             Logger.System($"Deleted source download {filePath}", LogEventLevel.Verbose);
         }
         catch (Exception ex)
@@ -58,6 +85,6 @@ public static class Download
             Logger.System($"Failed to delete source download {filePath}: {ex.Message}", LogEventLevel.Warning);
         }
 
-        await Task.Delay(0);
+        return Task.CompletedTask;
     }
 }

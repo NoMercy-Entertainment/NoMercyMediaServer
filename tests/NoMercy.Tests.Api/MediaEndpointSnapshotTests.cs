@@ -417,13 +417,13 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     // =========================================================================
-    // Genres Controller — /api/v1/genre
+    // Genres Controller — /api/v1/genres
     // =========================================================================
 
     [Fact]
     public async Task Genres_List_ReturnsComponentResponse()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/genre");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/genres");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -435,7 +435,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Genres_GetGenre_WithSeededData_ReturnsComponentResponse()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/genre/18");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/genres/18");
 
         string body = await response.Content.ReadAsStringAsync();
         Assert.True(
@@ -452,7 +452,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Genres_GetGenre_NonExistent_ReturnsNotFound()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/genre/999999");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/genres/999999");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -460,7 +460,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [Fact]
     public async Task Genres_GetGenre_Lolomo_ReturnsContainerOrError()
     {
-        HttpResponseMessage response = await _client.GetAsync("/api/v1/genre/18?version=lolomo");
+        HttpResponseMessage response = await _client.GetAsync("/api/v1/genres/18?version=lolomo");
 
         string body = await response.Content.ReadAsStringAsync();
 
@@ -783,7 +783,7 @@ public class MediaEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     [InlineData("/api/v1/movie/129")]
     [InlineData("/api/v1/tv/1399")]
     [InlineData("/api/v1/collection")]
-    [InlineData("/api/v1/genre")]
+    [InlineData("/api/v1/genres")]
     [InlineData("/api/v1/libraries")]
     [InlineData("/api/v1/")]
     [InlineData("/api/v1/home")]

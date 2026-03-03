@@ -45,16 +45,24 @@ public class MusicHub : ConnectionHub
     }
 
     private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
+    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> CommandLocks = new();
+
+    private static SemaphoreSlim GetUserLock(Guid userId)
+    {
+        return CommandLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+    }
 
     public async Task StartPlaybackCommand(string type, Guid listId, Guid trackId)
     {
         User? user = Context.User.User();
         if (user is null) return;
 
-        string country = GetCountryFromContext();
-
+        SemaphoreSlim userLock = GetUserLock(user.Id);
+        await userLock.WaitAsync();
         try
         {
+            string country = GetCountryFromContext();
+
             (PlaylistTrackDto item, List<PlaylistTrackDto> playlist) =
                 await _musicPlaylistManager.GetPlaylist(user.Id, type, listId, trackId, country);
             await HandlePlaybackState(user, type, listId, item, playlist);
@@ -66,6 +74,10 @@ public class MusicHub : ConnectionHub
         catch (Exception ex)
         {
             Logger.App($"Error in StartPlaybackCommand: {ex.Message}");
+        }
+        finally
+        {
+            userLock.Release();
         }
     }
 
@@ -309,23 +321,39 @@ public class MusicHub : ConnectionHub
         User? user = Context.User.User();
         if (user is null) return;
 
-        if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
+        SemaphoreSlim userLock = GetUserLock(user.Id);
+        await userLock.WaitAsync();
+        try
         {
-            await _musicPlaybackService.UpdatePlaybackState(user, null);
-            return;
-        }
-
-        _commandHandler.HandleCommand(user, command, data, state);
-
-        if (state.DeviceId == null)
-            if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
+            if (!_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? state))
             {
-                state.DeviceId = device.DeviceId;
-                state.VolumePercentage = device.VolumePercent;
+                await _musicPlaybackService.UpdatePlaybackState(user, null);
+                return;
             }
 
-        UpdateActionsDisallows(state);
-        await _musicPlaybackService.UpdatePlaybackState(user, state);
+            _commandHandler.HandleCommand(user, command, data, state);
+
+            if (state.DeviceId == null)
+                if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
+                {
+                    state.DeviceId = device.DeviceId;
+                    state.VolumePercentage = device.VolumePercent;
+                }
+
+            UpdateActionsDisallows(state);
+
+            bool isSkipCommand = command.Equals("next", StringComparison.OrdinalIgnoreCase)
+                || command.Equals("previous", StringComparison.OrdinalIgnoreCase);
+
+            if (isSkipCommand)
+                _musicPlaybackService.DebouncedUpdatePlaybackState(user, state);
+            else
+                await _musicPlaybackService.UpdatePlaybackState(user, state);
+        }
+        finally
+        {
+            userLock.Release();
+        }
     }
 
     public async Task CurrentTimeCommand(int time)

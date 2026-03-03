@@ -235,6 +235,9 @@ public static class ServiceConfiguration
         services.RegisterCronJob<ArtistFanartCronJob>("artist-fanart-job");
         services.RegisterCronJob<ArtistPaletteCronJob>("artist-palette-job");
         services.RegisterCronJob<AlbumPaletteCronJob>("album-palette-job");
+
+        // TODO: Remove after all palettes are regenerated with the new Median Cut algorithm
+        services.RegisterCronJob<ReprocessAllPalettesCronJob>("reprocess-all-palettes-job");
     }
     
 

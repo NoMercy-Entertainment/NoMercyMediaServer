@@ -181,11 +181,7 @@ public class LibrariesController(
             components.Add(carousel);
         }
         
-        ComponentEnvelope response = Component.Container()
-            .WithId("mobile-libraries")
-            .WithItems(components);
-
-        return Ok(ComponentResponse.From(response));
+        return Ok(ComponentResponse.From(components));
     }
 
     [HttpGet]

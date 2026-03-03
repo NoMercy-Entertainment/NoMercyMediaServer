@@ -5,6 +5,8 @@ using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Information;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 
@@ -44,8 +46,18 @@ public class ArtistPaletteCronJob : ICronJobExecutor
             {
                 try
                 {
-                    artist._colorPalette = await MovieDbImageManager
-                        .ColorPalette("cover", AppFiles.MusicImagesPath + artist.Cover);
+                    string filePath = AppFiles.MusicImagesPath + artist.Cover;
+                    if (File.Exists(filePath))
+                    {
+                        using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(filePath);
+                        artist._colorPalette = BaseImageManager.GenerateColorPalette([
+                            new() { Key = "cover", ImageData = image }
+                        ]);
+                    }
+                    else
+                    {
+                        artist._colorPalette = "{}";
+                    }
                 }
                 catch (Exception)
                 {
