@@ -255,7 +255,10 @@ public class LibraryRepository(MediaContext context)
                 Overview = movie.Overview,
                 Poster = movie.Poster,
                 Backdrop = movie.Backdrop,
-                Logo = movie.Images.Select(i => i.FilePath).FirstOrDefault(),
+                Logo = movie.Images
+                    .Where(i => i.Type == "logo" && i.Iso6391 == "en")
+                    .Select(i => i.FilePath)
+                    .FirstOrDefault(),
                 ReleaseDate = movie.ReleaseDate,
                 CreatedAt = movie.CreatedAt,
                 ColorPalette = movie._colorPalette,
@@ -295,7 +298,10 @@ public class LibraryRepository(MediaContext context)
                 Overview = tv.Overview,
                 Poster = tv.Poster,
                 Backdrop = tv.Backdrop,
-                Logo = tv.Images.Where(i => i.Type == "logo").Select(i => i.FilePath).FirstOrDefault(),
+                Logo = tv.Images
+                    .Where(i => i.Type == "logo" && i.Iso6391 == "en")
+                    .Select(i => i.FilePath)
+                    .FirstOrDefault(),
                 FirstAirDate = tv.FirstAirDate,
                 CreatedAt = tv.CreatedAt,
                 ColorPalette = tv._colorPalette,
