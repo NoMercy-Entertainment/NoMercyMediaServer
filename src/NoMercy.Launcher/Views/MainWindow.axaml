@@ -5,14 +5,20 @@
         x:Class="NoMercy.Launcher.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="NoMercy MediaServer"
-        Width="960" Height="640"
-        MinWidth="640" MinHeight="400"
+        Width="1024" Height="720"
+        MinWidth="720" MinHeight="480"
+        Background="#0a0a0f"
         WindowStartupLocation="CenterScreen">
 
-    <TabControl SelectedIndex="{Binding SelectedTabIndex}">
+    <TabControl SelectedIndex="{Binding SelectedTabIndex}"
+                Background="Transparent">
         <TabItem Header="Dashboard">
             <views:ServerControlView
                 DataContext="{Binding ServerControlViewModel}" />
+        </TabItem>
+        <TabItem Header="Settings">
+            <views:SettingsView
+                DataContext="{Binding SettingsViewModel}" />
         </TabItem>
         <TabItem Header="Startup Args">
             <views:StartupArgumentsView

@@ -64,9 +64,6 @@ public static class Config
 
     public static bool Swagger { get; set; } = true;
 
-    public static bool Sentry { get; set; }
-    public static string SentryDsn { get; set; } = string.Empty;
-
     public static bool IsDev { get; set; }
     public static bool UpdateAvailable { get; set; }
     public static bool RestartNeeded { get; set; }

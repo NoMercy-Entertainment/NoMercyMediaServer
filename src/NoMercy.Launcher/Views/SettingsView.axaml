@@ -1,0 +1,182 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NoMercy.Launcher.ViewModels"
+        x:Class="NoMercy.Launcher.Views.SettingsView"
+        x:DataType="vm:SettingsViewModel">
+
+    <DockPanel Margin="16">
+        <!-- Title -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Settings"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Foreground="#e0e0e0"
+                   Margin="0,0,0,16" />
+
+        <!-- Save status -->
+        <TextBlock DockPanel.Dock="Bottom"
+                   Text="{Binding ActionStatus}"
+                   Foreground="#999999"
+                   FontSize="12"
+                   Margin="0,8,0,0"
+                   HorizontalAlignment="Center" />
+
+        <!-- Save button -->
+        <Button DockPanel.Dock="Bottom"
+                x:Name="SaveConfigButton"
+                Content="Save Configuration"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                IsEnabled="{Binding IsServerRunning}"
+                Click="OnSaveConfigClick"
+                Background="#8f00fc"
+                Foreground="White"
+                Padding="12,8" />
+
+        <ScrollViewer IsVisible="{Binding ConfigLoaded}">
+            <StackPanel Spacing="16" Margin="0,0,0,8">
+
+                <!-- Server Settings -->
+                <Border Background="#16161e"
+                        BorderBrush="#2a2a3a"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Server Settings"
+                                   Foreground="#e0e0e0"
+                                   FontSize="14"
+                                   FontWeight="SemiBold" />
+
+                        <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="Server Name"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <TextBox Grid.Row="0" Grid.Column="1"
+                                     Text="{Binding ConfigServerName}"
+                                     IsEnabled="{Binding IsServerRunning}"
+                                     Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="Internal Port"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <TextBlock Grid.Row="1" Grid.Column="1"
+                                       Text="{Binding InternalPort}"
+                                       Foreground="#e0e0e0" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0"
+                                       Text="External Port"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Grid.Column="1"
+                                       Text="{Binding ExternalPort}"
+                                       Foreground="#e0e0e0" FontSize="13"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Worker Settings -->
+                <Border Background="#16161e"
+                        BorderBrush="#2a2a3a"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Worker Settings"
+                                   Foreground="#e0e0e0"
+                                   FontSize="14"
+                                   FontWeight="SemiBold" />
+
+                        <Grid ColumnDefinitions="140,*"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="Library Workers"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="0" Grid.Column="1"
+                                           Value="{Binding LibraryWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="Import Workers"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="1" Grid.Column="1"
+                                           Value="{Binding ImportWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0"
+                                       Text="Extras Workers"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="2" Grid.Column="1"
+                                           Value="{Binding ExtrasWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="3" Grid.Column="0"
+                                       Text="Encoder Workers"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="3" Grid.Column="1"
+                                           Value="{Binding EncoderWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="4" Grid.Column="0"
+                                       Text="Cron Workers"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="4" Grid.Column="1"
+                                           Value="{Binding CronWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="5" Grid.Column="0"
+                                       Text="Image Workers"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="5" Grid.Column="1"
+                                           Value="{Binding ImageWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="6" Grid.Column="0"
+                                       Text="File Workers"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,0,6" />
+                            <NumericUpDown Grid.Row="6" Grid.Column="1"
+                                           Value="{Binding FileWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0,0,0,6" />
+
+                            <TextBlock Grid.Row="7" Grid.Column="0"
+                                       Text="Music Workers"
+                                       Foreground="#999999" FontSize="13"
+                                       VerticalAlignment="Center" />
+                            <NumericUpDown Grid.Row="7" Grid.Column="1"
+                                           Value="{Binding MusicWorkers}"
+                                           Minimum="1" Maximum="32"
+                                           IsEnabled="{Binding IsServerRunning}"
+                                           Margin="0" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

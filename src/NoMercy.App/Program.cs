@@ -31,9 +31,10 @@ internal class Program
             .Center()
             .SetTitle(windowTitle)
             .SetMinSize(1280 + 16, 720 + 39)
+            .SetSize(1600 + 16, 900 + 39)
             .SetResizable(true)
             .SetIconFile(iconPath)
-            .SetUseOsDefaultSize(true)
+            .SetUseOsDefaultSize(false)
             .SetMediaAutoplayEnabled(true)
             .SetMediaStreamEnabled(true)
             .SetBrowserControlInitParameters("--remote-debugging-port=9222")
@@ -142,6 +143,7 @@ internal class Program
     {
         "Session Storage",
         "Local Storage",
+        "IndexedDB",
     };
 
     // WebView2 files inside Default/ that hold login/session state — preserved across updates
@@ -149,6 +151,14 @@ internal class Program
     [
         "Cookies",
         "Login Data",
+        "Preferences",
+        "Web Data",
+    ];
+
+    // WebView2 files in the EBWebView/ root that must survive cache clears
+    private static readonly string[] PreservedEbWebViewFiles =
+    [
+        "Local State",
     ];
 
     private static void ClearBrowserDataOnVersionChange(string browserDataPath)
@@ -214,6 +224,10 @@ internal class Program
 
         foreach (string file in Directory.GetFiles(ebWebViewPath))
         {
+            string fileName = Path.GetFileName(file);
+            if (PreservedEbWebViewFiles.Any(p => fileName.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
             try { File.Delete(file); }
             catch { /* skip */ }
         }

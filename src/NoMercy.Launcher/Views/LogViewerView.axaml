@@ -15,35 +15,42 @@
 
     <DockPanel Margin="8">
         <!-- Toolbar -->
-        <StackPanel DockPanel.Dock="Top"
-                    Orientation="Horizontal"
-                    Spacing="8"
-                    Margin="0,0,0,8">
-            <TextBox x:Name="SearchBox"
-                     Watermark="Search logs..."
-                     Width="250"
-                     Text="{Binding SearchText}" />
+        <Border DockPanel.Dock="Top"
+                Background="#16161e"
+                BorderBrush="#2a2a3a"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="8"
+                Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8">
+                <TextBox x:Name="SearchBox"
+                         Watermark="Search logs..."
+                         Width="250"
+                         Text="{Binding SearchText}" />
 
-            <ComboBox x:Name="LevelCombo"
-                      Width="130"
-                      ItemsSource="{Binding LevelOptions}"
-                      SelectedItem="{Binding SelectedLevel}" />
+                <ComboBox x:Name="LevelCombo"
+                          Width="130"
+                          ItemsSource="{Binding LevelOptions}"
+                          SelectedItem="{Binding SelectedLevel}" />
 
-            <ComboBox x:Name="TailCombo"
-                      Width="90"
-                      ItemsSource="{Binding TailOptions}"
-                      SelectedItem="{Binding TailCount}" />
+                <ComboBox x:Name="TailCombo"
+                          Width="90"
+                          ItemsSource="{Binding TailOptions}"
+                          SelectedItem="{Binding TailCount}" />
 
-            <CheckBox Content="Auto-refresh"
-                      IsChecked="{Binding AutoRefresh}"
-                      VerticalAlignment="Center" />
+                <CheckBox Content="Auto-refresh"
+                          IsChecked="{Binding AutoRefresh}"
+                          Foreground="#e0e0e0"
+                          VerticalAlignment="Center" />
 
-            <Button Content="Refresh"
-                    Click="OnRefreshClick" />
+                <Button Content="Refresh"
+                        Click="OnRefreshClick" />
 
-            <Button Content="Clear Filters"
-                    Click="OnClearFiltersClick" />
-        </StackPanel>
+                <Button Content="Clear Filters"
+                        Click="OnClearFiltersClick" />
+            </StackPanel>
+        </Border>
 
         <!-- Column headers -->
         <Grid DockPanel.Dock="Top"
@@ -51,19 +58,19 @@
               ColumnDefinitions="100,80,110,*,55">
             <TextBlock Grid.Column="0" Text="Time"
                        FontWeight="SemiBold" FontSize="12"
-                       Foreground="#9CA3AF" Margin="6,2" />
+                       Foreground="#999999" Margin="6,2" />
             <TextBlock Grid.Column="1" Text="Level"
                        FontWeight="SemiBold" FontSize="12"
-                       Foreground="#9CA3AF" Margin="4,2" />
+                       Foreground="#999999" Margin="4,2" />
             <TextBlock Grid.Column="2" Text="Type"
                        FontWeight="SemiBold" FontSize="12"
-                       Foreground="#9CA3AF" Margin="4,2" />
+                       Foreground="#999999" Margin="4,2" />
             <TextBlock Grid.Column="3" Text="Message"
                        FontWeight="SemiBold" FontSize="12"
-                       Foreground="#9CA3AF" Margin="4,2" />
+                       Foreground="#999999" Margin="4,2" />
             <TextBlock Grid.Column="4" Text="Thread"
                        FontWeight="SemiBold" FontSize="12"
-                       Foreground="#9CA3AF" Margin="4,2" />
+                       Foreground="#999999" Margin="4,2" />
         </Grid>
 
         <!-- Status bar -->
@@ -72,7 +79,7 @@
                     Margin="0,4,0,0">
             <TextBlock Text="{Binding StatusText}"
                        VerticalAlignment="Center"
-                       Foreground="#9CA3AF"
+                       Foreground="#999999"
                        FontSize="12" />
         </StackPanel>
 
@@ -81,8 +88,9 @@
                  ItemsSource="{Binding FilteredEntries}"
                  SelectionMode="Multiple"
                  BorderThickness="1"
-                 BorderBrush="#374151"
-                 Background="#111827">
+                 BorderBrush="#2a2a3a"
+                 Background="#0e0e14"
+                 CornerRadius="12">
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="m:LogEntryResponse">
                     <Grid ColumnDefinitions="100,80,110,*,55"
@@ -91,7 +99,7 @@
                                    Text="{Binding Time, StringFormat={}{0:HH:mm:ss.fff}}"
                                    FontFamily="Cascadia Mono, Consolas, monospace"
                                    FontSize="12"
-                                   Foreground="#9CA3AF"
+                                   Foreground="#999999"
                                    Margin="6,0"
                                    VerticalAlignment="Center" />
                         <TextBlock Grid.Column="1"
@@ -113,7 +121,7 @@
                                    Text="{Binding Message}"
                                    FontFamily="Cascadia Mono, Consolas, monospace"
                                    FontSize="12"
-                                   Foreground="#D1D5DB"
+                                   Foreground="#e0e0e0"
                                    TextTrimming="CharacterEllipsis"
                                    Margin="4,0"
                                    VerticalAlignment="Center" />
@@ -121,7 +129,7 @@
                                    Text="{Binding ThreadId}"
                                    FontFamily="Cascadia Mono, Consolas, monospace"
                                    FontSize="12"
-                                   Foreground="#6B7280"
+                                   Foreground="#666666"
                                    Margin="4,0"
                                    VerticalAlignment="Center" />
                     </Grid>

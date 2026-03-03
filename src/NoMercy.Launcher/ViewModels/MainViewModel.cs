@@ -9,6 +9,7 @@ public class MainViewModel : INotifyPropertyChanged
     private int _selectedTabIndex;
 
     public ServerControlViewModel ServerControlViewModel { get; }
+    public SettingsViewModel SettingsViewModel { get; }
     public StartupArgumentsViewModel StartupArgumentsViewModel { get; }
     public LogViewerViewModel LogViewerViewModel { get; }
 
@@ -23,8 +24,15 @@ public class MainViewModel : INotifyPropertyChanged
         ServerProcessLauncher processLauncher)
     {
         ServerControlViewModel = new(serverConnection, processLauncher);
+        SettingsViewModel = new(serverConnection);
         StartupArgumentsViewModel = new();
         LogViewerViewModel = new(serverConnection);
+
+        ServerControlViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ServerControlViewModel.IsServerRunning))
+                SettingsViewModel.IsServerRunning = ServerControlViewModel.IsServerRunning;
+        };
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

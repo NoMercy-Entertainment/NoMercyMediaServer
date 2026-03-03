@@ -127,7 +127,7 @@ public class NmCardDto
             : collection.Overview;
         Poster = collection.Poster;
         Backdrop = collection.Backdrop;
-        Logo = collection.Images.FirstOrDefault()?.FilePath;
+        Logo = collection.Images.FirstOrDefault(i => i.Type == "logo")?.FilePath;
         TitleSort = collection.Title.TitleSort(collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)
             ?.Movie.ReleaseDate);
         Year = collection.CollectionMovies.MinBy(movie => movie.Movie.ReleaseDate)?.Movie.ReleaseDate.ParseYear();

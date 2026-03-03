@@ -51,7 +51,6 @@
         <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
         <PackageReference Include="MimeMapping" />
         <PackageReference Include="Newtonsoft.Json" />
-        <PackageReference Include="Sentry" />
         <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
         <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" />

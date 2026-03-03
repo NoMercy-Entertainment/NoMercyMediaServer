@@ -23,6 +23,7 @@ public partial class MainWindow : Window
         await _viewModel.ServerControlViewModel.RefreshStatusAsync();
         _viewModel.ServerControlViewModel.StartPolling();
 
+        await _viewModel.SettingsViewModel.LoadConfigAsync();
         await _viewModel.StartupArgumentsViewModel.LoadAsync();
 
         if (_viewModel.LogViewerViewModel.AutoRefresh)

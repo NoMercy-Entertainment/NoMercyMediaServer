@@ -43,12 +43,6 @@ public class StartupOptions
     [Option("service", Required = false, HelpText = "Run as a platform service (Windows SCM, Linux systemd, macOS launchd).")]
     public bool RunAsService { get; set; }
 
-    [Option("sentry", Required = false, HelpText = "Enable Sentry.")]
-    public bool Sentry { get; set; }
-
-    [Option("dsn", Required = false, HelpText = "Sentry DSN.")]
-    public string? SentryDsn { get; set; }
-
     /// <summary>
     /// Apply environment variable overrides for options not set via CLI.
     /// Environment variables use NOMERCY_ prefix:
@@ -208,23 +202,6 @@ public class StartupOptions
             Logger.App("Setting external ip to " + ExternalIp);
             OverrideExternalIp = ExternalIp;
             options.Add("externalIp", ExternalIp);
-        }
-
-        if (Sentry)
-        {
-            Config.Sentry = Sentry;
-
-            if (!string.IsNullOrEmpty(SentryDsn))
-            {
-                Config.SentryDsn = SentryDsn;
-            }
-            else
-            {
-                Logger.App("Sentry DSN is not set. Sentry will not be enabled.");
-                Config.Sentry = false;
-            }
-
-            Logger.App("Sentry is enabled.");
         }
 
         UserSettings.ApplySettings(options, silent: true);

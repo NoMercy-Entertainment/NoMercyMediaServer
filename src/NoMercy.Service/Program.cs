@@ -113,13 +113,6 @@ public static class Program
 
         options.ApplySettings();
 
-        if (Config.Sentry)
-            SentrySdk.Init(config =>
-            {
-                config.Dsn = Config.SentryDsn;
-                config.TracesSampleRate = 1.0;
-            });
-
         Version version = Assembly.GetExecutingAssembly().GetName().Version!;
         Software.Version = version;
         Logger.App($"NoMercy MediaServer version: v{version.Major}.{version.Minor}.{version.Build}");
