@@ -533,7 +533,7 @@ public class HomeService
             [
                 Component.Carousel()
                     .WithId("continue")
-                    .WithNavigation("continue", 28)
+                    .WithNavigation("continue", "28")
                     .WithTitle("Continue watching".Localize())
                     .WithUpdate("pageLoad", "/home/continue")
                     .WithItems(BuildContinueWatchingCards(filtered, country))

@@ -10,7 +10,10 @@ public class SqliteNormalizeSearchInterceptor : DbConnectionInterceptor
     public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
     {
         if (connection is SqliteConnection sqliteConnection)
+        {
+            EnableWalMode(sqliteConnection);
             RegisterFunction(sqliteConnection);
+        }
 
         base.ConnectionOpened(connection, eventData);
     }
@@ -21,9 +24,19 @@ public class SqliteNormalizeSearchInterceptor : DbConnectionInterceptor
         CancellationToken cancellationToken = default)
     {
         if (connection is SqliteConnection sqliteConnection)
+        {
+            EnableWalMode(sqliteConnection);
             RegisterFunction(sqliteConnection);
+        }
 
         await base.ConnectionOpenedAsync(connection, eventData, cancellationToken);
+    }
+
+    private static void EnableWalMode(SqliteConnection connection)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=30000;";
+        command.ExecuteNonQuery();
     }
 
     private static void RegisterFunction(SqliteConnection connection)

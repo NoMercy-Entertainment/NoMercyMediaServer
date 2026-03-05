@@ -25,8 +25,8 @@ public class ReprocessAllPalettesCronJob : ICronJobExecutor
     private readonly ILogger<ReprocessAllPalettesCronJob> _logger;
     private readonly MediaContext _context;
 
-    private const int BatchSize = 50;
-    private const int MaxParallelism = 5;
+    private const int BatchSize = 100;
+    private const int MaxParallelism = 100;
 
     public string CronExpression => new CronExpressionBuilder().EveryMinutes(1);
     public string JobName => "Reprocess All ColorPalettes Job";

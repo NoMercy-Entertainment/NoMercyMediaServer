@@ -11,7 +11,7 @@ public class ColorPaletteTimeStamps : Timestamps
     [JsonProperty("color_palette")]
     [JsonIgnore]
     // ReSharper disable once InconsistentNaming
-    public string? _colorPalette { get; set; }
+    public string? _colorPalette { get; set; } = "";
 
     [NotMapped]
     public IColorPalettes? ColorPalette
