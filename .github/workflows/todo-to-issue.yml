@@ -21,7 +21,7 @@ jobs:
           INSERT_ISSUE_URLS: "true"
           CLOSE_ISSUES: "true"
           AUTO_ASSIGN: "true"
-          PROJECT: "organization/NoMercy-Entertainment/NoMercyMediaServer"
+          PROJECT: "organization/NoMercy-Entertainment/nomercy-media-server"
           PROJECTS_SECRET: "${{ secrets.TODO_PROJECTS_SECRET }}"
           ISSUE_TEMPLATE: |
             ### 📝 Todo Task

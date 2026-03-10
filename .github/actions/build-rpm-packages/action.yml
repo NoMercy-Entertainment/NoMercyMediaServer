@@ -12,7 +12,7 @@ inputs:
     description: 'GPG private key for signing'
     required: true
   app-repo-token:
-    description: 'Token for accessing the private NoMercyApp repo'
+    description: 'Token for accessing the private nomercy-app-web repo'
     required: false
     default: ''
 

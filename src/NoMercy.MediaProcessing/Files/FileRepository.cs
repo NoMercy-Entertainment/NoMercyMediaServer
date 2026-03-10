@@ -242,6 +242,10 @@ public class FileRepository(MediaContext context) : IFileRepository
         ConcurrentBag<FileItem> fileList)
     {
         string rawFileName = Path.GetFileNameWithoutExtension(file.Name);
+
+        // Check for a [tmdb-1234] hint baked into the filename, e.g. "[tmdb-553604]Spring (2019).mkv"
+        int? overrideTmdbId = rawFileName.TryGetTmdbHint();
+
         string cleanedForYear = Str.RemoveBracketedString().Replace(rawFileName, string.Empty);
         string? extractedYear = cleanedForYear.TryGetYear();
         
@@ -255,7 +259,6 @@ public class FileRepository(MediaContext context) : IFileRepository
         if (parsed.Title == null) return true;
         
         parsed.Title = Str.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
-
 
         if (parsed.Episode.HasValue && !parsed.Season.HasValue)
             parsed.Season = 1;
@@ -275,9 +278,9 @@ public class FileRepository(MediaContext context) : IFileRepository
         (MovieOrEpisode episodeMatch, string? imdbId)? result = libraryType switch
         {
             Config.AnimeMediaType or Config.TvMediaType =>
-                await ResolveShowEpisodeAsync(ctx, libraryType, parsed, ffprobeData.Format.Duration),
+                await ResolveShowEpisodeAsync(ctx, libraryType, parsed, ffprobeData.Format.Duration, overrideTmdbId),
             Config.MovieMediaType =>
-                await ResolveMovieMatchAsync(ctx, libraryType, parsed, ffprobeData.Format.Duration),
+                await ResolveMovieMatchAsync(ctx, libraryType, parsed, ffprobeData.Format.Duration, overrideTmdbId),
             _ => null
         };
 
@@ -374,12 +377,27 @@ public class FileRepository(MediaContext context) : IFileRepository
     }
 
     private static async Task<(MovieOrEpisode match, string? imdbId)?> ResolveShowEpisodeAsync(
-        MediaContext ctx, string libraryType, MovieFile parsed, TimeSpan? duration)
+        MediaContext ctx, string libraryType, MovieFile parsed, TimeSpan? duration, int? overrideTmdbId)
     {
         TmdbSearchClient searchClient = new();
-        TmdbPaginatedResponse<TmdbTvShow>? shows =
-            await searchClient.TvShow(parsed.Title ?? "", parsed.Year ?? "", true);
-        TmdbTvShow? show = shows?.Results.FirstOrDefault();
+
+        TmdbTvShow? show;
+        TmdbPaginatedResponse<TmdbTvShow>? shows = null;
+
+        if (overrideTmdbId.HasValue)
+        {
+            // Resolve directly by TMDB ID — no text search, no ambiguity
+            TmdbTvClient overrideTvClient = new(overrideTmdbId.Value);
+            TmdbTvShowDetails? overrideDetails = await overrideTvClient.Details(true);
+            if (overrideDetails == null) return null;
+            show = overrideDetails; // TmdbTvShowDetails : TmdbTvShow
+        }
+        else
+        {
+            shows = await searchClient.TvShow(parsed.Title ?? "", parsed.Year ?? "", true);
+            show = shows?.Results.FirstOrDefault();
+        }
+
         if (show == null || !parsed.Season.HasValue || !parsed.Episode.HasValue) return null;
 
         Ulid libraryId = await ctx.Libraries
@@ -468,12 +486,23 @@ public class FileRepository(MediaContext context) : IFileRepository
     }
 
     private static async Task<(MovieOrEpisode match, string? imdbId)?> ResolveMovieMatchAsync(
-        MediaContext ctx, string libraryType, MovieFile parsed, TimeSpan? duration)
+        MediaContext ctx, string libraryType, MovieFile parsed, TimeSpan? duration, int? overrideTmdbId)
     {
-        TmdbSearchClient searchClient = new();
-        TmdbPaginatedResponse<TmdbMovie>? movies =
-            await searchClient.Movie(parsed.Title ?? "", parsed.Year ?? "", true);
-        TmdbMovie? movie = movies?.Results.FirstOrDefault();
+        TmdbMovie? movie;
+
+        if (overrideTmdbId.HasValue)
+        {
+            // Resolve directly by TMDB ID — no text search, no ambiguity
+            movie = new TmdbMovie { Id = overrideTmdbId.Value };
+        }
+        else
+        {
+            TmdbSearchClient searchClient = new();
+            TmdbPaginatedResponse<TmdbMovie>? movies =
+                await searchClient.Movie(parsed.Title ?? "", parsed.Year ?? "", true);
+            movie = movies?.Results.FirstOrDefault();
+        }
+
         if (movie == null) return null;
 
         Movie? movieItem = ctx.Movies

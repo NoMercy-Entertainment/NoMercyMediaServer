@@ -87,7 +87,7 @@ jobs:
           VERSION="${{ inputs.version }}"
           TAG="${{ inputs.tag || format('v{0}', inputs.version) }}"
           SHORT_SHA="${GITHUB_SHA::7}"
-          REPO="https://github.com/NoMercy-Entertainment/NoMercyMediaServer"
+          REPO="https://github.com/NoMercy-Entertainment/nomercy-media-server"
           DL="${REPO}/releases/download/${TAG}"
 
           cat > /tmp/release-notes.md << NOTES_END

@@ -7,9 +7,9 @@
     <Company>NoMercy Entertainment</Company>
     <Copyright>2026 NoMercy Entertainment</Copyright>
     <PackageProjectUrl>https://nomercy.tv</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/NoMercy-Entertainment/NoMercyMediaServer</RepositoryUrl>
+    <RepositoryUrl>https://github.com/NoMercy-Entertainment/nomercy-media-server</RepositoryUrl>
 
-    <Version>0.1.291</Version>
+    <Version>0.1.292</Version>
     <AssemblyVersion>$(Version).0</AssemblyVersion>
     <FileVersion>$(Version).0</FileVersion>
   </PropertyGroup>

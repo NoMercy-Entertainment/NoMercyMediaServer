@@ -6,7 +6,7 @@ inputs:
     required: false
     default: '10.0.x'
   app-repo-token:
-    description: 'Token for accessing the private NoMercyApp repo'
+    description: 'Token for accessing the private nomercy-app-web repo'
     required: false
     default: ''
 outputs:
@@ -53,7 +53,7 @@ runs:
     - name: Pull App Files
       uses: actions/checkout@v5
       with:
-        repository: NoMercy-Entertainment/NoMercyApp
+        repository: NoMercy-Entertainment/nomercy-app-web
         token: ${{ inputs.app-repo-token || github.token }}
         path: ./src/NoMercy.App/Resources/wwwroot
         fetch-depth: 1

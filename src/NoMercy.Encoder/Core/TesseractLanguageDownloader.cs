@@ -8,7 +8,7 @@ namespace NoMercy.Encoder.Core;
 public static class TesseractLanguageDownloader
 {
     private static readonly HttpClient HttpClient = new();
-    private const string RepositoryBaseUrl = "https://raw.githubusercontent.com/NoMercy-Entertainment/NoMercyTesseract/master/tessdata";
+    private const string RepositoryBaseUrl = "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-tesseract/master/tessdata";
     
     static TesseractLanguageDownloader()
     {
@@ -17,7 +17,7 @@ public static class TesseractLanguageDownloader
 
     /// <summary>
     /// Ensures that the Tesseract language file for the specified language exists.
-    /// Downloads it from the NoMercyTesseract repository if it doesn't exist.
+    /// Downloads it from the nomercy-tesseract repository if it doesn't exist.
     /// </summary>
     /// <param name="languageCode">The ISO 639-3 language code (e.g., "eng", "fra", "deu")</param>
     /// <returns>True if the language file exists or was successfully downloaded, false otherwise</returns>

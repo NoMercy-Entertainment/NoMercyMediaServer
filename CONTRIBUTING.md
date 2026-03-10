@@ -18,7 +18,7 @@ Thank you for your interest in contributing to NoMercy MediaServer! This documen
 
 ### 1. Fork the Repository
 
-Click the "Fork" button on the [GitHub repository](https://github.com/NoMercyTV/NoMercyMediaServer) to create your own copy.
+Click the "Fork" button on the [GitHub repository](https://github.com/NoMercy-Entertainment/nomercy-media-server) to create your own copy.
 
 ### 2. Clone Your Fork
 
@@ -30,7 +30,7 @@ cd NoMercyMediaServer
 ### 3. Set Up Upstream Remote
 
 ```bash
-git remote add upstream https://github.com/NoMercyTV/NoMercyMediaServer.git
+git remote add upstream https://github.com/NoMercy-Entertainment/nomercy-media-server.git
 ```
 
 ### 4. Create a Feature Branch
@@ -123,8 +123,8 @@ See [CLAUDE.md](CLAUDE.md) for detailed code style and tooling guidelines.
 
 If you have questions or need help:
 
-- Open a [Discussion](https://github.com/NoMercyTV/NoMercyMediaServer/discussions)
-- Check existing [Issues](https://github.com/NoMercyTV/NoMercyMediaServer/issues)
+- Open a [Discussion](https://github.com/NoMercy-Entertainment/nomercy-media-server/discussions)
+- Check existing [Issues](https://github.com/NoMercy-Entertainment/nomercy-media-server/issues)
 
 ## License and Contributor Agreement
 

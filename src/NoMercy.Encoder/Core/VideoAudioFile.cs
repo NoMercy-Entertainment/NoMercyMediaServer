@@ -76,7 +76,10 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
                 foreach (BaseSubtitle newStream in x)
                     newStream.Extension = BaseSubtitle.GetExtension(newStream);
 
-                Container.SubtitleStreams.AddRange(x);
+                Container.SubtitleStreams.AddRange(
+                    x.Where(s => Container.SubtitleStreams.All(
+                        existing => existing.HlsPlaylistFilename != s.HlsPlaylistFilename))
+                );
             }
             else if (keyValuePair.Value.IsImage)
             {

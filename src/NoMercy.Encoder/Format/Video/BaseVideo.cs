@@ -488,25 +488,22 @@ public abstract class BaseVideo : Classes
             commandDictionary["-movflags"] = "faststart";
         }
         
-        bool isUhd = (VideoStream?.Width ?? 0) >= 3840 || (VideoStream?.Height ?? 0) >= 2160;
-        bool isHdr = PixelFormat is VideoPixelFormats.Yuv444P10Le or VideoPixelFormats.Yuv420P10Le;
-        
-        if (isUhd)
+        if (IsHdr)
         {
             commandDictionary["-color_primaries"] = "bt2020";
             commandDictionary["-colorspace"] = "bt2020nc";
-            commandDictionary["-color_trc"] = isHdr ? "smpte2084" : "bt709";
+            commandDictionary["-color_trc"] = "smpte2084";
         }
         else
         {
             commandDictionary["-color_primaries"] = "bt709";
-            commandDictionary["-color_trc"] = "bt709";
             commandDictionary["-colorspace"] = "bt709";
+            commandDictionary["-color_trc"] = "bt709";
         }
 
         commandDictionary["-color_range"] = "tv";
 
-        if (isHdr)
+        if (IsHdr)
         {
             const string masterDisplay = "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)";
             const string contentLight = "10000,4000";

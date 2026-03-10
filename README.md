@@ -2,7 +2,7 @@
 > **Work in progress — use with caution.** This repository is under active development and not yet stable.
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/NoMercy-Entertainment/NoMercyMediaServer/master/assets/icons/logo.png" style="width: auto;height: 240px;">
+<img src="https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-media-server/master/assets/icons/logo.png" style="width: auto;height: 240px;">
 </p>
 
 <h1 align="center">NoMercy MediaServer</h1>
@@ -13,8 +13,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/NoMercy-Entertainment/NoMercyMediaServer/actions">
-    <img src="https://github.com/NoMercy-Entertainment/NoMercyMediaServer/workflows/CI%2FCD%20Pipeline/badge.svg" alt="CI/CD Pipeline" />
+  <a href="https://github.com/NoMercy-Entertainment/nomercy-media-server/actions">
+    <img src="https://github.com/NoMercy-Entertainment/nomercy-media-server/workflows/CI%2FCD%20Pipeline/badge.svg" alt="CI/CD Pipeline" />
   </a>
 </p>
 
@@ -84,7 +84,7 @@
 
 > [!NOTE]
 > Installers and standalone binaries are self-contained — no .NET installation required.
-> Find all downloads on the [Releases page](https://github.com/NoMercy-Entertainment/NoMercyMediaServer/releases/latest).
+> Find all downloads on the [Releases page](https://github.com/NoMercy-Entertainment/nomercy-media-server/releases/latest).
 
 **2. Run the server and log in.**
 On desktop, a browser window opens automatically for authentication. On headless servers, navigate to `http://<your-server-ip>:7626/setup` to complete setup.
@@ -164,8 +164,8 @@ docker pull ghcr.io/nomercy-entertainment/nomercymediaserver:amd       # AMD
 Requires the [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
 
 ```bash
-git clone https://github.com/NoMercy-Entertainment/NoMercyMediaServer.git
-cd NoMercyMediaServer
+git clone https://github.com/NoMercy-Entertainment/nomercy-media-server.git
+cd nomercy-media-server
 dotnet restore && dotnet build
 dotnet run --project src/NoMercy.Service
 ```
@@ -201,7 +201,7 @@ Special thanks to **Mark** for donating hosting and the domain, and to [**Fill84
 
 ## Repository Note
 
-> This repository was recreated in January 2026 due to repository bloat. The previous repo with full history is archived at [NoMercyMediaServer-archive](https://github.com/NoMercy-Entertainment/NoMercyMediaServer-archive).
+> This repository was recreated in January 2026 due to repository bloat. The previous repo with full history is archived at [NoMercyMediaServer-archive](https://github.com/NoMercy-Entertainment/nomercy-media-server-archive).
 
 ## Contact
 

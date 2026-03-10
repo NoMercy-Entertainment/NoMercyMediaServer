@@ -1509,10 +1509,10 @@ public class EncoderCommandBuildingTests : IDisposable
     [Fact]
     public void BuildCommand_UhdVideo_ContainsBt2020ColorPrimaries()
     {
-        FfProbeData probe = CreateSdrProbeData(3840, 2160);
-        X264 video = new();
+        FfProbeData probe = CreateHdrProbeData();
+        X265 video = new();
         video.SetScale(3840, 2160);
-        video.SetColorSpace(VideoPixelFormats.Yuv420P);
+        video.SetColorSpace(VideoPixelFormats.Yuv420P10Le);
         video.SetHlsPlaylistFilename("video_3840x2160");
         Aac audio = new();
         audio.SetHlsPlaylistFilename("audio_eng_aac");

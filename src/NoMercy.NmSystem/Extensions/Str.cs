@@ -103,6 +103,20 @@ public static partial class Str
     [GeneratedRegex(@"\[.*?\]")]
     public static partial Regex RemoveBracketedString();
 
+    /// <summary>Matches a [tmdb-1234] hint embedded in a filename.</summary>
+    [GeneratedRegex(@"\[tmdb-(\d+)\]", RegexOptions.IgnoreCase)]
+    public static partial Regex MatchTmdbHint();
+
+    /// <summary>
+    /// Extracts the TMDB ID embedded as <c>[tmdb-1234]</c> anywhere in the string,
+    /// or returns <see langword="null"/> if no hint is present.
+    /// </summary>
+    public static int? TryGetTmdbHint(this string str)
+    {
+        Match m = MatchTmdbHint().Match(str);
+        return m.Success ? int.Parse(m.Groups[1].Value) : null;
+    }
+
     [GeneratedRegex(@"\d+")]
     public static partial Regex MatchNumbers();
 

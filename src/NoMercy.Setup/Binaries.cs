@@ -27,10 +27,10 @@ public static class Binaries
 {
     private static readonly HttpClient HttpClient = new();
 
-    private const string GithubMediaServerApiUrl    = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyMediaServer/releases/latest";
-    private const string GithubFfmpegApiUrl         = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyFFMpeg/releases/latest";
-    private const string GithubTesseractApiUrl      = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyTesseract/releases/latest";
-    private const string GithubWhisperModelApiUrl   = "https://api.github.com/repos/NoMercy-Entertainment/WhisperGmmlModels/releases/latest";
+    private const string GithubMediaServerApiUrl    = "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest";
+    private const string GithubFfmpegApiUrl         = "https://api.github.com/repos/NoMercy-Entertainment/nomercy-ffmpeg/releases/latest";
+    private const string GithubTesseractApiUrl      = "https://api.github.com/repos/NoMercy-Entertainment/nomercy-tesseract/releases/latest";
+    private const string GithubWhisperModelApiUrl   = "https://api.github.com/repos/NoMercy-Entertainment/nomercy-whisper-models/releases/latest";
     
     private const string GithubYtdlpApiUrl          = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest";
     private const string GithubCloudflaredApiUrl    = "https://api.github.com/repos/cloudflare/cloudflared/releases/latest";
@@ -648,7 +648,7 @@ public static class Binaries
         GithubReleaseResponse releaseInfo = await GetLatestReleaseInfo(GithubWhisperModelApiUrl);
         if (releaseInfo.Assets.Length == 0)
         {
-            Logger.Setup("No assets found for WhisperGmmlModels release.", LogEventLevel.Warning);
+            Logger.Setup("No assets found for nomercy-whisper-models release.", LogEventLevel.Warning);
             return;
         }
         
@@ -667,14 +667,14 @@ public static class Binaries
 
         if (downloadUrls.Count == 0)
         {
-            Logger.Setup($"No assets found for model {modelName} in WhisperGmmlModels release.", LogEventLevel.Warning);
+            Logger.Setup($"No assets found for model {modelName} in nomercy-whisper-models release.", LogEventLevel.Warning);
             return;
         }
 
         List<string> paths = [];
         foreach (Uri downloadUrl in downloadUrls)
         {
-            paths.Add(await Downloader.DownloadFile("WhisperGmmlModels", downloadUrl));
+            paths.Add(await Downloader.DownloadFile("nomercy-whisper-models", downloadUrl));
         }
 
         if (downloadUrls.Count > 1)

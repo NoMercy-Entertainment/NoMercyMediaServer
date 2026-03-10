@@ -8,7 +8,7 @@ namespace NoMercy.NmSystem;
 public static class UpdateChecker
 {
     private static readonly HttpClient HttpClient = new();
-    private const string GithubReleasesUrl = "https://api.github.com/repos/NoMercy-Entertainment/NoMercyMediaServer/releases/latest";
+    private const string GithubReleasesUrl = "https://api.github.com/repos/NoMercy-Entertainment/nomercy-media-server/releases/latest";
 
     static UpdateChecker()
     {

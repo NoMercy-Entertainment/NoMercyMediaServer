@@ -228,16 +228,14 @@ public class BaseSubtitle : Classes
         return extension;
     }
 
-    public void AddToDictionary(Dictionary<string, dynamic> commandDictionary, int index)
+    public void AddToDictionary(Dictionary<string, dynamic> commandDictionary, int sourceIndex, int outputIndex)
     {
-        // commandDictionary["-map"] = $"[s{index}_hls_0]";
-        commandDictionary["-map"] = $"s:{index}";
+        commandDictionary["-map"] = $"s:{sourceIndex}";
         commandDictionary["-c:s"] = SubtitleCodec.Value;
 
         if (!IsoLanguageMapper.IsoToLanguage.TryGetValue(Language, out string? language))
             throw new($"Language {Language} is not supported");
-        commandDictionary[$"-metadata:s:s:{index}"] = $"title=\"{language}\"";
-        commandDictionary[$"-metadata:s:s:{index}"] = $"language=\"{Language}\"";
+        commandDictionary[$"-metadata:s:s:{outputIndex}"] = $"title=\"{language}\" -metadata:s:s:{outputIndex} language=\"{Language}\"";
 
         foreach (KeyValuePair<string, dynamic> extraParameter in _extraParameters)
             commandDictionary[extraParameter.Key] = extraParameter.Value;
