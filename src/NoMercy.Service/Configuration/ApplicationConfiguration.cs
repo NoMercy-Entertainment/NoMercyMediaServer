@@ -82,7 +82,8 @@ public static class ApplicationConfiguration
         {
             app.UseHsts();
             app.UseWhen(
-                context => !context.Request.Path.StartsWithSegments("/manage"),
+                context => !context.Request.Path.StartsWithSegments("/manage")
+                           && context.Connection.LocalPort != Config.InternalServerPort + 1,
                 branch => branch.UseHttpsRedirection()
             );
         }
