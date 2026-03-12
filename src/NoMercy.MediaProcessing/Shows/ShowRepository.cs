@@ -315,7 +315,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
 
         // Kitsu alone isn't enough — require Japanese origin country from TMDB to avoid
         // false positives on western shows that have Kitsu entries (e.g. co-productions).
-        if (isAnime && show.OriginCountry.Length > 0)
+        if (isAnime)
         {
             bool hasJapaneseOrigin = show.OriginCountry.Any(c =>
                 string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase));
