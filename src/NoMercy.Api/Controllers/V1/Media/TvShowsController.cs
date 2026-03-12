@@ -251,6 +251,11 @@ public class TvShowsController(
 
         bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
 
+        // Require Japanese origin to avoid false positives on western co-productions
+        if (isAnime && show.OriginCountry.Length > 0 &&
+            !show.OriginCountry.Any(c => string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)))
+            isAnime = false;
+
         Library? tvLibrary = await mediaContext.Libraries
             .Where(f => f.Type == (isAnime ? "anime" : "tv"))
             .FirstOrDefaultAsync(ct) ?? await mediaContext.Libraries
@@ -279,6 +284,11 @@ public class TvShowsController(
         if (show == null) return NotFoundResponse("Tv show not found");
 
         bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+
+        // Require Japanese origin to avoid false positives on western co-productions
+        if (isAnime && show.OriginCountry.Length > 0 &&
+            !show.OriginCountry.Any(c => string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)))
+            isAnime = false;
 
         Library? library = await mediaContext.Libraries
             .Where(f => f.Type == (isAnime ? "anime" : "tv"))

@@ -313,6 +313,16 @@ public class ShowRepository(MediaContext context) : IShowRepository
     {
         bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
 
+        // Kitsu alone isn't enough — require Japanese origin country from TMDB to avoid
+        // false positives on western shows that have Kitsu entries (e.g. co-productions).
+        if (isAnime && show.OriginCountry.Length > 0)
+        {
+            bool hasJapaneseOrigin = show.OriginCountry.Any(c =>
+                string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase));
+            if (!hasJapaneseOrigin)
+                isAnime = false;
+        }
+
         return isAnime ? "anime" : "tv";
     }
     
