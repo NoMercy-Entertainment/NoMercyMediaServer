@@ -82,6 +82,7 @@ public static class SpecialSeed
                         await AddMovieItem(context, client, movieLibrary, item, movieIds, specialItems);
                         break;
                     case Config.TvMediaType:
+                    case Config.AnimeMediaType:
                         await AddTvItem(context, client, tvLibrary, item, tvIds, specialItems);
                         break;
                 }

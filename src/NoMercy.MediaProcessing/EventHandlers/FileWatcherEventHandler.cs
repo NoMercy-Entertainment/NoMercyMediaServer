@@ -62,6 +62,7 @@ public class FileWatcherEventHandler : IDisposable
                     await HandleMovieFolder(@event, mediaFolder);
                     break;
                 case Config.TvMediaType:
+                case Config.AnimeMediaType:
                     await HandleTvFolder(@event, mediaFolder);
                     break;
                 case Config.MusicMediaType:

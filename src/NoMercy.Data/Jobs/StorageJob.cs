@@ -135,6 +135,7 @@ public class StorageJob : IShouldQueue
                     storage.Data.Movies += size;
                     break;
                 case Config.TvMediaType:
+                case Config.AnimeMediaType:
                     storage.Data.Shows += size;
                     break;
                 case Config.MusicMediaType:

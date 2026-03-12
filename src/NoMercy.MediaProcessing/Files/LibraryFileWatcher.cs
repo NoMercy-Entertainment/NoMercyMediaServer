@@ -148,6 +148,7 @@ public class LibraryFileWatcher
         {
             case Config.MovieMediaType:
             case Config.TvMediaType:
+            case Config.AnimeMediaType:
                 string[] videoExtensions = [".mp4", ".mkv", ".avi", ".webm", ".mov", ".m3u8"];
                 return videoExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
             case Config.MusicMediaType:

@@ -537,6 +537,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                 query.On(p => new { p.UserId, p.MovieId });
                 break;
             case Config.TvMediaType:
+            case Config.AnimeMediaType:
                 query.On(p => new { p.UserId, p.TvId });
                 break;
             case Config.CollectionMediaType:
