@@ -254,17 +254,31 @@ public class MoviesController(
 
     [HttpPost]
     [Route("add")]
-    public async Task<IActionResult> Add(int id, CancellationToken ct = default)
+    public async Task<IActionResult> Add(int id, [FromQuery] Ulid? libraryId = null, CancellationToken ct = default)
     {
         if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to add tv shows");
+            return UnauthorizedResponse("You do not have permission to add movies");
 
-        Library? library = await mediaContext.Libraries
-            .Where(f => f.Type == Config.MovieMediaType)
-            .FirstOrDefaultAsync(ct);
+        Library? library;
 
-        if (library is null)
-            return UnprocessableEntityResponse("No movie library found");
+        if (libraryId is not null)
+        {
+            library = await mediaContext.Libraries
+                .Where(f => f.Id == libraryId.Value)
+                .FirstOrDefaultAsync(ct);
+
+            if (library is null)
+                return NotFoundResponse("Library not found");
+        }
+        else
+        {
+            library = await mediaContext.Libraries
+                .Where(f => f.Type == Config.MovieMediaType)
+                .FirstOrDefaultAsync(ct);
+
+            if (library is null)
+                return UnprocessableEntityResponse("No movie library found");
+        }
 
         try
         {

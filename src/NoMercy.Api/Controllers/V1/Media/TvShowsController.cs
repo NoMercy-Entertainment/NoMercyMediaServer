@@ -231,7 +231,7 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("refresh")]
-    public async Task<IActionResult> Refresh(int id, CancellationToken ct = default)
+    public async Task<IActionResult> Refresh(int id, [FromQuery] Ulid? libraryId = null, CancellationToken ct = default)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh tv shows");
@@ -245,23 +245,41 @@ public class TvShowsController(
         if (tv is null)
             return UnprocessableEntityResponse("Tv show not found");
 
-        TmdbTvClient tvClient = new(id);
-        TmdbTvShowDetails? show = await tvClient.Details(true);
-        if (show == null) return NotFoundResponse("Tv show not found");
+        Ulid targetLibraryId;
 
-        bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+        if (libraryId is not null)
+        {
+            Library? specified = await mediaContext.Libraries
+                .Where(f => f.Id == libraryId.Value)
+                .FirstOrDefaultAsync(ct);
 
-        // Require Japanese origin to avoid false positives on western co-productions
-        if (isAnime && !show.OriginCountry.Any(c => string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)))
-            isAnime = false;
+            if (specified is null)
+                return NotFoundResponse("Library not found");
 
-        Library? tvLibrary = await mediaContext.Libraries
-            .Where(f => f.Type == (isAnime ? "anime" : "tv"))
-            .FirstOrDefaultAsync(ct) ?? await mediaContext.Libraries
-            .Where(f => f.Type == "tv")
-            .FirstOrDefaultAsync(ct);
+            targetLibraryId = specified.Id;
+        }
+        else
+        {
+            TmdbTvClient tvClient = new(id);
+            TmdbTvShowDetails? show = await tvClient.Details(true);
+            if (show == null) return NotFoundResponse("Tv show not found");
 
-        jobDispatcher.DispatchJob<ShowImportJob>(id, tvLibrary?.Id ?? tv.Library.Id);
+            bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+
+            // Require Japanese origin to avoid false positives on western co-productions
+            if (isAnime && !show.OriginCountry.Any(c => string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)))
+                isAnime = false;
+
+            Library? tvLibrary = await mediaContext.Libraries
+                .Where(f => f.Type == (isAnime ? "anime" : "tv"))
+                .FirstOrDefaultAsync(ct) ?? await mediaContext.Libraries
+                .Where(f => f.Type == "tv")
+                .FirstOrDefaultAsync(ct);
+
+            targetLibraryId = tvLibrary?.Id ?? tv.Library.Id;
+        }
+
+        jobDispatcher.DispatchJob<ShowImportJob>(id, targetLibraryId);
 
         return Ok(new StatusResponseDto<string>
         {
@@ -273,35 +291,42 @@ public class TvShowsController(
 
     [HttpPost]
     [Route("add")]
-    public async Task<IActionResult> Add(int id, CancellationToken ct = default)
+    public async Task<IActionResult> Add(int id, [FromQuery] Ulid? libraryId = null, CancellationToken ct = default)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add tv shows");
 
-        TmdbTvClient tvClient = new(id);
-        TmdbTvShowDetails? show = await tvClient.Details(true);
-        if (show == null) return NotFoundResponse("Tv show not found");
+        Library? library;
 
-        bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
-
-        // Require Japanese origin to avoid false positives on western co-productions
-        Logger.MovieDb($"Show {show.Name}: Kitsu={isAnime}, OriginCountry=[{string.Join(", ", show.OriginCountry)}]");
-        if (isAnime && !show.OriginCountry.Any(c => string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)))
+        if (libraryId is not null)
         {
-            Logger.MovieDb($"Show {show.Name}: Overriding anime=false (no JP origin)");
-            isAnime = false;
+            library = await mediaContext.Libraries
+                .Where(f => f.Id == libraryId.Value)
+                .FirstOrDefaultAsync(ct);
+
+            if (library is null)
+                return NotFoundResponse("Library not found");
         }
+        else
+        {
+            TmdbTvClient tvClient = new(id);
+            TmdbTvShowDetails? show = await tvClient.Details(true);
+            if (show == null) return NotFoundResponse("Tv show not found");
 
-        Library? library = await mediaContext.Libraries
-            .Where(f => f.Type == (isAnime ? "anime" : "tv"))
-            .FirstOrDefaultAsync(ct) ?? await mediaContext.Libraries
-            .Where(f => f.Type == "tv")
-            .FirstOrDefaultAsync(ct);
+            bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
 
-        if (library is null)
-            return UnprocessableEntityResponse("No Tv library found");
+            if (isAnime && !show.OriginCountry.Any(c => string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)))
+                isAnime = false;
 
-        Logger.MovieDb($"Show {show.Name}: Selected library '{library.Title}' (type={library.Type}, isAnime={isAnime})");
+            library = await mediaContext.Libraries
+                .Where(f => f.Type == (isAnime ? "anime" : "tv"))
+                .FirstOrDefaultAsync(ct) ?? await mediaContext.Libraries
+                .Where(f => f.Type == "tv")
+                .FirstOrDefaultAsync(ct);
+
+            if (library is null)
+                return UnprocessableEntityResponse("No Tv library found");
+        }
 
         try
         {
@@ -317,7 +342,7 @@ public class TvShowsController(
         {
             Status = "ok",
             Message = "Adding {0} in the background",
-            Args = [show.Name]
+            Args = [library.Title]
         });
     }
 
