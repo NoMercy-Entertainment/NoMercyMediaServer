@@ -285,8 +285,12 @@ public class TvShowsController(
         bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
 
         // Require Japanese origin to avoid false positives on western co-productions
+        Logger.MovieDb($"Show {show.Name}: Kitsu={isAnime}, OriginCountry=[{string.Join(", ", show.OriginCountry)}]");
         if (isAnime && !show.OriginCountry.Any(c => string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)))
+        {
+            Logger.MovieDb($"Show {show.Name}: Overriding anime=false (no JP origin)");
             isAnime = false;
+        }
 
         Library? library = await mediaContext.Libraries
             .Where(f => f.Type == (isAnime ? "anime" : "tv"))
@@ -296,6 +300,8 @@ public class TvShowsController(
 
         if (library is null)
             return UnprocessableEntityResponse("No Tv library found");
+
+        Logger.MovieDb($"Show {show.Name}: Selected library '{library.Title}' (type={library.Type}, isAnime={isAnime})");
 
         try
         {
