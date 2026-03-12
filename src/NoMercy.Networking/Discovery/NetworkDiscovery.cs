@@ -224,6 +224,21 @@ public class NetworkDiscovery : INetworkDiscovery
 
     private static string GetInternalIp()
     {
+        // Prefer the UDP socket method — it returns the IP of the interface that would
+        // route to the internet, which is always the real LAN adapter, never Docker/WSL.
+        try
+        {
+            using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+            socket.Connect("1.1.1.1", 65530);
+            string? ip = (socket.LocalEndPoint as IPEndPoint)?.Address.ToString();
+            if (!string.IsNullOrEmpty(ip) && ip != "127.0.0.1")
+                return ip;
+        }
+        catch
+        {
+            // Fall through to interface enumeration
+        }
+
         try
         {
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
@@ -231,11 +246,13 @@ public class NetworkDiscovery : INetworkDiscovery
                 if (nic.OperationalStatus != OperationalStatus.Up) continue;
                 if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback
                     or NetworkInterfaceType.Tunnel) continue;
+                if (IsVirtualNetworkInterface(nic)) continue;
 
                 foreach (UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses)
                 {
                     if (addr.Address.AddressFamily != AddressFamily.InterNetwork) continue;
                     if (IPAddress.IsLoopback(addr.Address)) continue;
+                    if (IsDockerOrWslAddress(addr.Address)) continue;
 
                     return addr.Address.ToString();
                 }
@@ -243,19 +260,46 @@ public class NetworkDiscovery : INetworkDiscovery
         }
         catch
         {
-            // Fall through to socket method
+            // No suitable interface found
         }
 
-        try
+        return "127.0.0.1";
+    }
+
+    private static bool IsVirtualNetworkInterface(NetworkInterface nic)
+    {
+        string description = nic.Description.ToLowerInvariant();
+        string name = nic.Name.ToLowerInvariant();
+
+        string[] virtualKeywords =
+        [
+            "hyper-v", "virtual", "vethernet", "docker", "wsl",
+            "vpn", "vmware", "virtualbox", "vbox"
+        ];
+
+        foreach (string keyword in virtualKeywords)
         {
-            using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
-            socket.Connect("1.1.1.1", 65530);
-            return (socket.LocalEndPoint as IPEndPoint)?.Address.ToString() ?? "127.0.0.1";
+            if (description.Contains(keyword) || name.Contains(keyword))
+                return true;
         }
-        catch
-        {
-            return "127.0.0.1";
-        }
+
+        return false;
+    }
+
+    private static bool IsDockerOrWslAddress(IPAddress address)
+    {
+        byte[] bytes = address.GetAddressBytes();
+        if (bytes.Length != 4) return false;
+
+        // Docker default bridge: 172.17.0.0/16, and common Docker networks: 172.18-31.0.0/16
+        if (bytes[0] == 172 && bytes[1] >= 17 && bytes[1] <= 31)
+            return true;
+
+        // WSL: commonly 172.16.x.x range
+        if (bytes[0] == 172 && bytes[1] == 16)
+            return true;
+
+        return false;
     }
 
     private static string? GetInternalIpV6()
