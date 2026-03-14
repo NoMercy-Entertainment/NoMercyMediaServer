@@ -97,7 +97,7 @@ public class ApiInfo
             Logger.Setup("Requesting server info");
 
             GenericHttpClient apiClient = new(Config.ApiBaseUrl);
-            apiClient.SetDefaultHeaders(Config.UserAgent);
+            apiClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
 
             string content = await apiClient.SendAndReadAsync(HttpMethod.Get, "v1/info");
 
