@@ -31,6 +31,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Disable autocrlf before checkout
+        run: git config --global core.autocrlf false
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -142,8 +145,6 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git config core.autocrlf false
-          git config core.eol lf
 
           NEW_VERSION="${{ inputs.version }}"
           TAG="${{ inputs.tag || format('v{0}', inputs.version) }}"
@@ -198,7 +199,6 @@ jobs:
           # Checkout master and squash merge dev
           git checkout -f master
           git reset --hard origin/master
-          git stash --include-untracked 2>/dev/null || true
           git merge --squash -X theirs origin/dev
 
           # Update version in Directory.Build.props
