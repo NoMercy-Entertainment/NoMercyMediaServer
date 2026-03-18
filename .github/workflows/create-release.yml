@@ -199,6 +199,12 @@ jobs:
           # Checkout master and squash merge dev
           git checkout -f master
           git reset --hard origin/master
+
+          # Renormalize line endings to match .gitattributes
+          # Master may have CRLF files from before .gitattributes was enforced
+          git add --renormalize . 2>/dev/null || true
+          git checkout -- . 2>/dev/null || true
+
           git merge --squash -X theirs origin/dev
 
           # Update version in Directory.Build.props
