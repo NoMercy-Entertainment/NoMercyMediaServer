@@ -25,20 +25,21 @@ jobs:
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
 
-      - name: Run fast tests (Unit + ErrorHandling)
+      - name: Run fast tests (Unit + ErrorHandling + Characterization)
         run: >
-          dotnet test NoMercy.Server.sln 
+          dotnet test NoMercy.Server.sln
           --configuration Debug
           --no-restore
           --verbosity minimal
           --logger trx
           --blame-hang-timeout 5m
-          --filter "Category=Unit|Category=ErrorHandling"
+          --filter "Category=Unit|Category=ErrorHandling|Category=Characterization"
 
-  # Optional coverage job - only runs on main or when manually triggered
+  # Optional coverage job - non-blocking, only runs on master or when manually triggered
   coverage:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     
     steps:
       - uses: actions/checkout@v5
@@ -59,10 +60,10 @@ jobs:
           --settings tests/coverletArgs.runsettings
           --verbosity minimal
 
-  # Integration tests - only runs on main, releases, or manually
+  # Integration tests - only runs on master, releases, or manually
   integration_tests:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     
     steps:
       - uses: actions/checkout@v5

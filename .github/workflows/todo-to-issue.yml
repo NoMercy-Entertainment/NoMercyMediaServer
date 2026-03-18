@@ -21,8 +21,8 @@ jobs:
           INSERT_ISSUE_URLS: "true"
           CLOSE_ISSUES: "true"
           AUTO_ASSIGN: "true"
-          PROJECT: "organization/NoMercy-Entertainment/NoMercyMediaServer"
-          PROJECTS_SECRET: "${{ secrets.TODO_PROJECTS_SECRET }}"
+          PROJECT: "organization/NoMercy-Entertainment/nomercy-media-server"
+          PROJECTS_SECRET: "${{ secrets.TODO_PROJECTS_SECRET }}" # [REDACTED] GitHub Actions secret reference
           ISSUE_TEMPLATE: |
             ### 📝 Todo Task
             **Description:**  
