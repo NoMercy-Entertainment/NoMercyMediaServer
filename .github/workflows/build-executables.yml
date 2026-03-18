@@ -3,37 +3,60 @@ name: 'Build Executables Workflow'
 on:
   workflow_call:
     inputs:
+      ref:
+        description: 'Git ref to checkout and build'
+        required: false
+        type: string
+        default: ''
       dotnet-version:
         description: '.NET version to use'
         required: false
         type: string
         default: '10.0.x'
+      version:
+        description: 'Version to inject into Directory.Build.props before building (optional)'
+        required: false
+        type: string
+        default: ''
     outputs:
       artifact-names:
         description: 'Names of uploaded artifacts'
         value: ${{ jobs.build_executables.outputs.artifact-names }}
+    secrets:
+      APP_REPO_TOKEN:
+        description: 'PAT for accessing the private NoMercyApp repo'
+        required: true
 
 jobs:
   build_executables:
     runs-on: macos-latest
     strategy:
       matrix:
-        project: [Server, App]
+        project: [Service, App, Launcher, Cli]
     outputs:
       artifact-names: ${{ steps.set-names.outputs.names }}
 
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: main
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
           fetch-tags: true
+
+      - name: Override version in Directory.Build.props
+        if: inputs.version != ''
+        shell: bash
+        run: |
+          perl -i -pe 's|<Version>.*?</Version>|<Version>${{ inputs.version }}</Version>|' Directory.Build.props
+          echo "Injected version ${{ inputs.version }} into Directory.Build.props"
+          grep '<Version>' Directory.Build.props
 
       - name: Build ${{ matrix.project }}
         uses: ./.github/actions/build-dotnet-project
         with:
           project: ${{ matrix.project }}
           dotnet-version: ${{ inputs.dotnet-version }}
+          app-repo-token: ${{ secrets.APP_REPO_TOKEN }}
 
       - name: Set artifact names
         id: set-names

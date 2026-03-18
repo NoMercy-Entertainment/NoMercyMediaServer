@@ -5,12 +5,16 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'docker/**'
+      - '.github/**'
     branches:
       - dev
   pull_request:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'docker/**'
+      - '.github/**'
     branches:
       - dev
   workflow_dispatch:
@@ -21,6 +25,7 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
   pages: write
   id-token: write
   actions: read
@@ -32,20 +37,22 @@ jobs:
     with:
       dotnet-version: "10.0.x"
 
-  # Step 2: Version Management and squash merge to main
+  # Step 2: Calculate next version (no commits or pushes)
   version_management:
     needs: test
     if: github.ref == 'refs/heads/dev' && github.event_name != 'pull_request'
     uses: ./.github/workflows/version-and-release-management.yml
     secrets: inherit
 
-  # Step 3: Build Executables from main branch
+  # Step 3: Build Executables from dev with version override
   build_executables:
     needs: version_management
     if: needs.version_management.outputs.should_deploy == 'true'
     uses: ./.github/workflows/build-executables.yml
+    secrets: inherit
     with:
       dotnet-version: "10.0.x"
+      version: ${{ needs.version_management.outputs.version }}
 
   # Step 4: Build Linux Packages (before release so packages are included)
   build_packages:
@@ -56,21 +63,24 @@ jobs:
     with:
       version: ${{ needs.version_management.outputs.version }}
 
-  # Step 5: Create Release (includes executables AND Linux packages)
+  # Step 5: Build and push Docker images to ghcr.io (reuses linux binary from build_executables)
+  build_docker_images:
+    needs: [version_management, build_executables]
+    if: needs.version_management.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/build-docker-images.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      version: ${{ needs.version_management.outputs.version }}
+      ref: ${{ github.sha }}
+
+  # Step 6: Create Release, squash merge to master, and sync dev
+  # Only runs after ALL builds succeed — version bump is atomic with release
   create_release:
-    needs: [version_management, build_executables, build_packages]
+    needs: [version_management, build_executables, build_packages, build_docker_images]
     if: needs.version_management.outputs.should_deploy == 'true'
     uses: ./.github/workflows/create-release.yml
     secrets: inherit
     with:
       version: ${{ needs.version_management.outputs.version }}
-
-  # Step 6: Finalize Repository (website + metadata only, no binaries)
-  finalize_repository:
-    needs: [version_management, build_packages, create_release]
-    if: needs.version_management.outputs.should_deploy == 'true'
-    uses: ./.github/workflows/finalize-repository.yml
-    secrets: inherit
-    with:
-      version: ${{ needs.version_management.outputs.version }}
-      GPG_PUBLIC_KEY: ${{ vars.GPG_PUBLIC_KEY }}

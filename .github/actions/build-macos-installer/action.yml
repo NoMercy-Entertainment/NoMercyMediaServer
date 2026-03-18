@@ -1,0 +1,38 @@
+name: 'Build macOS Installer'
+description: 'Build macOS .pkg installer with shared runtime'
+inputs:
+  version:
+    description: 'Package version'
+    required: true
+  dotnet-version:
+    description: '.NET version to use'
+    required: false
+    default: '10.0.x'
+  app-repo-token:
+    description: 'Token for accessing the private NoMercyApp repo'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Build shared runtime payload
+      uses: ./.github/actions/build-macos-installer-payload
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+        app-repo-token: ${{ inputs.app-repo-token }}
+
+    - name: Build macOS .pkg installer
+      shell: bash
+      run: |
+        chmod +x ./packaging/macos/build-pkg.sh
+        ./packaging/macos/build-pkg.sh \
+          --version "${{ inputs.version }}" \
+          --payload-path "./installer-payload" \
+          --output-path "./packages/macos-installer"
+
+    - name: Upload macOS installer artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-installer
+        path: packages/macos-installer/
