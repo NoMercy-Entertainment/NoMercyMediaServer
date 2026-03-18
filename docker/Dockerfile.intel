@@ -1,0 +1,56 @@
+# NoMercy MediaServer - Runtime Only (Intel QSV)
+# Used by CI with pre-built self-contained binary in ./publish/
+
+FROM debian:bookworm-slim
+WORKDIR /app
+
+# Install Intel media drivers and VAAPI libraries (enable contrib + non-free-firmware)
+RUN sed -i 's/Components: main/Components: main contrib non-free-firmware/' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    intel-media-va-driver \
+    intel-opencl-icd \
+    libmfx1 \
+    libvpl2 \
+    libva2 \
+    libva-drm2 \
+    libva-x11-2 \
+    libdrm2 \
+    libdrm-intel1 \
+    libicu72 \
+    libssl3 \
+    mediainfo \
+    curl \
+    pciutils \
+    procps \
+    sqlite3 \
+    htop \
+    nvtop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user with video/render group access
+RUN groupadd -f video && groupadd -f render \
+    && useradd -m -o -u 1000 -G video,render nomercy
+
+# Create data directories (app stores data under $HOME/.local/share/NoMercy/)
+RUN mkdir -p /data/.local/share/NoMercy \
+    && chown -R nomercy:nomercy /data
+
+# Copy self-contained binary
+COPY publish/NoMercyMediaServer .
+RUN chown -R nomercy:nomercy /app
+
+USER nomercy
+
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV HOME=/data
+ENV LIBVA_DRIVER_NAME=iHD
+ENV LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
+
+EXPOSE 7626
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://127.0.0.1:7627/health || exit 1
+
+ENTRYPOINT ["./NoMercyMediaServer"]
+CMD ["--internal-port", "7626"]

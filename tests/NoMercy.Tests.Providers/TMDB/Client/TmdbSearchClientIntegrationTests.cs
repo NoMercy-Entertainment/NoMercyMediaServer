@@ -12,6 +12,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// These tests require a valid TMDB API key and internet connection
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("TmdbApi")]
 public class TmdbSearchClientIntegrationTests : TmdbTestBase
 {
     [Fact]

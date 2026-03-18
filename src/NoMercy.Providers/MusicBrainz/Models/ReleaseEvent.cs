@@ -17,6 +17,6 @@ public class ReleaseEvent
                _date.TryParseToDateTime(out DateTime dt)
             ? dt
             : null;
-        set => _date = value.ToString() ?? string.Empty;
+        set => _date = value.ToString().OrEmpty();
     }
 }

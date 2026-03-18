@@ -42,6 +42,6 @@ public class TvdbCharacterTagOption
     [JsonProperty("helpText")] public string? HelpText { get; set; }
     [JsonProperty("id")] public int Id { get; set; }
     [JsonProperty("name")] public string? Name { get; set; }
-    [JsonProperty("tag")] public int Tag { get; }
+    [JsonProperty("tag")] public int Tag { get; set; }
     [JsonProperty("tagName")] public string? TagName { get; set; }
 }

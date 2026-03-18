@@ -1,20 +1,23 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using NoMercy.Providers.MusicBrainz.Models;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 using Serilog.Events;
-using Image = NoMercy.Database.Models.Image;
+using Image = NoMercy.Database.Models.Media.Image;
 
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
 public class FanArtImagesJob : IShouldQueue
 {
+    public string QueueName => "image";
+    public int Priority => 2;
+
     public MusicBrainzArtist? MusicBrainzArtist { get; set; }
     public MusicBrainzReleaseAppends? MusicBrainzRelease { get; set; }
 

@@ -1,7 +1,10 @@
-using NoMercy.Database.Models;
+using System.Collections.Concurrent;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.People;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -13,7 +16,7 @@ using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Providers.TMDB.Models.TV;
 using Serilog.Events;
-using TmdbGender = NoMercy.Database.Models.TmdbGender;
+using TmdbGender = NoMercy.Database.Models.People.TmdbGender;
 
 namespace NoMercy.MediaProcessing.People;
 
@@ -67,7 +70,7 @@ public class PersonManager(
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.TvShow);
         Logger.MovieDb($"Show {show.Name}: Crew stored", LogEventLevel.Debug);
 
-        jobDispatcher.DispatchJob<AddPersonExtraDataJob, TmdbPersonAppends>(peopleAppends, show.Name);
+        jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(peopleAppends, show.Name);
     }
 
     public async Task Store(TmdbSeasonAppends season)
@@ -216,7 +219,7 @@ public class PersonManager(
         await personRepository.StoreCrew(crews.Where(c => ids.Contains(c.PersonId)), Type.Movie);
         Logger.MovieDb($"Movie: {movie.Title}: Crew stored", LogEventLevel.Debug);
 
-        jobDispatcher.DispatchJob<AddPersonExtraDataJob, TmdbPersonAppends>(peopleAppends, movie.Title);
+        jobDispatcher.DispatchJob<PersonExtrasJob, TmdbPersonAppends>(peopleAppends, movie.Title);
     }
 
     public Task Update(string showName, TmdbTvShowAppends show)
@@ -254,7 +257,7 @@ public class PersonManager(
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
                 Iso6391 = image.Iso6391,
-                FilePath = image.FilePath ?? string.Empty,
+                FilePath = image.FilePath.OrEmpty(),
                 Width = image.Width,
                 VoteAverage = image.VoteAverage,
                 VoteCount = image.VoteCount,
@@ -302,7 +305,7 @@ public class PersonManager(
 
             jobs.AddRange(aggregateCrew.Jobs.Select(crewJob => new Job
             {
-                CreditId = crewJob.CreditId ?? string.Empty,
+                CreditId = crewJob.CreditId.OrEmpty(),
                 Task = crewJob.Job,
                 Order = crewJob.Order,
                 EpisodeCount = crewJob.EpisodeCount
@@ -354,7 +357,7 @@ public class PersonManager(
 
             jobs.AddRange(aggregateCrew.Jobs.Select(j => new Job
             {
-                CreditId = j.CreditId ?? string.Empty,
+                CreditId = j.CreditId.OrEmpty(),
                 Task = j.Job,
                 Order = j.Order,
                 EpisodeCount = j.EpisodeCount
@@ -405,7 +408,7 @@ public class PersonManager(
 
             jobs.Add(new()
             {
-                CreditId = tmdbCrew.CreditId ?? string.Empty,
+                CreditId = tmdbCrew.CreditId.OrEmpty(),
                 Task = tmdbCrew.Job,
                 Order = tmdbCrew.Order
             });
@@ -455,7 +458,7 @@ public class PersonManager(
 
             jobs.Add(new()
             {
-                CreditId = tmdbCrew.CreditId ?? string.Empty,
+                CreditId = tmdbCrew.CreditId.OrEmpty(),
                 Task = tmdbCrew.Job,
                 Order = tmdbCrew.Order
             });
@@ -476,7 +479,7 @@ public class PersonManager(
     {
         try
         {
-            List<TmdbPersonAppends> personAppends = [];
+            ConcurrentBag<TmdbPersonAppends> personAppends = [];
 
             await Parallel.ForEachAsync(ids, Config.ParallelOptions, async (id, _) =>
             {
@@ -502,7 +505,7 @@ public class PersonManager(
                     Logger.MovieDb(e.Message, LogEventLevel.Error);
                 }
             });
-            
+
             return personAppends
                 .Where(f => f is { Name: not null })
                 .OrderBy(f => f!.Name)
@@ -512,7 +515,7 @@ public class PersonManager(
         {
             Logger.MovieDb(e.Message, LogEventLevel.Error);
         }
-        
+
         return [];
     }
 }

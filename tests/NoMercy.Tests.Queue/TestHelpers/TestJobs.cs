@@ -1,9 +1,12 @@
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.Tests.Queue.TestHelpers;
 
 public class TestJob : IShouldQueue
 {
+    public string QueueName => "default";
+    public int Priority => 0;
+
     public string Message { get; set; } = string.Empty;
     public bool HasExecuted { get; set; } = false;
     public bool ShouldFail { get; set; } = false;
@@ -27,6 +30,9 @@ public class TestJob : IShouldQueue
 
 public class AnotherTestJob : IShouldQueue
 {
+    public string QueueName => "default";
+    public int Priority => 0;
+
     public int Value { get; set; }
     public bool HasExecuted { get; set; } = false;
 
@@ -36,4 +42,13 @@ public class AnotherTestJob : IShouldQueue
         HasExecuted = true;
         Value *= 2;
     }
+}
+
+/// <summary>
+/// A type that does NOT implement IShouldQueue — used to test the safety gate
+/// that prevents non-job types from executing in the queue worker.
+/// </summary>
+public class NotAJob
+{
+    public string Data { get; set; } = string.Empty;
 }

@@ -22,6 +22,10 @@ public class ImageStream
     [JsonProperty("coded_height")] public int CodedHeight { get; set; }
     [JsonProperty("aspect_ratio")] public string DisplayAspectRatio => NumberConverter.NormalizeAspectRatio(Width, Height);
     
+    public ImageStream()
+    {
+    }
+
     public ImageStream(FfprobeSourceDataStream ffprobeSourceDataStream)
     {
         Index = ffprobeSourceDataStream.Index;

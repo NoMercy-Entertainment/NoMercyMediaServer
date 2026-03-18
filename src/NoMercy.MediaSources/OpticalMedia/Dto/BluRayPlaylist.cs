@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using NoMercy.Encoder.Core;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.MediaSources.OpticalMedia.Dto;
 
@@ -31,13 +32,13 @@ public partial class BluRayPlaylist
 
         foreach (string line in lines)
         {
-            string value = line.Split(':', 2).LastOrDefault()?.Trim() ?? string.Empty;
+            string value = (line.Split(':', 2).LastOrDefault()?.Trim()).OrEmpty();
 
             if (line.StartsWith("Complete name"))
             {
                 playlist.CompleteName = value;
-                playlist.PlaylistId = value.Split('\\').LastOrDefault()
-                    ?.Split('.').FirstOrDefault() ?? string.Empty;
+                playlist.PlaylistId = (value.Split('\\').LastOrDefault()
+                    ?.Split('.').FirstOrDefault()).OrEmpty();
             }
             else if (line.StartsWith("Format "))
             {

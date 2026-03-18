@@ -55,7 +55,11 @@ public class Classes
         set => CropValue = $"crop={value.W}:{value.H}:{value.X}:{value.Y}";
     }
 
-    internal double AspectRatioValue => Crop.H / Crop.W;
+    /// <summary>
+    /// The height-to-width ratio of the crop area.
+    /// Returns 0 when no crop is set (W == 0) to avoid NaN from 0.0/0.0.
+    /// </summary>
+    internal double AspectRatioValue => Crop.W > 0 ? Crop.H / Crop.W : 0.0;
 
     internal string ScaleValue = "";
 
@@ -72,7 +76,12 @@ public class Classes
                 int width = int.Parse(scale[0]);
                 int height = int.Parse(scale[1]);
 
-                if (height == -2) height = (int)(width * AspectRatioValue);
+                // -2 is the FFmpeg "auto height, divisible-by-2" sentinel.
+                // Resolve it to actual pixels using crop aspect ratio when crop is
+                // set, or leave it as -2 so callers can detect and handle it using
+                // the real video-stream dimensions.
+                if (height == -2 && AspectRatioValue > 0)
+                    height = (int)(width * AspectRatioValue);
 
                 return new()
                 {

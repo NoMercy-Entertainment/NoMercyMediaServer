@@ -35,8 +35,20 @@ public static class Cpu
     {
         List<string> vendors = [];
 
-        string output = SystemCalls.Shell.ExecCommand("lscpu | grep 'Model name:'");
-        vendors.Add(output.Trim().Split(':')[1].Trim());
+        string output = SystemCalls.Shell.ExecCommand("lscpu");
+        string modelName = "Unknown";
+        int sockets = 1;
+
+        foreach (string line in output.Split('\n'))
+        {
+            if (line.StartsWith("Model name:"))
+                modelName = line.Split(':', 2)[1].Trim();
+            else if (line.StartsWith("Socket(s):"))
+                int.TryParse(line.Split(':', 2)[1].Trim(), out sockets);
+        }
+
+        for (int i = 0; i < sockets; i++)
+            vendors.Add(modelName);
 
         return vendors;
     }
@@ -83,8 +95,20 @@ public static class Cpu
     {
         List<string> cpus = [];
 
-        string output = SystemCalls.Shell.ExecCommand("lscpu | grep 'Model name:'");
-        cpus.Add(output.Trim().Split(':')[1].Trim());
+        string output = SystemCalls.Shell.ExecCommand("lscpu");
+        string modelName = "Unknown";
+        int sockets = 1;
+
+        foreach (string line in output.Split('\n'))
+        {
+            if (line.StartsWith("Model name:"))
+                modelName = line.Split(':', 2)[1].Trim();
+            else if (line.StartsWith("Socket(s):"))
+                int.TryParse(line.Split(':', 2)[1].Trim(), out sockets);
+        }
+
+        for (int i = 0; i < sockets; i++)
+            cpus.Add(modelName);
 
         return cpus;
     }

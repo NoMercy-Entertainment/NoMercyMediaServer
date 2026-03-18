@@ -12,5 +12,5 @@ public class TmdbMovie : TmdbBase
     [JsonProperty("tagline")] public string? Tagline { get; set; }
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
     [JsonProperty("release_date")] public DateTime? ReleaseDate { get; set; }
-    [JsonProperty("video")] public string? Video { get; set; }
+    [JsonProperty("video")] public bool? Video { get; set; }
 }

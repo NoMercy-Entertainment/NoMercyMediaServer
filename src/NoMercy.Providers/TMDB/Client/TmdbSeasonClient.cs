@@ -104,8 +104,6 @@ public class TmdbSeasonClient : TmdbBaseClient, IDisposable
 
     public new void Dispose()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
+        base.Dispose();
     }
 }

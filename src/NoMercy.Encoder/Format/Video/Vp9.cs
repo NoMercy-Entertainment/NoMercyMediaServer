@@ -25,10 +25,10 @@ public class Vp9 : BaseVideo
     protected override CodecDto[] AvailableCodecs =>
     [
         VideoCodecs.Vp9,
-        VideoCodecs.Vp9Nvenc
-        // VideoCodecs.Vp9Qsv,
-        // VideoCodecs.Vp9Amf,
-        // VideoCodecs.Vp9Videotoolbox
+        VideoCodecs.Vp9Nvenc,
+        VideoCodecs.Vp9Qsv,
+        VideoCodecs.Vp9Amf,
+        VideoCodecs.Vp9Videotoolbox
     ];
 
     protected internal override string[] AvailableContainers =>

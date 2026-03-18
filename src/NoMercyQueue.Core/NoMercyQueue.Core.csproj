@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
+        <Product>NoMercy Queue Core</Product>
+    </PropertyGroup>
+    <PropertyGroup>
+        <IsTestProject>false</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="NoMercy.Tests.Queue" />
+    </ItemGroup>
+
+</Project>

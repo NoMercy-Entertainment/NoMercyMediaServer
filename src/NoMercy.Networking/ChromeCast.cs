@@ -1,4 +1,8 @@
 using System.Text.Json.Serialization;
+using NoMercy.Events;
+using NoMercy.Events.Cast;
+using NoMercy.Networking.Discovery;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Sharpcaster;
 using Sharpcaster.Models;
@@ -9,6 +13,8 @@ namespace NoMercy.Networking;
 
 public class ChromeCast
 {
+    public static INetworkDiscovery? NetworkDiscovery { get; set; }
+
     private static readonly ChromecastLocator Locator = new();
     private static IEnumerable<ChromecastReceiver> _chromecastReceivers = new List<ChromecastReceiver>();
     private static ChromecastClient? _client;
@@ -53,29 +59,32 @@ public class ChromeCast
 
         _client.MediaChannel.StatusChanged += (sender, args) =>
         {
-            Networking.SendToAll("StatusChanged", "castHub", new Dictionary<string, object?>
-            {
-                { "sender", sender },
-                { "args", args }
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new CastDeviceStatusChangedEvent
+                {
+                    EventType = "StatusChanged",
+                    StatusData = new Dictionary<string, object?> { { "sender", sender }, { "args", args } }
+                });
         };
 
         _client.ReceiverChannel.ReceiverStatusChanged += (sender, args) =>
         {
-            Networking.SendToAll("ReceiverStatusChanged", "castHub", new Dictionary<string, object?>
-            {
-                { "sender", sender },
-                { "args", args }
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new CastDeviceStatusChangedEvent
+                {
+                    EventType = "ReceiverStatusChanged",
+                    StatusData = new Dictionary<string, object?> { { "sender", sender }, { "args", args } }
+                });
         };
 
         _client.ReceiverChannel.LaunchStatusChanged += (sender, args) =>
         {
-            Networking.SendToAll("LaunchStatusChanged", "castHub", new Dictionary<string, object?>
-            {
-                { "sender", sender },
-                { "args", args }
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new CastDeviceStatusChangedEvent
+                {
+                    EventType = "LaunchStatusChanged",
+                    StatusData = new Dictionary<string, object?> { { "sender", sender }, { "args", args } }
+                });
         };
 
         await _client.ConnectChromecast(receiver);
@@ -119,11 +128,13 @@ public class ChromeCast
         if (_client is null) return;
         Logger.Ping("Casting playlist: " + value);
 
+        string externalAddress = (NetworkDiscovery?.ExternalAddress).OrEmpty();
+
         CastCustomData customData = new()
         {
             AccessToken = Globals.Globals.AccessToken,
-            BasePath = Networking.ExternalAddress,
-            Playlist = $"{Networking.ExternalAddress}/api/v1/{value}/watch",
+            BasePath = externalAddress,
+            Playlist = $"{externalAddress}/api/v1/{value}/watch",
             DeepLink = $"tv.nomercy.app://{value}/watch"
         };
         

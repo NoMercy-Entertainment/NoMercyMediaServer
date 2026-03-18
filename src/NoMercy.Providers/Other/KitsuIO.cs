@@ -1,6 +1,6 @@
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using Serilog.Events;
 
 namespace NoMercy.Providers.Other;
@@ -11,11 +11,9 @@ public static class KitsuIo
     {
         bool isAnime = false;
 
-        HttpClient client = new();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
-        client.BaseAddress = new("https://kitsu.io/api/edge/");
+        HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.KitsuIo);
 
-        HttpResponseMessage response = await client.GetAsync($"anime?filter[text]={title}&filter[year]={year}");
+        using HttpResponseMessage response = await client.GetAsync($"anime?filter[text]={title}&filter[year]={year}");
         string content = await response.Content.ReadAsStringAsync();
 
         try

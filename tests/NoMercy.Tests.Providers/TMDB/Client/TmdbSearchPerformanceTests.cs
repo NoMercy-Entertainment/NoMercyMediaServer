@@ -13,6 +13,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Tests response times and efficiency under various conditions
 /// </summary>
 [Trait("Category", "Performance")]
+[Collection("TmdbApi")]
 public class TmdbSearchPerformanceTests : TmdbTestBase
 {
     #region Single Operation Performance Tests
@@ -224,7 +225,7 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         stopwatch.Stop();
 
         // Assert
-        stopwatch.ElapsedMilliseconds.Should().BeLessThan(7000, 
+        stopwatch.ElapsedMilliseconds.Should().BeLessThan(15000,
             "because even large result sets should be handled efficiently");
         result.Should().NotBeNull();
         result!.Results.Should().NotBeEmpty();

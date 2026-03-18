@@ -1,0 +1,56 @@
+# Auto-detect and normalize
+* text=auto eol=lf
+
+# Source code
+*.cs            text diff=csharp
+*.csproj        text
+*.sln           text eol=crlf
+*.props         text
+*.targets       text
+*.resx          text
+*.axaml         text
+*.xml           text
+*.json          text
+*.js            text
+*.css           text
+*.html          text
+*.md            text diff=markdown
+*.txt           text
+*.yml           text
+*.yaml          text
+*.editorconfig  text
+*.config        text
+*.runsettings   text
+*.DotSettings   text
+
+# Dockerfiles
+Dockerfile      text
+Dockerfile.*    text
+
+# Shell scripts (force LF)
+*.sh            text eol=lf
+*.bash          text eol=lf
+
+# Windows batch files (force CRLF)
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+*.sln           text eol=crlf
+*.iss           text eol=crlf
+*.ps1           text eol=crlf
+
+# Unix config files (force LF)
+*.service       text eol=lf
+*.desktop       text eol=lf
+*.plist         text eol=lf
+*.dockerignore  text eol=lf
+
+# Binary files
+*.png           binary
+*.ico           binary
+*.icns          binary
+*.svg           text
+*.dll           binary
+
+# Linguist
+*.cs            linguist-language=C#
+*.axaml         linguist-language=XML

@@ -15,7 +15,7 @@ public class TmdbCollectionPart
     [JsonProperty("poster_path")] public string? PosterPath { get; set; }
     [JsonProperty("popularity")] public double? Popularity { get; set; }
     [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("video")] public string? Video { get; set; }
+    [JsonProperty("video")] public bool? Video { get; set; }
     [JsonProperty("vote_average")] public double VoteAverage { get; set; }
     [JsonProperty("vote_count")] public int VoteCount { get; set; }
 }

@@ -1,6 +1,7 @@
 using System.Drawing;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.LogEnrichers;
 using NoMercy.NmSystem.NewtonSoftConverters;
@@ -17,6 +18,8 @@ public static class Logger
     private static Serilog.Core.Logger FileLog { get; set; }
     private static LogEventLevel _maxLogLevel = LogEventLevel.Debug;
     private const string ConsoleTemplate = "{Time} {ConsoleType} | {@Message:lj}{NewLine}{Exception}";
+
+    public static event Action<LogEntry>? LogEmitted;
 
     public class LogType
     {
@@ -162,7 +165,7 @@ public static class Logger
             .DefaultEnrich()
             .WriteTo.Logger(lc =>
             {
-                if (!Console.IsOutputRedirected) lc.SinkConsole();
+                lc.SinkConsole();
             });
     }
 
@@ -209,6 +212,16 @@ public static class Logger
             .ForContext("Level", logLevel)
             .ForContext("ConsoleType", type.Name)
             .Write(logLevel, "{@Message}", message.ToJson());
+
+        LogEmitted?.Invoke(new()
+        {
+            Type = logType,
+            Color = colorHex,
+            Message = message?.ToString().OrEmpty(),
+            LogLevel = logLevel,
+            Time = DateTime.UtcNow,
+            ThreadId = Environment.CurrentManagedThreadId
+        });
     }
 
     // Generic entry point
@@ -279,10 +292,12 @@ public static class Logger
     public static async Task<List<LogEntry>> GetLogs(int limit = 10, Func<LogEntry, bool>? filter = null)
     {
         string logDirectoryPath = AppFiles.LogPath;
-        List<LogEntry> logs = await LogReader.GetLogsAsync(logDirectoryPath, limit);
+        List<LogEntry> logs = await LogReader.GetLogsAsync(logDirectoryPath, filter: filter);
 
-        if (filter != null) logs = logs.Where(filter).ToList();
-
-        return logs;
+        return logs
+            .OrderByDescending(entry => entry.Time)
+            .Take(limit)
+            .OrderBy(entry => entry.Time)
+            .ToList();
     }
 }

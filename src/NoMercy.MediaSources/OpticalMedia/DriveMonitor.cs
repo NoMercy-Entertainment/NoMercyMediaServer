@@ -5,6 +5,8 @@ using BDInfo;
 using MediaInfo;
 using NoMercy.Encoder;
 using NoMercy.Encoder.Core;
+using NoMercy.Events;
+using NoMercy.Events.DriveMonitor;
 using NoMercy.MediaSources.OpticalMedia.Dto;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -44,25 +46,33 @@ public partial class DriveMonitor
         {
             Logger.Ripper($"Media inserted: {drive} ({label})");
 
-            Networking.Networking.SendToAll("DriveState", "ripperHub", new DriveState
-            {
-                Open = false,
-                Path = drive.TrimEnd(Path.DirectorySeparatorChar),
-                Label = label,
-                MetaData = null
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new DriveStateChangedEvent
+                {
+                    DriveStateData = new DriveState
+                    {
+                        Open = false,
+                        Path = drive.TrimEnd(Path.DirectorySeparatorChar),
+                        Label = label,
+                        MetaData = null
+                    }
+                });
 
             MetaData? metaData = label is not null
                 ? await GetDriveMetadata(drive)
                 : null;
 
-            Networking.Networking.SendToAll("DriveState", "ripperHub", new DriveState
-            {
-                Open = false,
-                Path = drive.TrimEnd(Path.DirectorySeparatorChar),
-                Label = label,
-                MetaData = metaData
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new DriveStateChangedEvent
+                {
+                    DriveStateData = new DriveState
+                    {
+                        Open = false,
+                        Path = drive.TrimEnd(Path.DirectorySeparatorChar),
+                        Label = label,
+                        MetaData = metaData
+                    }
+                });
         };
 
         driveMonitor.OnMediaEjected += drive =>
@@ -71,11 +81,15 @@ public partial class DriveMonitor
 
             Contents = Contents.Where(c => c.Path != drive).ToList();
 
-            Networking.Networking.SendToAll("DriveState", "ripperHub", new DriveState
-            {
-                Open = true,
-                Path = drive.TrimEnd(Path.DirectorySeparatorChar)
-            });
+            if (EventBusProvider.IsConfigured)
+                _ = EventBusProvider.Current.PublishAsync(new DriveStateChangedEvent
+                {
+                    DriveStateData = new DriveState
+                    {
+                        Open = true,
+                        Path = drive.TrimEnd(Path.DirectorySeparatorChar)
+                    }
+                });
         };
 
         Task.Run(() => driveMonitor.StartPollingAsync());

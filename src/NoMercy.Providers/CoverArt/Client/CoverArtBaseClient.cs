@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
@@ -15,24 +14,14 @@ public class CoverArtBaseClient : IDisposable
 
     protected CoverArtBaseClient()
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _client = HttpClientProvider.CreateClient(HttpClientNames.CoverArt);
+        _client.BaseAddress ??= _baseUrl;
     }
 
     protected CoverArtBaseClient(Guid id)
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+        _client = HttpClientProvider.CreateClient(HttpClientNames.CoverArt);
+        _client.BaseAddress ??= _baseUrl;
         Id = id;
     }
 
@@ -67,6 +56,6 @@ public class CoverArtBaseClient : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

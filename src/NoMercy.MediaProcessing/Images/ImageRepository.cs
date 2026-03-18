@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Music;
 
 namespace NoMercy.MediaProcessing.Images;
 

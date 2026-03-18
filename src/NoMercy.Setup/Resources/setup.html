@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoMercy MediaServer - Setup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 440px;
+            padding: 24px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #8f00fc, #CBAFFF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo p {
+            color: #888;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .card {
+            background: #16161e;
+            border: 1px solid #2a2a3a;
+            border-radius: 12px;
+            padding: 32px 24px;
+        }
+
+        .step { display: none; }
+        .step.active { display: block; }
+
+        .step h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .step p {
+            color: #999;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #8f00fc, #705BAD);
+            color: #fff;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 24px 0;
+            color: #555;
+            font-size: 13px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #2a2a3a;
+        }
+
+        .divider span { padding: 0 12px; }
+
+        .qr-section {
+            text-align: center;
+        }
+
+        .qr-section p {
+            margin-bottom: 16px;
+        }
+
+        #qr-container {
+            display: inline-block;
+            padding: 12px;
+            background: #fff;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        #qr-container canvas {
+            display: block;
+        }
+
+        .device-code {
+            font-family: monospace;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #CBAFFF;
+            margin: 12px 0;
+        }
+
+        .device-link {
+            font-size: 13px;
+            color: #888;
+            word-break: break-all;
+        }
+
+        .device-link a {
+            color: #CBAFFF;
+            text-decoration: none;
+        }
+
+        .device-link a:hover { text-decoration: underline; }
+
+        .progress-section {
+            text-align: center;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            border: 3px solid #2a2a3a;
+            border-top-color: #8f00fc;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .phase-label {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .phase-detail {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .success-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .error-box {
+            background: #2a1520;
+            border: 1px solid #5c2040;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #f08080;
+            display: none;
+        }
+
+        .error-box.visible { display: block; }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: #CBAFFF;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>NoMercy</h1>
+            <p>MediaServer Setup</p>
+        </div>
+
+        <div class="card">
+            <!-- Step 1: Welcome / Login -->
+            <div id="step-login" class="step active">
+                <h2>Welcome</h2>
+                <p>Sign in with your NoMercy account to set up this server.</p>
+                <div id="error-box" class="error-box"></div>
+                <a id="btn-login" class="btn btn-primary" href="#">
+                    Login with NoMercy
+                </a>
+                <div class="divider"><span>or use another device</span></div>
+                <div class="qr-section">
+                    <p>Scan this QR code or enter the code on another device:</p>
+                    <div id="qr-container" style="display:none;"></div>
+                    <div id="device-code" class="device-code" style="display:none;"></div>
+                    <div id="device-link" class="device-link" style="display:none;"></div>
+                    <button id="btn-device-grant" class="btn-link">
+                        Show device login code
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Progress -->
+            <div id="step-progress" class="step">
+                <div class="progress-section">
+                    <div class="spinner"></div>
+                    <div id="progress-label" class="phase-label">Authenticating...</div>
+                    <div id="progress-detail" class="phase-detail">Please wait</div>
+                </div>
+                <div id="progress-error" class="error-box" style="margin-top:16px;"></div>
+                <button id="btn-retry" class="btn btn-primary"
+                    style="display:none; margin-top:16px;">Retry</button>
+            </div>
+
+            <!-- Step 3: Complete -->
+            <div id="step-complete" class="step">
+                <div class="progress-section">
+                    <div class="success-icon">&#10003;</div>
+                    <h2>Setup Complete</h2>
+                    <p>Your server is configured and ready to use.</p>
+                    <a id="server-url" class="btn btn-primary" href="#">
+                        Open NoMercy
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+(function() {
+    "use strict";
+
+    var config = null;
+    var pollTimer = null;
+    var devicePollTimer = null;
+
+    function show(id) {
+        var steps = document.querySelectorAll(".step");
+        for (var i = 0; i < steps.length; i++) steps[i].classList.remove("active");
+        document.getElementById(id).classList.add("active");
+    }
+
+    function showError(msg) {
+        var box = document.getElementById("error-box");
+        box.textContent = msg;
+        box.classList.add("visible");
+    }
+
+    function hideError() {
+        var box = document.getElementById("error-box");
+        box.textContent = "";
+        box.classList.remove("visible");
+    }
+
+    function drawQrCode(container, text) {
+        // Minimal QR code rendering using the server-side endpoint
+        var img = document.createElement("img");
+        img.src = "/setup/qr?data=" + encodeURIComponent(text);
+        img.width = 200;
+        img.height = 200;
+        img.alt = "QR Code";
+        img.style.display = "block";
+        container.innerHTML = "";
+        container.appendChild(img);
+        container.style.display = "inline-block";
+    }
+
+    function buildAuthUrl() {
+        var baseUrl = config.auth_base_url.replace(/\/+$/, "")
+            + "/protocol/openid-connect/auth";
+        var redirectUri = window.location.protocol + "//" +
+            window.location.host + "/sso-callback";
+        var params = [
+            "client_id=" + encodeURIComponent(config.client_id),
+            "redirect_uri=" + encodeURIComponent(redirectUri),
+            "response_type=code",
+            "scope=" + encodeURIComponent("openid offline_access email profile"),
+            "code_challenge=" + encodeURIComponent(config.code_challenge),
+            "code_challenge_method=S256"
+        ];
+        return baseUrl + "?" + params.join("&");
+    }
+
+    function handleStatusData(data) {
+        updateProgress(data);
+        if (data.phase === "Complete") {
+            stopStatusStream();
+            show("step-complete");
+        } else if (data.error) {
+            document.getElementById("progress-error").textContent = data.error;
+            document.getElementById("progress-error").classList.add("visible");
+            document.getElementById("btn-retry").style.display = "block";
+            document.querySelector(".spinner").style.display = "none";
+        } else {
+            document.getElementById("progress-error").classList.remove("visible");
+            document.getElementById("btn-retry").style.display = "none";
+            document.querySelector("#step-progress .spinner").style.display = "inline-block";
+        }
+    }
+
+    var statusSource = null;
+
+    function startStatusStream() {
+        stopStatusStream();
+
+        if (typeof EventSource !== "undefined") {
+            statusSource = new EventSource("/setup/status");
+            statusSource.onmessage = function(e) {
+                try {
+                    var data = JSON.parse(e.data);
+                    handleStatusData(data);
+                } catch (err) { /* ignore parse errors */ }
+            };
+            statusSource.onerror = function() {
+                statusSource.close();
+                statusSource = null;
+                pollTimer = setInterval(pollStatus, 2000);
+                pollStatus();
+            };
+        } else {
+            pollTimer = setInterval(pollStatus, 2000);
+            pollStatus();
+        }
+    }
+
+    function stopStatusStream() {
+        if (statusSource) {
+            statusSource.close();
+            statusSource = null;
+        }
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+    }
+
+    function pollStatus() {
+        fetch("/setup/status")
+            .then(function(r) { return r.json(); })
+            .then(function(data) { handleStatusData(data); })
+            .catch(function() { /* network error, keep polling */ });
+    }
+
+    function updateProgress(data) {
+        var label = document.getElementById("progress-label");
+        var detail = document.getElementById("progress-detail");
+
+        var phases = {
+            "Unauthenticated": ["Waiting for login...", "Sign in to continue"],
+            "Authenticating": ["Authenticating...", "Verifying your credentials"],
+            "Authenticated": ["Authenticated", "Registering server..."],
+            "Registering": ["Registering server...", "Connecting to NoMercy API"],
+            "Registered": ["Server registered", "Acquiring SSL certificate..."],
+            "CertificateAcquired": ["Certificate acquired", "Finalizing setup..."],
+            "Complete": ["Setup complete!", "Your server is ready"]
+        };
+
+        var info = phases[data.phase] || ["Processing...", "Please wait"];
+        label.textContent = info[0];
+        detail.textContent = info[1];
+    }
+
+    function startDeviceGrant() {
+        fetch("/setup/device-code", { method: "POST" })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.error) {
+                    showError(data.message || "Failed to start device login");
+                    return;
+                }
+
+                document.getElementById("device-code").textContent = data.user_code;
+                document.getElementById("device-code").style.display = "block";
+
+                var linkEl = document.getElementById("device-link");
+                linkEl.innerHTML = 'Visit: <a href="' + data.verification_uri_complete +
+                    '" target="_blank">' + data.verification_uri + '</a>';
+                linkEl.style.display = "block";
+
+                drawQrCode(
+                    document.getElementById("qr-container"),
+                    data.verification_uri_complete
+                );
+
+                document.getElementById("btn-device-grant").style.display = "none";
+
+                // Poll for device grant completion
+                devicePollTimer = setInterval(function() {
+                    fetch("/setup/status")
+                        .then(function(r) { return r.json(); })
+                        .then(function(status) {
+                            if (status.is_authenticated || status.phase !== "Unauthenticated") {
+                                clearInterval(devicePollTimer);
+                                show("step-progress");
+                                startStatusStream();
+                            }
+                        })
+                        .catch(function() {});
+                }, 3000);
+            })
+            .catch(function() {
+                showError("Failed to connect to server");
+            });
+    }
+
+    function init() {
+        fetch("/setup/config")
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                config = data;
+
+                // Check if already past login
+                if (data.phase !== "Unauthenticated") {
+                    if (data.phase === "Complete") {
+                        show("step-complete");
+                    } else {
+                        show("step-progress");
+                        startStatusStream();
+                    }
+                    return;
+                }
+
+                // Setup login button with server-side PKCE
+                var loginBtn = document.getElementById("btn-login");
+                loginBtn.href = buildAuthUrl();
+
+                // Device grant button
+                document.getElementById("btn-device-grant").addEventListener("click", function() {
+                    startDeviceGrant();
+                });
+            })
+            .catch(function() {
+                showError("Failed to load setup configuration");
+            });
+
+        // Retry button — re-fetch config to get a fresh code challenge
+        document.getElementById("btn-retry").addEventListener("click", function() {
+            hideError();
+            fetch("/setup/config")
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    config = data;
+                    var loginBtn = document.getElementById("btn-login");
+                    loginBtn.href = buildAuthUrl();
+                    show("step-login");
+                })
+                .catch(function() {
+                    show("step-login");
+                });
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+</body>
+</html>

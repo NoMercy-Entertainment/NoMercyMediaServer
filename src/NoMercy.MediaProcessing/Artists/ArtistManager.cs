@@ -1,16 +1,20 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.MusicGenres;
-using NoMercy.Networking.Dto;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.MediaProcessing.Artists;
 
@@ -66,10 +70,11 @@ public class ArtistManager(
             Logger.MusicBrainz(e.Message, LogEventLevel.Error);
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["music", "artist", artistCredit.MusicBrainzArtist.Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "artist", artistCredit.MusicBrainzArtist.Id.ToString()]
+            });
     }
 
     /** this is the store for a Release artist */
@@ -102,7 +107,7 @@ public class ArtistManager(
         };
 
         await artistRepository.StoreAsync(artist);
-        jobDispatcher.DispatchJob<MusicDescriptionJob>(artistCredit);
+        jobDispatcher.DispatchJob<MusicMetadataJob>(artistCredit);
         
         await LinkToLibrary(artistCredit, library);
         await LinkToRelease(artistCredit, releaseAppends);
@@ -132,10 +137,11 @@ public class ArtistManager(
             Logger.MusicBrainz(e.Message, LogEventLevel.Error);
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["music", "artist", artistCredit.Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "artist", artistCredit.Id.ToString()]
+            });
     }
 
     /** this is the store for a Recording artist */
@@ -169,7 +175,7 @@ public class ArtistManager(
         };
 
         await artistRepository.StoreAsync(artist);
-        jobDispatcher.DispatchJob<MusicDescriptionJob>(artistCredit);
+        jobDispatcher.DispatchJob<MusicMetadataJob>(artistCredit);
 
         await LinkToLibrary(artistCredit, library);
         await LinkToTrack(artistCredit, track);
@@ -198,10 +204,11 @@ public class ArtistManager(
             Logger.MusicBrainz(e.Message, LogEventLevel.Error);
         }
 
-        Networking.Networking.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = ["music", "artist", artistCredit.Id.ToString()]
-        });
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "artist", artistCredit.Id.ToString()]
+            });
 
     }
 
@@ -209,8 +216,10 @@ public class ArtistManager(
     {
         CoverArtImageManagerManager.CoverPalette? coverPalette = await FanArtImageManager.Add(artistCredit.Id, true);
         
-        if (coverPalette is not null) 
-            await FanArtImageClient.Download(coverPalette.Url!);
+        if (coverPalette is not null)
+        {
+            using Image<Rgba32>? downloadedImage = await FanArtImageClient.Download(coverPalette.Url!);
+        }
         
         return coverPalette;
     }

@@ -1,4 +1,4 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
 

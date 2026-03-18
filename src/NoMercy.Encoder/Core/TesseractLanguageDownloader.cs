@@ -8,7 +8,7 @@ namespace NoMercy.Encoder.Core;
 public static class TesseractLanguageDownloader
 {
     private static readonly HttpClient HttpClient = new();
-    private const string RepositoryBaseUrl = "https://raw.githubusercontent.com/NoMercy-Entertainment/NoMercyTesseract/master/tessdata";
+    private const string RepositoryBaseUrl = "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-tesseract/master/tessdata";
     
     static TesseractLanguageDownloader()
     {
@@ -17,7 +17,7 @@ public static class TesseractLanguageDownloader
 
     /// <summary>
     /// Ensures that the Tesseract language file for the specified language exists.
-    /// Downloads it from the NoMercyTesseract repository if it doesn't exist.
+    /// Downloads it from the nomercy-tesseract repository if it doesn't exist.
     /// </summary>
     /// <param name="languageCode">The ISO 639-3 language code (e.g., "eng", "fra", "deu")</param>
     /// <returns>True if the language file exists or was successfully downloaded, false otherwise</returns>
@@ -53,18 +53,19 @@ public static class TesseractLanguageDownloader
         {
             string downloadUrl = $"{RepositoryBaseUrl}/{languageFileName}";
             
-            using HttpResponseMessage response = await HttpClient.GetAsync(downloadUrl);
-            
+            using HttpResponseMessage response = await HttpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 Logger.Encoder($"Language file not found in repository: {languageFileName}", LogEventLevel.Warning);
                 return false;
             }
-            
+
             response.EnsureSuccessStatusCode();
-            
-            byte[] fileData = await response.Content.ReadAsByteArrayAsync();
-            await File.WriteAllBytesAsync(localFilePath, fileData);
+
+            await using Stream contentStream = await response.Content.ReadAsStreamAsync();
+            await using FileStream fileStream = new(localFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
+            await contentStream.CopyToAsync(fileStream);
             
             Logger.Encoder($"Successfully downloaded Tesseract language file: {languageFileName}");
             return true;

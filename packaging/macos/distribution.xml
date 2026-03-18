@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>NoMercy MediaServer</title>
+    <organization>tv.nomercy</organization>
+    <domains enable_localSystem="true" enable_currentUserHome="false" enable_anywhere="false"/>
+    <options customize="allow" require-scripts="false" hostArchitectures="x86_64,arm64"/>
+
+    <welcome language="en" mime-type="text/html"><![CDATA[
+        <html><body>
+        <h2>Welcome to NoMercy MediaServer</h2>
+        <p>This installer will install the NoMercy MediaServer, Service application, and command-line interface on your Mac.</p>
+        <p>Visit <a href="https://nomercy.tv">nomercy.tv</a> for more information.</p>
+        </body></html>
+    ]]></welcome>
+
+    <choices-outline>
+        <line choice="server"/>
+        <line choice="service"/>
+        <line choice="cli"/>
+    </choices-outline>
+
+    <choice id="server"
+            title="NoMercy MediaServer"
+            description="The core media server application."
+            enabled="true"
+            selected="true"
+            visible="true">
+        <pkg-ref id="tv.nomercy.mediaserver"/>
+    </choice>
+
+    <choice id="service"
+            title="NoMercy MediaServer Service"
+            description="System tray application for managing the server. Includes auto-launch on login."
+            enabled="true"
+            selected="true"
+            visible="true">
+        <pkg-ref id="tv.nomercy.mediaserver.service"/>
+    </choice>
+
+    <choice id="cli"
+            title="NoMercy CLI"
+            description="Command-line interface for managing the server. Installs to /usr/local/bin/nomercy."
+            enabled="true"
+            selected="true"
+            visible="true">
+        <pkg-ref id="tv.nomercy.cli"/>
+    </choice>
+
+    <pkg-ref id="tv.nomercy.mediaserver" version="0" onConclusion="none">server.pkg</pkg-ref>
+    <pkg-ref id="tv.nomercy.mediaserver.service" version="0" onConclusion="none">service.pkg</pkg-ref>
+    <pkg-ref id="tv.nomercy.cli" version="0" onConclusion="none">cli.pkg</pkg-ref>
+</installer-gui-script>

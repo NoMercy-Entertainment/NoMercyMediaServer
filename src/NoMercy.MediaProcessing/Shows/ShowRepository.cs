@@ -1,6 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.Other;
@@ -52,6 +56,15 @@ public class ShowRepository(MediaContext context) : IShowRepository
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.CreatedAt, t => tv.CreatedAt));
 
         await context.SaveChangesAsync();
+
+        // Link any existing recommendation/similar rows that reference this show as their target
+        await context.Recommendations
+            .Where(r => r.MediaId == tv.Id && r.TvToId == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.TvToId, tv.Id));
+
+        await context.Similar
+            .Where(r => r.MediaId == tv.Id && r.TvToId == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.TvToId, tv.Id));
     }
 
     public Task LinkToLibrary(Library library, Tv tv)
@@ -299,6 +312,16 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public string GetMediaType(TmdbTvShowAppends show)
     {
         bool isAnime = KitsuIo.IsAnime(show.Name, show.FirstAirDate.ParseYear()).Result;
+
+        // Kitsu alone isn't enough — require Japanese origin country from TMDB to avoid
+        // false positives on western shows that have Kitsu entries (e.g. co-productions).
+        if (isAnime)
+        {
+            bool hasJapaneseOrigin = show.OriginCountry.Any(c =>
+                string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase));
+            if (!hasJapaneseOrigin)
+                isAnime = false;
+        }
 
         return isAnime ? "anime" : "tv";
     }

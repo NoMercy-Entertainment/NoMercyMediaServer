@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.MediaProcessing.Libraries;
 
@@ -48,17 +50,35 @@ public class LibraryRepository(MediaContext context) : ILibraryRepository
             .FirstOrDefaultAsync(library => library.Id == libraryId);
     }
 
+    public async Task<HashSet<string>> GetExistingFolderNamesAsync(Ulid libraryId, string libraryType)
+    {
+        IEnumerable<string?> folders = libraryType switch
+        {
+            Config.MovieMediaType => await context.LibraryMovie
+                .Where(lm => lm.LibraryId == libraryId)
+                .Include(lm => lm.Movie)
+                .Select(lm => lm.Movie.Folder)
+                .ToListAsync(),
+            _ => await context.LibraryTv
+                .Where(lt => lt.LibraryId == libraryId)
+                .Include(lt => lt.Tv)
+                .Select(lt => lt.Tv.Folder)
+                .ToListAsync()
+        };
+
+        return folders
+            .Where(f => f is not null)
+            .Select(f => f!.Replace("/", "").NormalizeForComparison())
+            .ToHashSet();
+    }
+
     public void Dispose()
     {
         context.Dispose();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
 
     public async ValueTask DisposeAsync()
     {
         await context.DisposeAsync();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
 }

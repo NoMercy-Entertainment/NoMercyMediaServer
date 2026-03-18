@@ -9,7 +9,7 @@ namespace NoMercy.Tests.Providers.TMDB.Client;
 /// Note: These tests require a valid TMDB API key and internet connection
 /// They may be slower and should be run sparingly in CI/CD
 /// </summary>
-[Collection("Integration")]
+[Collection("TmdbApi")]
 public class TmdbMovieClientIntegrationTests : TmdbTestBase
 {
     private const int WellKnownMovieId = 155; // The Dark Knight - stable test data

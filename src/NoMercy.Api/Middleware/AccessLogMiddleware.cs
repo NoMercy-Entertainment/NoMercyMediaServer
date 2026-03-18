@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using System.Web;
 using Microsoft.AspNetCore.Http;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Database;
+using NoMercy.Database.Models.Users;
+using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
@@ -25,7 +27,9 @@ public class AccessLogMiddleware
         "/styles",
         "/scripts",
         "/favicon",
-        "/transcode"
+        "/transcode",
+        "/manage",
+        "/health"
     ];
 
     private readonly string[] _ignoreExact =
@@ -55,7 +59,11 @@ public class AccessLogMiddleware
         bool ignoreExactRoute = _ignoreExact
             .Any(route => context.Request.Path.ToString().Equals(route));
 
-        if (ignoreStart || ignoreExactRoute)
+        // Skip logging for file access paths (folder ID prefix)
+        bool isFolderPath = ClaimsPrincipleExtensions.FolderIds
+            .Any(x => path.StartsWith("/" + x, StringComparison.OrdinalIgnoreCase));
+
+        if (ignoreStart || ignoreExactRoute || isFolderPath)
         {
             await _next(context);
             return;
@@ -104,13 +112,15 @@ public class AccessLogMiddleware
             return;
         }
 
-        if (ClaimsPrincipleExtensions.FolderIds.Any(x => path.StartsWith("/" + x)))
+        User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
+        if (user is null)
         {
-            await _next(context);
-            return;
+            // User cache may not be populated yet during startup — try refreshing from DB
+            MediaContext mediaContext = context.RequestServices.GetRequiredService<MediaContext>();
+            ClaimsPrincipleExtensions.RefreshUsers(mediaContext);
+            user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
         }
 
-        User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
         if (user is null)
         {
             Logger.Http($"Unknown: {context.Connection.RemoteIpAddress}: {path} (User not found)");

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Collections;
 
 namespace NoMercy.MediaProcessing.Collections;

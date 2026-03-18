@@ -39,7 +39,7 @@ public static class FingerPrint
                             if (
                                 fingerprintRelease.Id == Guid.Empty ||
                                 releaseIds.Any(r => r == fingerprintRelease.Id) ||
-                                !(fingerprintRelease.Title ?? "").ContainsSanitized(albumName)
+                                !fingerprintRelease.Title.OrEmpty().ContainsSanitized(albumName)
                             )
                                 return ValueTask.CompletedTask;
 

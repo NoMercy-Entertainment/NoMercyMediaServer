@@ -15,7 +15,7 @@ public class AudioStream
     [JsonProperty("time_base")] public string? TimeBase { get; set; }
     [JsonProperty("duration")] public double Duration { get; set; }
     [JsonProperty("language")] public string? Language { get; set; }
-    [JsonProperty("language_name")] public string? LanguageName => IsoLanguageMapper.GetLanguageName(Language ?? string.Empty);
+    [JsonProperty("language_name")] public string? LanguageName => IsoLanguageMapper.GetLanguageName(Language.OrEmpty());
     [JsonProperty("size")] public long Size { get; set; }
     
     [JsonProperty("sample_fmt")] public string? SampleFmt { get; set; }
@@ -32,21 +32,25 @@ public class AudioStream
     
     [JsonProperty("tags")] public Dictionary<string,string> Tags { get; set; } = new();
     
+    public AudioStream()
+    {
+    }
+
     public AudioStream(FfprobeSourceDataStream ffprobeSourceDataStream)
     {
         Index = ffprobeSourceDataStream.Index;
-        Profile = ffprobeSourceDataStream.Profile ?? string.Empty;
-        CodecName = ffprobeSourceDataStream.CodecName ?? string.Empty;
-        CodecLongName = ffprobeSourceDataStream.CodecLongName ?? string.Empty;
+        Profile = ffprobeSourceDataStream.Profile.OrEmpty();
+        CodecName = ffprobeSourceDataStream.CodecName.OrEmpty();
+        CodecLongName = ffprobeSourceDataStream.CodecLongName.OrEmpty();
         CodecType = ffprobeSourceDataStream.CodecType;
-        TimeBase = ffprobeSourceDataStream.TimeBase ?? string.Empty;
+        TimeBase = ffprobeSourceDataStream.TimeBase.OrEmpty();
         Language = ffprobeSourceDataStream.Tags.TryGetValue("language", out string? language) ? language :  "und";
         Duration = ffprobeSourceDataStream.Tags.TryGetValue($"DURATION-{Language}", out string? duration) ? duration.ToSeconds() : ffprobeSourceDataStream.Duration.ToSeconds();
         Size = ffprobeSourceDataStream.Tags.TryGetValue($"NUMBER_OF_BYTES-{Language}", out string? numberOfBytes) ? numberOfBytes.ToLong() : 0;
-        SampleFmt = ffprobeSourceDataStream.SampleFmt ?? string.Empty;
+        SampleFmt = ffprobeSourceDataStream.SampleFmt.OrEmpty();
         SampleRate = ffprobeSourceDataStream.SampleRate;
         Channels = ffprobeSourceDataStream.Channels;
-        ChannelLayout = ffprobeSourceDataStream.ChannelLayout ?? string.Empty;
+        ChannelLayout = ffprobeSourceDataStream.ChannelLayout.OrEmpty();
         BitsPerSample = ffprobeSourceDataStream.BitsPerSample;
         BitRate = ffprobeSourceDataStream.BitRate;
         

@@ -1,3 +1,5 @@
+using NoMercy.NmSystem.Extensions;
+
 namespace NoMercy.MediaProcessing.Files;
 
 public class FileWatcherEventArgs
@@ -17,8 +19,8 @@ public class FileWatcherEventArgs
     {
         FileSystemEventArgs = fileSystemEventArgs;
         Sender = sender;
-        Root = sender?.Path ?? string.Empty;
-        Path = System.IO.Path.GetDirectoryName(fileSystemEventArgs.FullPath) ?? string.Empty;
+        Root = (sender?.Path).OrEmpty();
+        Path = System.IO.Path.GetDirectoryName(fileSystemEventArgs.FullPath).OrEmpty();
         FullPath = fileSystemEventArgs.FullPath;
         OldFullPath = (fileSystemEventArgs as RenamedEventArgs)?.OldFullPath;
     }

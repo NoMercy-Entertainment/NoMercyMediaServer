@@ -32,7 +32,7 @@ public static class TmdbMovieMockData
             Popularity = 123.456,
             VoteAverage = 9.0,
             VoteCount = 32000,
-            Video = "false",
+            Video = false,
             ImdbId = "tt0468569",
             Homepage = new("http://www.42entertainment.com/work/whysoserious")
         };

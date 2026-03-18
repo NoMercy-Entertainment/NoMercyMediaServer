@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Users;
 
 namespace NoMercy.Networking;
 

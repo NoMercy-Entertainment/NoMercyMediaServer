@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
-using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
@@ -16,26 +15,14 @@ public class TadbBaseClient : IDisposable
 
     protected TadbBaseClient()
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        _client.Timeout = TimeSpan.FromMinutes(5);
+        _client = HttpClientProvider.CreateClient(HttpClientNames.Tadb);
+        _client.BaseAddress = _baseUrl;
     }
 
     protected TadbBaseClient(int id)
     {
-        _client = new()
-        {
-            BaseAddress = _baseUrl
-        };
-        _client.DefaultRequestHeaders.Accept.Clear();
-        _client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        _client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        _client.Timeout = TimeSpan.FromMinutes(5);
+        _client = HttpClientProvider.CreateClient(HttpClientNames.Tadb);
+        _client.BaseAddress = _baseUrl;
         Id = id;
     }
 
@@ -79,6 +66,6 @@ public class TadbBaseClient : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

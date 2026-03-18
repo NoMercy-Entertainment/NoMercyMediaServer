@@ -61,18 +61,20 @@ public static class DesktopIconCreator
 
             string scriptPath = "/tmp/CreateShortcut.scpt";
             File.WriteAllText(scriptPath, script);
-            System.Diagnostics.Process.Start("osascript", scriptPath).WaitForExit();
+            using (System.Diagnostics.Process? osascriptProc = System.Diagnostics.Process.Start("osascript", scriptPath))
+                osascriptProc?.WaitForExit();
 
             if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
             {
                 string iconDest = Path.Combine(aliasPath, "Icon.icns");
                 File.Copy(iconPath, iconDest, true);
 
-                System.Diagnostics.Process.Start("sh",
-                        $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\"")
-                    .WaitForExit();
+                using (System.Diagnostics.Process? shProc = System.Diagnostics.Process.Start("sh",
+                        $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\""))
+                    shProc?.WaitForExit();
 
-                System.Diagnostics.Process.Start("killall", "Finder").WaitForExit();
+                using (System.Diagnostics.Process? killProc = System.Diagnostics.Process.Start("killall", "Finder"))
+                    killProc?.WaitForExit();
             }
         }
         catch (Exception ex)
@@ -97,7 +99,8 @@ public static class DesktopIconCreator
                 Terminal=false";
 
             File.WriteAllText(shortcutPath, content);
-            System.Diagnostics.Process.Start("chmod", $"+x \"{shortcutPath}\"");
+            using (System.Diagnostics.Process? chmodProc = System.Diagnostics.Process.Start("chmod", $"+x \"{shortcutPath}\""))
+                chmodProc?.WaitForExit();
         }
         catch (Exception ex)
         {

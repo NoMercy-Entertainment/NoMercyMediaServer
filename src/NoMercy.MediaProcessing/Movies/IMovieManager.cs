@@ -1,4 +1,4 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Providers.TMDB.Models.Movies;
 
 namespace NoMercy.MediaProcessing.Movies;

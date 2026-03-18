@@ -6,6 +6,7 @@ public class ApiInfoResponse
 {
     [JsonProperty("status")] public string Status { get; set; } = string.Empty;
     [JsonProperty("data")] public Data Data { get; set; } = new();
+    [JsonProperty("_cached_at")] public string? CachedAt { get; set; }
 }
 
 public class Data

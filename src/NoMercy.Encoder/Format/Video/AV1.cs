@@ -26,10 +26,10 @@ public class Av1 : BaseVideo
     protected override CodecDto[] AvailableCodecs =>
     [
         VideoCodecs.Av1,
-        VideoCodecs.Av1Nvenc
-        // VideoCodecs.Av1Qsv,
-        // VideoCodecs.Av1Amf,
-        // VideoCodecs.Av1Videotoolbox
+        VideoCodecs.Av1Nvenc,
+        VideoCodecs.Av1Qsv,
+        VideoCodecs.Av1Amf,
+        VideoCodecs.Av1Videotoolbox
     ];
 
     protected internal override string[] AvailableContainers =>
@@ -109,22 +109,29 @@ public class Av1 : BaseVideo
         get
         {
             if (VideoCodecs.Av1Nvenc.Value == VideoCodec.Value)
-            {
                 return
                 [
                     VideoTunes.Hq, VideoTunes.Li,
                     VideoTunes.Ull, VideoTunes.Lossless
                 ];
-            }
             else if (VideoCodecs.Av1Amf.Value == VideoCodec.Value)
-            {
-            }
+                return
+                [
+                    VideoTunes.Hq, VideoTunes.Li,
+                    VideoTunes.Ull, VideoTunes.Lossless
+                ];
             else if (VideoCodecs.Av1Qsv.Value == VideoCodec.Value)
-            {
-            }
+                return
+                [
+                    VideoTunes.Hq, VideoTunes.Li,
+                    VideoTunes.Ull, VideoTunes.Lossless
+                ];
             else if (VideoCodecs.Av1Videotoolbox.Value == VideoCodec.Value)
-            {
-            }
+                return
+                [
+                    VideoTunes.Hq, VideoTunes.Li,
+                    VideoTunes.Ull, VideoTunes.Lossless
+                ];
 
             return
             [

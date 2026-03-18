@@ -3,15 +3,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using NoMercy.Api.Controllers.V1.Dashboard.DTO;
-using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Data.Repositories;
-using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Format.Container;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.Encoder.Format.Video;
-using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -28,7 +27,6 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view encoder profiles");
 
-        await using MediaContext mediaContext = new();
         List<EncoderProfile> encoderProfiles = await encoderRepository.GetEncoderProfilesAsync();
 
         return Ok(encoderProfiles);
@@ -42,7 +40,6 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
 
         try
         {
-            await using MediaContext mediaContext = new();
             int encoderProfiles = await encoderRepository.GetEncoderProfileCountAsync();
 
             EncoderProfile profile = new()
@@ -71,14 +68,9 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
                 Args = []
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return Ok(new StatusResponseDto<EncoderProfile>
-            {
-                Status = "error",
-                Message = "Something went wrong creating a new library: {0}",
-                Args = [e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong creating the encoder profile");
         }
     }
 
@@ -92,11 +84,7 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
         EncoderProfile? profile = await encoderRepository.GetEncoderProfileByIdAsync(id);
 
         if (profile == null)
-            return NotFound(new StatusResponseDto<string>
-            {
-                Status = "error",
-                Data = "Encoder profile not found"
-            });
+            return NotFoundResponse("Encoder profile not found");
 
         await encoderRepository.DeleteEncoderProfileAsync(profile);
 

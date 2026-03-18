@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Media;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Data.Logic;
 
@@ -22,7 +23,7 @@ public class EncoderProfileDto
     {
         Id = argEncoderProfile.Id;
         Name = argEncoderProfile.Name;
-        Container = argEncoderProfile.Container ?? string.Empty;
+        Container = argEncoderProfile.Container.OrEmpty();
         Params = new(argEncoderProfile);
         EncoderProfileFolder = argEncoderProfile.EncoderProfileFolder
             .Select(ef => new EncoderProfileFolderDto(ef))

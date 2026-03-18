@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Media;
 
 namespace NoMercy.Data.Repositories;
 

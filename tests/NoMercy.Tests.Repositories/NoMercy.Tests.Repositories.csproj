@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsTestProject>true</IsTestProject>
+        <ParallelizeAssembly>true</ParallelizeAssembly>
+        <ParallelizeTestCollections>true</ParallelizeTestCollections>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\NoMercy.Api\NoMercy.Api.csproj" />
+        <ProjectReference Include="..\..\src\NoMercy.Data\NoMercy.Data.csproj" />
+        <ProjectReference Include="..\..\src\NoMercy.Database\NoMercy.Database.csproj" />
+        <ProjectReference Include="..\..\src\NoMercy.Helpers\NoMercy.Helpers.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,4 +1,6 @@
-// using NoMercy.Database.Models;
+// using NoMercy.Database.Models.Common;
+
+
 //
 // namespace NoMercy.Data.Repositories;
 //

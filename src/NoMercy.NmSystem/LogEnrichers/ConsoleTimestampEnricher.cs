@@ -10,7 +10,7 @@ internal class ConsoleTimestampEnricher : ILogEventEnricher
 {
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        string timestamp = DateTime.Now.ToString("g", CultureInfo.CurrentCulture).Pastel(Color.DarkGray);
+        string timestamp = DateTime.Now.ToString("d-M-yyyy HH:mm").Pastel(Color.DarkGray);
 
         logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty(
             "Time", timestamp));

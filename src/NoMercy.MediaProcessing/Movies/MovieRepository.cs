@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.Providers.TMDB.Models.Movies;
 
@@ -40,6 +43,15 @@ public class MovieRepository(MediaContext context) : IMovieRepository
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.CreatedAt, t => movie.CreatedAt));
 
         await context.SaveChangesAsync();
+
+        // Link any existing recommendation/similar rows that reference this movie as their target
+        await context.Recommendations
+            .Where(r => r.MediaId == movie.Id && r.MovieToId == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.MovieToId, movie.Id));
+
+        await context.Similar
+            .Where(r => r.MediaId == movie.Id && r.MovieToId == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.MovieToId, movie.Id));
     }
 
     public Task LinkToLibrary(Library library, Movie movie)

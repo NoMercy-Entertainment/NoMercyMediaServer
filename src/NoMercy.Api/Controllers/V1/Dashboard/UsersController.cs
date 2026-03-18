@@ -3,11 +3,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.Dashboard.DTO;
-using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Users;
+using NoMercy.Helpers.Extensions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -16,7 +19,7 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/dashboard/users", Order = 10)]
-public class UsersController : BaseController
+public class UsersController(MediaContext mediaContext) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index()
@@ -24,10 +27,10 @@ public class UsersController : BaseController
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to view users");
 
-        await using MediaContext mediaContext = new();
 
         List<User> users = await mediaContext.Users
             .Include(user => user.LibraryUser)
+            .ThenInclude(libraryUser => libraryUser.Library)
             .ToListAsync();
 
         return Ok(new DataResponseDto<IEnumerable<PermissionsResponseItemDto>>
@@ -42,7 +45,6 @@ public class UsersController : BaseController
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to create a user");
 
-        await using MediaContext mediaContext = new();
 
         Guid userId = User.UserId();
         User? hasPermission = mediaContext.Users.FirstOrDefault(user => user.Id.Equals(userId));
@@ -129,7 +131,6 @@ public class UsersController : BaseController
         if (!User.IsOwner())
             return UnauthorizedResponse("You do not have permission to view user permissions");
 
-        await using MediaContext mediaContext = new();
 
         List<User> users = await mediaContext.Users
             .Include(user => user.LibraryUser)
@@ -179,7 +180,6 @@ public class UsersController : BaseController
         if (User.IsSelf(id))
             return UnauthorizedResponse("You do not have permission to edit your own permissions");
 
-        await using MediaContext mediaContext = new();
 
         User? user = await mediaContext.Users
             .Where(user => user.Id == id)
@@ -233,6 +233,13 @@ public class UsersController : BaseController
         await mediaContext.SaveChangesAsync();
 
         ClaimsPrincipleExtensions.UpdateUser(user);
+
+        if (EventBusProvider.IsConfigured)
+            await EventBusProvider.Current.PublishAsync(new UserPermissionsChangedEvent
+            {
+                UserId = id,
+                ChangedBy = userId
+            });
 
         return Ok(new StatusResponseDto<string>
         {

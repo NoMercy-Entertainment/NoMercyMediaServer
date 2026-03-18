@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using NoMercy.NmSystem.Extensions;
@@ -9,6 +10,35 @@ namespace NoMercy.Providers.Helpers;
 
 public static class CacheController
 {
+    private const long MaxCacheSizeBytes = 500_000_000; // 500MB
+    private const int MaxLockEntries = 10_000;
+
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> FileLocks = new();
+
+    private static SemaphoreSlim GetLock(string path)
+    {
+        if (FileLocks.Count > MaxLockEntries)
+        {
+            PruneLocks();
+        }
+
+        return FileLocks.GetOrAdd(path, _ => new(1, 1));
+    }
+
+    private static void PruneLocks()
+    {
+        foreach (KeyValuePair<string, SemaphoreSlim> entry in FileLocks)
+        {
+            if (entry.Value.CurrentCount == 1)
+            {
+                if (FileLocks.TryRemove(entry.Key, out SemaphoreSlim? removed))
+                {
+                    removed.Dispose();
+                }
+            }
+        }
+    }
+
     public static string GenerateFileName(string url)
     {
         return CreateMd5(url);
@@ -31,7 +61,10 @@ public static class CacheController
         }
 
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
-        lock (fullname)
+        SemaphoreSlim fileLock = GetLock(fullname);
+        fileLock.Wait();
+
+        try
         {
             if (File.Exists(fullname) == false)
             {
@@ -50,7 +83,7 @@ public static class CacheController
             T? data;
             try
             {
-                string d = File.ReadAllTextAsync(fullname).Result;
+                string d = File.ReadAllText(fullname);
                 data = xml ? d.FromXml<T>() : d.FromJson<T>();
             }
             catch (Exception)
@@ -74,27 +107,72 @@ public static class CacheController
             value = default;
             return false;
         }
+        finally
+        {
+            fileLock.Release();
+        }
     }
 
-    public static async Task Write(string url, string data, int retry = 0)
+    public static async Task Write(string url, string data)
     {
         if (Config.IsDev == false) return;
 
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
+        SemaphoreSlim fileLock = GetLock(fullname);
 
-        try
+        for (int retry = 0; retry <= 10; retry++)
         {
-            await File.WriteAllTextAsync(fullname, data);
-        }
-        catch (Exception)
-        {
-            if (retry >= 10)
+            await fileLock.WaitAsync();
+
+            try
             {
-                Logger.App($"CacheController: Failed to write {fullname}");
-                throw;
+                await File.WriteAllTextAsync(fullname, data);
+                PruneCache();
+                return;
+            }
+            catch (Exception) when (retry < 10)
+            {
+            }
+            finally
+            {
+                fileLock.Release();
             }
 
-            await Write(url, data, retry + 1);
+            await Task.Delay(50 * (retry + 1));
+        }
+
+        Logger.App($"CacheController: Failed to write {fullname}");
+    }
+
+    internal static void PruneCache()
+    {
+        PruneCache(AppFiles.ApiCachePath, MaxCacheSizeBytes);
+    }
+
+    internal static void PruneCache(string cachePath, long maxSizeBytes)
+    {
+        DirectoryInfo cacheDir = new(cachePath);
+        if (cacheDir.Exists == false) return;
+
+        FileInfo[] files = cacheDir.GetFiles()
+            .OrderBy(f => f.CreationTime)
+            .ToArray();
+
+        long totalSize = files.Sum(f => f.Length);
+
+        foreach (FileInfo file in files)
+        {
+            if (totalSize <= maxSizeBytes) break;
+
+            try
+            {
+                totalSize -= file.Length;
+                file.Delete();
+            }
+            catch (Exception)
+            {
+                // File may be locked by another operation
+            }
         }
     }
 }

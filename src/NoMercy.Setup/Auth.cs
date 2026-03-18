@@ -1,9 +1,10 @@
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Web;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Builder;
 using Newtonsoft.Json;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
@@ -23,8 +24,9 @@ public static class Auth
     private static int? NotBefore { get; set; }
 
     private static JwtSecurityToken? _jwtSecurityToken;
+    private static string? _codeVerifier;
 
-    private static IWebHost? TempServerInstance { get; set; }
+    private static WebApplication? TempServerInstance { get; set; }
 
     public static async Task Init()
     {
@@ -39,15 +41,10 @@ public static class Auth
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
         {
-            try
-            {
-                await TokenByRefreshGrand();
-            }
-            catch (Exception)
-            {
-                //
-            }
-            return;
+            // No token exists — skip interactive auth during startup.
+            // Authentication should happen through the /setup web UI instead.
+            Logger.Auth("No token found — authentication required through /setup UI", LogEventLevel.Information);
+            throw new InvalidOperationException("No authentication token - setup required");
         }
 
         JwtSecurityTokenHandler tokenHandler = new();
@@ -55,7 +52,7 @@ public static class Auth
 
         int expiresInDays = _jwtSecurityToken.ValidTo.AddDays(-5).Subtract(DateTime.UtcNow).Days;
 
-        bool expired = NotBefore == null && expiresInDays >= 0;
+        bool expired = expiresInDays < 0;
 
         if (!expired)
             try
@@ -64,57 +61,104 @@ public static class Auth
             }
             catch (Exception)
             {
-                await TokenByBrowserOrPassword();
+                // Token refresh failed — need to re-authenticate through /setup UI
+                Logger.Auth("Token refresh failed — re-authentication required through /setup UI", LogEventLevel.Warning);
+                throw new InvalidOperationException("Token refresh failed - setup required");
             }
         else
-            await TokenByBrowserOrPassword();
+        {
+            // Token expired — need to re-authenticate through /setup UI
+            Logger.Auth("Token expired — re-authentication required through /setup UI", LogEventLevel.Warning);
+            throw new InvalidOperationException("Token expired - setup required");
+        }
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
             throw new("Failed to get tokens");
     }
 
-    private static async Task TokenByBrowserOrPassword()
+    public static async Task<bool> InitWithFallback()
     {
-        Logger.Auth("Trying to authenticate by browser, QR code or password", LogEventLevel.Verbose);
+        if (!File.Exists(AppFiles.TokenFile)) await File.WriteAllTextAsync(AppFiles.TokenFile, "{}");
 
-        if (IsDesktopEnvironment() && Environment.OSVersion.Platform != PlatformID.Unix)
+        // Load cached tokens from file
+        try
         {
-            TokenByBrowser();
+            Globals.Globals.AccessToken = GetAccessToken();
+            RefreshToken = GetRefreshToken();
+            ExpiresIn = TokenExpiration();
+            NotBefore = TokenNotBefore();
+        }
+        catch
+        {
+            // Token file may be empty or invalid
+        }
+
+        // Load cached auth keys for offline JWT validation
+        OfflineJwksCache.LoadCachedPublicKey();
+
+        if (Globals.Globals.AccessToken is null)
+        {
+            Logger.Auth("No cached token — authentication requires network");
+            return false;
+        }
+
+        // Check if token is still usable (local check, no network)
+        try
+        {
+            JwtSecurityTokenHandler tokenHandler = new();
+            _jwtSecurityToken = tokenHandler.ReadJwtToken(Globals.Globals.AccessToken);
+
+            if (_jwtSecurityToken.ValidTo > DateTime.UtcNow.AddMinutes(5))
+            {
+                Logger.Auth("Using cached token (still valid)");
+
+                // Try to refresh in background, but don't block
+                try
+                {
+                    await AuthKeys();
+                    await TokenByRefreshGrand();
+                }
+                catch
+                {
+                    // Network unavailable — cached token is fine
+                }
+
+                return true;
+            }
+        }
+        catch
+        {
+            // Token parsing failed — try refresh
+        }
+
+        // Token expired or invalid — try refresh (needs network)
+        try
+        {
+            await AuthKeys();
+            await TokenByRefreshGrand();
+            return true;
+        }
+        catch (Exception e)
+        {
+            Logger.Auth($"Token refresh failed: {e.Message}. Using expired token for local access.",
+                LogEventLevel.Warning);
+
+            // Use the expired token anyway — local requests can still work
+            return Globals.Globals.AccessToken is not null;
+        }
+    }
+
+    private static async Task TokenByBrowserOrDeviceGrant()
+    {
+        Logger.Auth("Trying to authenticate by browser or device grant", LogEventLevel.Verbose);
+
+        if (IsDesktopEnvironment())
+        {
+            await TokenByBrowser();
             return;
         }
 
-        Console.WriteLine("Select login method:");
-        Console.WriteLine("1. QR code / device login (recommended)");
-        Console.WriteLine("2. Password login");
-        Console.WriteLine("Auto-selecting QR code login in 15 seconds...");
-
-        Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(15));
-        Task<ConsoleKeyInfo> inputTask = Task.Run(() =>
-        {
-            while (!Console.KeyAvailable && !timeoutTask.IsCompleted) Thread.Sleep(100);
-            return Console.KeyAvailable ? Console.ReadKey(true) : default;
-        });
-
-        Task completedTask = Task.WhenAny(timeoutTask, inputTask).Result;
-
-        if (completedTask == timeoutTask || inputTask.Result == default)
-        {
-            await TokenByDeviceGrant();
-            return;
-        }
-
-        ConsoleKeyInfo key = inputTask.Result;
-        Console.WriteLine();
-
-        switch (key.KeyChar)
-        {
-            case '2':
-                await TokenByPassword();
-                break;
-            default:
-                await TokenByDeviceGrant();
-                break;
-        }
+        await TokenByDeviceGrant();
     }
 
     private static async Task TokenByDeviceGrant()
@@ -124,11 +168,7 @@ public static class Auth
 
         Logger.Auth("Authenticating via device grant", LogEventLevel.Verbose);
 
-        List<KeyValuePair<string, string>> deviceCodeBody =
-        [
-            new("client_id", Config.TokenClientId),
-            new("scope", "openid offline_access email profile")
-        ];
+        List<KeyValuePair<string, string>> deviceCodeBody = BuildDeviceCodeRequestBody(Config.TokenClientId);
 
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent);
@@ -142,37 +182,32 @@ public static class Auth
 
         ConsoleQrCode.Display(deviceData.VerificationUriComplete);
 
-        List<KeyValuePair<string, string>> tokenBody =
-        [
-            new("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
-            new("client_id", Config.TokenClientId),
-            new("device_code", deviceData.DeviceCode)
-        ];
+        List<KeyValuePair<string, string>> tokenBody = BuildDeviceTokenBody(Config.TokenClientId, deviceData.DeviceCode);
 
         DateTime expiresAt = DateTime.Now.AddSeconds(deviceData.ExpiresIn);
         bool authenticated = false;
 
         while (DateTime.Now < expiresAt && !authenticated)
         {
-            Thread.Sleep(deviceData.Interval * 1000);
+            await Task.Delay(deviceData.Interval * 1000);
             try
             {
-                HttpResponseMessage response = await authClient.SendAsync(HttpMethod.Post,
+                using HttpResponseMessage response = await authClient.SendAsync(HttpMethod.Post,
                     "protocol/openid-connect/token", new FormUrlEncodedContent(tokenBody));
 
                 if (response.IsSuccessStatusCode)
                 {
-                    string content = response.Content.ReadAsStringAsync().Result;
+                    string content = await response.Content.ReadAsStringAsync();
                     AuthResponse data = content.FromJson<AuthResponse>()
                                         ?? throw new("Failed to deserialize JSON");
                     SetTokens(data);
                     authenticated = true;
-                    Console.Clear();
+                    Logger.Auth("Device grant authentication successful");
                 }
                 else
                 {
-                    dynamic? error =
-                        JsonConvert.DeserializeObject<dynamic>(response.Content.ReadAsStringAsync().Result);
+                    string errorContent = await response.Content.ReadAsStringAsync();
+                    dynamic? error = JsonConvert.DeserializeObject<dynamic>(errorContent);
                     if (error?.error.ToString() != "authorization_pending")
                     {
                         Logger.Auth($"Error: {error?.error_description}", LogEventLevel.Error);
@@ -190,35 +225,7 @@ public static class Auth
         if (!authenticated) throw new("Device authorization timed out");
     }
 
-    private static string ReadPassword()
-    {
-        StringBuilder password = new();
-        ConsoleKeyInfo key;
-
-        do
-        {
-            key = Console.ReadKey(true);
-
-            if (key.Key == ConsoleKey.Backspace)
-            {
-                if (password.Length > 0)
-                {
-                    password.Remove(password.Length - 1, 1);
-                    Console.Write("\b \b");
-                }
-            }
-            else if (key.Key != ConsoleKey.Enter)
-            {
-                password.Append(key.KeyChar);
-                Console.Write('*');
-            }
-        } while (key.Key != ConsoleKey.Enter);
-
-        Console.WriteLine();
-        return password.ToString();
-    }
-
-    private static void TokenByBrowser()
+    private static async Task TokenByBrowser()
     {
         if (string.IsNullOrEmpty(Config.AuthBaseUrl) || string.IsNullOrEmpty(Config.TokenClientId))
             throw new ArgumentException("Auth base URL or client ID is not initialized");
@@ -227,12 +234,17 @@ public static class Auth
         string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
         string scope = "openid offline_access email profile";
 
+        _codeVerifier = GenerateCodeVerifier();
+        string codeChallenge = GenerateCodeChallenge(_codeVerifier);
+
         Dictionary<string, string> queryParams = new()
         {
             ["client_id"] = Config.TokenClientId,
             ["redirect_uri"] = redirectUri,
             ["response_type"] = "code",
-            ["scope"] = scope
+            ["scope"] = scope,
+            ["code_challenge"] = codeChallenge,
+            ["code_challenge_method"] = "S256"
         };
 
         string queryString = string.Join("&", queryParams.Select(kvp =>
@@ -242,32 +254,29 @@ public static class Auth
         Logger.Setup($"Opening browser for authentication: {url}", LogEventLevel.Verbose);
 
         TempServerInstance = TempServer.Start();
-        TempServerInstance.StartAsync().Wait();
+        await TempServerInstance.StartAsync();
 
         OpenBrowser(url);
 
-        CheckToken();
+        await WaitForToken();
     }
 
-    private static void CheckToken()
+    private static async Task WaitForToken()
     {
-        Task.Run(async () =>
+        while (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
         {
             await Task.Delay(1000);
+        }
 
-            if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
-                CheckToken();
-            else
-                TempServerInstance?.StopAsync().Wait();
-        }).Wait();
+        if (TempServerInstance != null)
+            await TempServerInstance.StopAsync();
     }
 
     private static void SetTokens(AuthResponse data)
     {
-        FileStream tmp = File.OpenWrite(AppFiles.TokenFile);
+        using FileStream tmp = File.OpenWrite(AppFiles.TokenFile);
         tmp.SetLength(0);
         tmp.Write(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(data, Formatting.Indented)));
-        tmp.Close();
 
         Logger.Auth("Tokens refreshed");
 
@@ -275,6 +284,11 @@ public static class Auth
         RefreshToken = data.RefreshToken;
         ExpiresIn = data.ExpiresIn;
         NotBefore = data.NotBeforePolicy;
+    }
+
+    internal static void SetTokensFromSetup(AuthResponse data)
+    {
+        SetTokens(data);
     }
 
     private static AuthResponse TokenData()
@@ -321,135 +335,77 @@ public static class Auth
                                 ?? throw new("Failed to deserialize JSON");
 
         PublicKey = data.PublicKey;
-    }
 
-    private static async Task TokenByPassword()
-    {
-        while (true)
-        {
-            Console.WriteLine("Enter your email:");
-            string? email = Console.ReadLine();
-
-            if (string.IsNullOrEmpty(email))
-            {
-                Console.WriteLine("Email cannot be empty");
-                continue;
-            }
-
-            Console.WriteLine("Enter your password:");
-            string password = ReadPassword();
-
-            if (string.IsNullOrEmpty(password))
-            {
-                Console.WriteLine("Password cannot be empty");
-                continue;
-            }
-
-            Console.WriteLine(
-                "Enter your 2 factor authentication code (if enabled, hit enter if you don't have it setup):");
-            string? otp = Console.ReadLine();
-
-            await TokenByPasswordGrant(email, password, otp);
-            break;
-        }
-    }
-
-    private static async Task TokenByPasswordGrant(string username, string password, string? otp = "")
-    {
-        if (Config.TokenClientId == null || Config.TokenClientSecret == null)
-            throw new("Auth keys not initialized");
-
-        List<KeyValuePair<string, string>> body =
-        [
-            new("grant_type", "password"),
-            new("client_id", Config.TokenClientId),
-            new("client_secret", Config.TokenClientSecret),
-            new("username", username),
-            new("password", password)
-        ];
-
-        if (!string.IsNullOrEmpty(otp))
-            body.Add(new("totp", otp));
-
-        GenericHttpClient authClient = new(Config.AuthBaseUrl);
-        authClient.SetDefaultHeaders(Config.UserAgent);
-        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token",
-            new FormUrlEncodedContent(body));
-        
-        AuthResponse data = response.FromJson<AuthResponse>()
-                            ?? throw new("Failed to deserialize JSON");
-
-        SetTokens(data);
+        if (!string.IsNullOrEmpty(data.PublicKey))
+            OfflineJwksCache.CachePublicKey(data.PublicKey);
     }
 
     private static async Task TokenByRefreshGrand()
     {
-        if (Config.TokenClientId == null || Config.TokenClientSecret == null || RefreshToken == null ||
-            _jwtSecurityToken == null)
-            throw new("Auth keys not initialized");
+        if (string.IsNullOrEmpty(Config.TokenClientId) ||
+            RefreshToken == null || _jwtSecurityToken == null)
+            throw new("Auth keys not initialized.");
 
         Logger.Auth("Refreshing token");
 
-        List<KeyValuePair<string, string>> body =
-        [
-            new("grant_type", "refresh_token"),
-            new("client_id", Config.TokenClientId),
-            new("client_secret", Config.TokenClientSecret),
-            new("refresh_token", RefreshToken),
-            new("scope", "openid offline_access email profile")
-        ];
+        List<KeyValuePair<string, string>> body = BuildRefreshTokenBody(Config.TokenClientId, RefreshToken);
 
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent);
         string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token",
             new FormUrlEncodedContent(body));
-        
+
         AuthResponse data = response.FromJson<AuthResponse>()
                             ?? throw new("Failed to deserialize JSON");
-        
+
         SetTokens(data);
     }
 
     public static async Task TokenByAuthorizationCode(string code)
     {
-        Logger.Auth("Getting token by authorization code", LogEventLevel.Verbose);
-        if (Config.TokenClientId == null || Config.TokenClientSecret == null)
-            throw new("Auth keys not initialized");
+        if (string.IsNullOrEmpty(_codeVerifier))
+            throw new("PKCE code verifier is missing. Authorization must be initiated via TokenByBrowser first.");
 
-        List<KeyValuePair<string, string>> body =
-        [
-            new("grant_type", "authorization_code"),
-            new("client_id", Config.TokenClientId),
-            new("client_secret", Config.TokenClientSecret),
-            new("scope", "openid offline_access email profile"),
-            new("redirect_uri", $"http://localhost:{Config.InternalServerPort}/sso-callback"),
-            new("code", code)
-        ];
+        string redirectUri = $"http://localhost:{Config.InternalServerPort}/sso-callback";
+        await TokenByAuthorizationCode(code, _codeVerifier, redirectUri);
+    }
+
+    public static async Task TokenByAuthorizationCode(string code, string codeVerifier, string redirectUri)
+    {
+        Logger.Auth("Getting token by authorization code", LogEventLevel.Verbose);
+        if (string.IsNullOrEmpty(Config.TokenClientId))
+            throw new("Auth keys not initialized.");
+
+        if (string.IsNullOrEmpty(codeVerifier))
+            throw new("PKCE code verifier is missing.");
+
+        List<KeyValuePair<string, string>> body = BuildAuthorizationCodeBody(
+            Config.TokenClientId, code, redirectUri, codeVerifier);
 
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent);
         string response = await authClient.SendAndReadAsync(HttpMethod.Post, "protocol/openid-connect/token",
             new FormUrlEncodedContent(body));
-        
+
         AuthResponse data = response.FromJson<AuthResponse>()
                             ?? throw new("Failed to deserialize JSON");
 
         SetTokens(data);
     }
 
-    private static void OpenBrowser(string url)
+    public static void OpenBrowser(string url)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            Process.Start("xdg-open", url);
+            Process.Start("xdg-open", url)?.Dispose();
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            Process.Start("open", url); // Not tested
+            Process.Start("open", url)?.Dispose();
         else
             throw new("Unsupported OS");
     }
 
-    private static bool IsDesktopEnvironment()
+    public static bool IsDesktopEnvironment()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
             RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return true;
@@ -459,5 +415,87 @@ public static class Auth
         if (string.IsNullOrEmpty(Info.GpuVendors.FirstOrDefault())) return false;
 
         return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY"));
+    }
+
+    internal static string GenerateCodeVerifier()
+    {
+        byte[] bytes = new byte[32];
+        RandomNumberGenerator.Fill(bytes);
+        return Convert.ToBase64String(bytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+    }
+
+    internal static string GenerateCodeChallenge(string codeVerifier)
+    {
+        byte[] hash = SHA256.HashData(Encoding.ASCII.GetBytes(codeVerifier));
+        return Convert.ToBase64String(hash)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildAuthorizationCodeBody(
+        string clientId, string code, string redirectUri, string codeVerifier)
+    {
+        return
+        [
+            new("grant_type", "authorization_code"),
+            new("client_id", clientId),
+            new("scope", "openid offline_access email profile"),
+            new("redirect_uri", redirectUri),
+            new("code", code),
+            new("code_verifier", codeVerifier)
+        ];
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildPasswordGrantBody(
+        string clientId, string username, string password, string? otp = "")
+    {
+        List<KeyValuePair<string, string>> body =
+        [
+            new("grant_type", "password"),
+            new("client_id", clientId),
+            new("username", username),
+            new("password", password)
+        ];
+
+        if (!string.IsNullOrEmpty(otp))
+            body.Add(new("totp", otp));
+
+        return body;
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildRefreshTokenBody(
+        string clientId, string refreshToken)
+    {
+        return
+        [
+            new("grant_type", "refresh_token"),
+            new("client_id", clientId),
+            new("refresh_token", refreshToken),
+            new("scope", "openid offline_access email profile")
+        ];
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildDeviceCodeRequestBody(string clientId)
+    {
+        return
+        [
+            new("client_id", clientId),
+            new("scope", "openid offline_access email profile")
+        ];
+    }
+
+    internal static List<KeyValuePair<string, string>> BuildDeviceTokenBody(
+        string clientId, string deviceCode)
+    {
+        return
+        [
+            new("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+            new("client_id", clientId),
+            new("device_code", deviceCode)
+        ];
     }
 }

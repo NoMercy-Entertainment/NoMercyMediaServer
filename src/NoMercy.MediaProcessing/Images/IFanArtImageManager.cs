@@ -1,6 +1,6 @@
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 using NoMercy.Providers.FanArt.Models;
-using Image = NoMercy.Database.Models.Image;
+using Image = NoMercy.Database.Models.Media.Image;
 
 namespace NoMercy.MediaProcessing.Images;
 

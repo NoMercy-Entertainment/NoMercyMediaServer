@@ -1,41 +1,43 @@
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Images;
-using NoMercy.Queue;
-using NoMercy.Queue.Interfaces;
+using NoMercyQueue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.PaletteJobs;
 
 public class EpisodePaletteCronJob : ICronJobExecutor
 {
     private readonly ILogger<EpisodePaletteCronJob> _logger;
+    private readonly MediaContext _context;
 
-    public string CronExpression => new CronExpressionBuilder().Daily();
+    public string CronExpression => new CronExpressionBuilder().EveryMinutes(10);
     public string JobName => "Episode ColorPalette Job";
 
-    public EpisodePaletteCronJob(ILogger<EpisodePaletteCronJob> logger)
+    public EpisodePaletteCronJob(ILogger<EpisodePaletteCronJob> logger, MediaContext context)
     {
         _logger = logger;
+        _context = context;
     }
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        await using MediaContext context = new();
-
-        List<Episode[]> episodes = context.Episodes
+        List<Episode[]> episodes = _context.Episodes
             .Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(5000)
+            .Take(50)
             .ToList()
-            .Chunk(5)
+            .Chunk(10)
             .ToList();
-        
+
+        if (episodes.Count == 0) return;
+
         _logger.LogTrace("Found {Count} episode chunks to process", episodes.Count);
 
         foreach (Episode[] episodeChunk in episodes)
         {
-            _logger.LogTrace("Processing episode chunk of size: {Size}", episodeChunk.Length);
+            if (cancellationToken.IsCancellationRequested) break;
 
             foreach (Episode episode in episodeChunk)
             {
@@ -48,9 +50,9 @@ public class EpisodePaletteCronJob : ICronJobExecutor
                     episode._colorPalette = "{}";
                 }
             }
-            
-            await context.SaveChangesAsync(cancellationToken);
-            
+
+            await _context.SaveChangesAsync(cancellationToken);
+
         }
 
         _logger.LogTrace("Episode palette job completed, updated: {Count}", episodes.Sum(x => x.Length));

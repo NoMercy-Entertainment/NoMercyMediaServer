@@ -7,6 +7,8 @@ using NoMercy.Encoder.Format.Rules;
 using NoMercy.Encoder.Format.Subtitle;
 using NoMercy.Encoder.Format.Video;
 using NoMercy.NmSystem;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Encoder.Commands;
 
@@ -88,14 +90,43 @@ public class FFmpegCommandBuilder
 
     private void ApplyScaleOverrides(BaseVideo stream)
     {
-        // Scale Override #1: Set height if missing (with proper double division fix)
-        if (stream.Scale.H == 0)
+        // Scale Override #1: Resolve the -2 sentinel and any zero height.
+        //
+        // ScaleValue may contain "width:-2" when the caller used SetScale(int).
+        // The Scale getter resolves -2 to pixels when a crop is set (AspectRatioValue
+        // > 0), but ScaleValue is never updated — it stays "width:-2" — so the
+        // FFmpeg filter_complex string would contain "scale=854:-2" instead of real
+        // pixel values.
+        //
+        // We always write the resolved Scale back through the property setter here
+        // so that ScaleValue is in sync before BuildVideoFilter reads it.
+        int resolvedH = stream.Scale.H; // may be -2 (no crop) or a computed value
+        if (resolvedH <= 0)
         {
-            double aspectRatio = (double)_FfProbeData.PrimaryVideoStream!.Height / _FfProbeData.PrimaryVideoStream.Width;
+            // -2 was not resolvable via crop ratio — fall back to source dimensions.
+            int sourceWidth = _FfProbeData.PrimaryVideoStream!.Width;
+            int sourceHeight = _FfProbeData.PrimaryVideoStream.Height;
+            double aspectRatio = sourceWidth > 0
+                ? (double)sourceHeight / sourceWidth
+                : 1.0;
+            int targetWidth = stream.Scale.W > 0
+                ? stream.Scale.W
+                : sourceWidth;
             stream.Scale = new()
             {
-                W = stream.VideoStream?.Width ?? _FfProbeData.PrimaryVideoStream!.Width,
-                H = (int)(stream.Scale.W * aspectRatio)  // FIXED: proper double division
+                W = targetWidth,
+                H = (int)(targetWidth * aspectRatio)
+            };
+        }
+        else
+        {
+            // Even when height was resolved by the getter (e.g. from crop ratio),
+            // ScaleValue still holds the original "width:-2" string.
+            // Write the resolved dimensions back so ScaleValue matches.
+            stream.Scale = new()
+            {
+                W = stream.Scale.W,
+                H = resolvedH
             };
         }
 
@@ -197,28 +228,41 @@ public class FFmpegCommandBuilder
             AddContainerParameters(commandDictionary);
             AddHlsParameters(commandDictionary, stream.HlsPlaylistFilename, true);
 
+            // Auto-bump H.264/H.265 level if the output resolution exceeds the configured level
+            ValidateAndFixLevel(commandDictionary, stream);
+
             command.Append(BuildParameterString(commandDictionary));
             stream.CreateFolder();
         }
     }
 
     /// <summary>
-    /// Apply final scale adjustments (the remaining scale override points)
+    /// Apply final scale adjustments (the remaining scale override points).
+    /// IMPORTANT: always assign to stream.Scale (the property setter), never mutate
+    /// stream.Scale.W/H directly — the getter returns a new ScaleArea each call so
+    /// direct field writes are lost and ScaleValue (the backing string passed to
+    /// FFmpeg) is never updated.
     /// </summary>
     private void ApplyFinalScaleAdjustments(BaseVideo stream)
     {
         // Scale Override #3: Another upscaling check
         if (stream.Scale.W > stream.VideoStream!.Width || stream.Scale.H > stream.VideoStream.Height)
         {
-            stream.Scale.W = stream.VideoStream.Width;
-            stream.Scale.H = stream.VideoStream.Height;
+            stream.Scale = new()
+            {
+                W = stream.VideoStream.Width,
+                H = stream.VideoStream.Height
+            };
         }
 
         // Scale Override #4: Downscaling threshold check
         if (stream.Scale.W < stream.VideoStream.Width * 0.95 && stream.Scale.H < stream.VideoStream.Height * 0.95)
         {
-            stream.Scale.W = stream.VideoStream.Width;
-            stream.Scale.H = stream.VideoStream.Height;
+            stream.Scale = new()
+            {
+                W = stream.VideoStream.Width,
+                H = stream.VideoStream.Height
+            };
         }
     }
 
@@ -256,7 +300,9 @@ public class FFmpegCommandBuilder
         foreach (BaseSubtitle stream in _container.SubtitleStreams)
         {
             Dictionary<string, dynamic> commandDictionary = new();
-            stream.AddToDictionary(commandDictionary, stream.Index);
+            // sourceIndex = stream.Index (which source stream to map)
+            // outputIndex = 0 (each subtitle is a separate output file with 1 stream)
+            stream.AddToDictionary(commandDictionary, stream.Index, outputIndex: 0);
 
             commandDictionary[""] = $"\"./{stream.HlsPlaylistFilename}.{stream.Extension}\"";
 
@@ -347,6 +393,62 @@ public class FFmpegCommandBuilder
     private string BuildParameterString(Dictionary<string, dynamic> parameters)
     {
         return parameters.Aggregate("", (acc, pair) => $"{acc} {pair.Key} {pair.Value}");
+    }
+
+    // H.264 levels ordered by capability, with max macroblocks per frame (MaxFS)
+    private static readonly (string level, int maxMacroblocks)[] H264Levels =
+    [
+        ("1.0", 99), ("1.1", 396), ("1.2", 396), ("1.3", 396),
+        ("2.0", 396), ("2.1", 792), ("2.2", 1620),
+        ("3.0", 1620), ("3.1", 3600), ("3.2", 5120),
+        ("4.0", 8192), ("4.1", 8192), ("4.2", 8704),
+        ("5.0", 22080), ("5.1", 36864), ("5.2", 36864),
+        ("6.0", 139264), ("6.1", 139264), ("6.2", 139264)
+    ];
+
+    /// <summary>
+    /// Validates the configured H.264 level against the actual output resolution.
+    /// If the resolution exceeds the configured level's macroblock limit, bumps to the minimum valid level.
+    /// This handles cases where crop detection changes the aspect ratio, producing non-standard resolutions.
+    /// </summary>
+    private static void ValidateAndFixLevel(Dictionary<string, dynamic> commandDictionary, BaseVideo stream)
+    {
+        if (!commandDictionary.TryGetValue("-level:v", out dynamic? levelValue))
+            return;
+
+        // Strip surrounding quotes — values from AddCustomArgument may be stored as "4.0" (with quotes)
+        string configuredLevel = ((string?)(levelValue?.ToString()) ?? string.Empty).Trim('"');
+        if (string.IsNullOrEmpty(configuredLevel) || configuredLevel == "auto")
+            return;
+
+        // Only validate for H.264 codecs
+        string codec = stream.VideoCodec.Value.ToLower();
+        if (codec is not ("libx264" or "h264_nvenc" or "h264_qsv" or "h264_amf" or "h264_videotoolbox"))
+            return;
+
+        int width = stream.Scale.W;
+        int height = stream.Scale.H;
+        if (width <= 0 || height <= 0) return;
+
+        int macroblocks = ((width + 15) / 16) * ((height + 15) / 16);
+
+        int configuredIndex = Array.FindIndex(H264Levels, l => l.level == configuredLevel);
+        if (configuredIndex < 0) return; // unknown level format, don't touch
+
+        if (H264Levels[configuredIndex].maxMacroblocks >= macroblocks)
+            return; // level is sufficient
+
+        // Find the minimum level that supports this resolution
+        int minIndex = Array.FindIndex(H264Levels, l => l.maxMacroblocks >= macroblocks);
+        if (minIndex < 0) return; // exceeds all known levels
+
+        string newLevel = H264Levels[minIndex].level;
+        // Preserve the original quoting style
+        bool wasQuoted = (levelValue?.ToString()).OrEmpty().StartsWith('"');
+        commandDictionary["-level:v"] = wasQuoted ? $"\"{newLevel}\"" : newLevel;
+
+        Logger.Encoder(
+            $"Auto-bumped H.264 level from {configuredLevel} to {newLevel} for {width}x{height} ({macroblocks} macroblocks, max {H264Levels[configuredIndex].maxMacroblocks} at level {configuredLevel})");
     }
 
     #endregion

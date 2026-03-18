@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Query;
-using NoMercy.Api.Controllers.V1.Dashboard.DTO;
-using NoMercy.Api.Controllers.V1.DTO;
+using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Data.Repositories;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Users;
+using NoMercy.Helpers.Extensions;
 
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
@@ -33,7 +33,7 @@ public class DevicesController : BaseController
         if (!User.IsModerator())
             return Task.FromResult(UnauthorizedResponse("You do not have permission to view devices"));
 
-        IIncludableQueryable<Device, ICollection<ActivityLog>> devices = _deviceRepository.GetDevicesAsync();
+        IIncludableQueryable<Device, ICollection<ActivityLog>> devices = _deviceRepository.GetDevices();
 
         DevicesDto[] devicesDtos = devices
             .Select(x => new DevicesDto

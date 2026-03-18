@@ -2,9 +2,9 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Dto;
-using NoMercy.Queue;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -26,8 +26,5 @@ public abstract class AbstractReleaseJob : IShouldQueue
 
     public void Dispose()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

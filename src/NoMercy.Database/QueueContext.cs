@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using NoMercy.Database.Models;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Database;
@@ -16,7 +15,11 @@ public class QueueContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
-        options.UseSqlite($"Data Source={AppFiles.QueueDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;");
+        if (!options.IsConfigured)
+        {
+            options.UseSqlite($"Data Source={AppFiles.QueueDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;");
+        }
+
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -39,6 +42,10 @@ public class QueueContext : DbContext
             .SelectMany(t => t.GetForeignKeys())
             .ToList()
             .ForEach(p => p.DeleteBehavior = DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<QueueJob>()
+            .Property(j => j.Payload)
+            .HasMaxLength(4096);
 
         base.OnModelCreating(modelBuilder);
     }

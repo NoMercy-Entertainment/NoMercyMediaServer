@@ -1,0 +1,70 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="NoMercy.Launcher.App"
+             RequestedThemeVariant="Dark">
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- Window background -->
+        <Style Selector="Window">
+            <Setter Property="Background" Value="#0a0a0f" />
+        </Style>
+
+        <!-- Tab styling -->
+        <Style Selector="TabItem">
+            <Setter Property="Foreground" Value="#999999" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style Selector="TabItem:selected">
+            <Setter Property="Foreground" Value="#CBAFFF" />
+        </Style>
+        <Style Selector="TabItem:pointerover">
+            <Setter Property="Foreground" Value="#e0e0e0" />
+        </Style>
+
+        <!-- Button defaults -->
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+
+        <!-- TextBox styling -->
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#0e0e14" />
+            <Setter Property="BorderBrush" Value="#2a2a3a" />
+            <Setter Property="Foreground" Value="#e0e0e0" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+
+        <!-- NumericUpDown styling -->
+        <Style Selector="NumericUpDown">
+            <Setter Property="Background" Value="#0e0e14" />
+            <Setter Property="BorderBrush" Value="#2a2a3a" />
+            <Setter Property="Foreground" Value="#e0e0e0" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+
+        <!-- ComboBox styling -->
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#0e0e14" />
+            <Setter Property="BorderBrush" Value="#2a2a3a" />
+            <Setter Property="Foreground" Value="#e0e0e0" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+    </Application.Styles>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="SystemAccentColor">#8f00fc</Color>
+                    <Color x:Key="SystemAccentColorDark1">#705BAD</Color>
+                    <Color x:Key="SystemAccentColorDark2">#5a3d8f</Color>
+                    <Color x:Key="SystemAccentColorDark3">#3d2066</Color>
+                    <Color x:Key="SystemAccentColorLight1">#a040ff</Color>
+                    <Color x:Key="SystemAccentColorLight2">#b870ff</Color>
+                    <Color x:Key="SystemAccentColorLight3">#CBAFFF</Color>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

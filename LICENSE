@@ -1,0 +1,92 @@
+NoMercy MediaServer License
+============================
+
+THIS IS A PROPRIETARY, SOURCE-AVAILABLE LICENSE. IT IS NOT AN OPEN-SOURCE LICENSE.
+
+Copyright (c) 2024-present NoMercy Entertainment
+
+TERMS AND CONDITIONS
+
+1. DEFINITIONS
+
+"Source Code" refers to the human-readable source code of NoMercy MediaServer,
+including all files in the repository.
+
+"Product" refers to the compiled, executable form of NoMercy MediaServer
+(the binaries/applications distributed as releases).
+
+"Commercial Use" means any use by or on behalf of a company, business, or
+organization for commercial advantage or monetary compensation, including:
+  - Incorporating the Source Code into commercial products
+  - Using the Source Code to build competing products or services
+  - Selling access to services built on this Source Code
+  - Using the Product in a business environment to generate revenue
+
+"Competing products or services" means any software or service that provides
+substantially similar functionality to NoMercy MediaServer.
+
+2. GRANT OF RIGHTS
+
+You are granted a limited, non-exclusive, non-transferable, revocable license to:
+
+  a) View and study the Source Code for personal learning
+  b) Download, run, and use the Product for any non-commercial purpose
+  c) Modify and run the Source Code for personal use.
+     Any distribution of modifications is limited to GitHub forks made
+     solely for contributing back to this repository or for security
+     research, and must not intentionally interfere with, disrupt, or
+     bypass the operation, security, or availability of official
+     NoMercy services
+
+3. SOURCE CODE RESTRICTIONS
+
+You may NOT:
+
+  a) Redistribute, publish, or share the Source Code or modifications,
+     EXCEPT for GitHub forks solely for contributing back to this repository
+     or for security research purposes
+  b) Use the Source Code to create competing products or services
+  c) Sell, sublicense, or commercially exploit the Source Code
+  d) Remove or alter any copyright notices or this license
+
+4. COMMERCIAL USE
+
+Commercial entities may not use the Product in production, internal,
+hosted, or customer-facing environments without a commercial license,
+regardless of whether the Source Code is accessed.
+
+For commercial licensing inquiries, contact NoMercy Entertainment.
+
+Individuals may use the Product (compiled software) for non-profit purposes, such as running a server for friends or a community, as long as no commercial use is involved.
+
+5. CONTRIBUTIONS
+
+By submitting contributions (pull requests, patches, etc.) to this project:
+  a) You license your contributions under these same terms
+  b) You assign copyright of your contributions to NoMercy Entertainment
+  c) You warrant you have the legal right to make such assignment
+
+6. COMPLIANCE WITH LAW
+
+You are solely responsible for ensuring your use of the Source Code and
+Product complies with all applicable laws in your jurisdiction. NoMercy
+Entertainment is not liable for any illegal use.
+
+7. NO WARRANTY
+
+THE SOURCE CODE AND PRODUCT ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY ARISING FROM THEIR USE.
+
+8. TERMINATION
+
+This license terminates automatically if you violate these terms. Upon
+termination, you must destroy all copies of the Source Code and any
+derivative works in your possession.
+
+9. GOVERNING LAW
+
+This license is governed by the laws of the Netherlands.
+
+For licensing questions: legal@nomercy.tv
+Terms of service: https://nomercy.tv/terms-of-service

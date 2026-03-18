@@ -1,0 +1,22 @@
+{
+  "profiles": {
+    "https": {
+      "commandName": "Project",
+      "commandLineArgs": "--dev --loglevel=verbose",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "https://localhost:7626"
+    }
+  },
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:56574/",
+      "sslPort": 44328
+    }
+  }
+}

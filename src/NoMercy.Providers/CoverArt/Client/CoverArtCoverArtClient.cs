@@ -1,5 +1,8 @@
-﻿using NoMercy.NmSystem.Information;
+﻿using HttpClient = System.Net.Http.HttpClient;
+using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Models;
+using NoMercy.Providers.Helpers;
 using NoMercy.Setup;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -50,24 +53,20 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
 
     public static async Task<Image<Rgba32>?> Download(Uri? url, bool? download = true)
     {
-        string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName(url?.LocalPath ?? string.Empty));
+        string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName((url?.LocalPath).OrEmpty()));
 
         if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
 
-        HttpClient httpClient = new();
-        httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        httpClient.DefaultRequestHeaders.Add("Accept", "image/*");
+        HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.CoverArtImage);
 
-        HttpResponseMessage response = await httpClient.GetAsync(url);
+        using HttpResponseMessage response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return null;
 
-        Stream stream = await response.Content.ReadAsStreamAsync();
+        byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
-        if (download is false) return Image.Load<Rgba32>(stream);
+        if (download is not false && !File.Exists(filePath))
+            await File.WriteAllBytesAsync(filePath, bytes);
 
-        if (!File.Exists(filePath))
-            await File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());
-
-        return Image.Load<Rgba32>(stream);
+        return Image.Load<Rgba32>(bytes);
     }
 }

@@ -43,19 +43,19 @@ public static class Date
         DateTime date;
         try
         {
-            date = DateTime.ParseExact(dateString.ToString() ?? string.Empty, "d-M-yyyy HH:mm:ss",
+            date = DateTime.ParseExact(dateString.ToString().OrEmpty(), "d-M-yyyy HH:mm:ss",
                 CultureInfo.InvariantCulture);
         }
         catch (Exception)
         {
             try
             {
-                date = DateTime.ParseExact(dateString.ToString() ?? string.Empty, "d/M/yyyy HH:mm:ss",
+                date = DateTime.ParseExact(dateString.ToString().OrEmpty(), "d/M/yyyy HH:mm:ss",
                     CultureInfo.InvariantCulture);
             }
             catch (Exception)
             {
-                date = DateTime.Parse(dateString.ToString() ?? string.Empty, CultureInfo.InvariantCulture);
+                date = DateTime.Parse(dateString.ToString().OrEmpty(), CultureInfo.InvariantCulture);
             }
         }
 

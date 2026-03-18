@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Description>NoMercy MediaServer CLI Tool</Description>
+        <Product>NoMercy CLI</Product>
+        <AssemblyName>nomercy</AssemblyName>
+        <PublishSingleFile>true</PublishSingleFile>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <IsTestProject>false</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="NoMercy.Tests.Cli" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="System.CommandLine" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
+        <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,4 +1,9 @@
-using NoMercy.Database.Models;
+using System.Collections.Concurrent;
+using NoMercy.Database.Models.Common;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -35,11 +40,19 @@ public class ShowManager(
         foreach (FolderLibrary folderLibrary in library.FolderLibraries)
         {
             string folderName = Path.Combine(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
-            if(!Directory.Exists(folderName)) continue;
-            
+
+            if (!Directory.Exists(folderName))
+            {
+                string? match = Str.FindMatchingDirectory(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
+                if (match != null)
+                    folderName = match;
+            }
+
+            if (!Directory.Exists(folderName)) continue;
+
             DirectoryInfo folderInfo = new(folderName);
             folderCreatedAt = folderInfo.CreationTimeUtc;
-            
+
             if(folderCreatedAt != DateTime.UtcNow) break;
         }
 
@@ -102,7 +115,7 @@ public class ShowManager(
 
         Logger.MovieDb($"Show {showAppends.Name}: Added to Library {library.Title}");
 
-        jobDispatcher.DispatchJob<AddShowExtraDataJob, TmdbTvShowAppends>(showAppends);
+        jobDispatcher.DispatchJob<ShowExtrasJob, TmdbTvShowAppends>(showAppends);
 
         return showAppends;
     }
@@ -412,31 +425,30 @@ public class ShowManager(
             Logger.MovieDb($"Show {show.Name}: No production companies found", LogEventLevel.Debug);
             return;
         }
-        
+
         TmdbTvClient showClient = new(show.Id);
 
-        List<Company> companies = [];
+        ConcurrentDictionary<int, Company> companiesDict = new();
 
         await Parallel.ForEachAsync(show.ProductionCompanies, Config.ParallelOptions, async (productionCompany, _) =>
         {
             TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(productionCompany.Id);
             if (nw == null) return;
 
-            if (companies.All(n => n.Id != nw.Id))
+            companiesDict.TryAdd(nw.Id, new()
             {
-                companies.Add(new()
-                {
-                    Id = nw.Id,
-                    Name = nw.Name,
-                    Logo = nw.LogoPath,
-                    OriginCountry = nw.OriginCountry,
-                    Headquarters = nw.Headquarters,
-                    Homepage = nw.Homepage,
-                });
-            }
+                Id = nw.Id,
+                Name = nw.Name,
+                Logo = nw.LogoPath,
+                OriginCountry = nw.OriginCountry,
+                Headquarters = nw.Headquarters,
+                Homepage = nw.Homepage,
+            });
         });
 
-        List<CompanyTv> companyTvs = show.ProductionCompanies
+        List<Company> companies = companiesDict.Values.ToList();
+
+        List<CompanyTv> companyTvs = companies
             .Select(company => new CompanyTv
             {
                 CompanyId = company.Id,

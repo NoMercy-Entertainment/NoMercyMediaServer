@@ -31,7 +31,7 @@ public class TvdbAwardCategoryData
     [JsonProperty("allowCoNominees")] public bool AllowCoNominees { get; set; }
     [JsonProperty("award")] public TvdbStatus Award { get; set; } = new();
     [JsonProperty("forMovies")] public bool ForMovies { get; set; }
-    [JsonProperty("forSeries")] public bool ForSeries { get; }
+    [JsonProperty("forSeries")] public bool ForSeries { get; set; }
     [JsonProperty("id")] public int Id { get; set; }
     [JsonProperty("name")] public string Name { get; set; } = string.Empty;
 }

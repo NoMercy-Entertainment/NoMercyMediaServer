@@ -4,9 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
-using NoMercy.NmSystem;
+using NoMercy.Database.Models.Users;
+using NoMercy.Helpers.Extensions;
+using NoMercy.Networking.Messaging;
+using NoMercy.NmSystem.Extensions;
 
 namespace NoMercy.Networking;
 
@@ -14,11 +15,15 @@ namespace NoMercy.Networking;
 public class ConnectionHub : Hub
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IDbContextFactory<MediaContext> _contextFactory;
+    protected readonly ConnectedClients ConnectedClients;
     private string Endpoint { get; set; }
 
-    protected ConnectionHub(IHttpContextAccessor httpContextAccessor)
+    protected ConnectionHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory, ConnectedClients connectedClients)
     {
         _httpContextAccessor = httpContextAccessor;
+        _contextFactory = contextFactory;
+        ConnectedClients = connectedClients;
         Endpoint = _httpContextAccessor.HttpContext?.Request.Path.Value ?? "Unknown";
         // Logger.Socket($"Connected to {Endpoint}");
     }
@@ -88,7 +93,7 @@ public class ConnectionHub : Hub
 
         }
 
-        await using MediaContext mediaContext = new();
+        await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
         await mediaContext.Devices.Upsert(client)
             .On(x => x.DeviceId)
             .WhenMatched((ds, di) => new()
@@ -128,7 +133,7 @@ public class ConnectionHub : Hub
             });
         }
 
-        Networking.SocketClients.TryAdd(Context.ConnectionId, client);
+        ConnectedClients.Clients.TryAdd(Context.ConnectionId, client);
 
         await Clients.All.SendAsync("ConnectedDevicesState", Devices());
     }
@@ -137,9 +142,9 @@ public class ConnectionHub : Hub
     {
         await base.OnDisconnectedAsync(exception);
 
-        if (Networking.SocketClients.TryGetValue(Context.ConnectionId, out Client? client))
+        if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
         {
-            await using MediaContext mediaContext = new();
+            await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
             Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
             if (device is not null)
             {
@@ -157,7 +162,7 @@ public class ConnectionHub : Hub
                 });
             }
 
-            Networking.SocketClients.Remove(Context.ConnectionId, out _);
+            ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
 
             await Clients.All.SendAsync("ConnectedDevicesState", Devices());
         }
@@ -185,7 +190,7 @@ public class ConnectionHub : Hub
         User? user = Context.User.User();
         if (user is null) return [];
 
-        return Networking.SocketClients.Values
+        return ConnectedClients.Clients.Values
             .Where(x => x.Sub.Equals(user.Id))
             .Where(x => x.Endpoint == Endpoint)
             .Select(c => new Device

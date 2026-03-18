@@ -99,6 +99,9 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         long start = 0;
         long end;
 
+        // Default chunk size for open-ended range requests on streamable media (1 MB)
+        const long defaultChunkSize = 1024 * 1024;
+
         if (hasRangeRequest)
         {
             string?[] ranges = rangeValue.ToString()
@@ -107,14 +110,27 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
                 .ToArray();
 
             start = Convert.ToInt64(ranges[0]);
-            end = ranges.Length > 1 && !string.IsNullOrEmpty(ranges[1]) 
-                ? Convert.ToInt64(ranges[1]) 
-                : fileLength - 1;
+
+            if (ranges.Length > 1 && !string.IsNullOrEmpty(ranges[1]))
+            {
+                // Explicit end byte specified (e.g., "bytes=0-65535")
+                end = Convert.ToInt64(ranges[1]);
+            }
+            else if (isStreamableMedia)
+            {
+                // Open-ended range on streamable media (e.g., "bytes=0-") — serve a chunk
+                end = Math.Min(start + defaultChunkSize - 1, fileLength - 1);
+            }
+            else
+            {
+                // Open-ended range on non-streamable file — serve the rest
+                end = fileLength - 1;
+            }
         }
         else
         {
-            // For streamable media without range request, serve initial chunk (e.g., first 1MB)
-            end = Math.Min(start + (1024 * 1024) - 1, fileLength - 1);
+            // Streamable media without range request — serve initial chunk
+            end = Math.Min(start + defaultChunkSize - 1, fileLength - 1);
         }
 
         long length = end - start + 1;

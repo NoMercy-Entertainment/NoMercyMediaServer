@@ -2,7 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Helpers;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaSources.OpticalMedia;
 using NoMercy.MediaSources.OpticalMedia.Dto;
 using NoMercy.NmSystem.SystemCalls;
@@ -41,7 +41,7 @@ public class OpticalMediaController : BaseController
             return UnauthorizedResponse("You do not have permission to view drive contents");
 
         MetaData? metadata = await DriveMonitor.GetDriveMetadata(drivePath);
-        if (metadata == null) return NotFound("Drive metadata not found.");
+        if (metadata == null) return NotFoundResponse("Drive metadata not found");
 
         return Ok(new DriveState
         {
@@ -58,7 +58,7 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to process media");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequest("Drive path is required.");
+        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
 
         _ = DriveMonitor.ProcessMedia(drivePath, request);
 
@@ -71,11 +71,11 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to open drive");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequest("Drive path is required.");
+        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
 
         bool success = Optical.OpenDrive(drivePath);
 
-        if (!success) return BadRequest("Failed to open drive.");
+        if (!success) return BadRequestResponse("Failed to open drive");
 
         return Ok("Drive opened.");
     }
@@ -86,11 +86,11 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to close drive");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequest("Drive path is required.");
+        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
 
         bool success = Optical.CloseDrive(drivePath);
 
-        if (!success) return BadRequest("Failed to close drive.");
+        if (!success) return BadRequestResponse("Failed to close drive");
 
         return Ok("Drive closed.");
     }
@@ -102,9 +102,9 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to play media");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequest("Drive path is required.");
+        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
 
-        if (string.IsNullOrWhiteSpace(playlistId)) return BadRequest("PlaylistId is required.");
+        if (string.IsNullOrWhiteSpace(playlistId)) return BadRequestResponse("Playlist ID is required");
 
         await DriveMonitor.PlayMedia(drivePath, playlistId, cancellationTokenSource);
 
@@ -117,7 +117,7 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to stop media");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequest("Drive path is required.");
+        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
 
         _ = DriveMonitor.StopMedia();
 

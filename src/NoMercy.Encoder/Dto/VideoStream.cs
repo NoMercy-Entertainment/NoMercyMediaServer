@@ -33,7 +33,7 @@ public class VideoStream
     [JsonProperty("chroma_location")] public string? ChromaLocation { get; set; }
     [JsonProperty("avg_frame_rate")] public string? AvgFrameRate { get; set; }
     
-    [JsonProperty("tags")] public object Tags { get; set; }
+    [JsonProperty("tags")] public object? Tags { get; set; }
 
     [JsonProperty("frame_rate")] public int FrameRate { get; set; }
 
@@ -42,6 +42,10 @@ public class VideoStream
     [JsonProperty("is_forced")] public bool IsForced  { get; set; }
     [JsonProperty("is_hdr")] public bool IsHdr  { get; set; }
     [JsonProperty("bitrate")] public long? BitRate { get; set; }
+
+    public VideoStream()
+    {
+    }
 
     public VideoStream(FfprobeSourceDataStream ffprobeSourceDataStream)
     {
@@ -70,7 +74,7 @@ public class VideoStream
         ColorPrimaries = ffprobeSourceDataStream.ColorPrimaries;
         ChromaLocation = ffprobeSourceDataStream.ChromaLocation;
         AvgFrameRate = ffprobeSourceDataStream.AvgFrameRate;
-        FrameRate = ParseFrameRate(ffprobeSourceDataStream.AvgFrameRate ?? string.Empty);
+        FrameRate = ParseFrameRate(ffprobeSourceDataStream.AvgFrameRate.OrEmpty());
         IsHdr = DetectHdr(ffprobeSourceDataStream);
         AspectRatio = !string.IsNullOrEmpty(ffprobeSourceDataStream.DisplayAspectRatio) 
             ? ffprobeSourceDataStream.DisplayAspectRatio 

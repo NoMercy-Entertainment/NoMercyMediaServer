@@ -1,6 +1,6 @@
-using FFMpegCore;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
@@ -13,8 +13,8 @@ public class BaseSubtitle : Classes
 
     public CodecDto SubtitleCodec { get; set; } = SubtitleCodecs.Webvtt;
 
-    protected internal SubtitleStream? SubtitleStream;
-    internal List<SubtitleStream> SubtitleStreams { get; set; } = [];
+    protected internal FfProbeSubtitleStream? SubtitleStream;
+    internal List<FfProbeSubtitleStream> SubtitleStreams { get; set; } = [];
 
     public string Language => SubtitleStream?.Language ?? "und";
     private string[] AllowedLanguages { get; set; } = ["eng"];
@@ -145,7 +145,7 @@ public class BaseSubtitle : Classes
         {
             if (SubtitleStreams.All(stream => stream.Language != allowedLanguage)) continue;
 
-            foreach (SubtitleStream? stream in SubtitleStreams.Where(stream => stream.Language == allowedLanguage))
+            foreach (FfProbeSubtitleStream? stream in SubtitleStreams.Where(stream => stream.Language == allowedLanguage))
             {
                 BaseSubtitle newStream = (BaseSubtitle)MemberwiseClone();
 
@@ -159,7 +159,7 @@ public class BaseSubtitle : Classes
 
                 if (newStream.SubtitleStream!.CodecName == newStream.SubtitleCodec.SimpleValue) continue;
 
-                List<SubtitleStream> subTitleStreams = SubtitleStreams
+                List<FfProbeSubtitleStream> subTitleStreams = SubtitleStreams
                     .Where(s => s.Language == stream.Language)
                     .ToList();
 
@@ -228,16 +228,14 @@ public class BaseSubtitle : Classes
         return extension;
     }
 
-    public void AddToDictionary(Dictionary<string, dynamic> commandDictionary, int index)
+    public void AddToDictionary(Dictionary<string, dynamic> commandDictionary, int sourceIndex, int outputIndex)
     {
-        // commandDictionary["-map"] = $"[s{index}_hls_0]";
-        commandDictionary["-map"] = $"s:{index}";
+        commandDictionary["-map"] = $"s:{sourceIndex}";
         commandDictionary["-c:s"] = SubtitleCodec.Value;
 
         if (!IsoLanguageMapper.IsoToLanguage.TryGetValue(Language, out string? language))
             throw new($"Language {Language} is not supported");
-        commandDictionary[$"-metadata:s:s:{index}"] = $"title=\"{language}\"";
-        commandDictionary[$"-metadata:s:s:{index}"] = $"language=\"{Language}\"";
+        commandDictionary[$"-metadata:s:s:{outputIndex}"] = $"title=\"{language}\" -metadata:s:s:{outputIndex} language=\"{Language}\"";
 
         foreach (KeyValuePair<string, dynamic> extraParameter in _extraParameters)
             commandDictionary[extraParameter.Key] = extraParameter.Value;

@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.Lrclib.Client;
 using NoMercy.Providers.MusixMatch.Client;
@@ -18,7 +18,7 @@ public static partial class NoMercyLyricsClient
         int recursiveCount = 0;
         string artistNames = string.Join(",", track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name));
         string duration = track.Duration.ToSeconds().ToString(CultureInfo.InvariantCulture);
-        string albumName = track.AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty;
+        string albumName = (track.AlbumTrack.FirstOrDefault()?.Album.Name).OrEmpty();
         while (true)
         {
             MusixMatchSubtitleGet? lyrics = null;
@@ -98,7 +98,7 @@ public static partial class NoMercyLyricsClient
 
     private static dynamic? ToFormatLyrics(MusixMatchSubtitleGet? lyrics)
     {
-        string text = FormatLyricsRegex().Replace(input: lyrics?.Message?.Body?.MacroCalls?.TrackLyricsGet?.Message?.Body?.Lyrics?.LyricsBody ?? string.Empty, replacement: "");
+        string text = FormatLyricsRegex().Replace(input: (lyrics?.Message?.Body?.MacroCalls?.TrackLyricsGet?.Message?.Body?.Lyrics?.LyricsBody).OrEmpty(), replacement: "");
         if (string.IsNullOrEmpty(text))
             return null;
         

@@ -1,4 +1,3 @@
-using FFMpegCore.Builders.MetaData;
 using Newtonsoft.Json;
 
 namespace NoMercy.MediaSources.OpticalMedia.Dto;
@@ -18,4 +17,12 @@ public class PlaylistItem
     [JsonProperty("streams")] public IEnumerable<Stream>? Streams;
     [JsonProperty("duration")] public string Duration = string.Empty;
     [JsonProperty("chapters")] public IEnumerable<ChapterData> Chapters { get; set; } = [];
+}
+
+public class ChapterData(string title, TimeSpan start, TimeSpan end)
+{
+    public string Title { get; set; } = title;
+    public TimeSpan Start { get; } = start;
+    public TimeSpan End { get; } = end;
+    public TimeSpan Duration => End - Start;
 }

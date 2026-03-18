@@ -18,7 +18,7 @@ public class TrackRecording
                _firstReleaseDate.TryParseToDateTime(out DateTime dt)
             ? dt
             : null;
-        set => _firstReleaseDate = value.ToString() ?? string.Empty;
+        set => _firstReleaseDate = value.ToString().OrEmpty();
     }
 
     [JsonProperty("genres")] public MusicBrainzGenreDetails[] Genres { get; set; } = [];

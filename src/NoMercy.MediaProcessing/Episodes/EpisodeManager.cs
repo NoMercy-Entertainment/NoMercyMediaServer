@@ -1,4 +1,6 @@
-using NoMercy.Database.Models;
+using System.Collections.Concurrent;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.TvShows;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -43,7 +45,7 @@ public class EpisodeManager(
         
         Logger.MovieDb($"Show {show.Name}: Season {season.SeasonNumber} Episodes stored", LogEventLevel.Debug);
         
-        jobDispatcher.DispatchJob<AddEpisodeExtraDataJob, TmdbEpisodeAppends>(episodeAppends, show.Name);
+        jobDispatcher.DispatchJob<EpisodeExtrasJob, TmdbEpisodeAppends>(episodeAppends, show.Name);
 
         return episodes;
     }
@@ -51,7 +53,7 @@ public class EpisodeManager(
     private static async Task<List<TmdbEpisodeAppends>> Collect(
         TmdbTvShow show, TmdbSeasonAppends season, bool? priority = false)
     {
-        List<TmdbEpisodeAppends> episodeAppends = [];
+        ConcurrentBag<TmdbEpisodeAppends> episodeAppends = [];
 
         await Parallel.ForEachAsync(season.Episodes, Config.ParallelOptions, async (episode, _) =>
         {
@@ -69,7 +71,7 @@ public class EpisodeManager(
             }
         });
 
-        return episodeAppends;
+        return episodeAppends.ToList();
     }
 
     internal async Task StoreTranslations(string showName, TmdbEpisodeAppends episode)

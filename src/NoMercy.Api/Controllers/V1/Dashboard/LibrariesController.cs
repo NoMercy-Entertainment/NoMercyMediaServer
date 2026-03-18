@@ -3,19 +3,24 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Controllers.V1.Dashboard.DTO;
-using NoMercy.Api.Controllers.V1.DTO;
-using NoMercy.Api.Middleware;
+using NoMercy.Api.DTOs.Dashboard;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
-using NoMercy.Database.Models;
-using NoMercy.Helpers;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
+using NoMercy.Database.Models.Movies;
+using NoMercy.Database.Models.TvShows;
+using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.Api.Middleware;
+using NoMercy.Events;
+using NoMercy.Events.Library;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
 using EncoderProfileDto = NoMercy.Data.Logic.EncoderProfileDto;
-using FolderLibraryDto = NoMercy.Data.Repositories.FolderLibraryDto;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -29,7 +34,8 @@ public class LibrariesController(
     EncoderRepository encoderRepository,
     FolderRepository folderRepository,
     JobDispatcher jobDispatcher,
-    LanguageRepository languageRepository
+    LanguageRepository languageRepository,
+    IDbContextFactory<MediaContext> mediaContextFactory
 ) : BaseController
 {
     [HttpGet]
@@ -72,7 +78,7 @@ public class LibrariesController(
                 PerfectSubtitleMatch = true,
                 Realtime = true,
                 SpecialSeasonName = "Specials",
-                Type = "movie",
+                Type = Config.MovieMediaType,
                 Order = 99
             };
             
@@ -86,12 +92,9 @@ public class LibrariesController(
                 Args = []
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return Ok(new StatusResponseDto<Library>
-            {
-                Status = "error", Message = "Something went wrong creating a new library: {0}", Args = [e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong creating the library");
         }
     }
 
@@ -104,7 +107,7 @@ public class LibrariesController(
 
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
         if (library is null)
-            return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Library not found" });
+            return NotFoundResponse("Library not found");
 
         try
         {
@@ -143,12 +146,9 @@ public class LibrariesController(
 
             await libraryRepository.UpdateLibraryAsync(library);
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return Ok(new StatusResponseDto<string>
-            {
-                Status = "error", Message = "Something went wrong updating the library: {0}", Args = [e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong updating the library");
         }
 
         // Only update folder libraries if provided
@@ -165,14 +165,9 @@ public class LibrariesController(
                 
                 await folderRepository.SyncFolderLibraryAsync(folderLibraries, folders);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                return UnprocessableEntity(new StatusResponseDto<string>
-                {
-                    Status = "error",
-                    Message = "Something went wrong updating the library folders: {0}",
-                    Args = [e.Message]
-                });
+                return InternalServerErrorResponse("Something went wrong updating the library folders");
             }
 
             try
@@ -205,12 +200,7 @@ public class LibrariesController(
             catch (Exception e)
             {
                 Logger.App(e);
-                return Ok(new StatusResponseDto<string>
-                {
-                    Status = "error",
-                    Message = "Something went wrong updating the library encoder profiles: {0}",
-                    Args = [e.Message]
-                });
+                return InternalServerErrorResponse("Something went wrong updating the library encoder profiles");
             }
         }
 
@@ -233,27 +223,44 @@ public class LibrariesController(
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
 
         if (library is null)
-            return Ok(new StatusResponseDto<string>
-            {
-                Status = "error", Message = "Library {0} does not exist.", Args = [id.ToString()]
-            });
+            return NotFoundResponse("Library not found");
         
         try
         {
             await libraryRepository.DeleteLibraryAsync(library);
-            
+
+            // Remove all associated folders from the middleware immediately
+            foreach (FolderLibrary fl in library.FolderLibraries)
+                DynamicStaticFilesMiddleware.RemovePath(fl.FolderId);
+
+            await using (MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync())
+            {
+                ClaimsPrincipleExtensions.RefreshFolderIds(refreshContext);
+            }
+
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new LibraryDeletedEvent
+                {
+                    LibraryId = library.Id,
+                    LibraryName = library.Title
+                });
+
+                foreach (FolderLibrary fl in library.FolderLibraries)
+                    await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
+                    {
+                        RequestPath = fl.FolderId
+                    });
+            }
+
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok", Message = "Successfully deleted {0} library.", Args = [library.Title]
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return Ok(new StatusResponseDto<string>
-            {
-                Status = "error", Message = "Something went wrong deleting the library: {0}",
-                Args = [e.InnerException?.Message ?? e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong deleting the library");
         }
     }
 
@@ -267,7 +274,7 @@ public class LibrariesController(
         List<Library> libraries = await libraryRepository.GetAllLibrariesAsync();
 
         if (libraries.Count == 0)
-            return Ok(new StatusResponseDto<string> { Status = "error", Message = "No libraries exist.", Args = [] });
+            return NotFoundResponse("No libraries exist");
 
         try
         {
@@ -284,11 +291,9 @@ public class LibrariesController(
                 Status = "ok", Message = "Successfully sorted libraries.", Args = []
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return Problem(title: "Internal Server Error.",
-                detail: $"Something went wrong sorting the libraries {e.Message}", instance: HttpContext.Request.Path,
-                statusCode: StatusCodes.Status403Forbidden, type: "/docs/errors/internal-server-error");
+            return InternalServerErrorResponse("Something went wrong sorting the libraries");
         }
     }
 
@@ -302,10 +307,7 @@ public class LibrariesController(
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
 
         if (librariesList.Count == 0)
-            return NotFound(new StatusResponseDto<List<string?>>
-            {
-                Status = "error", Message = "No libraries found to rescan.", Args = []
-            });
+            return NotFoundResponse("No libraries found to rescan");
 
         await using MediaContext mediaContext = new();
 
@@ -313,12 +315,12 @@ public class LibrariesController(
         {
             foreach (LibraryMovie movie in library.LibraryMovies)
             {
-                jobDispatcher.DispatchJob<RescanFilesJob>(movie.MovieId, movie.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
             }
 
             foreach (LibraryTv show in library.LibraryTvs)
             {
-                jobDispatcher.DispatchJob<RescanFilesJob>(show.TvId, show.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
             }
         }
 
@@ -336,20 +338,20 @@ public class LibrariesController(
             return UnauthorizedResponse("You do not have permission to refresh the library");
 
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
-        
+
         if (library is null)
-            return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Library not found" });
+            return NotFoundResponse("Library not found");
 
         await using MediaContext mediaContext = new();
 
         foreach (LibraryMovie movie in library.LibraryMovies)
         {
-            jobDispatcher.DispatchJob<RescanFilesJob>(movie.MovieId, movie.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(movie.MovieId, movie.LibraryId);
         }
 
         foreach (LibraryTv show in library.LibraryTvs)
         {
-            jobDispatcher.DispatchJob<RescanFilesJob>(show.TvId, show.LibraryId);
+            jobDispatcher.DispatchJob<FileRescanJob>(show.TvId, show.LibraryId);
         }
 
         return Ok(new StatusResponseDto<List<dynamic>>
@@ -368,18 +370,13 @@ public class LibrariesController(
         List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
 
         if (librariesList.Count == 0)
-        {
-            return NotFound(new StatusResponseDto<List<string?>>
-            {
-                Status = "error", Message = "No libraries found to refresh.", Args = []
-            });
-        }
+            return NotFoundResponse("No libraries found to refresh");
 
         List<string?> titles = [];
         
         foreach (Library library in librariesList)
         {
-            jobDispatcher.DispatchJob<RescanLibraryJob>(library.Id);
+            jobDispatcher.DispatchJob<LibraryRescanJob>(library.Id);
         }
 
         return Ok(new StatusResponseDto<List<string?>>
@@ -396,15 +393,58 @@ public class LibrariesController(
             return UnauthorizedResponse("You do not have permission to refresh the library");
 
         Library? library = await libraryRepository.GetLibraryByIdAsync(id);
-        
-        if (library is null)
-            return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Library not found" });
 
-        jobDispatcher.DispatchJob<RescanLibraryJob>(id);
+        if (library is null)
+            return NotFoundResponse("Library not found");
+
+        jobDispatcher.DispatchJob<LibraryRescanJob>(id);
 
         return Ok(new StatusResponseDto<List<dynamic>>
         {
             Status = "ok", Message = "Rescanning {0} library.", Args = [library.Title]
+        });
+    }
+
+    [HttpPost]
+    [Route("scan-new")]
+    public async Task<IActionResult> ScanNewAll()
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to scan all libraries");
+
+        List<Library> librariesList = await libraryRepository.GetAllLibrariesAsync();
+
+        if (librariesList.Count == 0)
+            return NotFoundResponse("No libraries found to scan");
+
+        foreach (Library library in librariesList)
+        {
+            jobDispatcher.DispatchJob<LibraryScanJob>(library.Id);
+        }
+
+        return Ok(new StatusResponseDto<List<string?>>
+        {
+            Status = "ok", Message = "Scanning all libraries for new items."
+        });
+    }
+
+    [HttpPost]
+    [Route("{id:ulid}/scan-new")]
+    public async Task<IActionResult> ScanNew(Ulid id)
+    {
+        if (!User.IsModerator())
+            return UnauthorizedResponse("You do not have permission to scan the library");
+
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
+
+        if (library is null)
+            return NotFoundResponse("Library not found");
+
+        jobDispatcher.DispatchJob<LibraryScanJob>(id);
+
+        return Ok(new StatusResponseDto<List<dynamic>>
+        {
+            Status = "ok", Message = "Scanning {0} library for new items.", Args = [library.Title]
         });
     }
 
@@ -423,41 +463,45 @@ public class LibrariesController(
         try
         {
             Folder folder = new() { Id = Ulid.NewUlid(), Path = request.Path };
-            
+
             await folderRepository.AddFolderAsync(folder);
-            
-            DynamicStaticFilesMiddleware.AddPath(library.Id, folder.Path);
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return UnprocessableEntity(new StatusResponseDto<string>
-            {
-                Status = "error", Message = "Something went wrong adding the folder: {0}", Args = [e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong adding the folder");
         }
 
         Folder? pathAsync = await folderRepository.GetFolderByPathAsync(request.Path);
-        
+
         if (pathAsync is null)
-        {
-            return NotFound(new StatusResponseDto<string>
-            {
-                Status = "error", Message = "Folder {0} does not exist.", Args = [id.ToString()]
-            });
-        }
+            return NotFoundResponse("Folder not found");
 
         FolderLibrary folderLibrary = new()
         {
-            LibraryId = library.Id, 
+            LibraryId = library.Id,
             FolderId = pathAsync.Id
         };
-        
+
         await folderRepository.AddFolderLibraryAsync(folderLibrary);
+
+        // Register the folder with the middleware directly so it can serve files immediately
+        DynamicStaticFilesMiddleware.AddPath(pathAsync.Id, pathAsync.Path);
+        await using MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync();
+        ClaimsPrincipleExtensions.RefreshFolderIds(refreshContext);
+
+        if (EventBusProvider.IsConfigured)
+        {
+            await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
+            {
+                RequestPath = pathAsync.Id,
+                PhysicalPath = pathAsync.Path
+            });
+        }
 
         return Ok(new StatusResponseDto<FolderLibrary>
         {
-            Status = "ok", 
-            Message = "Successfully added folder to {0} library.", 
+            Status = "ok",
+            Message = "Successfully added folder to {0} library.",
             Args = [pathAsync.Path],
             Data = folderLibrary
         });
@@ -473,29 +517,42 @@ public class LibrariesController(
         Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
         
         if (folder is null)
-            return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Folder not found" });
+            return NotFoundResponse("Folder not found");
 
         try
         {
             folder.Path = request.Path;
             await folderRepository.UpdateFolderAsync(folder);
-            
+
+            // Update the middleware directly so it can serve files from the new path immediately
             DynamicStaticFilesMiddleware.RemovePath(folder.Id);
-            DynamicStaticFilesMiddleware.AddPath(id, folder.Path);
-            
+            DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
+            await using (MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync())
+            {
+                ClaimsPrincipleExtensions.RefreshFolderIds(refreshContext);
+            }
+
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
+                {
+                    RequestPath = folder.Id
+                });
+                await EventBusProvider.Current.PublishAsync(new FolderPathAddedEvent
+                {
+                    RequestPath = folder.Id,
+                    PhysicalPath = folder.Path
+                });
+            }
+
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok", Message = "Successfully updated folder {0}.", Args = [folder.Path]
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return UnprocessableEntity(new StatusResponseDto<string>
-            {
-                Status = "error",
-                Message = "Something went wrong updating the library folder: {0}",
-                Args = [e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong updating the library folder");
         }
     }
 
@@ -509,27 +566,35 @@ public class LibrariesController(
         Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
         
         if (folder is null)
-            return NotFound(new StatusResponseDto<string> { Status = "error", Data = "Folder not found" });
+            return NotFoundResponse("Folder not found");
 
         try
         {
             await folderRepository.DeleteFolderAsync(folder);
-            
+
+            // Remove the folder from the middleware immediately
             DynamicStaticFilesMiddleware.RemovePath(folder.Id);
-            
+            await using (MediaContext refreshContext = await mediaContextFactory.CreateDbContextAsync())
+            {
+                ClaimsPrincipleExtensions.RefreshFolderIds(refreshContext);
+            }
+
+            if (EventBusProvider.IsConfigured)
+            {
+                await EventBusProvider.Current.PublishAsync(new FolderPathRemovedEvent
+                {
+                    RequestPath = folder.Id
+                });
+            }
+
             return Ok(new StatusResponseDto<string>
             {
                 Status = "ok", Message = "Successfully deleted folder {0}.", Args = [folder.Path]
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return UnprocessableEntity(new StatusResponseDto<string>
-            {
-                Status = "error",
-                Message = "Something went wrong deleting the library folder: {0}",
-                Args = [e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong deleting the library folder");
         }
     }
 
@@ -543,11 +608,7 @@ public class LibrariesController(
         Folder? folder = await folderRepository.GetFolderByIdAsync(folderId);
         
         if (folder is null)
-            return NotFound(new StatusResponseDto<string>
-            {
-                Status = "error", 
-                Data = "Folder not found"
-            });
+            return NotFoundResponse("Folder not found");
 
         try
         {
@@ -567,14 +628,9 @@ public class LibrariesController(
                 Args = [folder.Path]
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return UnprocessableEntity(new StatusResponseDto<string>
-            {
-                Status = "error",
-                Message = "Something went wrong adding the encoder profile: {0}",
-                Args = [e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong adding the encoder profile");
         }
     }
 
@@ -588,11 +644,7 @@ public class LibrariesController(
         EncoderProfile? encoderProfile = await encoderRepository.GetEncoderProfileByIdAsync(encoderProfileId);
         
         if (encoderProfile is null)
-            return NotFound(new StatusResponseDto<string>
-            {
-                Status = "error", 
-                Data = "Encoder profile not found"
-            });
+            return NotFoundResponse("Encoder profile not found");
 
         try
         {
@@ -603,14 +655,9 @@ public class LibrariesController(
                 Status = "ok", Message = "Successfully deleted encoder profile {0}.", Args = [encoderProfile.Name]
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return UnprocessableEntity(new StatusResponseDto<string>
-            {
-                Status = "error",
-                Message = "Something went wrong deleting the encoder profile: {0}",
-                Args = [e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong deleting the encoder profile");
         }
     }
 
@@ -624,17 +671,13 @@ public class LibrariesController(
         Folder? folder = await folderRepository.GetFolderByIdAsync(request.FolderId);
         
         if (folder is null)
-            return NotFound(new StatusResponseDto<string>
-            {
-                Status = "error", 
-                Data = "Folder not found"
-            });
+            return NotFoundResponse("Folder not found");
 
         try
         {
             await using MediaContext mediaContext = new();
 
-            FileRepository fileRepository = new();
+            FileRepository fileRepository = new(mediaContext);
             FileManager fileManager = new(fileRepository);
 
             await fileManager.MoveToLibraryFolder(request.Id, folder);
@@ -646,14 +689,9 @@ public class LibrariesController(
                 Args = [request.Id.ToString()]
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return UnprocessableEntity(new StatusResponseDto<string>
-            {
-                Status = "error",
-                Message = "Something went wrong moving the item: {0}",
-                Args = [e.Message]
-            });
+            return InternalServerErrorResponse("Something went wrong moving the item");
         }
     }
 }

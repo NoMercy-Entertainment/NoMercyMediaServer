@@ -8,7 +8,7 @@ public class TagFile
 {
     public static TagFile Create(string path)
     {
-        FileTag? fileTag = FileTag.Create(path);
+        using FileTag? fileTag = FileTag.Create(path);
         fileTag.Tag.Pictures = [];
         return new()
         {

@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "NoMercy Entertainment",
+  "classifications": [ "NoMercy", "Plugin", "Media Server" ],
+  "identity": "NoMercy.Plugin.Template",
+  "name": "NoMercy MediaServer Plugin",
+  "shortName": "nomercy-plugin",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "NoMercy.Plugin.Template",
+  "preferNameDirectory": true,
+  "symbols": {
+    "pluginId": {
+      "type": "generated",
+      "generator": "guid",
+      "replaces": "PLUGIN-GUID-PLACEHOLDER",
+      "parameters": {
+        "format": "D"
+      }
+    },
+    "authorName": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "",
+      "replaces": "AUTHOR-NAME-PLACEHOLDER",
+      "description": "The plugin author's name"
+    },
+    "pluginDescription": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "A NoMercy MediaServer plugin",
+      "replaces": "PLUGIN-DESCRIPTION-PLACEHOLDER",
+      "description": "A short description of the plugin"
+    }
+  }
+}

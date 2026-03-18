@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using NoMercy.Database.Models;
+using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
@@ -13,6 +14,8 @@ using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.MediaProcessing.Recordings;
@@ -75,7 +78,7 @@ public partial class RecordingManager(
             {
                 MediaFile? mediaFile = FileMatch(file, releaseAppends, musicBrainzMedia, musicBrainzTrack.Position);
                 if (mediaFile is null) continue;
-                TagLib.File tagFile = TagLib.File.Create(file.Path);
+                using TagLib.File tagFile = TagLib.File.Create(file.Path);
                 if (tagFile == null || mediaFile.FFprobe == null)
                 {
                     Logger.MusicBrainz($"File not found: {file.Name}", LogEventLevel.Error);
@@ -283,8 +286,10 @@ public partial class RecordingManager(
             {
                 CoverArtImageManagerManager.CoverPalette? coverPalette = await FanArtImageManager.Add(artist.Id, true);
                 
-                if (coverPalette is not null) 
-                    await FanArtImageClient.Download(coverPalette.Url!);
+                if (coverPalette is not null)
+                {
+                    using Image<Rgba32>? downloadedImage = await FanArtImageClient.Download(coverPalette.Url!);
+                }
                 
                 Artist artistEntity = new()
                 {
@@ -310,7 +315,7 @@ public partial class RecordingManager(
                     LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId
                 };
                 await artistRepository.StoreAsync(artistEntity);
-                jobDispatcher.DispatchJob<MusicDescriptionJob>(artist);
+                jobDispatcher.DispatchJob<MusicMetadataJob>(artist);
             }
             catch (Exception e)
             {
@@ -371,7 +376,7 @@ public partial class RecordingManager(
 
         Logger.MusicBrainz($"Recording {trackAppends.Title} stored", LogEventLevel.Verbose);
         
-        // jobDispatcher.DispatchJob<TrackLyricsJob>(insert);
+        // jobDispatcher.DispatchJob<LyricFetchJob>(insert);
     }
 
     private async Task LinkToArtist(Track insert, MusicBrainzArtistAppends[] artistAppends)

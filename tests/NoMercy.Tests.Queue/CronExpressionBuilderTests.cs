@@ -1,5 +1,5 @@
 using Xunit;
-using NoMercy.Queue;
+using NoMercyQueue;
 using NCrontab;
 
 namespace NoMercy.Tests.Queue;
@@ -1150,7 +1150,7 @@ public class CronExpressionBuilderTests
         string invalidCron = "invalid cron expression";
         
         // Act & Assert - NCrontab throws CrontabException, not FormatException
-        Assert.Throws<NCrontab.CrontabException>(() => CrontabSchedule.Parse(invalidCron));
+        Assert.Throws<CrontabException>(() => CrontabSchedule.Parse(invalidCron));
     }
 
     [Theory]

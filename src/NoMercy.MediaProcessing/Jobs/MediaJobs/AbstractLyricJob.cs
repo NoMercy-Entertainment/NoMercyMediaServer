@@ -1,5 +1,5 @@
-using NoMercy.Database.Models;
-using NoMercy.Queue;
+using NoMercy.Database.Models.Music;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
@@ -15,8 +15,5 @@ public abstract class AbstractLyricJob : IShouldQueue
 
     public void Dispose()
     {
-        GC.Collect();
-        GC.WaitForFullGCComplete();
-        GC.WaitForPendingFinalizers();
     }
 }

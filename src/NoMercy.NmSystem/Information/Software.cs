@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -70,6 +71,25 @@ public static class Software
     public static string GetReleaseVersion()
     {
         return $"{Version!.Major}.{Version.Minor}.{Version.Build}";
+    }
+
+    public static string? GetFileVersion(string exePath)
+    {
+        try
+        {
+            if (!File.Exists(exePath))
+                return null;
+
+            FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(exePath);
+            if (fileInfo.FileMajorPart == 0 && fileInfo.FileMinorPart == 0 && fileInfo.FileBuildPart == 0)
+                return null;
+
+            return $"{fileInfo.FileMajorPart}.{fileInfo.FileMinorPart}.{fileInfo.FileBuildPart}";
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     internal static DateTime GetBootTime()

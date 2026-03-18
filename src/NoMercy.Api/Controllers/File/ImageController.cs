@@ -8,35 +8,40 @@ using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
 using NoMercy.Providers.TMDB.Client;
 using Serilog.Events;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace NoMercy.Api.Controllers.File;
 
 [Route("images/{type}/{path}")]
-public class ImageController : Controller
+public class ImageController : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Image(string type, string path, [FromQuery] ImageConvertArguments request)
     {
         try
         {
-            Response.Headers.Append("Expires", DateTime.Now.AddDays(30) + " GMT");
+            Response.Headers.Append("Expires", DateTime.UtcNow.AddDays(30).ToString("R"));
             Response.Headers.Append("Cache-Control", "public, max-age=2592000");
             Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
             string folder = Path.Join(AppFiles.ImagesPath, type);
-            if (!Directory.Exists(folder)) return NotFound();
+            if (!Directory.Exists(folder)) return NotFoundResponse("Image folder not found");
 
             string filePath = Path.Join(folder, path.Replace("/", ""));
             try
             {
-                if (!System.IO.File.Exists(filePath) && type == "original") await TmdbImageClient.Download("/" + path)!;
+                if (!System.IO.File.Exists(filePath) && type == "original")
+                {
+                    using Image<Rgba32>? downloadedImage = await TmdbImageClient.Download("/" + path)!;
+                }
             }
             catch (Exception)
             {
                 //
             }
 
-            if (!System.IO.File.Exists(filePath)) return NotFound();
+            if (!System.IO.File.Exists(filePath)) return NotFoundResponse("Image not found");
 
             FileInfo fileInfo = new(filePath);
             long originalFileSize = fileInfo.Length;
@@ -47,23 +52,59 @@ public class ImageController : Controller
             if (emptyArguments || path.Contains(".svg") ||
                 (originalFileSize < request.Width && originalMimeType == request.Format.DefaultMimeType))
                 return PhysicalFile(filePath, originalMimeType);
+            
+            string encodedUrl = Request.GetEncodedUrl();
 
-            string hashedUrl = CacheController.GenerateFileName(Request.GetEncodedUrl()) + "." +
+            string hashedUrl = CacheController.GenerateFileName(encodedUrl) + "." +
                                request.Format.FileExtensions.First();
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
             if (System.IO.File.Exists(cachedImagePath))
                 return PhysicalFile(cachedImagePath, request.Format.DefaultMimeType);
 
-            (byte[] magickImage, string mimeType) = Images.ResizeMagickNet(filePath, request);
-            await System.IO.File.WriteAllBytesAsync(cachedImagePath, magickImage);
+            try
+            {
+                (byte[] magickImage, string mimeType) = Images.ResizeMagickNet(filePath, request);
+                await System.IO.File.WriteAllBytesAsync(cachedImagePath, magickImage);
 
-            return File(magickImage, mimeType);
+                return File(magickImage, mimeType);
+            }
+            catch (Exception e)
+            {
+                Logger.App($"Image conversion failed for {filePath}: {e.Message}", LogEventLevel.Warning);
+                return PhysicalFile(filePath, originalMimeType);
+            }
         }
         catch (Exception e)
         {
             Logger.App(e.Message, LogEventLevel.Error);
-            return NotFound();
+            return NotFoundResponse("Image not found");
+        }
+    }
+
+    [HttpDelete]
+    public IActionResult DeleteCache(string type, string path, [FromQuery] ImageConvertArguments request)
+    {
+        try
+        {
+            string encodedUrl = Request.GetEncodedUrl();
+
+            string hashedUrl = CacheController.GenerateFileName(encodedUrl) + "." +
+                               request.Format.FileExtensions.First();
+
+            string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
+            if (System.IO.File.Exists(cachedImagePath))
+            {
+                System.IO.File.Delete(cachedImagePath);
+                return Ok(new { status = "ok", message = "Cache deleted" });
+            }
+
+            return NotFoundResponse("Cache not found");
+        }
+        catch (Exception e)
+        {
+            Logger.App(e.Message, LogEventLevel.Error);
+            return InternalServerErrorResponse("Image cache operation failed");
         }
     }
 }

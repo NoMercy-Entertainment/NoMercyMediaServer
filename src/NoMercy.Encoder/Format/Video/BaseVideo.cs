@@ -1,12 +1,11 @@
 // ReSharper disable MemberCanBeProtected.Global
 // ReSharper disable MemberCanBePrivate.Global
 
-using NoMercy.Encoder.Dto;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
 using Serilog.Events;
-using VideoStream = FFMpegCore.VideoStream;
 
 namespace NoMercy.Encoder.Format.Video;
 
@@ -16,9 +15,9 @@ public abstract class BaseVideo : Classes
 
     public virtual CodecDto VideoCodec { get; set; } = VideoCodecs.H264;
 
-    protected internal FFMpegCore.VideoStream? VideoStream;
+    protected internal FfProbeVideoStream? VideoStream;
 
-    internal List<VideoStream> VideoStreams { get; set; } = [];
+    internal List<FfProbeVideoStream> VideoStreams { get; set; } = [];
 
     protected internal virtual bool BFramesSupport => false;
 
@@ -121,7 +120,7 @@ public abstract class BaseVideo : Classes
     {
         if (VideoStream is null)
             throw new("Video stream is null");
-        if (VideoStream.PixelFormat.Contains("hdr")) return true;
+        if (VideoStream.PixFmt?.Contains("hdr") == true) return true;
         if (string.IsNullOrEmpty(VideoStream.ColorSpace)) return false;
         if (VideoStream.ColorSpace.Contains(ColorSpaces.Bt2020)) return true;
         return false;
@@ -245,7 +244,10 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailablePresets.Contains(value))
-            throw new($"Wrong preset value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailablePresets)}");
+        {
+            Logger.Encoder($"Skipping preset '{value}' for {VideoCodec.Name}, available presets are {string.Join(", ", AvailablePresets)}", LogEventLevel.Warning);
+            return this;
+        }
         Preset = value;
         return this;
     }
@@ -255,7 +257,10 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableProfiles.Contains(value))
-            throw new($"Wrong profile value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailableProfiles)}");
+        {
+            Logger.Encoder($"Skipping profile '{value}' for {VideoCodec.Name}, available profiles are {string.Join(", ", AvailableProfiles)}", LogEventLevel.Warning);
+            return this;
+        }
         Profile = value;
         return this;
     }
@@ -265,7 +270,10 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableTune.Contains(value))
-            throw new($"Wrong tune value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailableTune)}");
+        {
+            Logger.Encoder($"Skipping tune '{value}' for {VideoCodec.Name}, available tunes are {string.Join(", ", AvailableTune)}", LogEventLevel.Warning);
+            return this;
+        }
         Tune = value;
         return this;
     }
@@ -275,7 +283,10 @@ public abstract class BaseVideo : Classes
         if (string.IsNullOrEmpty(value))
             return this;
         if (!AvailableLevels.Contains(value))
-            throw new($"Wrong level value for {VideoCodec.Name}, available formats are {string.Join(", ", AvailableLevels)}");
+        {
+            Logger.Encoder($"Skipping level '{value}' for {VideoCodec.Name}, available levels are {string.Join(", ", AvailableLevels)}", LogEventLevel.Warning);
+            return this;
+        }
         Level = value;
         return this;
     }
@@ -477,25 +488,22 @@ public abstract class BaseVideo : Classes
             commandDictionary["-movflags"] = "faststart";
         }
         
-        bool isUhd = (VideoStream?.Width ?? 0) >= 3840 || (VideoStream?.Height ?? 0) >= 2160;
-        bool isHdr = PixelFormat is VideoPixelFormats.Yuv444P10Le or VideoPixelFormats.Yuv420P10Le;
-        
-        if (isUhd)
+        if (IsHdr)
         {
             commandDictionary["-color_primaries"] = "bt2020";
             commandDictionary["-colorspace"] = "bt2020nc";
-            commandDictionary["-color_trc"] = isHdr ? "smpte2084" : "bt709";
+            commandDictionary["-color_trc"] = "smpte2084";
         }
         else
         {
             commandDictionary["-color_primaries"] = "bt709";
-            commandDictionary["-color_trc"] = "bt709";
             commandDictionary["-colorspace"] = "bt709";
+            commandDictionary["-color_trc"] = "bt709";
         }
 
         commandDictionary["-color_range"] = "tv";
 
-        if (isHdr)
+        if (IsHdr)
         {
             const string masterDisplay = "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)";
             const string contentLight = "10000,4000";
@@ -531,9 +539,10 @@ public abstract class BaseVideo : Classes
     {
         return profileCodec switch
         {
-            "libx264" or "h264_nvenc" => new X264(profileCodec),
-            "libx265" or "hevc_nvenc" => new X265(profileCodec),
-            "vp9" or "libvpx-vp9" => new Vp9(profileCodec),
+            "libx264" or "h264_nvenc" or "h264_amf" or "h264_qsv" or "h264_videotoolbox" => new X264(profileCodec),
+            "libx265" or "hevc_nvenc" or "hevc_amf" or "hevc_qsv" or "hevc_videotoolbox" => new X265(profileCodec),
+            "vp9" or "libvpx-vp9" or "vp9_nvenc" or "vp9_amf" or "vp9_qsv" or "vp9_videotoolbox" => new Vp9(profileCodec),
+            "librav1e" or "av1_nvenc" or "av1_amf" or "av1_qsv" or "av1_videotoolbox" => new Av1(profileCodec),
             _ => throw new($"Video codec {profileCodec} is not supported")
         };
     }
