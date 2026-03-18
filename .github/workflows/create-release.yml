@@ -143,8 +143,7 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git config core.autocrlf false
-          git rm --cached -r . > /dev/null 2>&1
-          git reset --hard HEAD
+          git config core.eol lf
 
           NEW_VERSION="${{ inputs.version }}"
           TAG="${{ inputs.tag || format('v{0}', inputs.version) }}"
@@ -199,6 +198,7 @@ jobs:
           # Checkout master and squash merge dev
           git checkout -f master
           git reset --hard origin/master
+          git stash --include-untracked 2>/dev/null || true
           git merge --squash -X theirs origin/dev
 
           # Update version in Directory.Build.props
