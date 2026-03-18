@@ -209,7 +209,21 @@ jobs:
             git commit -m "chore: normalize line endings to LF"
           fi
 
-          git merge --squash -X theirs origin/dev
+          if ! git merge --squash -X theirs origin/dev; then
+            # Resolve modify/delete conflicts: if a file was deleted in dev, delete it here too
+            while IFS= read -r conflict_file; do
+              if ! git cat-file -e "origin/dev:${conflict_file}" 2>/dev/null; then
+                git rm --force "${conflict_file}"
+              fi
+            done < <(git ls-files -u | cut -f2 | sort -u)
+
+            # Fail if any unresolved conflicts remain
+            if git ls-files -u | grep -q .; then
+              echo "::error::Unresolved merge conflicts remain"
+              git ls-files -u
+              exit 1
+            fi
+          fi
 
           # Update version in Directory.Build.props
           sed -i "s|<Version>.*</Version>|<Version>${NEW_VERSION}</Version>|" Directory.Build.props
