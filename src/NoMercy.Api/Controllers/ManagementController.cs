@@ -408,7 +408,7 @@ public class ManagementController(
                 storage
             });
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return InternalServerErrorResponse("Resource monitor failed");
         }
