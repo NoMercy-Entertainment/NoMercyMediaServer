@@ -783,12 +783,11 @@ public class FileRepository(MediaContext context) : IFileRepository
 
             if (targetGroup == null) continue;
 
-            // Find the episode by episode number within this group
+            // Find the episode by position within this group. Order values are show-global
+            // (e.g. 24-47 for Season 2), so use sorted index instead.
             TmdbEpisodeGroupEpisode? target = targetGroup.Episodes
-                .FirstOrDefault(e => e.Order == episodeNumber - 1);
-
-            target ??= targetGroup.Episodes
-                .FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
+                .OrderBy(e => e.Order)
+                .ElementAtOrDefault(episodeNumber - 1);
 
             if (target == null) continue;
 
