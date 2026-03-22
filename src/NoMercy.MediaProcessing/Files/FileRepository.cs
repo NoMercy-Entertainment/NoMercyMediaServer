@@ -417,11 +417,7 @@ public class FileRepository(MediaContext context) : IFileRepository
             .Where(item => item.SeasonNumber == parsed.Season)
             .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
 
-        // Only fall back to absolute-index lookup when the season was NOT explicit in the filename.
-        // If the season was parsed (e.g. S02E19) and the DB match failed, skip straight to the TMDB
-        // API fetch below so we get the correct episode rather than matching against a flat list that
-        // can land on a wrong season's episode.
-        if (episode == null && !seasonExplicit)
+        if (episode == null)
         {
             List<Episode> episodes = ctx.Episodes
                 .Where(item => item.TvId == show.Id)
@@ -430,7 +426,12 @@ public class FileRepository(MediaContext context) : IFileRepository
                 .ThenBy(item => item.EpisodeNumber)
                 .ToList();
 
-            episode = episodes.ElementAtOrDefault(parsed.Episode.Value - 1);
+            Episode? candidate = episodes.ElementAtOrDefault(parsed.Episode.Value - 1);
+
+            // Accept the absolute-index result only if its season matches what was parsed.
+            // This prevents e.g. S02E19 from matching S01E19 via absolute ordering.
+            if (candidate != null && candidate.SeasonNumber == parsed.Season)
+                episode = candidate;
         }
 
         if (episode == null && !seasonExplicit)
