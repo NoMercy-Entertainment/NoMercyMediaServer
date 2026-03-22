@@ -105,6 +105,17 @@ public class ApiInfo
             if (data?.Data?.Keys is null)
                 return null;
 
+            // nomercy-tv returns 200 with all keys as empty strings when the auth
+            // token is expired ($user is null server-side). Treat that as a failed
+            // fetch so we don't overwrite good cached keys with empty ones.
+            if (string.IsNullOrEmpty(data.Data.Keys.TmdbToken))
+            {
+                Logger.Setup(
+                    "API keys response contained empty keys — auth token may be expired, discarding response",
+                    LogEventLevel.Warning);
+                return null;
+            }
+
             return data;
         }
         catch (Exception ex)
