@@ -417,6 +417,38 @@ public class FileRepository(MediaContext context) : IFileRepository
             .Where(item => item.SeasonNumber == parsed.Season)
             .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
 
+        // When the season was explicit in the filename (e.g. S02E19), try the TMDB API first
+        // before falling back to the absolute-index lookup which can land on the wrong season.
+        if (episode == null && seasonExplicit)
+        {
+            TmdbEpisodeClient episodeClient = new(show.Id, parsed.Season.Value, parsed.Episode.Value);
+            TmdbEpisodeDetails? details = await episodeClient.Details(true);
+            if (details != null)
+            {
+                Season? season = await ctx.Seasons
+                    .FirstOrDefaultAsync(s =>
+                        s.TvId == show.Id && s.SeasonNumber == details.SeasonNumber);
+
+                episode = new()
+                {
+                    Id = details.Id,
+                    TvId = show.Id,
+                    SeasonNumber = details.SeasonNumber,
+                    EpisodeNumber = details.EpisodeNumber,
+                    Title = details.Name,
+                    Overview = details.Overview,
+                    Still = details.StillPath,
+                    VoteAverage = details.VoteAverage,
+                    VoteCount = details.VoteCount,
+                    AirDate = details.AirDate,
+                    SeasonId = season?.Id ?? 0,
+                };
+
+                ctx.Episodes.Add(episode);
+                await ctx.SaveChangesAsync();
+            }
+        }
+
         if (episode == null)
         {
             List<Episode> episodes = ctx.Episodes
@@ -426,20 +458,14 @@ public class FileRepository(MediaContext context) : IFileRepository
                 .ThenBy(item => item.EpisodeNumber)
                 .ToList();
 
-            Episode? candidate = episodes.ElementAtOrDefault(parsed.Episode.Value - 1);
-
-            // Accept the absolute-index result only if its season matches what was parsed.
-            // This prevents e.g. S02E19 from matching S01E19 via absolute ordering.
-            if (candidate != null && candidate.SeasonNumber == parsed.Season)
-                episode = candidate;
+            episode = episodes.ElementAtOrDefault(parsed.Episode.Value - 1);
         }
 
-        if (episode == null && !seasonExplicit)
+        if (episode == null)
             episode = await ResolveAbsoluteEpisodeAsync(ctx, show.Id, parsed.Episode.Value);
 
-        // Try alternate search results for absolute-order anime (e.g. TMDB ranks live-action above anime).
-        // Only relevant when no explicit season was parsed from the filename.
-        if (episode == null && !seasonExplicit && shows!.Results.Count > 1)
+        // Try alternate search results for absolute-order anime (e.g. TMDB ranks live-action above anime)
+        if (episode == null && shows!.Results.Count > 1)
         {
             foreach (TmdbTvShow altShow in shows.Results.Skip(1).Take(4))
             {
