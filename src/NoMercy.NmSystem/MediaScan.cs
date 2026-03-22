@@ -274,6 +274,38 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
                 MovieFile? movieFile = isVideoFile || isAudioFile ? _movieDetector.GetInfo(file) : null;
 
+                // Override MovieDetector's season/episode with our own regex on the filename only,
+                // because MovieDetector can pick up season/episode numbers from parent folder segments
+                // in the full path (e.g. "S02 1080p" in the folder name instead of the file name).
+                if (movieFile is not null && (isVideoFile || isAudioFile))
+                {
+                    string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+                    string cleanedFileName = Str.RemoveBracketedString()
+                        .Replace(fileNameWithoutExtension, string.Empty).Trim();
+
+                    Match epMatch = Str.MatchEpisodePrefix().Match(cleanedFileName);
+                    if (!epMatch.Success)
+                        epMatch = Str.MatchSeasonEpisode().Match(cleanedFileName);
+
+                    if (epMatch.Success && epMatch.Groups.Count >= 3)
+                    {
+                        movieFile.Season = int.Parse(epMatch.Groups[1].Value);
+                        movieFile.Episode = int.Parse(epMatch.Groups[2].Value);
+                        movieFile.IsSeries = true;
+                        movieFile.IsSuccess = true;
+                    }
+                    else
+                    {
+                        Match wordMatch = Str.MatchEpisodeWord().Match(cleanedFileName);
+                        if (wordMatch.Success)
+                        {
+                            movieFile.Episode = int.Parse(wordMatch.Groups[1].Value);
+                            movieFile.IsSeries = true;
+                            movieFile.IsSuccess = true;
+                        }
+                    }
+                }
+
                 FfProbeData? ffprobe = null;
                 TagFile? tagFile = null;
                 try
