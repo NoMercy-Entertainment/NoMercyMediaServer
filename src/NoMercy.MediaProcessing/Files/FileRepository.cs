@@ -260,6 +260,10 @@ public class FileRepository(MediaContext context) : IFileRepository
         
         parsed.Title = Str.RemoveParenthesizedString().Replace(parsed.Title, string.Empty);
 
+        // Track whether the season came from the filename or was defaulted to 1.
+        // This controls whether the absolute-index fallback is allowed in ResolveShowEpisodeAsync.
+        bool seasonExplicit = parsed.Season.HasValue;
+
         if (parsed.Episode.HasValue && !parsed.Season.HasValue)
             parsed.Season = 1;
 
@@ -278,7 +282,7 @@ public class FileRepository(MediaContext context) : IFileRepository
         (MovieOrEpisode episodeMatch, string? imdbId)? result = libraryType switch
         {
             Config.AnimeMediaType or Config.TvMediaType =>
-                await ResolveShowEpisodeAsync(ctx, libraryType, parsed, ffprobeData.Format.Duration, overrideTmdbId),
+                await ResolveShowEpisodeAsync(ctx, libraryType, parsed, ffprobeData.Format.Duration, overrideTmdbId, seasonExplicit),
             Config.MovieMediaType =>
                 await ResolveMovieMatchAsync(ctx, libraryType, parsed, ffprobeData.Format.Duration, overrideTmdbId),
             _ => null
@@ -377,7 +381,8 @@ public class FileRepository(MediaContext context) : IFileRepository
     }
 
     private static async Task<(MovieOrEpisode match, string? imdbId)?> ResolveShowEpisodeAsync(
-        MediaContext ctx, string libraryType, MovieFile parsed, TimeSpan? duration, int? overrideTmdbId)
+        MediaContext ctx, string libraryType, MovieFile parsed, TimeSpan? duration, int? overrideTmdbId,
+        bool seasonExplicit = false)
     {
         TmdbSearchClient searchClient = new();
 
@@ -412,7 +417,11 @@ public class FileRepository(MediaContext context) : IFileRepository
             .Where(item => item.SeasonNumber == parsed.Season)
             .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
 
-        if (episode == null)
+        // Only fall back to absolute-index lookup when the season was NOT explicit in the filename.
+        // If the season was parsed (e.g. S02E19) and the DB match failed, skip straight to the TMDB
+        // API fetch below so we get the correct episode rather than matching against a flat list that
+        // can land on a wrong season's episode.
+        if (episode == null && !seasonExplicit)
         {
             List<Episode> episodes = ctx.Episodes
                 .Where(item => item.TvId == show.Id)
@@ -424,11 +433,12 @@ public class FileRepository(MediaContext context) : IFileRepository
             episode = episodes.ElementAtOrDefault(parsed.Episode.Value - 1);
         }
 
-        if (episode == null)
+        if (episode == null && !seasonExplicit)
             episode = await ResolveAbsoluteEpisodeAsync(ctx, show.Id, parsed.Episode.Value);
 
-        // Try alternate search results (e.g. TMDB may rank live-action above anime)
-        if (episode == null && shows!.Results.Count > 1)
+        // Try alternate search results for absolute-order anime (e.g. TMDB ranks live-action above anime).
+        // Only relevant when no explicit season was parsed from the filename.
+        if (episode == null && !seasonExplicit && shows!.Results.Count > 1)
         {
             foreach (TmdbTvShow altShow in shows.Results.Skip(1).Take(4))
             {
