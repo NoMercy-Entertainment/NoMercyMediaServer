@@ -417,13 +417,18 @@ public class FileRepository(MediaContext context) : IFileRepository
             .Where(item => item.SeasonNumber == parsed.Season)
             .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
 
-        // When the season was explicit in the filename (e.g. S02E19), try the TMDB API first
-        // before falling back to the absolute-index lookup which can land on the wrong season.
+        // When the season was explicit in the filename (e.g. S02E19), try the TMDB API first,
+        // then episode groups (e.g. Crunchyroll splits seasons differently from TMDB default).
         if (episode == null && seasonExplicit)
         {
             TmdbEpisodeClient episodeClient = new(show.Id, parsed.Season.Value, parsed.Episode.Value);
             TmdbEpisodeDetails? details = await episodeClient.Details(true);
-            if (details != null)
+
+            // TMDB default doesn't have this season — try episode groups for alternate season splits
+            if (details == null)
+                episode = await ResolveSeasonedEpisodeFromGroupsAsync(ctx, show.Id, parsed.Season.Value, parsed.Episode.Value);
+
+            if (details != null && episode == null)
             {
                 Season? season = await ctx.Seasons
                     .FirstOrDefaultAsync(s =>
@@ -717,6 +722,89 @@ public class FileRepository(MediaContext context) : IFileRepository
             if (episode != null) return episode;
 
             // Fetch from TMDB and add to DB
+            TmdbEpisodeClient episodeClient = new(showId, target.SeasonNumber, target.EpisodeNumber);
+            TmdbEpisodeDetails? details = await episodeClient.Details(true);
+            if (details == null) continue;
+
+            Season? season = await ctx.Seasons
+                .FirstOrDefaultAsync(s => s.TvId == showId && s.SeasonNumber == details.SeasonNumber);
+
+            episode = new()
+            {
+                Id = details.Id,
+                TvId = showId,
+                SeasonNumber = details.SeasonNumber,
+                EpisodeNumber = details.EpisodeNumber,
+                Title = details.Name,
+                Overview = details.Overview,
+                Still = details.StillPath,
+                VoteAverage = details.VoteAverage,
+                VoteCount = details.VoteCount,
+                AirDate = details.AirDate,
+                SeasonId = season?.Id ?? 0,
+            };
+
+            ctx.Episodes.Add(episode);
+            await ctx.SaveChangesAsync();
+
+            return episode;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Resolves an episode using TMDB episode groups when the default season structure doesn't match.
+    /// E.g. Crunchyroll splits a show into S01/S02 but TMDB has it as a single season.
+    /// Searches all episode group types for a group whose season/order matches the parsed season,
+    /// then finds the episode by number within that group.
+    /// </summary>
+    private static async Task<Episode?> ResolveSeasonedEpisodeFromGroupsAsync(
+        MediaContext ctx, int showId, int seasonNumber, int episodeNumber)
+    {
+        TmdbTvClient tvClient = new(showId);
+        TmdbTvEpisodeGroups? episodeGroups = await tvClient.EpisodeGroups(true);
+        if (episodeGroups?.Results is not { Length: > 0 }) return null;
+
+        foreach (TmdbEpisodeGroupsResult groupResult in episodeGroups.Results)
+        {
+            TmdbEpisodeGroupClient groupClient = new(groupResult.Id);
+            TmdbEpisodeGroupDetails? groupDetails = await groupClient.Details(true);
+            if (groupDetails == null) continue;
+
+            // Groups within an episode group represent seasons/parts, ordered by their Order field.
+            // Find the group matching the target season (Order is 0-based, season is 1-based).
+            TmdbEpisodeGroup? targetGroup = groupDetails.Groups
+                .FirstOrDefault(g => g.Order == seasonNumber - 1);
+
+            // Also try 1-based match in case the group uses 1-based ordering
+            targetGroup ??= groupDetails.Groups
+                .FirstOrDefault(g => g.Order == seasonNumber);
+
+            if (targetGroup == null) continue;
+
+            // Find the episode by episode number within this group
+            TmdbEpisodeGroupEpisode? target = targetGroup.Episodes
+                .FirstOrDefault(e => e.Order == episodeNumber - 1);
+
+            target ??= targetGroup.Episodes
+                .FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
+
+            if (target == null) continue;
+
+            Logger.App(
+                $"Resolved S{seasonNumber:D2}E{episodeNumber:D2} → TMDB S{target.SeasonNumber:D2}E{target.EpisodeNumber:D2} ({target.Name}) via episode group '{groupResult.Name}'",
+                LogEventLevel.Information);
+
+            // Look up in DB first
+            Episode? episode = await ctx.Episodes
+                .FirstOrDefaultAsync(e => e.TvId == showId
+                    && e.SeasonNumber == target.SeasonNumber
+                    && e.EpisodeNumber == target.EpisodeNumber);
+
+            if (episode != null) return episode;
+
+            // Fetch from TMDB and create
             TmdbEpisodeClient episodeClient = new(showId, target.SeasonNumber, target.EpisodeNumber);
             TmdbEpisodeDetails? details = await episodeClient.Details(true);
             if (details == null) continue;
