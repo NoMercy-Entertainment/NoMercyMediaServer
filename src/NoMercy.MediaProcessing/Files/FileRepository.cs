@@ -870,7 +870,13 @@ public class FileRepository(MediaContext context) : IFileRepository
         if (episodeGroups?.Results is not { Length: > 0 })
             return null;
 
-        foreach (TmdbEpisodeGroupsResult groupResult in episodeGroups.Results)
+        // Prefer episode groups with the fewest sub-groups that still cover the target season.
+        // E.g. for Season 2, a 2-group set (S1+S2) is better than a 3-group set (Specials+S1+S2).
+        IEnumerable<TmdbEpisodeGroupsResult> sortedResults = episodeGroups.Results
+            .Where(g => g.GroupCount >= seasonNumber)
+            .OrderBy(g => g.GroupCount);
+
+        foreach (TmdbEpisodeGroupsResult groupResult in sortedResults)
         {
             TmdbEpisodeGroupClient groupClient = new(groupResult.Id);
             TmdbEpisodeGroupDetails? groupDetails = await groupClient.Details(true);
