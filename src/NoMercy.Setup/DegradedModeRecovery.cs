@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.SystemCalls;
@@ -113,10 +114,28 @@ public static class DegradedModeRecovery
                 {
                     try
                     {
-                        // Ensure token is still valid before attempting registration
-                        if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
+                        // Ensure token is present and not expired before attempting registration.
+                        // Auth.InitWithFallback() may keep an expired token for local access, so a
+                        // null/empty check is not sufficient — nomercy-tv will reject an expired JWT.
+                        bool tokenNeedsRefresh = true;
+
+                        if (!string.IsNullOrEmpty(Globals.Globals.AccessToken))
                         {
-                            Logger.App("Access token missing before deferred registration — re-authenticating",
+                            try
+                            {
+                                JwtSecurityTokenHandler tokenHandler = new();
+                                JwtSecurityToken parsedToken = tokenHandler.ReadJwtToken(Globals.Globals.AccessToken);
+                                tokenNeedsRefresh = parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(30);
+                            }
+                            catch
+                            {
+                                // Token could not be parsed — treat as expired
+                            }
+                        }
+
+                        if (tokenNeedsRefresh)
+                        {
+                            Logger.App("Access token missing or expired before deferred registration — re-authenticating",
                                 LogEventLevel.Warning);
                             tasks.Authenticated = await Auth.InitWithFallback();
                         }
