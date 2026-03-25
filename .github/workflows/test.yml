@@ -12,7 +12,7 @@ on:
 jobs:
   # Fast tests that run on every push/PR
   test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     
     steps:
       - uses: actions/checkout@v5
@@ -37,7 +37,7 @@ jobs:
 
   # Optional coverage job - non-blocking, only runs on master or when manually triggered
   coverage:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     continue-on-error: true
     if: github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     
@@ -62,7 +62,7 @@ jobs:
 
   # Integration tests - only runs on master, releases, or manually
   integration_tests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.ref == 'refs/heads/master' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     
     steps:
