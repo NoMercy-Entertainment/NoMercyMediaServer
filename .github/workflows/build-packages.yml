@@ -26,7 +26,7 @@ jobs:
     strategy:
       matrix:
         package-type: [deb, rpm, arch, windows-installer, macos-installer]
-        os: [self-hosted]
+        os: [ubuntu-latest]
         include:
           - package-type: windows-installer
             os: self-hosted
