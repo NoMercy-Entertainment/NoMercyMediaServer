@@ -29,7 +29,7 @@ on:
 
 jobs:
   build_executables:
-    runs-on: macos-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         project: [Service, App, Launcher, Cli]

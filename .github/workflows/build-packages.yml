@@ -29,14 +29,14 @@ jobs:
         os: [self-hosted]
         include:
           - package-type: windows-installer
-            os: windows-latest
+            os: self-hosted
           - package-type: macos-installer
-            os: macos-latest
+            os: self-hosted
         exclude:
           - package-type: windows-installer
-            os: ubuntu-latest
+            os: self-hosted
           - package-type: macos-installer
-            os: ubuntu-latest
+            os: self-hosted
       fail-fast: false
 
     steps:
