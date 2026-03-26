@@ -133,12 +133,8 @@ public class MediaScan : IDisposable, IAsyncDisposable
 
                 ConcurrentBag<MediaFile> files2 = depth - 1 > 0 ? await FilesAsync(directory) : [];
 
-                string cleanedFolderName = Str.RemoveBracketedString().Replace(folderName, string.Empty).Trim();
-                string cleanedDirectory = Path.Combine(Path.GetDirectoryName(directory)!, cleanedFolderName);
-                MovieFile movieFile = _movieDetector.GetInfo(cleanedDirectory);
+                MovieFile movieFile = _movieDetector.GetInfo(directory);
                 movieFile.Year ??= directory.TryGetYear();
-                if (string.IsNullOrEmpty(movieFile.Title))
-                    movieFile.Title = cleanedFolderName.Replace('.', ' ').Trim();
 
                 folders.Add(new()
                 {
@@ -213,12 +209,9 @@ public class MediaScan : IDisposable, IAsyncDisposable
                     return;
                 }
 
-                string cleanedFolderName = Str.RemoveBracketedString().Replace(folderName, string.Empty).Trim();
-                string cleanedDirectory = Path.Combine(Path.GetDirectoryName(directory)!, cleanedFolderName);
-                MovieFile movieFile = _movieDetector.GetInfo(cleanedDirectory);
+                MovieFile movieFile = _movieDetector.GetInfo(directory);
+
                 movieFile.Year ??= directory.TryGetYear();
-                if (string.IsNullOrEmpty(movieFile.Title))
-                    movieFile.Title = cleanedFolderName.Replace('.', ' ').Trim();
 
                 folders.Add(new()
                 {

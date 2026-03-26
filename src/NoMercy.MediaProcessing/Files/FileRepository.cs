@@ -358,11 +358,6 @@ public class FileRepository(MediaContext context) : IFileRepository
             string showTitle = fileNameNoParens[..episodeWordMatch.Index]
                 .TrimEnd('-', '.', '_', ' ');
 
-            // Strip trailing year from title (year is captured separately by TryGetYear)
-            Match yearInEpisodeTitle = Str.MatchYearRegex().Match(showTitle);
-            if (yearInEpisodeTitle.Success)
-                showTitle = showTitle[..yearInEpisodeTitle.Index].TrimEnd('-', '.', '_', ' ');
-
             if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
                 showTitle = ExtractTitleFromFolder(file);
 
@@ -385,11 +380,6 @@ public class FileRepository(MediaContext context) : IFileRepository
                 .Replace('_', ' ')
                 .TrimEnd('-', ' ')
                 .Trim();
-
-            // Strip trailing year from title (year is captured separately by TryGetYear)
-            Match yearInSeasonTitle = Str.MatchYearRegex().Match(showTitle);
-            if (yearInSeasonTitle.Success)
-                showTitle = showTitle[..yearInSeasonTitle.Index].TrimEnd('-', '.', '_', ' ');
 
             if (string.IsNullOrWhiteSpace(showTitle) || showTitle.Length <= 1)
                 showTitle = ExtractTitleFromFolder(file);
@@ -422,14 +412,7 @@ public class FileRepository(MediaContext context) : IFileRepository
         if (seasonTag.Success && seasonTag.Index > 0)
             cleaned = cleaned[..seasonTag.Index];
 
-        string folderTitle = cleaned.Replace('.', ' ').Replace('_', ' ').TrimEnd('-', '.', '_', ' ').Trim();
-
-        // Strip trailing year from folder-derived title (year is captured separately by TryGetYear)
-        Match yearInFolder = Str.MatchYearRegex().Match(folderTitle);
-        if (yearInFolder.Success)
-            folderTitle = folderTitle[..yearInFolder.Index].TrimEnd('-', '.', '_', ' ');
-
-        return folderTitle;
+        return cleaned.Replace('.', ' ').Replace('_', ' ').TrimEnd('-', '.', '_', ' ').Trim();
     }
 
     private static async Task<(MovieOrEpisode match, string? imdbId)?> ResolveShowEpisodeAsync(
