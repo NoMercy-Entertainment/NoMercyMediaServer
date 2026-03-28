@@ -293,7 +293,7 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo AddOpts(string value)
     {
-        // AddFilter(value, "");
+        AddCustomArgument(value, null);
         return this;
     }
 
