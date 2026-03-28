@@ -143,6 +143,9 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                         ExceptionType = e.GetType().Name
                     });
                 }
+
+                // Re-throw so the queue system marks this job as failed and can retry it.
+                throw;
             }
         }
     }
