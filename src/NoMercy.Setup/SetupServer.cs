@@ -171,20 +171,17 @@ public class SetupServer
         if (!string.IsNullOrEmpty(error))
         {
             string errorDescription = context.Request.Query["error_description"].ToString();
-            string message = string.IsNullOrEmpty(errorDescription)
-                ? $"Authorization failed: {error}"
-                : $"Authorization failed: {errorDescription}";
 
-            Logger.Setup($"OAuth callback error: {error} — {errorDescription}",
+            Logger.Setup($"SSO callback error: {error} — {errorDescription}",
                 LogEventLevel.Warning);
 
-            _state.SetError(message);
+            _state.SetError("Sign in failed. Please try again.");
 
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(BuildCallbackHtml(
                 "Authorization Failed",
-                message,
+                "Sign in failed. Please try again.",
                 isError: true));
             return;
         }
@@ -235,13 +232,13 @@ public class SetupServer
         }
         catch (Exception ex)
         {
-            _state.SetError($"Authentication failed: {ex.Message}");
-            _state.TransitionTo(SetupPhase.Unauthenticated);
-            Logger.Setup($"OAuth token exchange failed: {ex.Message}",
+            Logger.Setup($"Token exchange failed: {ex.GetType().Name} — {ex.Message}",
                 LogEventLevel.Error);
+            _state.SetError("Sign in failed. Please try again.");
+            _state.TransitionTo(SetupPhase.Unauthenticated);
 
             responseTitle = "Authentication Failed";
-            responseMessage = $"Token exchange failed: {ex.Message}";
+            responseMessage = "Sign in failed. Please try again.";
             responseIsError = true;
         }
         finally
@@ -268,9 +265,9 @@ public class SetupServer
                 }
                 catch (Exception ex)
                 {
-                    _state.SetError($"Registration failed: {ex.Message}");
-                    Logger.Setup($"Post-auth registration failed: {ex.Message}",
+                    Logger.Setup($"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
                         LogEventLevel.Error);
+                    _state.SetError("Could not connect your server. Please try again.");
                 }
             });
         }
@@ -397,7 +394,9 @@ public class SetupServer
             phase = _state.CurrentPhase.ToString(),
             is_setup_required = _state.IsSetupRequired,
             is_authenticated = _state.IsAuthenticated,
-            error = _state.ErrorMessage
+            error = _state.ErrorMessage,
+            detail = _state.PhaseDetail,
+            server_url = _state.ServerUrl
         };
     }
 
@@ -575,8 +574,12 @@ public class SetupServer
 
             _state.TransitionTo(SetupPhase.Registered);
 
+            _state.SetPhaseDetail("Securing your connection... (this can take a couple of minutes)");
+
             if (Certificate.HasValidCertificate())
             {
+                string serverUrl = $"https://{Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
+                _state.SetServerUrl(serverUrl);
                 _state.TransitionTo(SetupPhase.CertificateAcquired);
                 _state.TransitionTo(SetupPhase.Complete);
                 Logger.Setup("Setup complete — server will restart with HTTPS");
@@ -588,10 +591,10 @@ public class SetupServer
         }
         catch (Exception ex)
         {
-            _state.SetError($"Registration failed: {ex.Message}");
-            _state.TransitionTo(SetupPhase.Authenticated);
-            Logger.Setup($"Post-auth registration failed: {ex.Message}",
+            Logger.Setup($"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
                 LogEventLevel.Error);
+            _state.SetError("Could not connect your server. Please try again.");
+            _state.TransitionTo(SetupPhase.Authenticated);
         }
     }
 
