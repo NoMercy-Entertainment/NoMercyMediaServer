@@ -147,8 +147,22 @@ public partial class FfMpeg : Classes
         }
     }
 
-    public static async Task<string> Run(string args, string cwd, ProgressMeta meta)
+    private static readonly TimeSpan DefaultEncodeTimeout = TimeSpan.FromHours(24);
+
+    public static async Task<string> Run(string args, string cwd, ProgressMeta meta,
+        CancellationToken cancellationToken = default)
     {
+        // If no cancellation token was provided, apply a 24-hour safety timeout so a
+        // hung FFmpeg process cannot block the worker thread forever.
+        CancellationTokenSource? timeoutSource = null;
+        CancellationToken effectiveToken = cancellationToken;
+
+        if (!cancellationToken.CanBeCanceled)
+        {
+            timeoutSource = new CancellationTokenSource(DefaultEncodeTimeout);
+            effectiveToken = timeoutSource.Token;
+        }
+
         Process ffmpeg = new()
         {
             StartInfo = new()
@@ -318,7 +332,17 @@ public partial class FfMpeg : Classes
                 }
             };
 
-            await ffmpeg.WaitForExitAsync();
+            try
+            {
+                await ffmpeg.WaitForExitAsync(effectiveToken);
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.Encoder($"FFmpeg process timed out or was cancelled for job {meta.Id} — killing process");
+                try { ffmpeg.Kill(entireProcessTree: true); }
+                catch { /* process may have exited between check and kill */ }
+                throw;
+            }
 
             if (EventBusProvider.IsConfigured)
                 _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
@@ -333,6 +357,7 @@ public partial class FfMpeg : Classes
         }
         finally
         {
+            timeoutSource?.Dispose();
             FfmpegProcess.TryRemove(ffmpeg.Id, out _);
             if (!ffmpeg.HasExited)
             {
