@@ -53,9 +53,11 @@ public class VideoEncodeJob : AbstractEncoderJob
 
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        try
+        foreach (EncoderProfile profile in profiles)
         {
-            foreach (EncoderProfile profile in profiles)
+            BaseContainer container = BaseContainer.Create(profile.Container);
+
+            try
             {
                 if (EventBusProvider.IsConfigured)
                 {
@@ -67,8 +69,6 @@ public class VideoEncodeJob : AbstractEncoderJob
                         ProfileName = profile.Name
                     });
                 }
-
-                BaseContainer container = BaseContainer.Create(profile.Container);
 
                 await PublishStageAsync(fileMetadata, folder, container, "running", "Preparing to encode");
 
@@ -165,33 +165,36 @@ public class VideoEncodeJob : AbstractEncoderJob
                     });
                 }
             }
-        }
-        catch (Exception e)
-        {
-            Logger.Encoder(e, LogEventLevel.Error);
-
-            CleanupPartialOutput(fileMetadata.Path);
-
-            if (EventBusProvider.IsConfigured)
+            catch (Exception e)
             {
-                await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
-                {
-                    JobId = fileMetadata.Id,
-                    Status = "failed",
-                    Title = fileMetadata.Title,
-                    Message = e.Message
-                });
+                Logger.Encoder(e, LogEventLevel.Error);
 
-                await EventBusProvider.Current.PublishAsync(new EncodingFailedEvent
+                // Only remove the output directories owned by this profile's streams,
+                // not the entire base path — other profiles that completed successfully
+                // must not have their output destroyed.
+                CleanupPartialOutput(fileMetadata.Path, container);
+
+                if (EventBusProvider.IsConfigured)
                 {
-                    JobId = fileMetadata.Id,
-                    InputPath = InputFile,
-                    ErrorMessage = e.Message,
-                    ExceptionType = e.GetType().Name
-                });
+                    await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
+                    {
+                        JobId = fileMetadata.Id,
+                        Status = "failed",
+                        Title = fileMetadata.Title,
+                        Message = e.Message
+                    });
+
+                    await EventBusProvider.Current.PublishAsync(new EncodingFailedEvent
+                    {
+                        JobId = fileMetadata.Id,
+                        InputPath = InputFile,
+                        ErrorMessage = e.Message,
+                        ExceptionType = e.GetType().Name
+                    });
+                }
+
+                throw;
             }
-
-            throw;
         }
     }
 
@@ -352,19 +355,48 @@ public class VideoEncodeJob : AbstractEncoderJob
         }
     }
 
-    internal static void CleanupPartialOutput(string outputPath)
+    /// <summary>
+    /// Deletes only the output subdirectories written by the specified container's
+    /// streams.  Leaves all other subdirectories inside <paramref name="basePath"/>
+    /// intact so that output from previously completed profiles is not destroyed.
+    /// If the container reports no subdirectories (e.g. non-HLS formats writing a
+    /// single file), the single output file matching the container filename is
+    /// removed instead.
+    /// </summary>
+    internal static void CleanupPartialOutput(string basePath, BaseContainer container)
     {
         try
         {
-            if (Directory.Exists(outputPath))
+            HashSet<string> profileDirs = container.GetOutputSubdirectories();
+
+            if (profileDirs.Count > 0)
             {
-                Directory.Delete(outputPath, recursive: true);
-                Logger.Encoder($"Cleaned up partial encoding output: {outputPath}");
+                foreach (string subdirName in profileDirs)
+                {
+                    string fullPath = Path.Combine(basePath, subdirName);
+                    if (Directory.Exists(fullPath))
+                    {
+                        Directory.Delete(fullPath, recursive: true);
+                        Logger.Encoder($"Cleaned up partial encoding output: {fullPath}");
+                    }
+                }
+            }
+            else if (!string.IsNullOrEmpty(container.FileName))
+            {
+                // Non-HLS single-file output — delete just the output file
+                string outputFile = Path.Combine(basePath, container.FileName);
+                if (File.Exists(outputFile))
+                {
+                    File.Delete(outputFile);
+                    Logger.Encoder($"Cleaned up partial encoding output: {outputFile}");
+                }
             }
         }
         catch (Exception cleanupEx)
         {
-            Logger.Encoder($"Failed to clean up partial output at {outputPath}: {cleanupEx.Message}", LogEventLevel.Warning);
+            Logger.Encoder(
+                $"Failed to clean up partial output at {basePath}: {cleanupEx.Message}",
+                LogEventLevel.Warning);
         }
     }
 }
