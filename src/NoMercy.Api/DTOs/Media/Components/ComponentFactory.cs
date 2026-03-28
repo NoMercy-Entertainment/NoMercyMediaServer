@@ -128,6 +128,16 @@ public static class Component
     /// </summary>
     public static LeafComponentBuilder<SeasonTitleData> SeasonTitle(SeasonTitleData data) => new LeafComponentBuilder<SeasonTitleData>(ComponentTypes.SeasonTitle).WithData(data);
 
+    /// <summary>
+    /// Creates an NMEmptyState component - shown when there is no content to display.
+    /// </summary>
+    public static LeafComponentBuilder<EmptyStateData> EmptyState() => new(ComponentTypes.EmptyState);
+
+    /// <summary>
+    /// Creates an NMEmptyState component with data.
+    /// </summary>
+    public static LeafComponentBuilder<EmptyStateData> EmptyState(EmptyStateData data) => new LeafComponentBuilder<EmptyStateData>(ComponentTypes.EmptyState).WithData(data);
+
     #endregion
 
     public static ComponentEnvelope MusicCard(ArtistsResponseItemDto data) => new LeafComponentBuilder<ArtistsResponseItemDto>(ComponentTypes.MusicCard).WithData(data);

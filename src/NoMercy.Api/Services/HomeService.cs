@@ -143,6 +143,34 @@ public class HomeService
         int movieCount = movieCountTask.Result;
         int tvCount = tvCountTask.Result;
 
+        // Early-exit: return an NMEmptyState component when there is nothing to show
+        bool hasNoContent = movieCount == 0 && tvCount == 0 && animeCount == 0;
+
+        if (hasNoContent)
+        {
+            ComponentEnvelope emptyState = libraries.Count == 0
+                ? Component.EmptyState(new EmptyStateData
+                {
+                    Title = "No libraries yet",
+                    Message = "Create your first library to get started.",
+                    Icon = "library",
+                    Action = new EmptyStateActionData
+                    {
+                        Label = "Add library",
+                        Route = "/dashboard/libraries"
+                    }
+                }).Build()
+                : Component.EmptyState(new EmptyStateData
+                {
+                    Title = "Scanning your libraries",
+                    Message = "Content will appear as it's found. This usually takes a few minutes.",
+                    Icon = "scanning",
+                    AutoRefresh = true
+                }).Build();
+
+            return new() { Data = [emptyState] };
+        }
+
         // Phase 2: Collect genre source data (sync, fast - just shuffling IDs)
         List<GenreSourceData> genreSourceList = [];
         List<int> movieIds = [];
