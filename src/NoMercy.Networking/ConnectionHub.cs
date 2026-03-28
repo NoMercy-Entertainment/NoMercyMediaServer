@@ -99,7 +99,7 @@ public class ConnectionHub : Hub
             .WhenMatched((ds, di) => new()
             {
                 Browser = di.Browser,
-                // CustomName = di.CustomName,
+                CustomName = string.IsNullOrEmpty(di.CustomName) ? ds.CustomName : di.CustomName,
                 DeviceId = di.DeviceId,
                 Ip = di.Ip,
                 Model = di.Model,
