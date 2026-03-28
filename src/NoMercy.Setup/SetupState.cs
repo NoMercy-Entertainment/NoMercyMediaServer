@@ -133,6 +133,15 @@ public class SetupState
         }
     }
 
+    public void ClearError()
+    {
+        lock (_lock)
+        {
+            _errorMessage = null;
+            NotifyChange();
+        }
+    }
+
     public void SetPhaseDetail(string detail)
     {
         lock (_lock)
@@ -184,6 +193,8 @@ public class SetupState
             (SetupPhase.Authenticating, SetupPhase.Unauthenticated) => true,
             // Registering can fail back to authenticated (retry registration)
             (SetupPhase.Registering, SetupPhase.Authenticated) => true,
+            // Retry: authenticated can stay at authenticated to re-trigger registration
+            (SetupPhase.Authenticated, SetupPhase.Authenticated) => true,
             // Certificate failure can go back to registered (retry cert)
             (SetupPhase.Registered, SetupPhase.Registered) => true,
 

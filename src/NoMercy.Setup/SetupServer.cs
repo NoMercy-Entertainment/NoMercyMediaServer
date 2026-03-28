@@ -109,6 +109,10 @@ public class SetupServer
                 await HandleDeviceCode(context);
                 break;
 
+            case "/setup/retry":
+                await HandleRetry(context);
+                break;
+
             case "/sso-callback":
                 await HandleSsoCallback(context);
                 break;
@@ -492,6 +496,52 @@ public class SetupServer
                 message = $"Failed to initiate device login: {ex.Message}"
             });
         }
+    }
+
+    private async Task HandleRetry(HttpContext context)
+    {
+        if (context.Request.Method != HttpMethods.Post)
+        {
+            context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+            return;
+        }
+
+        context.Response.ContentType = "application/json";
+
+        SetupPhase phase = _state.CurrentPhase;
+
+        // Re-authentication is not required if we already have tokens.
+        // Reset any error state so the UI can show progress again.
+        if (phase == SetupPhase.Authenticated || phase == SetupPhase.Registering)
+        {
+            _state.ClearError();
+
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await WriteJsonResponse(context.Response, new { status = "retrying" });
+
+            // Kick off registration in the background — response is already sent.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Reset to Authenticated so RunPostAuthRegistration will proceed.
+                    _state.TransitionTo(SetupPhase.Authenticated);
+                    await RunPostAuthRegistration();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Setup($"Registration retry failed: {ex.GetType().Name} — {ex.Message}",
+                        LogEventLevel.Error);
+                    _state.SetError("Could not connect your server. Check your internet connection and try again.");
+                }
+            });
+
+            return;
+        }
+
+        // Any other phase: tell the client to go back to login.
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        await WriteJsonResponse(context.Response, new { status = "unauthenticated" });
     }
 
     private async Task PollDeviceGrant(Dto.DeviceAuthResponse deviceData)

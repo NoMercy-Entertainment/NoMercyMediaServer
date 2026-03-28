@@ -334,7 +334,11 @@
         } else if (data.error) {
             document.getElementById("progress-error").textContent = data.error;
             document.getElementById("progress-error").classList.add("visible");
-            document.getElementById("btn-retry").style.display = "block";
+            // Show retry only when phase is not Unauthenticated — for auth failures,
+            // the user goes back to the login step instead.
+            if (data.phase !== "Unauthenticated") {
+                document.getElementById("btn-retry").style.display = "block";
+            }
             document.querySelector(".spinner").style.display = "none";
         } else {
             document.getElementById("progress-error").classList.remove("visible");
@@ -479,19 +483,54 @@
                 showError("Failed to load setup configuration");
             });
 
-        // Retry button — re-fetch config to get a fresh code challenge
+        // Retry button — behaviour depends on the current setup phase.
+        // If registration failed (Authenticated / Registering): re-trigger registration
+        // without re-authenticating — tokens are already saved.
+        // If auth failed (Unauthenticated): go back to login.
         document.getElementById("btn-retry").addEventListener("click", function() {
-            hideError();
+            document.getElementById("btn-retry").style.display = "none";
+            document.getElementById("progress-error").classList.remove("visible");
+            document.querySelector("#step-progress .spinner").style.display = "inline-block";
+
             fetch("/setup/config")
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     config = data;
-                    var loginBtn = document.getElementById("btn-login");
-                    loginBtn.href = buildAuthUrl();
-                    show("step-login");
+
+                    if (data.phase === "Unauthenticated") {
+                        // Auth failed — need to sign in again.
+                        var loginBtn = document.getElementById("btn-login");
+                        loginBtn.href = buildAuthUrl();
+                        show("step-login");
+                        return;
+                    }
+
+                    // Registration failed — re-trigger server registration.
+                    // Stay on the progress step so the user sees the updated status.
+                    show("step-progress");
+
+                    fetch("/setup/retry", { method: "POST" })
+                        .then(function(r) { return r.json(); })
+                        .then(function(retryData) {
+                            if (retryData.status === "unauthenticated") {
+                                // Server says tokens are gone — fall back to login.
+                                var loginBtn = document.getElementById("btn-login");
+                                loginBtn.href = buildAuthUrl();
+                                show("step-login");
+                                return;
+                            }
+                            // Registration is running — watch for status changes.
+                            startStatusStream();
+                        })
+                        .catch(function() {
+                            // Network error hitting /setup/retry — keep watching status.
+                            startStatusStream();
+                        });
                 })
                 .catch(function() {
-                    show("step-login");
+                    // Could not fetch config — just restart status polling and hope.
+                    show("step-progress");
+                    startStatusStream();
                 });
         });
     }
