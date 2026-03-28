@@ -99,7 +99,6 @@ public class ConnectionHub : Hub
             .WhenMatched((ds, di) => new()
             {
                 Browser = di.Browser,
-                CustomName = string.IsNullOrEmpty(di.CustomName) ? ds.CustomName : di.CustomName,
                 DeviceId = di.DeviceId,
                 Ip = di.Ip,
                 Model = di.Model,
@@ -110,6 +109,15 @@ public class ConnectionHub : Hub
                 VolumePercent = di.VolumePercent
             })
             .RunAsync();
+
+        // Update CustomName separately — FlexLabs upsert doesn't support conditional expressions.
+        // Only overwrite when the client sends a non-empty custom_name, preserving existing names otherwise.
+        if (!string.IsNullOrEmpty(client.CustomName))
+        {
+            await mediaContext.Devices
+                .Where(x => x.DeviceId == client.DeviceId)
+                .ExecuteUpdateAsync(x => x.SetProperty(d => d.CustomName, client.CustomName));
+        }
 
         Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
 
