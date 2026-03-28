@@ -398,17 +398,34 @@ public static class Program
 
         if (blockingPid <= 0)
         {
-            Logger.Error($"Port {port} is in use but cannot identify the process. Please free it manually.");
+            // Cannot identify the process — apply registered-server rules conservatively.
+            if (Certificate.HasValidCertificate())
+            {
+                Logger.Error(
+                    $"Port {port} is in use by an unknown process. "
+                    + "NoMercy is registered on this port and cannot use a different one. "
+                    + "Free the port and restart.");
+            }
+            else
+            {
+                Logger.Error($"Port {port} is in use but cannot identify the process. Please free it manually.");
+            }
+
             Environment.ExitCode = 1;
             Environment.Exit(1);
             return;
         }
 
         bool isStaleInstance = false;
+        string blockingProcessName = "unknown";
         try
         {
             Process blockingProcess = Process.GetProcessById(blockingPid);
-            isStaleInstance = blockingProcess.ProcessName == "NoMercyMediaServer";
+            blockingProcessName = blockingProcess.ProcessName;
+            // NOTE: ProcessName cannot distinguish between a stale instance of this server
+            // and a different valid NoMercy instance on the same machine. Auto-kill is
+            // acceptable because two instances sharing the same port is never valid.
+            isStaleInstance = blockingProcessName == "NoMercyMediaServer";
         }
         catch
         {
@@ -421,24 +438,30 @@ public static class Program
         }
         else
         {
-            bool isInteractive = !IsRunningAsService && !Console.IsInputRedirected && !Console.IsOutputRedirected;
-            if (!isInteractive)
+            // A different process is holding the port.
+            bool isRegistered = Certificate.HasValidCertificate();
+
+            if (isRegistered)
             {
-                Logger.Error($"Port {port} is in use by PID {blockingPid}. Stop it manually and restart.");
+                // Registered servers CANNOT switch ports — the port is embedded in DNS
+                // records, the SSL certificate, and any firewall rules the user configured.
+                Logger.Error(
+                    $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}). "
+                    + "NoMercy is registered on this port and cannot use a different one. "
+                    + "Free the port and restart.");
                 Environment.ExitCode = 1;
                 Environment.Exit(1);
                 return;
             }
 
-            Console.Write($"\nPort {port} is in use by process {blockingPid}. Kill it and retry? [y/N] ");
-            string? answer = Console.ReadLine();
-            if (string.IsNullOrEmpty(answer) || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase))
-            {
-                Logger.App("User declined. Exiting.");
-                Environment.ExitCode = 1;
-                Environment.Exit(1);
-                return;
-            }
+            // Not yet registered — find the next available port so first-time setup
+            // can proceed without the user having to manually free the default port.
+            int alternativePort = FindNextAvailablePort(port + 1);
+            Logger.App(
+                $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}). "
+                + $"Server is not yet registered — using port {alternativePort} instead.");
+            Config.InternalServerPort = alternativePort;
+            return;
         }
 
         try
@@ -479,6 +502,22 @@ public static class Program
         }
 
         Logger.App("Port freed — continuing startup...");
+    }
+
+    private static int FindNextAvailablePort(int startPort)
+    {
+        const int MaxPort = 65535;
+
+        for (int candidate = startPort; candidate <= MaxPort; candidate++)
+        {
+            if (IsPortAvailable(candidate))
+                return candidate;
+        }
+
+        Logger.Error($"No available port found in range {startPort}–{MaxPort}.");
+        Environment.ExitCode = 1;
+        Environment.Exit(1);
+        return -1;
     }
 
     private static bool IsPortAvailable(int port)
