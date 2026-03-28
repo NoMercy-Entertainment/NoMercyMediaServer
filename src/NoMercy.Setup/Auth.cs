@@ -274,9 +274,9 @@ public static class Auth
 
     private static void SetTokens(AuthResponse data)
     {
-        using FileStream tmp = File.OpenWrite(AppFiles.TokenFile);
-        tmp.SetLength(0);
-        tmp.Write(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(data, Formatting.Indented)));
+        string tmpPath = AppFiles.TokenFile + ".tmp";
+        File.WriteAllText(tmpPath, JsonConvert.SerializeObject(data, Formatting.Indented));
+        File.Move(tmpPath, AppFiles.TokenFile, overwrite: true);
 
         Logger.Auth("Tokens refreshed");
 
