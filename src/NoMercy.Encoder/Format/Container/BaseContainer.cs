@@ -187,4 +187,39 @@ public class BaseContainer : Classes
     {
         return Fonts.Extract(InputFile, BasePath);
     }
+
+    /// <summary>
+    /// Returns the set of output subdirectory names (relative to BasePath) that this
+    /// container's streams would write to.  Used by the encode job to limit cleanup to
+    /// only the directories owned by a failed profile, so that output from previously
+    /// completed profiles is not destroyed.
+    /// </summary>
+    public HashSet<string> GetOutputSubdirectories()
+    {
+        HashSet<string> result = [];
+
+        foreach (BaseVideo video in VideoStreams)
+        {
+            string raw = video._hlsPlaylistFilename;
+            if (!string.IsNullOrEmpty(raw))
+            {
+                string firstSegment = raw.Split('/')[0];
+                if (!string.IsNullOrEmpty(firstSegment))
+                    result.Add(firstSegment);
+            }
+        }
+
+        foreach (BaseAudio audio in AudioStreams)
+        {
+            string raw = audio.HlsSegmentFilename;
+            if (!string.IsNullOrEmpty(raw))
+            {
+                string firstSegment = raw.Split('/')[0];
+                if (!string.IsNullOrEmpty(firstSegment))
+                    result.Add(firstSegment);
+            }
+        }
+
+        return result;
+    }
 }
