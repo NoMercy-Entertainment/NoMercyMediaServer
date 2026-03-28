@@ -34,7 +34,11 @@ public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? r
 
                     if (jobWithArguments is IShouldQueue classInstance)
                     {
-                        classInstance.Handle().Wait();
+                        // GetAwaiter().GetResult() rather than .Wait() so that the
+                        // original exception propagates unwrapped (not wrapped in
+                        // AggregateException) — this keeps catch-block handling and
+                        // retry classification correct.
+                        classInstance.Handle().GetAwaiter().GetResult();
 
                         queue.DeleteJob(job);
                         _currentJobId = null;
