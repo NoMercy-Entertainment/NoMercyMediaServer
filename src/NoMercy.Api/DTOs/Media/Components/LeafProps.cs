@@ -67,3 +67,8 @@ public record SeasonCardProps : LeafProps<SeasonCardData>;
 /// Props for NMSeasonTitle component - season header.
 /// </summary>
 public record SeasonTitleProps : LeafProps<SeasonTitleData>;
+
+/// <summary>
+/// Props for NMEmptyState component - shown when there is no content to display.
+/// </summary>
+public record EmptyStateProps : LeafProps<EmptyStateData>;
