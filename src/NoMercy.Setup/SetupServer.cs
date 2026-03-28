@@ -30,6 +30,9 @@ public class SetupServer
     private string _codeVerifier;
     private string _codeChallenge;
 
+    // Terminal UI — created lazily when device code flow starts
+    private SetupTerminalUi? _terminalUi;
+
     public bool IsRunning { get; private set; }
 
     public SetupServer(SetupState state, int? port = null)
@@ -228,6 +231,7 @@ public class SetupServer
                 throw new("Token exchange succeeded but token file was not written");
 
             _state.TransitionTo(SetupPhase.Authenticated);
+            _terminalUi?.ShowProgress("Authenticated", "Signed in via browser");
             Logger.Setup("OAuth token exchange completed successfully");
 
             responseTitle = "Authentication Successful";
@@ -482,6 +486,19 @@ public class SetupServer
                 interval = deviceData.Interval
             });
 
+            // Show the terminal UI for console/binary mode users who also have the
+            // browser open. Both paths run simultaneously — whichever completes first wins.
+            if (SetupTerminalUi.IsInteractiveTerminal)
+            {
+                _terminalUi ??= new SetupTerminalUi();
+                string setupPageUrl = $"http://localhost:{_port}/setup";
+                _terminalUi.Show(
+                    deviceData.VerificationUriComplete,
+                    deviceData.VerificationUri,
+                    deviceData.UserCode,
+                    setupPageUrl);
+            }
+
             _ = Task.Run(async () =>
             {
                 await PollDeviceGrant(deviceData);
@@ -577,6 +594,8 @@ public class SetupServer
                     Auth.SetTokensFromSetup(data);
                     _state.TransitionTo(SetupPhase.Authenticated);
 
+                    _terminalUi?.ShowProgress("Authenticated", "Signed in successfully!");
+
                     await RunPostAuthRegistration();
                     return;
                 }
@@ -617,14 +636,17 @@ public class SetupServer
                     LogEventLevel.Warning);
 
             _state.TransitionTo(SetupPhase.Registering);
+            _terminalUi?.ShowProgress("Registering", "Connecting your server to NoMercy...");
 
             if (Start.NetworkDiscovery is not null)
                 await Start.NetworkDiscovery.DiscoverExternalIpAsync();
             await Register.Init();
 
             _state.TransitionTo(SetupPhase.Registered);
+            _terminalUi?.ShowProgress("Registered", "Setting up your server address...");
 
             _state.SetPhaseDetail("Securing your connection... (this can take a couple of minutes)");
+            _terminalUi?.SetStatus("Securing your connection...");
 
             if (Certificate.HasValidCertificate())
             {
@@ -632,6 +654,7 @@ public class SetupServer
                 _state.SetServerUrl(serverUrl);
                 _state.TransitionTo(SetupPhase.CertificateAcquired);
                 _state.TransitionTo(SetupPhase.Complete);
+                _terminalUi?.ShowComplete(serverUrl);
                 Logger.Setup("Setup complete — server will restart with HTTPS");
             }
             else
