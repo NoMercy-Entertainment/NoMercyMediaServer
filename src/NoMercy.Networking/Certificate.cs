@@ -99,9 +99,9 @@ public static class Certificate
         }
     }
 
-    private static readonly int[] CertBackoffSeconds = [2, 5, 15, 30, 60];
+    private const int CertRetryDelaySeconds = 10;
 
-    public static async Task RenewSslCertificate(int maxRetries = 5)
+    public static async Task RenewSslCertificate(int maxRetries = 30)
     {
         if (ValidateSslCertificate())
         {
@@ -134,16 +134,21 @@ public static class Certificate
             for (int attempt = 1; attempt <= maxRetries; attempt++)
                 try
                 {
-                    if (await FetchCertificate(maxRetries, client, serverUrl, attempt, hasExistingCert))
+                    CertificateDto? result = await FetchCertificate(client, serverUrl, hasExistingCert);
+                    if (result != null)
                         return;
+
+                    // null means 202 — cert not ready yet, wait and retry
+                    Logger.Certificate(
+                        $"Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})");
+                    await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
                 }
                 catch (Exception ex) when (attempt < maxRetries &&
                     (ex is HttpRequestException || ex is InvalidOperationException))
                 {
-                    int delay = CertBackoffSeconds[Math.Min(attempt - 1, CertBackoffSeconds.Length - 1)];
                     Logger.Certificate(
-                        $"Certificate attempt failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})");
-                    await Task.Delay(TimeSpan.FromSeconds(delay));
+                        $"Certificate attempt failed: {ex.Message}, retrying in {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})");
+                    await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
                 }
         }
         catch (Exception ex) when (hasExistingCert)
@@ -156,19 +161,19 @@ public static class Certificate
         }
     }
 
-    private static async Task<bool> FetchCertificate(int maxRetries, HttpClient client, string serverUrl,
-        int attempt, bool hasExistingCert)
+    private static async Task<CertificateDto?> FetchCertificate(HttpClient client, string serverUrl,
+        bool hasExistingCert)
     {
         using HttpResponseMessage response = await client.GetAsync(serverUrl);
-        if (response.StatusCode == System.Net.HttpStatusCode.GatewayTimeout)
-        {
-            if (attempt == maxRetries)
-                throw new HttpRequestException("Max retries reached for certificate renewal");
 
-            int delay = CertBackoffSeconds[Math.Min(attempt - 1, CertBackoffSeconds.Length - 1)];
-            await Task.Delay(TimeSpan.FromSeconds(delay));
-            return false;
+        if (response.StatusCode == System.Net.HttpStatusCode.Accepted) // 202 — cert not ready yet
+        {
+            Logger.Certificate("Certificate not ready yet (202 Accepted), will retry");
+            return null;
         }
+
+        if (response.StatusCode == System.Net.HttpStatusCode.GatewayTimeout)
+            throw new HttpRequestException("Gateway timeout waiting for certificate");
 
         response.EnsureSuccessStatusCode();
         string content = await response.Content.ReadAsStringAsync();
@@ -198,8 +203,11 @@ public static class Certificate
         Logger.Certificate(!hasExistingCert
             ? "SSL Certificate created"
             : "SSL Certificate renewed");
-        return true;
+        return new CertificateDto();
     }
+
+    /// <summary>Sentinel returned by FetchCertificate to indicate a successfully written certificate.</summary>
+    private sealed class CertificateDto { }
 
     public class ApiResponse<T>
     {
