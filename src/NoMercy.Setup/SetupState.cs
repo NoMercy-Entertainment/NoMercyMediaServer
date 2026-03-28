@@ -33,6 +33,8 @@ public class SetupState
 
     private SetupPhase _currentPhase = SetupPhase.Unauthenticated;
     private string? _errorMessage;
+    private string _phaseDetail = "";
+    private string? _serverUrl;
     private TaskCompletionSource _changeSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private TaskCompletionSource _setupCompletedSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -44,6 +46,16 @@ public class SetupState
     public string? ErrorMessage
     {
         get { lock (_lock) return _errorMessage; }
+    }
+
+    public string PhaseDetail
+    {
+        get { lock (_lock) return _phaseDetail; }
+    }
+
+    public string? ServerUrl
+    {
+        get { lock (_lock) return _serverUrl; }
     }
 
     public bool IsSetupRequired => CurrentPhase < SetupPhase.Complete;
@@ -89,6 +101,17 @@ public class SetupState
             SetupPhase previousPhase = _currentPhase;
             _currentPhase = targetPhase;
             _errorMessage = null;
+            _phaseDetail = targetPhase switch
+            {
+                SetupPhase.Unauthenticated => "Waiting for you to sign in...",
+                SetupPhase.Authenticating => "Verifying your credentials...",
+                SetupPhase.Authenticated => "Signed in successfully",
+                SetupPhase.Registering => "Connecting your server to NoMercy...",
+                SetupPhase.Registered => "Setting up your server address...",
+                SetupPhase.CertificateAcquired => "Connection secured",
+                SetupPhase.Complete => "All done — opening NoMercy...",
+                _ => ""
+            };
 
             Logger.Setup($"Setup phase: {previousPhase} → {targetPhase}");
             NotifyChange();
@@ -106,6 +129,24 @@ public class SetupState
         {
             _errorMessage = message;
             Logger.Setup($"Setup error in {_currentPhase}: {message}", LogEventLevel.Error);
+            NotifyChange();
+        }
+    }
+
+    public void SetPhaseDetail(string detail)
+    {
+        lock (_lock)
+        {
+            _phaseDetail = detail;
+            NotifyChange();
+        }
+    }
+
+    public void SetServerUrl(string url)
+    {
+        lock (_lock)
+        {
+            _serverUrl = url;
             NotifyChange();
         }
     }

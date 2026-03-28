@@ -250,8 +250,10 @@
             <div id="step-complete" class="step">
                 <div class="progress-section">
                     <div class="success-icon">&#10003;</div>
-                    <h2>Setup Complete</h2>
+                    <h2>All done!</h2>
                     <p>Your server is configured and ready to use.</p>
+                    <p id="server-url-display" style="font-size:13px;color:#CBAFFF;word-break:break-all;margin-bottom:16px;"></p>
+                    <p id="redirect-msg" style="display:none;font-size:13px;color:#888;margin-bottom:16px;">Starting secure server...</p>
                     <a id="server-url" class="btn btn-primary" href="#">
                         Open NoMercy
                     </a>
@@ -320,6 +322,15 @@
         if (data.phase === "Complete") {
             stopStatusStream();
             show("step-complete");
+            if (data.server_url) {
+                var urlEl = document.getElementById("server-url");
+                var urlDisplayEl = document.getElementById("server-url-display");
+                var redirectMsgEl = document.getElementById("redirect-msg");
+                if (urlEl) urlEl.href = data.server_url;
+                if (urlDisplayEl) urlDisplayEl.textContent = data.server_url;
+                if (redirectMsgEl) redirectMsgEl.style.display = "block";
+                setTimeout(function() { window.location.href = data.server_url; }, 3000);
+            }
         } else if (data.error) {
             document.getElementById("progress-error").textContent = data.error;
             document.getElementById("progress-error").classList.add("visible");
@@ -377,7 +388,7 @@
 
     function updateProgress(data) {
         var label = document.getElementById("progress-label");
-        var detail = document.getElementById("progress-detail");
+        var detailEl = document.getElementById("progress-detail");
 
         var phases = {
             "Unauthenticated": ["Waiting for login...", "Sign in to continue"],
@@ -391,7 +402,8 @@
 
         var info = phases[data.phase] || ["Processing...", "Please wait"];
         label.textContent = info[0];
-        detail.textContent = info[1];
+        var detailText = data.detail || (phases[data.phase] ? phases[data.phase][1] : "");
+        detailEl.textContent = detailText || "Please wait";
     }
 
     function startDeviceGrant() {
