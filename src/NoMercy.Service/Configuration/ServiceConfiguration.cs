@@ -143,7 +143,7 @@ public static class ServiceConfiguration
 
         services.AddHttpClient(HttpClientNames.FanArt, client =>
         {
-            client.BaseAddress = new("http://webservice.fanart.tv/v3/");
+            client.BaseAddress = new("https://webservice.fanart.tv/v3/");
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new("application/json"));
             client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
