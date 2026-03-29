@@ -81,9 +81,13 @@ public class UsersController(MediaContext mediaContext) : BaseController
 
         await mediaContext.SaveChangesAsync();
 
-        User createdUser = mediaContext.Users
+        User? createdUser = await mediaContext.Users
             .Include(u => u.LibraryUser)
-            .First(u => u.Id == newUser.Id);
+            .FirstOrDefaultAsync(u => u.Id == newUser.Id);
+
+        if (createdUser is null)
+            return UnprocessableEntityResponse("User was created but could not be retrieved");
+
 
         ClaimsPrincipleExtensions.AddUser(createdUser);
 

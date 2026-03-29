@@ -126,9 +126,9 @@ public class MusicHub : ConnectionHub
 
     private Device GetCurrentDevice(User user)
     {
-        Client device = ConnectedClients.Clients
-            .First(d => d.Key == Context.ConnectionId).Value;
-    
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
+            throw new InvalidOperationException($"Connection {Context.ConnectionId} not found in ConnectedClients");
+
         CurrentDevice[user.Id] = device;
 
         return device;
@@ -448,7 +448,7 @@ public class MusicHub : ConnectionHub
         User? user = Context.User.User();
         if (user is null) return;
 
-        await Task.Delay(3000);
+        await Task.Delay(500);
 
         // Send updated device list to all connected devices for this user
         List<Device> connectedDevices = Devices();

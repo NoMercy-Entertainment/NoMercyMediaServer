@@ -64,8 +64,24 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
 
     private void HandleSeek(MusicPlayerState state, object? data)
     {
-        int seekTime = int.Parse(data?.ToString() ?? "0") * 1000;
-        state.Time = seekTime;
+        string raw = data?.ToString() ?? "0";
+        int seekSeconds;
+
+        if (int.TryParse(raw, out int intValue))
+        {
+            seekSeconds = intValue;
+        }
+        else if (double.TryParse(raw, System.Globalization.NumberStyles.Float,
+                     System.Globalization.CultureInfo.InvariantCulture, out double floatValue))
+        {
+            seekSeconds = (int)floatValue;
+        }
+        else
+        {
+            seekSeconds = 0;
+        }
+
+        state.Time = seekSeconds * 1000;
         state.CrossfadeSignalSent = false; // User seeked, invalidate any pending crossfade
     }
 

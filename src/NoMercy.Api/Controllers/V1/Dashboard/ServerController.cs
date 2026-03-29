@@ -24,6 +24,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Providers.Helpers;
 using NoMercyQueue;
 using Serilog.Events;
 using SixLabors.ImageSharp;
@@ -31,7 +32,6 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Quantization;
 using Configuration = NoMercy.Database.Models.Common.Configuration;
-using HttpClient = System.Net.Http.HttpClient;
 using Image = NoMercy.Database.Models.Media.Image;
 using JobDispatcher = NoMercy.MediaProcessing.Jobs.JobDispatcher;
 
@@ -50,7 +50,8 @@ public class ServerController(
     QueueRunner queueRunner,
     IEventBus eventBus,
     IWallpaperService wallpaperService,
-    INetworkDiscovery networkDiscovery) : BaseController
+    INetworkDiscovery networkDiscovery,
+    IHttpClientFactory httpClientFactory) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -113,8 +114,7 @@ public class ServerController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to start the server");
 
-        // ApplicationLifetime.StopApplication();
-        return Content("Done");
+        return StatusCode(StatusCodes.Status501NotImplemented);
     }
 
     [HttpPost]
@@ -157,8 +157,7 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to restart the server");
 
-        // ApplicationLifetime.StopApplication();
-        return Content("Done");
+        return StatusCode(StatusCodes.Status501NotImplemented);
     }
 
     [HttpGet("update/check")]
@@ -369,10 +368,8 @@ public class ServerController(
 
             await context.SaveChangesAsync();
 
-            HttpClient client = new();
+            System.Net.Http.HttpClient client = httpClientFactory.CreateClient(HttpClientNames.General);
             client.BaseAddress = new(Config.ApiServerBaseUrl);
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
             client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
 
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Patch, "name")
@@ -384,9 +381,8 @@ public class ServerController(
                 })
             };
 
-            string response = await client
-                .SendAsync(httpRequestMessage)
-                .Result.Content.ReadAsStringAsync();
+            HttpResponseMessage httpResponse = await client.SendAsync(httpRequestMessage);
+            string response = await httpResponse.Content.ReadAsStringAsync();
 
             StatusResponseDto<string>? data = JsonConvert.DeserializeObject<StatusResponseDto<string>>(response);
 

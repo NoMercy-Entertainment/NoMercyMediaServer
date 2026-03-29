@@ -35,11 +35,17 @@ public class MovieImportJob : AbstractMediaJob
         MovieRepository movieRepository = new(context);
         MovieManager movieManager = new(movieRepository, jobDispatcher);
 
-        Library movieLibrary = await context.Libraries
+        Library? movieLibrary = await context.Libraries
             .Where(f => f.Id == LibraryId)
             .Include(f => f.FolderLibraries)
             .ThenInclude(f => f.Folder)
-            .FirstAsync();
+            .FirstOrDefaultAsync();
+
+        if (movieLibrary is null)
+        {
+            Logger.App($"MovieImportJob: library {LibraryId} not found, skipping movie {Id}");
+            return;
+        }
 
         bool wasEmpty = !await context.LibraryMovie.AnyAsync(lm => lm.LibraryId == LibraryId);
 
