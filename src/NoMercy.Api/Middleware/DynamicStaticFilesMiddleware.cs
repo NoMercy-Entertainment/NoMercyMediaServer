@@ -109,12 +109,22 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
                 .Split('-')
                 .ToArray();
 
-            start = Convert.ToInt64(ranges[0]);
+            if (!long.TryParse(ranges[0], out start))
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                context.Response.Headers.ContentRange = new ContentRangeHeaderValue(fileLength).ToString();
+                return;
+            }
 
             if (ranges.Length > 1 && !string.IsNullOrEmpty(ranges[1]))
             {
                 // Explicit end byte specified (e.g., "bytes=0-65535")
-                end = Convert.ToInt64(ranges[1]);
+                if (!long.TryParse(ranges[1], out end))
+                {
+                    context.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
+                    context.Response.Headers.ContentRange = new ContentRangeHeaderValue(fileLength).ToString();
+                    return;
+                }
             }
             else if (isStreamableMedia)
             {
