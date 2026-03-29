@@ -1,4 +1,3 @@
-using System.Security.Authentication;
 using System.Security.Claims;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
@@ -75,34 +74,22 @@ public static class ClaimsPrincipleExtensions
         return principal?
                    .FindFirst(ClaimTypes.Role)?
                    .Value
-               ?? throw new AuthenticationException("Role not found");
+               ?? string.Empty;
     }
 
     public static string UserName(this ClaimsPrincipal? principal)
     {
-        try
-        {
-            return principal?.FindFirst("name")?.Value
-                   ?? principal?.FindFirst(ClaimTypes.GivenName)?.Value + " " +
-                   principal?.FindFirst(ClaimTypes.Surname)?.Value;
-        }
-        catch (Exception)
-        {
-            throw new AuthenticationException("User name not found");
-        }
+        string? nameValue = principal?.FindFirst("name")?.Value;
+        if (nameValue is not null) return nameValue;
+
+        string given = principal?.FindFirst(ClaimTypes.GivenName)?.Value ?? string.Empty;
+        string surname = principal?.FindFirst(ClaimTypes.Surname)?.Value ?? string.Empty;
+        return $"{given} {surname}".Trim();
     }
 
     public static string Email(this ClaimsPrincipal? principal)
     {
-        try
-        {
-            return principal?.FindFirst(ClaimTypes.Email)?.Value
-                   ?? throw new AuthenticationException("Email not found");
-        }
-        catch (Exception)
-        {
-            throw new AuthenticationException("User name not found");
-        }
+        return principal?.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
     }
 
     public static bool IsOwner(this ClaimsPrincipal? principal)

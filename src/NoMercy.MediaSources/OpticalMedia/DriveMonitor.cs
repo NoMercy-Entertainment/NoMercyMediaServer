@@ -92,7 +92,12 @@ public partial class DriveMonitor
                 });
         };
 
-        Task.Run(() => driveMonitor.StartPollingAsync());
+        Task.Run(() => driveMonitor.StartPollingAsync())
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted && t.Exception is not null)
+                    Logger.Ripper($"[FATAL] DriveMonitor polling loop crashed: {t.Exception.GetBaseException().Message}");
+            }, TaskContinuationOptions.OnlyOnFaulted);
 
         return Task.CompletedTask;
     }
@@ -416,8 +421,7 @@ public partial class DriveMonitor
             sb.Append($" -f matroska \"{outputFile}\" ");
             string command = sb.ToString();
             Logger.Encoder(command);
-            FfMpeg.Run(command, AppFiles.TempPath, new() { Id = Guid.NewGuid(), Title = matchTitle, BaseFolder = path })
-                .Wait();
+            await FfMpeg.Run(command, AppFiles.TempPath, new() { Id = Guid.NewGuid(), Title = matchTitle, BaseFolder = path });
             File.Delete(chaptersFile);
         }
     }

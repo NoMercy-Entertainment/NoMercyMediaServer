@@ -32,10 +32,16 @@ public class MusicPlaybackService
 
     private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
     private readonly ConcurrentDictionary<Guid, Timer> _broadcastTimers = new();
+    private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _stateLocks = new();
     private const int TimerInterval = 100;
     private const int CrossfadeLeewayMs = 10000; // Send PrepareCrossfade 10s before track end (gives time to buffer)
     private const int BroadcastDebounceMs = 150;
     private const int MinPlayTimeForRecordMs = 10_000;
+
+    private SemaphoreSlim GetStateLock(Guid userId)
+    {
+        return _stateLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+    }
 
     internal void StartPlaybackTimer(User user)
     {
@@ -43,36 +49,46 @@ public class MusicPlaybackService
 
         if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? _)) return;
 
+        SemaphoreSlim stateLock = GetStateLock(user.Id);
+
         Timer timer = new(async _ =>
         {
-            if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? playerState)) return;
-            if (!playerState.PlayState || playerState.CurrentItem is null) return;
-
-            playerState.Time += TimerInterval;
-
-            int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
-
-            if (playerState.Time >= (duration / 2) && playerState.Time < (duration / 2) + TimerInterval
-                && playerState.Time >= MinPlayTimeForRecordMs)
+            if (!await stateLock.WaitAsync(0)) return; // Skip tick if previous tick is still running
+            try
             {
-                await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
-                IDbContextFactory<MediaContext> factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
-                await using MediaContext ctx = await factory.CreateDbContextAsync();
-                await ctx.MusicPlays.AddAsync(new(user.Id, playerState.CurrentItem.Id));
-                await ctx.SaveChangesAsync();
-                await PublishProgressEventAsync(user.Id, playerState);
-            }
+                if (!_stateManager.TryGetValue(user.Id, out MusicPlayerState? playerState)) return;
+                if (!playerState.PlayState || playerState.CurrentItem is null) return;
 
-            // Send crossfade signal to clients ~10s before track ends
-            if (playerState.Time >= duration - CrossfadeLeewayMs && !playerState.CrossfadeSignalSent)
+                playerState.Time += TimerInterval;
+
+                int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
+
+                if (playerState.Time >= (duration / 2) && playerState.Time < (duration / 2) + TimerInterval
+                    && playerState.Time >= MinPlayTimeForRecordMs)
+                {
+                    await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+                    IDbContextFactory<MediaContext> factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+                    await using MediaContext ctx = await factory.CreateDbContextAsync();
+                    await ctx.MusicPlays.AddAsync(new(user.Id, playerState.CurrentItem.Id));
+                    await ctx.SaveChangesAsync();
+                    await PublishProgressEventAsync(user.Id, playerState);
+                }
+
+                // Send crossfade signal to clients ~10s before track ends
+                if (playerState.Time >= duration - CrossfadeLeewayMs && !playerState.CrossfadeSignalSent)
+                {
+                    playerState.CrossfadeSignalSent = true;
+                    PlaylistTrackDto? nextItem = PeekNextTrack(playerState);
+                    if (nextItem != null)
+                        await SendPrepareCrossfadeSignal(user, nextItem);
+                }
+
+                if (playerState.Time >= duration) await HandleTrackCompletion(user, playerState);
+            }
+            finally
             {
-                playerState.CrossfadeSignalSent = true;
-                PlaylistTrackDto? nextItem = PeekNextTrack(playerState);
-                if (nextItem != null)
-                    await SendPrepareCrossfadeSignal(user, nextItem);
+                stateLock.Release();
             }
-
-            if (playerState.Time >= duration) await HandleTrackCompletion(user, playerState);
         }, null, 100, TimerInterval);
 
         _timers[user.Id] = timer;

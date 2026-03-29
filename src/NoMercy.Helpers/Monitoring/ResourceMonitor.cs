@@ -77,20 +77,13 @@ public class ResourceMonitor
                     and not HardwareType.GpuIntel and not HardwareType.GpuNvidia and not HardwareType.GpuAmd
                    ) continue;
 
-                try
+                foreach (ISensor? sensor in hardware.Sensors)
                 {
-                    foreach (ISensor? sensor in hardware.Sensors)
-                    {
-                        if (sensor.SensorType is not SensorType.Load && sensor.SensorType is not SensorType.Data)
-                            continue;
+                    if (sensor.SensorType is not SensorType.Load && sensor.SensorType is not SensorType.Data)
+                        continue;
 
-                        // Logger.App($"Type: {sensor.Hardware}, Identifier: {sensor.Hardware.Identifier}, Sensor: {sensor.Name}, value: {sensor.Value}");
-                        HardwareSensorType(sensor, resource);
-                    }
-                }
-                catch
-                {
-                    throw new("Error while monitoring hardware");
+                    // Logger.App($"Type: {sensor.Hardware}, Identifier: {sensor.Hardware.Identifier}, Sensor: {sensor.Name}, value: {sensor.Value}");
+                    HardwareSensorType(sensor, resource);
                 }
             }
         }

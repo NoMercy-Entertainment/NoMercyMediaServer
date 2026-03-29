@@ -594,7 +594,8 @@ public partial class FfMpeg : Classes
             IntPtr threadHandle = OpenThread(ThreadSuspendResume, false, (uint)thread.Id);
             if (threadHandle != IntPtr.Zero)
             {
-                SuspendThread(threadHandle);
+                if (!SuspendThread(threadHandle))
+                    Logger.Encoder($"SuspendThread failed for thread {thread.Id}, error code: {Marshal.GetLastWin32Error()}");
                 CloseHandle(threadHandle);
             }
         }
@@ -609,7 +610,8 @@ public partial class FfMpeg : Classes
             IntPtr threadHandle = OpenThread(ThreadSuspendResume, false, (uint)thread.Id);
             if (threadHandle != IntPtr.Zero)
             {
-                ResumeThread(threadHandle);
+                if (!ResumeThread(threadHandle))
+                    Logger.Encoder($"ResumeThread failed for thread {thread.Id}, error code: {Marshal.GetLastWin32Error()}");
                 CloseHandle(threadHandle);
             }
         }

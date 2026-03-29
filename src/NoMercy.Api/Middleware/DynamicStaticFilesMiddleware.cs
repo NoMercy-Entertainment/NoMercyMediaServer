@@ -5,6 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using NoMercy.Encoder.Format.Rules;
+using NoMercy.NmSystem.SystemCalls;
 
 namespace NoMercy.Api.Middleware;
 
@@ -70,8 +71,9 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
             else
                 await next(context);
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.App($"DynamicStaticFilesMiddleware unhandled exception for path '{context.Request.Path}': {ex.Message}");
             await next(context);
         }
     }
