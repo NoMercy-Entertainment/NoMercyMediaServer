@@ -343,12 +343,12 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
+        await FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = title,
             BaseFolder = encodePath
-        }).RunSynchronously);
+        });
 
         return new()
         {
@@ -375,12 +375,12 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
+        await FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = title,
             BaseFolder = encodePath
-        }).RunSynchronously);
+        });
 
         return new()
         {
@@ -574,18 +574,29 @@ public partial class DriveMonitor
 
         Logger.Encoder(command);
 
-        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
+        Task encodingTask = FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = title,
             BaseFolder = encodePath
-        }).RunSynchronously, token.Token);
+        });
 
         await File.WriteAllTextAsync(Path.Combine(encodePath, "master.m3u8"), masterPlaylist.ToString(), token.Token);
 
-        while (!File.Exists(Path.Combine(encodePath, "video_0_00001.ts")))
+        // Wait for FFmpeg to produce the first segment, with a 60-second timeout
+        const int maxWaitMs = 60_000;
+        int elapsedMs = 0;
+        string firstSegment = Path.Combine(encodePath, "video_0_00001.ts");
+
+        while (!File.Exists(firstSegment) && !encodingTask.IsCompleted)
         {
-            //
+            await Task.Delay(100, token.Token);
+            elapsedMs += 100;
+
+            if (elapsedMs < maxWaitMs) continue;
+
+            Logger.Encoder("PlayBluRay: timed out waiting for first HLS segment after 60s");
+            return false;
         }
 
         return true;
@@ -605,12 +616,12 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
+        await FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = "DVD",
             BaseFolder = encodePath
-        }).RunSynchronously, token.Token);
+        });
 
         return true;
     }
@@ -629,12 +640,12 @@ public partial class DriveMonitor
         string command = sb.ToString();
         Logger.Encoder(command);
 
-        _ = Task.Run(FfMpeg.Run(command, encodePath, new()
+        await FfMpeg.Run(command, encodePath, new()
         {
             Id = Guid.NewGuid(),
             Title = "CD",
             BaseFolder = encodePath
-        }).RunSynchronously, token.Token);
+        });
 
         return true;
     }
