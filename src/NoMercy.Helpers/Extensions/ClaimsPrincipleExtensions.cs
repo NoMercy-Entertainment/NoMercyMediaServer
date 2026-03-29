@@ -67,7 +67,7 @@ public static class ClaimsPrincipleExtensions
 
         return Guid.TryParse(userId, out Guid parsedUserId)
             ? parsedUserId
-            : throw new AuthenticationException("User ID not found");
+            : Guid.Empty;
     }
 
     public static string Role(this ClaimsPrincipal? principal)
