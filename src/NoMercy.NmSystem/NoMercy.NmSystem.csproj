@@ -1,53 +1,52 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="NoMercy.Tests.Setup" />
+  </ItemGroup>
 
-    <PropertyGroup>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
-    </PropertyGroup>
-    <PropertyGroup>
-        <IsTestProject>false</IsTestProject>
-    </PropertyGroup>
-    <ItemGroup>
-        <InternalsVisibleTo Include="NoMercy.Tests.Setup" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="DeviceId" />
+    <PackageReference Include="DeviceId.Linux" />
+    <PackageReference Include="DeviceId.Mac" />
+    <PackageReference Include="DeviceId.Windows" />
+    <PackageReference Include="DeviceId.Windows.Mmi" />
+    <PackageReference Include="Humanizer" />
+    <PackageReference Include="Humanizer.Core" />
+    <PackageReference Include="I18N.DotNet" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Localization" />
+    <PackageReference Include="MovieFileLibrary" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Pastel" />
+    <PackageReference Include="Polly" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="System.Management" />
+    <PackageReference Include="DnsClient" />
+    <PackageReference Include="TagLibSharp" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="DeviceId" />
-        <PackageReference Include="DeviceId.Linux" />
-        <PackageReference Include="DeviceId.Mac" />
-        <PackageReference Include="DeviceId.Windows" />
-        <PackageReference Include="DeviceId.Windows.Mmi" />
-        <PackageReference Include="Humanizer" />
-        <PackageReference Include="Humanizer.Core" />
-        <PackageReference Include="I18N.DotNet"/>
-        <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-        <PackageReference Include="Microsoft.Extensions.Localization" />
-        <PackageReference Include="MovieFileLibrary"/>
-        <PackageReference Include="Newtonsoft.Json" />
-        <PackageReference Include="Pastel" />
-        <PackageReference Include="Polly" />
-        <PackageReference Include="Serilog" />
-        <PackageReference Include="Serilog.Formatting.Compact"/>
-        <PackageReference Include="Serilog.Sinks.Console" />
-        <PackageReference Include="Serilog.Sinks.File" />
-        <PackageReference Include="SixLabors.ImageSharp" />
-        <PackageReference Include="System.Management" />
-        <PackageReference Include="DnsClient" />
-        <PackageReference Include="TagLibSharp"/>
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
-    </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\I18N.xml" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <EmbeddedResource Include="Resources\I18N.xml"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Reference Include="Microsoft.Extensions.Configuration">
-            <HintPath>..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.1\Microsoft.Extensions.Configuration.dll</HintPath>
-        </Reference>
-    </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Extensions.Configuration">
+      <HintPath>..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\9.0.1\Microsoft.Extensions.Configuration.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>

@@ -27,5 +27,6 @@ public static class NullableExtensions
     /// Returns null if the string is null, empty, or whitespace; otherwise returns the string.
     /// Inspired by Kotlin's String?.takeIf { it.isNotBlank() }
     /// </summary>
-    public static string? OrNull(this string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+    public static string? OrNull(this string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
 }

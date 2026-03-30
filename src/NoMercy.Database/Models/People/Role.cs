@@ -13,14 +13,21 @@ public class Role
     [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty("character")] public string? Character { get; set; }
-    [JsonProperty("episode_count")] public int EpisodeCount { get; set; }
-    [JsonProperty("order")] public int? Order { get; set; } = 9999;
+    [JsonProperty("character")]
+    public string? Character { get; set; }
 
-    [JsonProperty("credit_id")] public string? CreditId { get; set; }
+    [JsonProperty("episode_count")]
+    public int EpisodeCount { get; set; }
+
+    [JsonProperty("order")]
+    public int? Order { get; set; } = 9999;
+
+    [JsonProperty("credit_id")]
+    public string? CreditId { get; set; }
     public Cast? Cast { get; set; }
 
-    [JsonProperty("guest_star_id")] public int? GuestStarId { get; set; }
+    [JsonProperty("guest_star_id")]
+    public int? GuestStarId { get; set; }
     public GuestStar? GuestStar { get; set; }
 
     public Role()

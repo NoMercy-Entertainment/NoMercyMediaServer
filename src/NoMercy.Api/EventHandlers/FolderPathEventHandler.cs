@@ -20,28 +20,28 @@ public class FolderPathEventHandler : IDisposable
         _subscriptions.Add(eventBus.Subscribe<FolderPathRemovedEvent>(OnFolderPathRemoved));
     }
 
-    internal Task OnFolderPathAdded(FolderPathAddedEvent @event, CancellationToken ct)
+    internal async Task OnFolderPathAdded(FolderPathAddedEvent @event, CancellationToken ct)
     {
         DynamicStaticFilesMiddleware.AddPath(@event.RequestPath, @event.PhysicalPath);
 
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
-        using MediaContext mediaContext = contextFactory.CreateDbContext();
-        ClaimsPrincipleExtensions.RefreshFolderIds(mediaContext);
-
-        return Task.CompletedTask;
+        await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<
+            IDbContextFactory<MediaContext>
+        >();
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(mediaContext);
     }
 
-    internal Task OnFolderPathRemoved(FolderPathRemovedEvent @event, CancellationToken ct)
+    internal async Task OnFolderPathRemoved(FolderPathRemovedEvent @event, CancellationToken ct)
     {
         DynamicStaticFilesMiddleware.RemovePath(@event.RequestPath);
 
-        using IServiceScope scope = _scopeFactory.CreateScope();
-        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
-        using MediaContext mediaContext = contextFactory.CreateDbContext();
-        ClaimsPrincipleExtensions.RefreshFolderIds(mediaContext);
-
-        return Task.CompletedTask;
+        await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<
+            IDbContextFactory<MediaContext>
+        >();
+        await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync(ct);
+        await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(mediaContext);
     }
 
     public void Dispose()

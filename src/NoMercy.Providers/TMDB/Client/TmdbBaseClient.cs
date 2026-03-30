@@ -40,7 +40,14 @@ public class TmdbBaseClient : IDisposable
 
     protected static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 50, Interval = 1000, Start = true });
+        return _queue ??= new(
+            new()
+            {
+                Concurrent = 50,
+                Interval = 1000,
+                Start = true,
+            }
+        );
     }
 
     private static int Max(int available, int wanted, int constraint)
@@ -52,35 +59,48 @@ public class TmdbBaseClient : IDisposable
             : available;
     }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string?>? query = null, bool? priority = false,
-        bool skipCache = false)
+    protected async Task<T?> Get<T>(
+        string url,
+        Dictionary<string, string?>? query = null,
+        bool? priority = false,
+        bool skipCache = false
+    )
         where T : class
     {
         query ??= new();
-        
-        query["language"] = priority is true
-            ? Language 
-            : "";
+
+        query["language"] = priority is true ? Language : "";
 
         query["include_adult"] = Config.AllowAdultContent;
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (!skipCache && CacheController.Read(newUrl, out T? result)) return result;
+        if (!skipCache && CacheController.Read(newUrl, out T? result))
+            return result;
 
         Logger.MovieDb(_baseUrl + newUrl, LogEventLevel.Verbose);
 
         try
         {
-            string response = await GetQueue().Enqueue(() => {
-                if (_disposed)
-                {
-                    throw new ObjectDisposedException(nameof(TmdbBaseClient), "Cannot access a disposed TMDB client.");
-                }
-                return _client.GetStringAsync(newUrl);
-            }, newUrl, priority);
+            string response = await GetQueue()
+                .Enqueue(
+                    () =>
+                    {
+                        if (_disposed)
+                        {
+                            throw new ObjectDisposedException(
+                                nameof(TmdbBaseClient),
+                                "Cannot access a disposed TMDB client."
+                            );
+                        }
+                        return _client.GetStringAsync(newUrl);
+                    },
+                    newUrl,
+                    priority
+                );
 
-            if (!skipCache) await CacheController.Write(newUrl, response);
+            if (!skipCache)
+                await CacheController.Write(newUrl, response);
 
             T? data = response.FromJson<T>();
 
@@ -89,10 +109,17 @@ public class TmdbBaseClient : IDisposable
         catch (ObjectDisposedException)
         {
             // If the client is disposed, return null gracefully
-            Logger.MovieDb($"TMDB client disposed during operation for {newUrl}", LogEventLevel.Debug);
+            Logger.MovieDb(
+                $"TMDB client disposed during operation for {newUrl}",
+                LogEventLevel.Debug
+            );
             return null;
         }
-        catch (HttpRequestException ex) when (ex.Message.Contains("404") || ex.Message.Contains("422") || ex.Message.Contains("400"))
+        catch (HttpRequestException ex)
+            when (ex.Message.Contains("404")
+                || ex.Message.Contains("422")
+                || ex.Message.Contains("400")
+            )
         {
             // Handle common HTTP errors gracefully - return null for not found, unprocessable entity, or bad request
             Logger.MovieDb($"HTTP error for {newUrl}: {ex.Message}", LogEventLevel.Debug);
@@ -100,7 +127,8 @@ public class TmdbBaseClient : IDisposable
         }
     }
 
-    protected async Task<List<T>?> Paginated<T>(string url, int limit) where T : class
+    protected async Task<List<T>?> Paginated<T>(string url, int limit)
+        where T : class
     {
         List<T> list = [];
 
@@ -108,24 +136,29 @@ public class TmdbBaseClient : IDisposable
         list.AddRange(firstPage?.Results ?? []);
 
         if (limit > 1)
-            await Parallel.ForAsync(2, Max(firstPage?.TotalPages ?? 0, limit, 500), async (i, _) =>
-            {
-                TmdbPaginatedResponse<T>? page = await Get<TmdbPaginatedResponse<T>>(url, new()
+            await Parallel.ForAsync(
+                2,
+                Max(firstPage?.TotalPages ?? 0, limit, 500),
+                async (i, _) =>
                 {
-                    ["page"] = i.ToString()
-                });
-                lock (list)
-                {
-                    list.AddRange(page?.Results ?? []);
+                    TmdbPaginatedResponse<T>? page = await Get<TmdbPaginatedResponse<T>>(
+                        url,
+                        new() { ["page"] = i.ToString() }
+                    );
+                    lock (list)
+                    {
+                        list.AddRange(page?.Results ?? []);
+                    }
                 }
-            });
+            );
 
         return list;
     }
 
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
 
         _disposed = true;
         GC.SuppressFinalize(this);

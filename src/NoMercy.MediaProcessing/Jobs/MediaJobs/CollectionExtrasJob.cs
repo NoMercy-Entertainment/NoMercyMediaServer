@@ -29,14 +29,17 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
         MovieManager movieManager = new(movieRepository, jobDispatcher);
 
         CollectionRepository collectionRepository = new(context);
-        CollectionManager collectionManager = new(collectionRepository, movieManager, jobDispatcher);
+        CollectionManager collectionManager = new(
+            collectionRepository,
+            movieManager,
+            jobDispatcher
+        );
 
         await collectionManager.StoreImages(Storage);
 
         if (EventBusProvider.IsConfigured)
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["collection", Storage.Id.ToString()]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["collection", Storage.Id.ToString()] }
+            );
     }
 }

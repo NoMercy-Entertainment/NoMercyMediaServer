@@ -10,8 +10,5 @@ public class Srt : BaseContainer
         AddCustomArgument("-f", SubtitleFormats.Srt);
     }
 
-    public override CodecDto[] AvailableCodecs =>
-    [
-        SubtitleCodecs.Srt
-    ];
+    public override CodecDto[] AvailableCodecs => [SubtitleCodecs.Srt];
 }

@@ -11,15 +11,9 @@ public class Png : BaseImage
         throw new NotImplementedException("Png is not implemented yet");
     }
 
-    private protected override CodecDto[] AvailableCodecs =>
-    [
-        ImageCodecs.Png
-    ];
+    private protected override CodecDto[] AvailableCodecs => [ImageCodecs.Png];
 
-    private protected override string[] AvailableContainers =>
-    [
-        "png"
-    ];
+    private protected override string[] AvailableContainers => ["png"];
 
     private protected override string[] AvailablePresets => [];
 

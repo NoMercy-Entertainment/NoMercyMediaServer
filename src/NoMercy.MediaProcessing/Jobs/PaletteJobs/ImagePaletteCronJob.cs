@@ -27,40 +27,56 @@ public class ImagePaletteCronJob : ICronJobExecutor
     {
         _logger.LogTrace("Starting image palette job");
 
-        List<Image[]> images = _context.Images
-            .Where(i => i.Site == "https://image.tmdb.org/t/p/")
+        List<Image[]> images = _context
+            .Images.Where(i => i.Site == "https://image.tmdb.org/t/p/")
             .Where(x => string.IsNullOrEmpty(x._colorPalette) && !x.FilePath.EndsWith(".svg"))
-            .Where(e => e.Iso6391 == null || e.Iso6391 == "en" || e.Iso6391 == "" ||
-                        e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+            .Where(e =>
+                e.Iso6391 == null
+                || e.Iso6391 == "en"
+                || e.Iso6391 == ""
+                || e.Iso6391 == CultureInfo.CurrentCulture.TwoLetterISOLanguageName
+            )
             .OrderByDescending(x => x.UpdatedAt)
             .Take(100)
             .ToList()
             .Chunk(10)
             .ToList();
 
-        if (images.Count == 0) return;
+        if (images.Count == 0)
+            return;
 
         _logger.LogTrace("Found {Count} image chunks to process", images.Count);
 
         foreach (Image[] imageChunk in images)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
-            await Parallel.ForEachAsync(imageChunk, cancellationToken, async (image, token) =>
-            {
-                try
+            await Parallel.ForEachAsync(
+                imageChunk,
+                cancellationToken,
+                async (image, token) =>
                 {
-                    image._colorPalette = await MovieDbImageManager.ColorPalette("image", image.FilePath);
+                    try
+                    {
+                        image._colorPalette = await MovieDbImageManager.ColorPalette(
+                            "image",
+                            image.FilePath
+                        );
+                    }
+                    catch (Exception)
+                    {
+                        image._colorPalette = "{}";
+                    }
                 }
-                catch (Exception)
-                {
-                    image._colorPalette = "{}";
-                }
-            });
+            );
 
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        _logger.LogTrace("Image palette job completed, processed {Count} images", images.Sum(x => x.Length));
+        _logger.LogTrace(
+            "Image palette job completed, processed {Count} images",
+            images.Sum(x => x.Length)
+        );
     }
 }

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
 using NoMercy.Database;
@@ -19,7 +19,11 @@ public class ConnectionHub : Hub
     protected readonly ConnectedClients ConnectedClients;
     private string Endpoint { get; set; }
 
-    protected ConnectionHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory, ConnectedClients connectedClients)
+    protected ConnectionHub(
+        IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<MediaContext> contextFactory,
+        ConnectedClients connectedClients
+    )
     {
         _httpContextAccessor = httpContextAccessor;
         _contextFactory = contextFactory;
@@ -30,15 +34,17 @@ public class ConnectionHub : Hub
 
     public string GetCountryFromContext()
     {
-        return _httpContextAccessor.HttpContext?.Request.Headers["country"].FirstOrDefault() ?? "US";
+        return _httpContextAccessor.HttpContext?.Request.Headers["country"].FirstOrDefault()
+            ?? "US";
     }
-    
+
     public string GetLanguageFromContext()
     {
-        return _httpContextAccessor.HttpContext?.Request.Headers.AcceptLanguage
-                   .FirstOrDefault()?.Split("_")
-                   .FirstOrDefault() ??
-               LocalizationHelper.GlobalLocalizer.TargetLanguage;
+        return _httpContextAccessor
+                .HttpContext?.Request.Headers.AcceptLanguage.FirstOrDefault()
+                ?.Split("_")
+                .FirstOrDefault()
+            ?? LocalizationHelper.GlobalLocalizer.TargetLanguage;
     }
 
     public override async Task OnConnectedAsync()
@@ -46,15 +52,18 @@ public class ConnectionHub : Hub
         await base.OnConnectedAsync();
 
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         Client client = new()
         {
             Sub = user.Id,
-            Ip = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+            Ip =
+                _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString()
+                ?? "Unknown",
             Socket = Clients.Caller,
             Endpoint = Endpoint,
-            IsActive = true
+            IsActive = true,
         };
 
         IQueryCollection? query = _httpContextAccessor.HttpContext?.Request.Query;
@@ -90,26 +99,37 @@ public class ConnectionHub : Hub
 
             if (query.TryGetValue("client_device", out StringValues model))
                 client.Model = model.ToString();
-
         }
 
         await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
-        await mediaContext.Devices.Upsert(client)
+        await mediaContext
+            .Devices.Upsert(client)
             .On(x => x.DeviceId)
-            .WhenMatched((ds, di) => new()
-            {
-                Browser = di.Browser,
-                // CustomName = di.CustomName,
-                DeviceId = di.DeviceId,
-                Ip = di.Ip,
-                Model = di.Model,
-                Name = di.Name,
-                Os = di.Os,
-                Type = di.Type,
-                Version = di.Version,
-                VolumePercent = di.VolumePercent
-            })
+            .WhenMatched(
+                (ds, di) =>
+                    new()
+                    {
+                        Browser = di.Browser,
+                        DeviceId = di.DeviceId,
+                        Ip = di.Ip,
+                        Model = di.Model,
+                        Name = di.Name,
+                        Os = di.Os,
+                        Type = di.Type,
+                        Version = di.Version,
+                        VolumePercent = di.VolumePercent,
+                    }
+            )
             .RunAsync();
+
+        // Update CustomName separately — FlexLabs upsert doesn't support conditional expressions.
+        // Only overwrite when the client sends a non-empty custom_name, preserving existing names otherwise.
+        if (!string.IsNullOrEmpty(client.CustomName))
+        {
+            await mediaContext
+                .Devices.Where(x => x.DeviceId == client.DeviceId)
+                .ExecuteUpdateAsync(x => x.SetProperty(d => d.CustomName, client.CustomName));
+        }
 
         Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
 
@@ -119,18 +139,21 @@ public class ConnectionHub : Hub
 
         if (device is not null)
         {
-            await mediaContext.Devices
-                .Where(x => x.DeviceId == device.DeviceId)
+            await mediaContext
+                .Devices.Where(x => x.DeviceId == device.DeviceId)
                 .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, true));
             await mediaContext.SaveChangesAsync();
 
-            await SaveActivityLog(mediaContext, new()
-            {
-                DeviceId = device.Id,
-                Time = DateTime.Now,
-                Type = "Connected to server",
-                UserId = user.Id
-            });
+            await SaveActivityLog(
+                mediaContext,
+                new()
+                {
+                    DeviceId = device.Id,
+                    Time = DateTime.Now,
+                    Type = "Connected to server",
+                    UserId = user.Id,
+                }
+            );
         }
 
         ConnectedClients.Clients.TryAdd(Context.ConnectionId, client);
@@ -145,21 +168,26 @@ public class ConnectionHub : Hub
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
         {
             await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
-            Device? device = mediaContext.Devices.FirstOrDefault(x => x.DeviceId == client.DeviceId);
+            Device? device = mediaContext.Devices.FirstOrDefault(x =>
+                x.DeviceId == client.DeviceId
+            );
             if (device is not null)
             {
-                await mediaContext.Devices
-                    .Where(x => x.DeviceId == device.DeviceId)
+                await mediaContext
+                    .Devices.Where(x => x.DeviceId == device.DeviceId)
                     .ExecuteUpdateAsync(x => x.SetProperty(d => d.IsActive, false));
                 await mediaContext.SaveChangesAsync();
 
-                await SaveActivityLog(mediaContext, new()
-                {
-                    DeviceId = device.Id,
-                    Time = DateTime.Now,
-                    Type = "Disconnected from server",
-                    UserId = client.Sub
-                });
+                await SaveActivityLog(
+                    mediaContext,
+                    new()
+                    {
+                        DeviceId = device.Id,
+                        Time = DateTime.Now,
+                        Type = "Disconnected from server",
+                        UserId = client.Sub,
+                    }
+                );
             }
 
             ConnectedClients.Clients.Remove(Context.ConnectionId, out _);
@@ -168,7 +196,11 @@ public class ConnectionHub : Hub
         }
     }
 
-    private static async Task SaveActivityLog(MediaContext mediaContext, ActivityLog log, int count = 0)
+    private static async Task SaveActivityLog(
+        MediaContext mediaContext,
+        ActivityLog log,
+        int count = 0
+    )
     {
         try
         {
@@ -177,7 +209,8 @@ public class ConnectionHub : Hub
         }
         catch (Exception)
         {
-            if (count > 2) return; // 3 times
+            if (count > 2)
+                return; // 3 times
 
             count += 1;
             await Task.Delay(1000);
@@ -188,10 +221,11 @@ public class ConnectionHub : Hub
     public List<Device> Devices()
     {
         User? user = Context.User.User();
-        if (user is null) return [];
+        if (user is null)
+            return [];
 
-        return ConnectedClients.Clients.Values
-            .Where(x => x.Sub.Equals(user.Id))
+        return ConnectedClients
+            .Clients.Values.Where(x => x.Sub.Equals(user.Id))
             .Where(x => x.Endpoint == Endpoint)
             .Select(c => new Device
             {
@@ -205,7 +239,7 @@ public class ConnectionHub : Hub
                 Version = c.Version,
                 Id = c.Id,
                 CustomName = c.CustomName,
-                VolumePercent = c.VolumePercent
+                VolumePercent = c.VolumePercent,
             })
             .ToList();
     }

@@ -61,7 +61,10 @@ public static class OfflineJwksCache
         }
         catch (Exception e)
         {
-            Logger.Auth($"Failed to load cached auth public key: {e.Message}", LogEventLevel.Warning);
+            Logger.Auth(
+                $"Failed to load cached auth public key: {e.Message}",
+                LogEventLevel.Warning
+            );
             return false;
         }
     }

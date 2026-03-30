@@ -13,7 +13,9 @@ public static class KitsuIo
 
         HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.KitsuIo);
 
-        using HttpResponseMessage response = await client.GetAsync($"anime?filter[text]={title}&filter[year]={year}");
+        using HttpResponseMessage response = await client.GetAsync(
+            $"anime?filter[text]={title}&filter[year]={year}"
+        );
         string content = await response.Content.ReadAsStringAsync();
 
         try
@@ -21,16 +23,39 @@ public static class KitsuIo
             KitsuAnime? anime = content.FromJson<KitsuAnime>();
 
             foreach (Data data in anime?.Data ?? [])
-                if (data.Attributes.Titles.En?.Equals(title, StringComparison.CurrentCultureIgnoreCase) == true)
+                if (
+                    data.Attributes.Titles.En?.Equals(
+                        title,
+                        StringComparison.CurrentCultureIgnoreCase
+                    ) == true
+                )
                     isAnime = true;
-                else if (data.Attributes.Titles.EnJp?.Equals(title, StringComparison.CurrentCultureIgnoreCase) == true)
+                else if (
+                    data.Attributes.Titles.EnJp?.Equals(
+                        title,
+                        StringComparison.CurrentCultureIgnoreCase
+                    ) == true
+                )
                     isAnime = true;
-                else if (data.Attributes.Titles.JaJp?.Equals(title, StringComparison.CurrentCultureIgnoreCase) == true)
+                else if (
+                    data.Attributes.Titles.JaJp?.Equals(
+                        title,
+                        StringComparison.CurrentCultureIgnoreCase
+                    ) == true
+                )
                     isAnime = true;
-                else if (data.Attributes.Titles.ThTh?.Equals(title, StringComparison.CurrentCultureIgnoreCase) == true)
+                else if (
+                    data.Attributes.Titles.ThTh?.Equals(
+                        title,
+                        StringComparison.CurrentCultureIgnoreCase
+                    ) == true
+                )
                     isAnime = true;
-                else if (data.Attributes.AbbreviatedTitles.Any(abbreviatedTitle =>
-                             abbreviatedTitle.Equals(title, StringComparison.CurrentCultureIgnoreCase)))
+                else if (
+                    data.Attributes.AbbreviatedTitles.Any(abbreviatedTitle =>
+                        abbreviatedTitle.Equals(title, StringComparison.CurrentCultureIgnoreCase)
+                    )
+                )
                     isAnime = true;
         }
         catch (Exception e)

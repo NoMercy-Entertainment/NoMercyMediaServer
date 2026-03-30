@@ -23,31 +23,32 @@ public class MoviePaletteCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        List<Movie[]> movies = _context.Movies
-            .Where(x => string.IsNullOrEmpty(x._colorPalette))
+        List<Movie[]> movies = _context
+            .Movies.Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
             .Take(50)
             .ToList()
             .Chunk(10)
             .ToList();
 
-        if (movies.Count == 0) return;
+        if (movies.Count == 0)
+            return;
 
         _logger.LogTrace("Found {Count} movie chunks to process", movies.Count);
 
         foreach (Movie[] movieChunk in movies)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
             foreach (Movie movie in movieChunk)
             {
                 try
                 {
-                    movie._colorPalette = await MovieDbImageManager
-                        .MultiColorPalette([
-                            new("poster", movie.Poster),
-                            new("backdrop", movie.Backdrop)
-                        ]);
+                    movie._colorPalette = await MovieDbImageManager.MultiColorPalette([
+                        new("poster", movie.Poster),
+                        new("backdrop", movie.Backdrop),
+                    ]);
                 }
                 catch (Exception)
                 {
@@ -56,10 +57,11 @@ public class MoviePaletteCronJob : ICronJobExecutor
             }
 
             await _context.SaveChangesAsync(cancellationToken);
-
         }
 
-        _logger.LogTrace("Movie palette job completed, updated: {Count}", movies.Sum(x => x.Length));
-
+        _logger.LogTrace(
+            "Movie palette job completed, updated: {Count}",
+            movies.Sum(x => x.Length)
+        );
     }
 }

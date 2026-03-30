@@ -1,9 +1,9 @@
 using HeyRed.ImageSharp.Heif.Formats.Avif;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace NoMercy.Helpers;
 
@@ -22,7 +22,10 @@ public static class Images
         return memoryStream.ToArray();
     }
 
-    public static (byte[] magickImage, string mimeType) ResizeMagickNet(string image, ImageConvertArguments arguments)
+    public static (byte[] magickImage, string mimeType) ResizeMagickNet(
+        string image,
+        ImageConvertArguments arguments
+    )
     {
         using Image<Rgba32> inputStream = ReadFileStream(image);
         double aspectRatio = arguments.AspectRatio ?? inputStream.Height / (float)inputStream.Width;
@@ -36,7 +39,8 @@ public static class Images
 
     private static Image<Rgba32> ReadFileStream(string image)
     {
-        if (!File.Exists(image)) throw new("File not found");
+        if (!File.Exists(image))
+            throw new("File not found");
 
         // try
         // {
@@ -57,14 +61,22 @@ public static class Images
     public static IImageFormat Parse(string format)
     {
         IImageFormat imageFormat;
-        Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension("png", out imageFormat!);
+        Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension(
+            "png",
+            out imageFormat!
+        );
 
-        if (string.IsNullOrEmpty(format)) return imageFormat;
+        if (string.IsNullOrEmpty(format))
+            return imageFormat;
 
         format = format.ToLowerInvariant();
 
-        if (Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension(format,
-                out IImageFormat? imageFormat2))
+        if (
+            Configuration.Default.ImageFormatsManager.TryFindFormatByFileExtension(
+                format,
+                out IImageFormat? imageFormat2
+            )
+        )
             return imageFormat2;
 
         return imageFormat;

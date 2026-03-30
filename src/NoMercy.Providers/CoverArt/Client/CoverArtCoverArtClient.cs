@@ -1,5 +1,4 @@
-﻿using HttpClient = System.Net.Http.HttpClient;
-using NoMercy.NmSystem.Extensions;
+﻿using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.CoverArt.Models;
 using NoMercy.Providers.Helpers;
@@ -7,12 +6,14 @@ using NoMercy.Setup;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Configuration = AcoustID.Configuration;
+using HttpClient = System.Net.Http.HttpClient;
 
 namespace NoMercy.Providers.CoverArt.Client;
 
 public class CoverArtCoverArtClient : CoverArtBaseClient
 {
-    public CoverArtCoverArtClient(Guid id) : base(id)
+    public CoverArtCoverArtClient(Guid id)
+        : base(id)
     {
         Configuration.ClientKey = ApiInfo.AcousticIdKey;
     }
@@ -53,14 +54,19 @@ public class CoverArtCoverArtClient : CoverArtBaseClient
 
     public static async Task<Image<Rgba32>?> Download(Uri? url, bool? download = true)
     {
-        string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName((url?.LocalPath).OrEmpty()));
+        string filePath = Path.Combine(
+            AppFiles.MusicImagesPath,
+            Path.GetFileName((url?.LocalPath).OrEmpty())
+        );
 
-        if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
+        if (File.Exists(filePath))
+            return Image.Load<Rgba32>(filePath);
 
         HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.CoverArtImage);
 
         using HttpResponseMessage response = await httpClient.GetAsync(url);
-        if (!response.IsSuccessStatusCode) return null;
+        if (!response.IsSuccessStatusCode)
+            return null;
 
         byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 

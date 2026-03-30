@@ -1,4 +1,5 @@
 using NCrontab;
+
 namespace NoMercyQueue.Services;
 
 public class CronService
@@ -8,7 +9,7 @@ public class CronService
         CrontabSchedule? schedule = CrontabSchedule.Parse(cronExpression);
         return schedule.GetNextOccurrence(baseTime);
     }
-        
+
     public static bool ShouldRun(string cronExpression, DateTime lastRun, DateTime currentTime)
     {
         DateTime nextRun = GetNextOccurrence(cronExpression, lastRun);

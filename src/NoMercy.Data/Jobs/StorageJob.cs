@@ -30,91 +30,111 @@ public class StorageJob : IShouldQueue
     {
         await using MediaContext context = new();
 
-        List<Library> libraries = await context.Libraries
-            .Include(library => library.FolderLibraries)
-            .ThenInclude(folderLibrary => folderLibrary.Folder)
+        List<Library> libraries = await context
+            .Libraries.Include(library => library.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
             .Include(library => library.LibraryTvs)
-            .ThenInclude(folder => folder.Tv)
-            .ThenInclude(tv => tv.Episodes)
-            .ThenInclude(episode => episode.VideoFiles)
-            .ThenInclude(file => file.Metadata)
+                .ThenInclude(folder => folder.Tv)
+                    .ThenInclude(tv => tv.Episodes)
+                        .ThenInclude(episode => episode.VideoFiles)
+                            .ThenInclude(file => file.Metadata)
             .Include(folder => folder.LibraryMovies)
-            .ThenInclude(folder => folder.Movie)
-            .ThenInclude(movie => movie.VideoFiles)
-            .ThenInclude(file => file.Metadata)
+                .ThenInclude(folder => folder.Movie)
+                    .ThenInclude(movie => movie.VideoFiles)
+                        .ThenInclude(file => file.Metadata)
             .Include(folder => folder.AlbumLibraries)
-            .ThenInclude(folder => folder.Album)
-            .ThenInclude(file => file.Metadata)
+                .ThenInclude(folder => folder.Album)
+                    .ThenInclude(file => file.Metadata)
             .ToListAsync();
 
-        await Parallel.ForEachAsync(libraries, Config.ParallelOptions, (library, _) =>
-        {
-            List<Metadata?> movieMetaData = library.LibraryMovies
-                .Select(l => l.Movie)
-                .SelectMany(m => m.VideoFiles)
-                .Where(m => m.Metadata is not null)
-                .Select(vf => vf.Metadata)
-                .ToList();
-
-            List<Metadata?> tvMetaData = library.LibraryTvs
-                .Select(l => l.Tv)
-                .SelectMany(t => t.Episodes)
-                .SelectMany(e => e.VideoFiles)
-                .Where(m => m.Metadata is not null)
-                .Select(vf => vf.Metadata)
-                .ToList();
-
-            List<Metadata?> albumMetaData = library.AlbumLibraries
-                .Select(l => l.Album)
-                .Where(m => m.Metadata is not null)
-                .Select(vf => vf.Metadata)
-                .ToList();
-
-            foreach (FolderLibrary folderLibraries in library.FolderLibraries)
+        await Parallel.ForEachAsync(
+            libraries,
+            Config.ParallelOptions,
+            (library, _) =>
             {
-                StorageDto? storage = Storage.Find(s => s.Path == folderLibraries.Folder.Path);
+                List<Metadata?> movieMetaData = library
+                    .LibraryMovies.Select(l => l.Movie)
+                    .SelectMany(m => m.VideoFiles)
+                    .Where(m => m.Metadata is not null)
+                    .Select(vf => vf.Metadata)
+                    .ToList();
 
-                if (storage?.Data is null) return default;
+                List<Metadata?> tvMetaData = library
+                    .LibraryTvs.Select(l => l.Tv)
+                    .SelectMany(t => t.Episodes)
+                    .SelectMany(e => e.VideoFiles)
+                    .Where(m => m.Metadata is not null)
+                    .Select(vf => vf.Metadata)
+                    .ToList();
 
-                if (movieMetaData.Count > 0)
-                    foreach (Metadata? metadata in movieMetaData.Where(metadata =>
-                                 metadata?.HostFolder.StartsWith(folderLibraries.Folder.Path.Replace("\\", "/")) ??
-                                 false))
-                    {
-                        storage.Data.Movies += metadata?.MovieSize ?? 0;
-                        storage.Data.Other += metadata?.OtherSize ?? 0;
-                        storage.Data.Used += metadata?.FolderSize ?? 0;
-                    }
+                List<Metadata?> albumMetaData = library
+                    .AlbumLibraries.Select(l => l.Album)
+                    .Where(m => m.Metadata is not null)
+                    .Select(vf => vf.Metadata)
+                    .ToList();
 
-                if (tvMetaData.Count > 0)
-                    foreach (Metadata? metadata in tvMetaData.Where(metadata =>
-                                 metadata?.HostFolder.StartsWith(folderLibraries.Folder.Path.Replace("\\", "/")) ??
-                                 false))
-                    {
-                        storage.Data.Shows += metadata?.TvSize ?? 0;
-                        storage.Data.Other += metadata?.OtherSize ?? 0;
-                        storage.Data.Used += metadata?.FolderSize ?? 0;
-                    }
+                foreach (FolderLibrary folderLibraries in library.FolderLibraries)
+                {
+                    StorageDto? storage = Storage.Find(s => s.Path == folderLibraries.Folder.Path);
 
-                if (albumMetaData.Count > 0)
-                    foreach (Metadata? metadata in albumMetaData.Where(metadata =>
-                                 metadata?.HostFolder.StartsWith(folderLibraries.Folder.Path.Replace("\\", "/")) ??
-                                 false))
-                    {
-                        storage.Data.Music += metadata?.MusicSize ?? 0;
-                        storage.Data.Other += metadata?.OtherSize ?? 0;
-                        storage.Data.Used += metadata?.FolderSize ?? 0;
-                    }
+                    if (storage?.Data is null)
+                        return default;
+
+                    if (movieMetaData.Count > 0)
+                        foreach (
+                            Metadata? metadata in movieMetaData.Where(metadata =>
+                                metadata?.HostFolder.StartsWith(
+                                    folderLibraries.Folder.Path.Replace("\\", "/")
+                                )
+                                ?? false
+                            )
+                        )
+                        {
+                            storage.Data.Movies += metadata?.MovieSize ?? 0;
+                            storage.Data.Other += metadata?.OtherSize ?? 0;
+                            storage.Data.Used += metadata?.FolderSize ?? 0;
+                        }
+
+                    if (tvMetaData.Count > 0)
+                        foreach (
+                            Metadata? metadata in tvMetaData.Where(metadata =>
+                                metadata?.HostFolder.StartsWith(
+                                    folderLibraries.Folder.Path.Replace("\\", "/")
+                                )
+                                ?? false
+                            )
+                        )
+                        {
+                            storage.Data.Shows += metadata?.TvSize ?? 0;
+                            storage.Data.Other += metadata?.OtherSize ?? 0;
+                            storage.Data.Used += metadata?.FolderSize ?? 0;
+                        }
+
+                    if (albumMetaData.Count > 0)
+                        foreach (
+                            Metadata? metadata in albumMetaData.Where(metadata =>
+                                metadata?.HostFolder.StartsWith(
+                                    folderLibraries.Folder.Path.Replace("\\", "/")
+                                )
+                                ?? false
+                            )
+                        )
+                        {
+                            storage.Data.Music += metadata?.MusicSize ?? 0;
+                            storage.Data.Other += metadata?.OtherSize ?? 0;
+                            storage.Data.Used += metadata?.FolderSize ?? 0;
+                        }
+                }
+
+                return default;
             }
-
-
-            return default;
-        });
+        );
     }
 
     private static long GetDirectorySize(DirectoryInfo directoryInfo)
     {
-        if (!directoryInfo.Exists) return 0;
+        if (!directoryInfo.Exists)
+            return 0;
 
         FileInfo[] dirs = directoryInfo.GetFiles("*", SearchOption.AllDirectories);
 
@@ -125,25 +145,29 @@ public class StorageJob : IShouldQueue
 
     private static async Task CountFolder(List<string> folders, string library, StorageDto storage)
     {
-        await Parallel.ForEachAsync(folders, Config.ParallelOptions, (folder, _) =>
-        {
-            long size = GetDirectorySize(new(folder));
-
-            switch (library)
+        await Parallel.ForEachAsync(
+            folders,
+            Config.ParallelOptions,
+            (folder, _) =>
             {
-                case Config.MovieMediaType:
-                    storage.Data.Movies += size;
-                    break;
-                case Config.TvMediaType:
-                case Config.AnimeMediaType:
-                    storage.Data.Shows += size;
-                    break;
-                case Config.MusicMediaType:
-                    storage.Data.Music += size;
-                    break;
-            }
+                long size = GetDirectorySize(new(folder));
 
-            return default;
-        });
+                switch (library)
+                {
+                    case Config.MovieMediaType:
+                        storage.Data.Movies += size;
+                        break;
+                    case Config.TvMediaType:
+                    case Config.AnimeMediaType:
+                        storage.Data.Shows += size;
+                        break;
+                    case Config.MusicMediaType:
+                        storage.Data.Music += size;
+                        break;
+                }
+
+                return default;
+            }
+        );
     }
 }

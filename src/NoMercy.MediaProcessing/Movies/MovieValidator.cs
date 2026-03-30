@@ -1,5 +1,3 @@
 namespace NoMercy.MediaProcessing.Movies;
 
-public class MovieValidator
-{
-}
+public class MovieValidator { }

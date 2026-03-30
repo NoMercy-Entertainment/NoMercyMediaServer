@@ -21,7 +21,7 @@ public class StorageMonitor
             ResourceMonitorDto resourceMonitorDto = new()
             {
                 Name = d.Name,
-                Type = d.DriveType.ToString()
+                Type = d.DriveType.ToString(),
             };
             if (d.IsReady)
             {
@@ -39,18 +39,18 @@ public class StorageMonitor
     {
         using MediaContext context = new();
 
-        _libraries = context.Libraries
-            .Include(library => library.FolderLibraries)
-            .ThenInclude(folderLibrary => folderLibrary.Folder)
+        _libraries = context
+            .Libraries.Include(library => library.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
             .Include(library => library.LibraryTvs)
-            .ThenInclude(folder => folder.Tv)
-            .ThenInclude(tv => tv.Episodes)
-            .ThenInclude(episode => episode.VideoFiles)
+                .ThenInclude(folder => folder.Tv)
+                    .ThenInclude(tv => tv.Episodes)
+                        .ThenInclude(episode => episode.VideoFiles)
             .Include(folder => folder.LibraryMovies)
-            .ThenInclude(folder => folder.Movie)
-            .ThenInclude(movie => movie.VideoFiles)
+                .ThenInclude(folder => folder.Movie)
+                    .ThenInclude(movie => movie.VideoFiles)
             .Include(folder => folder.LibraryTracks)
-            .ThenInclude(folder => folder.Track)
+                .ThenInclude(folder => folder.Track)
             .ToList();
 
         foreach (Library library in _libraries)
@@ -66,8 +66,8 @@ public class StorageMonitor
                     Music = 0,
                     // Free = StorageHelper.GetFreeSpace(folderLibrary.Folder.Path),
                     Used = 0,
-                    Other = 0
-                }
+                    Other = 0,
+                },
             };
             Storage.Add(movieStorageDto);
 
@@ -81,8 +81,8 @@ public class StorageMonitor
                     Music = 0,
                     // Free = StorageHelper.GetFreeSpace(folderLibrary.Folder.Path),
                     Used = 0,
-                    Other = 0
-                }
+                    Other = 0,
+                },
             };
             Storage.Add(tvStorageDto);
 
@@ -96,15 +96,13 @@ public class StorageMonitor
                     Music = 0,
                     // Free = StorageHelper.GetFreeSpace(folderLibrary.Folder.Path),
                     Used = 0,
-                    Other = 0
-                }
+                    Other = 0,
+                },
             };
             Storage.Add(musicStorageDto);
         }
 
-        Storage = Storage.GroupBy(f => f.Path)
-            .Select(f => f.First())
-            .ToList();
+        Storage = Storage.GroupBy(f => f.Path).Select(f => f.First()).ToList();
 
         return Task.CompletedTask;
     }
@@ -112,8 +110,11 @@ public class StorageMonitor
 
 public record StorageDto
 {
-    [JsonProperty("path")] public string Path { get; set; } = string.Empty;
-    [JsonProperty("data")] public Usage Data { get; set; } = new();
+    [JsonProperty("path")]
+    public string Path { get; set; } = string.Empty;
+
+    [JsonProperty("data")]
+    public Usage Data { get; set; } = new();
 }
 
 public class Usage
@@ -159,10 +160,10 @@ public class Usage
         set => _used = value / 1024 / 8;
     }
 
-
     private long CalculatePercentage(long value)
     {
-        if (Used == 0) return 0;
+        if (Used == 0)
+            return 0;
 
         double fraction = (double)value / Used;
         long percentage = (long)(fraction * 100);

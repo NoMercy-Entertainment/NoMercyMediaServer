@@ -13,10 +13,12 @@ public class MusicPlay : Timestamps
     [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty("user_id")] public Guid UserId { get; set; }
+    [JsonProperty("user_id")]
+    public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
-    [JsonProperty("track_id")] public Guid TrackId { get; set; }
+    [JsonProperty("track_id")]
+    public Guid TrackId { get; set; }
     public Track Track { get; set; } = null!;
 
     public MusicPlay()

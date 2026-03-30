@@ -16,12 +16,14 @@ public class MainViewModel : INotifyPropertyChanged
     public int SelectedTabIndex
     {
         get => _selectedTabIndex;
-        set { _selectedTabIndex = value; OnPropertyChanged(); }
+        set
+        {
+            _selectedTabIndex = value;
+            OnPropertyChanged();
+        }
     }
 
-    public MainViewModel(
-        ServerConnection serverConnection,
-        ServerProcessLauncher processLauncher)
+    public MainViewModel(ServerConnection serverConnection, ServerProcessLauncher processLauncher)
     {
         ServerControlViewModel = new(serverConnection, processLauncher);
         SettingsViewModel = new(serverConnection);
@@ -37,10 +39,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    protected void OnPropertyChanged(
-        [CallerMemberName] string? propertyName = null)
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(
-            this, new(propertyName));
+        PropertyChanged?.Invoke(this, new(propertyName));
     }
 }

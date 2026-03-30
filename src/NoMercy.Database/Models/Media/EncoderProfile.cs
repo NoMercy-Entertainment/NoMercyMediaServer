@@ -12,9 +12,15 @@ public class EncoderProfile : Timestamps
     [JsonProperty("id")]
     public Ulid Id { get; set; }
 
-    [Key] [JsonProperty("name")] public required string Name { get; set; }
-    [JsonProperty("container")] public string? Container { get; set; }
-    [JsonProperty("type")] public string? Param { get; set; }
+    [Key]
+    [JsonProperty("name")]
+    public required string Name { get; set; }
+
+    [JsonProperty("container")]
+    public string? Container { get; set; }
+
+    [JsonProperty("type")]
+    public string? Param { get; set; }
 
     [Column("VideoProfile")]
     [JsonProperty("video_profile")]
@@ -25,9 +31,10 @@ public class EncoderProfile : Timestamps
     [NotMapped]
     public IVideoProfile[] VideoProfiles
     {
-        get => _videoProfiles != string.Empty
-            ? JsonConvert.DeserializeObject<IVideoProfile[]>(_videoProfiles)!
-            : [];
+        get =>
+            _videoProfiles != string.Empty
+                ? JsonConvert.DeserializeObject<IVideoProfile[]>(_videoProfiles)!
+                : [];
         set => _videoProfiles = JsonConvert.SerializeObject(value);
     }
 
@@ -40,9 +47,10 @@ public class EncoderProfile : Timestamps
     [NotMapped]
     public IAudioProfile[] AudioProfiles
     {
-        get => _audioProfiles != string.Empty
-            ? JsonConvert.DeserializeObject<IAudioProfile[]>(_audioProfiles)!
-            : [];
+        get =>
+            _audioProfiles != string.Empty
+                ? JsonConvert.DeserializeObject<IAudioProfile[]>(_audioProfiles)!
+                : [];
         set => _audioProfiles = JsonConvert.SerializeObject(value);
     }
 
@@ -55,9 +63,10 @@ public class EncoderProfile : Timestamps
     [NotMapped]
     public ISubtitleProfile[] SubtitleProfiles
     {
-        get => _subtitleProfiles != string.Empty
-            ? JsonConvert.DeserializeObject<ISubtitleProfile[]>(_subtitleProfiles)!
-            : [];
+        get =>
+            _subtitleProfiles != string.Empty
+                ? JsonConvert.DeserializeObject<ISubtitleProfile[]>(_subtitleProfiles)!
+                : [];
         set => _subtitleProfiles = JsonConvert.SerializeObject(value);
     }
 

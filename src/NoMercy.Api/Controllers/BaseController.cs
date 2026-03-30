@@ -18,7 +18,7 @@ public class BaseController : Controller
             Detail = detail.Localize(),
             Instance = HttpContext.Request.Path,
             Status = statusCode,
-            Extensions = { { "traceId", HttpContext.TraceIdentifier } }
+            Extensions = { { "traceId", HttpContext.TraceIdentifier } },
         };
 
         return StatusCode(statusCode, problemDetails);
@@ -30,7 +30,8 @@ public class BaseController : Controller
             title: "Unauthenticated.",
             detail: detail,
             statusCode: StatusCodes.Status401Unauthorized,
-            type: "/docs/errors/unauthenticated");
+            type: "/docs/errors/unauthenticated"
+        );
     }
 
     protected IActionResult UnauthorizedResponse(string detail)
@@ -39,7 +40,8 @@ public class BaseController : Controller
             title: "Unauthorized.",
             detail: detail,
             statusCode: StatusCodes.Status403Forbidden,
-            type: "/docs/errors/forbidden");
+            type: "/docs/errors/forbidden"
+        );
     }
 
     protected IActionResult NotFoundResponse(string detail)
@@ -48,7 +50,8 @@ public class BaseController : Controller
             title: "Not Found.",
             detail: detail,
             statusCode: StatusCodes.Status404NotFound,
-            type: "/docs/errors/not-found");
+            type: "/docs/errors/not-found"
+        );
     }
 
     protected IActionResult BadRequestResponse(string detail)
@@ -57,7 +60,8 @@ public class BaseController : Controller
             title: "Bad Request.",
             detail: detail,
             statusCode: StatusCodes.Status400BadRequest,
-            type: "/docs/errors/bad-request");
+            type: "/docs/errors/bad-request"
+        );
     }
 
     protected IActionResult InternalServerErrorResponse(string detail)
@@ -66,7 +70,8 @@ public class BaseController : Controller
             title: "Internal Server Error.",
             detail: detail,
             statusCode: StatusCodes.Status500InternalServerError,
-            type: "/docs/errors/internal-server-error");
+            type: "/docs/errors/internal-server-error"
+        );
     }
 
     protected IActionResult ConflictResponse(string detail)
@@ -75,7 +80,8 @@ public class BaseController : Controller
             title: "Conflict.",
             detail: detail,
             statusCode: StatusCodes.Status409Conflict,
-            type: "/docs/errors/conflict");
+            type: "/docs/errors/conflict"
+        );
     }
 
     protected IActionResult NotImplementedResponse(string detail)
@@ -84,7 +90,8 @@ public class BaseController : Controller
             title: "Not Implemented.",
             detail: detail,
             statusCode: StatusCodes.Status501NotImplemented,
-            type: "/docs/errors/not-implemented");
+            type: "/docs/errors/not-implemented"
+        );
     }
 
     protected IActionResult ServiceUnavailableResponse(string detail)
@@ -93,7 +100,8 @@ public class BaseController : Controller
             title: "Service Unavailable.",
             detail: detail,
             statusCode: StatusCodes.Status503ServiceUnavailable,
-            type: "/docs/errors/service-unavailable");
+            type: "/docs/errors/service-unavailable"
+        );
     }
 
     protected IActionResult GatewayTimeoutResponse(string detail)
@@ -102,7 +110,8 @@ public class BaseController : Controller
             title: "Gateway Timeout.",
             detail: detail,
             statusCode: StatusCodes.Status504GatewayTimeout,
-            type: "/docs/errors/gateway-timeout");
+            type: "/docs/errors/gateway-timeout"
+        );
     }
 
     protected IActionResult UnprocessableEntityResponse(string detail)
@@ -111,7 +120,8 @@ public class BaseController : Controller
             title: "Unprocessable Entity.",
             detail: detail,
             statusCode: StatusCodes.Status422UnprocessableEntity,
-            type: "/docs/errors/unprocessable-entity");
+            type: "/docs/errors/unprocessable-entity"
+        );
     }
 
     protected IActionResult TooManyRequestsResponse(string detail)
@@ -120,7 +130,8 @@ public class BaseController : Controller
             title: "Too Many Requests.",
             detail: detail,
             statusCode: StatusCodes.Status429TooManyRequests,
-            type: "/docs/errors/too-many-requests");
+            type: "/docs/errors/too-many-requests"
+        );
     }
 
     protected IActionResult GoneResponse(string detail)
@@ -129,7 +140,8 @@ public class BaseController : Controller
             title: "Gone.",
             detail: detail,
             statusCode: StatusCodes.Status410Gone,
-            type: "/docs/errors/gone");
+            type: "/docs/errors/gone"
+        );
     }
 
     protected IActionResult PaymentRequiredResponse(string detail)
@@ -138,7 +150,8 @@ public class BaseController : Controller
             title: "Payment Required.",
             detail: detail,
             statusCode: StatusCodes.Status402PaymentRequired,
-            type: "/docs/errors/payment-required");
+            type: "/docs/errors/payment-required"
+        );
     }
 
     protected IActionResult LengthRequiredResponse(string detail)
@@ -147,7 +160,8 @@ public class BaseController : Controller
             title: "Length Required.",
             detail: detail,
             statusCode: StatusCodes.Status411LengthRequired,
-            type: "/docs/errors/length-required");
+            type: "/docs/errors/length-required"
+        );
     }
 
     protected IActionResult PreconditionFailedResponse(string detail)
@@ -156,7 +170,8 @@ public class BaseController : Controller
             title: "Precondition Failed.",
             detail: detail,
             statusCode: StatusCodes.Status412PreconditionFailed,
-            type: "/docs/errors/precondition-failed");
+            type: "/docs/errors/precondition-failed"
+        );
     }
 
     protected IActionResult RequestEntityTooLargeResponse(string detail)
@@ -165,7 +180,8 @@ public class BaseController : Controller
             title: "Request Entity Too Large.",
             detail: detail,
             statusCode: StatusCodes.Status413RequestEntityTooLarge,
-            type: "/docs/errors/request-entity-too-large");
+            type: "/docs/errors/request-entity-too-large"
+        );
     }
 
     protected IActionResult RequestUriTooLongResponse(string detail)
@@ -174,7 +190,8 @@ public class BaseController : Controller
             title: "Request-URI Too Long.",
             detail: detail,
             statusCode: StatusCodes.Status414RequestUriTooLong,
-            type: "/docs/errors/request-uri-too-long");
+            type: "/docs/errors/request-uri-too-long"
+        );
     }
 
     protected IActionResult UnsupportedMediaTypeResponse(string detail)
@@ -183,7 +200,8 @@ public class BaseController : Controller
             title: "Unsupported Media Type.",
             detail: detail,
             statusCode: StatusCodes.Status415UnsupportedMediaType,
-            type: "/docs/errors/unsupported-media-libraryType");
+            type: "/docs/errors/unsupported-media-libraryType"
+        );
     }
 
     protected IActionResult RequestedRangeNotSatisfiableResponse(string detail)
@@ -192,7 +210,8 @@ public class BaseController : Controller
             title: "Requested Range Not Satisfiable.",
             detail: detail,
             statusCode: StatusCodes.Status416RequestedRangeNotSatisfiable,
-            type: "/docs/errors/requested-range-not-satisfiable");
+            type: "/docs/errors/requested-range-not-satisfiable"
+        );
     }
 
     protected IActionResult ExpectationFailedResponse(string detail)
@@ -201,7 +220,8 @@ public class BaseController : Controller
             title: "Expectation Failed.",
             detail: detail,
             statusCode: StatusCodes.Status417ExpectationFailed,
-            type: "/docs/errors/expectation-failed");
+            type: "/docs/errors/expectation-failed"
+        );
     }
 
     protected IActionResult MisdirectedRequestResponse(string detail)
@@ -210,7 +230,8 @@ public class BaseController : Controller
             title: "Misdirected Request.",
             detail: detail,
             statusCode: StatusCodes.Status421MisdirectedRequest,
-            type: "/docs/errors/misdirected-request");
+            type: "/docs/errors/misdirected-request"
+        );
     }
 
     protected IActionResult UnavailableForLegalReasonsResponse(string detail)
@@ -219,10 +240,14 @@ public class BaseController : Controller
             title: "Unavailable For Legal Reasons.",
             detail: detail,
             statusCode: StatusCodes.Status451UnavailableForLegalReasons,
-            type: "/docs/errors/unavailable-for-legal-reasons");
+            type: "/docs/errors/unavailable-for-legal-reasons"
+        );
     }
 
-    protected IActionResult GetPaginatedResponse<T>(IEnumerable<T> data, [FromQuery] PageRequestDto request)
+    protected IActionResult GetPaginatedResponse<T>(
+        IEnumerable<T> data,
+        [FromQuery] PageRequestDto request
+    )
     {
         List<T> newData = data.ToList();
         bool hasMore = newData.Count >= request.Take;
@@ -233,7 +258,7 @@ public class BaseController : Controller
         {
             Data = newData,
             NextPage = hasMore ? request.Page + 1 : null,
-            HasMore = hasMore
+            HasMore = hasMore,
         };
 
         return Ok(response);
@@ -241,23 +266,65 @@ public class BaseController : Controller
 
     protected string Language()
     {
-        return HttpContext.Request.Headers.AcceptLanguage.FirstOrDefault()?.Split("_").FirstOrDefault() ??
-                LocalizationHelper.GlobalLocalizer.TargetLanguage;
-
+        return HttpContext
+                .Request.Headers.AcceptLanguage.FirstOrDefault()
+                ?.Split("_")
+                .FirstOrDefault()
+            ?? LocalizationHelper.GlobalLocalizer.TargetLanguage;
     }
 
     protected string Country()
     {
-        return HttpContext.Request.Headers["country"].FirstOrDefault() ??
-               RegionInfo.CurrentRegion.TwoLetterISORegionName;
+        return HttpContext.Request.Headers["country"].FirstOrDefault()
+            ?? RegionInfo.CurrentRegion.TwoLetterISORegionName;
     }
 
     protected static readonly string[] Numbers =
-        ["*", "#", "'", "\"", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+    [
+        "*",
+        "#",
+        "'",
+        "\"",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "0",
+    ];
 
     protected static readonly string[] Letters =
     [
-        "#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
-        "U", "V", "W", "X", "Y", "Z"
+        "#",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
     ];
 }

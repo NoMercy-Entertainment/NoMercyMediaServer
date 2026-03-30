@@ -2,10 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.NmSystem.Information;
+using NoMercy.Queue.MediaServer.Configuration;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
-using NoMercy.Queue.MediaServer.Configuration;
 
 namespace NoMercy.Queue.MediaServer;
 
@@ -31,8 +31,8 @@ public static class ServiceRegistration
                     [Config.CronWorkers.Key] = Config.CronWorkers.Value,
                     [Config.ImageWorkers.Key] = Config.ImageWorkers.Value,
                     [Config.FileWorkers.Key] = Config.FileWorkers.Value,
-                    [Config.MusicWorkers.Key] = Config.MusicWorkers.Value
-                }
+                    [Config.MusicWorkers.Key] = Config.MusicWorkers.Value,
+                },
             };
             return new(queueContext, configuration, loggerFactory, configStore);
         });

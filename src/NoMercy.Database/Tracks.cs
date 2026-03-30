@@ -1,6 +1,6 @@
-using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Newtonsoft.Json;
 
 namespace NoMercy.Database;
 
@@ -16,9 +16,9 @@ public class VideoTracks : Timestamps
     [NotMapped]
     public IVideoTrack[] Tracks
     {
-        get => (_tracks != string.Empty
-            ? JsonConvert.DeserializeObject<IVideoTrack[]>(_tracks)
-            : []) ?? [];
+        get =>
+            (_tracks != string.Empty ? JsonConvert.DeserializeObject<IVideoTrack[]>(_tracks) : [])
+            ?? [];
         set => _tracks = JsonConvert.SerializeObject(value);
     }
 }

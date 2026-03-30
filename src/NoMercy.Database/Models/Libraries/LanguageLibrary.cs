@@ -8,11 +8,12 @@ namespace NoMercy.Database.Models.Libraries;
 [Index(nameof(LibraryId))]
 public class LanguageLibrary
 {
-    [JsonProperty("language_id")] public int LanguageId { get; set; }
+    [JsonProperty("language_id")]
+    public int LanguageId { get; set; }
     public Language Language { get; set; } = null!;
 
-
-    [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
+    [JsonProperty("library_id")]
+    public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
     public LanguageLibrary()

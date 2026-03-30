@@ -26,7 +26,8 @@ public class RecommendationService
     public RecommendationService(
         RecommendationRepository recommendationRepository,
         IDbContextFactory<MediaContext> contextFactory,
-        IMemoryCache cache)
+        IMemoryCache cache
+    )
     {
         _recommendationRepository = recommendationRepository;
         _contextFactory = contextFactory;
@@ -34,7 +35,11 @@ public class RecommendationService
     }
 
     public async Task<List<RecommendationDto>> GetPersonalizedRecommendationsAsync(
-        Guid userId, string mediaTypeFilter, int take = 50, CancellationToken ct = default)
+        Guid userId,
+        string mediaTypeFilter,
+        int take = 50,
+        CancellationToken ct = default
+    )
     {
         bool wantMovie = mediaTypeFilter == Config.MovieMediaType;
         bool wantTv = mediaTypeFilter == Config.TvMediaType;
@@ -42,55 +47,119 @@ public class RecommendationService
 
         // Phase 1: Parallel queries — only fetch candidates for the requested type
         Task<List<RecommendationCandidateDto>> movieRecsTask = wantMovie
-            ? Task.Run(async () =>
-            {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetUnownedMovieRecommendationsAsync(context, userId, ct);
-            }, ct)
+            ? Task.Run(
+                async () =>
+                {
+                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
+                        ct
+                    );
+                    return await _recommendationRepository.GetUnownedMovieRecommendationsAsync(
+                        context,
+                        userId,
+                        ct
+                    );
+                },
+                ct
+            )
             : Task.FromResult(new List<RecommendationCandidateDto>());
         Task<List<RecommendationCandidateDto>> tvRecsTask = wantTv
-            ? Task.Run(async () =>
-            {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetUnownedTvRecommendationsAsync(context, userId, ct);
-            }, ct)
+            ? Task.Run(
+                async () =>
+                {
+                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
+                        ct
+                    );
+                    return await _recommendationRepository.GetUnownedTvRecommendationsAsync(
+                        context,
+                        userId,
+                        ct
+                    );
+                },
+                ct
+            )
             : Task.FromResult(new List<RecommendationCandidateDto>());
         Task<List<RecommendationCandidateDto>> animeRecsTask = wantAnime
-            ? Task.Run(async () =>
-            {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetUnownedAnimeRecommendationsAsync(context, userId, ct);
-            }, ct)
+            ? Task.Run(
+                async () =>
+                {
+                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
+                        ct
+                    );
+                    return await _recommendationRepository.GetUnownedAnimeRecommendationsAsync(
+                        context,
+                        userId,
+                        ct
+                    );
+                },
+                ct
+            )
             : Task.FromResult(new List<RecommendationCandidateDto>());
         Task<List<RecommendationCandidateDto>> movieSimTask = wantMovie
-            ? Task.Run(async () =>
-            {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetUnownedMovieSimilarAsync(context, userId, ct);
-            }, ct)
+            ? Task.Run(
+                async () =>
+                {
+                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
+                        ct
+                    );
+                    return await _recommendationRepository.GetUnownedMovieSimilarAsync(
+                        context,
+                        userId,
+                        ct
+                    );
+                },
+                ct
+            )
             : Task.FromResult(new List<RecommendationCandidateDto>());
         Task<List<RecommendationCandidateDto>> tvSimTask = wantTv
-            ? Task.Run(async () =>
-            {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetUnownedTvSimilarAsync(context, userId, ct);
-            }, ct)
+            ? Task.Run(
+                async () =>
+                {
+                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
+                        ct
+                    );
+                    return await _recommendationRepository.GetUnownedTvSimilarAsync(
+                        context,
+                        userId,
+                        ct
+                    );
+                },
+                ct
+            )
             : Task.FromResult(new List<RecommendationCandidateDto>());
         Task<List<RecommendationCandidateDto>> animeSimTask = wantAnime
-            ? Task.Run(async () =>
-            {
-                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetUnownedAnimeSimilarAsync(context, userId, ct);
-            }, ct)
+            ? Task.Run(
+                async () =>
+                {
+                    await using MediaContext context = await _contextFactory.CreateDbContextAsync(
+                        ct
+                    );
+                    return await _recommendationRepository.GetUnownedAnimeSimilarAsync(
+                        context,
+                        userId,
+                        ct
+                    );
+                },
+                ct
+            )
             : Task.FromResult(new List<RecommendationCandidateDto>());
         Task<UserAffinityProfile> affinityTask = GetOrBuildAffinityProfileAsync(userId, ct);
 
-        await Task.WhenAll(movieRecsTask, tvRecsTask, animeRecsTask, movieSimTask, tvSimTask, animeSimTask, affinityTask);
+        await Task.WhenAll(
+            movieRecsTask,
+            tvRecsTask,
+            animeRecsTask,
+            movieSimTask,
+            tvSimTask,
+            animeSimTask,
+            affinityTask
+        );
 
-        Logger.App($"Recommendations [{mediaTypeFilter}]: recs={animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count}, " +
-                   $"similar={animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count}, " +
-                   $"affinity sources={affinityTask.Result.SourceItems.Count}",
-            LogEventLevel.Debug);
+        Logger.App(
+            $"Recommendations [{mediaTypeFilter}]: recs={animeRecsTask.Result.Count + movieRecsTask.Result.Count + tvRecsTask.Result.Count}, "
+                + $"similar={animeSimTask.Result.Count + movieSimTask.Result.Count + tvSimTask.Result.Count}, "
+                + $"affinity sources={affinityTask.Result.SourceItems.Count}",
+            LogEventLevel.Debug
+        );
 
         UserAffinityProfile profile = affinityTask.Result;
 
@@ -102,13 +171,19 @@ public class RecommendationService
         foreach (KeyValuePair<int, UserAffinitySourceDto> kv in profile.SourceItems)
         {
             UserAffinitySourceDto src = kv.Value;
-            if (src.KeywordIds.Count == 0) continue;
+            if (src.KeywordIds.Count == 0)
+                continue;
 
-            bool isHighSignal = src.IsFavorited
+            bool isHighSignal =
+                src.IsFavorited
                 || (src.Rating.HasValue && src.Rating.Value >= 6)
-                || (src.TimeWatched is > 0 && src.Duration is > 0
-                    && (double)src.TimeWatched / src.Duration.Value > 0.5);
-            if (!isHighSignal) continue;
+                || (
+                    src.TimeWatched is > 0
+                    && src.Duration is > 0
+                    && (double)src.TimeWatched / src.Duration.Value > 0.5
+                );
+            if (!isHighSignal)
+                continue;
 
             if (src.MediaType == Config.MovieMediaType)
                 movieKeywordMap[src.ItemId] = src.KeywordIds;
@@ -124,62 +199,123 @@ public class RecommendationService
             .Concat(animeKeywordMap)
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
-        Task<List<RecommendationCandidateDto>> crossTypeTvTask = wantTv && movieKeywordMap.Count > 0
-            ? Task.Run(async () =>
-            {
-                await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetKeywordCrossTypeTvCandidatesAsync(
-                    ctx, userId, movieKeywordMap, minSharedKeywords: 3, maxCandidates: 100, ct: ct);
-            }, ct)
-            : Task.FromResult(new List<RecommendationCandidateDto>());
+        Task<List<RecommendationCandidateDto>> crossTypeTvTask =
+            wantTv && movieKeywordMap.Count > 0
+                ? Task.Run(
+                    async () =>
+                    {
+                        await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(
+                            ct
+                        );
+                        return await _recommendationRepository.GetKeywordCrossTypeTvCandidatesAsync(
+                            ctx,
+                            userId,
+                            movieKeywordMap,
+                            minSharedKeywords: 3,
+                            maxCandidates: 100,
+                            ct: ct
+                        );
+                    },
+                    ct
+                )
+                : Task.FromResult(new List<RecommendationCandidateDto>());
 
-        Task<List<RecommendationCandidateDto>> crossTypeMovieTask = wantMovie && nonMovieKeywordMap.Count > 0
-            ? Task.Run(async () =>
-            {
-                await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetKeywordCrossTypeMovieCandidatesAsync(
-                    ctx, userId, nonMovieKeywordMap, minSharedKeywords: 3, maxCandidates: 100, ct: ct);
-            }, ct)
-            : Task.FromResult(new List<RecommendationCandidateDto>());
+        Task<List<RecommendationCandidateDto>> crossTypeMovieTask =
+            wantMovie && nonMovieKeywordMap.Count > 0
+                ? Task.Run(
+                    async () =>
+                    {
+                        await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(
+                            ct
+                        );
+                        return await _recommendationRepository.GetKeywordCrossTypeMovieCandidatesAsync(
+                            ctx,
+                            userId,
+                            nonMovieKeywordMap,
+                            minSharedKeywords: 3,
+                            maxCandidates: 100,
+                            ct: ct
+                        );
+                    },
+                    ct
+                )
+                : Task.FromResult(new List<RecommendationCandidateDto>());
 
-        Task<List<RecommendationCandidateDto>> crossTypeAnimeTask = wantAnime && movieKeywordMap.Count > 0
-            ? Task.Run(async () =>
-            {
-                await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(ct);
-                return await _recommendationRepository.GetKeywordCrossTypeAnimeCandidatesAsync(
-                    ctx, userId, movieKeywordMap, minSharedKeywords: 3, maxCandidates: 100, ct: ct);
-            }, ct)
-            : Task.FromResult(new List<RecommendationCandidateDto>());
+        Task<List<RecommendationCandidateDto>> crossTypeAnimeTask =
+            wantAnime && movieKeywordMap.Count > 0
+                ? Task.Run(
+                    async () =>
+                    {
+                        await using MediaContext ctx = await _contextFactory.CreateDbContextAsync(
+                            ct
+                        );
+                        return await _recommendationRepository.GetKeywordCrossTypeAnimeCandidatesAsync(
+                            ctx,
+                            userId,
+                            movieKeywordMap,
+                            minSharedKeywords: 3,
+                            maxCandidates: 100,
+                            ct: ct
+                        );
+                    },
+                    ct
+                )
+                : Task.FromResult(new List<RecommendationCandidateDto>());
 
         await Task.WhenAll(crossTypeTvTask, crossTypeMovieTask, crossTypeAnimeTask);
 
         // Phase 2: Merge candidates (same MediaId+MediaType from Recommendation + Similar + Keywords = higher frequency)
         List<RecommendationCandidateDto> allCandidates = MergeCandidates(
-            movieRecsTask.Result, tvRecsTask.Result, animeRecsTask.Result,
-            movieSimTask.Result, tvSimTask.Result, animeSimTask.Result,
-            crossTypeTvTask.Result, crossTypeMovieTask.Result, crossTypeAnimeTask.Result);
+            movieRecsTask.Result,
+            tvRecsTask.Result,
+            animeRecsTask.Result,
+            movieSimTask.Result,
+            tvSimTask.Result,
+            animeSimTask.Result,
+            crossTypeTvTask.Result,
+            crossTypeMovieTask.Result,
+            crossTypeAnimeTask.Result
+        );
 
         // Phase 3: Get genre maps for source items — use actual source type from profile, not candidate type
         HashSet<int> allSourceIds = allCandidates.SelectMany(c => c.SourceIds).ToHashSet();
         List<int> allSourceMovieIds = allSourceIds
-            .Where(id => profile.SourceItems.TryGetValue(id, out UserAffinitySourceDto? s)
-                && s.MediaType == Config.MovieMediaType)
+            .Where(id =>
+                profile.SourceItems.TryGetValue(id, out UserAffinitySourceDto? s)
+                && s.MediaType == Config.MovieMediaType
+            )
             .ToList();
         List<int> allSourceTvIds = allSourceIds
-            .Where(id => profile.SourceItems.TryGetValue(id, out UserAffinitySourceDto? s)
-                && s.MediaType != Config.MovieMediaType)
+            .Where(id =>
+                profile.SourceItems.TryGetValue(id, out UserAffinitySourceDto? s)
+                && s.MediaType != Config.MovieMediaType
+            )
             .ToList();
 
-        Task<Dictionary<int, List<int>>> movieGenreMapTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await _recommendationRepository.GetGenresForMovieIdsAsync(context, allSourceMovieIds, ct);
-        }, ct);
-        Task<Dictionary<int, List<int>>> tvGenreMapTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await _recommendationRepository.GetGenresForTvIdsAsync(context, allSourceTvIds, ct);
-        }, ct);
+        Task<Dictionary<int, List<int>>> movieGenreMapTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+                return await _recommendationRepository.GetGenresForMovieIdsAsync(
+                    context,
+                    allSourceMovieIds,
+                    ct
+                );
+            },
+            ct
+        );
+        Task<Dictionary<int, List<int>>> tvGenreMapTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+                return await _recommendationRepository.GetGenresForTvIdsAsync(
+                    context,
+                    allSourceTvIds,
+                    ct
+                );
+            },
+            ct
+        );
 
         await Task.WhenAll(movieGenreMapTask, tvGenreMapTask);
 
@@ -203,7 +339,7 @@ public class RecommendationService
                 Type = c.MediaType,
                 Score = ScoreCandidate(c, profile, combinedGenreMap),
                 SourceCount = c.SourceCount,
-                SourceIds = c.SourceIds
+                SourceIds = c.SourceIds,
             })
             .Where(s => s.Poster != null)
             .ToList();
@@ -214,21 +350,33 @@ public class RecommendationService
             .Select(g => g.OrderByDescending(s => s.Score).First())
             .ToList();
 
-        Logger.App($"Recommendations [{mediaTypeFilter}]: merged={allCandidates.Count}, scored={scored.Count}, deduped={deduped.Count}",
-            LogEventLevel.Debug);
+        Logger.App(
+            $"Recommendations [{mediaTypeFilter}]: merged={allCandidates.Count}, scored={scored.Count}, deduped={deduped.Count}",
+            LogEventLevel.Debug
+        );
 
         // Phase 5: Diversity selection — guarantee floor representation per media type
         return SelectWithDiversity(deduped, take);
     }
 
     public async Task<List<RecommendationDto>> GetHomeRecommendationCarouselAsync(
-        Guid userId, string mediaTypeFilter, int take = 36, CancellationToken ct = default)
+        Guid userId,
+        string mediaTypeFilter,
+        int take = 36,
+        CancellationToken ct = default
+    )
     {
         return await GetPersonalizedRecommendationsAsync(userId, mediaTypeFilter, take, ct);
     }
 
     public async Task<RecommendationDetailDto?> GetRecommendationDetailAsync(
-        Guid userId, int mediaId, string mediaType, string country, string language, CancellationToken ct = default)
+        Guid userId,
+        int mediaId,
+        string mediaType,
+        string country,
+        string language,
+        CancellationToken ct = default
+    )
     {
         bool isMovie = mediaType == "movie";
         string tmdbLanguage = $"{language}-{country}";
@@ -253,17 +401,45 @@ public class RecommendationService
         await Task.WhenAll(movieAppendsTask, tvAppendsTask, sourceMoviesTask, sourceTvsTask);
 
         // Keyword-based source enrichment: same-type (exclude already-found Rec/Similar sources) + cross-type
-        HashSet<int> existingMovieSourceIds = sourceMoviesTask.Result.Movies.Select(m => m.Id).ToHashSet();
-        HashSet<int> existingTvSourceIds = sourceTvsTask.Result.TvShows.Select(t => t.Id).ToHashSet();
+        HashSet<int> existingMovieSourceIds = sourceMoviesTask
+            .Result.Movies.Select(m => m.Id)
+            .ToHashSet();
+        HashSet<int> existingTvSourceIds = sourceTvsTask
+            .Result.TvShows.Select(t => t.Id)
+            .ToHashSet();
 
         List<Movie> keywordMovieSources = isMovie
-            ? await _recommendationRepository.GetKeywordMovieSourcesForMovieAsync(context, userId, mediaId, existingMovieSourceIds, ct)
-            : await _recommendationRepository.GetCrossTypeMovieSourcesForTvAsync(context, userId, mediaId, ct);
+            ? await _recommendationRepository.GetKeywordMovieSourcesForMovieAsync(
+                context,
+                userId,
+                mediaId,
+                existingMovieSourceIds,
+                ct
+            )
+            : await _recommendationRepository.GetCrossTypeMovieSourcesForTvAsync(
+                context,
+                userId,
+                mediaId,
+                ct
+            );
         List<Tv> keywordTvSources = !isMovie
-            ? await _recommendationRepository.GetKeywordTvSourcesForTvAsync(context, userId, mediaId, existingTvSourceIds, ct)
-            : await _recommendationRepository.GetCrossTypeTvSourcesForMovieAsync(context, userId, mediaId, ct);
+            ? await _recommendationRepository.GetKeywordTvSourcesForTvAsync(
+                context,
+                userId,
+                mediaId,
+                existingTvSourceIds,
+                ct
+            )
+            : await _recommendationRepository.GetCrossTypeTvSourcesForMovieAsync(
+                context,
+                userId,
+                mediaId,
+                ct
+            );
 
-        string? rawPalette = isMovie ? sourceMoviesTask.Result.ColorPalette : sourceTvsTask.Result.ColorPalette;
+        string? rawPalette = isMovie
+            ? sourceMoviesTask.Result.ColorPalette
+            : sourceTvsTask.Result.ColorPalette;
         IColorPalettes? colorPalette = !string.IsNullOrEmpty(rawPalette)
             ? JsonConvert.DeserializeObject<IColorPalettes>(rawPalette)
             : null;
@@ -271,10 +447,11 @@ public class RecommendationService
         if (isMovie)
         {
             TmdbMovieAppends? appends = movieAppendsTask.Result;
-            if (appends is null) return null;
+            if (appends is null)
+                return null;
 
-            List<RecommendationDetailSourceDto> becauseYouHave = sourceMoviesTask.Result.Movies
-                .Select(m => new RecommendationDetailSourceDto
+            List<RecommendationDetailSourceDto> becauseYouHave = sourceMoviesTask
+                .Result.Movies.Select(m => new RecommendationDetailSourceDto
                 {
                     Id = m.Id,
                     Title = m.Title,
@@ -289,90 +466,34 @@ public class RecommendationService
                     HaveItems = m.VideoFiles.Count(vf => vf.Folder != null),
                     NumberOfItems = 1,
                     Duration = m.Runtime ?? 0,
-                    Tags = m.KeywordMovies.Select(km => km.Keyword.Name)
-                }).ToList();
+                    Tags = m.KeywordMovies.Select(km => km.Keyword.Name),
+                })
+                .ToList();
 
             // Append same-type keyword sources (e.g., Ice Age movies for an Ice Age spinoff)
-            becauseYouHave.AddRange(keywordMovieSources.Select(m => new RecommendationDetailSourceDto
-            {
-                Id = m.Id,
-                Title = m.Title,
-                TitleSort = m.TitleSort,
-                Poster = m.Poster,
-                Backdrop = m.Backdrop,
-                Logo = m.Images.FirstOrDefault()?.FilePath,
-                Overview = m.Overview,
-                Year = m.ReleaseDate?.Year,
-                ColorPalette = m.ColorPalette,
-                MediaType = "movie",
-                HaveItems = m.VideoFiles.Count(vf => vf.Folder != null),
-                NumberOfItems = 1,
-                Duration = m.Runtime ?? 0,
-                Tags = m.KeywordMovies.Select(km => km.Keyword.Name)
-            }));
+            becauseYouHave.AddRange(
+                keywordMovieSources.Select(m => new RecommendationDetailSourceDto
+                {
+                    Id = m.Id,
+                    Title = m.Title,
+                    TitleSort = m.TitleSort,
+                    Poster = m.Poster,
+                    Backdrop = m.Backdrop,
+                    Logo = m.Images.FirstOrDefault()?.FilePath,
+                    Overview = m.Overview,
+                    Year = m.ReleaseDate?.Year,
+                    ColorPalette = m.ColorPalette,
+                    MediaType = "movie",
+                    HaveItems = m.VideoFiles.Count(vf => vf.Folder != null),
+                    NumberOfItems = 1,
+                    Duration = m.Runtime ?? 0,
+                    Tags = m.KeywordMovies.Select(km => km.Keyword.Name),
+                })
+            );
 
             // Append cross-type TV sources found via keyword overlap
-            becauseYouHave.AddRange(keywordTvSources.Select(t => new RecommendationDetailSourceDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                TitleSort = t.TitleSort,
-                Poster = t.Poster,
-                Backdrop = t.Backdrop,
-                Logo = t.Images.FirstOrDefault()?.FilePath,
-                Overview = t.Overview,
-                Year = t.FirstAirDate?.Year,
-                ColorPalette = t.ColorPalette,
-                MediaType = "tv",
-                HaveItems = t.Episodes.Count(e => e.SeasonNumber > 0 && e.VideoFiles.Any(vf => vf.Folder != null)),
-                NumberOfItems = t.Episodes.Count(e => e.SeasonNumber > 0),
-                Duration = t.Duration ?? 0,
-                Tags = t.KeywordTvs.Select(kt => kt.Keyword.Name)
-            }));
-
-            // Deduplicate by source family — cap items per title family
-            becauseYouHave = DeduplicateSourcesByFamily(becauseYouHave);
-
-            return new()
-            {
-                Id = appends.Id,
-                Title = appends.Title,
-                Overview = appends.Overview,
-                Poster = appends.PosterPath,
-                Backdrop = appends.BackdropPath,
-                Logo = appends.Images.Logos
-                    .Where(l => l.Iso6391 == "en")
-                    .OrderByDescending(l => l.VoteAverage)
-                    .FirstOrDefault()?.FilePath,
-                ColorPalette = colorPalette,
-                MediaType = "movie",
-                Year = appends.ReleaseDate?.Year,
-                VoteAverage = appends.VoteAverage,
-                Genres = appends.Genres.Select(g => new GenreDto(g)),
-                ContentRatings = appends.ReleaseDates.Results
-                    .Where(r => r.Iso31661 == country)
-                    .SelectMany(r => r.ReleaseDates)
-                    .Where(rd => !string.IsNullOrEmpty(rd.Certification))
-                    .Select(rd => new ContentRating
-                    {
-                        Rating = rd.Certification,
-                        Iso31661 = country
-                    })
-                    .DistinctBy(cr => cr.Rating),
-                ExternalIds = new()
-                {
-                    ImdbId = appends.ExternalIds.ImdbId
-                },
-                BecauseYouHave = becauseYouHave
-            };
-        }
-        else
-        {
-            TmdbTvShowAppends? appends = tvAppendsTask.Result;
-            if (appends is null) return null;
-
-            List<RecommendationDetailSourceDto> becauseYouHave = sourceTvsTask.Result.TvShows
-                .Select(t => new RecommendationDetailSourceDto
+            becauseYouHave.AddRange(
+                keywordTvSources.Select(t => new RecommendationDetailSourceDto
                 {
                     Id = t.Id,
                     Title = t.Title,
@@ -384,49 +505,120 @@ public class RecommendationService
                     Year = t.FirstAirDate?.Year,
                     ColorPalette = t.ColorPalette,
                     MediaType = "tv",
-                    HaveItems = t.Episodes.Count(e => e.SeasonNumber > 0 && e.VideoFiles.Any(vf => vf.Folder != null)),
+                    HaveItems = t.Episodes.Count(e =>
+                        e.SeasonNumber > 0 && e.VideoFiles.Any(vf => vf.Folder != null)
+                    ),
                     NumberOfItems = t.Episodes.Count(e => e.SeasonNumber > 0),
                     Duration = t.Duration ?? 0,
-                    Tags = t.KeywordTvs.Select(kt => kt.Keyword.Name)
-                }).ToList();
+                    Tags = t.KeywordTvs.Select(kt => kt.Keyword.Name),
+                })
+            );
+
+            // Deduplicate by source family — cap items per title family
+            becauseYouHave = DeduplicateSourcesByFamily(becauseYouHave);
+
+            return new()
+            {
+                Id = appends.Id,
+                Title = appends.Title,
+                Overview = appends.Overview,
+                Poster = appends.PosterPath,
+                Backdrop = appends.BackdropPath,
+                Logo = appends
+                    .Images.Logos.Where(l => l.Iso6391 == "en")
+                    .OrderByDescending(l => l.VoteAverage)
+                    .FirstOrDefault()
+                    ?.FilePath,
+                ColorPalette = colorPalette,
+                MediaType = "movie",
+                Year = appends.ReleaseDate?.Year,
+                VoteAverage = appends.VoteAverage,
+                Genres = appends.Genres.Select(g => new GenreDto(g)),
+                ContentRatings = appends
+                    .ReleaseDates.Results.Where(r => r.Iso31661 == country)
+                    .SelectMany(r => r.ReleaseDates)
+                    .Where(rd => !string.IsNullOrEmpty(rd.Certification))
+                    .Select(rd => new ContentRating
+                    {
+                        Rating = rd.Certification,
+                        Iso31661 = country,
+                    })
+                    .DistinctBy(cr => cr.Rating),
+                ExternalIds = new() { ImdbId = appends.ExternalIds.ImdbId },
+                BecauseYouHave = becauseYouHave,
+            };
+        }
+        else
+        {
+            TmdbTvShowAppends? appends = tvAppendsTask.Result;
+            if (appends is null)
+                return null;
+
+            List<RecommendationDetailSourceDto> becauseYouHave = sourceTvsTask
+                .Result.TvShows.Select(t => new RecommendationDetailSourceDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    TitleSort = t.TitleSort,
+                    Poster = t.Poster,
+                    Backdrop = t.Backdrop,
+                    Logo = t.Images.FirstOrDefault()?.FilePath,
+                    Overview = t.Overview,
+                    Year = t.FirstAirDate?.Year,
+                    ColorPalette = t.ColorPalette,
+                    MediaType = "tv",
+                    HaveItems = t.Episodes.Count(e =>
+                        e.SeasonNumber > 0 && e.VideoFiles.Any(vf => vf.Folder != null)
+                    ),
+                    NumberOfItems = t.Episodes.Count(e => e.SeasonNumber > 0),
+                    Duration = t.Duration ?? 0,
+                    Tags = t.KeywordTvs.Select(kt => kt.Keyword.Name),
+                })
+                .ToList();
 
             // Append same-type keyword sources
-            becauseYouHave.AddRange(keywordTvSources.Select(t => new RecommendationDetailSourceDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                TitleSort = t.TitleSort,
-                Poster = t.Poster,
-                Backdrop = t.Backdrop,
-                Logo = t.Images.FirstOrDefault()?.FilePath,
-                Overview = t.Overview,
-                Year = t.FirstAirDate?.Year,
-                ColorPalette = t.ColorPalette,
-                MediaType = "tv",
-                HaveItems = t.Episodes.Count(e => e.SeasonNumber > 0 && e.VideoFiles.Any(vf => vf.Folder != null)),
-                NumberOfItems = t.Episodes.Count(e => e.SeasonNumber > 0),
-                Duration = t.Duration ?? 0,
-                Tags = t.KeywordTvs.Select(kt => kt.Keyword.Name)
-            }));
+            becauseYouHave.AddRange(
+                keywordTvSources.Select(t => new RecommendationDetailSourceDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    TitleSort = t.TitleSort,
+                    Poster = t.Poster,
+                    Backdrop = t.Backdrop,
+                    Logo = t.Images.FirstOrDefault()?.FilePath,
+                    Overview = t.Overview,
+                    Year = t.FirstAirDate?.Year,
+                    ColorPalette = t.ColorPalette,
+                    MediaType = "tv",
+                    HaveItems = t.Episodes.Count(e =>
+                        e.SeasonNumber > 0 && e.VideoFiles.Any(vf => vf.Folder != null)
+                    ),
+                    NumberOfItems = t.Episodes.Count(e => e.SeasonNumber > 0),
+                    Duration = t.Duration ?? 0,
+                    Tags = t.KeywordTvs.Select(kt => kt.Keyword.Name),
+                })
+            );
 
             // Append cross-type movie sources found via keyword overlap
-            becauseYouHave.AddRange(keywordMovieSources.Select(m => new RecommendationDetailSourceDto
-            {
-                Id = m.Id,
-                Title = m.Title,
-                TitleSort = m.TitleSort,
-                Poster = m.Poster,
-                Backdrop = m.Backdrop,
-                Logo = m.Images.FirstOrDefault()?.FilePath,
-                Overview = m.Overview,
-                Year = m.ReleaseDate?.Year,
-                ColorPalette = m.ColorPalette,
-                MediaType = "movie",
-                HaveItems = m.VideoFiles.Count(vf => vf.Folder != null),
-                NumberOfItems = 1,
-                Duration = m.Runtime ?? 0,
-                Tags = m.KeywordMovies.Select(km => km.Keyword.Name)
-            }));
+            becauseYouHave.AddRange(
+                keywordMovieSources.Select(m => new RecommendationDetailSourceDto
+                {
+                    Id = m.Id,
+                    Title = m.Title,
+                    TitleSort = m.TitleSort,
+                    Poster = m.Poster,
+                    Backdrop = m.Backdrop,
+                    Logo = m.Images.FirstOrDefault()?.FilePath,
+                    Overview = m.Overview,
+                    Year = m.ReleaseDate?.Year,
+                    ColorPalette = m.ColorPalette,
+                    MediaType = "movie",
+                    HaveItems = m.VideoFiles.Count(vf => vf.Folder != null),
+                    NumberOfItems = 1,
+                    Duration = m.Runtime ?? 0,
+                    Tags = m.KeywordMovies.Select(km => km.Keyword.Name),
+                })
+            );
 
             // Deduplicate by source family — cap items per title family
             becauseYouHave = DeduplicateSourcesByFamily(becauseYouHave);
@@ -438,34 +630,32 @@ public class RecommendationService
                 Overview = appends.Overview,
                 Poster = appends.PosterPath,
                 Backdrop = appends.BackdropPath,
-                Logo = appends.Images.Logos
-                    .Where(l => l.Iso6391 == "en")
+                Logo = appends
+                    .Images.Logos.Where(l => l.Iso6391 == "en")
                     .OrderByDescending(l => l.VoteAverage)
-                    .FirstOrDefault()?.FilePath,
+                    .FirstOrDefault()
+                    ?.FilePath,
                 ColorPalette = colorPalette,
                 MediaType = "tv",
                 Year = appends.FirstAirDate?.Year,
                 VoteAverage = appends.VoteAverage,
                 Genres = appends.Genres.Select(g => new GenreDto(g)),
-                ContentRatings = appends.ContentRatings.Results
-                    .Where(cr => cr.Iso31661 == country)
-                    .Select(cr => new ContentRating
-                    {
-                        Rating = cr.Rating,
-                        Iso31661 = cr.Iso31661
-                    }),
+                ContentRatings = appends
+                    .ContentRatings.Results.Where(cr => cr.Iso31661 == country)
+                    .Select(cr => new ContentRating { Rating = cr.Rating, Iso31661 = cr.Iso31661 }),
                 ExternalIds = new()
                 {
                     ImdbId = appends.ExternalIds.ImdbId,
-                    TvdbId = appends.ExternalIds.TvdbId
+                    TvdbId = appends.ExternalIds.TvdbId,
                 },
-                BecauseYouHave = becauseYouHave
+                BecauseYouHave = becauseYouHave,
             };
         }
     }
 
     private static List<RecommendationCandidateDto> MergeCandidates(
-        params List<RecommendationCandidateDto>[] candidateLists)
+        params List<RecommendationCandidateDto>[] candidateLists
+    )
     {
         Dictionary<string, RecommendationCandidateDto> merged = new();
 
@@ -492,7 +682,8 @@ public class RecommendationService
     private static double ScoreCandidate(
         RecommendationCandidateDto candidate,
         UserAffinityProfile profile,
-        Dictionary<int, List<int>> sourceGenreMap)
+        Dictionary<int, List<int>> sourceGenreMap
+    )
     {
         double score = 0.0;
 
@@ -502,16 +693,18 @@ public class RecommendationService
         score += Math.Min(effectiveSourceCount, 5) / 5.0 * 3.0;
 
         // 2. Source rating: average user rating of source items
-        List<double> sourceRatings = candidate.SourceIds
-            .Where(id => profile.SourceItems.ContainsKey(id) && profile.SourceItems[id].Rating.HasValue)
+        List<double> sourceRatings = candidate
+            .SourceIds.Where(id =>
+                profile.SourceItems.ContainsKey(id) && profile.SourceItems[id].Rating.HasValue
+            )
             .Select(id => (double)profile.SourceItems[id].Rating!.Value)
             .ToList();
         if (sourceRatings.Count > 0)
             score += sourceRatings.Average() / 10.0 * 2.0;
 
         // 3. Source watch completion
-        List<double> completions = candidate.SourceIds
-            .Where(id => profile.SourceItems.ContainsKey(id))
+        List<double> completions = candidate
+            .SourceIds.Where(id => profile.SourceItems.ContainsKey(id))
             .Select(id =>
             {
                 UserAffinitySourceDto src = profile.SourceItems[id];
@@ -524,8 +717,8 @@ public class RecommendationService
             score += completions.Average() * 1.5;
 
         // 4. Genre match via source items' genres as proxy
-        List<int> candidateGenreIds = candidate.SourceIds
-            .Where(id => sourceGenreMap.ContainsKey(id))
+        List<int> candidateGenreIds = candidate
+            .SourceIds.Where(id => sourceGenreMap.ContainsKey(id))
             .SelectMany(id => sourceGenreMap[id])
             .Distinct()
             .ToList();
@@ -539,7 +732,8 @@ public class RecommendationService
 
         // 5. Favorite source bonus — check both sets to handle cross-type candidates
         bool hasFavoritedSource = candidate.SourceIds.Any(id =>
-            profile.FavoritedMovieIds.Contains(id) || profile.FavoritedTvIds.Contains(id));
+            profile.FavoritedMovieIds.Contains(id) || profile.FavoritedTvIds.Contains(id)
+        );
         if (hasFavoritedSource)
             score += 1.0;
 
@@ -551,9 +745,12 @@ public class RecommendationService
     /// Prevents 18 Tom and Jerry items from drowning out more relevant sources like Ice Age movies.
     /// </summary>
     private static List<RecommendationDetailSourceDto> DeduplicateSourcesByFamily(
-        List<RecommendationDetailSourceDto> sources, int maxPerFamily = 3)
+        List<RecommendationDetailSourceDto> sources,
+        int maxPerFamily = 3
+    )
     {
-        if (sources.Count <= maxPerFamily) return sources;
+        if (sources.Count <= maxPerFamily)
+            return sources;
 
         List<(string Family, RecommendationDetailSourceDto Source)> tagged = [];
         List<string> families = [];
@@ -603,7 +800,8 @@ public class RecommendationService
             .Where(t => !string.IsNullOrEmpty(t))
             .ToList();
 
-        if (titles.Count <= 1) return titles.Count;
+        if (titles.Count <= 1)
+            return titles.Count;
 
         // Cluster by shared prefix: if two titles share the first 60%+ characters of the shorter one,
         // they're in the same family (e.g., "Tom and Jerry: The Movie" and "Tom and Jerry: Willy Wonka")
@@ -640,34 +838,59 @@ public class RecommendationService
         return len;
     }
 
-    private async Task<UserAffinityProfile> GetOrBuildAffinityProfileAsync(Guid userId, CancellationToken ct)
+    private async Task<UserAffinityProfile> GetOrBuildAffinityProfileAsync(
+        Guid userId,
+        CancellationToken ct
+    )
     {
         string cacheKey = $"reco:affinity:{userId}";
 
         if (_cache.TryGetValue(cacheKey, out UserAffinityProfile? cached) && cached is not null)
             return cached;
 
-        Task<List<UserAffinitySourceDto>> movieAffinityTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await _recommendationRepository.GetUserMovieAffinityDataAsync(context, userId, ct);
-        }, ct);
-        Task<List<UserAffinitySourceDto>> tvAffinityTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await _recommendationRepository.GetUserTvAffinityDataAsync(context, userId, ct);
-        }, ct);
-        Task<List<UserAffinitySourceDto>> animeAffinityTask = Task.Run(async () =>
-        {
-            await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
-            return await _recommendationRepository.GetUserAnimeAffinityDataAsync(context, userId, ct);
-        }, ct);
+        Task<List<UserAffinitySourceDto>> movieAffinityTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+                return await _recommendationRepository.GetUserMovieAffinityDataAsync(
+                    context,
+                    userId,
+                    ct
+                );
+            },
+            ct
+        );
+        Task<List<UserAffinitySourceDto>> tvAffinityTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+                return await _recommendationRepository.GetUserTvAffinityDataAsync(
+                    context,
+                    userId,
+                    ct
+                );
+            },
+            ct
+        );
+        Task<List<UserAffinitySourceDto>> animeAffinityTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
+                return await _recommendationRepository.GetUserAnimeAffinityDataAsync(
+                    context,
+                    userId,
+                    ct
+                );
+            },
+            ct
+        );
 
         await Task.WhenAll(movieAffinityTask, tvAffinityTask, animeAffinityTask);
 
-        List<UserAffinitySourceDto> allSources = movieAffinityTask.Result
-            .Concat(tvAffinityTask.Result)
-            .Concat(animeAffinityTask.Result).ToList();
+        List<UserAffinitySourceDto> allSources = movieAffinityTask
+            .Result.Concat(tvAffinityTask.Result)
+            .Concat(animeAffinityTask.Result)
+            .ToList();
 
         Dictionary<int, double> genreScores = new();
         Dictionary<int, UserAffinitySourceDto> sourceMap = new();
@@ -688,8 +911,11 @@ public class RecommendationService
             double weight = 1.0;
             if (src.Rating.HasValue)
                 weight += (src.Rating.Value - 5) / 5.0;
-            if (src.TimeWatched is > 0 && src.Duration is > 0 &&
-                (double)src.TimeWatched / src.Duration.Value > 0.8)
+            if (
+                src.TimeWatched is > 0
+                && src.Duration is > 0
+                && (double)src.TimeWatched / src.Duration.Value > 0.8
+            )
                 weight += 0.5;
             if (src.IsFavorited)
                 weight += 1.0;
@@ -703,21 +929,23 @@ public class RecommendationService
 
         // Normalize genre scores to 0–1 range
         double maxGenre = genreScores.Values.DefaultIfEmpty(1).Max();
-        Dictionary<int, double> genreAffinity = genreScores
-            .ToDictionary(kv => kv.Key, kv => kv.Value / maxGenre);
+        Dictionary<int, double> genreAffinity = genreScores.ToDictionary(
+            kv => kv.Key,
+            kv => kv.Value / maxGenre
+        );
 
         UserAffinityProfile profile = new()
         {
             GenreAffinity = genreAffinity,
             SourceItems = sourceMap,
             FavoritedMovieIds = favMovies,
-            FavoritedTvIds = favTvs
+            FavoritedTvIds = favTvs,
         };
 
         MemoryCacheEntryOptions cacheOptions = new()
         {
             SlidingExpiration = TimeSpan.FromMinutes(10),
-            Size = 1
+            Size = 1,
         };
         _cache.Set(cacheKey, profile, cacheOptions);
 
@@ -729,13 +957,16 @@ public class RecommendationService
     /// then fills remaining slots with the highest-scored items from any type.
     /// </summary>
     private static List<RecommendationDto> SelectWithDiversity(
-        List<RecommendationDto> scored, int take)
+        List<RecommendationDto> scored,
+        int take
+    )
     {
         Dictionary<string, Queue<RecommendationDto>> byType = scored
             .GroupBy(s => s.Type)
             .ToDictionary(
                 g => g.Key,
-                g => new Queue<RecommendationDto>(g.OrderByDescending(s => s.Score)));
+                g => new Queue<RecommendationDto>(g.OrderByDescending(s => s.Score))
+            );
 
         int typeCount = byType.Count;
         if (typeCount <= 1)
@@ -755,8 +986,8 @@ public class RecommendationService
         int remaining = take - result.Count;
         if (remaining > 0)
         {
-            List<RecommendationDto> overflow = byType.Values
-                .SelectMany(q => q)
+            List<RecommendationDto> overflow = byType
+                .Values.SelectMany(q => q)
                 .OrderByDescending(s => s.Score)
                 .Take(remaining)
                 .ToList();

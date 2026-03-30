@@ -20,7 +20,8 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
     public ConnectivityManager(
         INetworkDiscovery networkDiscovery,
-        IEnumerable<IConnectivityStrategy> strategies)
+        IEnumerable<IConnectivityStrategy> strategies
+    )
     {
         _networkDiscovery = networkDiscovery;
         _strategies = strategies.OrderBy(s => s.Priority);
@@ -39,18 +40,29 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
             while (!Config.Started && !cancellationToken.IsCancellationRequested)
                 await Task.Delay(1000, cancellationToken);
 
-            if (cancellationToken.IsCancellationRequested) return;
+            if (cancellationToken.IsCancellationRequested)
+                return;
 
             if (Globals.Globals.AccessToken is null)
             {
-                Logger.Setup("ConnectivityManager waiting for authentication...", LogEventLevel.Debug);
+                Logger.Setup(
+                    "ConnectivityManager waiting for authentication...",
+                    LogEventLevel.Debug
+                );
                 int maxWait = 30;
-                while (Globals.Globals.AccessToken is null && maxWait-- > 0 && !cancellationToken.IsCancellationRequested)
+                while (
+                    Globals.Globals.AccessToken is null
+                    && maxWait-- > 0
+                    && !cancellationToken.IsCancellationRequested
+                )
                     await Task.Delay(1000, cancellationToken);
 
                 if (Globals.Globals.AccessToken is null)
                 {
-                    Logger.Setup("ConnectivityManager skipped — no authentication available", LogEventLevel.Debug);
+                    Logger.Setup(
+                        "ConnectivityManager skipped — no authentication available",
+                        LogEventLevel.Debug
+                    );
                     return;
                 }
             }
@@ -84,7 +96,8 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
         foreach (IConnectivityStrategy strategy in _strategies)
         {
-            if (ct.IsCancellationRequested) break;
+            if (ct.IsCancellationRequested)
+                break;
 
             try
             {
@@ -98,35 +111,46 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
                         ConnectivityType.PortForward => ConnectivityState.DirectAccess,
                         ConnectivityType.StunHolePunch => ConnectivityState.HolePunched,
                         ConnectivityType.CloudflareTunnel => ConnectivityState.Tunneled,
-                        _ => ConnectivityState.DirectAccess
+                        _ => ConnectivityState.DirectAccess,
                     };
                     SetState(newState);
                     Logger.Setup($"Connectivity established via {strategy.Name}");
                     return;
                 }
 
-                Logger.Setup($"Strategy {strategy.Name} did not succeed, trying next...", LogEventLevel.Debug);
+                Logger.Setup(
+                    $"Strategy {strategy.Name} did not succeed, trying next...",
+                    LogEventLevel.Debug
+                );
             }
             catch (Exception ex)
             {
-                Logger.Setup($"Strategy {strategy.Name} failed: {ex.Message}", LogEventLevel.Warning);
+                Logger.Setup(
+                    $"Strategy {strategy.Name} failed: {ex.Message}",
+                    LogEventLevel.Warning
+                );
             }
         }
 
         SetState(ConnectivityState.LocalOnly);
-        Logger.Setup("No remote connectivity strategy succeeded — server is local-only", LogEventLevel.Warning);
+        Logger.Setup(
+            "No remote connectivity strategy succeeded — server is local-only",
+            LogEventLevel.Warning
+        );
     }
 
     private void SetState(ConnectivityState state)
     {
-        if (CurrentState == state) return;
+        if (CurrentState == state)
+            return;
         CurrentState = state;
         StateChanged?.Invoke(state);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (_executingTask == null) return;
+        if (_executingTask == null)
+            return;
 
         try
         {
@@ -134,7 +158,10 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         }
         finally
         {
-            await Task.WhenAny(_executingTask, Task.Delay(TimeSpan.FromSeconds(3), cancellationToken));
+            await Task.WhenAny(
+                _executingTask,
+                Task.Delay(TimeSpan.FromSeconds(3), cancellationToken)
+            );
         }
 
         if (_activeStrategy is not null)

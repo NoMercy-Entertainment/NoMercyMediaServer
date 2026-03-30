@@ -42,11 +42,10 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
         await showManager.StoreNetworks(Storage);
         await showManager.StoreCompanies(Storage);
         await showManager.StoreKeywords(Storage);
-        
+
         if (EventBusProvider.IsConfigured)
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["base", "info", Storage.Id.ToString()]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
+            );
     }
 }

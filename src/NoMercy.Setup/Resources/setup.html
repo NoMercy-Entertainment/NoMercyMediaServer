@@ -1,209 +1,278 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NoMercy MediaServer - Setup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg:          #09090b;
+            --text:        #fafafa;
+            --muted:       #a1a1aa;
+            --border:      #27272a;
+            --accent-from: #8f00fc;
+            --accent-to:   #CBAFFF;
+            --error-bg:    #1c0a0a;
+            --error-border:#5c2040;
+            --error-text:  #f08080;
+            --radius:      0.5rem;
+        }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #0a0a0f;
-            color: #e0e0e0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
             width: 100%;
-            max-width: 440px;
+            max-width: 420px;
             padding: 24px;
         }
 
+        /* ── Logo ───────────────────────────────────────────── */
+
         .logo {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 40px;
         }
 
         .logo h1 {
-            font-size: 28px;
+            font-size: 30px;
             font-weight: 700;
-            background: linear-gradient(135deg, #8f00fc, #CBAFFF);
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
         .logo p {
-            color: #888;
-            font-size: 14px;
+            color: var(--muted);
+            font-size: 13px;
             margin-top: 4px;
+            font-weight: 500;
         }
 
-        .card {
-            background: #16161e;
-            border: 1px solid #2a2a3a;
-            border-radius: 12px;
-            padding: 32px 24px;
-        }
+        /* ── Steps ──────────────────────────────────────────── */
 
         .step { display: none; }
         .step.active { display: block; }
 
-        .step h2 {
-            font-size: 18px;
+        /* ── Login ──────────────────────────────────────────── */
+
+        .login-heading {
+            font-size: 17px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
-        .step p {
-            color: #999;
-            font-size: 14px;
-            line-height: 1.5;
+        .login-sub {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.55;
             margin-bottom: 24px;
         }
 
+        /* ── Buttons ────────────────────────────────────────── */
+
         .btn {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             width: 100%;
-            padding: 14px 20px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 8px;
-            font-size: 15px;
+            border-radius: var(--radius);
+            font-size: 14px;
             font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
             text-align: center;
             text-decoration: none;
-            transition: opacity 0.2s;
+            transition: opacity 0.15s ease, transform 0.1s ease;
+            line-height: 1;
         }
 
-        .btn:hover { opacity: 0.9; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:hover { opacity: 0.88; }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
         .btn-primary {
-            background: linear-gradient(135deg, #8f00fc, #705BAD);
+            background: linear-gradient(135deg, var(--accent-from), #6b35cc);
             color: #fff;
         }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover { background: rgba(255,255,255,0.04); }
+
+        /* ── Divider ────────────────────────────────────────── */
 
         .divider {
             display: flex;
             align-items: center;
-            margin: 24px 0;
-            color: #555;
-            font-size: 13px;
+            margin: 20px 0;
+            color: var(--muted);
+            font-size: 12px;
         }
 
         .divider::before,
         .divider::after {
             content: "";
             flex: 1;
-            border-bottom: 1px solid #2a2a3a;
+            border-bottom: 1px solid var(--border);
         }
 
         .divider span { padding: 0 12px; }
 
-        .qr-section {
-            text-align: center;
+        /* ── QR section ─────────────────────────────────────── */
+
+        .qr-section { text-align: center; }
+
+        .qr-loading {
+            color: var(--muted);
+            font-size: 13px;
+            padding: 24px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
         }
 
-        .qr-section p {
-            margin-bottom: 16px;
+        .qr-loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent-from);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
         }
+
+        .qr-hidden { display: none !important; }
 
         #qr-container {
             display: inline-block;
-            padding: 12px;
+            padding: 10px;
             background: #fff;
-            border-radius: 8px;
-            margin-bottom: 12px;
+            border-radius: var(--radius);
+            margin-bottom: 14px;
+            line-height: 0;
         }
 
-        #qr-container canvas {
-            display: block;
+        #qr-container img { display: block; border-radius: 2px; }
+
+        .device-code-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 4px;
         }
+
+        #device-link { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+        #device-link a { color: var(--accent-to); text-decoration: none; }
+        #device-link a:hover { text-decoration: underline; }
 
         .device-code {
-            font-family: monospace;
-            font-size: 20px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 22px;
             font-weight: 700;
-            letter-spacing: 4px;
-            color: #CBAFFF;
-            margin: 12px 0;
+            letter-spacing: 5px;
+            color: var(--accent-to);
+            margin-bottom: 8px;
         }
 
-        .device-link {
-            font-size: 13px;
-            color: #888;
-            word-break: break-all;
-        }
+        .qr-error { font-size: 13px; color: var(--muted); padding: 12px 0; }
 
-        .device-link a {
-            color: #CBAFFF;
-            text-decoration: none;
-        }
+        /* ── Progress ───────────────────────────────────────── */
 
-        .device-link a:hover { text-decoration: underline; }
-
-        .progress-section {
-            text-align: center;
-        }
+        .progress-section { text-align: center; padding: 8px 0; }
 
         .spinner {
             display: inline-block;
-            width: 32px;
-            height: 32px;
-            border: 3px solid #2a2a3a;
-            border-top-color: #8f00fc;
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent-from);
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-bottom: 16px;
+            animation: spin 0.75s linear infinite;
+            margin-bottom: 20px;
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .phase-label {
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
+        .phase-label { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+        .phase-detail { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
-        .phase-detail {
-            font-size: 13px;
-            color: #888;
-        }
+        /* ── Complete ───────────────────────────────────────── */
 
         .success-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+            font-size: 22px;
+            margin-bottom: 20px;
         }
 
+        .complete-heading { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+
+        .complete-sub {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        #server-url-display {
+            font-size: 12px;
+            color: var(--accent-to);
+            word-break: break-all;
+            margin-bottom: 20px;
+            font-family: monospace;
+        }
+
+        #redirect-msg { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+        /* ── Errors ─────────────────────────────────────────── */
+
         .error-box {
-            background: #2a1520;
-            border: 1px solid #5c2040;
-            border-radius: 8px;
-            padding: 12px 16px;
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            border-radius: var(--radius);
+            padding: 10px 14px;
             margin-bottom: 16px;
             font-size: 13px;
-            color: #f08080;
+            color: var(--error-text);
+            line-height: 1.5;
             display: none;
         }
 
         .error-box.visible { display: block; }
-
-        .btn-link {
-            background: none;
-            border: none;
-            color: #CBAFFF;
-            font-size: 13px;
-            cursor: pointer;
-            padding: 8px;
-            margin-top: 8px;
-        }
-
-        .btn-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -213,49 +282,57 @@
             <p>MediaServer Setup</p>
         </div>
 
-        <div class="card">
-            <!-- Step 1: Welcome / Login -->
-            <div id="step-login" class="step active">
-                <h2>Welcome</h2>
-                <p>Sign in with your NoMercy account to set up this server.</p>
-                <div id="error-box" class="error-box"></div>
-                <a id="btn-login" class="btn btn-primary" href="#">
-                    Login with NoMercy
-                </a>
-                <div class="divider"><span>or use another device</span></div>
-                <div class="qr-section">
-                    <p>Scan this QR code or enter the code on another device:</p>
-                    <div id="qr-container" style="display:none;"></div>
-                    <div id="device-code" class="device-code" style="display:none;"></div>
-                    <div id="device-link" class="device-link" style="display:none;"></div>
-                    <button id="btn-device-grant" class="btn-link">
-                        Show device login code
-                    </button>
+        <!-- Step 1: Login -->
+        <div id="step-login" class="step active">
+            <p class="login-heading">Welcome</p>
+            <p class="login-sub">Sign in with your NoMercy account to set up this server.</p>
+
+            <div id="error-box" class="error-box"></div>
+
+            <a id="btn-login" class="btn btn-primary" href="#">Login with NoMercy</a>
+
+            <div class="divider"><span>or scan with your phone</span></div>
+
+            <div class="qr-section">
+                <div id="qr-loading" class="qr-loading">
+                    <div class="qr-loading-spinner"></div>
+                    <span>Loading sign-in code...</span>
+                </div>
+
+                <div id="qr-ready" class="qr-hidden">
+                    <div id="qr-container"></div>
+                    <div class="device-code-label">Enter code at</div>
+                    <div id="device-link"></div>
+                    <div id="device-code" class="device-code"></div>
+                </div>
+
+                <div id="qr-error" class="qr-hidden qr-error">
+                    QR sign-in is unavailable right now.
                 </div>
             </div>
+        </div>
 
-            <!-- Step 2: Progress -->
-            <div id="step-progress" class="step">
-                <div class="progress-section">
-                    <div class="spinner"></div>
-                    <div id="progress-label" class="phase-label">Authenticating...</div>
-                    <div id="progress-detail" class="phase-detail">Please wait</div>
-                </div>
-                <div id="progress-error" class="error-box" style="margin-top:16px;"></div>
-                <button id="btn-retry" class="btn btn-primary"
-                    style="display:none; margin-top:16px;">Retry</button>
+        <!-- Step 2: Progress -->
+        <div id="step-progress" class="step">
+            <div class="progress-section">
+                <div class="spinner"></div>
+                <div id="progress-label" class="phase-label">Authenticating...</div>
+                <div id="progress-detail" class="phase-detail">Please wait</div>
             </div>
+            <div id="progress-error" class="error-box" style="margin-top:20px;"></div>
+            <button id="btn-retry" class="btn btn-outline"
+                style="display:none; margin-top:16px;">Try again</button>
+        </div>
 
-            <!-- Step 3: Complete -->
-            <div id="step-complete" class="step">
-                <div class="progress-section">
-                    <div class="success-icon">&#10003;</div>
-                    <h2>Setup Complete</h2>
-                    <p>Your server is configured and ready to use.</p>
-                    <a id="server-url" class="btn btn-primary" href="#">
-                        Open NoMercy
-                    </a>
-                </div>
+        <!-- Step 3: Complete -->
+        <div id="step-complete" class="step">
+            <div class="progress-section">
+                <div class="success-icon">&#10003;</div>
+                <div class="complete-heading">All done!</div>
+                <p class="complete-sub">Your server is configured and ready to use.</p>
+                <div id="server-url-display"></div>
+                <p id="redirect-msg" style="display:none;">Opening NoMercy...</p>
+                <a id="server-url" class="btn btn-primary" href="#">Open NoMercy</a>
             </div>
         </div>
     </div>
@@ -267,6 +344,9 @@
     var config = null;
     var pollTimer = null;
     var devicePollTimer = null;
+    var statusSource = null;
+
+    /* ── DOM helpers ─────────────────────────────────────── */
 
     function show(id) {
         var steps = document.querySelectorAll(".step");
@@ -280,59 +360,99 @@
         box.classList.add("visible");
     }
 
-    function hideError() {
-        var box = document.getElementById("error-box");
-        box.textContent = "";
-        box.classList.remove("visible");
+    function el(id) { return document.getElementById(id); }
+
+    function drawQrCode(container, url) {
+        var img = document.createElement("img");
+        img.src = "/setup/qr?data=" + encodeURIComponent(url);
+        img.width = 180;
+        img.height = 180;
+        img.alt = "QR Code";
+        while (container.firstChild) container.removeChild(container.firstChild);
+        container.appendChild(img);
     }
 
-    function drawQrCode(container, text) {
-        // Minimal QR code rendering using the server-side endpoint
-        var img = document.createElement("img");
-        img.src = "/setup/qr?data=" + encodeURIComponent(text);
-        img.width = 200;
-        img.height = 200;
-        img.alt = "QR Code";
-        img.style.display = "block";
-        container.innerHTML = "";
-        container.appendChild(img);
-        container.style.display = "inline-block";
+    function buildDeviceLink(linkEl, verificationUri, verificationUriComplete) {
+        while (linkEl.firstChild) linkEl.removeChild(linkEl.firstChild);
+        var anchor = document.createElement("a");
+        anchor.href = verificationUriComplete;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        anchor.textContent = verificationUri;
+        linkEl.appendChild(anchor);
     }
 
     function buildAuthUrl() {
         var baseUrl = config.auth_base_url.replace(/\/+$/, "")
             + "/protocol/openid-connect/auth";
-        var redirectUri = window.location.protocol + "//" +
-            window.location.host + "/sso-callback";
+        var redirectUri = window.location.protocol + "//"
+            + window.location.host + "/sso-callback";
         var params = [
-            "client_id=" + encodeURIComponent(config.client_id),
-            "redirect_uri=" + encodeURIComponent(redirectUri),
+            "client_id="              + encodeURIComponent(config.client_id),
+            "redirect_uri="           + encodeURIComponent(redirectUri),
             "response_type=code",
-            "scope=" + encodeURIComponent("openid offline_access email profile"),
-            "code_challenge=" + encodeURIComponent(config.code_challenge),
+            "scope="                  + encodeURIComponent("openid offline_access email profile"),
+            "code_challenge="         + encodeURIComponent(config.code_challenge),
             "code_challenge_method=S256"
         ];
         return baseUrl + "?" + params.join("&");
     }
 
-    function handleStatusData(data) {
-        updateProgress(data);
-        if (data.phase === "Complete") {
-            stopStatusStream();
-            show("step-complete");
-        } else if (data.error) {
-            document.getElementById("progress-error").textContent = data.error;
-            document.getElementById("progress-error").classList.add("visible");
-            document.getElementById("btn-retry").style.display = "block";
-            document.querySelector(".spinner").style.display = "none";
-        } else {
-            document.getElementById("progress-error").classList.remove("visible");
-            document.getElementById("btn-retry").style.display = "none";
-            document.querySelector("#step-progress .spinner").style.display = "inline-block";
-        }
+    /* ── QR / device code ────────────────────────────────── */
+
+    function showQrReady(data) {
+        el("qr-loading").style.display = "none";
+        el("qr-error").classList.add("qr-hidden");
+
+        drawQrCode(el("qr-container"), data.verification_uri_complete);
+        buildDeviceLink(
+            el("device-link"),
+            data.verification_uri,
+            data.verification_uri_complete
+        );
+        el("device-code").textContent = data.user_code;
+        el("qr-ready").classList.remove("qr-hidden");
     }
 
-    var statusSource = null;
+    function showQrFailed() {
+        el("qr-loading").style.display = "none";
+        el("qr-ready").classList.add("qr-hidden");
+        el("qr-error").classList.remove("qr-hidden");
+    }
+
+    function startDeviceGrant() {
+        fetch("/setup/device-code", { method: "POST" })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.error) {
+                    showQrFailed();
+                    return;
+                }
+
+                showQrReady(data);
+
+                // Poll until auth transitions away from Unauthenticated
+                devicePollTimer = setInterval(function() {
+                    fetch("/setup/status")
+                        .then(function(r) { return r.json(); })
+                        .then(function(status) {
+                            if (status.is_authenticated ||
+                                    status.phase !== "Unauthenticated") {
+                                clearInterval(devicePollTimer);
+                                devicePollTimer = null;
+                                show("step-progress");
+                                startStatusStream();
+                            }
+                        })
+                        .catch(function() {});
+                }, 3000);
+            })
+            .catch(function() {
+                showQrFailed();
+            });
+    }
+
+    /* ── Status stream ───────────────────────────────────── */
 
     function startStatusStream() {
         stopStatusStream();
@@ -341,8 +461,7 @@
             statusSource = new EventSource("/setup/status");
             statusSource.onmessage = function(e) {
                 try {
-                    var data = JSON.parse(e.data);
-                    handleStatusData(data);
+                    handleStatusData(JSON.parse(e.data));
                 } catch (err) { /* ignore parse errors */ }
             };
             statusSource.onerror = function() {
@@ -372,70 +491,59 @@
         fetch("/setup/status")
             .then(function(r) { return r.json(); })
             .then(function(data) { handleStatusData(data); })
-            .catch(function() { /* network error, keep polling */ });
+            .catch(function() { /* network error — keep polling */ });
     }
+
+    function handleStatusData(data) {
+        updateProgress(data);
+
+        if (data.phase === "Complete") {
+            stopStatusStream();
+            show("step-complete");
+
+            if (data.server_url) {
+                el("server-url").href = data.server_url;
+                el("server-url-display").textContent = data.server_url;
+                el("redirect-msg").style.display = "block";
+                setTimeout(function() {
+                    window.location.href = data.server_url;
+                }, 3000);
+            }
+
+        } else if (data.error) {
+            el("progress-error").textContent = data.error;
+            el("progress-error").classList.add("visible");
+            if (data.phase !== "Unauthenticated") {
+                el("btn-retry").style.display = "block";
+            }
+            var spinner = el("step-progress").querySelector(".spinner");
+            if (spinner) spinner.style.display = "none";
+
+        } else {
+            el("progress-error").classList.remove("visible");
+            el("btn-retry").style.display = "none";
+            var spinner = el("step-progress").querySelector(".spinner");
+            if (spinner) spinner.style.display = "inline-block";
+        }
+    }
+
+    var phases = {
+        "Unauthenticated":     ["Waiting for login...",        "Sign in to continue"],
+        "Authenticating":      ["Authenticating...",           "Verifying your credentials"],
+        "Authenticated":       ["Authenticated",               "Registering server..."],
+        "Registering":         ["Registering server...",       "Connecting to NoMercy"],
+        "Registered":          ["Server registered",           "Acquiring SSL certificate..."],
+        "CertificateAcquired": ["Certificate acquired",        "Finalizing setup..."],
+        "Complete":            ["Setup complete!",             "Your server is ready"]
+    };
 
     function updateProgress(data) {
-        var label = document.getElementById("progress-label");
-        var detail = document.getElementById("progress-detail");
-
-        var phases = {
-            "Unauthenticated": ["Waiting for login...", "Sign in to continue"],
-            "Authenticating": ["Authenticating...", "Verifying your credentials"],
-            "Authenticated": ["Authenticated", "Registering server..."],
-            "Registering": ["Registering server...", "Connecting to NoMercy API"],
-            "Registered": ["Server registered", "Acquiring SSL certificate..."],
-            "CertificateAcquired": ["Certificate acquired", "Finalizing setup..."],
-            "Complete": ["Setup complete!", "Your server is ready"]
-        };
-
         var info = phases[data.phase] || ["Processing...", "Please wait"];
-        label.textContent = info[0];
-        detail.textContent = info[1];
+        el("progress-label").textContent = info[0];
+        el("progress-detail").textContent = data.detail || info[1] || "Please wait";
     }
 
-    function startDeviceGrant() {
-        fetch("/setup/device-code", { method: "POST" })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.error) {
-                    showError(data.message || "Failed to start device login");
-                    return;
-                }
-
-                document.getElementById("device-code").textContent = data.user_code;
-                document.getElementById("device-code").style.display = "block";
-
-                var linkEl = document.getElementById("device-link");
-                linkEl.innerHTML = 'Visit: <a href="' + data.verification_uri_complete +
-                    '" target="_blank">' + data.verification_uri + '</a>';
-                linkEl.style.display = "block";
-
-                drawQrCode(
-                    document.getElementById("qr-container"),
-                    data.verification_uri_complete
-                );
-
-                document.getElementById("btn-device-grant").style.display = "none";
-
-                // Poll for device grant completion
-                devicePollTimer = setInterval(function() {
-                    fetch("/setup/status")
-                        .then(function(r) { return r.json(); })
-                        .then(function(status) {
-                            if (status.is_authenticated || status.phase !== "Unauthenticated") {
-                                clearInterval(devicePollTimer);
-                                show("step-progress");
-                                startStatusStream();
-                            }
-                        })
-                        .catch(function() {});
-                }, 3000);
-            })
-            .catch(function() {
-                showError("Failed to connect to server");
-            });
-    }
+    /* ── Init ────────────────────────────────────────────── */
 
     function init() {
         fetch("/setup/config")
@@ -443,43 +551,74 @@
             .then(function(data) {
                 config = data;
 
-                // Check if already past login
-                if (data.phase !== "Unauthenticated") {
-                    if (data.phase === "Complete") {
-                        show("step-complete");
-                    } else {
-                        show("step-progress");
-                        startStatusStream();
-                    }
+                if (data.phase === "Complete") {
+                    show("step-complete");
                     return;
                 }
 
-                // Setup login button with server-side PKCE
-                var loginBtn = document.getElementById("btn-login");
-                loginBtn.href = buildAuthUrl();
+                if (data.phase !== "Unauthenticated") {
+                    show("step-progress");
+                    startStatusStream();
+                    return;
+                }
 
-                // Device grant button
-                document.getElementById("btn-device-grant").addEventListener("click", function() {
+                // Wire up the login button with server-side PKCE
+                el("btn-login").href = buildAuthUrl();
+
+                // If a device code poll is already in flight on the server
+                // (phase would be Authenticating), reuse it via status polling
+                // instead of creating a new device code — prevents Keycloak
+                // rate limiting on page refresh / multiple tabs.
+                if (data.phase === "Authenticating") {
+                    el("qr-loading").style.display = "none";
+                    el("qr-error").classList.remove("qr-hidden");
+                    show("step-progress");
+                    startStatusStream();
+                } else {
                     startDeviceGrant();
-                });
+                }
             })
             .catch(function() {
                 showError("Failed to load setup configuration");
             });
 
-        // Retry button — re-fetch config to get a fresh code challenge
-        document.getElementById("btn-retry").addEventListener("click", function() {
-            hideError();
+        // Retry button
+        el("btn-retry").addEventListener("click", function() {
+            el("btn-retry").style.display = "none";
+            el("progress-error").classList.remove("visible");
+            var spinner = el("step-progress").querySelector(".spinner");
+            if (spinner) spinner.style.display = "inline-block";
+
             fetch("/setup/config")
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     config = data;
-                    var loginBtn = document.getElementById("btn-login");
-                    loginBtn.href = buildAuthUrl();
-                    show("step-login");
+
+                    if (data.phase === "Unauthenticated") {
+                        el("btn-login").href = buildAuthUrl();
+                        show("step-login");
+                        return;
+                    }
+
+                    show("step-progress");
+
+                    fetch("/setup/retry", { method: "POST" })
+                        .then(function(r) { return r.json(); })
+                        .then(function(retryData) {
+                            if (retryData.status === "unauthenticated") {
+                                el("btn-login").href = buildAuthUrl();
+                                show("step-login");
+                                return;
+                            }
+                            startStatusStream();
+                        })
+                        .catch(function() {
+                            startStatusStream();
+                        });
                 })
                 .catch(function() {
-                    show("step-login");
+                    show("step-progress");
+                    startStatusStream();
                 });
         });
     }

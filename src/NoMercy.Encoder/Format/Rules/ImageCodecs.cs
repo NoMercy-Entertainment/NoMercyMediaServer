@@ -7,7 +7,7 @@ public static class ImageCodecs
         Name = "Joint Photographic Experts Group",
         Value = "mjpeg",
         SimpleValue = "jpeg",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Png = new()
@@ -15,7 +15,7 @@ public static class ImageCodecs
         Name = "Portable Network Graphics",
         Value = "png",
         SimpleValue = "png",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Gif = new()
@@ -23,7 +23,7 @@ public static class ImageCodecs
         Name = "Graphics Interchange Format",
         Value = "gif",
         SimpleValue = "gif",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Bmp = new()
@@ -31,7 +31,7 @@ public static class ImageCodecs
         Name = "Bitmap",
         Value = "bmp",
         SimpleValue = "bmp",
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Tiff = new()
@@ -39,7 +39,7 @@ public static class ImageCodecs
         Name = "Tagged Image File Format",
         Value = "tiff",
         SimpleValue = "tiff",
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Webp = new()
@@ -47,7 +47,7 @@ public static class ImageCodecs
         Name = "WebP",
         Value = "webp",
         SimpleValue = "webp",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Heif = new()
@@ -55,7 +55,7 @@ public static class ImageCodecs
         Name = "High Efficiency Image Format",
         Value = "heif",
         SimpleValue = "heif",
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Heic = new()
@@ -63,6 +63,6 @@ public static class ImageCodecs
         Name = "High Efficiency Image Container",
         Value = "heic",
         SimpleValue = "heic",
-        IsDefault = false
+        IsDefault = false,
     };
 }

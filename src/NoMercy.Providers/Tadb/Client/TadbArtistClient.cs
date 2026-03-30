@@ -6,10 +6,7 @@ public class TadbArtistClient : TadbBaseClient
 {
     public TadbArtist? ByMusicBrainzId(Guid id, bool priority = false)
     {
-        Dictionary<string, string> queryParams = new()
-        {
-            { "i", id.ToString() }
-        };
+        Dictionary<string, string> queryParams = new() { { "i", id.ToString() } };
 
         try
         {

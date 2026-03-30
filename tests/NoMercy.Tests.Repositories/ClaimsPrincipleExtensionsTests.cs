@@ -22,27 +22,27 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void Initialize_LoadsUsersFromContext()
+    public async Task Initialize_LoadsUsersFromContext()
     {
-        ClaimsPrincipleExtensions.Initialize(_context);
+        await ClaimsPrincipleExtensions.InitializeAsync(_context);
 
         Assert.Single(ClaimsPrincipleExtensions.Users);
         Assert.Equal(SeedConstants.UserId, ClaimsPrincipleExtensions.Users[0].Id);
     }
 
     [Fact]
-    public void Initialize_LoadsFolderIdsFromContext()
+    public async Task Initialize_LoadsFolderIdsFromContext()
     {
-        ClaimsPrincipleExtensions.Initialize(_context);
+        await ClaimsPrincipleExtensions.InitializeAsync(_context);
 
         Assert.Single(ClaimsPrincipleExtensions.FolderIds);
         Assert.Equal(SeedConstants.MovieFolderId, ClaimsPrincipleExtensions.FolderIds[0]);
     }
 
     [Fact]
-    public void NewUserCreatedAfterStartup_IsAccessibleViaAddUser()
+    public async Task NewUserCreatedAfterStartup_IsAccessibleViaAddUser()
     {
-        ClaimsPrincipleExtensions.Initialize(_context);
+        await ClaimsPrincipleExtensions.InitializeAsync(_context);
 
         Guid newUserId = Guid.NewGuid();
         User newUser = new()
@@ -52,7 +52,7 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
             Name = "New User",
             Owner = false,
             Allowed = true,
-            Manage = false
+            Manage = false,
         };
 
         ClaimsPrincipleExtensions.AddUser(newUser);
@@ -62,9 +62,9 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void DeletedUser_IsRemovedFromList()
+    public async Task DeletedUser_IsRemovedFromList()
     {
-        ClaimsPrincipleExtensions.Initialize(_context);
+        await ClaimsPrincipleExtensions.InitializeAsync(_context);
 
         User existingUser = ClaimsPrincipleExtensions.Users.First();
         ClaimsPrincipleExtensions.RemoveUser(existingUser);
@@ -73,32 +73,34 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void RefreshUsers_ReloadsFromDatabase()
+    public async Task RefreshUsers_ReloadsFromDatabase()
     {
-        ClaimsPrincipleExtensions.Initialize(_context);
+        await ClaimsPrincipleExtensions.InitializeAsync(_context);
 
         Guid newUserId = Guid.NewGuid();
-        _context.Users.Add(new()
-        {
-            Id = newUserId,
-            Email = "added@nomercy.tv",
-            Name = "Added User",
-            Owner = false,
-            Allowed = true,
-            Manage = false
-        });
+        _context.Users.Add(
+            new()
+            {
+                Id = newUserId,
+                Email = "added@nomercy.tv",
+                Name = "Added User",
+                Owner = false,
+                Allowed = true,
+                Manage = false,
+            }
+        );
         _context.SaveChanges();
 
-        ClaimsPrincipleExtensions.RefreshUsers(_context);
+        await ClaimsPrincipleExtensions.RefreshUsersAsync(_context);
 
         Assert.Equal(2, ClaimsPrincipleExtensions.Users.Count);
         Assert.Contains(ClaimsPrincipleExtensions.Users, u => u.Id == newUserId);
     }
 
     [Fact]
-    public void UpdateUser_ReplacesExistingUserInList()
+    public async Task UpdateUser_ReplacesExistingUserInList()
     {
-        ClaimsPrincipleExtensions.Initialize(_context);
+        await ClaimsPrincipleExtensions.InitializeAsync(_context);
 
         User updatedUser = new()
         {
@@ -107,7 +109,7 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
             Name = "Updated User",
             Owner = true,
             Allowed = true,
-            Manage = true
+            Manage = true,
         };
 
         ClaimsPrincipleExtensions.UpdateUser(updatedUser);
@@ -118,19 +120,21 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void Initialize_ClearsPreviousData()
+    public async Task Initialize_ClearsPreviousData()
     {
-        ClaimsPrincipleExtensions.AddUser(new()
-        {
-            Id = Guid.NewGuid(),
-            Email = "stale@nomercy.tv",
-            Name = "Stale User",
-            Owner = false,
-            Allowed = false,
-            Manage = false
-        });
+        ClaimsPrincipleExtensions.AddUser(
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Email = "stale@nomercy.tv",
+                Name = "Stale User",
+                Owner = false,
+                Allowed = false,
+                Manage = false,
+            }
+        );
 
-        ClaimsPrincipleExtensions.Initialize(_context);
+        await ClaimsPrincipleExtensions.InitializeAsync(_context);
 
         Assert.Single(ClaimsPrincipleExtensions.Users);
         Assert.Equal(SeedConstants.UserId, ClaimsPrincipleExtensions.Users[0].Id);
@@ -139,8 +143,10 @@ public class ClaimsPrincipleExtensionsTests : IDisposable
     [Fact]
     public void NoStaticMediaContext_FieldDoesNotExist()
     {
-        System.Reflection.FieldInfo? field = typeof(ClaimsPrincipleExtensions)
-            .GetField("MediaContext", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        System.Reflection.FieldInfo? field = typeof(ClaimsPrincipleExtensions).GetField(
+            "MediaContext",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+        );
 
         Assert.Null(field);
     }

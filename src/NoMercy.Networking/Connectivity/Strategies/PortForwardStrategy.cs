@@ -16,7 +16,9 @@ public class PortForwardStrategy(NetworkDiscovery networkDiscovery) : IConnectiv
     {
         if (Config.NatStatus == NatStatus.Open)
         {
-            Logger.Setup("NAT status is open, you can access your server from outside your local network.");
+            Logger.Setup(
+                "NAT status is open, you can access your server from outside your local network."
+            );
             return true;
         }
 
@@ -36,13 +38,18 @@ public class PortForwardStrategy(NetworkDiscovery networkDiscovery) : IConnectiv
         Config.PortForwarded = await networkDiscovery.IsPortOpenAsync();
         if (Config.PortForwarded)
         {
-            Logger.Setup("Your server is port forwarded, you can access your server from outside your local network.");
+            Logger.Setup(
+                "Your server is port forwarded, you can access your server from outside your local network."
+            );
             Config.NatStatus = NatStatus.Open;
             return true;
         }
 
-        Logger.Setup("Port forward check failed — router may not support NAT hairpinning, " +
-                      "but external clients may still be able to connect.", LogEventLevel.Debug);
+        Logger.Setup(
+            "Port forward check failed — router may not support NAT hairpinning, "
+                + "but external clients may still be able to connect.",
+            LogEventLevel.Debug
+        );
         return false;
     }
 

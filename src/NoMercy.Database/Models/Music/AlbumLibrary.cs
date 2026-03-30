@@ -8,15 +8,15 @@ namespace NoMercy.Database.Models.Music;
 [Index(nameof(LibraryId))]
 public class AlbumLibrary
 {
-    [JsonProperty("album_id")] public Guid AlbumId { get; set; }
+    [JsonProperty("album_id")]
+    public Guid AlbumId { get; set; }
     public Album Album { get; set; } = null!;
 
-    [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
+    [JsonProperty("library_id")]
+    public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
-    public AlbumLibrary()
-    {
-    }
+    public AlbumLibrary() { }
 
     public AlbumLibrary(Guid albumId, Ulid libraryId)
     {

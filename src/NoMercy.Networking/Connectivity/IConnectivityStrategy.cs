@@ -15,7 +15,7 @@ public enum ConnectivityType
     PortForward,
     StunHolePunch,
     CloudflareTunnel,
-    LocalOnly
+    LocalOnly,
 }
 
 public enum ConnectivityState
@@ -25,5 +25,5 @@ public enum ConnectivityState
     DirectAccess,
     HolePunched,
     Tunneled,
-    LocalOnly
+    LocalOnly,
 }

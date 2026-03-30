@@ -8,38 +8,44 @@ namespace NoMercy.Providers.Lrclib.Client;
 public partial class LrclibClient : LrclibBaseClient
 {
     public async Task<MusixMatchFormattedLyric[]?> SongSearch(
-        string[] artists, 
-        string trackName, 
-        string? albumName = null, 
-        double? duration = null, 
+        string[] artists,
+        string trackName,
+        string? albumName = null,
+        double? duration = null,
         bool priority = false
     )
     {
         Dictionary<string, string> additionalArguments = new()
         {
             { "artist_name", string.Join(",", artists) },
-            { "track_name", trackName }
+            { "track_name", trackName },
         };
         if (albumName != null)
             additionalArguments.Add("album_name", albumName);
         if (duration.HasValue)
-            additionalArguments.Add("duration", duration.Value.ToString(CultureInfo.InvariantCulture));
-        
-        LrclibSongResult? result = await Get<LrclibSongResult>("",additionalArguments, priority);
+            additionalArguments.Add(
+                "duration",
+                duration.Value.ToString(CultureInfo.InvariantCulture)
+            );
+
+        LrclibSongResult? result = await Get<LrclibSongResult>("", additionalArguments, priority);
         if (
-                !string.IsNullOrEmpty(result?.Message) || 
-                result?.StatusCode != 200 || 
-                result.Name == "TrackNotFound"
-            )
+            !string.IsNullOrEmpty(result?.Message)
+            || result?.StatusCode != 200
+            || result.Name == "TrackNotFound"
+        )
             return null;
-        return ConvertToMusixmatchLyrics(!string.IsNullOrEmpty(result.SyncedLyrics) ? result.SyncedLyrics : result.PlainLyrics);
+        return ConvertToMusixmatchLyrics(
+            !string.IsNullOrEmpty(result.SyncedLyrics) ? result.SyncedLyrics : result.PlainLyrics
+        );
     }
-    
+
     private static MusixMatchFormattedLyric[]? ConvertToMusixmatchLyrics(string? lyrics)
     {
-        if (string.IsNullOrEmpty(lyrics)) return null;
+        if (string.IsNullOrEmpty(lyrics))
+            return null;
         string[] lines = lyrics.Split(['\r', '\n'], StringSplitOptions.None);
-        
+
         List<MusixMatchFormattedLyric> lyricLines = [];
         foreach (string line in lines)
         {
@@ -55,8 +61,9 @@ public partial class LrclibClient : LrclibBaseClient
 
     private static MusixMatchFormattedLyric? MakeLyricLine(string trimmedLine)
     {
-        if (string.IsNullOrEmpty(trimmedLine)) return null;
-        
+        if (string.IsNullOrEmpty(trimmedLine))
+            return null;
+
         Match match = TimeStamped().Match(trimmedLine);
         if (!match.Success)
             return new()
@@ -67,16 +74,16 @@ public partial class LrclibClient : LrclibBaseClient
                     Total = 0,
                     Minutes = 0,
                     Seconds = 0,
-                    Hundredths = 0
-                }
+                    Hundredths = 0,
+                },
             };
-        
+
         int minutes = int.Parse(match.Groups[1].Value);
         int seconds = int.Parse(match.Groups[2].Value);
         int hundredths = int.Parse(match.Groups[3].Value);
         string text = match.Groups[4].Value.Trim();
         double total = (minutes * 60) + seconds + (hundredths / 100.0);
-            
+
         return new()
         {
             Text = text,
@@ -85,12 +92,11 @@ public partial class LrclibClient : LrclibBaseClient
                 Total = total,
                 Minutes = minutes,
                 Seconds = seconds,
-                Hundredths = hundredths
-            }
+                Hundredths = hundredths,
+            },
         };
     }
 
     [GeneratedRegex(@"\[(\d{2}):(\d{2})\.(\d{2})\](.*)$")]
     private static partial Regex TimeStamped();
 }
-    

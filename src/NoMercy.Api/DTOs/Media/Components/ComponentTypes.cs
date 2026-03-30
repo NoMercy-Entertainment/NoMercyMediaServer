@@ -22,7 +22,10 @@ public static class ComponentTypes
     public const string TopResultCard = "NMTopResultCard";
     public const string SeasonCard = "NMSeasonCard";
     public const string SeasonTitle = "NMSeasonTitle";
+    public const string EmptyState = "NMEmptyState";
 
-    public static bool IsContainer(string componentType) => componentType is Grid or List or Carousel or Container;
+    public static bool IsContainer(string componentType) =>
+        componentType is Grid or List or Carousel or Container;
+
     public static bool IsLeaf(string componentType) => !IsContainer(componentType);
 }

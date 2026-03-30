@@ -17,7 +17,8 @@ public class BinariesCloudflaredArchTests
         while (dir != null!)
         {
             string candidate = Path.Combine(dir, "src", "NoMercy.Setup", "Binaries.cs");
-            if (File.Exists(candidate)) return candidate;
+            if (File.Exists(candidate))
+                return candidate;
             dir = Path.GetDirectoryName(dir)!;
         }
         throw new FileNotFoundException("Could not find src/NoMercy.Setup/Binaries.cs");
@@ -27,7 +28,10 @@ public class BinariesCloudflaredArchTests
 
     private static string ExtractDownloadCloudflaredMethod(string source)
     {
-        int start = source.IndexOf("private static async Task DownloadCloudflared()", StringComparison.Ordinal);
+        int start = source.IndexOf(
+            "private static async Task DownloadCloudflared()",
+            StringComparison.Ordinal
+        );
         Assert.True(start >= 0, "Could not find DownloadCloudflared method in source");
 
         int braceStart = source.IndexOf('{', start);
@@ -35,9 +39,12 @@ public class BinariesCloudflaredArchTests
         int i = braceStart;
         while (i < source.Length)
         {
-            if (source[i] == '{') depth++;
-            else if (source[i] == '}') depth--;
-            if (depth == 0) break;
+            if (source[i] == '{')
+                depth++;
+            else if (source[i] == '}')
+                depth--;
+            if (depth == 0)
+                break;
             i++;
         }
         return source[start..(i + 1)];
@@ -48,7 +55,8 @@ public class BinariesCloudflaredArchTests
     {
         MethodInfo? method = typeof(Binaries).GetMethod(
             "DownloadCloudflared",
-            BindingFlags.NonPublic | BindingFlags.Static);
+            BindingFlags.NonPublic | BindingFlags.Static
+        );
         Assert.NotNull(method);
         Assert.NotNull(method.GetCustomAttribute<AsyncStateMachineAttribute>());
     }
@@ -59,9 +67,11 @@ public class BinariesCloudflaredArchTests
         string method = ExtractDownloadCloudflaredMethod(GetSourceCode());
 
         // Match: OSPlatform.OSX) && ...Architecture.Arm64) ... cloudflared-darwin-XXX.tgz
+        // \s* before \) handles formatter putting the closing paren on its own line
         Regex pattern = new(
-            @"OSPlatform\.OSX\).*?Architecture\.Arm64\).*?cloudflared-darwin-(\w+)\.tgz",
-            RegexOptions.Singleline);
+            @"OSPlatform\.OSX\).*?Architecture\.Arm64\s*\).*?cloudflared-darwin-(\w+)\.tgz",
+            RegexOptions.Singleline
+        );
 
         RegexMatch match = pattern.Match(method);
         Assert.True(match.Success, "Could not find macOS Arm64 branch with darwin asset");
@@ -74,9 +84,11 @@ public class BinariesCloudflaredArchTests
         string method = ExtractDownloadCloudflaredMethod(GetSourceCode());
 
         // Match: OSPlatform.OSX) && ...Architecture.X64) ... cloudflared-darwin-XXX.tgz
+        // \s* before \) handles formatter putting the closing paren on its own line
         Regex pattern = new(
-            @"OSPlatform\.OSX\).*?Architecture\.X64\).*?cloudflared-darwin-(\w+)\.tgz",
-            RegexOptions.Singleline);
+            @"OSPlatform\.OSX\).*?Architecture\.X64\s*\).*?cloudflared-darwin-(\w+)\.tgz",
+            RegexOptions.Singleline
+        );
 
         RegexMatch match = pattern.Match(method);
         Assert.True(match.Success, "Could not find macOS X64 branch with darwin asset");
@@ -89,12 +101,15 @@ public class BinariesCloudflaredArchTests
         string method = ExtractDownloadCloudflaredMethod(GetSourceCode());
 
         // Extract both macOS branches and verify each downloads the correct architecture
+        // \s* before \) handles formatter putting the closing paren on its own line
         Regex arm64Pattern = new(
-            @"OSPlatform\.OSX\).*?Architecture\.Arm64\).*?cloudflared-darwin-(\w+)\.tgz",
-            RegexOptions.Singleline);
+            @"OSPlatform\.OSX\).*?Architecture\.Arm64\s*\).*?cloudflared-darwin-(\w+)\.tgz",
+            RegexOptions.Singleline
+        );
         Regex x64Pattern = new(
-            @"OSPlatform\.OSX\).*?Architecture\.X64\).*?cloudflared-darwin-(\w+)\.tgz",
-            RegexOptions.Singleline);
+            @"OSPlatform\.OSX\).*?Architecture\.X64\s*\).*?cloudflared-darwin-(\w+)\.tgz",
+            RegexOptions.Singleline
+        );
 
         RegexMatch arm64Match = arm64Pattern.Match(method);
         RegexMatch x64Match = x64Pattern.Match(method);
@@ -120,9 +135,11 @@ public class BinariesCloudflaredArchTests
     {
         string method = ExtractDownloadCloudflaredMethod(GetSourceCode());
 
+        // \s* before \) handles formatter putting the closing paren on its own line
         Regex pattern = new(
-            @"OSPlatform\.Linux\).*?Architecture\.Arm64\).*?cloudflared-linux-(\w+)""",
-            RegexOptions.Singleline);
+            @"OSPlatform\.Linux\).*?Architecture\.Arm64\s*\).*?cloudflared-linux-(\w+)""",
+            RegexOptions.Singleline
+        );
         RegexMatch match = pattern.Match(method);
         Assert.True(match.Success, "Could not find Linux Arm64 branch");
         Assert.Equal("arm", match.Groups[1].Value);
@@ -133,9 +150,11 @@ public class BinariesCloudflaredArchTests
     {
         string method = ExtractDownloadCloudflaredMethod(GetSourceCode());
 
+        // \s* before \) handles formatter putting the closing paren on its own line
         Regex pattern = new(
-            @"OSPlatform\.Linux\).*?Architecture\.X64\).*?cloudflared-linux-(\w+)""",
-            RegexOptions.Singleline);
+            @"OSPlatform\.Linux\).*?Architecture\.X64\s*\).*?cloudflared-linux-(\w+)""",
+            RegexOptions.Singleline
+        );
         RegexMatch match = pattern.Match(method);
         Assert.True(match.Success, "Could not find Linux X64 branch");
         Assert.Equal("amd64", match.Groups[1].Value);

@@ -51,48 +51,56 @@ public static class FfProbe
             switch (codecType)
             {
                 case "video":
-                    videoStreams.Add(new()
-                    {
-                        Index = s.Index,
-                        CodecName = s.CodecName,
-                        Width = s.Width,
-                        Height = s.Height,
-                        PixFmt = s.PixFmt,
-                        ColorSpace = s.ColorSpace,
-                        ColorTransfer = s.ColorTransfer,
-                        ColorPrimaries = s.ColorPrimaries,
-                        Language = s.Tags?.GetValueOrDefault("language")
-                    });
+                    videoStreams.Add(
+                        new()
+                        {
+                            Index = s.Index,
+                            CodecName = s.CodecName,
+                            Width = s.Width,
+                            Height = s.Height,
+                            PixFmt = s.PixFmt,
+                            ColorSpace = s.ColorSpace,
+                            ColorTransfer = s.ColorTransfer,
+                            ColorPrimaries = s.ColorPrimaries,
+                            Language = s.Tags?.GetValueOrDefault("language"),
+                        }
+                    );
                     break;
                 case "audio":
-                    audioStreams.Add(new()
-                    {
-                        Index = s.Index,
-                        CodecName = s.CodecName,
-                        Language = s.Tags?.GetValueOrDefault("language") ?? "und",
-                        Channels = (int)(s.Channels ?? 0),
-                        BitRate = s.BitRate ?? 0,
-                        SampleRate = (int)(s.SampleRate ?? 0),
-                        Tags = s.Tags ?? new()
-                    });
+                    audioStreams.Add(
+                        new()
+                        {
+                            Index = s.Index,
+                            CodecName = s.CodecName,
+                            Language = s.Tags?.GetValueOrDefault("language") ?? "und",
+                            Channels = (int)(s.Channels ?? 0),
+                            BitRate = s.BitRate ?? 0,
+                            SampleRate = (int)(s.SampleRate ?? 0),
+                            Tags = s.Tags ?? new(),
+                        }
+                    );
                     break;
                 case "subtitle":
-                    subtitleStreams.Add(new()
-                    {
-                        Index = s.Index,
-                        CodecName = s.CodecName,
-                        Language = s.Tags?.GetValueOrDefault("language") ?? "und",
-                        Tags = s.Tags ?? new()
-                    });
+                    subtitleStreams.Add(
+                        new()
+                        {
+                            Index = s.Index,
+                            CodecName = s.CodecName,
+                            Language = s.Tags?.GetValueOrDefault("language") ?? "und",
+                            Tags = s.Tags ?? new(),
+                        }
+                    );
                     break;
                 case "image":
-                    imageStreams.Add(new()
-                    {
-                        Index = s.Index,
-                        CodecName = s.CodecName,
-                        Width = s.Width,
-                        Height = s.Height
-                    });
+                    imageStreams.Add(
+                        new()
+                        {
+                            Index = s.Index,
+                            CodecName = s.CodecName,
+                            Width = s.Width,
+                            Height = s.Height,
+                        }
+                    );
                     break;
             }
         }
@@ -100,8 +108,14 @@ public static class FfProbe
         TimeSpan duration = TimeSpan.Zero;
         if (raw.Format?.Duration is not null)
         {
-            if (double.TryParse(raw.Format.Duration, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out double seconds))
+            if (
+                double.TryParse(
+                    raw.Format.Duration,
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out double seconds
+                )
+            )
                 duration = TimeSpan.FromSeconds(seconds);
         }
 
@@ -112,7 +126,7 @@ public static class FfProbe
             FormatLongName = raw.Format?.FormatLongName,
             Duration = duration,
             BitRate = long.TryParse(raw.Format?.BitRate, out long br) ? br : 0,
-            Tags = raw.Format?.Tags
+            Tags = raw.Format?.Tags,
         };
 
         return new()
@@ -127,7 +141,7 @@ public static class FfProbe
             PrimaryVideoStream = videoStreams.Count > 0 ? videoStreams[0] : null,
             PrimaryAudioStream = audioStreams.Count > 0 ? audioStreams[0] : null,
             PrimarySubtitleStream = subtitleStreams.Count > 0 ? subtitleStreams[0] : null,
-            PrimaryImageStream = imageStreams.Count > 0 ? imageStreams[0] : null
+            PrimaryImageStream = imageStreams.Count > 0 ? imageStreams[0] : null,
         };
     }
 
@@ -141,7 +155,10 @@ public static class FfProbe
             }
             catch (OperationCanceledException)
             {
-                Logger.App($"ffprobe timed out for {file} (attempt {attempt}/{MaxRetries})", LogEventLevel.Warning);
+                Logger.App(
+                    $"ffprobe timed out for {file} (attempt {attempt}/{MaxRetries})",
+                    LogEventLevel.Warning
+                );
                 if (attempt < MaxRetries)
                 {
                     await Task.Delay(500, ct);
@@ -150,7 +167,10 @@ public static class FfProbe
             }
             catch (Exception ex)
             {
-                Logger.App($"ffprobe failed for {file}: {ex.Message} (attempt {attempt}/{MaxRetries})", LogEventLevel.Warning);
+                Logger.App(
+                    $"ffprobe failed for {file}: {ex.Message} (attempt {attempt}/{MaxRetries})",
+                    LogEventLevel.Warning
+                );
                 if (attempt < MaxRetries)
                 {
                     int delayMs = IsResourceExhaustionError(ex) ? 2000 * attempt : 500;
@@ -169,8 +189,8 @@ public static class FfProbe
         return ex is System.ComponentModel.Win32Exception win32Ex
             ? win32Ex.NativeErrorCode is 1455 or 8 // ERROR_COMMITMENT_LIMIT or ERROR_NOT_ENOUGH_MEMORY
             : ex.Message.Contains("paging file", StringComparison.OrdinalIgnoreCase)
-              || ex.Message.Contains("wisselbestand", StringComparison.OrdinalIgnoreCase)
-              || ex.Message.Contains("not enough memory", StringComparison.OrdinalIgnoreCase);
+                || ex.Message.Contains("wisselbestand", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("not enough memory", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<string> RunFfprobe(string file, CancellationToken ct)
@@ -183,19 +203,21 @@ public static class FfProbe
         try
         {
             using CancellationTokenSource timeoutCts = new(ExecutionTimeoutMs);
-            using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+            using CancellationTokenSource linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
 
             process = new();
             process.StartInfo = new()
             {
                 WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = AppFiles.FfProbePath,
-                Arguments = $"-hide_banner -v quiet -show_format -show_streams -print_format json \"{file}\"",
+                Arguments =
+                    $"-hide_banner -v quiet -show_format -show_streams -print_format json \"{file}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                RedirectStandardInput = true
+                RedirectStandardInput = true,
             };
 
             process.Start();
@@ -205,7 +227,10 @@ public static class FfProbe
             bool exited = process.WaitForExit(ExecutionTimeoutMs);
             if (!exited)
             {
-                try { process.Kill(entireProcessTree: true); }
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
                 catch (InvalidOperationException) { }
                 throw new OperationCanceledException("ffprobe did not exit within timeout");
             }

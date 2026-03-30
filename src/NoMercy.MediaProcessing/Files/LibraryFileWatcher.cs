@@ -24,7 +24,8 @@ public class LibraryFileWatcher
 
     private static readonly Regex EncodingOutputRegex = new(
         @"^(video_.*|audio_.*|subtitles|fonts|thumbs|metadata|scans|cds.*|NCED|NCOP)$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        RegexOptions.IgnoreCase | RegexOptions.Compiled
+    );
 
     private const int Delay = 10;
 
@@ -47,25 +48,26 @@ public class LibraryFileWatcher
     public static void RefreshLibraryCache()
     {
         using MediaContext mediaContext = new();
-        _libraries = mediaContext.Libraries
-            .Include(library => library.FolderLibraries)
-            .ThenInclude(folderLibrary => folderLibrary.Folder)
+        _libraries = mediaContext
+            .Libraries.Include(library => library.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
             .ToList();
     }
 
     // ReSharper disable once MemberCanBePrivate.Global
     public static Action AddLibraryWatcher(Library library)
     {
-        List<string> paths = library.FolderLibraries
-            .Select(folderLibrary => folderLibrary.Folder.Path)
+        List<string> paths = library
+            .FolderLibraries.Select(folderLibrary => folderLibrary.Folder.Path)
             .ToList();
 
         List<Action> disposers = [];
 
         Task.Run(() =>
-        {
-            disposers = Fs.Watch(paths);
-        }).Wait();
+            {
+                disposers = Fs.Watch(paths);
+            })
+            .Wait();
 
         return () =>
         {
@@ -75,8 +77,11 @@ public class LibraryFileWatcher
     }
 
     private void _onFileChanged(FileWatcherEventArgs e) => HandleFileChange(e);
+
     private void _onFileCreated(FileWatcherEventArgs e) => HandleFileChange(e);
+
     private void _onFileDeleted(FileWatcherEventArgs e) => HandleFileChange(e);
+
     private void _onFileRenamed(FileWatcherEventArgs e) => HandleFileChange(e);
 
     private void _onError(FileWatcherEventArgs e)
@@ -86,8 +91,9 @@ public class LibraryFileWatcher
 
     private static Library? GetLibraryByPath(string path)
     {
-        return _libraries.FirstOrDefault(library => library.FolderLibraries
-            .Any(folderLibrary => path.Contains(folderLibrary.Folder.Path)));
+        return _libraries.FirstOrDefault(library =>
+            library.FolderLibraries.Any(folderLibrary => path.Contains(folderLibrary.Folder.Path))
+        );
     }
 
     private static bool IsInEncodingOutputDirectory(string fullPath)
@@ -106,20 +112,25 @@ public class LibraryFileWatcher
 
     private void HandleFileChange(FileWatcherEventArgs e)
     {
-        if (IsInEncodingOutputDirectory(e.FullPath)) return;
+        if (IsInEncodingOutputDirectory(e.FullPath))
+            return;
 
         string watcherPath = e.Path;
         Library? library = GetLibraryByPath(watcherPath);
 
-        if (library is null) return;
+        if (library is null)
+            return;
 
-        if (!IsAllowedExtensionForLibrary(library, e.FullPath)) return;
+        if (!IsAllowedExtensionForLibrary(library, e.FullPath))
+            return;
 
-        if (e.ChangeType != WatcherChangeTypes.Deleted && !Path.Exists(e.FullPath)) return;
+        if (e.ChangeType != WatcherChangeTypes.Deleted && !Path.Exists(e.FullPath))
+            return;
 
         string folderPath = Path.GetDirectoryName(e.FullPath).OrEmpty();
 
-        if (string.IsNullOrEmpty(folderPath)) return;
+        if (string.IsNullOrEmpty(folderPath))
+            return;
 
         lock (LockObject)
         {
@@ -136,14 +147,19 @@ public class LibraryFileWatcher
                 fileChangeGroup.OldFullPath = e.OldFullPath;
 
             fileChangeGroup.Timer?.Dispose();
-            fileChangeGroup.Timer = new(ProcessFileChanges, fileChangeGroup, TimeSpan.FromSeconds(Delay),
-                Timeout.InfiniteTimeSpan);
+            fileChangeGroup.Timer = new(
+                ProcessFileChanges,
+                fileChangeGroup,
+                TimeSpan.FromSeconds(Delay),
+                Timeout.InfiniteTimeSpan
+            );
         }
     }
 
     private static bool IsAllowedExtensionForLibrary(Library library, string path)
     {
-        if (Directory.Exists(path)) return true;
+        if (Directory.Exists(path))
+            return true;
 
         switch (library.Type)
         {
@@ -151,10 +167,16 @@ public class LibraryFileWatcher
             case Config.TvMediaType:
             case Config.AnimeMediaType:
                 string[] videoExtensions = [".mp4", ".mkv", ".avi", ".webm", ".mov", ".m3u8"];
-                return videoExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+                return videoExtensions.Contains(
+                    Path.GetExtension(path),
+                    StringComparer.OrdinalIgnoreCase
+                );
             case Config.MusicMediaType:
                 string[] audioExtensions = [".mp3", ".flac", ".opus", ".wav", ".m4a"];
-                return audioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+                return audioExtensions.Contains(
+                    Path.GetExtension(path),
+                    StringComparer.OrdinalIgnoreCase
+                );
             default:
                 return false;
         }
@@ -171,7 +193,7 @@ public class LibraryFileWatcher
             snapshot = new(group.ChangeType, group.Library, group.FolderPath)
             {
                 FullPath = group.FullPath,
-                OldFullPath = group.OldFullPath
+                OldFullPath = group.OldFullPath,
             };
             FileChangeGroups.Remove(group.FolderPath);
         }
@@ -184,57 +206,81 @@ public class LibraryFileWatcher
             }
             catch (Exception ex)
             {
-                Logger.System($"FileWatcher error processing {snapshot.FolderPath}: {ex.Message}", LogEventLevel.Error);
+                Logger.System(
+                    $"FileWatcher error processing {snapshot.FolderPath}: {ex.Message}",
+                    LogEventLevel.Error
+                );
             }
         });
     }
 
     private static async Task PublishFileEvent(FileChangeGroup group)
     {
-        if (!EventBusProvider.IsConfigured) return;
+        if (!EventBusProvider.IsConfigured)
+            return;
 
         switch (group.ChangeType)
         {
             case WatcherChangeTypes.Created:
             case WatcherChangeTypes.Changed:
-                Logger.System($"FileWatcher: Publishing FileCreatedEvent for {group.FolderPath}", LogEventLevel.Debug);
-                await EventBusProvider.Current.PublishAsync(new FileCreatedEvent
-                {
-                    FolderPath = group.FolderPath,
-                    LibraryId = group.Library.Id,
-                    LibraryType = group.Library.Type
-                });
+                Logger.System(
+                    $"FileWatcher: Publishing FileCreatedEvent for {group.FolderPath}",
+                    LogEventLevel.Debug
+                );
+                await EventBusProvider.Current.PublishAsync(
+                    new FileCreatedEvent
+                    {
+                        FolderPath = group.FolderPath,
+                        LibraryId = group.Library.Id,
+                        LibraryType = group.Library.Type,
+                    }
+                );
                 break;
 
             case WatcherChangeTypes.Deleted:
-                Logger.System($"FileWatcher: Publishing FileDeletedEvent for {group.FullPath}", LogEventLevel.Debug);
-                await EventBusProvider.Current.PublishAsync(new FileDeletedEvent
-                {
-                    FullPath = group.FullPath ?? group.FolderPath,
-                    LibraryId = group.Library.Id,
-                    LibraryType = group.Library.Type
-                });
+                Logger.System(
+                    $"FileWatcher: Publishing FileDeletedEvent for {group.FullPath}",
+                    LogEventLevel.Debug
+                );
+                await EventBusProvider.Current.PublishAsync(
+                    new FileDeletedEvent
+                    {
+                        FullPath = group.FullPath ?? group.FolderPath,
+                        LibraryId = group.Library.Id,
+                        LibraryType = group.Library.Type,
+                    }
+                );
                 break;
 
             case WatcherChangeTypes.Renamed when group.OldFullPath is not null:
-                Logger.System($"FileWatcher: Publishing FileRenamedEvent from {group.OldFullPath} to {group.FullPath}", LogEventLevel.Debug);
-                await EventBusProvider.Current.PublishAsync(new FileRenamedEvent
-                {
-                    OldFullPath = group.OldFullPath,
-                    NewFullPath = group.FullPath ?? group.FolderPath,
-                    LibraryId = group.Library.Id,
-                    LibraryType = group.Library.Type
-                });
+                Logger.System(
+                    $"FileWatcher: Publishing FileRenamedEvent from {group.OldFullPath} to {group.FullPath}",
+                    LogEventLevel.Debug
+                );
+                await EventBusProvider.Current.PublishAsync(
+                    new FileRenamedEvent
+                    {
+                        OldFullPath = group.OldFullPath,
+                        NewFullPath = group.FullPath ?? group.FolderPath,
+                        LibraryId = group.Library.Id,
+                        LibraryType = group.Library.Type,
+                    }
+                );
                 break;
 
             case WatcherChangeTypes.Renamed:
-                Logger.System($"FileWatcher: Rename detected but no OldFullPath, treating as Created for {group.FolderPath}", LogEventLevel.Debug);
-                await EventBusProvider.Current.PublishAsync(new FileCreatedEvent
-                {
-                    FolderPath = group.FolderPath,
-                    LibraryId = group.Library.Id,
-                    LibraryType = group.Library.Type
-                });
+                Logger.System(
+                    $"FileWatcher: Rename detected but no OldFullPath, treating as Created for {group.FolderPath}",
+                    LogEventLevel.Debug
+                );
+                await EventBusProvider.Current.PublishAsync(
+                    new FileCreatedEvent
+                    {
+                        FolderPath = group.FolderPath,
+                        LibraryId = group.Library.Id,
+                        LibraryType = group.Library.Type,
+                    }
+                );
                 break;
         }
     }

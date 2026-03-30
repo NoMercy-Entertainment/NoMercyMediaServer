@@ -10,9 +10,11 @@ public class Storage
 
     public static List<StorageDevice> GetStorageDevices()
     {
-        if (Software.IsWindows) return GetWindowsStorageDevices();
+        if (Software.IsWindows)
+            return GetWindowsStorageDevices();
 
-        if (Software.IsLinux || Software.IsMac) return GetUnixStorageDevices();
+        if (Software.IsLinux || Software.IsMac)
+            return GetUnixStorageDevices();
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
     }
@@ -22,17 +24,21 @@ public class Storage
         List<StorageDevice> devices = [];
 
 #pragma warning disable CA1416
-        ManagementObjectSearcher searcher = new("SELECT * FROM Win32_LogicalDisk WHERE DriveType=3");
+        ManagementObjectSearcher searcher = new(
+            "SELECT * FROM Win32_LogicalDisk WHERE DriveType=3"
+        );
         foreach (ManagementBaseObject? o in searcher.Get())
         {
             ManagementObject? item = (ManagementObject)o;
             if (item["DeviceID"] is string deviceId)
-                devices.Add(new()
-                {
-                    Name = deviceId,
-                    TotalSpace = (long)(ulong)item["Size"],
-                    FreeSpace = (long)(ulong)item["FreeSpace"]
-                });
+                devices.Add(
+                    new()
+                    {
+                        Name = deviceId,
+                        TotalSpace = (long)(ulong)item["Size"],
+                        FreeSpace = (long)(ulong)item["FreeSpace"],
+                    }
+                );
         }
 #pragma warning restore CA1416
 
@@ -47,16 +53,20 @@ public class Storage
         string[] lines = output.Split('\n');
         foreach (string line in lines.Skip(1))
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
             string[] parts = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 6) continue;
+            if (parts.Length < 6)
+                continue;
 
-            devices.Add(new()
-            {
-                Name = parts[0],
-                TotalSpace = long.Parse(parts[1]) * 1024,
-                FreeSpace = long.Parse(parts[3]) * 1024
-            });
+            devices.Add(
+                new()
+                {
+                    Name = parts[0],
+                    TotalSpace = long.Parse(parts[1]) * 1024,
+                    FreeSpace = long.Parse(parts[3]) * 1024,
+                }
+            );
         }
 
         return devices;
@@ -75,27 +85,33 @@ public class Storage
 
     private static long GetFreeSpace(string path)
     {
-        if (Software.IsWindows) return GetWindowsFreeSpace(path);
+        if (Software.IsWindows)
+            return GetWindowsFreeSpace(path);
 
-        if (Software.IsLinux || Software.IsMac) return GetUnixFreeSpace(path);
+        if (Software.IsLinux || Software.IsMac)
+            return GetUnixFreeSpace(path);
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
     }
 
     private static long GetWindowsFreeSpace(string path)
     {
-        if (!Directory.Exists(path)) throw new ArgumentException($"Path does not exist: {path}");
+        if (!Directory.Exists(path))
+            throw new ArgumentException($"Path does not exist: {path}");
 
-        if (GetDiskFreeSpaceEx(path, out ulong freeBytesAvailable, out _, out _)) return (long)freeBytesAvailable;
+        if (GetDiskFreeSpaceEx(path, out ulong freeBytesAvailable, out _, out _))
+            return (long)freeBytesAvailable;
 
         throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
     }
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    private static extern bool GetDiskFreeSpaceEx(string lpDirectoryName,
+    private static extern bool GetDiskFreeSpaceEx(
+        string lpDirectoryName,
         out ulong lpFreeBytesAvailable,
         out ulong lpTotalNumberOfBytes,
-        out ulong lpTotalNumberOfFreeBytes);
+        out ulong lpTotalNumberOfFreeBytes
+    );
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Statvfs
@@ -118,9 +134,11 @@ public class Storage
 
     private static long GetUnixFreeSpace(string path)
     {
-        if (!Directory.Exists(path)) throw new ArgumentException($"Path does not exist: {path}");
+        if (!Directory.Exists(path))
+            throw new ArgumentException($"Path does not exist: {path}");
 
-        if (statvfs(path, out Statvfs stat) == 0) return (long)(stat.f_bavail * stat.f_frsize);
+        if (statvfs(path, out Statvfs stat) == 0)
+            return (long)(stat.f_bavail * stat.f_frsize);
 
         throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
     }
@@ -129,13 +147,15 @@ public class Storage
     {
         if (Software.IsWindows)
         {
-            if (GetDiskFreeSpaceEx(path, out _, out ulong totalBytes, out _)) return (long)totalBytes;
+            if (GetDiskFreeSpaceEx(path, out _, out ulong totalBytes, out _))
+                return (long)totalBytes;
             throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         }
 
         if (Software.IsLinux || Software.IsMac)
         {
-            if (statvfs(path, out Statvfs stat) == 0) return (long)(stat.f_blocks * stat.f_frsize);
+            if (statvfs(path, out Statvfs stat) == 0)
+                return (long)(stat.f_blocks * stat.f_frsize);
             throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         }
 
@@ -148,23 +168,29 @@ public class Storage
 
     public static string GetFileSystemType(string path)
     {
-        if (Software.IsWindows) return GetWindowsFileSystemType(path);
+        if (Software.IsWindows)
+            return GetWindowsFileSystemType(path);
 
-        if (Software.IsLinux || Software.IsMac) return GetUnixFileSystemType(path);
+        if (Software.IsLinux || Software.IsMac)
+            return GetUnixFileSystemType(path);
 
         throw new PlatformNotSupportedException("Unsupported operating system.");
     }
 
     private static string GetWindowsFileSystemType(string path)
     {
-        if (!Directory.Exists(path)) throw new ArgumentException($"Path does not exist: {path}");
+        if (!Directory.Exists(path))
+            throw new ArgumentException($"Path does not exist: {path}");
 
 #pragma warning disable CA1416
-        ManagementObjectSearcher searcher = new($"SELECT FileSystem FROM Win32_LogicalDisk WHERE DeviceID='{path}'");
+        ManagementObjectSearcher searcher = new(
+            $"SELECT FileSystem FROM Win32_LogicalDisk WHERE DeviceID='{path}'"
+        );
         foreach (ManagementBaseObject? o in searcher.Get())
         {
             ManagementObject? item = (ManagementObject)o;
-            if (item["FileSystem"] is string fileSystem) return fileSystem;
+            if (item["FileSystem"] is string fileSystem)
+                return fileSystem;
         }
 #pragma warning restore CA1416
 
@@ -173,7 +199,8 @@ public class Storage
 
     private static string GetUnixFileSystemType(string path)
     {
-        if (!Directory.Exists(path)) throw new ArgumentException($"Path does not exist: {path}");
+        if (!Directory.Exists(path))
+            throw new ArgumentException($"Path does not exist: {path}");
 
         string output = SystemCalls.Shell.ExecCommand($"df -T {path} | awk 'NR==2 {{print $2}}'");
         return output.Trim();
@@ -185,7 +212,8 @@ public class Storage
 
     public static Dictionary<string, long> GetDiskUsageByDirectory(string path)
     {
-        if (!Directory.Exists(path)) throw new ArgumentException($"Path does not exist: {path}");
+        if (!Directory.Exists(path))
+            throw new ArgumentException($"Path does not exist: {path}");
 
         Dictionary<string, long> directorySizes = new();
         foreach (string dir in Directory.GetDirectories(path))

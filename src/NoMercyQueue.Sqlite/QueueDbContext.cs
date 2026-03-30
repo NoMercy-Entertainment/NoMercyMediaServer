@@ -5,9 +5,8 @@ namespace NoMercyQueue.Sqlite;
 
 internal class QueueDbContext : DbContext
 {
-    public QueueDbContext(DbContextOptions<QueueDbContext> options) : base(options)
-    {
-    }
+    public QueueDbContext(DbContextOptions<QueueDbContext> options)
+        : base(options) { }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -17,20 +16,20 @@ internal class QueueDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Model.GetEntityTypes()
+        modelBuilder
+            .Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.Name is "CreatedAt" or "UpdatedAt")
             .ToList()
             .ForEach(p => p.SetDefaultValueSql("CURRENT_TIMESTAMP"));
 
-        modelBuilder.Model.GetEntityTypes()
+        modelBuilder
+            .Model.GetEntityTypes()
             .SelectMany(t => t.GetForeignKeys())
             .ToList()
             .ForEach(p => p.DeleteBehavior = DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<QueueJobEntity>()
-            .Property(j => j.Payload)
-            .HasMaxLength(4096);
+        modelBuilder.Entity<QueueJobEntity>().Property(j => j.Payload).HasMaxLength(4096);
 
         base.OnModelCreating(modelBuilder);
     }

@@ -17,8 +17,8 @@ public static class EncoderProfilesSeed
 
         List<EncoderProfile> encoderProfiles;
         if (File.Exists(AppFiles.EncoderProfilesSeedFile))
-            encoderProfiles = File.ReadAllTextAsync(AppFiles.EncoderProfilesSeedFile).Result
-                .FromJson<List<EncoderProfile>>()!;
+            encoderProfiles = File.ReadAllTextAsync(AppFiles.EncoderProfilesSeedFile)
+                .Result.FromJson<List<EncoderProfile>>()!;
         else
             encoderProfiles = EncoderProfileSeedData.GetEncoderProfiles();
 
@@ -26,18 +26,22 @@ public static class EncoderProfilesSeed
 
         try
         {
-            await dbContext.EncoderProfiles.UpsertRange(encoderProfiles)
+            await dbContext
+                .EncoderProfiles.UpsertRange(encoderProfiles)
                 .On(v => new { v.Id })
-                .WhenMatched((vs, vi) => new()
-                {
-                    Id = vi.Id,
-                    Name = vi.Name,
-                    Container = vi.Container,
-                    Param = vi.Param,
-                    _videoProfiles = vi._videoProfiles,
-                    _audioProfiles = vi._audioProfiles,
-                    _subtitleProfiles = vi._subtitleProfiles
-                })
+                .WhenMatched(
+                    (vs, vi) =>
+                        new()
+                        {
+                            Id = vi.Id,
+                            Name = vi.Name,
+                            Container = vi.Container,
+                            Param = vi.Param,
+                            _videoProfiles = vi._videoProfiles,
+                            _audioProfiles = vi._audioProfiles,
+                            _subtitleProfiles = vi._subtitleProfiles,
+                        }
+                )
                 .RunAsync();
         }
         catch (Exception e)
@@ -47,23 +51,25 @@ public static class EncoderProfilesSeed
 
         List<EncoderProfileFolder> encoderProfileFolders = [];
         foreach (EncoderProfile encoderProfile in encoderProfiles)
-            encoderProfileFolders.AddRange(encoderProfile.EncoderProfileFolder.ToList()
-                .Select(encoderProfileFolder => new EncoderProfileFolder
-                {
-                    EncoderProfileId = encoderProfile.Id,
-                    FolderId = encoderProfileFolder.FolderId
-                }));
+            encoderProfileFolders.AddRange(
+                encoderProfile
+                    .EncoderProfileFolder.ToList()
+                    .Select(encoderProfileFolder => new EncoderProfileFolder
+                    {
+                        EncoderProfileId = encoderProfile.Id,
+                        FolderId = encoderProfileFolder.FolderId,
+                    })
+            );
 
         try
         {
-            await dbContext.EncoderProfileFolder
-                .UpsertRange(encoderProfileFolders)
+            await dbContext
+                .EncoderProfileFolder.UpsertRange(encoderProfileFolders)
                 .On(v => new { v.FolderId, v.EncoderProfileId })
-                .WhenMatched((vs, vi) => new()
-                {
-                    FolderId = vi.FolderId,
-                    EncoderProfileId = vi.EncoderProfileId
-                })
+                .WhenMatched(
+                    (vs, vi) =>
+                        new() { FolderId = vi.FolderId, EncoderProfileId = vi.EncoderProfileId }
+                )
                 .RunAsync();
         }
         catch (Exception e)

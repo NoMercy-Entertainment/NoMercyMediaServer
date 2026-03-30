@@ -13,25 +13,52 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record GenreCardData
 {
-    [JsonProperty("id")] public dynamic? Id { get; set; }
-    [JsonProperty("title")] public string? Title { get; set; } = string.Empty;
-    [JsonProperty("titleSort")] public string? TitleSort { get; set; }
-    [JsonProperty("overview")] public string? Overview { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; } = null!;
-    [JsonProperty("rating")] public RatingClass? Rating { get; set; }
-    [JsonProperty("year")] public int? Year { get; set; }
-    [JsonProperty("type")] public string? Type { get; set; }
-    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
-    [JsonProperty("poster")] public string? Poster { get; set; }
-    [JsonProperty("logo")] public string? Logo { get; set; }
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("content_ratings")] public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
-    [JsonProperty("have_items")] public int? HaveItems { get; set; }
-    [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
+    [JsonProperty("id")]
+    public dynamic? Id { get; set; }
 
-    public GenreCardData()
-    {
-    }
+    [JsonProperty("title")]
+    public string? Title { get; set; } = string.Empty;
+
+    [JsonProperty("titleSort")]
+    public string? TitleSort { get; set; }
+
+    [JsonProperty("overview")]
+    public string? Overview { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; } = null!;
+
+    [JsonProperty("rating")]
+    public RatingClass? Rating { get; set; }
+
+    [JsonProperty("year")]
+    public int? Year { get; set; }
+
+    [JsonProperty("type")]
+    public string? Type { get; set; }
+
+    [JsonProperty("backdrop")]
+    public string? Backdrop { get; set; }
+
+    [JsonProperty("poster")]
+    public string? Poster { get; set; }
+
+    [JsonProperty("logo")]
+    public string? Logo { get; set; }
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
+
+    [JsonProperty("content_ratings")]
+    public IEnumerable<ContentRating> ContentRatings { get; set; } = [];
+
+    [JsonProperty("have_items")]
+    public int? HaveItems { get; set; }
+
+    [JsonProperty("number_of_items")]
+    public int? NumberOfItems { get; set; }
+
+    public GenreCardData() { }
 
     public GenreCardData(Genre genre)
     {
@@ -41,8 +68,11 @@ public record GenreCardData
         Type = "genre";
         Link = new($"/genres/{genre.Id}", UriKind.Relative);
         NumberOfItems = genre.GenreMovies.Count + genre.GenreTvShows.Count;
-        HaveItems = genre.GenreMovies.Count(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
-                    + genre.GenreTvShows.Count(gt => gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null)));
+        HaveItems =
+            genre.GenreMovies.Count(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
+            + genre.GenreTvShows.Count(gt =>
+                gt.Tv.Episodes.Any(e => e.VideoFiles.Any(v => v.Folder != null))
+            );
     }
 
     public GenreCardData(MusicGenre musicGenre)
@@ -53,8 +83,9 @@ public record GenreCardData
         Type = "genre";
         Link = new($"/music/genres/{musicGenre.Id}", UriKind.Relative);
         NumberOfItems = musicGenre.AlbumMusicGenres.Count + musicGenre.ArtistMusicGenres.Count;
-        HaveItems = musicGenre.AlbumMusicGenres.Count(ga => ga.Album.AlbumTrack.Count != 0)
-                    + musicGenre.ArtistMusicGenres.Count(ga => ga.Artist.ArtistTrack.Count != 0);
+        HaveItems =
+            musicGenre.AlbumMusicGenres.Count(ga => ga.Album.AlbumTrack.Count != 0)
+            + musicGenre.ArtistMusicGenres.Count(ga => ga.Artist.ArtistTrack.Count != 0);
     }
 
     public GenreCardData(GenreWithCountsDto dto)

@@ -19,16 +19,20 @@ public static class HttpClient
                 IPHostEntry hostEntry;
                 if (!string.IsNullOrEmpty(server))
                 {
-                    LookupClient dnsClient = DnsClients.GetOrAdd(server, s => new(IPAddress.Parse(s)));
-                    IDnsQueryResponse? result = await dnsClient.QueryAsync(context.DnsEndPoint.Host, QueryType.A,
-                        cancellationToken: token);
+                    LookupClient dnsClient = DnsClients.GetOrAdd(
+                        server,
+                        s => new(IPAddress.Parse(s))
+                    );
+                    IDnsQueryResponse? result = await dnsClient.QueryAsync(
+                        context.DnsEndPoint.Host,
+                        QueryType.A,
+                        cancellationToken: token
+                    );
                     IPAddress? address = result.Answers.ARecords().FirstOrDefault()?.Address;
-                    if (address == null) throw new SocketException((int)SocketError.HostNotFound);
+                    if (address == null)
+                        throw new SocketException((int)SocketError.HostNotFound);
 
-                    hostEntry = new()
-                    {
-                        AddressList = [address]
-                    };
+                    hostEntry = new() { AddressList = [address] };
                 }
                 else
                 {
@@ -48,7 +52,7 @@ public static class HttpClient
                     socket.Dispose();
                     throw;
                 }
-            }
+            },
         };
 
         return new(handler);

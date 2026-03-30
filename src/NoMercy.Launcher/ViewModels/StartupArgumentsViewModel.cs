@@ -13,13 +13,21 @@ public class StartupArgumentsViewModel : INotifyPropertyChanged
     public string StartupArguments
     {
         get => _startupArguments;
-        set { _startupArguments = value; OnPropertyChanged(); }
+        set
+        {
+            _startupArguments = value;
+            OnPropertyChanged();
+        }
     }
 
     public string SaveStatus
     {
         get => _saveStatus;
-        set { _saveStatus = value; OnPropertyChanged(); }
+        set
+        {
+            _saveStatus = value;
+            OnPropertyChanged();
+        }
     }
 
     public Task LoadAsync()
@@ -40,10 +48,8 @@ public class StartupArgumentsViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    protected void OnPropertyChanged(
-        [CallerMemberName] string? propertyName = null)
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(
-            this, new(propertyName));
+        PropertyChanged?.Invoke(this, new(propertyName));
     }
 }

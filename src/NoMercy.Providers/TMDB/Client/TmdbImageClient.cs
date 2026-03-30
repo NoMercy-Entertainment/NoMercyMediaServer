@@ -18,12 +18,18 @@ public abstract class TmdbImageClient : TmdbBaseClient
         }
         catch (InvalidImageContentException e)
         {
-            Logger.MovieDb($"Image format error downloading image: {path} - {e.Message}", LogEventLevel.Error);
+            Logger.MovieDb(
+                $"Image format error downloading image: {path} - {e.Message}",
+                LogEventLevel.Error
+            );
             return null;
         }
         catch (ImageFormatException e)
         {
-            Logger.MovieDb($"Image format error downloading image: {path} - {e.Message}", LogEventLevel.Error);
+            Logger.MovieDb(
+                $"Image format error downloading image: {path} - {e.Message}",
+                LogEventLevel.Error
+            );
             return null;
         }
 
@@ -31,12 +37,14 @@ public abstract class TmdbImageClient : TmdbBaseClient
         {
             try
             {
-                if (path is null) return null;
+                if (path is null)
+                    return null;
 
                 bool isSvg = path.EndsWith(".svg");
                 string folder = Path.Join(AppFiles.ImagesPath, "original");
 
-                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                if (!Directory.Exists(folder))
+                    Directory.CreateDirectory(folder);
 
                 string filePath = Path.Join(folder, path.Replace("/", ""));
                 if (File.Exists(filePath))
@@ -47,7 +55,8 @@ public abstract class TmdbImageClient : TmdbBaseClient
                 string url = path.StartsWith("http") ? path : $"original{path}";
                 using HttpResponseMessage response = await httpClient.GetAsync(url);
 
-                if (!response.IsSuccessStatusCode) return null;
+                if (!response.IsSuccessStatusCode)
+                    return null;
 
                 if (download is false)
                 {
@@ -56,7 +65,10 @@ public abstract class TmdbImageClient : TmdbBaseClient
                 }
 
                 if (!File.Exists(filePath))
-                    await File.WriteAllBytesAsync(filePath, await response.Content.ReadAsByteArrayAsync());
+                    await File.WriteAllBytesAsync(
+                        filePath,
+                        await response.Content.ReadAsByteArrayAsync()
+                    );
 
                 try
                 {
@@ -64,18 +76,27 @@ public abstract class TmdbImageClient : TmdbBaseClient
                 }
                 catch (Exception e)
                 {
-                    Logger.MovieDb($"Error loading image: {path} - {e.Message}", LogEventLevel.Error);
+                    Logger.MovieDb(
+                        $"Error loading image: {path} - {e.Message}",
+                        LogEventLevel.Error
+                    );
                     return null;
                 }
             }
             catch (InvalidImageContentException e)
             {
-                Logger.MovieDb($"Image format error downloading image: {path} - {e.Message}", LogEventLevel.Error);
+                Logger.MovieDb(
+                    $"Image format error downloading image: {path} - {e.Message}",
+                    LogEventLevel.Error
+                );
                 return null;
             }
             catch (ImageFormatException e)
             {
-                Logger.MovieDb($"Image format error downloading image: {path} - {e.Message}", LogEventLevel.Error);
+                Logger.MovieDb(
+                    $"Image format error downloading image: {path} - {e.Message}",
+                    LogEventLevel.Error
+                );
                 return null;
             }
         }

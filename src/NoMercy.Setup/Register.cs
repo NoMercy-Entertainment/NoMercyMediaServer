@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Users;
-using Serilog.Events;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Networking;
 using NoMercy.Networking.Discovery;
@@ -13,6 +12,7 @@ using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Dto;
+using Serilog.Events;
 
 namespace NoMercy.Setup;
 
@@ -25,8 +25,9 @@ public static class Register
         try
         {
             MediaContext mediaContext = new();
-            Configuration? device = mediaContext.Configuration
-                .FirstOrDefault(device => device.Key == "serverName");
+            Configuration? device = mediaContext.Configuration.FirstOrDefault(device =>
+                device.Key == "serverName"
+            );
 
             Info.DeviceName = device?.Value ?? Environment.MachineName;
         }
@@ -54,7 +55,7 @@ public static class Register
             { "platform", Info.Platform },
             { "stun_public_ip", Config.StunPublicIp.OrEmpty() },
             { "stun_public_port", (Config.StunPublicPort?.ToString()).OrEmpty() },
-            { "stun_nat_type", Config.NatStatus.ToString() }
+            { "stun_nat_type", Config.NatStatus.ToString() },
         };
 
         return serverData;
@@ -74,7 +75,8 @@ public static class Register
         if (sinceLastFailure < FailureCooldown)
         {
             Logger.Register(
-                $"Registration failed recently, cooling down for {(FailureCooldown - sinceLastFailure).TotalSeconds:F0}s");
+                $"Registration failed recently, cooling down for {(FailureCooldown - sinceLastFailure).TotalSeconds:F0}s"
+            );
             throw new InvalidOperationException("Registration on cooldown after recent failure");
         }
 
@@ -114,11 +116,16 @@ public static class Register
                 GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
                 authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
                 string response = await authClient.SendAndReadAsync(
-                    HttpMethod.Post, "register", new FormUrlEncodedContent(serverData));
+                    HttpMethod.Post,
+                    "register",
+                    new FormUrlEncodedContent(serverData)
+                );
 
                 object? data = JsonConvert.DeserializeObject(response);
                 if (data == null)
-                    throw new InvalidOperationException("Failed to register Server — empty response");
+                    throw new InvalidOperationException(
+                        "Failed to register Server — empty response"
+                    );
 
                 Logger.Register("Server registered successfully");
                 return;
@@ -128,7 +135,32 @@ public static class Register
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
                 Logger.Register(
                     $"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
-                    LogEventLevel.Warning);
+                    LogEventLevel.Warning
+                );
+
+                bool is401 = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized");
+                if (is401)
+                {
+                    Logger.Register(
+                        "Received 401 — attempting re-authentication before retry",
+                        LogEventLevel.Warning
+                    );
+                    bool reAuthed = await Auth.InitWithFallback();
+                    if (!reAuthed)
+                    {
+                        Logger.Register(
+                            "Re-authentication failed — aborting registration retries",
+                            LogEventLevel.Error
+                        );
+                        break;
+                    }
+
+                    Logger.Register(
+                        "Re-authentication succeeded — retrying registration",
+                        LogEventLevel.Information
+                    );
+                }
+
                 await Task.Delay(TimeSpan.FromSeconds(delay));
             }
         }
@@ -148,7 +180,32 @@ public static class Register
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
                 Logger.Register(
                     $"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
-                    LogEventLevel.Warning);
+                    LogEventLevel.Warning
+                );
+
+                bool is401 = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized");
+                if (is401)
+                {
+                    Logger.Register(
+                        "Received 401 — attempting re-authentication before retry",
+                        LogEventLevel.Warning
+                    );
+                    bool reAuthed = await Auth.InitWithFallback();
+                    if (!reAuthed)
+                    {
+                        Logger.Register(
+                            "Re-authentication failed — aborting assignment retries",
+                            LogEventLevel.Error
+                        );
+                        break;
+                    }
+
+                    Logger.Register(
+                        "Re-authentication succeeded — retrying server assignment",
+                        LogEventLevel.Information
+                    );
+                }
+
                 await Task.Delay(TimeSpan.FromSeconds(delay));
             }
         }
@@ -159,15 +216,20 @@ public static class Register
         Dictionary<string, string> serverData = GetServerInfo();
 
         Logger.Register("Assigning Server, this takes a moment...");
-        
+
         GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
         authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
-        
-        string response = await authClient.SendAndReadAsync(HttpMethod.Post, "assign", new FormUrlEncodedContent(serverData));
+
+        string response = await authClient.SendAndReadAsync(
+            HttpMethod.Post,
+            "assign",
+            new FormUrlEncodedContent(serverData)
+        );
 
         ServerRegisterResponse? data = response.FromJson<ServerRegisterResponse>();
 
-        if (data?.Data is null || data.Data.Status == "error") throw new("Failed to assign Server");
+        if (data?.Data is null || data.Data.Status == "error")
+            throw new("Failed to assign Server");
 
         User user = new()
         {
@@ -180,24 +242,28 @@ public static class Register
             CreatedAt = DateTime.Now,
             AudioTranscoding = true,
             NoTranscoding = true,
-            VideoTranscoding = true
+            VideoTranscoding = true,
         };
 
         await using MediaContext mediaContext = new();
-        await mediaContext.Users.Upsert(user)
+        await mediaContext
+            .Users.Upsert(user)
             .On(x => x.Id)
-            .WhenMatched((oldUser, newUser) => new()
-            {
-                Id = newUser.Id,
-                Name = newUser.Name,
-                Email = newUser.Email,
-                Owner = newUser.Owner,
-                Allowed = newUser.Allowed,
-                AudioTranscoding = newUser.AudioTranscoding,
-                NoTranscoding = newUser.NoTranscoding,
-                VideoTranscoding = newUser.VideoTranscoding,
-                Manage = newUser.Manage
-            })
+            .WhenMatched(
+                (oldUser, newUser) =>
+                    new()
+                    {
+                        Id = newUser.Id,
+                        Name = newUser.Name,
+                        Email = newUser.Email,
+                        Owner = newUser.Owner,
+                        Allowed = newUser.Allowed,
+                        AudioTranscoding = newUser.AudioTranscoding,
+                        NoTranscoding = newUser.NoTranscoding,
+                        VideoTranscoding = newUser.VideoTranscoding,
+                        Manage = newUser.Manage,
+                    }
+            )
             .RunAsync();
 
         ClaimsPrincipleExtensions.AddUser(user);
@@ -214,11 +280,17 @@ public static class Register
             GenericHttpClient authClient = new(Config.ApiServerBaseUrl);
             authClient.SetDefaultHeaders(Config.UserAgent, Globals.Globals.AccessToken);
 
-            string response = await authClient.SendAndReadAsync(HttpMethod.Post, "tunnel", new FormUrlEncodedContent(serverData));
+            string response = await authClient.SendAndReadAsync(
+                HttpMethod.Post,
+                "tunnel",
+                new FormUrlEncodedContent(serverData)
+            );
 
-            ServerTunnelAvailabilityResponse? data = response.FromJson<ServerTunnelAvailabilityResponse>();
+            ServerTunnelAvailabilityResponse? data =
+                response.FromJson<ServerTunnelAvailabilityResponse>();
 
-            if (data is null || !data.Allowed || data.Token is null) return;
+            if (data is null || !data.Allowed || data.Token is null)
+                return;
 
             Config.CloudflareTunnelToken = data.Token;
 

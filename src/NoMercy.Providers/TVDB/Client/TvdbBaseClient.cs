@@ -40,29 +40,39 @@ public class TvdbBaseClient : IDisposable
 
     private async Task Login()
     {
-        if (IsTokenValid(Token)) return;
+        if (IsTokenValid(Token))
+            return;
 
         TvdbLoginResponse? token = await GetToken();
 
-        if (token is null) return;
+        if (token is null)
+            return;
 
         Token = token;
     }
 
     private static bool IsTokenValid(TvdbLoginResponse? token)
     {
-        if (token is null) return false;
+        if (token is null)
+            return false;
 
-        if (token.Data.ExpiresAt >= DateTime.Now.AddMinutes(5)) return true;
+        if (token.Data.ExpiresAt >= DateTime.Now.AddMinutes(5))
+            return true;
 
         Token = null;
         return false;
     }
 
-
     protected static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 50, Interval = 1000, Start = true });
+        return _queue ??= new(
+            new()
+            {
+                Concurrent = 50,
+                Interval = 1000,
+                Start = true,
+            }
+        );
     }
 
     private static int Max(int available, int wanted, int constraint)
@@ -83,10 +93,7 @@ public class TvdbBaseClient : IDisposable
 
         JsonContent content = JsonContent.Create(new { apikey = ApiInfo.TvdbKey });
 
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "login")
-        {
-            Content = content
-        };
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, "login") { Content = content };
 
         using HttpResponseMessage httpResponse = await client.SendAsync(httpRequestMessage);
         string response = await httpResponse.Content.ReadAsStringAsync();
@@ -94,21 +101,28 @@ public class TvdbBaseClient : IDisposable
         return response.FromJson<TvdbLoginResponse>();
     }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false,
-        bool skipCache = false)
+    protected async Task<T?> Get<T>(
+        string url,
+        Dictionary<string, string>? query = null,
+        bool? priority = false,
+        bool skipCache = false
+    )
         where T : class
     {
         query ??= new();
 
         string newUrl = QueryHelpers.AddQueryString(url, query!);
 
-        if (!skipCache && CacheController.Read(newUrl, out T? result)) return result;
+        if (!skipCache && CacheController.Read(newUrl, out T? result))
+            return result;
 
         Logger.Tvdb(_baseUrl + newUrl, LogEventLevel.Verbose);
 
-        string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+        string response = await GetQueue()
+            .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
-        if (!skipCache) await CacheController.Write(newUrl, response);
+        if (!skipCache)
+            await CacheController.Write(newUrl, response);
 
         T? data = response.FromJson<T>();
 

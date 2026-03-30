@@ -31,104 +31,161 @@ public class ServerControlViewModel : INotifyPropertyChanged
     public string ServerStatus
     {
         get => _serverStatus;
-        set { _serverStatus = value; OnPropertyChanged(); }
+        set
+        {
+            _serverStatus = value;
+            OnPropertyChanged();
+        }
     }
 
     public string ServerName
     {
         get => _serverName;
-        set { _serverName = value; OnPropertyChanged(); }
+        set
+        {
+            _serverName = value;
+            OnPropertyChanged();
+        }
     }
 
     public string Version
     {
         get => _version;
-        set { _version = value; OnPropertyChanged(); }
+        set
+        {
+            _version = value;
+            OnPropertyChanged();
+        }
     }
 
     public string Platform
     {
         get => _platform;
-        set { _platform = value; OnPropertyChanged(); }
+        set
+        {
+            _platform = value;
+            OnPropertyChanged();
+        }
     }
 
     public string Uptime
     {
         get => _uptime;
-        set { _uptime = value; OnPropertyChanged(); }
+        set
+        {
+            _uptime = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool IsServerRunning
     {
         get => _isServerRunning;
-        set { _isServerRunning = value; OnPropertyChanged(); }
+        set
+        {
+            _isServerRunning = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool IsServerStopped
     {
         get => _isServerStopped;
-        set { _isServerStopped = value; OnPropertyChanged(); }
+        set
+        {
+            _isServerStopped = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool IsActionInProgress
     {
         get => _isActionInProgress;
-        set { _isActionInProgress = value; OnPropertyChanged(); }
+        set
+        {
+            _isActionInProgress = value;
+            OnPropertyChanged();
+        }
     }
 
     public string ActionStatus
     {
         get => _actionStatus;
-        set { _actionStatus = value; OnPropertyChanged(); }
+        set
+        {
+            _actionStatus = value;
+            OnPropertyChanged();
+        }
     }
 
     public string StatusColor
     {
         get => _statusColor;
-        set { _statusColor = value; OnPropertyChanged(); }
+        set
+        {
+            _statusColor = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool AutoStartEnabled
     {
         get => _autoStartEnabled;
-        set { _autoStartEnabled = value; OnPropertyChanged(); }
+        set
+        {
+            _autoStartEnabled = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool UpdateAvailable
     {
         get => _updateAvailable;
-        set { _updateAvailable = value; OnPropertyChanged(); }
+        set
+        {
+            _updateAvailable = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool RestartNeeded
     {
         get => _restartNeeded;
-        set { _restartNeeded = value; OnPropertyChanged(); }
+        set
+        {
+            _restartNeeded = value;
+            OnPropertyChanged();
+        }
     }
 
     public string LatestVersion
     {
         get => _latestVersion;
-        set { _latestVersion = value; OnPropertyChanged(); }
+        set
+        {
+            _latestVersion = value;
+            OnPropertyChanged();
+        }
     }
 
     public ServerControlViewModel(
         ServerConnection serverConnection,
-        ServerProcessLauncher processLauncher)
+        ServerProcessLauncher processLauncher
+    )
     {
         _serverConnection = serverConnection;
         _processLauncher = processLauncher;
     }
 
-    public async Task RefreshStatusAsync(
-        CancellationToken cancellationToken = default)
+    public async Task RefreshStatusAsync(CancellationToken cancellationToken = default)
     {
         if (!_serverConnection.IsConnected)
             await _serverConnection.ConnectAsync(cancellationToken);
 
-        ServerStatusResponse? status =
-            await _serverConnection.GetAsync<ServerStatusResponse>(
-                "/manage/status", cancellationToken);
+        ServerStatusResponse? status = await _serverConnection.GetAsync<ServerStatusResponse>(
+            "/manage/status",
+            cancellationToken
+        );
 
         if (status is null)
         {
@@ -147,16 +204,12 @@ public class ServerControlViewModel : INotifyPropertyChanged
         {
             "running" => "Running",
             "starting" => "Starting",
-            _ => status.Status
+            _ => status.Status,
         };
 
-        ServerName = string.IsNullOrEmpty(status.ServerName)
-            ? "--"
-            : status.ServerName;
+        ServerName = string.IsNullOrEmpty(status.ServerName) ? "--" : status.ServerName;
 
-        Version = string.IsNullOrEmpty(status.Version)
-            ? "--"
-            : status.Version;
+        Version = string.IsNullOrEmpty(status.Version) ? "--" : status.Version;
 
         Platform = string.IsNullOrEmpty(status.Platform)
             ? "--"
@@ -171,7 +224,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
         {
             "running" => "#22C55E",
             "starting" => "#EAB308",
-            _ => "#EF4444"
+            _ => "#EF4444",
         };
 
         AutoStartEnabled = status.AutoStart;
@@ -182,19 +235,17 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     public async Task StopServerAsync()
     {
-        if (IsActionInProgress) return;
+        if (IsActionInProgress)
+            return;
 
         IsActionInProgress = true;
         ActionStatus = "Stopping server...";
 
         try
         {
-            bool success = await _serverConnection
-                .PostAsync("/manage/stop");
+            bool success = await _serverConnection.PostAsync("/manage/stop");
 
-            ActionStatus = success
-                ? "Stop command sent"
-                : "Failed to send stop command";
+            ActionStatus = success ? "Stop command sent" : "Failed to send stop command";
 
             await Task.Delay(1000);
             await RefreshStatusAsync();
@@ -207,7 +258,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     public async Task RestartServerAsync()
     {
-        if (IsActionInProgress) return;
+        if (IsActionInProgress)
+            return;
 
         IsActionInProgress = true;
         ActionStatus = "Stopping server...";
@@ -254,17 +306,15 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     public async Task ToggleAutoStartAsync(bool enabled)
     {
-        await _serverConnection.PostAsync(
-            "/manage/autostart",
-            new { enabled },
-            default);
+        await _serverConnection.PostAsync("/manage/autostart", new { enabled }, default);
 
         await RefreshStatusAsync();
     }
 
     public async Task ApplyUpdateAsync()
     {
-        if (IsActionInProgress) return;
+        if (IsActionInProgress)
+            return;
 
         IsActionInProgress = true;
         ActionStatus = "Downloading update...";
@@ -272,8 +322,9 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
         try
         {
-            (bool downloaded, string? downloadBody) =
-                await _serverConnection.PostWithBodyAsync("/manage/update");
+            (bool downloaded, string? downloadBody) = await _serverConnection.PostWithBodyAsync(
+                "/manage/update"
+            );
 
             LauncherLog.Info($"POST /manage/update => success={downloaded}, body={downloadBody}");
 
@@ -350,7 +401,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     private static string? ExtractMessage(string? json)
     {
-        if (string.IsNullOrEmpty(json)) return null;
+        if (string.IsNullOrEmpty(json))
+            return null;
 
         try
         {
@@ -365,7 +417,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     public async Task LaunchAppAsync()
     {
-        if (IsActionInProgress) return;
+        if (IsActionInProgress)
+            return;
 
         IsActionInProgress = true;
         ActionStatus = "Launching app...";
@@ -379,9 +432,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             else
                 launched = await _processLauncher.LaunchAppAsync();
 
-            ActionStatus = launched
-                ? "App launched"
-                : "Failed to launch app";
+            ActionStatus = launched ? "App launched" : "Failed to launch app";
         }
         finally
         {
@@ -391,7 +442,8 @@ public class ServerControlViewModel : INotifyPropertyChanged
 
     public async Task StartServerAsync()
     {
-        if (IsActionInProgress) return;
+        if (IsActionInProgress)
+            return;
 
         IsActionInProgress = true;
         IsServerStopped = false;
@@ -402,9 +454,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             string extraArgs = LauncherSettings.Load().StartupArguments;
             bool started = await _processLauncher.StartServerAsync(extraArgs);
 
-            ActionStatus = started
-                ? "Server process launched"
-                : "Failed to start server";
+            ActionStatus = started ? "Server process launched" : "Failed to start server";
 
             await Task.Delay(2000);
             await RefreshStatusAsync();
@@ -422,15 +472,17 @@ public class ServerControlViewModel : INotifyPropertyChanged
         _pollCts = new();
         CancellationToken token = _pollCts.Token;
 
-        _ = Task.Run(async () =>
-        {
-            while (!token.IsCancellationRequested)
+        _ = Task.Run(
+            async () =>
             {
-                await RefreshStatusAsync(token);
-                await Task.Delay(
-                    TimeSpan.FromSeconds(5), token);
-            }
-        }, token);
+                while (!token.IsCancellationRequested)
+                {
+                    await RefreshStatusAsync(token);
+                    await Task.Delay(TimeSpan.FromSeconds(5), token);
+                }
+            },
+            token
+        );
     }
 
     public void StopPolling()
@@ -479,7 +531,7 @@ public class ServerControlViewModel : INotifyPropertyChanged
             "running" => "Running",
             "starting" => "Starting",
             "Disconnected" => "Disconnected",
-            _ => status
+            _ => status,
         };
     }
 
@@ -489,16 +541,14 @@ public class ServerControlViewModel : INotifyPropertyChanged
         {
             "running" or "Running" => "#22C55E",
             "starting" or "Starting" => "#EAB308",
-            _ => "#EF4444"
+            _ => "#EF4444",
         };
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    protected void OnPropertyChanged(
-        [CallerMemberName] string? propertyName = null)
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(
-            this, new(propertyName));
+        PropertyChanged?.Invoke(this, new(propertyName));
     }
 }

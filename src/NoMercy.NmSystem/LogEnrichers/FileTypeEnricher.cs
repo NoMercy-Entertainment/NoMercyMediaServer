@@ -11,7 +11,6 @@ internal class FileTypeEnricher : ILogEventEnricher
 
         string type = value?.ToString().Replace("\"", "") ?? "app";
 
-        logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty(
-            "Type", type));
+        logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("Type", type));
     }
 }

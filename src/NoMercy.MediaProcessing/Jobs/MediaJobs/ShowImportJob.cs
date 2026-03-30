@@ -44,56 +44,64 @@ public class ShowImportJob : AbstractMediaJob
         EpisodeRepository episodeRepository = new(context);
         EpisodeManager episodeManager = new(episodeRepository, jobDispatcher);
 
-        Library tvLibrary = await context.Libraries
-            .Where(f => f.Id == LibraryId)
+        Library tvLibrary = await context
+            .Libraries.Where(f => f.Id == LibraryId)
             .Include(f => f.FolderLibraries)
-            .ThenInclude(f => f.Folder)
+                .ThenInclude(f => f.Folder)
             .FirstAsync();
 
         bool wasEmpty = !await context.LibraryTv.AnyAsync(lt => lt.LibraryId == LibraryId);
 
         TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary, HighPriority);
-        if (show == null) return;
+        if (show == null)
+            return;
 
         if (EventBusProvider.IsConfigured)
         {
-            await EventBusProvider.Current.PublishAsync(new MediaAddedEvent
-            {
-                MediaId = Id,
-                MediaType = "tvshow",
-                Title = show.Name ?? $"Show {Id}",
-                LibraryId = LibraryId
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new MediaAddedEvent
+                {
+                    MediaId = Id,
+                    MediaType = "tvshow",
+                    Title = show.Name ?? $"Show {Id}",
+                    LibraryId = LibraryId,
+                }
+            );
         }
 
-        IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(show, HighPriority);
+        IEnumerable<TmdbSeasonAppends> seasons = await seasonManager.StoreSeasonsAsync(
+            show,
+            HighPriority
+        );
 
         ConcurrentBag<Episode> episodes = [];
-        await Parallel.ForEachAsync(seasons, Config.ParallelOptions, async (season, _) =>
-        {
-            IEnumerable<Episode> eps = await episodeManager.Add(show, season, HighPriority);
-            foreach (Episode episode in eps)
+        await Parallel.ForEachAsync(
+            seasons,
+            Config.ParallelOptions,
+            async (season, _) =>
             {
-                episodes.Add(episode);
+                IEnumerable<Episode> eps = await episodeManager.Add(show, season, HighPriority);
+                foreach (Episode episode in eps)
+                {
+                    episodes.Add(episode);
+                }
             }
-        });
+        );
 
         await episodeRepository.StoreEpisodes(episodes);
 
         jobDispatcher.DispatchJob<FileRescanJob>(Id, tvLibrary);
-        
+
         if (EventBusProvider.IsConfigured)
         {
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["base", "info", Id.ToString()]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["base", "info", Id.ToString()] }
+            );
 
             if (wasEmpty)
-                await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-                {
-                    QueryKey = ["libraries"]
-                });
+                await EventBusProvider.Current.PublishAsync(
+                    new LibraryRefreshEvent { QueryKey = ["libraries"] }
+                );
         }
     }
 }

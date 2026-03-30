@@ -27,8 +27,12 @@ public class App : Application
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             _trayIconManager = new(
-                _serverConnection, _processLauncher, desktop,
-                Program.ShowOnStartup, Program.IsDev);
+                _serverConnection,
+                _processLauncher,
+                desktop,
+                Program.ShowOnStartup,
+                Program.IsDev
+            );
             _trayIconManager.Initialize();
         }
 

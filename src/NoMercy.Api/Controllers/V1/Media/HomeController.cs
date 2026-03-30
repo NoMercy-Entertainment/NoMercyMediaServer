@@ -39,7 +39,10 @@ public class HomeController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index([FromQuery] PageRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> Index(
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view home");
@@ -48,7 +51,12 @@ public class HomeController : BaseController
         string language = Language();
         string country = Country();
 
-        List<GenreRowDto<GenreRowItemDto>> result = await _homeService.GetHomePageContent(userId, language, country, request);
+        List<GenreRowDto<GenreRowItemDto>> result = await _homeService.GetHomePageContent(
+            userId,
+            language,
+            country,
+            request
+        );
 
         List<GenreRowDto<GenreRowItemDto>> newData = result.ToList();
         bool hasMore = newData.Count >= request.Take;
@@ -59,10 +67,11 @@ public class HomeController : BaseController
         {
             Data = newData,
             NextPage = hasMore ? request.Page + 1 : null,
-            HasMore = hasMore
+            HasMore = hasMore,
         };
 
-        if (request.Page != 0) return Ok(response);
+        if (request.Page != 0)
+            return Ok(response);
 
         LibraryRepository libraryRepository = new(await _contextFactory.CreateDbContextAsync(ct));
         List<Library> libraries = await libraryRepository.GetLibraries(userId);
@@ -73,15 +82,35 @@ public class HomeController : BaseController
             {
                 await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
                 List<Movie> libraryMovies = [];
-                await foreach (Movie movie in libraryRepository
-                                   .GetLibraryMovies(context, userId, library.Id, language, request.Take, request.Page, m => m.CreatedAt, "desc"))
+                await foreach (
+                    Movie movie in libraryRepository.GetLibraryMovies(
+                        context,
+                        userId,
+                        library.Id,
+                        language,
+                        request.Take,
+                        request.Page,
+                        m => m.CreatedAt,
+                        "desc"
+                    )
+                )
                 {
                     libraryMovies.Add(movie);
                 }
 
                 List<Tv> libraryShows = [];
-                await foreach (Tv tv in libraryRepository
-                                   .GetLibraryShows(context, userId, library.Id, language, request.Take, request.Page, m => m.CreatedAt, "desc"))
+                await foreach (
+                    Tv tv in libraryRepository.GetLibraryShows(
+                        context,
+                        userId,
+                        library.Id,
+                        language,
+                        request.Take,
+                        request.Page,
+                        m => m.CreatedAt,
+                        "desc"
+                    )
+                )
                 {
                     libraryShows.Add(tv);
                 }
@@ -90,17 +119,27 @@ public class HomeController : BaseController
             })
             .ToArray();
 
-        (Library library, List<Movie> movies, List<Tv> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
+        (Library library, List<Movie> movies, List<Tv> shows)[] libraryDataResults =
+            await Task.WhenAll(libraryDataTasks);
 
-        foreach ((Library library, List<Movie> libraryMovies, List<Tv> libraryShows) in libraryDataResults.OrderByDescending(r => r.library.Order))
+        foreach (
+            (
+                Library library,
+                List<Movie> libraryMovies,
+                List<Tv> libraryShows
+            ) in libraryDataResults.OrderByDescending(r => r.library.Order)
+        )
         {
-            response.Data = response.Data.Prepend(new()
-            {
-                Title = "Latest in " + library.Title,
-                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
-                Items = libraryMovies.Select(movie => new GenreRowItemDto(movie, country))
-                    .Concat(libraryShows.Select(tv => new GenreRowItemDto(tv, country)))
-            });
+            response.Data = response.Data.Prepend(
+                new()
+                {
+                    Title = "Latest in " + library.Title,
+                    MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+                    Items = libraryMovies
+                        .Select(movie => new GenreRowItemDto(movie, country))
+                        .Concat(libraryShows.Select(tv => new GenreRowItemDto(tv, country))),
+                }
+            );
         }
 
         return Ok(response);
@@ -113,18 +152,30 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view continue watching");
 
-        ComponentResponse result = await _homeService.GetHomeData(User.UserId(), Language(), Country());
+        ComponentResponse result = await _homeService.GetHomeData(
+            User.UserId(),
+            Language(),
+            Country()
+        );
 
         return Ok(result);
     }
 
     [HttpPost("home/card")]
-    public async Task<IActionResult> HomeCard([FromBody] CardRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> HomeCard(
+        [FromBody] CardRequestDto request,
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view home card");
 
-        ComponentResponse result = await _homeService.GetHomeCard(User.UserId(), Language(), Country(), request.ReplaceId);
+        ComponentResponse result = await _homeService.GetHomeCard(
+            User.UserId(),
+            Language(),
+            Country(),
+            request.ReplaceId
+        );
 
         return Ok(result);
     }
@@ -135,28 +186,41 @@ public class HomeController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view home tv");
 
-        ComponentResponse result = await _homeService.GetHomeTvContent(User.UserId(), Language(), Country());
+        ComponentResponse result = await _homeService.GetHomeTvContent(
+            User.UserId(),
+            Language(),
+            Country()
+        );
 
         return Ok(result);
     }
 
     [HttpPost("home/continue")]
-    public async Task<IActionResult> HomeContinue([FromBody] CardRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> HomeContinue(
+        [FromBody] CardRequestDto request,
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view continue watching");
 
-        ComponentResponse result =
-            await _homeService.GetHomeContinueContent(User.UserId(), Language(), Country(), request.ReplaceId);
+        ComponentResponse result = await _homeService.GetHomeContinueContent(
+            User.UserId(),
+            Language(),
+            Country(),
+            request.ReplaceId
+        );
 
         return Ok(result);
     }
 
-
-
     [HttpHead]
     [Route("trailer/{trailerId}")]
-    public async Task<IActionResult> HasTrailer(int id, string trailerId, CancellationToken ct = default)
+    public async Task<IActionResult> HasTrailer(
+        int id,
+        string trailerId,
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
@@ -164,17 +228,15 @@ public class HomeController : BaseController
         string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
         string jsonFile = Path.Combine(folder, "info.json");
 
-        if(System.IO.File.Exists(jsonFile))
+        if (System.IO.File.Exists(jsonFile))
         {
             string text = await System.IO.File.ReadAllTextAsync(jsonFile, ct);
             TrailerInfo? trailerInfo = text.FromJson<TrailerInfo>();
             if (trailerInfo is not null)
             {
-                return Ok(new StatusResponseDto<string>
-                {
-                    Status = "ok",
-                    Message = "Trailer found"
-                });
+                return Ok(
+                    new StatusResponseDto<string> { Status = "ok", Message = "Trailer found" }
+                );
             }
         }
 
@@ -182,7 +244,7 @@ public class HomeController : BaseController
             $"-f bestvideo+bestaudio -j https://youtube.com/watch?v={trailerId} --extractor-args \"youtube:player_client=default\" ";
         Shell.ExecResult result = await Shell.ExecAsync(AppFiles.YtdlpPath, arg);
 
-        if(!result.Success || string.IsNullOrEmpty(result.StandardOutput))
+        if (!result.Success || string.IsNullOrEmpty(result.StandardOutput))
         {
             Logger.Encoder(result.StandardError, LogEventLevel.Error);
             return NotFoundResponse("Trailer not found");
@@ -193,16 +255,16 @@ public class HomeController : BaseController
 
         await System.IO.File.WriteAllTextAsync(jsonFile, result.StandardOutput, ct);
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Trailer found"
-        });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer found" });
     }
 
     [HttpGet]
     [Route("trailer/{trailerId}")]
-    public async Task<IActionResult> Trailer(int id, string trailerId, CancellationToken ct = default)
+    public async Task<IActionResult> Trailer(
+        int id,
+        string trailerId,
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
@@ -228,31 +290,32 @@ public class HomeController : BaseController
                 new VideoPlaylistResponseDto
                 {
                     Id = 0,
-                    Title =  trailerInfo.Title,
+                    Title = trailerInfo.Title,
                     Description = trailerInfo.Description,
                     Duration = trailerInfo.Duration.ToHis(),
-                    Image =  trailerInfo.Thumbnail?.ToString(),
+                    Image = trailerInfo.Thumbnail?.ToString(),
                     File = $"/transcodes/{trailerId}/video.m3u8",
                     Origin = Info.DeviceId,
                     PlaylistId = trailerInfo.Id!,
-                    Tracks = trailerInfo.Subtitles
-                        .Where(t => t.Value.Any(s => s.Ext == "vtt"))
+                    Tracks = trailerInfo
+                        .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
                         .Select(t => new IVideoTrack
                         {
                             Label = t.Value.First(s => s.Ext == "vtt").Name,
                             File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                             Language = t.Key,
-                            Kind = "subtitles"
-                        }).ToList(),
+                            Kind = "subtitles",
+                        })
+                        .ToList(),
                     Sources =
                     [
                         new()
                         {
                             Src = $"/transcodes/{trailerId}/video.m3u8",
                             Type = "application/x-mpegURL",
-                            Languages = [trailerInfo.Language.OrEmpty()]
-                        }
-                    ]
+                            Languages = [trailerInfo.Language.OrEmpty()],
+                        },
+                    ],
                 }
             );
         }
@@ -264,7 +327,9 @@ public class HomeController : BaseController
                 StringBuilder sb = new();
 
                 sb.Append(AppFiles.YtdlpPath);
-                sb.Append(" -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" ");
+                sb.Append(
+                    " -f bestvideo+bestaudio  --extractor-args \"youtube:player_client=default\" "
+                );
 
                 if (!string.IsNullOrEmpty(language))
                     sb.Append($" -o \"subtitle:{language}.%(ext)s\" --sub-langs all --write-subs ");
@@ -272,33 +337,40 @@ public class HomeController : BaseController
                 sb.Append(trailerId);
 
                 sb.Append(" -o - ");
-                sb.Append($" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast ");
-                sb.Append("-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 ");
+                sb.Append(
+                    $" | {AppFiles.FfmpegPath} -i pipe: -map 0:0 -map 0:1 -c:v libx264 -c:a aac -ac 2 -preset ultrafast "
+                );
+                sb.Append(
+                    "-segment_list_type m3u8 -hls_playlist_type event -hls_init_time 4 -hls_time 4 -hls_segment_filename video_%05d.ts video.m3u8 "
+                );
 
                 if (Software.IsWindows)
                 {
                     Logger.Encoder($"cmd -c \"{sb}\"", LogEventLevel.Debug);
-                    Shell.ExecSync("cmd", $"/c \"{sb}\"", new()
-                    {
-                        WorkingDirectory = folder
-                    });
+                    Shell.ExecSync("cmd", $"/c \"{sb}\"", new() { WorkingDirectory = folder });
                 }
                 else
                 {
                     Logger.Encoder($"/bin/bash -c \"{sb}\"", LogEventLevel.Debug);
-                    Shell.ExecSync("/bin/bash", $"-c \"{sb}\"", new()
-                    {
-                        WorkingDirectory = folder
-                    });
+                    Shell.ExecSync(
+                        "/bin/bash",
+                        $"-c \"{sb}\"",
+                        new() { WorkingDirectory = folder }
+                    );
                 }
             }
             catch (Exception ex)
             {
-                Logger.Encoder($"Trailer download failed for {trailerId}: {ex.Message}", LogEventLevel.Error);
+                Logger.Encoder(
+                    $"Trailer download failed for {trailerId}: {ex.Message}",
+                    LogEventLevel.Error
+                );
             }
         });
 
-        using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted);
+        using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(
+            HttpContext.RequestAborted
+        );
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
         while (!System.IO.File.Exists(Path.Combine(folder, "video_00002.ts")))
         {
@@ -309,38 +381,43 @@ public class HomeController : BaseController
             new VideoPlaylistResponseDto
             {
                 Id = 0,
-                Title =  trailerInfo.Title,
+                Title = trailerInfo.Title,
                 Description = trailerInfo.Description,
                 Duration = trailerInfo.Duration.ToHis(),
-                Image =  trailerInfo.Thumbnail?.ToString(),
+                Image = trailerInfo.Thumbnail?.ToString(),
                 File = $"/transcodes/{trailerId}/video.m3u8",
                 Origin = Info.DeviceId,
                 PlaylistId = trailerInfo.Id!,
-                Tracks = trailerInfo.Subtitles
-                    .Where(t => t.Value.Any(s => s.Ext == "vtt"))
+                Tracks = trailerInfo
+                    .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
                     .Select(t => new IVideoTrack
                     {
                         Label = t.Value.First(s => s.Ext == "vtt").Name,
                         File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
                         Language = t.Key,
-                        Kind = "subtitles"
-                    }).ToList(),
+                        Kind = "subtitles",
+                    })
+                    .ToList(),
                 Sources =
                 [
                     new()
                     {
                         Src = $"/transcodes/{trailerId}/video.m3u8",
                         Type = "application/x-mpegURL",
-                        Languages = [trailerInfo.Language.OrEmpty()]
-                    }
-                ]
+                        Languages = [trailerInfo.Language.OrEmpty()],
+                    },
+                ],
             }
         );
     }
 
     [HttpDelete]
     [Route("trailer/{trailerId}")]
-    public async Task<IActionResult> RemoveTrailer(int id, string trailerId, CancellationToken ct = default)
+    public async Task<IActionResult> RemoveTrailer(
+        int id,
+        string trailerId,
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view tv shows");
@@ -348,11 +425,7 @@ public class HomeController : BaseController
         string folder = Path.Combine(AppFiles.TranscodePath, trailerId);
 
         if (!Directory.Exists(folder))
-            return Ok(new StatusResponseDto<string>
-            {
-                Status = "ok",
-                Message = "Trailer removed"
-            });
+            return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer removed" });
 
         try
         {
@@ -361,14 +434,13 @@ public class HomeController : BaseController
         }
         catch (Exception ex)
         {
-            Logger.Encoder($"Failed to delete trailer folder {folder}: {ex.Message}", LogEventLevel.Error);
+            Logger.Encoder(
+                $"Failed to delete trailer folder {folder}: {ex.Message}",
+                LogEventLevel.Error
+            );
             return InternalServerErrorResponse("Failed to remove trailer");
         }
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Trailer removed"
-        });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Trailer removed" });
     }
 }

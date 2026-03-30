@@ -6,11 +6,18 @@ public static class Checksum
 {
     public static async Task<string> GetAsync(string filePath)
     {
-        await using FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
+        await using FileStream fileStream = new(
+            filePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 4096,
+            useAsync: true
+        );
         byte[] hashBytes = await SHA256.HashDataAsync(fileStream);
         return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
     }
-    
+
     public static string Get(string filePath)
     {
         const int bufferSize = 1024 * 64; // 64 KB, can be increased to 1MB (1024 * 1024)

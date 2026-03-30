@@ -7,9 +7,14 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record DirectorDto
 {
-    [JsonProperty("id")] public long Id { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
+    [JsonProperty("id")]
+    public long Id { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
 
     public DirectorDto(Crew crew)
     {

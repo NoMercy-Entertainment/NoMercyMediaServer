@@ -25,7 +25,14 @@ public class OpenSubtitlesBaseClient : IDisposable
 
     protected static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 1, Interval = 1000, Start = true });
+        return _queue ??= new(
+            new()
+            {
+                Concurrent = 1,
+                Interval = 1000,
+                Start = true,
+            }
+        );
     }
 
     protected async Task<T2?> Post<T1, T2>(string url, T1 query, bool? priority = false)
@@ -36,12 +43,18 @@ public class OpenSubtitlesBaseClient : IDisposable
 
         Logger.OpenSubs(content.ReadAsStringAsync().Result);
 
-        string newUrl =
-            QueryHelpers.AddQueryString(url, new Dictionary<string, string?> { { "query", query.ToXml() } });
+        string newUrl = QueryHelpers.AddQueryString(
+            url,
+            new Dictionary<string, string?> { { "query", query.ToXml() } }
+        );
         // if (CacheController.Read(newUrl, out T2? result, true)) return result;
 
         string response = await GetQueue()
-            .Enqueue(() => _client.PostAsync(url, content).Result.Content.ReadAsStringAsync(), newUrl, priority);
+            .Enqueue(
+                () => _client.PostAsync(url, content).Result.Content.ReadAsStringAsync(),
+                newUrl,
+                priority
+            );
 
         await CacheController.Write(newUrl, response);
 
@@ -51,7 +64,6 @@ public class OpenSubtitlesBaseClient : IDisposable
 
         return data;
     }
-
 
     public void Dispose()
     {

@@ -16,8 +16,7 @@ public partial class LogViewerView : UserControl
         InitializeComponent();
     }
 
-    private LogViewerViewModel? ViewModel =>
-        DataContext as LogViewerViewModel;
+    private LogViewerViewModel? ViewModel => DataContext as LogViewerViewModel;
 
     protected override void OnDataContextChanged(EventArgs e)
     {
@@ -36,15 +35,13 @@ public partial class LogViewerView : UserControl
         });
     }
 
-    private async void OnRefreshClick(
-        object? sender, RoutedEventArgs e)
+    private async void OnRefreshClick(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is not null)
             await ViewModel.RefreshLogsAsync();
     }
 
-    private void OnClearFiltersClick(
-        object? sender, RoutedEventArgs e)
+    private void OnClearFiltersClick(object? sender, RoutedEventArgs e)
     {
         ViewModel?.ClearFilters();
     }
@@ -53,11 +50,9 @@ public partial class LogViewerView : UserControl
     {
         base.OnKeyDown(e);
 
-        if (e.Key == Key.C
-            && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        if (e.Key == Key.C && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
-            System.Collections.IList? selectedItems =
-                LogList.SelectedItems;
+            System.Collections.IList? selectedItems = LogList.SelectedItems;
 
             if (selectedItems is null || selectedItems.Count == 0)
                 return;
@@ -70,7 +65,8 @@ public partial class LogViewerView : UserControl
                     continue;
 
                 sb.AppendLine(
-                    $"{entry.Time:HH:mm:ss.fff}\t{entry.Level}\t{entry.Type}\t{entry.Message}");
+                    $"{entry.Time:HH:mm:ss.fff}\t{entry.Level}\t{entry.Type}\t{entry.Message}"
+                );
             }
 
             if (sb.Length > 0)
@@ -79,8 +75,7 @@ public partial class LogViewerView : UserControl
 
                 if (topLevel?.Clipboard is not null)
                 {
-                    await topLevel.Clipboard.SetTextAsync(
-                        sb.ToString());
+                    await topLevel.Clipboard.SetTextAsync(sb.ToString());
                     e.Handled = true;
                 }
             }

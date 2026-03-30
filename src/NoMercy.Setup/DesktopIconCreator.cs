@@ -12,7 +12,8 @@ public static class DesktopIconCreator
                 CreateWindowsShortcut(appName, appPath, iconPath);
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 CreateMacShortcut(appName, appPath, iconPath);
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) CreateLinuxShortcut(appName, appPath, iconPath);
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                CreateLinuxShortcut(appName, appPath, iconPath);
         }
         catch (Exception ex)
         {
@@ -29,10 +30,12 @@ public static class DesktopIconCreator
             string shortcutPath = Path.Combine(desktopPath, $"{appName}.lnk");
 
             Type? id = Type.GetTypeFromProgID("WScript.Shell");
-            if (id == null) return;
+            if (id == null)
+                return;
 
             dynamic shell = Activator.CreateInstance(id) ?? throw new InvalidOperationException();
-            if (shell == null) return;
+            if (shell == null)
+                return;
 
             dynamic shortcut = shell.CreateShortcut(shortcutPath);
             shortcut.TargetPath = appPath;
@@ -53,7 +56,8 @@ public static class DesktopIconCreator
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string aliasPath = Path.Combine(desktopPath, appName);
 
-            string script = $@"
+            string script =
+                $@"
             tell application ""Finder""
                 set appAlias to make new alias file at POSIX file ""{desktopPath}"" to POSIX file ""{appPath}""
                 set name of appAlias to ""{appName}""
@@ -61,7 +65,12 @@ public static class DesktopIconCreator
 
             string scriptPath = "/tmp/CreateShortcut.scpt";
             File.WriteAllText(scriptPath, script);
-            using (System.Diagnostics.Process? osascriptProc = System.Diagnostics.Process.Start("osascript", scriptPath))
+            using (
+                System.Diagnostics.Process? osascriptProc = System.Diagnostics.Process.Start(
+                    "osascript",
+                    scriptPath
+                )
+            )
                 osascriptProc?.WaitForExit();
 
             if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
@@ -69,11 +78,20 @@ public static class DesktopIconCreator
                 string iconDest = Path.Combine(aliasPath, "Icon.icns");
                 File.Copy(iconPath, iconDest, true);
 
-                using (System.Diagnostics.Process? shProc = System.Diagnostics.Process.Start("sh",
-                        $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\""))
+                using (
+                    System.Diagnostics.Process? shProc = System.Diagnostics.Process.Start(
+                        "sh",
+                        $"-c \"cp '{iconPath}' '{aliasPath}/Icon.icns' && /usr/bin/SetFile -a C '{aliasPath}'\""
+                    )
+                )
                     shProc?.WaitForExit();
 
-                using (System.Diagnostics.Process? killProc = System.Diagnostics.Process.Start("killall", "Finder"))
+                using (
+                    System.Diagnostics.Process? killProc = System.Diagnostics.Process.Start(
+                        "killall",
+                        "Finder"
+                    )
+                )
                     killProc?.WaitForExit();
             }
         }
@@ -90,7 +108,8 @@ public static class DesktopIconCreator
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string shortcutPath = Path.Combine(desktopPath, $"{appName}.desktop");
 
-            string content = $@"
+            string content =
+                $@"
                 [Desktop Entry]
                 Name={appName}
                 Exec={appPath}
@@ -99,7 +118,12 @@ public static class DesktopIconCreator
                 Terminal=false";
 
             File.WriteAllText(shortcutPath, content);
-            using (System.Diagnostics.Process? chmodProc = System.Diagnostics.Process.Start("chmod", $"+x \"{shortcutPath}\""))
+            using (
+                System.Diagnostics.Process? chmodProc = System.Diagnostics.Process.Start(
+                    "chmod",
+                    $"+x \"{shortcutPath}\""
+                )
+            )
                 chmodProc?.WaitForExit();
         }
         catch (Exception ex)

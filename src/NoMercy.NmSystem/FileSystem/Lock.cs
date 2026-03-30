@@ -10,7 +10,12 @@ public static class Locking
     {
         try
         {
-            using FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            using FileStream stream = File.Open(
+                filePath,
+                FileMode.Open,
+                FileAccess.ReadWrite,
+                FileShare.None
+            );
             stream.Close();
         }
         catch (IOException)
@@ -28,14 +33,24 @@ public static class Locking
         foreach (Process process in Process.GetProcesses())
             try
             {
-                if (process.MainModule?.FileName == null) continue;
-                if (!process.MainModule.FileName.Equals(filePath, StringComparison.OrdinalIgnoreCase)) continue;
-                
+                if (process.MainModule?.FileName == null)
+                    continue;
+                if (
+                    !process.MainModule.FileName.Equals(
+                        filePath,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                    continue;
+
                 process.Kill();
                 process.WaitForExit();
-                
-                Logger.System($"Closed application {process.ProcessName} locking {filePath}", LogEventLevel.Verbose);
-                
+
+                Logger.System(
+                    $"Closed application {process.ProcessName} locking {filePath}",
+                    LogEventLevel.Verbose
+                );
+
                 break;
             }
             catch (System.ComponentModel.Win32Exception)
@@ -44,7 +59,10 @@ public static class Locking
             }
             catch (InvalidOperationException ex)
             {
-                Logger.System($"Process {process.ProcessName} has already exited: {ex.Message}", LogEventLevel.Warning);
+                Logger.System(
+                    $"Process {process.ProcessName} has already exited: {ex.Message}",
+                    LogEventLevel.Warning
+                );
             }
     }
 }

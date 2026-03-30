@@ -22,13 +22,14 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view optical drives");
 
-        IEnumerable<DriveState> drives = Optical.GetOpticalDrives()
+        IEnumerable<DriveState> drives = Optical
+            .GetOpticalDrives()
             .Select(drive => new DriveState
             {
                 Path = drive.Key.TrimEnd(Path.DirectorySeparatorChar),
                 Label = drive.Value,
                 Open = drive.Value == null,
-                MetaData = DriveMonitor.Contents.FirstOrDefault(x => x.Path == drive.Key)
+                MetaData = DriveMonitor.Contents.FirstOrDefault(x => x.Path == drive.Key),
             });
 
         return Ok(drives);
@@ -41,15 +42,18 @@ public class OpticalMediaController : BaseController
             return UnauthorizedResponse("You do not have permission to view drive contents");
 
         MetaData? metadata = await DriveMonitor.GetDriveMetadata(drivePath);
-        if (metadata == null) return NotFoundResponse("Drive metadata not found");
+        if (metadata == null)
+            return NotFoundResponse("Drive metadata not found");
 
-        return Ok(new DriveState
-        {
-            Open = false,
-            Path = drivePath.TrimEnd(Path.DirectorySeparatorChar),
-            Label = metadata.Title,
-            MetaData = metadata
-        });
+        return Ok(
+            new DriveState
+            {
+                Open = false,
+                Path = drivePath.TrimEnd(Path.DirectorySeparatorChar),
+                Label = metadata.Title,
+                MetaData = metadata,
+            }
+        );
     }
 
     [HttpPost("{drivePath}/process")]
@@ -58,7 +62,8 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to process media");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
 
         _ = DriveMonitor.ProcessMedia(drivePath, request);
 
@@ -71,11 +76,13 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to open drive");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
 
         bool success = Optical.OpenDrive(drivePath);
 
-        if (!success) return BadRequestResponse("Failed to open drive");
+        if (!success)
+            return BadRequestResponse("Failed to open drive");
 
         return Ok("Drive opened.");
     }
@@ -86,25 +93,32 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to close drive");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
 
         bool success = Optical.CloseDrive(drivePath);
 
-        if (!success) return BadRequestResponse("Failed to close drive");
+        if (!success)
+            return BadRequestResponse("Failed to close drive");
 
         return Ok("Drive closed.");
     }
 
     [HttpPost("{drivePath}/play/{playlistId}")]
-    public async Task<IActionResult> PlayMedia(string drivePath, string playlistId,
-        CancellationTokenSource cancellationTokenSource)
+    public async Task<IActionResult> PlayMedia(
+        string drivePath,
+        string playlistId,
+        CancellationTokenSource cancellationTokenSource
+    )
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to play media");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
 
-        if (string.IsNullOrWhiteSpace(playlistId)) return BadRequestResponse("Playlist ID is required");
+        if (string.IsNullOrWhiteSpace(playlistId))
+            return BadRequestResponse("Playlist ID is required");
 
         await DriveMonitor.PlayMedia(drivePath, playlistId, cancellationTokenSource);
 
@@ -117,7 +131,8 @@ public class OpticalMediaController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to stop media");
 
-        if (string.IsNullOrWhiteSpace(drivePath)) return BadRequestResponse("Drive path is required");
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
 
         _ = DriveMonitor.StopMedia();
 

@@ -13,22 +13,30 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         Configuration.ClientKey = ApiInfo.AcousticIdKey;
     }
 
-    private Task<AcoustIdFingerprint?> WithFingerprint(string[] appendices, FingerPrintData fingerprintData,
-        bool? priority = false)
+    private Task<AcoustIdFingerprint?> WithFingerprint(
+        string[] appendices,
+        FingerPrintData fingerprintData,
+        bool? priority = false
+    )
     {
         Dictionary<string, string?> queryParams = new()
         {
             ["client"] = ApiInfo.AcousticIdKey,
             ["duration"] = fingerprintData.Duration.ToString(),
-            ["fingerprint"] = fingerprintData.Fingerprint
+            ["fingerprint"] = fingerprintData.Fingerprint,
         };
 
-        return Get<AcoustIdFingerprint>("lookup?meta=" + string.Join("+", appendices), queryParams, priority);
+        return Get<AcoustIdFingerprint>(
+            "lookup?meta=" + string.Join("+", appendices),
+            queryParams,
+            priority
+        );
     }
 
     public async ValueTask<AcoustIdFingerprint?> Lookup(string? file, bool? priority = false)
     {
-        if (file == null) return null;
+        if (file == null)
+            return null;
 
         string fingerprint = await FfMpeg.GetFingerprint(file);
         string duration = await FfMpeg.GetDuration(file);
@@ -36,18 +44,16 @@ public class AcoustIdFingerprintClient : AcoustIdBaseClient
         FingerPrintData? fingerprintData = new()
         {
             Fingerprint = fingerprint,
-            Duration = duration.ToInt()
+            Duration = duration.ToInt(),
         };
 
-        if (fingerprintData == null) throw new("Fingerprint data is null");
+        if (fingerprintData == null)
+            throw new("Fingerprint data is null");
 
-        return await WithFingerprint([
-            "recordings",
-            "releases",
-            "tracks",
-            "compress",
-            "usermeta",
-            "sources"
-        ], fingerprintData, priority);
+        return await WithFingerprint(
+            ["recordings", "releases", "tracks", "compress", "usermeta", "sources"],
+            fingerprintData,
+            priority
+        );
     }
 }

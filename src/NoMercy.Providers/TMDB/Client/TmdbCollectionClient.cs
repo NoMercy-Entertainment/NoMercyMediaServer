@@ -6,9 +6,8 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public class TmdbCollectionClient : TmdbBaseClient
 {
-    public TmdbCollectionClient(int id, string[]? appendices = null, string? language = "en-US") : base(id, language!)
-    {
-    }
+    public TmdbCollectionClient(int id, string[]? appendices = null, string? language = "en-US")
+        : base(id, language!) { }
 
     public Task<TmdbCollectionDetails?> Details()
     {
@@ -19,7 +18,7 @@ public class TmdbCollectionClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["append_to_response"] = string.Join(",", appendices)
+            ["append_to_response"] = string.Join(",", appendices),
         };
 
         return Get<TmdbCollectionAppends>("collection/" + Id, queryParams, priority);
@@ -27,10 +26,7 @@ public class TmdbCollectionClient : TmdbBaseClient
 
     public Task<TmdbCollectionAppends?> WithAllAppends(bool? priority = false)
     {
-        return WithAppends([
-            "images",
-            "translations"
-        ], priority);
+        return WithAppends(["images", "translations"], priority);
     }
 
     public Task<TmdbCollectionImages?> Images()

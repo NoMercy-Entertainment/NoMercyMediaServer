@@ -2,6 +2,4 @@
 
 namespace NoMercy.Providers.TMDB.Models.Movies;
 
-public abstract class TmdbMovieTopRated : TmdbPaginatedResponse<TmdbMovie>
-{
-}
+public abstract class TmdbMovieTopRated : TmdbPaginatedResponse<TmdbMovie> { }

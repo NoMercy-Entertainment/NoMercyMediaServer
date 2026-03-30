@@ -32,9 +32,7 @@ public partial class FfMpeg : Classes
 
     internal static readonly ConcurrentDictionary<int, Process> FfmpegProcess = new();
 
-    public FfMpeg()
-    {
-    }
+    public FfMpeg() { }
 
     public FfMpeg(string ffmpeg, string ffProbePath)
     {
@@ -108,7 +106,11 @@ public partial class FfMpeg : Classes
         return await OpenAsync(inputFile);
     }
 
-    public static async Task<string> ExecStdErrOut(string args, string? cwd = null, string? executable = null)
+    public static async Task<string> ExecStdErrOut(
+        string args,
+        string? cwd = null,
+        string? executable = null
+    )
     {
         Process ffmpeg = new()
         {
@@ -122,8 +124,8 @@ public partial class FfMpeg : Classes
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                RedirectStandardInput = true
-            }
+                RedirectStandardInput = true,
+            },
         };
 
         ffmpeg.Start();
@@ -140,15 +142,38 @@ public partial class FfMpeg : Classes
             FfmpegProcess.TryRemove(ffmpeg.Id, out _);
             if (!ffmpeg.HasExited)
             {
-                try { ffmpeg.Kill(entireProcessTree: true); }
-                catch { /* process may have exited between check and kill */ }
+                try
+                {
+                    ffmpeg.Kill(entireProcessTree: true);
+                }
+                catch
+                { /* process may have exited between check and kill */
+                }
             }
             ffmpeg.Dispose();
         }
     }
 
-    public static async Task<string> Run(string args, string cwd, ProgressMeta meta)
+    private static readonly TimeSpan DefaultEncodeTimeout = TimeSpan.FromHours(24);
+
+    public static async Task<string> Run(
+        string args,
+        string cwd,
+        ProgressMeta meta,
+        CancellationToken cancellationToken = default
+    )
     {
+        // If no cancellation token was provided, apply a 24-hour safety timeout so a
+        // hung FFmpeg process cannot block the worker thread forever.
+        CancellationTokenSource? timeoutSource = null;
+        CancellationToken effectiveToken = cancellationToken;
+
+        if (!cancellationToken.CanBeCanceled)
+        {
+            timeoutSource = new CancellationTokenSource(DefaultEncodeTimeout);
+            effectiveToken = timeoutSource.Token;
+        }
+
         Process ffmpeg = new()
         {
             StartInfo = new()
@@ -161,8 +186,8 @@ public partial class FfMpeg : Classes
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                RedirectStandardInput = true
-            }
+                RedirectStandardInput = true,
+            },
         };
 
         ffmpeg.Start();
@@ -215,13 +240,15 @@ public partial class FfMpeg : Classes
                 hasOutput = true;
                 try
                 {
-                    if (e.Data == null) return;
+                    if (e.Data == null)
+                        return;
 
                     output.AppendLine(e.Data);
                     output2.AppendLine(e.Data);
 
                     // Only parse and send when we have a complete progress block
-                    if (!e.Data.StartsWith("progress=")) return;
+                    if (!e.Data.StartsWith("progress="))
+                        return;
 
                     ProgressData? parsedData = ParseOutputData(output2.ToString(), totalDuration);
                     if (parsedData == null)
@@ -237,7 +264,9 @@ public partial class FfMpeg : Classes
                     int frame = parsedData.Frame;
                     string bitrate = parsedData.Bitrate;
                     double remaining = parsedData.Remaining;
-                    string remainingHms = TimeSpan.FromSeconds(remaining).ToString(@"d\:hh\:mm\:ss");
+                    string remainingHms = TimeSpan
+                        .FromSeconds(remaining)
+                        .ToString(@"d\:hh\:mm\:ss");
 
                     // Check if this is the final progress block — always send
                     if (e.Data.Trim() == "progress=end")
@@ -264,11 +293,13 @@ public partial class FfMpeg : Classes
                             Title = meta.Title,
                             Id = meta.Id,
                             Message = $"Encoding {meta.Type}",
-                            ProgressId = ffmpeg.Id
+                            ProgressId = ffmpeg.Id,
                         };
                         progressData.RemainingSplit = new int[] { 0, 0, 0, 0 };
                         if (EventBusProvider.IsConfigured)
-                            _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent { ProgressData = progressData });
+                            _ = EventBusProvider.Current.PublishAsync(
+                                new EncoderProgressBroadcastEvent { ProgressData = progressData }
+                            );
                         output2.Clear();
                         return;
                     }
@@ -302,13 +333,17 @@ public partial class FfMpeg : Classes
                         Title = meta.Title,
                         Id = meta.Id,
                         Message = $"Encoding {meta.Type}",
-                        ProgressId = ffmpeg.Id
+                        ProgressId = ffmpeg.Id,
                     };
-                    progressDataRunning.RemainingSplit = progressDataRunning.RemainingHms
-                        .Split(":").Select(s => int.TryParse(s, out int v) ? v : 0).ToArray();
+                    progressDataRunning.RemainingSplit = progressDataRunning
+                        .RemainingHms.Split(":")
+                        .Select(s => int.TryParse(s, out int v) ? v : 0)
+                        .ToArray();
                     if (progressDataRunning.Speed > 0 && EventBusProvider.IsConfigured)
                     {
-                        _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent { ProgressData = progressDataRunning });
+                        _ = EventBusProvider.Current.PublishAsync(
+                            new EncoderProgressBroadcastEvent { ProgressData = progressDataRunning }
+                        );
                     }
                     output2.Clear();
                 }
@@ -318,13 +353,32 @@ public partial class FfMpeg : Classes
                 }
             };
 
-            await ffmpeg.WaitForExitAsync();
+            try
+            {
+                await ffmpeg.WaitForExitAsync(effectiveToken);
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.Encoder(
+                    $"FFmpeg process timed out or was cancelled for job {meta.Id} — killing process"
+                );
+                try
+                {
+                    ffmpeg.Kill(entireProcessTree: true);
+                }
+                catch
+                { /* process may have exited between check and kill */
+                }
+                throw;
+            }
 
             if (EventBusProvider.IsConfigured)
-                _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
-                {
-                    ProgressData = new Progress { Status = "completed", Id = meta.Id }
-                });
+                _ = EventBusProvider.Current.PublishAsync(
+                    new EncoderProgressBroadcastEvent
+                    {
+                        ProgressData = new Progress { Status = "completed", Id = meta.Id },
+                    }
+                );
 
             if (!hasOutput && error.Length > 0)
                 throw new(error.ToString());
@@ -333,11 +387,17 @@ public partial class FfMpeg : Classes
         }
         finally
         {
+            timeoutSource?.Dispose();
             FfmpegProcess.TryRemove(ffmpeg.Id, out _);
             if (!ffmpeg.HasExited)
             {
-                try { ffmpeg.Kill(entireProcessTree: true); }
-                catch { /* process may have exited between check and kill */ }
+                try
+                {
+                    ffmpeg.Kill(entireProcessTree: true);
+                }
+                catch
+                { /* process may have exited between check and kill */
+                }
             }
             ffmpeg.Dispose();
         }
@@ -367,21 +427,33 @@ public partial class FfMpeg : Classes
 
             parsedValues["totalDuration"] = totalDuration.ToString();
 
-            Match progressMatch = TimeRegex().Match(parsedValues.GetValueOrDefault("out_time", string.Empty));
+            Match progressMatch = TimeRegex()
+                .Match(parsedValues.GetValueOrDefault("out_time", string.Empty));
 
             if (progressMatch.Success)
             {
                 int hours = int.Parse(progressMatch.Groups[1].Value, CultureInfo.InvariantCulture);
-                int minutes = int.Parse(progressMatch.Groups[2].Value, CultureInfo.InvariantCulture);
-                int seconds = int.Parse(progressMatch.Groups[3].Value, CultureInfo.InvariantCulture);
-                int milliseconds = int.Parse(progressMatch.Groups[4].Value, CultureInfo.InvariantCulture) / 100;
+                int minutes = int.Parse(
+                    progressMatch.Groups[2].Value,
+                    CultureInfo.InvariantCulture
+                );
+                int seconds = int.Parse(
+                    progressMatch.Groups[3].Value,
+                    CultureInfo.InvariantCulture
+                );
+                int milliseconds =
+                    int.Parse(progressMatch.Groups[4].Value, CultureInfo.InvariantCulture) / 100;
 
                 currentTime = new(0, hours, minutes, seconds, milliseconds);
-                progressPercentage = currentTime.TotalMilliseconds / totalDuration.TotalMilliseconds * 100;
+                progressPercentage =
+                    currentTime.TotalMilliseconds / totalDuration.TotalMilliseconds * 100;
             }
 
             double speed = parsedValues.TryGetValue("speed", out string? speedStr)
-                ? double.Parse(speedStr.Replace("N/A", "0").TrimEnd('x'), CultureInfo.InvariantCulture)
+                ? double.Parse(
+                    speedStr.Replace("N/A", "0").TrimEnd('x'),
+                    CultureInfo.InvariantCulture
+                )
                 : 0.0;
             double fps = parsedValues.TryGetValue("fps", out string? fpsStr)
                 ? double.Parse(fpsStr, CultureInfo.InvariantCulture)
@@ -392,7 +464,9 @@ public partial class FfMpeg : Classes
             string bitrate = parsedValues.GetValueOrDefault("bitrate", string.Empty);
 
             double remaining =
-                speed > 0 ? Math.Floor((totalDuration.TotalSeconds - currentTime.TotalSeconds) / speed) : 0.0;
+                speed > 0
+                    ? Math.Floor((totalDuration.TotalSeconds - currentTime.TotalSeconds) / speed)
+                    : 0.0;
 
             return new()
             {
@@ -402,7 +476,7 @@ public partial class FfMpeg : Classes
                 Fps = fps,
                 Frame = frame,
                 Bitrate = bitrate,
-                Remaining = remaining
+                Remaining = remaining,
             };
         }
         catch (Exception ex)
@@ -415,18 +489,24 @@ public partial class FfMpeg : Classes
 
     private static string GetThumbnail(ProgressMeta meta)
     {
-        string? thumbFolder = Directory.GetDirectories(meta.BaseFolder, "*thumbs_*")
+        string? thumbFolder = Directory
+            .GetDirectories(meta.BaseFolder, "*thumbs_*")
             .FirstOrDefault();
 
-        if (!Directory.Exists(thumbFolder)) return "";
+        if (!Directory.Exists(thumbFolder))
+            return "";
 
-        string file = Directory.GetFiles(thumbFolder)
+        string file = Directory
+            .GetFiles(thumbFolder)
             .OrderByDescending(file => new FileInfo(file).LastWriteTimeUtc)
-            .FirstOrDefault().OrEmpty();
+            .FirstOrDefault()
+            .OrEmpty();
 
         string thumbnail = Path.GetFileName(file);
         string thumbnailFolder = Path.GetFileNameWithoutExtension(thumbnail)
-            .Split("-").FirstOrDefault().OrEmpty();
+            .Split("-")
+            .FirstOrDefault()
+            .OrEmpty();
 
         return $"{meta.ShareBasePath}/{thumbnailFolder}/{thumbnail}";
     }
@@ -438,13 +518,16 @@ public partial class FfMpeg : Classes
             StartInfo =
             {
                 FileName = AppFiles.FfmpegPath,
-                Arguments = "-hide_banner -i \"" + file + "\" -map 0:a:0  -ar 11025 -f chromaprint -t 120 -",
+                Arguments =
+                    "-hide_banner -i \""
+                    + file
+                    + "\" -map 0:a:0  -ar 11025 -f chromaprint -t 120 -",
                 WindowStyle = ProcessWindowStyle.Hidden,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                CreateNoWindow = true
-            }
+                CreateNoWindow = true,
+            },
         };
 
         process1.Start();
@@ -473,14 +556,16 @@ public partial class FfMpeg : Classes
                 StartInfo =
                 {
                     FileName = AppFiles.FfProbePath,
-                    Arguments = "-i \"" + file +
-                                "\" -hide_banner -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
+                    Arguments =
+                        "-i \""
+                        + file
+                        + "\" -hide_banner -show_entries format=duration -of default=noprint_wrappers=1:nokey=1",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true
-                }
+                    CreateNoWindow = true,
+                },
             };
 
             process2.Start();
@@ -496,11 +581,14 @@ public partial class FfMpeg : Classes
             string time = await outputTask2;
             await process2.WaitForExitAsync();
 
-            if (string.IsNullOrEmpty(time)) throw new("Failed to get duration");
+            if (string.IsNullOrEmpty(time))
+                throw new("Failed to get duration");
 
-            if (time.Contains("N/A")) throw new("Failed to get duration");
+            if (time.Contains("N/A"))
+                throw new("Failed to get duration");
 
-            if (time.Contains("Duration")) time = time.Split("Duration: ")[1].Split(",")[0];
+            if (time.Contains("Duration"))
+                time = time.Split("Duration: ")[1].Split(",")[0];
 
             return time.Trim();
         }
@@ -510,10 +598,10 @@ public partial class FfMpeg : Classes
         }
     }
 
-
     public static async Task<bool> Pause(int id)
     {
-        if (!FfmpegProcess.TryGetValue(id, out Process? process)) return false;
+        if (!FfmpegProcess.TryGetValue(id, out Process? process))
+            return false;
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -549,7 +637,11 @@ public partial class FfMpeg : Classes
     }
 
     [DllImport("kernel32.dll")]
-    private static extern IntPtr OpenThread(int dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
+    private static extern IntPtr OpenThread(
+        int dwDesiredAccess,
+        bool bInheritHandle,
+        uint dwThreadId
+    );
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool SuspendThread(IntPtr hThread);
@@ -569,7 +661,10 @@ public partial class FfMpeg : Classes
             IntPtr threadHandle = OpenThread(ThreadSuspendResume, false, (uint)thread.Id);
             if (threadHandle != IntPtr.Zero)
             {
-                SuspendThread(threadHandle);
+                if (!SuspendThread(threadHandle))
+                    Logger.Encoder(
+                        $"SuspendThread failed for thread {thread.Id}, error code: {Marshal.GetLastWin32Error()}"
+                    );
                 CloseHandle(threadHandle);
             }
         }
@@ -584,7 +679,10 @@ public partial class FfMpeg : Classes
             IntPtr threadHandle = OpenThread(ThreadSuspendResume, false, (uint)thread.Id);
             if (threadHandle != IntPtr.Zero)
             {
-                ResumeThread(threadHandle);
+                if (!ResumeThread(threadHandle))
+                    Logger.Encoder(
+                        $"ResumeThread failed for thread {thread.Id}, error code: {Marshal.GetLastWin32Error()}"
+                    );
                 CloseHandle(threadHandle);
             }
         }

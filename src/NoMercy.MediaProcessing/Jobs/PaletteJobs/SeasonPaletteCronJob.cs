@@ -23,27 +23,32 @@ public class SeasonPaletteCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        List<Season[]> seasons = _context.Seasons
-            .Where(x => string.IsNullOrEmpty(x._colorPalette))
+        List<Season[]> seasons = _context
+            .Seasons.Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
             .Take(100)
             .ToList()
             .Chunk(10)
             .ToList();
 
-        if (seasons.Count == 0) return;
+        if (seasons.Count == 0)
+            return;
 
         _logger.LogTrace("Found {Count} season chunks to process", seasons.Count);
 
         foreach (Season[] seasonChunk in seasons)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
             foreach (Season season in seasonChunk)
             {
                 try
                 {
-                    season._colorPalette = await MovieDbImageManager.ColorPalette("poster", season.Poster);
+                    season._colorPalette = await MovieDbImageManager.ColorPalette(
+                        "poster",
+                        season.Poster
+                    );
                 }
                 catch (Exception)
                 {
@@ -52,10 +57,11 @@ public class SeasonPaletteCronJob : ICronJobExecutor
             }
 
             await _context.SaveChangesAsync(cancellationToken);
-
         }
 
-        _logger.LogTrace("Season palette job completed, updated: {Count}", seasons.Sum(x => x.Length));
-
+        _logger.LogTrace(
+            "Season palette job completed, updated: {Count}",
+            seasons.Sum(x => x.Length)
+        );
     }
 }

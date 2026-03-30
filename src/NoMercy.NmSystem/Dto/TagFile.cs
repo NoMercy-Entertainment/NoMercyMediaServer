@@ -10,13 +10,10 @@ public class TagFile
     {
         using FileTag? fileTag = FileTag.Create(path);
         fileTag.Tag.Pictures = [];
-        return new()
-        {
-            Tag = fileTag.Tag,
-            Properties = fileTag.Properties
-        };
+        return new() { Tag = fileTag.Tag, Properties = fileTag.Properties };
     }
 
-    [JsonIgnore] public Tag? Tag { get; set; }
+    [JsonIgnore]
+    public Tag? Tag { get; set; }
     public Properties? Properties { get; set; }
 }

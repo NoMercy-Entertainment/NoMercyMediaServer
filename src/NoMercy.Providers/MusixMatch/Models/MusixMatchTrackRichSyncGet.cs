@@ -4,5 +4,6 @@ namespace NoMercy.Providers.MusixMatch.Models;
 
 public class MusixMatchTrackRichSyncGet
 {
-    [JsonProperty("richsync")] public MusixMatchRichSync MusixMatchRichSync { get; set; } = new();
+    [JsonProperty("richsync")]
+    public MusixMatchRichSync MusixMatchRichSync { get; set; } = new();
 }

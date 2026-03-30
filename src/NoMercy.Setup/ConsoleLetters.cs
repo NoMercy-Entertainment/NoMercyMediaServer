@@ -16,7 +16,7 @@ public class ConsoleLetters
             " d88P     888",
             "             ",
             "             ",
-            "             "
+            "             ",
         ],
         ["B"] =
         [
@@ -30,7 +30,7 @@ public class ConsoleLetters
             " 8888888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["C"] =
         [
@@ -44,7 +44,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["D"] =
         [
@@ -58,7 +58,7 @@ public class ConsoleLetters
             " 8888888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["E"] =
         [
@@ -72,7 +72,7 @@ public class ConsoleLetters
             " 8888888888",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["F"] =
         [
@@ -86,7 +86,7 @@ public class ConsoleLetters
             " 888       ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["G"] =
         [
@@ -100,7 +100,7 @@ public class ConsoleLetters
             "  \"Y8888P88",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["H"] =
         [
@@ -114,7 +114,7 @@ public class ConsoleLetters
             " 888    888",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["IJ"] =
         [
@@ -128,7 +128,7 @@ public class ConsoleLetters
             " 8888888    888",
             "          .d88P",
             "        .d88P\" ",
-            "       888P\"   "
+            "       888P\"   ",
         ],
         ["I"] =
         [
@@ -142,7 +142,7 @@ public class ConsoleLetters
             " 8888888",
             "        ",
             "        ",
-            "       "
+            "       ",
         ],
         ["J"] =
         [
@@ -156,7 +156,7 @@ public class ConsoleLetters
             "     888",
             "   .d88P",
             " .d88P\" ",
-            "888P\"   "
+            "888P\"   ",
         ],
         ["K"] =
         [
@@ -170,7 +170,7 @@ public class ConsoleLetters
             " 888    Y88b",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["L"] =
         [
@@ -184,7 +184,7 @@ public class ConsoleLetters
             " 88888888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["M"] =
         [
@@ -198,7 +198,7 @@ public class ConsoleLetters
             " 888       888",
             "              ",
             "              ",
-            "              "
+            "              ",
         ],
         ["N"] =
         [
@@ -212,7 +212,7 @@ public class ConsoleLetters
             " 888    Y888",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["O"] =
         [
@@ -226,7 +226,7 @@ public class ConsoleLetters
             "  \"Y88888P\" ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["P"] =
         [
@@ -240,7 +240,7 @@ public class ConsoleLetters
             " 888       ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["Q"] =
         [
@@ -254,7 +254,7 @@ public class ConsoleLetters
             "  \"Y888888\" ",
             "        Y8b ",
             "            ",
-            "            "
+            "            ",
         ],
         ["R"] =
         [
@@ -268,7 +268,7 @@ public class ConsoleLetters
             " 888   T88b",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["S"] =
         [
@@ -282,7 +282,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["T"] =
         [
@@ -296,7 +296,7 @@ public class ConsoleLetters
             "     888    ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["U"] =
         [
@@ -310,7 +310,7 @@ public class ConsoleLetters
             "  \"Y88888P\" ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["V"] =
         [
@@ -324,7 +324,7 @@ public class ConsoleLetters
             "     Y8P    ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["W"] =
         [
@@ -338,7 +338,7 @@ public class ConsoleLetters
             " 888P     Y888",
             "              ",
             "              ",
-            "              "
+            "              ",
         ],
         ["X"] =
         [
@@ -352,7 +352,7 @@ public class ConsoleLetters
             " d88P   Y88b",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["Y"] =
         [
@@ -366,7 +366,7 @@ public class ConsoleLetters
             "     888    ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["Z"] =
         [
@@ -380,7 +380,7 @@ public class ConsoleLetters
             " d8888888888 ",
             "             ",
             "             ",
-            "             "
+            "             ",
         ],
         ["a"] =
         [
@@ -394,7 +394,7 @@ public class ConsoleLetters
             " \"Y888888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["b"] =
         [
@@ -408,7 +408,7 @@ public class ConsoleLetters
             " 88888P\" ",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["c"] =
         [
@@ -422,7 +422,7 @@ public class ConsoleLetters
             "  \"Y8888P",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["d"] =
         [
@@ -436,7 +436,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["e"] =
         [
@@ -450,7 +450,7 @@ public class ConsoleLetters
             "  \"Y8888 ",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["f"] =
         [
@@ -464,7 +464,7 @@ public class ConsoleLetters
             " 888   ",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         ["g"] =
         [
@@ -478,7 +478,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "      888",
             " Y8b d88P",
-            "  \"Y88P\" "
+            "  \"Y88P\" ",
         ],
         ["h"] =
         [
@@ -492,7 +492,7 @@ public class ConsoleLetters
             " 888  888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["ij"] =
         [
@@ -506,7 +506,7 @@ public class ConsoleLetters
             " 888  888",
             "      888",
             "     d88P",
-            "   888P\" "
+            "   888P\" ",
         ],
         ["i"] =
         [
@@ -520,7 +520,7 @@ public class ConsoleLetters
             " 888",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["j"] =
         [
@@ -534,7 +534,7 @@ public class ConsoleLetters
             "   888",
             "   888",
             "  d88P",
-            "888P\" "
+            "888P\" ",
         ],
         ["k"] =
         [
@@ -548,7 +548,7 @@ public class ConsoleLetters
             " 888  888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["l"] =
         [
@@ -562,7 +562,7 @@ public class ConsoleLetters
             " 888",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["m"] =
         [
@@ -576,7 +576,7 @@ public class ConsoleLetters
             " 888  888  888",
             "              ",
             "              ",
-            "              "
+            "              ",
         ],
         ["n"] =
         [
@@ -590,7 +590,7 @@ public class ConsoleLetters
             " 888  888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["o"] =
         [
@@ -604,7 +604,7 @@ public class ConsoleLetters
             "  \"Y88P\" ",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["p"] =
         [
@@ -618,7 +618,7 @@ public class ConsoleLetters
             " 88888P\" ",
             " 888     ",
             " 888     ",
-            " 888     "
+            " 888     ",
         ],
         ["q"] =
         [
@@ -632,7 +632,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "      888",
             "      888",
-            "      888"
+            "      888",
         ],
         ["r"] =
         [
@@ -646,7 +646,7 @@ public class ConsoleLetters
             " 888    ",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         ["s"] =
         [
@@ -660,7 +660,7 @@ public class ConsoleLetters
             "  88888P'",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["t"] =
         [
@@ -674,7 +674,7 @@ public class ConsoleLetters
             "  \"Y888",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         ["u"] =
         [
@@ -688,7 +688,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["v"] =
         [
@@ -702,7 +702,7 @@ public class ConsoleLetters
             "   Y88P  ",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["w"] =
         [
@@ -716,7 +716,7 @@ public class ConsoleLetters
             "  \"Y8888888P\" ",
             "              ",
             "              ",
-            "              "
+            "              ",
         ],
         ["x"] =
         [
@@ -730,7 +730,7 @@ public class ConsoleLetters
             " 888  888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["y"] =
         [
@@ -744,7 +744,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "      888",
             " Y8b d88P",
-            "  \"Y88P\" "
+            "  \"Y88P\" ",
         ],
         ["z"] =
         [
@@ -758,7 +758,7 @@ public class ConsoleLetters
             " 88888888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["0"] =
         [
@@ -772,7 +772,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["1"] =
         [
@@ -786,7 +786,7 @@ public class ConsoleLetters
             " 8888888",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         ["2"] =
         [
@@ -800,7 +800,7 @@ public class ConsoleLetters
             " 888888888 ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["3"] =
         [
@@ -814,7 +814,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["4"] =
         [
@@ -828,7 +828,7 @@ public class ConsoleLetters
             "       888 ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["5"] =
         [
@@ -842,7 +842,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["6"] =
         [
@@ -856,7 +856,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["7"] =
         [
@@ -870,7 +870,7 @@ public class ConsoleLetters
             " d88P      ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["8"] =
         [
@@ -884,7 +884,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["9"] =
         [
@@ -898,22 +898,9 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
-        [" "] =
-        [
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " "
-        ],
+        [" "] = [" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
         ["!"] =
         [
             " 888",
@@ -926,7 +913,7 @@ public class ConsoleLetters
             " 888",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["\""] =
         [
@@ -940,7 +927,7 @@ public class ConsoleLetters
             "    ",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["#"] =
         [
@@ -954,7 +941,7 @@ public class ConsoleLetters
             "   888  888  ",
             "             ",
             "             ",
-            "             "
+            "             ",
         ],
         ["$"] =
         [
@@ -968,7 +955,7 @@ public class ConsoleLetters
             "  \"Y88888P\" ",
             "      88    ",
             "            ",
-            "            "
+            "            ",
         ],
         ["%"] =
         [
@@ -982,7 +969,7 @@ public class ConsoleLetters
             " d88P   Y88P",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["&"] =
         [
@@ -996,7 +983,7 @@ public class ConsoleLetters
             "  \"Y8888P\" Y88b",
             "               ",
             "               ",
-            "               "
+            "               ",
         ],
         ["\'"] =
         [
@@ -1010,7 +997,7 @@ public class ConsoleLetters
             "        Y88b",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["("] =
         [
@@ -1024,7 +1011,7 @@ public class ConsoleLetters
             "   \"Y88",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         [")"] =
         [
@@ -1038,7 +1025,7 @@ public class ConsoleLetters
             " 88P\"  ",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         ["*"] =
         [
@@ -1052,7 +1039,7 @@ public class ConsoleLetters
             "  dP\"     \"Yb ",
             "              ",
             "              ",
-            "              "
+            "              ",
         ],
         ["+"] =
         [
@@ -1066,7 +1053,7 @@ public class ConsoleLetters
             "        ",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         [","] =
         [
@@ -1080,7 +1067,7 @@ public class ConsoleLetters
             " 88P",
             " 8P ",
             " \"  ",
-            "    "
+            "    ",
         ],
         ["-"] =
         [
@@ -1094,7 +1081,7 @@ public class ConsoleLetters
             "       ",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         ["."] =
         [
@@ -1108,7 +1095,7 @@ public class ConsoleLetters
             " Y8P",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["/"] =
         [
@@ -1122,7 +1109,7 @@ public class ConsoleLetters
             " d88P       ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         [":"] =
         [
@@ -1136,7 +1123,7 @@ public class ConsoleLetters
             " Y8P",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         [";"] =
         [
@@ -1150,7 +1137,7 @@ public class ConsoleLetters
             " 88P",
             " 8P ",
             " \"  ",
-            "    "
+            "    ",
         ],
         ["<"] =
         [
@@ -1164,7 +1151,7 @@ public class ConsoleLetters
             "    Y88b",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         ["="] =
         [
@@ -1178,7 +1165,7 @@ public class ConsoleLetters
             "       ",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         [">"] =
         [
@@ -1192,7 +1179,7 @@ public class ConsoleLetters
             " d88P   ",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         ["["] =
         [
@@ -1206,7 +1193,7 @@ public class ConsoleLetters
             " 8888888",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         ["]"] =
         [
@@ -1220,22 +1207,9 @@ public class ConsoleLetters
             " 8888888",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
-        ["║"] =
-        [
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║"
-        ]
+        ["║"] = ["║", "║", "║", "║", "║", "║", "║", "║", "║", "║", "║"],
     };
 
     public static readonly Dictionary<string, List<string>> ColossalXmas = new()
@@ -1252,7 +1226,7 @@ public class ConsoleLetters
             " d88P     888",
             "             ",
             "             ",
-            "             "
+            "             ",
         ],
         ["B"] =
         [
@@ -1266,7 +1240,7 @@ public class ConsoleLetters
             " 8888888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["C"] =
         [
@@ -1280,7 +1254,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["D"] =
         [
@@ -1294,7 +1268,7 @@ public class ConsoleLetters
             " 8888888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["E"] =
         [
@@ -1308,7 +1282,7 @@ public class ConsoleLetters
             " 8888888888",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["F"] =
         [
@@ -1322,7 +1296,7 @@ public class ConsoleLetters
             " 888       ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["G"] =
         [
@@ -1336,7 +1310,7 @@ public class ConsoleLetters
             "  \"Y8888P88",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["H"] =
         [
@@ -1350,7 +1324,7 @@ public class ConsoleLetters
             " 888    888",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["IJ"] =
         [
@@ -1364,7 +1338,7 @@ public class ConsoleLetters
             " 8888888    888",
             "          .d88P",
             "        .d88P\" ",
-            "       888P\"   "
+            "       888P\"   ",
         ],
         ["I"] =
         [
@@ -1378,7 +1352,7 @@ public class ConsoleLetters
             " 8888888",
             "        ",
             "        ",
-            "       "
+            "       ",
         ],
         ["J"] =
         [
@@ -1392,7 +1366,7 @@ public class ConsoleLetters
             "     888",
             "   .d88P",
             " .d88P\" ",
-            "888P\"   "
+            "888P\"   ",
         ],
         ["K"] =
         [
@@ -1406,7 +1380,7 @@ public class ConsoleLetters
             " 888    Y88b",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["L"] =
         [
@@ -1420,7 +1394,7 @@ public class ConsoleLetters
             " 88888888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["M"] =
         [
@@ -1435,7 +1409,7 @@ public class ConsoleLetters
             "   ❄️         ",
             "              ",
             "        🎄    ",
-            "              "
+            "              ",
         ],
         ["N"] =
         [
@@ -1449,7 +1423,7 @@ public class ConsoleLetters
             " 888    Y888",
             "            ",
             "        ❄️  ",
-            "  🎁        "
+            "  🎁        ",
         ],
         ["O"] =
         [
@@ -1463,7 +1437,7 @@ public class ConsoleLetters
             "  \"Y88888P\" ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["P"] =
         [
@@ -1477,7 +1451,7 @@ public class ConsoleLetters
             " 888       ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["Q"] =
         [
@@ -1491,7 +1465,7 @@ public class ConsoleLetters
             "  \"Y888888\" ",
             "        Y8b ",
             "            ",
-            "            "
+            "            ",
         ],
         ["R"] =
         [
@@ -1505,7 +1479,7 @@ public class ConsoleLetters
             " 888   T88b",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["S"] =
         [
@@ -1519,7 +1493,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "    ❄️     ",
-            "           "
+            "           ",
         ],
         ["T"] =
         [
@@ -1533,7 +1507,7 @@ public class ConsoleLetters
             "     888    ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["U"] =
         [
@@ -1547,7 +1521,7 @@ public class ConsoleLetters
             "  \"Y88888P\" ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["V"] =
         [
@@ -1561,7 +1535,7 @@ public class ConsoleLetters
             "     Y8P    ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["W"] =
         [
@@ -1575,7 +1549,7 @@ public class ConsoleLetters
             " 888P     Y888",
             "              ",
             "              ",
-            "              "
+            "              ",
         ],
         ["X"] =
         [
@@ -1589,7 +1563,7 @@ public class ConsoleLetters
             " d88P   Y88b",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["Y"] =
         [
@@ -1603,7 +1577,7 @@ public class ConsoleLetters
             "     888    ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["Z"] =
         [
@@ -1617,7 +1591,7 @@ public class ConsoleLetters
             " d8888888888 ",
             "             ",
             "             ",
-            "             "
+            "             ",
         ],
         ["a"] =
         [
@@ -1630,7 +1604,7 @@ public class ConsoleLetters
             " 888  888",
             " \"Y888888",
             "   🎄️   ",
-            "          "
+            "          ",
         ],
         ["b"] =
         [
@@ -1644,7 +1618,7 @@ public class ConsoleLetters
             " 88888P\" ",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["c"] =
         [
@@ -1658,7 +1632,7 @@ public class ConsoleLetters
             "  \"Y8888P",
             "         ",
             "     ❄️  ",
-            "         "
+            "         ",
         ],
         ["d"] =
         [
@@ -1672,7 +1646,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "         ",
             "      ❄️ ",
-            "         "
+            "         ",
         ],
         ["e"] =
         [
@@ -1685,7 +1659,7 @@ public class ConsoleLetters
             " Y8b.    ",
             "  \"Y8888 ",
             "         ",
-            " ⛄      "
+            " ⛄      ",
         ],
         ["f"] =
         [
@@ -1699,7 +1673,7 @@ public class ConsoleLetters
             " 888   ",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         ["g"] =
         [
@@ -1713,7 +1687,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "      888",
             " Y8b d88P",
-            "  \"Y88P\" "
+            "  \"Y88P\" ",
         ],
         ["h"] =
         [
@@ -1727,7 +1701,7 @@ public class ConsoleLetters
             " 888  888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["ij"] =
         [
@@ -1741,7 +1715,7 @@ public class ConsoleLetters
             " 888  888",
             "      888",
             "     d88P",
-            "   888P\" "
+            "   888P\" ",
         ],
         ["i"] =
         [
@@ -1755,7 +1729,7 @@ public class ConsoleLetters
             " 888",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["j"] =
         [
@@ -1769,7 +1743,7 @@ public class ConsoleLetters
             "   888",
             "   888",
             "  d88P",
-            "888P\" "
+            "888P\" ",
         ],
         ["k"] =
         [
@@ -1783,7 +1757,7 @@ public class ConsoleLetters
             " 888  888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["l"] =
         [
@@ -1797,7 +1771,7 @@ public class ConsoleLetters
             " 888",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["m"] =
         [
@@ -1811,7 +1785,7 @@ public class ConsoleLetters
             " 888  888  888",
             "              ",
             "              ",
-            "              "
+            "              ",
         ],
         ["n"] =
         [
@@ -1825,7 +1799,7 @@ public class ConsoleLetters
             " 888  888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["o"] =
         [
@@ -1839,7 +1813,7 @@ public class ConsoleLetters
             "  \"Y88P\" ",
             "         ",
             "         ",
-            "       🎅"
+            "       🎅",
         ],
         ["p"] =
         [
@@ -1853,7 +1827,7 @@ public class ConsoleLetters
             " 88888P\" ",
             " 888     ",
             " 888     ",
-            " 888     "
+            " 888     ",
         ],
         ["q"] =
         [
@@ -1867,7 +1841,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "      888",
             "      888",
-            "      888"
+            "      888",
         ],
         ["r"] =
         [
@@ -1881,7 +1855,7 @@ public class ConsoleLetters
             " 888    ",
             "        ",
             "     ⭐   ",
-            "        "
+            "        ",
         ],
         ["s"] =
         [
@@ -1895,7 +1869,7 @@ public class ConsoleLetters
             "  88888P'",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["t"] =
         [
@@ -1909,7 +1883,7 @@ public class ConsoleLetters
             "  \"Y888",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         ["u"] =
         [
@@ -1923,7 +1897,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["v"] =
         [
@@ -1937,7 +1911,7 @@ public class ConsoleLetters
             "   Y88P  ",
             "   ❄️    ",
             "         ",
-            " ❄️      "
+            " ❄️      ",
         ],
         ["w"] =
         [
@@ -1951,7 +1925,7 @@ public class ConsoleLetters
             "  \"Y8888888P\" ",
             "              ",
             "              ",
-            "              "
+            "              ",
         ],
         ["x"] =
         [
@@ -1965,7 +1939,7 @@ public class ConsoleLetters
             " 888  888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["y"] =
         [
@@ -1979,7 +1953,7 @@ public class ConsoleLetters
             "  \"Y88888",
             "      888",
             " Y8b d88P",
-            "  \"Y88P\" "
+            "  \"Y88P\" ",
         ],
         ["z"] =
         [
@@ -1993,7 +1967,7 @@ public class ConsoleLetters
             " 88888888",
             "         ",
             "         ",
-            "         "
+            "         ",
         ],
         ["0"] =
         [
@@ -2007,7 +1981,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["1"] =
         [
@@ -2021,7 +1995,7 @@ public class ConsoleLetters
             " 8888888",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         ["2"] =
         [
@@ -2035,7 +2009,7 @@ public class ConsoleLetters
             " 888888888 ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["3"] =
         [
@@ -2049,7 +2023,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["4"] =
         [
@@ -2063,7 +2037,7 @@ public class ConsoleLetters
             "       888 ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["5"] =
         [
@@ -2077,7 +2051,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["6"] =
         [
@@ -2091,7 +2065,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["7"] =
         [
@@ -2105,7 +2079,7 @@ public class ConsoleLetters
             " d88P      ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["8"] =
         [
@@ -2119,7 +2093,7 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
         ["9"] =
         [
@@ -2133,22 +2107,9 @@ public class ConsoleLetters
             "  \"Y8888P\" ",
             "           ",
             "           ",
-            "           "
+            "           ",
         ],
-        [" "] =
-        [
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " ",
-            " "
-        ],
+        [" "] = [" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
         ["!"] =
         [
             " 888",
@@ -2161,7 +2122,7 @@ public class ConsoleLetters
             " 888",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["\""] =
         [
@@ -2175,7 +2136,7 @@ public class ConsoleLetters
             "    ",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["#"] =
         [
@@ -2189,7 +2150,7 @@ public class ConsoleLetters
             "   888  888  ",
             "             ",
             "             ",
-            "             "
+            "             ",
         ],
         ["$"] =
         [
@@ -2203,7 +2164,7 @@ public class ConsoleLetters
             "  \"Y88888P\" ",
             "      88    ",
             "            ",
-            "            "
+            "            ",
         ],
         ["%"] =
         [
@@ -2217,7 +2178,7 @@ public class ConsoleLetters
             " d88P   Y88P",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["&"] =
         [
@@ -2231,7 +2192,7 @@ public class ConsoleLetters
             "  \"Y8888P\" Y88b",
             "               ",
             "               ",
-            "               "
+            "               ",
         ],
         ["\'"] =
         [
@@ -2245,7 +2206,7 @@ public class ConsoleLetters
             "        Y88b",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         ["("] =
         [
@@ -2259,7 +2220,7 @@ public class ConsoleLetters
             "   \"Y88",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         [")"] =
         [
@@ -2273,7 +2234,7 @@ public class ConsoleLetters
             " 88P\"  ",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         ["*"] =
         [
@@ -2287,7 +2248,7 @@ public class ConsoleLetters
             "  dP\"     \"Yb ",
             "              ",
             "              ",
-            "              "
+            "              ",
         ],
         ["+"] =
         [
@@ -2301,7 +2262,7 @@ public class ConsoleLetters
             "        ",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         [","] =
         [
@@ -2315,7 +2276,7 @@ public class ConsoleLetters
             " 88P",
             " 8P ",
             " \"  ",
-            "    "
+            "    ",
         ],
         ["-"] =
         [
@@ -2329,7 +2290,7 @@ public class ConsoleLetters
             "       ",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         ["."] =
         [
@@ -2343,7 +2304,7 @@ public class ConsoleLetters
             " Y8P",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         ["/"] =
         [
@@ -2357,7 +2318,7 @@ public class ConsoleLetters
             " d88P       ",
             "            ",
             "            ",
-            "            "
+            "            ",
         ],
         [":"] =
         [
@@ -2371,7 +2332,7 @@ public class ConsoleLetters
             " Y8P",
             "    ",
             "    ",
-            "    "
+            "    ",
         ],
         [";"] =
         [
@@ -2385,7 +2346,7 @@ public class ConsoleLetters
             " 88P",
             " 8P ",
             " \"  ",
-            "    "
+            "    ",
         ],
         ["<"] =
         [
@@ -2399,7 +2360,7 @@ public class ConsoleLetters
             "    Y88b",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         ["="] =
         [
@@ -2413,7 +2374,7 @@ public class ConsoleLetters
             "       ",
             "       ",
             "       ",
-            "       "
+            "       ",
         ],
         [">"] =
         [
@@ -2427,7 +2388,7 @@ public class ConsoleLetters
             " d88P   ",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         ["["] =
         [
@@ -2441,7 +2402,7 @@ public class ConsoleLetters
             " 8888888",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
         ["]"] =
         [
@@ -2455,21 +2416,8 @@ public class ConsoleLetters
             " 8888888",
             "        ",
             "        ",
-            "        "
+            "        ",
         ],
-        ["║"] =
-        [
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║",
-            "║"
-        ]
+        ["║"] = ["║", "║", "║", "║", "║", "║", "║", "║", "║", "║", "║"],
     };
 }

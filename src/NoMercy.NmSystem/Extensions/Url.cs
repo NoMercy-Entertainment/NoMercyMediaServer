@@ -9,7 +9,7 @@ public static partial class Url
         UriBuilder uriBuilder = new(url)
         {
             Scheme = Uri.UriSchemeHttps,
-            Port = -1 // default port for scheme
+            Port = -1, // default port for scheme
         };
 
         return uriBuilder.Uri;
@@ -30,7 +30,10 @@ public static partial class Url
         try
         {
             System.Net.Http.HttpClient httpClient = new();
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "NoMercy wMediaServer/0.1.0 ( admin@nomercy.tv )");
+            httpClient.DefaultRequestHeaders.Add(
+                "User-Agent",
+                "NoMercy wMediaServer/0.1.0 ( admin@nomercy.tv )"
+            );
 
             if (contentType is not null)
                 httpClient.DefaultRequestHeaders.Add("Accept", contentType);
@@ -43,7 +46,7 @@ public static partial class Url
             return false;
         }
     }
-    
+
     public static string SafeHost(this string url)
     {
         url = ReplaceIpV4().Replace(url, "-");
@@ -53,6 +56,7 @@ public static partial class Url
 
     [GeneratedRegex(":")]
     private static partial Regex ReplaceIpV6();
+
     [GeneratedRegex("\\.")]
     private static partial Regex ReplaceIpV4();
 }

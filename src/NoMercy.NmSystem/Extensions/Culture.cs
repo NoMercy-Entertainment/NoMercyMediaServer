@@ -40,9 +40,10 @@ public static class Culture
 
         // Only replace if the language is not English
         bool isEnglish = iso3.Equals("eng", StringComparison.OrdinalIgnoreCase);
-        string tag = !isEnglish && LegacyIsoMap.TryGetValue(iso3, out string? legacyCode)
-            ? legacyCode
-            : iso3;
+        string tag =
+            !isEnglish && LegacyIsoMap.TryGetValue(iso3, out string? legacyCode)
+                ? legacyCode
+                : iso3;
 
         return tag;
     }

@@ -14,7 +14,11 @@ public static class Archiving
         {
             extractedFiles = ExtractZipFile(filePath, destination);
         }
-        else if (filePath.EndsWith(".tar.xz") || filePath.EndsWith(".tar.gz") || filePath.EndsWith("tgz"))
+        else if (
+            filePath.EndsWith(".tar.xz")
+            || filePath.EndsWith(".tar.gz")
+            || filePath.EndsWith("tgz")
+        )
         {
             extractedFiles = await ExtractTarFile(filePath, destination);
         }
@@ -26,10 +30,10 @@ public static class Archiving
 
         foreach (string extractedFile in extractedFiles)
             await FilePermissions.SetExecutionPermissions(extractedFile);
-        
+
         return extractedFiles;
     }
-    
+
     private static List<string> ExtractZipFile(string zipFilePath, string extractToDirectory)
     {
         List<string> extractedFiles = [];
@@ -40,7 +44,8 @@ public static class Archiving
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
                 string destinationPath = Path.Combine(extractToDirectory, entry.FullName);
-                string destinationDir = Path.GetDirectoryName(destinationPath) ?? extractToDirectory;
+                string destinationDir =
+                    Path.GetDirectoryName(destinationPath) ?? extractToDirectory;
 
                 if (!Directory.Exists(destinationDir))
                     Directory.CreateDirectory(destinationDir);
@@ -49,30 +54,36 @@ public static class Archiving
                     continue;
 
                 entry.ExtractToFile(destinationPath, true);
-                
+
                 extractedFiles.Add(destinationPath);
             }
         }
         catch (Exception ex)
         {
-            Logger.System($"Failed to extract zip file {zipFilePath}: {ex.Message}", LogEventLevel.Error);
+            Logger.System(
+                $"Failed to extract zip file {zipFilePath}: {ex.Message}",
+                LogEventLevel.Error
+            );
             throw new($"Failed to extract zip file {zipFilePath}", ex);
         }
 
         return extractedFiles;
     }
 
-    private static async Task<List<string>> ExtractTarFile(string tarFilePath, string extractToDirectory)
+    private static async Task<List<string>> ExtractTarFile(
+        string tarFilePath,
+        string extractToDirectory
+    )
     {
         List<string> extractedFiles = [];
 
         try
         {
             await Shell.ExecAsync("tar", $"xf \"{tarFilePath}\" -C \"{extractToDirectory}\"");
-            
-            Shell.ExecResult result = await Shell.ExecAsync("tar" , $"tf \"{tarFilePath}\"");
+
+            Shell.ExecResult result = await Shell.ExecAsync("tar", $"tf \"{tarFilePath}\"");
             string output = result.StandardOutput;
-            
+
             foreach (string line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
                 string destinationPath = Path.Combine(extractToDirectory, line.Trim());
@@ -82,7 +93,10 @@ public static class Archiving
         }
         catch (Exception ex)
         {
-            Logger.System($"Failed to extract tar file {tarFilePath}: {ex.Message}", LogEventLevel.Error);
+            Logger.System(
+                $"Failed to extract tar file {tarFilePath}: {ex.Message}",
+                LogEventLevel.Error
+            );
             throw new($"Failed to extract tar file {tarFilePath}", ex);
         }
 

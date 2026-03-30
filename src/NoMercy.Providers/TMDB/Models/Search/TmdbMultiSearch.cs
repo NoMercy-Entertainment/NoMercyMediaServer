@@ -5,6 +5,4 @@ using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.Providers.TMDB.Models.Search;
 
-public class TmdbMultiSearch : TmdbPaginatedResponse<(TmdbMovie, TmdbTvShow, TmdbPerson)>
-{
-}
+public class TmdbMultiSearch : TmdbPaginatedResponse<(TmdbMovie, TmdbTvShow, TmdbPerson)> { }

@@ -31,7 +31,7 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.Main10,
                         Level = "5.1",
                         KeyInt = -1,
-                        ConvertHdrToSdr = false
+                        ConvertHdrToSdr = false,
                     },
                     // HDR 1080p profile
                     new()
@@ -47,7 +47,7 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.Main10,
                         Level = "4.0",
                         KeyInt = -1,
-                        ConvertHdrToSdr = false
+                        ConvertHdrToSdr = false,
                     },
                     // SDR 4K profile
                     new()
@@ -63,7 +63,7 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "5.1",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
+                        ConvertHdrToSdr = true,
                     },
                     // SDR 1080p profile
                     new()
@@ -79,8 +79,8 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "4.0",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
-                    }
+                        ConvertHdrToSdr = true,
+                    },
                 ],
                 AudioProfiles =
                 [
@@ -91,7 +91,7 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                        AllowedLanguages = Languages.AllLanguages()
+                        AllowedLanguages = Languages.AllLanguages(),
                     },
                     new()
                     {
@@ -99,8 +99,8 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
                 ],
                 SubtitleProfiles =
                 [
@@ -108,15 +108,15 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
+                        AllowedLanguages = Languages.AllLanguages(),
                     },
                     new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -140,8 +140,8 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "4.0",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
-                    }
+                        ConvertHdrToSdr = true,
+                    },
                 ],
                 AudioProfiles =
                 [
@@ -152,8 +152,8 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
                 ],
                 SubtitleProfiles =
                 [
@@ -161,9 +161,9 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -187,8 +187,8 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "4.0",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
-                    }
+                        ConvertHdrToSdr = true,
+                    },
                 ],
                 AudioProfiles =
                 [
@@ -199,8 +199,8 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
                 ],
                 SubtitleProfiles =
                 [
@@ -208,15 +208,15 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
+                        AllowedLanguages = Languages.AllLanguages(),
                     },
                     new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -240,8 +240,8 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "4.0",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
-                    }
+                        ConvertHdrToSdr = true,
+                    },
                 ],
                 AudioProfiles =
                 [
@@ -252,8 +252,8 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
                 ],
                 SubtitleProfiles =
                 [
@@ -261,15 +261,15 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
+                        AllowedLanguages = Languages.AllLanguages(),
                     },
                     new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -277,13 +277,7 @@ public static class EncoderProfileSeedData
                 Name = "Music",
                 Container = AudioContainers.Mp3,
                 EncoderProfileFolder = [],
-                AudioProfiles =
-                [
-                    new()
-                    {
-                        Codec = AudioCodecs.Mp3.Value
-                    }
-                ]
+                AudioProfiles = [new() { Codec = AudioCodecs.Mp3.Value }],
             },
             // Standard Quality Presets (HLS Video Streaming)
             new()
@@ -308,8 +302,8 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "4.0",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
-                    }
+                        ConvertHdrToSdr = true,
+                    },
                 ],
                 AudioProfiles =
                 [
@@ -320,8 +314,8 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
                 ],
                 SubtitleProfiles =
                 [
@@ -329,9 +323,9 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -355,8 +349,8 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "4.0",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
-                    }
+                        ConvertHdrToSdr = true,
+                    },
                 ],
                 AudioProfiles =
                 [
@@ -367,8 +361,8 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
                 ],
                 SubtitleProfiles =
                 [
@@ -376,15 +370,15 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
+                        AllowedLanguages = Languages.AllLanguages(),
                     },
                     new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -408,8 +402,8 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "5.1",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
-                    }
+                        ConvertHdrToSdr = true,
+                    },
                 ],
                 AudioProfiles =
                 [
@@ -420,8 +414,8 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
                         PlaylistName = ":type:_:language:_:codec:/:type:_:language:_:codec:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
                 ],
                 SubtitleProfiles =
                 [
@@ -429,15 +423,15 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
+                        AllowedLanguages = Languages.AllLanguages(),
                     },
                     new()
                     {
                         Codec = SubtitleCodecs.Ass.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             // MP4 Progressive Download Profiles
             new()
@@ -462,8 +456,8 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "4.0",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
-                    }
+                        ConvertHdrToSdr = true,
+                    },
                 ],
                 AudioProfiles =
                 [
@@ -474,8 +468,8 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":filename:",
                         PlaylistName = ":filename:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
                 ],
                 SubtitleProfiles =
                 [
@@ -483,9 +477,9 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -509,8 +503,8 @@ public static class EncoderProfileSeedData
                         Profile = VideoProfiles.High,
                         Level = "5.1",
                         KeyInt = -1,
-                        ConvertHdrToSdr = true
-                    }
+                        ConvertHdrToSdr = true,
+                    },
                 ],
                 AudioProfiles =
                 [
@@ -521,8 +515,8 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":filename:",
                         PlaylistName = ":filename:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
                 ],
                 SubtitleProfiles =
                 [
@@ -530,9 +524,9 @@ public static class EncoderProfileSeedData
                     {
                         Codec = SubtitleCodecs.Webvtt.Value,
                         PlaylistName = "subtitles/:filename:.:language:.:variant:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             // Audio Profiles
             new()
@@ -550,9 +544,9 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":filename:",
                         PlaylistName = ":filename:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -569,9 +563,9 @@ public static class EncoderProfileSeedData
                         SampleRate = 44100,
                         SegmentName = ":filename:",
                         PlaylistName = ":filename:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -588,9 +582,9 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":filename:",
                         PlaylistName = ":filename:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -607,9 +601,9 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":filename:",
                         PlaylistName = ":filename:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
             },
             new()
             {
@@ -626,12 +620,10 @@ public static class EncoderProfileSeedData
                         SampleRate = 48000,
                         SegmentName = ":filename:",
                         PlaylistName = ":filename:",
-                        AllowedLanguages = Languages.AllLanguages()
-                    }
-                ]
-            }
+                        AllowedLanguages = Languages.AllLanguages(),
+                    },
+                ],
+            },
         ];
     }
-
 }
-

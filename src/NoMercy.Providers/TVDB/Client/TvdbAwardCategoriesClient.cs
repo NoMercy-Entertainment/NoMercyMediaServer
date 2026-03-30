@@ -4,9 +4,8 @@ namespace NoMercy.Providers.TVDB.Client;
 
 public class TvdbAwardCategoriesClient : TvdbBaseClient
 {
-    public TvdbAwardCategoriesClient(int id = 0) : base(id)
-    {
-    }
+    public TvdbAwardCategoriesClient(int id = 0)
+        : base(id) { }
 
     public Task<TvdbAwardExtendedResponse?> Extended()
     {

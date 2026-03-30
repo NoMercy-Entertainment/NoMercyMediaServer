@@ -12,25 +12,52 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record MusicCardData
 {
-    [JsonProperty("id")] public string Id { get; set; } = null!;
-    [JsonProperty("name")] public string Name { get; set; } = null!;
-    [JsonProperty("link")] public string Link { get; set; } = null!;
-    [JsonProperty("type")] public string? Type { get; set; }
-    [JsonProperty("cover")] public string? Cover { get; set; }
-    [JsonProperty("logo")] public string? Logo { get; set; }
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("disambiguation")] public string? Disambiguation { get; set; }
-    [JsonProperty("description")] public string? Description { get; set; }
-    [JsonProperty("favorite")] public bool? Favorite { get; set; }
-    [JsonProperty("folder")] public string? Folder { get; set; }
-    [JsonProperty("libraryID")] public string? LibraryId { get; set; }
-    [JsonProperty("trackID")] public string? TrackId { get; set; }
-    [JsonProperty("tracks")] public long? Tracks { get; set; }
-    [JsonProperty("year")] public int? Year { get; set; }
+    [JsonProperty("id")]
+    public string Id { get; set; } = null!;
 
-    public MusicCardData()
-    {
-    }
+    [JsonProperty("name")]
+    public string Name { get; set; } = null!;
+
+    [JsonProperty("link")]
+    public string Link { get; set; } = null!;
+
+    [JsonProperty("type")]
+    public string? Type { get; set; }
+
+    [JsonProperty("cover")]
+    public string? Cover { get; set; }
+
+    [JsonProperty("logo")]
+    public string? Logo { get; set; }
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
+
+    [JsonProperty("disambiguation")]
+    public string? Disambiguation { get; set; }
+
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    [JsonProperty("favorite")]
+    public bool? Favorite { get; set; }
+
+    [JsonProperty("folder")]
+    public string? Folder { get; set; }
+
+    [JsonProperty("libraryID")]
+    public string? LibraryId { get; set; }
+
+    [JsonProperty("trackID")]
+    public string? TrackId { get; set; }
+
+    [JsonProperty("tracks")]
+    public long? Tracks { get; set; }
+
+    [JsonProperty("year")]
+    public int? Year { get; set; }
+
+    public MusicCardData() { }
 
     public MusicCardData(Album album)
     {
@@ -160,24 +187,49 @@ public record MusicCardData
 /// </summary>
 public record MusicHomeCardData
 {
-    [JsonProperty("id")] public string Id { get; set; } = null!;
-    [JsonProperty("name")] public string Name { get; set; } = null!;
-    [JsonProperty("link")] public string Link { get; set; } = null!;
-    [JsonProperty("type")] public string? Type { get; set; }
-    [JsonProperty("cover")] public string? Cover { get; set; }
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("disambiguation")] public string? Disambiguation { get; set; }
-    [JsonProperty("description")] public string? Description { get; set; }
-    [JsonProperty("favorite")] public bool? Favorite { get; set; }
-    [JsonProperty("folder")] public string? Folder { get; set; }
-    [JsonProperty("libraryID")] public string? LibraryId { get; set; }
-    [JsonProperty("trackID")] public string? TrackId { get; set; }
-    [JsonProperty("tracks")] public long? Tracks { get; set; }
-    [JsonProperty("year")] public int? Year { get; set; }
+    [JsonProperty("id")]
+    public string Id { get; set; } = null!;
 
-    public MusicHomeCardData()
-    {
-    }
+    [JsonProperty("name")]
+    public string Name { get; set; } = null!;
+
+    [JsonProperty("link")]
+    public string Link { get; set; } = null!;
+
+    [JsonProperty("type")]
+    public string? Type { get; set; }
+
+    [JsonProperty("cover")]
+    public string? Cover { get; set; }
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
+
+    [JsonProperty("disambiguation")]
+    public string? Disambiguation { get; set; }
+
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    [JsonProperty("favorite")]
+    public bool? Favorite { get; set; }
+
+    [JsonProperty("folder")]
+    public string? Folder { get; set; }
+
+    [JsonProperty("libraryID")]
+    public string? LibraryId { get; set; }
+
+    [JsonProperty("trackID")]
+    public string? TrackId { get; set; }
+
+    [JsonProperty("tracks")]
+    public long? Tracks { get; set; }
+
+    [JsonProperty("year")]
+    public int? Year { get; set; }
+
+    public MusicHomeCardData() { }
 
     public MusicHomeCardData(Album album)
     {

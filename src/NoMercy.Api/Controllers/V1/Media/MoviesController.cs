@@ -29,7 +29,7 @@ public class MoviesController(
     MovieRepository movieRepository,
     JobDispatcher jobDispatcher,
     MediaContext mediaContext
-    ) : BaseController
+) : BaseController
 {
     [HttpGet]
     [ResponseCache(Duration = 120)]
@@ -42,13 +42,16 @@ public class MoviesController(
         string language = Language();
         string country = Country();
 
-        Movie? movie = await movieRepository.GetMovieDetailAsync(mediaContext, userId, id, language, country);
+        Movie? movie = await movieRepository.GetMovieDetailAsync(
+            mediaContext,
+            userId,
+            id,
+            language,
+            country
+        );
 
         if (movie is not null)
-            return Ok(new InfoResponseDto
-            {
-                Data = new(movie, country)
-            });
+            return Ok(new InfoResponseDto { Data = new(movie, country) });
 
         try
         {
@@ -58,10 +61,7 @@ public class MoviesController(
             if (movieAppends is null)
                 return NotFoundResponse("Movie not found");
 
-            return Ok(new InfoResponseDto
-            {
-                Data = new(movieAppends, country)
-            });
+            return Ok(new InfoResponseDto { Data = new(movieAppends, country) });
         }
         catch (Exception)
         {
@@ -77,11 +77,7 @@ public class MoviesController(
 
         await movieRepository.DeleteAsync(id, ct);
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Movie deleted"
-        });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
     }
 
     [HttpGet]
@@ -100,15 +96,14 @@ public class MoviesController(
         if (!available)
             return NotFoundResponse("Movie not found");
 
-        return Ok(new StatusResponseDto<AvailableResponseDto>
-        {
-            Data = new()
+        return Ok(
+            new StatusResponseDto<AvailableResponseDto>
             {
-                Available = true
-            },
-            Status = "ok",
-            Message = "Movie is available"
-        });
+                Data = new() { Available = true },
+                Status = "ok",
+                Message = "Movie is available",
+            }
+        );
     }
 
     [HttpGet]
@@ -122,9 +117,9 @@ public class MoviesController(
         string language = Language();
         string country = Country();
 
-        IEnumerable<VideoPlaylistResponseDto> playlist =
-            (await movieRepository.GetMoviePlaylistAsync(userId, id, language, country, ct))
-            .Select(movie => new VideoPlaylistResponseDto(movie, Config.MovieMediaType, id, country));
+        IEnumerable<VideoPlaylistResponseDto> playlist = (
+            await movieRepository.GetMoviePlaylistAsync(userId, id, language, country, ct)
+        ).Select(movie => new VideoPlaylistResponseDto(movie, Config.MovieMediaType, id, country));
 
         if (!playlist.Any())
             return NotFoundResponse("Movie not found");
@@ -134,7 +129,11 @@ public class MoviesController(
 
     [HttpPost]
     [Route("like")]
-    public async Task<IActionResult> Like(int id, [FromBody] LikeRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> Like(
+        int id,
+        [FromBody] LikeRequestDto request,
+        CancellationToken ct = default
+    )
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -145,20 +144,23 @@ public class MoviesController(
         if (!success)
             return UnprocessableEntityResponse("Movie not found");
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "{0}: {1}",
-            Args = new object[]
+        return Ok(
+            new StatusResponseDto<string>
             {
-                request.Value ? "liked" : "unliked"
+                Status = "ok",
+                Message = "{0}: {1}",
+                Args = new object[] { request.Value ? "liked" : "unliked" },
             }
-        });
+        );
     }
 
     [HttpPost]
     [Route("watch-list")]
-    public async Task<IActionResult> AddToWatchList(int id, [FromBody] WatchListRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> AddToWatchList(
+        int id,
+        [FromBody] WatchListRequestDto request,
+        CancellationToken ct = default
+    )
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -169,11 +171,15 @@ public class MoviesController(
         if (!success)
             return UnprocessableEntityResponse("Movie not found");
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = request.Add ? "Movie added to watch list" : "Movie removed from watch list"
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = request.Add
+                    ? "Movie added to watch list"
+                    : "Movie removed from watch list",
+            }
+        );
     }
 
     [HttpPost]
@@ -183,11 +189,11 @@ public class MoviesController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan movies");
 
-        Movie? movie = await mediaContext.Movies
-            .AsNoTracking()
+        Movie? movie = await mediaContext
+            .Movies.AsNoTracking()
             .Include(movie => movie.Library)
-            .ThenInclude(f => f.FolderLibraries)
-            .ThenInclude(f => f.Folder)
+                .ThenInclude(f => f.FolderLibraries)
+                    .ThenInclude(f => f.Folder)
             .FirstOrDefaultAsync(movie => movie.Id == id, ct);
 
         if (movie is null)
@@ -203,12 +209,14 @@ public class MoviesController(
             return InternalServerErrorResponse(e.Message);
         }
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Rescanning {0} for files in the background",
-            Args = [movie.Title]
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Rescanning {0} for files in the background",
+                Args = [movie.Title],
+            }
+        );
     }
 
     [HttpPost]
@@ -218,8 +226,8 @@ public class MoviesController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh movies");
 
-        Movie? movie = await mediaContext.Movies
-            .AsNoTracking()
+        Movie? movie = await mediaContext
+            .Movies.AsNoTracking()
             .Include(movie => movie.Library)
             .FirstOrDefaultAsync(movie => movie.Id == id, ct);
 
@@ -236,17 +244,23 @@ public class MoviesController(
             return InternalServerErrorResponse(e.Message);
         }
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Refreshing {0} in the background",
-            Args = [movie.Title]
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Refreshing {0} in the background",
+                Args = [movie.Title],
+            }
+        );
     }
 
     [HttpPost]
     [Route("add")]
-    public async Task<IActionResult> Add(int id, [FromQuery] Ulid? libraryId = null, CancellationToken ct = default)
+    public async Task<IActionResult> Add(
+        int id,
+        [FromQuery] Ulid? libraryId = null,
+        CancellationToken ct = default
+    )
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add movies");
@@ -255,8 +269,8 @@ public class MoviesController(
 
         if (libraryId is not null)
         {
-            library = await mediaContext.Libraries
-                .Where(f => f.Id == libraryId.Value)
+            library = await mediaContext
+                .Libraries.Where(f => f.Id == libraryId.Value)
                 .FirstOrDefaultAsync(ct);
 
             if (library is null)
@@ -264,8 +278,8 @@ public class MoviesController(
         }
         else
         {
-            library = await mediaContext.Libraries
-                .Where(f => f.Type == Config.MovieMediaType)
+            library = await mediaContext
+                .Libraries.Where(f => f.Type == Config.MovieMediaType)
                 .FirstOrDefaultAsync(ct);
 
             if (library is null)
@@ -282,11 +296,13 @@ public class MoviesController(
             return InternalServerErrorResponse(e.Message);
         }
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Adding {0} in the background",
-            Args = [library.Title]
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Adding {0} in the background",
+                Args = [library.Title],
+            }
+        );
     }
 }

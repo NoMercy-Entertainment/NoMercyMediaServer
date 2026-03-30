@@ -5,5 +5,6 @@ namespace NoMercy.Providers.TMDB.Models.Movies;
 
 public class TmdbMovieLists : TmdbPaginatedResponse<TmdbMovie>
 {
-    [JsonProperty("id")] public int Id { get; set; }
+    [JsonProperty("id")]
+    public int Id { get; set; }
 }

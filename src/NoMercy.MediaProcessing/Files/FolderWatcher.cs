@@ -7,7 +7,7 @@ namespace NoMercy.MediaProcessing.Files;
 public class FolderWatcher : IDisposable
 {
     private static readonly List<IDisposable> Watchers = [];
-    private static FolderWatcher? _instance;
+    private static volatile FolderWatcher? _instance;
 
     public event Action<FileWatcherEventArgs>? OnChanged;
     public event Action<FileWatcherEventArgs>? OnCreated;
@@ -17,14 +17,18 @@ public class FolderWatcher : IDisposable
 
     public List<Action> Watch(List<string> paths)
     {
-        _instance ??= this;
+        Interlocked.CompareExchange(ref _instance, this, null);
         return WatchFolders(paths);
     }
 
     private List<Action> WatchFolders(List<string> foldersToWatch)
     {
         List<Action> disposers = [];
-        disposers.AddRange(from folder in foldersToWatch where Directory.Exists(folder) select CreateWatcher(folder));
+        disposers.AddRange(
+            from folder in foldersToWatch
+            where Directory.Exists(folder)
+            select CreateWatcher(folder)
+        );
 
         return disposers;
     }
@@ -32,38 +36,48 @@ public class FolderWatcher : IDisposable
     private static Action CreateWatcher(string folder)
     {
         folder = Path.GetFullPath(folder);
-        return !IsNetworkPath(folder) ? StartFileSystemWatcher(folder) : StartNetworkFileWatcher(folder);
+        return !IsNetworkPath(folder)
+            ? StartFileSystemWatcher(folder)
+            : StartNetworkFileWatcher(folder);
     }
 
     private static bool IsNetworkPath(string path)
     {
-        if (string.IsNullOrWhiteSpace(path)) return false;
-        if (path.StartsWith(@"\\")) return true; // UNC path
+        if (string.IsNullOrWhiteSpace(path))
+            return false;
+        if (path.StartsWith(@"\\"))
+            return true; // UNC path
         string? drive = Path.GetPathRoot(path);
-        if (string.IsNullOrEmpty(drive)) return false;
+        if (string.IsNullOrEmpty(drive))
+            return false;
         try
         {
-            DriveInfo driveInfo = new (drive);
+            DriveInfo driveInfo = new(drive);
             return driveInfo.DriveType == DriveType.Network;
         }
-        catch { return false; }
+        catch
+        {
+            return false;
+        }
     }
 
     private static Action StartNetworkFileWatcher(string folder)
     {
         IFileStorage storage;
-        if (folder.StartsWith("s3://", StringComparison.OrdinalIgnoreCase) ||
-            folder.StartsWith("gs://", StringComparison.OrdinalIgnoreCase) ||
-            folder.StartsWith("az://", StringComparison.OrdinalIgnoreCase))
+        if (
+            folder.StartsWith("s3://", StringComparison.OrdinalIgnoreCase)
+            || folder.StartsWith("gs://", StringComparison.OrdinalIgnoreCase)
+            || folder.StartsWith("az://", StringComparison.OrdinalIgnoreCase)
+        )
         {
             storage = Stowage.Files.Of.ConnectionString(folder);
         }
         else
         {
-            storage = Stowage.Files.Of.ConnectionString("disk://path="+folder);
+            storage = Stowage.Files.Of.ConnectionString("disk://path=" + folder);
         }
 
-        StowageWatcher stowageWatcher = new (storage);
+        StowageWatcher stowageWatcher = new(storage);
         stowageWatcher.Changed += (e) =>
         {
             _onFileChanged(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
@@ -77,12 +91,15 @@ public class FolderWatcher : IDisposable
             _onFileDeleted(_instance!, e.ToFileSystemEventArgsEventArgs(folder));
         };
         stowageWatcher.Watch(TimeSpan.FromMinutes(1));
-        
+
         Watchers.Add(stowageWatcher);
-        
+
         Logger.System($"Watching folder: {folder}");
-        
-        return () => { stowageWatcher.Dispose(); };
+
+        return () =>
+        {
+            stowageWatcher.Dispose();
+        };
     }
 
     private static Action StartFileSystemWatcher(string folder)
@@ -94,13 +111,14 @@ public class FolderWatcher : IDisposable
         fileSystemWatcher.NotifyFilter =
             // NotifyFilters.Attributes |
             // NotifyFilters.CreationTime |
-            NotifyFilters.DirectoryName |
-            NotifyFilters.FileName |
+            NotifyFilters.DirectoryName
+            | NotifyFilters.FileName
+            |
             // NotifyFilters.LastAccess |
             NotifyFilters.LastWrite
-            // NotifyFilters.Security |
-            // NotifyFilters.Size
-            ;
+        // NotifyFilters.Security |
+        // NotifyFilters.Size
+        ;
         fileSystemWatcher.InternalBufferSize = 64 * 1024;
 
         fileSystemWatcher.Filter = "*.*";
@@ -122,69 +140,86 @@ public class FolderWatcher : IDisposable
 
         Logger.System($"Watching folder: {folder}");
 
-        return () => { fileSystemWatcher.Dispose(); };
+        return () =>
+        {
+            fileSystemWatcher.Dispose();
+        };
     }
 
-    private static string _prevChanged = "";
+    private string _prevChanged = "";
 
     private static void _onFileChanged(object sender, FileSystemEventArgs e)
     {
+        if (_instance is null)
+            return;
         string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
 
-        if (e.ChangeType != WatcherChangeTypes.Changed || _prevChanged == current) return;
-        _prevChanged = current;
+        if (e.ChangeType != WatcherChangeTypes.Changed || _instance._prevChanged == current)
+            return;
+        _instance._prevChanged = current;
 
-        _instance?.OnChanged?.Invoke(new(sender as FileSystemWatcher, e));
+        _instance.OnChanged?.Invoke(new(sender as FileSystemWatcher, e));
 
         Logger.System($"File Changed: {e.FullPath}", LogEventLevel.Verbose);
     }
 
-    private static string _prevCreated = "";
+    private string _prevCreated = "";
 
     private static void _onFileCreated(object sender, FileSystemEventArgs e)
     {
+        if (_instance is null)
+            return;
         string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
 
-        if (e.ChangeType != WatcherChangeTypes.Created || _prevCreated == current) return;
-        _prevCreated = current;
+        if (e.ChangeType != WatcherChangeTypes.Created || _instance._prevCreated == current)
+            return;
+        _instance._prevCreated = current;
 
-        _instance?.OnCreated?.Invoke(new(sender as FileSystemWatcher, e));
+        _instance.OnCreated?.Invoke(new(sender as FileSystemWatcher, e));
 
         Logger.System($"File Created: {e.FullPath}", LogEventLevel.Verbose);
     }
 
-    private static string _prevDeleted = "";
+    private string _prevDeleted = "";
 
     private static void _onFileDeleted(object sender, FileSystemEventArgs e)
     {
+        if (_instance is null)
+            return;
         string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
 
-        if (e.ChangeType != WatcherChangeTypes.Deleted || _prevDeleted == current) return;
-        _prevDeleted = current;
+        if (e.ChangeType != WatcherChangeTypes.Deleted || _instance._prevDeleted == current)
+            return;
+        _instance._prevDeleted = current;
 
-        _instance?.OnDeleted?.Invoke(new(sender as FileSystemWatcher, e));
+        _instance.OnDeleted?.Invoke(new(sender as FileSystemWatcher, e));
 
         Logger.System($"File Deleted: {e.FullPath}", LogEventLevel.Verbose);
     }
 
-    private static string _prevRenamed = "";
+    private string _prevRenamed = "";
 
     private static void _onFileRenamed(object sender, RenamedEventArgs e)
     {
+        if (_instance is null)
+            return;
         string current = e.FullPath + DateTime.Now.ToString("HHmmssddMMyyyy");
 
-        if (e.ChangeType != WatcherChangeTypes.Renamed || _prevRenamed == current) return;
-        _prevRenamed = current;
+        if (e.ChangeType != WatcherChangeTypes.Renamed || _instance._prevRenamed == current)
+            return;
+        _instance._prevRenamed = current;
 
-        _instance?.OnRenamed?.Invoke(new(sender as FileSystemWatcher, e));
+        _instance.OnRenamed?.Invoke(new(sender as FileSystemWatcher, e));
 
         Logger.System($"File Renamed from {e.OldFullPath} to {e.FullPath}", LogEventLevel.Verbose);
     }
 
     private static void _onError(object sender, ErrorEventArgs e)
     {
-        FileWatcherEventArgs fileWatcherEventArgs = new(sender as FileSystemWatcher,
-            new(WatcherChangeTypes.All, "", ""));
+        FileWatcherEventArgs fileWatcherEventArgs = new(
+            sender as FileSystemWatcher,
+            new(WatcherChangeTypes.All, "", "")
+        );
 
         fileWatcherEventArgs.ErrorEventArgs = e;
 
@@ -195,6 +230,7 @@ public class FolderWatcher : IDisposable
 
     public void Dispose()
     {
-        foreach (IDisposable watcher in Watchers) watcher.Dispose();
+        foreach (IDisposable watcher in Watchers)
+            watcher.Dispose();
     }
 }

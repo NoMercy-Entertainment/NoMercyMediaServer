@@ -9,14 +9,8 @@ public class Copy : BaseSubtitle
         SetSubtitleCodec(subtitleCodec);
     }
 
-    public override CodecDto[] AvailableCodecs =>
-    [
-        SubtitleCodecs.Copy
-    ];
+    public override CodecDto[] AvailableCodecs => [SubtitleCodecs.Copy];
 
     protected override string[] AvailableContainers =>
-    [
-        SubtitleContainers.WebVtt, SubtitleContainers.Srt,
-        SubtitleContainers.Ass
-    ];
+        [SubtitleContainers.WebVtt, SubtitleContainers.Srt, SubtitleContainers.Ass];
 }

@@ -11,11 +11,9 @@ public partial class SettingsView : UserControl
         InitializeComponent();
     }
 
-    private SettingsViewModel? ViewModel =>
-        DataContext as SettingsViewModel;
+    private SettingsViewModel? ViewModel => DataContext as SettingsViewModel;
 
-    private async void OnSaveConfigClick(
-        object? sender, RoutedEventArgs e)
+    private async void OnSaveConfigClick(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is not null)
             await ViewModel.SaveConfigAsync();

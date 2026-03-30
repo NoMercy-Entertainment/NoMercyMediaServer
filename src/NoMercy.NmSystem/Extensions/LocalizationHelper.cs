@@ -24,19 +24,22 @@ public static class LocalizationHelper
     private static void AppendMissingLocalization(string key)
     {
         string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        string? projectRoot = Directory.GetParent(baseDirectory)?.Parent?.Parent?.Parent?.Parent?.FullName;
-        if (projectRoot is null) return;
+        string? projectRoot = Directory
+            .GetParent(baseDirectory)
+            ?.Parent?.Parent?.Parent?.Parent?.FullName;
+        if (projectRoot is null)
+            return;
 
         string filePath = Path.Combine(projectRoot, "NoMercy.Api", "Resources", "I18N.xml");
         XDocument doc = XDocument.Load(filePath);
 
         // Check if the key already exists to avoid duplicates
-        bool exists = doc.Root
-            ?.Elements("Entry")
-            .Any(e => e.Element("Key")?.Value == key) == true;
-        if (exists) return;
+        bool exists = doc.Root?.Elements("Entry").Any(e => e.Element("Key")?.Value == key) == true;
+        if (exists)
+            return;
 
-        XElement newEntry = new("Entry",
+        XElement newEntry = new(
+            "Entry",
             new XElement("Key", key),
             new XElement("Value", new XAttribute("lang", "nl"), key)
         );

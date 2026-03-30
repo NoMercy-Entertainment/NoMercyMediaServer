@@ -13,7 +13,8 @@ public static class ResourceMonitor
 
     public static void StartBroadcasting(IClientMessenger clientMessenger)
     {
-        if (_broadcasting) return;
+        if (_broadcasting)
+            return;
         _clientMessenger = clientMessenger;
         Logger.Socket("Starting resource monitoring broadcast");
         _broadcasting = true;
@@ -41,12 +42,17 @@ public static class ResourceMonitor
 
                 // at least one second between broadcasts
                 int delay = 1000 - (int)(DateTime.Now - time).TotalMilliseconds;
-                if (delay > 0) await Task.Delay(delay, cancellationToken);
+                if (delay > 0)
+                    await Task.Delay(delay, cancellationToken);
             }
             catch (Exception e)
             {
-                if (e.Message == "A task was canceled.") return;
-                Logger.Socket($"Error broadcasting resource data: {e.Message}", LogEventLevel.Error);
+                if (e.Message == "A task was canceled.")
+                    return;
+                Logger.Socket(
+                    $"Error broadcasting resource data: {e.Message}",
+                    LogEventLevel.Error
+                );
             }
         }
     }

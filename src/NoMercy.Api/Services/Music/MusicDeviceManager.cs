@@ -32,8 +32,8 @@ public class MusicDeviceManager
 
     public async Task UpdateDeviceVolume(string deviceId, int volume)
     {
-        await _mediaContext.Devices
-            .Where(d => d.DeviceId == deviceId)
+        await _mediaContext
+            .Devices.Where(d => d.DeviceId == deviceId)
             .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, volume));
     }
 }

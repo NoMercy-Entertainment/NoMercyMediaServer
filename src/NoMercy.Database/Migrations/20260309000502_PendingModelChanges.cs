@@ -18,7 +18,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -28,7 +29,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "Title",
@@ -38,7 +40,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -48,7 +51,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -58,7 +62,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -68,7 +73,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -78,7 +84,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -88,7 +95,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -98,7 +106,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -108,7 +117,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -118,7 +128,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -128,7 +139,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -138,7 +150,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -148,7 +161,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -158,7 +172,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -168,7 +183,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -178,7 +194,8 @@ namespace NoMercy.Database.Migrations
                 nullable: true,
                 oldClrType: typeof(string),
                 oldType: "TEXT",
-                oldMaxLength: 256);
+                oldMaxLength: 256
+            );
         }
 
         /// <inheritdoc />
@@ -194,7 +211,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -206,7 +224,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "Title",
@@ -218,7 +237,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -230,7 +250,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -242,7 +263,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -254,7 +276,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -266,7 +289,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -278,7 +302,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -290,7 +315,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -302,7 +328,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -314,7 +341,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -326,7 +354,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -338,7 +367,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -350,7 +380,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -362,7 +393,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -374,7 +406,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
 
             migrationBuilder.AlterColumn<string>(
                 name: "ColorPalette",
@@ -386,7 +419,8 @@ namespace NoMercy.Database.Migrations
                 oldClrType: typeof(string),
                 oldType: "TEXT",
                 oldMaxLength: 256,
-                oldNullable: true);
+                oldNullable: true
+            );
         }
     }
 }

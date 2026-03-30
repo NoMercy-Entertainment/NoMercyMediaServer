@@ -13,19 +13,25 @@ public static class AniDbRandomAnime
         AniDBClient client = AniDbBaseClient.Client();
         TaskCompletionSource<AniDBAnimeItem> tcs = new();
 
-        client.FetchRandomAnime((response) =>
-        {
-            Logger.AniDb(response.StatusCode.ToString());
-            Logger.AniDb(response.StatusMessage);
+        client.FetchRandomAnime(
+            (response) =>
+            {
+                Logger.AniDb(response.StatusCode.ToString());
+                Logger.AniDb(response.StatusMessage);
 
-            response.GetMessageItem(0, new AniDbCallbackObject<AniDBAnimeItem>(messageItem =>
-                {
-                    messageItem.parseContentsDefault();
+                response.GetMessageItem(
+                    0,
+                    new AniDbCallbackObject<AniDBAnimeItem>(messageItem =>
+                    {
+                        messageItem.parseContentsDefault();
 
-                    tcs.SetResult(messageItem);
-                })
-            );
-        }, RandomAnimeSource.ANY, 2);
+                        tcs.SetResult(messageItem);
+                    })
+                );
+            },
+            RandomAnimeSource.ANY,
+            2
+        );
 
         return tcs.Task;
     }

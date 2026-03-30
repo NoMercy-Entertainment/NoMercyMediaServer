@@ -24,11 +24,7 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
     [ProducesResponseType(typeof(HealthResponse), StatusCodes.Status200OK)]
     public IActionResult GetLiveness()
     {
-        return Ok(new HealthResponse
-        {
-            Status = "healthy",
-            Timestamp = DateTime.UtcNow
-        });
+        return Ok(new HealthResponse { Status = "healthy", Timestamp = DateTime.UtcNow });
     }
 
     /// <summary>
@@ -49,7 +45,7 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
             Status = status,
             Timestamp = DateTime.UtcNow,
             Database = databaseHealthy ? "ok" : "unavailable",
-            ServerStarted = Config.Started
+            ServerStarted = Config.Started,
         };
 
         return isReady
@@ -75,16 +71,17 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
             Status = status,
             Timestamp = DateTime.UtcNow,
             Version = Software.GetReleaseVersion(),
-            Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
+            Environment =
+                Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
             UptimeSeconds = (long)(DateTime.UtcNow - Info.StartTime).TotalSeconds,
             Components = new()
             {
                 Database = databaseHealthy ? "ok" : "unavailable",
                 Authentication = isDegraded ? "degraded" : "ok",
                 Network = isDegraded ? "degraded" : "ok",
-                Registration = isDegraded ? "degraded" : "ok"
+                Registration = isDegraded ? "degraded" : "ok",
             },
-            IsDegraded = isDegraded
+            IsDegraded = isDegraded,
         };
 
         return databaseHealthy
@@ -94,9 +91,12 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
 
     private static string DetermineStatus(bool databaseHealthy, bool isDegraded)
     {
-        if (!Config.Started) return "starting";
-        if (!databaseHealthy) return "unhealthy";
-        if (isDegraded) return "degraded";
+        if (!Config.Started)
+            return "starting";
+        if (!databaseHealthy)
+            return "unhealthy";
+        if (isDegraded)
+            return "degraded";
         return "healthy";
     }
 
@@ -116,29 +116,51 @@ public class HealthController(MediaContext mediaContext) : ControllerBase
 
 public record HealthResponse
 {
-    [JsonProperty("status")] public required string Status { get; init; }
-    [JsonProperty("timestamp")] public required DateTime Timestamp { get; init; }
+    [JsonProperty("status")]
+    public required string Status { get; init; }
+
+    [JsonProperty("timestamp")]
+    public required DateTime Timestamp { get; init; }
 }
 
 public record ReadinessResponse : HealthResponse
 {
-    [JsonProperty("database")] public required string Database { get; init; }
-    [JsonProperty("server_started")] public required bool ServerStarted { get; init; }
+    [JsonProperty("database")]
+    public required string Database { get; init; }
+
+    [JsonProperty("server_started")]
+    public required bool ServerStarted { get; init; }
 }
 
 public record DetailedHealthResponse : HealthResponse
 {
-    [JsonProperty("version")] public required string Version { get; init; }
-    [JsonProperty("environment")] public required string Environment { get; init; }
-    [JsonProperty("uptime_seconds")] public required long UptimeSeconds { get; init; }
-    [JsonProperty("components")] public required ComponentStatus Components { get; init; }
-    [JsonProperty("is_degraded")] public required bool IsDegraded { get; init; }
+    [JsonProperty("version")]
+    public required string Version { get; init; }
+
+    [JsonProperty("environment")]
+    public required string Environment { get; init; }
+
+    [JsonProperty("uptime_seconds")]
+    public required long UptimeSeconds { get; init; }
+
+    [JsonProperty("components")]
+    public required ComponentStatus Components { get; init; }
+
+    [JsonProperty("is_degraded")]
+    public required bool IsDegraded { get; init; }
 }
 
 public record ComponentStatus
 {
-    [JsonProperty("database")] public required string Database { get; init; }
-    [JsonProperty("authentication")] public required string Authentication { get; init; }
-    [JsonProperty("network")] public required string Network { get; init; }
-    [JsonProperty("registration")] public required string Registration { get; init; }
+    [JsonProperty("database")]
+    public required string Database { get; init; }
+
+    [JsonProperty("authentication")]
+    public required string Authentication { get; init; }
+
+    [JsonProperty("network")]
+    public required string Network { get; init; }
+
+    [JsonProperty("registration")]
+    public required string Registration { get; init; }
 }

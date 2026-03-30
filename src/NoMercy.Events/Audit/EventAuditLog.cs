@@ -19,8 +19,10 @@ public sealed class EventAuditLog
 
     public void Record(IEvent @event, string eventTypeName)
     {
-        if (!_options.Enabled) return;
-        if (_options.ExcludedEventTypes.Contains(eventTypeName)) return;
+        if (!_options.Enabled)
+            return;
+        if (_options.ExcludedEventTypes.Contains(eventTypeName))
+            return;
 
         EventAuditEntry entry = new()
         {
@@ -28,7 +30,7 @@ public sealed class EventAuditLog
             EventType = eventTypeName,
             Source = @event.Source,
             Timestamp = @event.Timestamp,
-            Payload = SerializePayload(@event)
+            Payload = SerializePayload(@event),
         };
 
         _entries.Enqueue(entry);
@@ -73,10 +75,11 @@ public sealed class EventAuditLog
     {
         try
         {
-            return JsonSerializer.Serialize(@event, @event.GetType(), new JsonSerializerOptions
-            {
-                WriteIndented = false
-            });
+            return JsonSerializer.Serialize(
+                @event,
+                @event.GetType(),
+                new JsonSerializerOptions { WriteIndented = false }
+            );
         }
         catch
         {

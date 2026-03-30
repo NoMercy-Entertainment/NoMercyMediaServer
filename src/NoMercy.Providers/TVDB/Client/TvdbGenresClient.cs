@@ -4,9 +4,8 @@ namespace NoMercy.Providers.TVDB.Client;
 
 public class TvdbGenresClient : TvdbBaseClient
 {
-    public TvdbGenresClient(int id) : base(id)
-    {
-    }
+    public TvdbGenresClient(int id)
+        : base(id) { }
 
     public Task<TvdbGenresResponse?> Genres()
     {

@@ -8,7 +8,8 @@ public class Image
     // ReSharper disable once InconsistentNaming
     private Uri __url { get; set; } = null!;
 
-    [JsonProperty("id")] public int Id { get; set; }
+    [JsonProperty("id")]
+    public int Id { get; set; }
 
     [JsonProperty("url")]
     public Uri Url
@@ -17,5 +18,6 @@ public class Image
         init => __url = value;
     }
 
-    [JsonProperty("likes")] public int Likes { get; set; }
+    [JsonProperty("likes")]
+    public int Likes { get; set; }
 }

@@ -18,12 +18,16 @@ public class SignalRNotificationEventHandler : IDisposable
 
     internal Task OnUserNotification(UserNotificationEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll("Notify", @event.Hub, new NotifyDto
-        {
-            Title = @event.Title,
-            Message = @event.Message,
-            Type = @event.Type
-        });
+        _clientMessenger.SendToAll(
+            "Notify",
+            @event.Hub,
+            new NotifyDto
+            {
+                Title = @event.Title,
+                Message = @event.Message,
+                Type = @event.Type,
+            }
+        );
 
         return Task.CompletedTask;
     }

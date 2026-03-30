@@ -30,6 +30,9 @@ public class SetupServer
     private string _codeVerifier;
     private string _codeChallenge;
 
+    // Terminal UI — created lazily when device code flow starts
+    private SetupTerminalUi? _terminalUi;
+
     public bool IsRunning { get; private set; }
 
     public SetupServer(SetupState state, int? port = null)
@@ -48,10 +51,14 @@ public class SetupServer
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.ConfigureKestrel(kestrelOptions =>
         {
-            kestrelOptions.Listen(IPAddress.Any, _port, listenOptions =>
-            {
-                listenOptions.Protocols = HttpProtocols.Http1;
-            });
+            kestrelOptions.Listen(
+                IPAddress.Any,
+                _port,
+                listenOptions =>
+                {
+                    listenOptions.Protocols = HttpProtocols.Http1;
+                }
+            );
         });
 
         _host = builder.Build();
@@ -109,6 +116,10 @@ public class SetupServer
                 await HandleDeviceCode(context);
                 break;
 
+            case "/setup/retry":
+                await HandleRetry(context);
+                break;
+
             case "/sso-callback":
                 await HandleSsoCallback(context);
                 break;
@@ -153,7 +164,7 @@ public class SetupServer
             server_port = _port,
             auth_base_url = Config.AuthBaseUrl.OrEmpty(),
             client_id = Config.TokenClientId.OrEmpty(),
-            code_challenge = _codeChallenge
+            code_challenge = _codeChallenge,
         };
 
         await WriteJsonResponse(context.Response, response);
@@ -171,21 +182,23 @@ public class SetupServer
         if (!string.IsNullOrEmpty(error))
         {
             string errorDescription = context.Request.Query["error_description"].ToString();
-            string message = string.IsNullOrEmpty(errorDescription)
-                ? $"Authorization failed: {error}"
-                : $"Authorization failed: {errorDescription}";
 
-            Logger.Setup($"OAuth callback error: {error} — {errorDescription}",
-                LogEventLevel.Warning);
+            Logger.Setup(
+                $"SSO callback error: {error} — {errorDescription}",
+                LogEventLevel.Warning
+            );
 
-            _state.SetError(message);
+            _state.SetError("Sign in failed. Please try again.");
 
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
-            await context.Response.WriteAsync(BuildCallbackHtml(
-                "Authorization Failed",
-                message,
-                isError: true));
+            await context.Response.WriteAsync(
+                BuildCallbackHtml(
+                    "Authorization Failed",
+                    "Sign in failed. Please try again.",
+                    isError: true
+                )
+            );
             return;
         }
 
@@ -195,11 +208,10 @@ public class SetupServer
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             context.Response.ContentType = "application/json";
-            await WriteJsonResponse(context.Response, new
-            {
-                status = "error",
-                message = "Missing authorization code"
-            });
+            await WriteJsonResponse(
+                context.Response,
+                new { status = "error", message = "Missing authorization code" }
+            );
             return;
         }
 
@@ -227,6 +239,7 @@ public class SetupServer
                 throw new("Token exchange succeeded but token file was not written");
 
             _state.TransitionTo(SetupPhase.Authenticated);
+            _terminalUi?.ShowProgress("Authenticated", "Signed in via browser");
             Logger.Setup("OAuth token exchange completed successfully");
 
             responseTitle = "Authentication Successful";
@@ -235,13 +248,15 @@ public class SetupServer
         }
         catch (Exception ex)
         {
-            _state.SetError($"Authentication failed: {ex.Message}");
+            Logger.Setup(
+                $"Token exchange failed: {ex.GetType().Name} — {ex.Message}",
+                LogEventLevel.Error
+            );
+            _state.SetError("Sign in failed. Please try again.");
             _state.TransitionTo(SetupPhase.Unauthenticated);
-            Logger.Setup($"OAuth token exchange failed: {ex.Message}",
-                LogEventLevel.Error);
 
             responseTitle = "Authentication Failed";
-            responseMessage = $"Token exchange failed: {ex.Message}";
+            responseMessage = "Sign in failed. Please try again.";
             responseIsError = true;
         }
         finally
@@ -252,8 +267,9 @@ public class SetupServer
 
         context.Response.ContentType = "text/html; charset=utf-8";
         context.Response.StatusCode = StatusCodes.Status200OK;
-        await context.Response.WriteAsync(BuildCallbackHtml(
-            responseTitle, responseMessage, responseIsError));
+        await context.Response.WriteAsync(
+            BuildCallbackHtml(responseTitle, responseMessage, responseIsError)
+        );
         await context.Response.CompleteAsync();
 
         // Run post-auth registration in the background (networking, cert, etc.)
@@ -268,69 +284,70 @@ public class SetupServer
                 }
                 catch (Exception ex)
                 {
-                    _state.SetError($"Registration failed: {ex.Message}");
-                    Logger.Setup($"Post-auth registration failed: {ex.Message}",
-                        LogEventLevel.Error);
+                    Logger.Setup(
+                        $"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
+                        LogEventLevel.Error
+                    );
+                    _state.SetError("Could not connect your server. Please try again.");
                 }
             });
         }
     }
 
-    internal static string BuildCallbackHtml(string title, string message,
-        bool isError = false)
+    internal static string BuildCallbackHtml(string title, string message, bool isError = false)
     {
         string color = isError ? "#f08080" : "#CBAFFF";
 
         if (isError)
         {
             return "<!DOCTYPE html><html><head>"
-                   + "<meta charset=\"UTF-8\">"
-                   + "<style>"
-                   + "body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,"
-                   + "BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;"
-                   + "display:flex;align-items:center;justify-content:center;"
-                   + "min-height:100vh;margin:0;}"
-                   + ".card{background:#16161e;border:1px solid #2a2a3a;"
-                   + "border-radius:12px;padding:32px 24px;text-align:center;"
-                   + "max-width:440px;width:100%;}"
-                   + $"h2{{color:{color};margin-bottom:12px;}}"
-                   + "p{color:#999;font-size:14px;}"
-                   + "</style></head><body>"
-                   + "<div class=\"card\">"
-                   + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
-                   + $"<p>{WebUtility.HtmlEncode(message)}</p>"
-                   + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
-                   + "</div>"
-                   + "<script>setTimeout(function(){window.location.href='/setup';}, 1500);</script>"
-                   + "</body></html>";
+                + "<meta charset=\"UTF-8\">"
+                + "<style>"
+                + "body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,"
+                + "BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;"
+                + "display:flex;align-items:center;justify-content:center;"
+                + "min-height:100vh;margin:0;}"
+                + ".card{background:#16161e;border:1px solid #2a2a3a;"
+                + "border-radius:12px;padding:32px 24px;text-align:center;"
+                + "max-width:440px;width:100%;}"
+                + $"h2{{color:{color};margin-bottom:12px;}}"
+                + "p{color:#999;font-size:14px;}"
+                + "</style></head><body>"
+                + "<div class=\"card\">"
+                + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
+                + $"<p>{WebUtility.HtmlEncode(message)}</p>"
+                + "<p style=\"margin-top:16px;color:#666;\">Redirecting to setup...</p>"
+                + "</div>"
+                + "<script>setTimeout(function(){window.location.href='/setup';}, 1500);</script>"
+                + "</body></html>";
         }
 
         // Success case: try to close the tab (works when opened as popup),
         // otherwise show a static message since the server will restart for HTTPS
         return "<!DOCTYPE html><html><head>"
-               + "<meta charset=\"UTF-8\">"
-               + "<style>"
-               + "body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,"
-               + "BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;"
-               + "display:flex;align-items:center;justify-content:center;"
-               + "min-height:100vh;margin:0;}"
-               + ".card{background:#16161e;border:1px solid #2a2a3a;"
-               + "border-radius:12px;padding:32px 24px;text-align:center;"
-               + "max-width:440px;width:100%;}"
-               + $"h2{{color:{color};margin-bottom:12px;}}"
-               + "p{color:#999;font-size:14px;}"
-               + "</style></head><body>"
-               + "<div class=\"card\">"
-               + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
-               + $"<p>{WebUtility.HtmlEncode(message)}</p>"
-               + "<p id=\"status\" style=\"margin-top:16px;color:#666;\">You can close this tab.</p>"
-               + "</div>"
-               + "<script>"
-               + "try{window.close();}catch(e){}"
-               + "document.getElementById('status').textContent="
-               + "'Server is restarting with HTTPS. You can close this tab.';"
-               + "</script>"
-               + "</body></html>";
+            + "<meta charset=\"UTF-8\">"
+            + "<style>"
+            + "body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,"
+            + "BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;"
+            + "display:flex;align-items:center;justify-content:center;"
+            + "min-height:100vh;margin:0;}"
+            + ".card{background:#16161e;border:1px solid #2a2a3a;"
+            + "border-radius:12px;padding:32px 24px;text-align:center;"
+            + "max-width:440px;width:100%;}"
+            + $"h2{{color:{color};margin-bottom:12px;}}"
+            + "p{color:#999;font-size:14px;}"
+            + "</style></head><body>"
+            + "<div class=\"card\">"
+            + $"<h2>{WebUtility.HtmlEncode(title)}</h2>"
+            + $"<p>{WebUtility.HtmlEncode(message)}</p>"
+            + "<p id=\"status\" style=\"margin-top:16px;color:#666;\">You can close this tab.</p>"
+            + "</div>"
+            + "<script>"
+            + "try{window.close();}catch(e){}"
+            + "document.getElementById('status').textContent="
+            + "'Server is restarting with HTTPS. You can close this tab.';"
+            + "</script>"
+            + "</body></html>";
     }
 
     internal static string BuildRedirectUri(HttpRequest request)
@@ -397,12 +414,17 @@ public class SetupServer
             phase = _state.CurrentPhase.ToString(),
             is_setup_required = _state.IsSetupRequired,
             is_authenticated = _state.IsAuthenticated,
-            error = _state.ErrorMessage
+            error = _state.ErrorMessage,
+            detail = _state.PhaseDetail,
+            server_url = _state.ServerUrl,
         };
     }
 
     private static async Task WriteSseEvent(
-        HttpResponse response, string data, CancellationToken cancellationToken)
+        HttpResponse response,
+        string data,
+        CancellationToken cancellationToken
+    )
     {
         await response.WriteAsync($"data: {data}\n\n", Encoding.UTF8, cancellationToken);
         await response.Body.FlushAsync(cancellationToken);
@@ -445,39 +467,57 @@ public class SetupServer
         if (string.IsNullOrEmpty(Config.TokenClientId))
         {
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-            await WriteJsonResponse(context.Response, new
-            {
-                error = true,
-                message = "Auth configuration not available"
-            });
+            await WriteJsonResponse(
+                context.Response,
+                new { error = true, message = "Auth configuration not available" }
+            );
             return;
         }
 
         try
         {
-            List<KeyValuePair<string, string>> deviceCodeBody =
-                Auth.BuildDeviceCodeRequestBody(Config.TokenClientId);
+            List<KeyValuePair<string, string>> deviceCodeBody = Auth.BuildDeviceCodeRequestBody(
+                Config.TokenClientId
+            );
 
             GenericHttpClient authClient = new(Config.AuthBaseUrl);
             authClient.SetDefaultHeaders(Config.UserAgent);
             string deviceCodeResponse = await authClient.SendAndReadAsync(
                 HttpMethod.Post,
                 "protocol/openid-connect/auth/device",
-                new FormUrlEncodedContent(deviceCodeBody));
+                new FormUrlEncodedContent(deviceCodeBody)
+            );
 
             Dto.DeviceAuthResponse deviceData =
                 deviceCodeResponse.FromJson<Dto.DeviceAuthResponse>()
                 ?? throw new("Failed to get device code");
 
             context.Response.StatusCode = StatusCodes.Status200OK;
-            await WriteJsonResponse(context.Response, new
+            await WriteJsonResponse(
+                context.Response,
+                new
+                {
+                    user_code = deviceData.UserCode,
+                    verification_uri = deviceData.VerificationUri,
+                    verification_uri_complete = deviceData.VerificationUriComplete,
+                    expires_in = deviceData.ExpiresIn,
+                    interval = deviceData.Interval,
+                }
+            );
+
+            // Show the terminal UI for console/binary mode users who also have the
+            // browser open. Both paths run simultaneously — whichever completes first wins.
+            if (SetupTerminalUi.IsInteractiveTerminal)
             {
-                user_code = deviceData.UserCode,
-                verification_uri = deviceData.VerificationUri,
-                verification_uri_complete = deviceData.VerificationUriComplete,
-                expires_in = deviceData.ExpiresIn,
-                interval = deviceData.Interval
-            });
+                _terminalUi ??= new SetupTerminalUi();
+                string setupPageUrl = $"http://localhost:{_port}/setup";
+                _terminalUi.Show(
+                    deviceData.VerificationUriComplete,
+                    deviceData.VerificationUri,
+                    deviceData.UserCode,
+                    setupPageUrl
+                );
+            }
 
             _ = Task.Run(async () =>
             {
@@ -487,12 +527,61 @@ public class SetupServer
         catch (Exception ex)
         {
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await WriteJsonResponse(context.Response, new
-            {
-                error = true,
-                message = $"Failed to initiate device login: {ex.Message}"
-            });
+            await WriteJsonResponse(
+                context.Response,
+                new { error = true, message = $"Failed to initiate device login: {ex.Message}" }
+            );
         }
+    }
+
+    private async Task HandleRetry(HttpContext context)
+    {
+        if (context.Request.Method != HttpMethods.Post)
+        {
+            context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+            return;
+        }
+
+        context.Response.ContentType = "application/json";
+
+        SetupPhase phase = _state.CurrentPhase;
+
+        // Re-authentication is not required if we already have tokens.
+        // Reset any error state so the UI can show progress again.
+        if (phase == SetupPhase.Authenticated || phase == SetupPhase.Registering)
+        {
+            _state.ClearError();
+
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            await WriteJsonResponse(context.Response, new { status = "retrying" });
+
+            // Kick off registration in the background — response is already sent.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Reset to Authenticated so RunPostAuthRegistration will proceed.
+                    _state.TransitionTo(SetupPhase.Authenticated);
+                    await RunPostAuthRegistration();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Setup(
+                        $"Registration retry failed: {ex.GetType().Name} — {ex.Message}",
+                        LogEventLevel.Error
+                    );
+                    _state.SetError(
+                        "Could not connect your server. Check your internet connection and try again."
+                    );
+                }
+            });
+
+            return;
+        }
+
+        // Any other phase: tell the client to go back to login.
+        context.Response.StatusCode = StatusCodes.Status200OK;
+        await WriteJsonResponse(context.Response, new { status = "unauthenticated" });
     }
 
     private async Task PollDeviceGrant(Dto.DeviceAuthResponse deviceData)
@@ -502,8 +591,10 @@ public class SetupServer
 
         _state.TransitionTo(SetupPhase.Authenticating);
 
-        List<KeyValuePair<string, string>> tokenBody =
-            Auth.BuildDeviceTokenBody(Config.TokenClientId, deviceData.DeviceCode);
+        List<KeyValuePair<string, string>> tokenBody = Auth.BuildDeviceTokenBody(
+            Config.TokenClientId,
+            deviceData.DeviceCode
+        );
 
         DateTime expiresAt = DateTime.Now.AddSeconds(deviceData.ExpiresIn);
         GenericHttpClient authClient = new(Config.AuthBaseUrl);
@@ -518,15 +609,19 @@ public class SetupServer
                 using HttpResponseMessage response = await authClient.SendAsync(
                     HttpMethod.Post,
                     "protocol/openid-connect/token",
-                    new FormUrlEncodedContent(tokenBody));
+                    new FormUrlEncodedContent(tokenBody)
+                );
 
                 if (response.IsSuccessStatusCode)
                 {
                     string content = await response.Content.ReadAsStringAsync();
-                    Dto.AuthResponse data = content.FromJson<Dto.AuthResponse>()
-                                            ?? throw new("Failed to deserialize token response");
+                    Dto.AuthResponse data =
+                        content.FromJson<Dto.AuthResponse>()
+                        ?? throw new("Failed to deserialize token response");
                     Auth.SetTokensFromSetup(data);
                     _state.TransitionTo(SetupPhase.Authenticated);
+
+                    _terminalUi?.ShowProgress("Authenticated", "Signed in successfully!");
 
                     await RunPostAuthRegistration();
                     return;
@@ -564,21 +659,34 @@ public class SetupServer
             using CancellationTokenSource dbTimeoutCts = new(TimeSpan.FromSeconds(30));
             bool dbReady = await CronWorker.GetDatabaseReadyTask().WaitAsync(dbTimeoutCts.Token);
             if (!dbReady)
-                Logger.Setup("Database schema init reported failure — continuing registration anyway",
-                    LogEventLevel.Warning);
+                Logger.Setup(
+                    "Database schema init reported failure — continuing registration anyway",
+                    LogEventLevel.Warning
+                );
 
             _state.TransitionTo(SetupPhase.Registering);
+            _terminalUi?.ShowProgress("Registering", "Connecting your server to NoMercy...");
 
             if (Start.NetworkDiscovery is not null)
                 await Start.NetworkDiscovery.DiscoverExternalIpAsync();
             await Register.Init();
 
             _state.TransitionTo(SetupPhase.Registered);
+            _terminalUi?.ShowProgress("Registered", "Setting up your server address...");
+
+            _state.SetPhaseDetail(
+                "Securing your connection... (this can take a couple of minutes)"
+            );
+            _terminalUi?.SetStatus("Securing your connection...");
 
             if (Certificate.HasValidCertificate())
             {
+                string serverUrl =
+                    $"https://{Info.DeviceId}.nomercy.tv:{Config.ExternalServerPort}";
+                _state.SetServerUrl(serverUrl);
                 _state.TransitionTo(SetupPhase.CertificateAcquired);
                 _state.TransitionTo(SetupPhase.Complete);
+                _terminalUi?.ShowComplete(serverUrl);
                 Logger.Setup("Setup complete — server will restart with HTTPS");
             }
             else
@@ -588,10 +696,12 @@ public class SetupServer
         }
         catch (Exception ex)
         {
-            _state.SetError($"Registration failed: {ex.Message}");
+            Logger.Setup(
+                $"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
+                LogEventLevel.Error
+            );
+            _state.SetError("Could not connect your server. Please try again.");
             _state.TransitionTo(SetupPhase.Authenticated);
-            Logger.Setup($"Post-auth registration failed: {ex.Message}",
-                LogEventLevel.Error);
         }
     }
 
@@ -604,7 +714,7 @@ public class SetupServer
         {
             status = "setup_required",
             message = "Server is in setup mode",
-            setup_url = "/setup"
+            setup_url = "/setup",
         };
 
         await WriteJsonResponse(context.Response, response);
@@ -622,13 +732,17 @@ public class SetupServer
             return _cachedSetupHtml;
 
         Assembly assembly = typeof(SetupServer).Assembly;
-        string resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("setup.html", StringComparison.OrdinalIgnoreCase))
+        string resourceName =
+            assembly
+                .GetManifestResourceNames()
+                .FirstOrDefault(n => n.EndsWith("setup.html", StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException("Embedded setup.html resource not found");
 
-        using Stream stream = assembly.GetManifestResourceStream(resourceName)
-                              ?? throw new InvalidOperationException(
-                                  $"Failed to load embedded resource: {resourceName}");
+        using Stream stream =
+            assembly.GetManifestResourceStream(resourceName)
+            ?? throw new InvalidOperationException(
+                $"Failed to load embedded resource: {resourceName}"
+            );
         using StreamReader reader = new(stream, Encoding.UTF8);
         _cachedSetupHtml = reader.ReadToEnd();
 

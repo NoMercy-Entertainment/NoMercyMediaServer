@@ -48,7 +48,10 @@ internal static class ColorQuantizer
             return image.Clone();
         }
 
-        double scale = Math.Min((double)MaxDimension / image.Width, (double)MaxDimension / image.Height);
+        double scale = Math.Min(
+            (double)MaxDimension / image.Width,
+            (double)MaxDimension / image.Height
+        );
         int newWidth = Math.Max(1, (int)(image.Width * scale));
         int newHeight = Math.Max(1, (int)(image.Height * scale));
 
@@ -101,7 +104,9 @@ internal static class ColorQuantizer
 
             for (int i = 0; i < boxes.Count; i++)
             {
-                if (boxes[i].CanSplit && (largestBox is null || boxes[i].Volume > largestBox.Volume))
+                if (
+                    boxes[i].CanSplit && (largestBox is null || boxes[i].Volume > largestBox.Volume)
+                )
                 {
                     largestBox = boxes[i];
                     largestIndex = i;
@@ -152,7 +157,7 @@ internal static class ColorQuantizer
             new("DarkVibrant", 1.0, 0.26),
             new("LightMuted", 0.3, 0.74),
             new("Muted", 0.3, 0.50),
-            new("DarkMuted", 0.3, 0.26)
+            new("DarkMuted", 0.3, 0.26),
         ];
 
         Dictionary<string, ColorSwatch?> assigned = new();
@@ -173,9 +178,11 @@ internal static class ColorQuantizer
                 ColorSwatch swatch = swatches[i];
                 double satDistance = Math.Abs(swatch.Saturation - target.TargetSaturation);
                 double lumDistance = Math.Abs(swatch.Luminance - target.TargetLuminance);
-                double popNormalized = maxPopulation > 0 ? (double)swatch.Population / maxPopulation : 0;
+                double popNormalized =
+                    maxPopulation > 0 ? (double)swatch.Population / maxPopulation : 0;
 
-                double score = 1.0
+                double score =
+                    1.0
                     - SaturationWeight * satDistance
                     - LuminanceWeight * lumDistance
                     - PopulationWeight * (1.0 - popNormalized);
@@ -206,10 +213,12 @@ internal static class ColorQuantizer
         {
             Dominant = SwatchToHex(dominantSwatch),
             Primary = SwatchToHex(primarySwatch),
-            LightVibrant = SwatchToHex(assigned.GetValueOrDefault("LightVibrant") ?? dominantSwatch),
+            LightVibrant = SwatchToHex(
+                assigned.GetValueOrDefault("LightVibrant") ?? dominantSwatch
+            ),
             DarkVibrant = SwatchToHex(assigned.GetValueOrDefault("DarkVibrant") ?? dominantSwatch),
             LightMuted = SwatchToHex(assigned.GetValueOrDefault("LightMuted") ?? dominantSwatch),
-            DarkMuted = SwatchToHex(assigned.GetValueOrDefault("DarkMuted") ?? dominantSwatch)
+            DarkMuted = SwatchToHex(assigned.GetValueOrDefault("DarkMuted") ?? dominantSwatch),
         };
     }
 
@@ -228,7 +237,7 @@ internal static class ColorQuantizer
             LightVibrant = "#C0C0C0FF",
             DarkVibrant = "#404040FF",
             LightMuted = "#C0C0C0FF",
-            DarkMuted = "#404040FF"
+            DarkMuted = "#404040FF",
         };
     }
 
@@ -265,15 +274,20 @@ internal static class ColorQuantizer
         }
         else
         {
-            saturation = luminance <= 0.5
-                ? delta / (max + min)
-                : delta / (2.0 - max - min);
+            saturation = luminance <= 0.5 ? delta / (max + min) : delta / (2.0 - max - min);
         }
 
         return (saturation, luminance);
     }
 
-    private readonly struct QuantizedColor(byte qr, byte qg, byte qb, byte origR, byte origG, byte origB)
+    private readonly struct QuantizedColor(
+        byte qr,
+        byte qg,
+        byte qb,
+        byte origR,
+        byte origG,
+        byte origB
+    )
     {
         public byte Qr { get; } = qr;
         public byte Qg { get; } = qg;
@@ -283,7 +297,14 @@ internal static class ColorQuantizer
         public byte OrigB { get; } = origB;
     }
 
-    private readonly struct ColorSwatch(byte r, byte g, byte b, int population, double saturation, double luminance)
+    private readonly struct ColorSwatch(
+        byte r,
+        byte g,
+        byte b,
+        int population,
+        double saturation,
+        double luminance
+    )
     {
         public byte R { get; } = r;
         public byte G { get; } = g;
@@ -293,7 +314,11 @@ internal static class ColorQuantizer
         public double Luminance { get; } = luminance;
     }
 
-    private readonly struct SwatchTarget(string name, double targetSaturation, double targetLuminance)
+    private readonly struct SwatchTarget(
+        string name,
+        double targetSaturation,
+        double targetLuminance
+    )
     {
         public string Name { get; } = name;
         public double TargetSaturation { get; } = targetSaturation;
@@ -303,29 +328,46 @@ internal static class ColorQuantizer
     private sealed class ColorBox
     {
         private readonly List<QuantizedColor> _pixels;
-        private readonly byte _minR, _maxR, _minG, _maxG, _minB, _maxB;
+        private readonly byte _minR,
+            _maxR,
+            _minG,
+            _maxG,
+            _minB,
+            _maxB;
 
         public ColorBox(List<QuantizedColor> pixels)
         {
             _pixels = pixels;
 
-            byte minR = 255, maxR = 0;
-            byte minG = 255, maxG = 0;
-            byte minB = 255, maxB = 0;
+            byte minR = 255,
+                maxR = 0;
+            byte minG = 255,
+                maxG = 0;
+            byte minB = 255,
+                maxB = 0;
 
             foreach (QuantizedColor pixel in pixels)
             {
-                if (pixel.Qr < minR) minR = pixel.Qr;
-                if (pixel.Qr > maxR) maxR = pixel.Qr;
-                if (pixel.Qg < minG) minG = pixel.Qg;
-                if (pixel.Qg > maxG) maxG = pixel.Qg;
-                if (pixel.Qb < minB) minB = pixel.Qb;
-                if (pixel.Qb > maxB) maxB = pixel.Qb;
+                if (pixel.Qr < minR)
+                    minR = pixel.Qr;
+                if (pixel.Qr > maxR)
+                    maxR = pixel.Qr;
+                if (pixel.Qg < minG)
+                    minG = pixel.Qg;
+                if (pixel.Qg > maxG)
+                    maxG = pixel.Qg;
+                if (pixel.Qb < minB)
+                    minB = pixel.Qb;
+                if (pixel.Qb > maxB)
+                    maxB = pixel.Qb;
             }
 
-            _minR = minR; _maxR = maxR;
-            _minG = minG; _maxG = maxG;
-            _minB = minB; _maxB = maxB;
+            _minR = minR;
+            _maxR = maxR;
+            _minG = minG;
+            _maxG = maxG;
+            _minB = minB;
+            _maxB = maxB;
         }
 
         public int Population => _pixels.Count;
@@ -364,13 +406,16 @@ internal static class ColorQuantizer
                 longestChannel = Channel.B;
             }
 
-            _pixels.Sort((a, b) => longestChannel switch
-            {
-                Channel.R => a.Qr.CompareTo(b.Qr),
-                Channel.G => a.Qg.CompareTo(b.Qg),
-                Channel.B => a.Qb.CompareTo(b.Qb),
-                _ => 0
-            });
+            _pixels.Sort(
+                (a, b) =>
+                    longestChannel switch
+                    {
+                        Channel.R => a.Qr.CompareTo(b.Qr),
+                        Channel.G => a.Qg.CompareTo(b.Qg),
+                        Channel.B => a.Qb.CompareTo(b.Qb),
+                        _ => 0,
+                    }
+            );
 
             int median = _pixels.Count / 2;
 
@@ -382,7 +427,9 @@ internal static class ColorQuantizer
 
         public ColorSwatch ToSwatch()
         {
-            long totalR = 0, totalG = 0, totalB = 0;
+            long totalR = 0,
+                totalG = 0,
+                totalB = 0;
 
             foreach (QuantizedColor pixel in _pixels)
             {
@@ -400,6 +447,11 @@ internal static class ColorQuantizer
             return new ColorSwatch(avgR, avgG, avgB, _pixels.Count, saturation, luminance);
         }
 
-        private enum Channel { R, G, B }
+        private enum Channel
+        {
+            R,
+            G,
+            B,
+        }
     }
 }

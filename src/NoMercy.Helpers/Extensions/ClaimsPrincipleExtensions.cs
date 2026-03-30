@@ -1,5 +1,5 @@
-using System.Security.Authentication;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 
@@ -15,94 +15,100 @@ public static class ClaimsPrincipleExtensions
 
     public static List<User> Users
     {
-        get { lock (UsersLock) return [.._users]; }
+        get
+        {
+            lock (UsersLock)
+                return [.. _users];
+        }
     }
 
     public static List<Ulid> FolderIds
     {
-        get { lock (FolderIdsLock) return [.._folderIds]; }
+        get
+        {
+            lock (FolderIdsLock)
+                return [.. _folderIds];
+        }
     }
 
     private static User? Owner
     {
-        get { lock (UsersLock) return _users.FirstOrDefault(u => u.Owner); }
+        get
+        {
+            lock (UsersLock)
+                return _users.FirstOrDefault(u => u.Owner);
+        }
     }
 
     private static List<User> ManagerUsers
     {
-        get { lock (UsersLock) return _users.Where(u => u.Manage).ToList(); }
+        get
+        {
+            lock (UsersLock)
+                return _users.Where(u => u.Manage).ToList();
+        }
     }
 
     private static List<User> AllowedUsers
     {
-        get { lock (UsersLock) return _users.Where(u => u.Allowed).ToList(); }
+        get
+        {
+            lock (UsersLock)
+                return _users.Where(u => u.Allowed).ToList();
+        }
     }
 
-    public static void Initialize(MediaContext context)
+    public static async Task InitializeAsync(MediaContext context)
     {
-        List<User> users = context.Users.ToList();
-        List<Ulid> folderIds = context.Folders.Select(x => x.Id).ToList();
+        List<User> users = await context.Users.AsNoTracking().ToListAsync();
+        List<Ulid> folderIds = await context.Folders.AsNoTracking().Select(x => x.Id).ToListAsync();
 
-        lock (UsersLock) _users = users;
-        lock (FolderIdsLock) _folderIds = folderIds;
+        lock (UsersLock)
+            _users = users;
+        lock (FolderIdsLock)
+            _folderIds = folderIds;
     }
 
-    public static void RefreshUsers(MediaContext context)
+    public static async Task RefreshUsersAsync(MediaContext context)
     {
-        List<User> users = context.Users.ToList();
-        lock (UsersLock) _users = users;
+        List<User> users = await context.Users.AsNoTracking().ToListAsync();
+        lock (UsersLock)
+            _users = users;
     }
 
-    public static void RefreshFolderIds(MediaContext context)
+    public static async Task RefreshFolderIdsAsync(MediaContext context)
     {
-        List<Ulid> folderIds = context.Folders.Select(x => x.Id).ToList();
-        lock (FolderIdsLock) _folderIds = folderIds;
+        List<Ulid> folderIds = await context.Folders.AsNoTracking().Select(x => x.Id).ToListAsync();
+        lock (FolderIdsLock)
+            _folderIds = folderIds;
     }
 
     public static Guid UserId(this ClaimsPrincipal? principal)
     {
-        string? userId = principal?
-            .FindFirst(ClaimTypes.NameIdentifier)?
-            .Value;
+        string? userId = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        return Guid.TryParse(userId, out Guid parsedUserId)
-            ? parsedUserId
-            : throw new AuthenticationException("User ID not found");
+        return Guid.TryParse(userId, out Guid parsedUserId) ? parsedUserId : Guid.Empty;
     }
 
     public static string Role(this ClaimsPrincipal? principal)
     {
-        return principal?
-                   .FindFirst(ClaimTypes.Role)?
-                   .Value
-               ?? throw new AuthenticationException("Role not found");
+        return principal?.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
     }
 
     public static string UserName(this ClaimsPrincipal? principal)
     {
-        try
-        {
-            return principal?.FindFirst("name")?.Value
-                   ?? principal?.FindFirst(ClaimTypes.GivenName)?.Value + " " +
-                   principal?.FindFirst(ClaimTypes.Surname)?.Value;
-        }
-        catch (Exception)
-        {
-            throw new AuthenticationException("User name not found");
-        }
+        string? nameValue = principal?.FindFirst("name")?.Value;
+        if (nameValue is not null)
+            return nameValue;
+
+        string given = principal?.FindFirst(ClaimTypes.GivenName)?.Value ?? string.Empty;
+        string surname = principal?.FindFirst(ClaimTypes.Surname)?.Value ?? string.Empty;
+        return $"{given} {surname}".Trim();
     }
 
     public static string Email(this ClaimsPrincipal? principal)
     {
-        try
-        {
-            return principal?.FindFirst(ClaimTypes.Email)?.Value
-                   ?? throw new AuthenticationException("Email not found");
-        }
-        catch (Exception)
-        {
-            throw new AuthenticationException("User name not found");
-        }
+        return principal?.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
     }
 
     public static bool IsOwner(this ClaimsPrincipal? principal)
@@ -127,17 +133,20 @@ public static class ClaimsPrincipleExtensions
 
     public static User? User(this ClaimsPrincipal? principal)
     {
-        lock (UsersLock) return _users.FirstOrDefault(u => u.Id == principal.UserId());
+        lock (UsersLock)
+            return _users.FirstOrDefault(u => u.Id == principal.UserId());
     }
 
     public static void AddUser(User user)
     {
-        lock (UsersLock) _users = [.._users, user];
+        lock (UsersLock)
+            _users = [.. _users, user];
     }
 
     public static void RemoveUser(User user)
     {
-        lock (UsersLock) _users = _users.Where(u => u.Id != user.Id).ToList();
+        lock (UsersLock)
+            _users = _users.Where(u => u.Id != user.Id).ToList();
     }
 
     public static void UpdateUser(User user)
@@ -150,7 +159,9 @@ public static class ClaimsPrincipleExtensions
 
     public static void Reset()
     {
-        lock (UsersLock) _users = [];
-        lock (FolderIdsLock) _folderIds = [];
+        lock (UsersLock)
+            _users = [];
+        lock (FolderIdsLock)
+            _folderIds = [];
     }
 }

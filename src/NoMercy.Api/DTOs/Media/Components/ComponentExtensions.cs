@@ -17,8 +17,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToCard(this Movie movie, string country, bool watch = false)
     {
-        return Component.Card(new(movie, country))
-            .WithWatch(watch);
+        return Component.Card(new(movie, country)).WithWatch(watch);
     }
 
     /// <summary>
@@ -32,7 +31,11 @@ public static class ComponentExtensions
     /// <summary>
     /// Converts a collection of Movies to Card components.
     /// </summary>
-    public static IEnumerable<ComponentEnvelope> ToCards(this IEnumerable<Movie> movies, string country, bool watch = false)
+    public static IEnumerable<ComponentEnvelope> ToCards(
+        this IEnumerable<Movie> movies,
+        string country,
+        bool watch = false
+    )
     {
         return movies.Select(m => m.ToCard(country, watch));
     }
@@ -46,8 +49,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToCard(this Tv tv, string country, bool watch = false)
     {
-        return Component.Card(new(tv, country))
-            .WithWatch(watch);
+        return Component.Card(new(tv, country)).WithWatch(watch);
     }
 
     /// <summary>
@@ -61,7 +63,11 @@ public static class ComponentExtensions
     /// <summary>
     /// Converts a collection of Tv shows to Card components.
     /// </summary>
-    public static IEnumerable<ComponentEnvelope> ToCards(this IEnumerable<Tv> shows, string country, bool watch = false)
+    public static IEnumerable<ComponentEnvelope> ToCards(
+        this IEnumerable<Tv> shows,
+        string country,
+        bool watch = false
+    )
     {
         return shows.Select(t => t.ToCard(country, watch));
     }
@@ -73,16 +79,23 @@ public static class ComponentExtensions
     /// <summary>
     /// Converts a Collection to a Card component.
     /// </summary>
-    public static ComponentEnvelope ToCard(this Collection collection, string country, bool watch = false)
+    public static ComponentEnvelope ToCard(
+        this Collection collection,
+        string country,
+        bool watch = false
+    )
     {
-        return Component.Card(new(collection, country))
-            .WithWatch(watch);
+        return Component.Card(new(collection, country)).WithWatch(watch);
     }
 
     /// <summary>
     /// Converts a collection of Collections to Card components.
     /// </summary>
-    public static IEnumerable<ComponentEnvelope> ToCards(this IEnumerable<Collection> collections, string country, bool watch = false)
+    public static IEnumerable<ComponentEnvelope> ToCards(
+        this IEnumerable<Collection> collections,
+        string country,
+        bool watch = false
+    )
     {
         return collections.Select(c => c.ToCard(country, watch));
     }
@@ -96,8 +109,7 @@ public static class ComponentExtensions
     /// </summary>
     public static ComponentEnvelope ToCard(this Special special, string country, bool watch = false)
     {
-        return Component.Card(new(special, country))
-            .WithWatch(watch);
+        return Component.Card(new(special, country)).WithWatch(watch);
     }
 
     #endregion
@@ -151,7 +163,10 @@ public static class ComponentExtensions
     /// <summary>
     /// Converts a collection of Tracks to TrackRow components.
     /// </summary>
-    public static IEnumerable<ComponentEnvelope> ToTrackRows(this IEnumerable<Track> tracks, Func<Track, bool>? isFavorite = null)
+    public static IEnumerable<ComponentEnvelope> ToTrackRows(
+        this IEnumerable<Track> tracks,
+        Func<Track, bool>? isFavorite = null
+    )
     {
         return tracks.Select(t => t.ToTrackRow(isFavorite?.Invoke(t) ?? false));
     }
@@ -167,9 +182,11 @@ public static class ComponentExtensions
         this IEnumerable<ComponentEnvelope> items,
         string? title = null,
         string? moreLink = null,
-        dynamic? id = null)
+        dynamic? id = null
+    )
     {
-        ContainerComponentBuilder builder = Component.Carousel()
+        ContainerComponentBuilder builder = Component
+            .Carousel()
             .WithTitle(title)
             .WithMoreLink(moreLink)
             .WithItems(items);
@@ -187,9 +204,11 @@ public static class ComponentExtensions
         this IEnumerable<ComponentEnvelope> items,
         string? title = null,
         string? moreLink = null,
-        dynamic? id = null)
+        dynamic? id = null
+    )
     {
-        ContainerComponentBuilder builder = Component.Grid()
+        ContainerComponentBuilder builder = Component
+            .Grid()
             .WithTitle(title)
             .WithMoreLink(moreLink)
             .WithItems(items);
@@ -207,9 +226,11 @@ public static class ComponentExtensions
         this IEnumerable<ComponentEnvelope> items,
         string? title = null,
         string? moreLink = null,
-        dynamic? id = null)
+        dynamic? id = null
+    )
     {
-        ContainerComponentBuilder builder = Component.List()
+        ContainerComponentBuilder builder = Component
+            .List()
             .WithTitle(title)
             .WithMoreLink(moreLink)
             .WithItems(items);

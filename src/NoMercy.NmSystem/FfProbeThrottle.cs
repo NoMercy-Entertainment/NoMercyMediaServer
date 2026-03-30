@@ -7,7 +7,8 @@ namespace NoMercy.NmSystem;
 /// </summary>
 public static class FfProbeThrottle
 {
-    public static int MaxConcurrentProbes { get; } = Math.Clamp(Environment.ProcessorCount / 2, 2, 8);
+    public static int MaxConcurrentProbes { get; } =
+        Math.Clamp(Environment.ProcessorCount / 2, 2, 8);
 
     private static readonly SemaphoreSlim Semaphore = new(MaxConcurrentProbes, MaxConcurrentProbes);
 
@@ -19,7 +20,8 @@ public static class FfProbeThrottle
     /// <summary>
     /// Acquires a slot asynchronously with a timeout. Returns true if acquired, false on timeout.
     /// </summary>
-    public static Task<bool> WaitAsync(TimeSpan timeout, CancellationToken ct = default) => Semaphore.WaitAsync(timeout, ct);
+    public static Task<bool> WaitAsync(TimeSpan timeout, CancellationToken ct = default) =>
+        Semaphore.WaitAsync(timeout, ct);
 
     /// <summary>
     /// Releases a slot after an ffprobe process has completed.

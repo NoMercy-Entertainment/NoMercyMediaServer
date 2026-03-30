@@ -3,11 +3,11 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Avalonia.Threading;
+using NoMercy.Launcher.Models;
+using NoMercy.Launcher.Services;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
-using NoMercy.Launcher.Models;
-using NoMercy.Launcher.Services;
 
 namespace NoMercy.Launcher.ViewModels;
 
@@ -30,15 +30,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
     public ObservableCollection<LogEntryResponse> FilteredEntries { get; } = [];
 
     public List<string> LevelOptions { get; } =
-    [
-        "All",
-        "Verbose",
-        "Debug",
-        "Information",
-        "Warning",
-        "Error",
-        "Fatal"
-    ];
+    ["All", "Verbose", "Debug", "Information", "Warning", "Error", "Fatal"];
 
     public List<int> TailOptions { get; } = [100, 200, 500, 1000];
 
@@ -93,13 +85,21 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
     public bool IsLoading
     {
         get => _isLoading;
-        set { _isLoading = value; OnPropertyChanged(); }
+        set
+        {
+            _isLoading = value;
+            OnPropertyChanged();
+        }
     }
 
     public string StatusText
     {
         get => _statusText;
-        set { _statusText = value; OnPropertyChanged(); }
+        set
+        {
+            _statusText = value;
+            OnPropertyChanged();
+        }
     }
 
     public LogViewerViewModel(ServerConnection serverConnection)
@@ -107,8 +107,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         _serverConnection = serverConnection;
     }
 
-    public async Task RefreshLogsAsync(
-        CancellationToken cancellationToken = default)
+    public async Task RefreshLogsAsync(CancellationToken cancellationToken = default)
     {
         IsLoading = true;
 
@@ -119,8 +118,10 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
             if (_selectedLevel != "All")
                 path += $"&levels={_selectedLevel}";
 
-            List<LogEntryResponse>? logs = await _serverConnection
-                .GetAsync<List<LogEntryResponse>>(path, cancellationToken);
+            List<LogEntryResponse>? logs = await _serverConnection.GetAsync<List<LogEntryResponse>>(
+                path,
+                cancellationToken
+            );
 
             if (logs is null)
             {
@@ -138,8 +139,9 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
             }
 
             ApplyFilter();
-            StatusText = $"{FilteredEntries.Count} entries" +
-                $" (fetched {logs.Count} at {DateTime.Now:HH:mm:ss})";
+            StatusText =
+                $"{FilteredEntries.Count} entries"
+                + $" (fetched {logs.Count} at {DateTime.Now:HH:mm:ss})";
         }
         catch (OperationCanceledException)
         {
@@ -183,7 +185,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
                     Color = entry.Color,
                     ThreadId = entry.ThreadId,
                     Time = entry.Time,
-                    Level = entry.Level
+                    Level = entry.Level,
                 };
                 CleanMessage(response);
                 LogEntries.Add(response);
@@ -220,46 +222,62 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         // Open SSE stream for real-time updates.
         // StreamLogsAsync handles reconnection with backoff internally,
         // so this works even if the server isn't up yet.
-        _ = Task.Run(async () =>
-        {
-            await _serverConnection.StreamLogsAsync(entry =>
+        _ = Task.Run(
+            async () =>
             {
-                CleanMessage(entry);
-
-                // Filter by level client-side
-                if (_selectedLevel != "All" &&
-                    !string.Equals(entry.Level, _selectedLevel, StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
-
-                Dispatcher.UIThread.Post(() =>
-                {
-                    LogEntries.Add(entry);
-
-                    // Check if entry matches current filter
-                    if (MatchesFilter(entry))
+                await _serverConnection.StreamLogsAsync(
+                    entry =>
                     {
-                        FilteredEntries.Add(entry);
-                        StatusText = $"{FilteredEntries.Count} entries (streaming)";
-                    }
+                        CleanMessage(entry);
 
-                    // Trim old entries to keep memory bounded
-                    while (LogEntries.Count > _tailCount * 2)
-                        LogEntries.RemoveAt(0);
-                    while (FilteredEntries.Count > _tailCount * 2)
-                        FilteredEntries.RemoveAt(0);
-                });
-            }, token, onConnected: () =>
-            {
-                Dispatcher.UIThread.Post(() =>
-                    StatusText = $"{FilteredEntries.Count} entries (streaming)");
-            }, onDisconnected: () =>
-            {
-                Dispatcher.UIThread.Post(() =>
-                    StatusText = $"{FilteredEntries.Count} entries (reconnecting...)");
-            });
-        }, token);
+                        // Filter by level client-side
+                        if (
+                            _selectedLevel != "All"
+                            && !string.Equals(
+                                entry.Level,
+                                _selectedLevel,
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        )
+                        {
+                            return;
+                        }
+
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            LogEntries.Add(entry);
+
+                            // Check if entry matches current filter
+                            if (MatchesFilter(entry))
+                            {
+                                FilteredEntries.Add(entry);
+                                StatusText = $"{FilteredEntries.Count} entries (streaming)";
+                            }
+
+                            // Trim old entries to keep memory bounded
+                            while (LogEntries.Count > _tailCount * 2)
+                                LogEntries.RemoveAt(0);
+                            while (FilteredEntries.Count > _tailCount * 2)
+                                FilteredEntries.RemoveAt(0);
+                        });
+                    },
+                    token,
+                    onConnected: () =>
+                    {
+                        Dispatcher.UIThread.Post(() =>
+                            StatusText = $"{FilteredEntries.Count} entries (streaming)"
+                        );
+                    },
+                    onDisconnected: () =>
+                    {
+                        Dispatcher.UIThread.Post(() =>
+                            StatusText = $"{FilteredEntries.Count} entries (reconnecting...)"
+                        );
+                    }
+                );
+            },
+            token
+        );
     }
 
     private async Task RestartStreamAsync()
@@ -283,8 +301,8 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         if (string.IsNullOrWhiteSpace(_searchText))
             return true;
 
-        return entry.Message.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
-               entry.Type.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
+        return entry.Message.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+            || entry.Type.Contains(_searchText, StringComparison.OrdinalIgnoreCase);
     }
 
     internal void ApplyFilter()
@@ -296,16 +314,16 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         if (_selectedLevel != "All")
         {
             filtered = filtered.Where(e =>
-                string.Equals(e.Level, _selectedLevel, StringComparison.OrdinalIgnoreCase));
+                string.Equals(e.Level, _selectedLevel, StringComparison.OrdinalIgnoreCase)
+            );
         }
 
         if (!string.IsNullOrWhiteSpace(_searchText))
         {
             filtered = filtered.Where(e =>
-                e.Message.Contains(
-                    _searchText, StringComparison.OrdinalIgnoreCase) ||
-                e.Type.Contains(
-                    _searchText, StringComparison.OrdinalIgnoreCase));
+                e.Message.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+                || e.Type.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+            );
         }
 
         foreach (LogEntryResponse entry in filtered)
@@ -317,9 +335,7 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         string message = entry.Message;
 
         // Strip surrounding quotes from double-serialization
-        if (message.Length >= 2
-            && message[0] == '"'
-            && message[^1] == '"')
+        if (message.Length >= 2 && message[0] == '"' && message[^1] == '"')
         {
             message = message[1..^1];
         }
@@ -328,7 +344,8 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
         message = AnsiEscapeRegex().Replace(message, "");
 
         // Unescape any remaining JSON escapes from double-serialization
-        message = message.Replace("\\n", "\n")
+        message = message
+            .Replace("\\n", "\n")
             .Replace("\\r", "\r")
             .Replace("\\t", "\t")
             .Replace("\\\"", "\"")
@@ -345,10 +362,8 @@ public partial class LogViewerViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    protected void OnPropertyChanged(
-        [CallerMemberName] string? propertyName = null)
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(
-            this, new(propertyName));
+        PropertyChanged?.Invoke(this, new(propertyName));
     }
 }

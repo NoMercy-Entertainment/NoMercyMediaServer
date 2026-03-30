@@ -9,8 +9,10 @@ public class MovieDbImageManager : IMovieDbImageManager
         return await BaseImageManager.ColorPalette(TmdbImageClient.Download, type, path, download);
     }
 
-    public static async Task<string> MultiColorPalette(IEnumerable<BaseImageManager.MultiStringType> items,
-        bool? download = true)
+    public static async Task<string> MultiColorPalette(
+        IEnumerable<BaseImageManager.MultiStringType> items,
+        bool? download = true
+    )
     {
         return await BaseImageManager.MultiColorPalette(TmdbImageClient.Download, items, download);
     }

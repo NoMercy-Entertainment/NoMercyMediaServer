@@ -30,10 +30,10 @@ public class ReleaseImportJob : AbstractMusicFolderJob
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
-        Library albumLibrary = await context.Libraries
-            .Where(f => f.Id == LibraryId)
+        Library albumLibrary = await context
+            .Libraries.Where(f => f.Id == LibraryId)
             .Include(f => f.FolderLibraries)
-            .ThenInclude(f => f.Folder)
+                .ThenInclude(f => f.Folder)
             .FirstAsync();
 
         await using MediaScan mediaScan = new();
@@ -45,20 +45,26 @@ public class ReleaseImportJob : AbstractMusicFolderJob
         if (rootFolders.Count == 0)
         {
             Logger.App("Processing folder: " + InputFolder, LogEventLevel.Verbose);
-            Folder baseFolder = albumLibrary.FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
+            Folder baseFolder = albumLibrary
+                .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
                 .First(f => InputFolder.Contains(f.Path));
-            
+
             jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, InputFolder);
             return;
         }
-        
-        Parallel.ForEach(rootFolders, Config.ParallelOptions, folder =>
-        {
-            Logger.App("Processing folder: " + folder.Path);
-            Folder baseFolder = albumLibrary.FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
-                .First(f => folder.Path.Contains(f.Path));
-            
-            jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, folder.Path);
-        });
+
+        Parallel.ForEach(
+            rootFolders,
+            Config.ParallelOptions,
+            folder =>
+            {
+                Logger.App("Processing folder: " + folder.Path);
+                Folder baseFolder = albumLibrary
+                    .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
+                    .First(f => folder.Path.Contains(f.Path));
+
+                jobDispatcher.DispatchJob<AudioImportJob>(LibraryId, baseFolder.Id, folder.Path);
+            }
+        );
     }
 }

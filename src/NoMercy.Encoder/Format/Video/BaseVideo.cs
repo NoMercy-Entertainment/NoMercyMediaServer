@@ -43,10 +43,7 @@ public abstract class BaseVideo : Classes
     public bool ConvertToSdr { get; set; }
 
     protected internal virtual string[] AvailableContainers =>
-    [
-        VideoContainers.Hls, VideoContainers.Mkv,
-        VideoContainers.Mp4, VideoContainers.Webm
-    ];
+        [VideoContainers.Hls, VideoContainers.Mkv, VideoContainers.Mp4, VideoContainers.Webm];
 
     public virtual string[] AvailablePresets => [];
     public virtual string[] AvailableProfiles => [];
@@ -55,23 +52,31 @@ public abstract class BaseVideo : Classes
     public virtual string[] AvailableLevels => [];
 
     protected virtual CodecDto[] AvailableCodecs =>
-    [
-        VideoCodecs.H264, VideoCodecs.H264Nvenc, VideoCodecs.H265,
-        VideoCodecs.H265Nvenc, VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc,
-        VideoCodecs.Av1
-    ];
+        [
+            VideoCodecs.H264,
+            VideoCodecs.H264Nvenc,
+            VideoCodecs.H265,
+            VideoCodecs.H265Nvenc,
+            VideoCodecs.Vp9,
+            VideoCodecs.Vp9Nvenc,
+            VideoCodecs.Av1,
+        ];
 
     internal readonly Dictionary<string, dynamic> _extraParameters = [];
     internal readonly Dictionary<string, dynamic> _filters = [];
     internal readonly Dictionary<string, dynamic> _ops = [];
 
     public static VideoQualityDto[] AvailableVideoSizes =>
-    [
-        FrameSizes._240p, FrameSizes._360p,
-        FrameSizes._480p, FrameSizes._720p,
-        FrameSizes._1080p, FrameSizes._1440p,
-        FrameSizes._4k, FrameSizes._8k
-    ];
+        [
+            FrameSizes._240p,
+            FrameSizes._360p,
+            FrameSizes._480p,
+            FrameSizes._720p,
+            FrameSizes._1080p,
+            FrameSizes._1440p,
+            FrameSizes._4k,
+            FrameSizes._8k,
+        ];
 
     internal string _hlsPlaylistType = "event";
 
@@ -79,10 +84,11 @@ public abstract class BaseVideo : Classes
 
     private string HlsSegmentFilename
     {
-        get => _hlsSegmentFilename
-            .Replace(":framesize:", $"{Scale.W}x{Scale.H}")
-            .Replace(":filename:", FileName)
-            .Replace(":type:", Type);
+        get =>
+            _hlsSegmentFilename
+                .Replace(":framesize:", $"{Scale.W}x{Scale.H}")
+                .Replace(":filename:", FileName)
+                .Replace(":type:", Type);
         set => _hlsSegmentFilename = value;
     }
 
@@ -93,10 +99,11 @@ public abstract class BaseVideo : Classes
 
     internal string HlsPlaylistFilename
     {
-        get => _hlsPlaylistFilename
-            .Replace(":framesize:", $"{Scale.W}x{Scale.H}")
-            .Replace(":filename:", FileName)
-            .Replace(":type:", Type);
+        get =>
+            _hlsPlaylistFilename
+                .Replace(":framesize:", $"{Scale.W}x{Scale.H}")
+                .Replace(":filename:", FileName)
+                .Replace(":type:", Type);
         private set => _hlsPlaylistFilename = value;
     }
 
@@ -106,7 +113,8 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo SetKiloBitrate(int? kiloBitrate = 0)
     {
-        if (kiloBitrate is null) return this;
+        if (kiloBitrate is null)
+            return this;
 
         if (kiloBitrate < 0)
             throw new("Wrong bitrate value");
@@ -120,9 +128,12 @@ public abstract class BaseVideo : Classes
     {
         if (VideoStream is null)
             throw new("Video stream is null");
-        if (VideoStream.PixFmt?.Contains("hdr") == true) return true;
-        if (string.IsNullOrEmpty(VideoStream.ColorSpace)) return false;
-        if (VideoStream.ColorSpace.Contains(ColorSpaces.Bt2020)) return true;
+        if (VideoStream.PixFmt?.Contains("hdr") == true)
+            return true;
+        if (string.IsNullOrEmpty(VideoStream.ColorSpace))
+            return false;
+        if (VideoStream.ColorSpace.Contains(ColorSpaces.Bt2020))
+            return true;
         return false;
     }
 
@@ -131,7 +142,8 @@ public abstract class BaseVideo : Classes
         CodecDto[] availableCodecs = AvailableCodecs;
         if (availableCodecs.All(codec => codec.Value != videoCodec))
             throw new(
-                $"Wrong video codec value for {videoCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}");
+                $"Wrong video codec value for {videoCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}"
+            );
 
         VideoCodec = availableCodecs.First(codec => codec.Value == videoCodec);
 
@@ -245,7 +257,10 @@ public abstract class BaseVideo : Classes
             return this;
         if (!AvailablePresets.Contains(value))
         {
-            Logger.Encoder($"Skipping preset '{value}' for {VideoCodec.Name}, available presets are {string.Join(", ", AvailablePresets)}", LogEventLevel.Warning);
+            Logger.Encoder(
+                $"Skipping preset '{value}' for {VideoCodec.Name}, available presets are {string.Join(", ", AvailablePresets)}",
+                LogEventLevel.Warning
+            );
             return this;
         }
         Preset = value;
@@ -258,7 +273,10 @@ public abstract class BaseVideo : Classes
             return this;
         if (!AvailableProfiles.Contains(value))
         {
-            Logger.Encoder($"Skipping profile '{value}' for {VideoCodec.Name}, available profiles are {string.Join(", ", AvailableProfiles)}", LogEventLevel.Warning);
+            Logger.Encoder(
+                $"Skipping profile '{value}' for {VideoCodec.Name}, available profiles are {string.Join(", ", AvailableProfiles)}",
+                LogEventLevel.Warning
+            );
             return this;
         }
         Profile = value;
@@ -271,7 +289,10 @@ public abstract class BaseVideo : Classes
             return this;
         if (!AvailableTune.Contains(value))
         {
-            Logger.Encoder($"Skipping tune '{value}' for {VideoCodec.Name}, available tunes are {string.Join(", ", AvailableTune)}", LogEventLevel.Warning);
+            Logger.Encoder(
+                $"Skipping tune '{value}' for {VideoCodec.Name}, available tunes are {string.Join(", ", AvailableTune)}",
+                LogEventLevel.Warning
+            );
             return this;
         }
         Tune = value;
@@ -284,7 +305,10 @@ public abstract class BaseVideo : Classes
             return this;
         if (!AvailableLevels.Contains(value))
         {
-            Logger.Encoder($"Skipping level '{value}' for {VideoCodec.Name}, available levels are {string.Join(", ", AvailableLevels)}", LogEventLevel.Warning);
+            Logger.Encoder(
+                $"Skipping level '{value}' for {VideoCodec.Name}, available levels are {string.Join(", ", AvailableLevels)}",
+                LogEventLevel.Warning
+            );
             return this;
         }
         Level = value;
@@ -293,7 +317,7 @@ public abstract class BaseVideo : Classes
 
     public BaseVideo AddOpts(string value)
     {
-        // AddFilter(value, "");
+        AddCustomArgument(value, null);
         return this;
     }
 
@@ -472,11 +496,13 @@ public abstract class BaseVideo : Classes
         {
             commandDictionary["-bsf:v"] = VideoCodec.Value.ToLower() switch
             {
-                "libx264" or "h264_nvenc" or "h264_qsv" or "h264_amf" or "h264_videotoolbox" => "h264_mp4toannexb",
-                "libx265" or "hevc_nvenc" or "hevc_qsv" or "hevc_amf" or "hevc_videotoolbox" => "hevc_mp4toannexb",
-                _ => ""
+                "libx264" or "h264_nvenc" or "h264_qsv" or "h264_amf" or "h264_videotoolbox" =>
+                    "h264_mp4toannexb",
+                "libx265" or "hevc_nvenc" or "hevc_qsv" or "hevc_amf" or "hevc_videotoolbox" =>
+                    "hevc_mp4toannexb",
+                _ => "",
             };
-            
+
             if (commandDictionary["-bsf:v"] == "")
                 commandDictionary.Remove("-bsf:v");
         }
@@ -487,7 +513,7 @@ public abstract class BaseVideo : Classes
         {
             commandDictionary["-movflags"] = "faststart";
         }
-        
+
         if (IsHdr)
         {
             commandDictionary["-color_primaries"] = "bt2020";
@@ -505,17 +531,20 @@ public abstract class BaseVideo : Classes
 
         if (IsHdr)
         {
-            const string masterDisplay = "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)";
+            const string masterDisplay =
+                "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)";
             const string contentLight = "10000,4000";
 
             switch (VideoCodec.Value.ToLower())
             {
                 case "libx265":
-                    commandDictionary["-x265-params"] = $"master-display={masterDisplay}:max-cll={contentLight}:hdr-opt=1:repeat-headers=1";
+                    commandDictionary["-x265-params"] =
+                        $"master-display={masterDisplay}:max-cll={contentLight}:hdr-opt=1:repeat-headers=1";
                     break;
 
                 case "libsvtav1":
-                    commandDictionary["-svtav1-params"] = $"master-display={masterDisplay}:content-light={contentLight}";
+                    commandDictionary["-svtav1-params"] =
+                        $"master-display={masterDisplay}:content-light={contentLight}";
                     break;
             }
         }
@@ -539,11 +568,16 @@ public abstract class BaseVideo : Classes
     {
         return profileCodec switch
         {
-            "libx264" or "h264_nvenc" or "h264_amf" or "h264_qsv" or "h264_videotoolbox" => new X264(profileCodec),
-            "libx265" or "hevc_nvenc" or "hevc_amf" or "hevc_qsv" or "hevc_videotoolbox" => new X265(profileCodec),
-            "vp9" or "libvpx-vp9" or "vp9_nvenc" or "vp9_amf" or "vp9_qsv" or "vp9_videotoolbox" => new Vp9(profileCodec),
-            "librav1e" or "av1_nvenc" or "av1_amf" or "av1_qsv" or "av1_videotoolbox" => new Av1(profileCodec),
-            _ => throw new($"Video codec {profileCodec} is not supported")
+            "libx264" or "h264_nvenc" or "h264_amf" or "h264_qsv" or "h264_videotoolbox" =>
+                new X264(profileCodec),
+            "libx265" or "hevc_nvenc" or "hevc_amf" or "hevc_qsv" or "hevc_videotoolbox" =>
+                new X265(profileCodec),
+            "vp9" or "libvpx-vp9" or "vp9_nvenc" or "vp9_amf" or "vp9_qsv" or "vp9_videotoolbox" =>
+                new Vp9(profileCodec),
+            "librav1e" or "av1_nvenc" or "av1_amf" or "av1_qsv" or "av1_videotoolbox" => new Av1(
+                profileCodec
+            ),
+            _ => throw new($"Video codec {profileCodec} is not supported"),
         };
     }
 }

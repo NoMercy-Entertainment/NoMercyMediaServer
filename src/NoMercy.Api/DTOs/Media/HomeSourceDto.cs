@@ -4,9 +4,14 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record HomeSourceDto
 {
-    [JsonProperty("id")] public int Id { get; set; }
-    [JsonProperty("media_type")] public string MediaType { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("id")]
+    public int Id { get; set; }
+
+    [JsonProperty("media_type")]
+    public string MediaType { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; }
 
     public HomeSourceDto(int id, string type)
     {

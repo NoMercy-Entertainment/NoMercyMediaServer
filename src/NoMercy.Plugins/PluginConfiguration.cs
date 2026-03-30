@@ -13,7 +13,7 @@ public class PluginConfiguration : IPluginConfiguration
         WriteIndented = true,
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
+        AllowTrailingCommas = true,
     };
 
     public PluginConfiguration(string dataFolderPath)
@@ -22,7 +22,8 @@ public class PluginConfiguration : IPluginConfiguration
         _configFilePath = Path.Combine(dataFolderPath, "config.json");
     }
 
-    public T? GetConfiguration<T>() where T : class, new()
+    public T? GetConfiguration<T>()
+        where T : class, new()
     {
         lock (_lock)
         {
@@ -36,7 +37,8 @@ public class PluginConfiguration : IPluginConfiguration
         }
     }
 
-    public async Task<T?> GetConfigurationAsync<T>(CancellationToken ct = default) where T : class, new()
+    public async Task<T?> GetConfigurationAsync<T>(CancellationToken ct = default)
+        where T : class, new()
     {
         if (!File.Exists(_configFilePath))
         {
@@ -47,7 +49,8 @@ public class PluginConfiguration : IPluginConfiguration
         return JsonSerializer.Deserialize<T>(json, JsonOptions);
     }
 
-    public void SaveConfiguration<T>(T configuration) where T : class
+    public void SaveConfiguration<T>(T configuration)
+        where T : class
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
@@ -64,7 +67,8 @@ public class PluginConfiguration : IPluginConfiguration
         }
     }
 
-    public async Task SaveConfigurationAsync<T>(T configuration, CancellationToken ct = default) where T : class
+    public async Task SaveConfigurationAsync<T>(T configuration, CancellationToken ct = default)
+        where T : class
     {
         ArgumentNullException.ThrowIfNull(configuration);
 

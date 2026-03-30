@@ -3,6 +3,4 @@ using NoMercy.Providers.TMDB.Models.Shared;
 
 namespace NoMercy.Providers.TMDB.Models.Keywords;
 
-public class MoviesKeywords : TmdbPaginatedResponse<TmdbMovie>
-{
-}
+public class MoviesKeywords : TmdbPaginatedResponse<TmdbMovie> { }

@@ -17,5 +17,5 @@ public enum CoverArtType
     Top,
     Track,
     Tray,
-    Watermark
+    Watermark,
 }

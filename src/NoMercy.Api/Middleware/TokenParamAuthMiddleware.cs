@@ -11,14 +11,19 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context)
     {
-        context.Request.Headers.Authorization = context.Request.Headers.Authorization.ToString().Split(",").ElementAt(0)
-            .Split("&").ElementAt(0);
+        context.Request.Headers.Authorization = context
+            .Request.Headers.Authorization.ToString()
+            .Split(",")
+            .ElementAt(0)
+            .Split("&")
+            .ElementAt(0);
 
         // Extract JWT from query params for all requests (enables ?token= and ?access_token= everywhere)
         if (!context.Request.Headers.Authorization.ToString().Contains("Bearer"))
         {
-            string jwt = context.Request.Query
-                .FirstOrDefault(q => q.Key is "token" or "access_token").Value.ToString();
+            string jwt = context
+                .Request.Query.FirstOrDefault(q => q.Key is "token" or "access_token")
+                .Value.ToString();
 
             if (!string.IsNullOrEmpty(jwt))
             {
@@ -28,8 +33,10 @@ public class TokenParamAuthMiddleware(RequestDelegate next)
 
         string url = context.Request.Path;
 
-        if (!ClaimsPrincipleExtensions.FolderIds.Any(x => url.StartsWith("/" + x)) ||
-            context.Request.Headers.Authorization.ToString().Contains("Bearer"))
+        if (
+            !ClaimsPrincipleExtensions.FolderIds.Any(x => url.StartsWith("/" + x))
+            || context.Request.Headers.Authorization.ToString().Contains("Bearer")
+        )
         {
             await next(context);
             return;

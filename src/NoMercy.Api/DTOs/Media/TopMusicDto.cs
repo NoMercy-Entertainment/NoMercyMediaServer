@@ -7,12 +7,23 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record TopMusicDto
 {
-    [JsonProperty("id")] public string Id { get; set; } = string.Empty;
-    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("type")] public string Type { get; set; } = "albums";
-    [JsonProperty("cover")] public string? Cover { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; } = null!;
+    [JsonProperty("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; } = "albums";
+
+    [JsonProperty("cover")]
+    public string? Cover { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; } = null!;
 
     public TopMusicDto()
     {
@@ -27,7 +38,9 @@ public record TopMusicDto
         Type = "playlist";
         Link = new($"/music/playlists/{Id}", UriKind.Relative);
         Cover = musicPlay.Playlist.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = Cover is not null
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            : null;
     }
 
     public TopMusicDto(AlbumTrack albumTrack)
@@ -38,7 +51,9 @@ public record TopMusicDto
         Type = "album";
         Link = new($"/music/album/{Id}", UriKind.Relative);
         Cover = albumTrack.Album.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = Cover is not null
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            : null;
     }
 
     public TopMusicDto(ArtistTrack artistTrack)
@@ -49,7 +64,9 @@ public record TopMusicDto
         Type = "artist";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
         Cover = artistTrack.Artist.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = Cover is not null
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            : null;
     }
 
     public TopMusicDto(TopMusicItemDto item)
@@ -65,9 +82,11 @@ public record TopMusicDto
             "artist" => new($"/music/artist/{Id}", UriKind.Relative),
             "album" => new($"/music/album/{Id}", UriKind.Relative),
             "playlist" => new($"/music/playlists/{Id}", UriKind.Relative),
-            _ => new($"/music/{Id}", UriKind.Relative)
+            _ => new($"/music/{Id}", UriKind.Relative),
         };
         Cover = item.Cover;
-        Cover = Cover is not null ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() : null;
+        Cover = Cover is not null
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
+            : null;
     }
 }

@@ -27,8 +27,13 @@ public class PeopleController(MediaContext mediaContext) : BaseController
 
         string language = Language();
 
-        List<PeopleResponseItemDto> people = await PeopleResponseDto
-            .GetPeople(mediaContext, userId, language, request.Take, request.Page);
+        List<PeopleResponseItemDto> people = await PeopleResponseDto.GetPeople(
+            mediaContext,
+            userId,
+            language,
+            request.Take,
+            request.Page
+        );
 
         return GetPaginatedResponse(people, request);
     }
@@ -49,9 +54,6 @@ public class PeopleController(MediaContext mediaContext) : BaseController
         if (personAppends is null)
             return NotFoundResponse("Person not found");
 
-        return Ok(new PersonResponseDto
-        {
-            Data = new(personAppends, country, mediaContext)
-        });
+        return Ok(new PersonResponseDto { Data = new(personAppends, country, mediaContext) });
     }
 }

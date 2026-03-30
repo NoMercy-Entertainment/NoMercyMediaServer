@@ -10,9 +10,8 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public class TmdbTvClient : TmdbBaseClient
 {
-    public TmdbTvClient(int? id = 0, string[]? appendices = null, string? language = "en-US") : base((int)id!, language!)
-    {
-    }
+    public TmdbTvClient(int? id = 0, string[]? appendices = null, string? language = "en-US")
+        : base((int)id!, language!) { }
 
     public TmdbSeasonClient Season(int seasonNumber, string[]? items = null)
     {
@@ -33,7 +32,7 @@ public class TmdbTvClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["append_to_response"] = string.Join(",", appendices)
+            ["append_to_response"] = string.Join(",", appendices),
         };
 
         return Get<TmdbTvShowAppends>("tv/" + Id, queryParams, priority);
@@ -41,21 +40,24 @@ public class TmdbTvClient : TmdbBaseClient
 
     public Task<TmdbTvShowAppends?> WithAllAppends(bool? priority = false)
     {
-        return WithAppends([
-            "aggregate_credits",
-            "alternative_titles",
-            "changes",
-            "content_ratings",
-            "credits",
-            "external_ids",
-            "images",
-            "keywords",
-            "recommendations",
-            "similar",
-            "translations",
-            "videos",
-            "watch/providers"
-        ], priority);
+        return WithAppends(
+            [
+                "aggregate_credits",
+                "alternative_titles",
+                "changes",
+                "content_ratings",
+                "credits",
+                "external_ids",
+                "images",
+                "keywords",
+                "recommendations",
+                "similar",
+                "translations",
+                "videos",
+                "watch/providers",
+            ],
+            priority
+        );
     }
 
     public Task<TmdbTvAggregatedCredits?> AggregatedCredits(bool? priority = false)
@@ -73,7 +75,7 @@ public class TmdbTvClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new()
         {
             ["start_date"] = startDate,
-            ["end_date"] = endDate
+            ["end_date"] = endDate,
         };
 
         return Get<TmdbTvChanges>("tv/changes", queryParams, priority: priority);
@@ -126,7 +128,10 @@ public class TmdbTvClient : TmdbBaseClient
 
     public Task<TmdbTvScreenedTheatrically?> ScreenedTheatrically(bool? priority = false)
     {
-        return Get<TmdbTvScreenedTheatrically>("tv/" + Id + "/screened_theatrically", priority: priority);
+        return Get<TmdbTvScreenedTheatrically>(
+            "tv/" + Id + "/screened_theatrically",
+            priority: priority
+        );
     }
 
     public Task<TmdbTvSimilar?> Similar(bool? priority = false)
@@ -166,7 +171,10 @@ public class TmdbTvClient : TmdbBaseClient
 
     public async Task<List<TmdbTvShow>?> Popular(int limit = 10, bool? priority = false)
     {
-        var response = await Get<TmdbPaginatedResponse<TmdbTvShow>>("tv/popular", priority: priority);
+        var response = await Get<TmdbPaginatedResponse<TmdbTvShow>>(
+            "tv/popular",
+            priority: priority
+        );
         return response?.Results?.Take(limit).ToList();
     }
 
@@ -182,14 +190,11 @@ public class TmdbTvClient : TmdbBaseClient
 
     public Task<TmdbGenreTv?> Genres(string language = "en", bool? priority = false)
     {
-        Dictionary<string, string?> queryParams = new()
-        {
-            ["language"] = language
-        };
+        Dictionary<string, string?> queryParams = new() { ["language"] = language };
 
         return Get<TmdbGenreTv>("genre/tv/list", queryParams, priority: priority);
     }
-    
+
     public Task<TmdbTmdbNetworkDetails?> NetworkDetails(int id, bool? priority = false)
     {
         return Get<TmdbTmdbNetworkDetails>("network/" + id, priority: priority);

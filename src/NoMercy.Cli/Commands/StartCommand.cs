@@ -9,56 +9,55 @@ internal static class StartCommand
 {
     public static Command Create(Option<string?> pipeOption)
     {
-        Command command = new("start")
-        {
-            Description = "Start the server"
-        };
+        Command command = new("start") { Description = "Start the server" };
 
         Option<bool> devOption = new("--dev")
         {
-            Description = "Start the server in development mode"
+            Description = "Start the server in development mode",
         };
         command.Options.Add(devOption);
 
-        command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
-        {
-            string? pipe = parseResult.GetValue(pipeOption);
-            bool dev = parseResult.GetValue(devOption);
-
-            if (await IsServerRunning(pipe, ct))
+        command.SetAction(
+            async (ParseResult parseResult, CancellationToken ct) =>
             {
-                Console.WriteLine("Server is already running.");
-                return 0;
-            }
+                string? pipe = parseResult.GetValue(pipeOption);
+                bool dev = parseResult.GetValue(devOption);
 
-            ProcessStartInfo? startInfo = FindServerStartInfo(dev);
-
-            if (startInfo is null)
-            {
-                Console.Error.WriteLine("Could not find server executable.");
-                return 1;
-            }
-
-            try
-            {
-                Process process = new() { StartInfo = startInfo };
-                bool started = process.Start();
-
-                if (started)
+                if (await IsServerRunning(pipe, ct))
                 {
-                    Console.WriteLine("Server started.");
+                    Console.WriteLine("Server is already running.");
                     return 0;
                 }
 
-                Console.Error.WriteLine("Failed to start server.");
-                return 1;
+                ProcessStartInfo? startInfo = FindServerStartInfo(dev);
+
+                if (startInfo is null)
+                {
+                    Console.Error.WriteLine("Could not find server executable.");
+                    return 1;
+                }
+
+                try
+                {
+                    Process process = new() { StartInfo = startInfo };
+                    bool started = process.Start();
+
+                    if (started)
+                    {
+                        Console.WriteLine("Server started.");
+                        return 0;
+                    }
+
+                    Console.Error.WriteLine("Failed to start server.");
+                    return 1;
+                }
+                catch (Exception e)
+                {
+                    Console.Error.WriteLine($"Failed to start server: {e.Message}");
+                    return 1;
+                }
             }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine($"Failed to start server: {e.Message}");
-                return 1;
-            }
-        });
+        );
 
         return command;
     }
@@ -69,7 +68,9 @@ internal static class StartCommand
         {
             using CliClient client = new(pipe);
             Models.StatusResponse? status = await client.GetAsync<Models.StatusResponse>(
-                "/manage/status", ct);
+                "/manage/status",
+                ct
+            );
             return status is not null;
         }
         catch
@@ -81,15 +82,16 @@ internal static class StartCommand
     private static ProcessStartInfo? FindServerStartInfo(bool dev)
     {
         return CreateInstalledStartInfo(dev)
-               ?? CreateProductionStartInfo(dev)
-               ?? CreateDevBinaryStartInfo()
-               ?? CreateDotnetRunStartInfo();
+            ?? CreateProductionStartInfo(dev)
+            ?? CreateDevBinaryStartInfo()
+            ?? CreateDotnetRunStartInfo();
     }
 
     private static ProcessStartInfo? CreateInstalledStartInfo(bool dev)
     {
         string? ownDir = Path.GetDirectoryName(
-            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+        );
 
         if (ownDir is null)
             return null;
@@ -102,7 +104,7 @@ internal static class StartCommand
         ProcessStartInfo startInfo = new(candidate)
         {
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
         };
 
         if (dev)
@@ -121,7 +123,7 @@ internal static class StartCommand
         ProcessStartInfo startInfo = new(exePath)
         {
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
         };
 
         if (dev)
@@ -141,20 +143,31 @@ internal static class StartCommand
 
         string[] searchPaths =
         [
-            Path.Combine(serverProjectDir, "bin", "Debug",
-                $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName),
-            Path.Combine(serverProjectDir, "bin", "Release",
-                $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName)
+            Path.Combine(
+                serverProjectDir,
+                "bin",
+                "Debug",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
+            ),
+            Path.Combine(
+                serverProjectDir,
+                "bin",
+                "Release",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
+            ),
         ];
 
         foreach (string path in searchPaths)
         {
-            if (!File.Exists(path)) continue;
+            if (!File.Exists(path))
+                continue;
 
             ProcessStartInfo startInfo = new(path)
             {
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
             startInfo.ArgumentList.Add("--dev");
@@ -174,7 +187,7 @@ internal static class StartCommand
         ProcessStartInfo startInfo = new("dotnet")
         {
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
         };
 
         startInfo.ArgumentList.Add("run");
@@ -188,8 +201,7 @@ internal static class StartCommand
 
     private static string? FindProjectDirectory(string projectName)
     {
-        string? assemblyLocation = Path.GetDirectoryName(
-            Assembly.GetExecutingAssembly().Location);
+        string? assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         string? directory = assemblyLocation;
 

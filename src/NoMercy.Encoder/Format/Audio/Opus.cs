@@ -10,19 +10,14 @@ public class Opus : BaseAudio
         AddCustomArgument("-strict", "-2");
     }
 
-    public override CodecDto[] AvailableCodecs =>
-    [
-        AudioCodecs.LibOpus,
-        AudioCodecs.Opus
-    ];
+    public override CodecDto[] AvailableCodecs => [AudioCodecs.LibOpus, AudioCodecs.Opus];
 
     protected override string[] AvailableContainers =>
-    [
-        AudioContainers.Ogg,
-
-        VideoContainers.Mkv,
-        VideoContainers.Mp4,
-        VideoContainers.Webm,
-        VideoContainers.Hls
-    ];
+        [
+            AudioContainers.Ogg,
+            VideoContainers.Mkv,
+            VideoContainers.Mp4,
+            VideoContainers.Webm,
+            VideoContainers.Hls,
+        ];
 }

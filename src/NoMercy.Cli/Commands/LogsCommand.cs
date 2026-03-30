@@ -21,106 +21,129 @@ internal static partial class LogsCommand
         Option<int> tailOption = new("--tail", "-n")
         {
             Description = "Number of log entries to show",
-            DefaultValueFactory = _ => 100
+            DefaultValueFactory = _ => 100,
         };
 
         Option<bool> followOption = new("--follow", "-f")
         {
             Description = "Stream logs in real-time",
-            DefaultValueFactory = _ => false
+            DefaultValueFactory = _ => false,
         };
 
         Option<string?> levelOption = new("--level")
         {
-            Description = "Filter by log level (e.g. Information,Warning,Error)"
+            Description = "Filter by log level (e.g. Information,Warning,Error)",
         };
 
-        Option<string?> typeOption = new("--type")
-        {
-            Description = "Filter by log type"
-        };
+        Option<string?> typeOption = new("--type") { Description = "Filter by log type" };
 
-        Command command = new("logs")
-        {
-            Description = "View server logs"
-        };
+        Command command = new("logs") { Description = "View server logs" };
         command.Options.Add(tailOption);
         command.Options.Add(followOption);
         command.Options.Add(levelOption);
         command.Options.Add(typeOption);
 
-        command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
-        {
-            string? pipe = parseResult.GetValue(pipeOption);
-            int tail = parseResult.GetValue(tailOption);
-            bool follow = parseResult.GetValue(followOption);
-            string? level = parseResult.GetValue(levelOption);
-            string? type = parseResult.GetValue(typeOption);
-
-            using CliClient client = new(pipe);
-
-            // Fetch initial batch
-            string query = BuildQuery(tail, level, type);
-            List<LogEntryResponse>? logs = await client
-                .GetAsync<List<LogEntryResponse>>($"/manage/logs{query}", ct);
-
-            if (logs is null)
+        command.SetAction(
+            async (ParseResult parseResult, CancellationToken ct) =>
             {
-                Console.Error.WriteLine("Could not connect to server.");
-                return 1;
-            }
+                string? pipe = parseResult.GetValue(pipeOption);
+                int tail = parseResult.GetValue(tailOption);
+                bool follow = parseResult.GetValue(followOption);
+                string? level = parseResult.GetValue(levelOption);
+                string? type = parseResult.GetValue(typeOption);
 
-            foreach (LogEntryResponse entry in logs)
-                PrintEntry(entry);
+                using CliClient client = new(pipe);
 
-            if (!follow) return 0;
+                // Fetch initial batch
+                string query = BuildQuery(tail, level, type);
+                List<LogEntryResponse>? logs = await client.GetAsync<List<LogEntryResponse>>(
+                    $"/manage/logs{query}",
+                    ct
+                );
 
-            // Stream via SSE
-            using IpcClient ipc = new(pipe);
-            try
-            {
-                using HttpResponseMessage response = await ipc.GetStreamAsync(
-                    $"/manage/logs/stream?backfill=0", ct);
-
-                using Stream stream = await response.Content.ReadAsStreamAsync(ct);
-                using StreamReader reader = new(stream);
-
-                while (!ct.IsCancellationRequested)
+                if (logs is null)
                 {
-                    string? line = await reader.ReadLineAsync(ct);
-                    if (line is null) break;
-                    if (!line.StartsWith("data: ")) continue;
-
-                    string json = line[6..];
-                    LogEntryResponse? entry = JsonConvert.DeserializeObject<LogEntryResponse>(json);
-                    if (entry is null) continue;
-
-                    // Apply client-side filters
-                    if (!string.IsNullOrWhiteSpace(level) &&
-                        !level.Split(',').Any(l =>
-                            string.Equals(l.Trim(), entry.Level, StringComparison.OrdinalIgnoreCase)))
-                        continue;
-
-                    if (!string.IsNullOrWhiteSpace(type) &&
-                        !type.Split(',').Any(t =>
-                            string.Equals(t.Trim(), entry.Type, StringComparison.OrdinalIgnoreCase)))
-                        continue;
-
-                    PrintEntry(entry);
+                    Console.Error.WriteLine("Could not connect to server.");
+                    return 1;
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected on Ctrl+C
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Stream disconnected: {ex.Message}");
-                return 1;
-            }
 
-            return 0;
-        });
+                foreach (LogEntryResponse entry in logs)
+                    PrintEntry(entry);
+
+                if (!follow)
+                    return 0;
+
+                // Stream via SSE
+                using IpcClient ipc = new(pipe);
+                try
+                {
+                    using HttpResponseMessage response = await ipc.GetStreamAsync(
+                        $"/manage/logs/stream?backfill=0",
+                        ct
+                    );
+
+                    using Stream stream = await response.Content.ReadAsStreamAsync(ct);
+                    using StreamReader reader = new(stream);
+
+                    while (!ct.IsCancellationRequested)
+                    {
+                        string? line = await reader.ReadLineAsync(ct);
+                        if (line is null)
+                            break;
+                        if (!line.StartsWith("data: "))
+                            continue;
+
+                        string json = line[6..];
+                        LogEntryResponse? entry = JsonConvert.DeserializeObject<LogEntryResponse>(
+                            json
+                        );
+                        if (entry is null)
+                            continue;
+
+                        // Apply client-side filters
+                        if (
+                            !string.IsNullOrWhiteSpace(level)
+                            && !level
+                                .Split(',')
+                                .Any(l =>
+                                    string.Equals(
+                                        l.Trim(),
+                                        entry.Level,
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
+                        )
+                            continue;
+
+                        if (
+                            !string.IsNullOrWhiteSpace(type)
+                            && !type.Split(',')
+                                .Any(t =>
+                                    string.Equals(
+                                        t.Trim(),
+                                        entry.Type,
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
+                        )
+                            continue;
+
+                        PrintEntry(entry);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected on Ctrl+C
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Stream disconnected: {ex.Message}");
+                    return 1;
+                }
+
+                return 0;
+            }
+        );
 
         return command;
     }
@@ -133,7 +156,10 @@ internal static partial class LogsCommand
         _lastEntryTime = entry.Time;
 
         string message = CleanMessage(entry.Message);
-        string timestamp = entry.Time.ToLocalTime().ToString("d-M-yyyy HH:mm").Pastel(Color.DarkGray);
+        string timestamp = entry
+            .Time.ToLocalTime()
+            .ToString("d-M-yyyy HH:mm")
+            .Pastel(Color.DarkGray);
         string typeName = entry.Type.ToTitleCase().PadLeft(14);
 
         if (!string.IsNullOrEmpty(entry.Color))
@@ -146,7 +172,9 @@ internal static partial class LogsCommand
     {
         string separator = new('-', 60);
         Console.WriteLine();
-        Console.WriteLine($"{"",16}{"Server Restart".PadLeft(14)} | {separator}".Pastel(Color.DarkGray));
+        Console.WriteLine(
+            $"{"", 16}{"Server Restart".PadLeft(14)} | {separator}".Pastel(Color.DarkGray)
+        );
         Console.WriteLine();
     }
 
@@ -160,7 +188,8 @@ internal static partial class LogsCommand
         message = AnsiEscapeRegex().Replace(message, "");
 
         // Unescape JSON escapes from double-serialization
-        message = message.Replace("\\n", "\n")
+        message = message
+            .Replace("\\n", "\n")
             .Replace("\\r", "\r")
             .Replace("\\t", "\t")
             .Replace("\\\"", "\"")

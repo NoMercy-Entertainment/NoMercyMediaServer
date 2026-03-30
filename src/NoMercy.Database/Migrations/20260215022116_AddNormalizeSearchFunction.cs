@@ -13,15 +13,14 @@ namespace NoMercy.Database.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Tracks_MetadataId",
                 table: "Tracks",
-                column: "MetadataId");
+                column: "MetadataId"
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_Tracks_MetadataId",
-                table: "Tracks");
+            migrationBuilder.DropIndex(name: "IX_Tracks_MetadataId", table: "Tracks");
         }
     }
 }

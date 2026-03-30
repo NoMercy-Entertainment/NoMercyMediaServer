@@ -12,41 +12,35 @@ internal sealed class CliClient : IDisposable
         _client = new(pipeNameOrSocketPath);
     }
 
-    public async Task<T?> GetAsync<T>(
-        string path,
-        CancellationToken cancellationToken = default) where T : class
+    public async Task<T?> GetAsync<T>(string path, CancellationToken cancellationToken = default)
+        where T : class
     {
-        using HttpResponseMessage response =
-            await _client.GetAsync(path, cancellationToken);
+        using HttpResponseMessage response = await _client.GetAsync(path, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
-            string body = await response.Content
-                .ReadAsStringAsync(cancellationToken);
-            Console.Error.WriteLine(
-                $"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+            string body = await response.Content.ReadAsStringAsync(cancellationToken);
+            Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
             if (!string.IsNullOrWhiteSpace(body))
                 Console.Error.WriteLine(body);
             return null;
         }
 
-        string json = await response.Content
-            .ReadAsStringAsync(cancellationToken);
+        string json = await response.Content.ReadAsStringAsync(cancellationToken);
 
         return JsonConvert.DeserializeObject<T>(json);
     }
 
     public async Task<string?> GetRawAsync(
         string path,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        using HttpResponseMessage response =
-            await _client.GetAsync(path, cancellationToken);
+        using HttpResponseMessage response = await _client.GetAsync(path, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
-            Console.Error.WriteLine(
-                $"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+            Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
             return null;
         }
 
@@ -56,17 +50,20 @@ internal sealed class CliClient : IDisposable
     public async Task<bool> PostAsync(
         string path,
         HttpContent? content = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        using HttpResponseMessage response =
-            await _client.PostAsync(path, content, cancellationToken);
+        using HttpResponseMessage response = await _client.PostAsync(
+            path,
+            content,
+            cancellationToken
+        );
 
-        if (response.IsSuccessStatusCode) return true;
+        if (response.IsSuccessStatusCode)
+            return true;
 
-        string body = await response.Content
-            .ReadAsStringAsync(cancellationToken);
-        Console.Error.WriteLine(
-            $"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+        string body = await response.Content.ReadAsStringAsync(cancellationToken);
+        Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
         if (!string.IsNullOrWhiteSpace(body))
             Console.Error.WriteLine(body);
 
@@ -76,24 +73,26 @@ internal sealed class CliClient : IDisposable
     public async Task<T?> PostAsync<T>(
         string path,
         HttpContent? content = null,
-        CancellationToken cancellationToken = default) where T : class
+        CancellationToken cancellationToken = default
+    )
+        where T : class
     {
-        using HttpResponseMessage response =
-            await _client.PostAsync(path, content, cancellationToken);
+        using HttpResponseMessage response = await _client.PostAsync(
+            path,
+            content,
+            cancellationToken
+        );
 
         if (!response.IsSuccessStatusCode)
         {
-            string body = await response.Content
-                .ReadAsStringAsync(cancellationToken);
-            Console.Error.WriteLine(
-                $"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+            string body = await response.Content.ReadAsStringAsync(cancellationToken);
+            Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
             if (!string.IsNullOrWhiteSpace(body))
                 Console.Error.WriteLine(body);
             return null;
         }
 
-        string json = await response.Content
-            .ReadAsStringAsync(cancellationToken);
+        string json = await response.Content.ReadAsStringAsync(cancellationToken);
 
         return JsonConvert.DeserializeObject<T>(json);
     }
@@ -101,17 +100,20 @@ internal sealed class CliClient : IDisposable
     public async Task<bool> PutAsync(
         string path,
         HttpContent? content = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        using HttpResponseMessage response =
-            await _client.PutAsync(path, content, cancellationToken);
+        using HttpResponseMessage response = await _client.PutAsync(
+            path,
+            content,
+            cancellationToken
+        );
 
-        if (response.IsSuccessStatusCode) return true;
+        if (response.IsSuccessStatusCode)
+            return true;
 
-        string body = await response.Content
-            .ReadAsStringAsync(cancellationToken);
-        Console.Error.WriteLine(
-            $"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
+        string body = await response.Content.ReadAsStringAsync(cancellationToken);
+        Console.Error.WriteLine($"Error: {(int)response.StatusCode} {response.ReasonPhrase}");
         if (!string.IsNullOrWhiteSpace(body))
             Console.Error.WriteLine(body);
 

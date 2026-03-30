@@ -51,7 +51,7 @@ public class MacWallpaperService : IWallpaperService
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
             process.Start();

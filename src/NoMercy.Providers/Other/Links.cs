@@ -4,5 +4,6 @@ namespace NoMercy.Providers.Other;
 
 public class Links
 {
-    [JsonProperty("self")] public Uri Self { get; set; } = default!;
+    [JsonProperty("self")]
+    public Uri Self { get; set; } = default!;
 }

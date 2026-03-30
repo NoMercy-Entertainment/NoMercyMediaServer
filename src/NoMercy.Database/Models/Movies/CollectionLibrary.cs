@@ -8,15 +8,15 @@ namespace NoMercy.Database.Models.Movies;
 [Index(nameof(LibraryId))]
 public class CollectionLibrary
 {
-    [JsonProperty("collection_id")] public int CollectionId { get; set; }
+    [JsonProperty("collection_id")]
+    public int CollectionId { get; set; }
     public Collection Collection { get; set; } = null!;
 
-    [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
+    [JsonProperty("library_id")]
+    public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
-    public CollectionLibrary()
-    {
-    }
+    public CollectionLibrary() { }
 
     public CollectionLibrary(int collectionId, Ulid libraryId)
     {

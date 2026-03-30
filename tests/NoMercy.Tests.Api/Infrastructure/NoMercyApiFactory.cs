@@ -57,7 +57,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     protected override IWebHostBuilder? CreateWebHostBuilder()
     {
-        return Microsoft.AspNetCore.WebHost.CreateDefaultBuilder([])
+        return Microsoft
+            .AspNetCore.WebHost.CreateDefaultBuilder([])
             .UseContentRoot(AppContext.BaseDirectory)
             .ConfigureLogging(logging => logging.ClearProviders())
             .UseStartup<Startup>()
@@ -65,11 +66,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             {
                 services.AddSingleton(new StartupOptions());
                 services.AddSingleton<ISunsetPolicyManager>(new NoOpSunsetPolicyManager());
-                services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
+                services.AddSingleton<
+                    IApiVersionDescriptionProvider,
+                    DefaultApiVersionDescriptionProvider
+                >();
 
-                services.AddSingleton(
-                    typeof(ILogger<>),
-                    typeof(CustomLogger<>));
+                services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
             });
     }
 
@@ -114,7 +116,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 Name = TestAuthHandler.DefaultUserName,
                 Owner = true,
                 Allowed = true,
-                Manage = true
+                Manage = true,
             };
             mediaContext.Users.Add(testUser);
             mediaContext.SaveChanges();
@@ -122,7 +124,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         SeedMediaData(mediaContext);
 
-        ClaimsPrincipleExtensions.Initialize(mediaContext);
+        ClaimsPrincipleExtensions.InitializeAsync(mediaContext).GetAwaiter().GetResult();
 
         string queueDbPath = Path.Combine(AppFiles.DataPath, "queue.db");
         foreach (string suffix in new[] { "", "-wal", "-shm", "-journal" })
@@ -147,22 +149,18 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Id = MovieLibraryId,
             Title = "Movies",
             Type = "movie",
-            Order = 1
+            Order = 1,
         };
         Library tvLibrary = new()
         {
             Id = TvLibraryId,
             Title = "TV Shows",
             Type = "tv",
-            Order = 2
+            Order = 2,
         };
         context.Libraries.AddRange(movieLibrary, tvLibrary);
 
-        Folder movieFolder = new()
-        {
-            Id = MovieFolderId,
-            Path = "/media/movies"
-        };
+        Folder movieFolder = new() { Id = MovieFolderId, Path = "/media/movies" };
         context.Folders.Add(movieFolder);
 
         Genre actionGenre = new() { Id = 28, Name = "Action" };
@@ -174,7 +172,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         // Step 2: Entities with FK to libraries/folders/user
         context.LibraryUser.AddRange(
             new LibraryUser(MovieLibraryId, TestAuthHandler.DefaultUserId),
-            new LibraryUser(TvLibraryId, TestAuthHandler.DefaultUserId));
+            new LibraryUser(TvLibraryId, TestAuthHandler.DefaultUserId)
+        );
 
         context.FolderLibrary.Add(new(MovieFolderId, MovieLibraryId));
 
@@ -183,24 +182,26 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Id = 129,
             Title = "Spirited Away",
             TitleSort = "spirited away",
-            Overview = "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
+            Overview =
+                "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
             Poster = "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
             Backdrop = "/Ab8mkHmkYADjU7wQiOkia9BzGvS.jpg",
             ReleaseDate = new DateTime(2001, 7, 20),
             LibraryId = MovieLibraryId,
-            VoteAverage = 8.5
+            VoteAverage = 8.5,
         };
         Movie movie2 = new()
         {
             Id = 680,
             Title = "Pulp Fiction",
             TitleSort = "pulp fiction",
-            Overview = "The lives of two mob hitmen intertwine in four tales of violence and redemption.",
+            Overview =
+                "The lives of two mob hitmen intertwine in four tales of violence and redemption.",
             Poster = "/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",
             Backdrop = "/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",
             ReleaseDate = new DateTime(1994, 9, 10),
             LibraryId = MovieLibraryId,
-            VoteAverage = 8.5
+            VoteAverage = 8.5,
         };
         context.Movies.AddRange(movie1, movie2);
 
@@ -209,14 +210,15 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Id = 1399,
             Title = "Breaking Bad",
             TitleSort = "breaking bad",
-            Overview = "A chemistry teacher teams up with a former student to cook and sell crystal meth.",
+            Overview =
+                "A chemistry teacher teams up with a former student to cook and sell crystal meth.",
             Poster = "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg",
             Backdrop = "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg",
             FirstAirDate = new DateTime(2008, 1, 20),
             NumberOfEpisodes = 62,
             NumberOfSeasons = 5,
             LibraryId = TvLibraryId,
-            VoteAverage = 8.9
+            VoteAverage = 8.9,
         };
         context.Tvs.Add(show1);
 
@@ -225,14 +227,16 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         // Step 3: Join tables and child entities (FK to movies/tv/genres)
         context.LibraryMovie.AddRange(
             new LibraryMovie(MovieLibraryId, 129),
-            new LibraryMovie(MovieLibraryId, 680));
+            new LibraryMovie(MovieLibraryId, 680)
+        );
 
         context.LibraryTv.Add(new(TvLibraryId, 1399));
 
         context.GenreMovie.AddRange(
             new GenreMovie { GenreId = 28, MovieId = 129 },
             new GenreMovie { GenreId = 18, MovieId = 129 },
-            new GenreMovie { GenreId = 18, MovieId = 680 });
+            new GenreMovie { GenreId = 18, MovieId = 680 }
+        );
 
         context.GenreTv.Add(new() { GenreId = 18, TvId = 1399 });
 
@@ -242,7 +246,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Title = "Season 1",
             SeasonNumber = 1,
             EpisodeCount = 7,
-            TvId = 1399
+            TvId = 1399,
         };
         context.Seasons.Add(season1);
 
@@ -257,7 +261,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             SeasonNumber = 1,
             TvId = 1399,
             SeasonId = 3572,
-            Overview = "Walter White is diagnosed with advanced lung cancer."
+            Overview = "Walter White is diagnosed with advanced lung cancer.",
         };
         Episode episode2 = new()
         {
@@ -267,7 +271,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             SeasonNumber = 1,
             TvId = 1399,
             SeasonId = 3572,
-            Overview = "Walt and Jesse deal with a corpse and a prisoner."
+            Overview = "Walt and Jesse deal with a corpse and a prisoner.",
         };
         context.Episodes.AddRange(episode1, episode2);
 
@@ -280,7 +284,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Languages = "[\"en\"]",
             Quality = "1080p",
             Share = "movies",
-            MovieId = 129
+            MovieId = 129,
         };
         VideoFile movieVideoFile2 = new()
         {
@@ -291,7 +295,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Languages = "[\"en\"]",
             Quality = "1080p",
             Share = "movies",
-            MovieId = 680
+            MovieId = 680,
         };
         context.VideoFiles.AddRange(movieVideoFile1, movieVideoFile2);
 
@@ -307,7 +311,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Languages = "[\"en\"]",
             Quality = "1080p",
             Share = "tv",
-            EpisodeId = 62085
+            EpisodeId = 62085,
         };
         VideoFile tvVideoFile2 = new()
         {
@@ -318,7 +322,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Languages = "[\"en\"]",
             Quality = "1080p",
             Share = "tv",
-            EpisodeId = 62086
+            EpisodeId = 62086,
         };
         context.VideoFiles.AddRange(tvVideoFile1, tvVideoFile2);
 
@@ -330,15 +334,11 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Id = MusicLibraryId,
             Title = "Music",
             Type = "music",
-            Order = 3
+            Order = 3,
         };
         context.Libraries.Add(musicLibrary);
 
-        Folder musicFolder = new()
-        {
-            Id = MusicFolderId,
-            Path = "/media/music"
-        };
+        Folder musicFolder = new() { Id = MusicFolderId, Path = "/media/music" };
         context.Folders.Add(musicFolder);
 
         context.SaveChanges();
@@ -346,11 +346,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         context.LibraryUser.Add(new(MusicLibraryId, TestAuthHandler.DefaultUserId));
         context.FolderLibrary.Add(new(MusicFolderId, MusicLibraryId));
 
-        MusicGenre rockGenre = new()
-        {
-            Id = MusicGenreId1,
-            Name = "Rock"
-        };
+        MusicGenre rockGenre = new() { Id = MusicGenreId1, Name = "Rock" };
         context.MusicGenres.Add(rockGenre);
 
         Artist artist1 = new()
@@ -362,7 +358,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Cover = "/test-artist.jpg",
             HostFolder = "/media/music/Test Artist",
             LibraryId = MusicLibraryId,
-            FolderId = MusicFolderId
+            FolderId = MusicFolderId,
         };
         context.Artists.Add(artist1);
 
@@ -376,7 +372,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Tracks = 2,
             HostFolder = "/media/music/Test Artist/Test Album",
             LibraryId = MusicLibraryId,
-            FolderId = MusicFolderId
+            FolderId = MusicFolderId,
         };
         context.Albums.Add(album1);
 
@@ -392,7 +388,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Filename = "01-test-track-1.flac",
             Folder = "/media/music/Test Artist/Test Album",
             HostFolder = "/media/music/Test Artist/Test Album",
-            FolderId = MusicFolderId
+            FolderId = MusicFolderId,
         };
         Track track2 = new()
         {
@@ -404,7 +400,7 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Filename = "02-test-track-2.flac",
             Folder = "/media/music/Test Artist/Test Album",
             HostFolder = "/media/music/Test Artist/Test Album",
-            FolderId = MusicFolderId
+            FolderId = MusicFolderId,
         };
         context.Tracks.AddRange(track1, track2);
 
@@ -413,11 +409,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         // Step 7: Music join tables
         context.ArtistTrack.AddRange(
             new ArtistTrack { ArtistId = ArtistId1, TrackId = TrackId1 },
-            new ArtistTrack { ArtistId = ArtistId1, TrackId = TrackId2 });
+            new ArtistTrack { ArtistId = ArtistId1, TrackId = TrackId2 }
+        );
 
         context.AlbumTrack.AddRange(
             new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId1 },
-            new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId2 });
+            new AlbumTrack { AlbumId = AlbumId1, TrackId = TrackId2 }
+        );
 
         context.AlbumArtist.Add(new() { AlbumId = AlbumId1, ArtistId = ArtistId1 });
 
@@ -426,30 +424,29 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
         context.LibraryTrack.AddRange(
             new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId1 },
-            new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId2 });
+            new LibraryTrack { LibraryId = MusicLibraryId, TrackId = TrackId2 }
+        );
 
-        context.ArtistMusicGenre.Add(
-            new() { ArtistId = ArtistId1, MusicGenreId = MusicGenreId1 });
+        context.ArtistMusicGenre.Add(new() { ArtistId = ArtistId1, MusicGenreId = MusicGenreId1 });
 
         Playlist playlist1 = new()
         {
             Id = PlaylistId1,
             Name = "Test Playlist",
             Description = "A test playlist",
-            UserId = TestAuthHandler.DefaultUserId
+            UserId = TestAuthHandler.DefaultUserId,
         };
         context.Playlists.Add(playlist1);
 
         context.SaveChanges();
 
-        context.PlaylistTrack.Add(
-            new() { PlaylistId = PlaylistId1, TrackId = TrackId1 });
+        context.PlaylistTrack.Add(new() { PlaylistId = PlaylistId1, TrackId = TrackId1 });
 
         // Favorite the artist/track so favorites endpoints have data
         context.ArtistUser.Add(
-            new() { ArtistId = ArtistId1, UserId = TestAuthHandler.DefaultUserId });
-        context.TrackUser.Add(
-            new() { TrackId = TrackId1, UserId = TestAuthHandler.DefaultUserId });
+            new() { ArtistId = ArtistId1, UserId = TestAuthHandler.DefaultUserId }
+        );
+        context.TrackUser.Add(new() { TrackId = TrackId1, UserId = TestAuthHandler.DefaultUserId });
 
         context.SaveChanges();
     }
@@ -483,22 +480,35 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         services.RemoveAll<IAuthenticationSchemeProvider>();
         services.RemoveAll<IAuthenticationHandlerProvider>();
 
-        services.AddAuthentication(TestAuthDefaults.AuthenticationScheme)
+        services
+            .AddAuthentication(TestAuthDefaults.AuthenticationScheme)
             .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
-                TestAuthDefaults.AuthenticationScheme, _ => { });
+                TestAuthDefaults.AuthenticationScheme,
+                _ => { }
+            );
 
-        services.AddAuthorizationBuilder()
-            .SetDefaultPolicy(new AuthorizationPolicyBuilder(TestAuthDefaults.AuthenticationScheme)
-                .RequireAuthenticatedUser()
-                .Build())
-            .AddPolicy("api", new AuthorizationPolicyBuilder(TestAuthDefaults.AuthenticationScheme)
-                .RequireAuthenticatedUser()
-                .Build());
+        services
+            .AddAuthorizationBuilder()
+            .SetDefaultPolicy(
+                new AuthorizationPolicyBuilder(TestAuthDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build()
+            )
+            .AddPolicy(
+                "api",
+                new AuthorizationPolicyBuilder(TestAuthDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build()
+            );
     }
 
     private sealed class NoOpSunsetPolicyManager : ISunsetPolicyManager
     {
-        public bool TryGetPolicy(string? name, ApiVersion? apiVersion, out SunsetPolicy sunsetPolicy)
+        public bool TryGetPolicy(
+            string? name,
+            ApiVersion? apiVersion,
+            out SunsetPolicy sunsetPolicy
+        )
         {
             sunsetPolicy = default!;
             return false;
@@ -508,9 +518,17 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
     private sealed class StubPluginManager : IPluginManager
     {
         public IReadOnlyList<PluginInfo> GetInstalledPlugins() => Array.Empty<PluginInfo>();
-        public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) => Task.CompletedTask;
-        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) => Task.CompletedTask;
-        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+            Task.CompletedTask;
     }
 }

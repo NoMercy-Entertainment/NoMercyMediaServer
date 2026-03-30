@@ -3823,13 +3823,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Folder", "Folder")
                         .WithMany("FolderLibraries")
                         .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("FolderLibraries")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Folder");
@@ -3842,13 +3842,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Language", "Language")
                         .WithMany("LanguageLibrary")
                         .HasForeignKey("LanguageId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("LanguageLibraries")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Language");
@@ -3861,13 +3861,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("LibraryUsers")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("LibraryUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -3880,12 +3880,12 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("AlternativeTitles")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("AlternativeTitles")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Movie");
 
@@ -3897,13 +3897,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Media.EncoderProfile", "EncoderProfile")
                         .WithMany("EncoderProfileFolder")
                         .HasForeignKey("EncoderProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Libraries.Folder", "Folder")
                         .WithMany("EncoderProfileFolder")
                         .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("EncoderProfile");
@@ -3916,57 +3916,57 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Album", "Album")
                         .WithMany("Images")
                         .HasForeignKey("AlbumId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Music.Artist", "Artist")
                         .WithMany("Images")
                         .HasForeignKey("ArtistId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.People.Cast", "Cast")
                         .WithMany()
                         .HasForeignKey("CastId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Collection", "Collection")
                         .WithMany("Images")
                         .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.People.Crew", "Crew")
                         .WithMany()
                         .HasForeignKey("CrewId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Episode", "Episode")
                         .WithMany("Images")
                         .HasForeignKey("EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("Images")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.People.Person", "Person")
                         .WithMany("Images")
                         .HasForeignKey("PersonId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Season", "Season")
                         .WithMany("Images")
                         .HasForeignKey("SeasonId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Music.Track", "Track")
                         .WithMany("Images")
                         .HasForeignKey("TrackId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("Images")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Album");
 
@@ -3996,32 +3996,32 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Episode", "Episode")
                         .WithMany("Media")
                         .HasForeignKey("EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("Media")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.People.Person", "Person")
                         .WithMany()
                         .HasForeignKey("PersonId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Season", "Season")
                         .WithMany("Medias")
                         .HasForeignKey("SeasonId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("Media")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Media.VideoFile", "VideoFile")
                         .WithMany()
                         .HasForeignKey("VideoFileId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Episode");
 
@@ -4051,52 +4051,52 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Album", "Album")
                         .WithMany("Translations")
                         .HasForeignKey("AlbumId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Music.Artist", "Artist")
                         .WithMany("Translations")
                         .HasForeignKey("ArtistId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Collection", "Collection")
                         .WithMany("Translations")
                         .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Episode", "Episode")
                         .WithMany("Translations")
                         .HasForeignKey("EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Common.Genre", "Genre")
                         .WithMany("Translations")
                         .HasForeignKey("GenreId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("Translations")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.People.Person", "People")
                         .WithMany("Translations")
                         .HasForeignKey("PersonId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Music.ReleaseGroup", "ReleaseGroup")
                         .WithMany("Translations")
                         .HasForeignKey("ReleaseGroupId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Season", "Season")
                         .WithMany("Translations")
                         .HasForeignKey("SeasonId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("Translations")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Album");
 
@@ -4124,17 +4124,17 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Episode", "Episode")
                         .WithMany("VideoFiles")
                         .HasForeignKey("EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Media.Metadata", "Metadata")
                         .WithMany()
                         .HasForeignKey("MetadataId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("VideoFiles")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Episode");
 
@@ -4148,13 +4148,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Common.Certification", "Certification")
                         .WithMany()
                         .HasForeignKey("CertificationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("CertificationMovies")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Certification");
@@ -4167,7 +4167,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -4178,13 +4178,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Collection", "Collection")
                         .WithMany()
                         .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("CollectionLibraries")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Collection");
@@ -4197,13 +4197,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Collection", "Collection")
                         .WithMany("CollectionMovies")
                         .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany()
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Collection");
@@ -4216,13 +4216,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Collection", "Collection")
                         .WithMany("CollectionUser")
                         .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("CollectionUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Collection");
@@ -4235,13 +4235,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Common.Company", "Company")
                         .WithMany("CompanyMovie")
                         .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("CompaniesMovies")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Company");
@@ -4254,13 +4254,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Common.Genre", "Genre")
                         .WithMany("GenreMovies")
                         .HasForeignKey("GenreId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("GenreMovies")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Genre");
@@ -4273,13 +4273,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Common.Keyword", "Keyword")
                         .WithMany()
                         .HasForeignKey("KeywordId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("KeywordMovies")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Keyword");
@@ -4292,13 +4292,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("LibraryMovies")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany()
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -4311,7 +4311,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -4322,13 +4322,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("MovieUser")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("MovieUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Movie");
@@ -4341,22 +4341,22 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "MovieFrom")
                         .WithMany("RecommendationFrom")
                         .HasForeignKey("MovieFromId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "MovieTo")
                         .WithMany("RecommendationTo")
                         .HasForeignKey("MovieToId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "TvFrom")
                         .WithMany("RecommendationFrom")
                         .HasForeignKey("TvFromId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "TvTo")
                         .WithMany("RecommendationTo")
                         .HasForeignKey("TvToId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("MovieFrom");
 
@@ -4372,22 +4372,22 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "MovieFrom")
                         .WithMany("SimilarFrom")
                         .HasForeignKey("MovieFromId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "MovieTo")
                         .WithMany("SimilarTo")
                         .HasForeignKey("MovieToId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "TvFrom")
                         .WithMany("SimilarFrom")
                         .HasForeignKey("TvFromId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "TvTo")
                         .WithMany("SimilarTo")
                         .HasForeignKey("TvToId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("MovieFrom");
 
@@ -4403,17 +4403,17 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("WatchProviderMedia")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("WatchProviderMedia")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.WatchProvider", "WatchProvider")
                         .WithMany("WatchProviderMedias")
                         .HasForeignKey("WatchProviderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Movie");
@@ -4428,19 +4428,19 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Folder", "LibraryFolder")
                         .WithMany()
                         .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Media.Metadata", "Metadata")
                         .WithMany()
                         .HasForeignKey("MetadataId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Library");
 
@@ -4454,13 +4454,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Album", "Album")
                         .WithMany("AlbumArtist")
                         .HasForeignKey("AlbumId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.Artist", "Artist")
                         .WithMany("AlbumArtist")
                         .HasForeignKey("ArtistId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Album");
@@ -4473,13 +4473,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Album", "Album")
                         .WithMany()
                         .HasForeignKey("AlbumId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("AlbumLibraries")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Album");
@@ -4492,13 +4492,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Album", "Album")
                         .WithMany("AlbumMusicGenre")
                         .HasForeignKey("AlbumId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.MusicGenre", "MusicGenre")
                         .WithMany("AlbumMusicGenres")
                         .HasForeignKey("MusicGenreId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Album");
@@ -4511,13 +4511,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Album", "Album")
                         .WithMany("AlbumReleaseGroup")
                         .HasForeignKey("AlbumId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.ReleaseGroup", "ReleaseGroup")
                         .WithMany("AlbumReleaseGroup")
                         .HasForeignKey("ReleaseGroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Album");
@@ -4530,13 +4530,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Album", "Album")
                         .WithMany("AlbumTrack")
                         .HasForeignKey("AlbumId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.Track", "Track")
                         .WithMany("AlbumTrack")
                         .HasForeignKey("TrackId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Album");
@@ -4549,13 +4549,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Album", "Album")
                         .WithMany("AlbumUser")
                         .HasForeignKey("AlbumId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("AlbumUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Album");
@@ -4568,12 +4568,12 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Folder", "LibraryFolder")
                         .WithMany()
                         .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Library");
 
@@ -4585,13 +4585,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Artist", "Artist")
                         .WithMany()
                         .HasForeignKey("ArtistId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("ArtistLibraries")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Artist");
@@ -4604,13 +4604,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Artist", "Artist")
                         .WithMany("ArtistMusicGenre")
                         .HasForeignKey("ArtistId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.MusicGenre", "MusicGenre")
                         .WithMany("ArtistMusicGenres")
                         .HasForeignKey("MusicGenreId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Artist");
@@ -4623,13 +4623,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Artist", "Artist")
                         .WithMany("ArtistReleaseGroup")
                         .HasForeignKey("ArtistId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.ReleaseGroup", "ReleaseGroup")
                         .WithMany("ArtistReleaseGroup")
                         .HasForeignKey("ReleaseGroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Artist");
@@ -4642,13 +4642,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Artist", "Artist")
                         .WithMany("ArtistTrack")
                         .HasForeignKey("ArtistId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.Track", "Track")
                         .WithMany("ArtistTrack")
                         .HasForeignKey("TrackId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Artist");
@@ -4661,13 +4661,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Artist", "Artist")
                         .WithMany("ArtistUser")
                         .HasForeignKey("ArtistId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("ArtistUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Artist");
@@ -4680,13 +4680,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("LibraryTracks")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.Track", "Track")
                         .WithMany("LibraryTrack")
                         .HasForeignKey("TrackId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -4699,13 +4699,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.MusicGenre", "Genre")
                         .WithMany("MusicGenreReleaseGroups")
                         .HasForeignKey("GenreId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.ReleaseGroup", "ReleaseGroup")
                         .WithMany()
                         .HasForeignKey("ReleaseGroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Genre");
@@ -4718,13 +4718,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.MusicGenre", "Genre")
                         .WithMany("MusicGenreTracks")
                         .HasForeignKey("GenreId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.Track", "Track")
                         .WithMany("MusicGenreTrack")
                         .HasForeignKey("TrackId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Genre");
@@ -4737,13 +4737,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Track", "Track")
                         .WithMany("MusicPlays")
                         .HasForeignKey("TrackId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Track");
@@ -4756,7 +4756,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -4767,13 +4767,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Playlist", "Playlist")
                         .WithMany("Tracks")
                         .HasForeignKey("PlaylistId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Music.Track", "Track")
                         .WithMany("PlaylistTrack")
                         .HasForeignKey("TrackId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Playlist");
@@ -4786,7 +4786,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Library");
                 });
@@ -4796,7 +4796,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Folder", "LibraryFolder")
                         .WithMany()
                         .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Media.Metadata", "Metadata")
@@ -4814,13 +4814,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Music.Track", "Track")
                         .WithMany("TrackUser")
                         .HasForeignKey("TrackId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("TrackUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Track");
@@ -4833,33 +4833,33 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Episode", "Episode")
                         .WithMany("Cast")
                         .HasForeignKey("EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("Cast")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.People.Person", "Person")
                         .WithMany("Casts")
                         .HasForeignKey("PersonId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.People.Role", "Role")
                         .WithOne("Cast")
                         .HasForeignKey("NoMercy.Database.Models.People.Cast", "RoleId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Season", "Season")
                         .WithMany("Cast")
                         .HasForeignKey("SeasonId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("Cast")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Episode");
 
@@ -4879,33 +4879,33 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Episode", "Episode")
                         .WithMany("Crew")
                         .HasForeignKey("EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.People.Job", "Job")
                         .WithOne("Crew")
                         .HasForeignKey("NoMercy.Database.Models.People.Crew", "JobId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("Crew")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.People.Person", "Person")
                         .WithMany("Crews")
                         .HasForeignKey("PersonId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Season", "Season")
                         .WithMany("Crew")
                         .HasForeignKey("SeasonId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("Crew")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Episode");
 
@@ -4925,7 +4925,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.GuestStar", "GuestStar")
                         .WithMany()
                         .HasForeignKey("GuestStarId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("GuestStar");
                 });
@@ -4935,13 +4935,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Common.Certification", "Certification")
                         .WithMany()
                         .HasForeignKey("CertificationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("CertificationTvs")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Certification");
@@ -4954,13 +4954,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Common.Company", "Company")
                         .WithMany("CompanyTv")
                         .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("CompaniesTvs")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Company");
@@ -4973,13 +4973,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.People.Person", "Person")
                         .WithMany()
                         .HasForeignKey("PersonId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("Creators")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Person");
@@ -4992,13 +4992,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Season", "Season")
                         .WithMany("Episodes")
                         .HasForeignKey("SeasonId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("Episodes")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Season");
@@ -5011,13 +5011,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Common.Genre", "Genre")
                         .WithMany("GenreTvShows")
                         .HasForeignKey("GenreId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("GenreTvs")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Genre");
@@ -5030,13 +5030,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Episode", "Episode")
                         .WithMany("GuestStars")
                         .HasForeignKey("EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.People.Person", "Person")
                         .WithMany()
                         .HasForeignKey("PersonId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Episode");
@@ -5049,13 +5049,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Common.Keyword", "Keyword")
                         .WithMany()
                         .HasForeignKey("KeywordId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("KeywordTvs")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Keyword");
@@ -5068,13 +5068,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("LibraryTvs")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany()
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -5087,13 +5087,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Network", "Network")
                         .WithMany("NetworkTv")
                         .HasForeignKey("NetworkId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("NetworkTvs")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Network");
@@ -5106,12 +5106,12 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", null)
                         .WithMany("Seasons")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("Seasons")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Tv");
@@ -5122,17 +5122,17 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Episode", "Episode")
                         .WithMany("SpecialItems")
                         .HasForeignKey("EpisodeId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany()
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Special", "Special")
                         .WithMany("Items")
                         .HasForeignKey("SpecialId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Episode");
@@ -5147,13 +5147,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Special", "Special")
                         .WithMany("SpecialUser")
                         .HasForeignKey("SpecialId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("SpecialUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Special");
@@ -5166,7 +5166,7 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany()
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Library");
@@ -5177,13 +5177,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("TvUser")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("TvUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Tv");
@@ -5196,13 +5196,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Users.Device", "Device")
                         .WithMany("ActivityLogs")
                         .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Device");
@@ -5215,13 +5215,13 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Users.Notification", "Notification")
                         .WithMany()
                         .HasForeignKey("NotificationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("NotificationUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Notification");
@@ -5234,32 +5234,32 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Collection", "Collection")
                         .WithMany()
                         .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Libraries.Library", "Library")
                         .WithMany("PlaybackPreferences")
                         .HasForeignKey("LibraryId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("PlaybackPreferences")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Special", "Special")
                         .WithMany()
                         .HasForeignKey("SpecialId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("PlaybackPreferences")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany("PlaybackPreferences")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Collection");
@@ -5280,38 +5280,38 @@ namespace NoMercy.Database.Migrations
                     b.HasOne("NoMercy.Database.Models.Movies.Collection", "Collection")
                         .WithMany("UserData")
                         .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
                         .WithMany("UserData")
                         .HasForeignKey("MovieId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Special", "Special")
                         .WithMany()
                         .HasForeignKey("SpecialId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.SpecialItem", null)
                         .WithMany("UserData")
                         .HasForeignKey("SpecialItemId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
                         .WithMany("UserData")
                         .HasForeignKey("TvId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NoMercy.Database.Models.Users.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("NoMercy.Database.Models.Media.VideoFile", "VideoFile")
                         .WithMany("UserData")
                         .HasForeignKey("VideoFileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Collection");

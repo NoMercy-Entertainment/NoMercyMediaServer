@@ -24,7 +24,6 @@ public class MusicJob : IShouldQueue, IDisposable, IAsyncDisposable
         //
     }
 
-
     public MusicJob(string folder, Library library)
     {
         Folder = folder;
@@ -33,8 +32,10 @@ public class MusicJob : IShouldQueue, IDisposable, IAsyncDisposable
 
     public async Task Handle()
     {
-        if (Folder is null) return;
-        if (Library is null) return;
+        if (Folder is null)
+            return;
+        if (Library is null)
+            return;
 
         await using MediaScan mediaScan = new();
         IEnumerable<MediaFolderExtend> mediaFolder = await mediaScan

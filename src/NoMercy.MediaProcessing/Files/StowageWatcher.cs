@@ -4,7 +4,12 @@ using Stowage;
 
 namespace NoMercy.MediaProcessing.Files;
 
-public enum StowageChangeType { Created, Changed, Deleted }
+public enum StowageChangeType
+{
+    Created,
+    Changed,
+    Deleted,
+}
 
 public class StowageWatcherEventArgs : EventArgs
 {
@@ -15,17 +20,20 @@ public class StowageWatcherEventArgs : EventArgs
 
     public FileWatcherEventArgs ToFileWatcherEventArgs()
     {
-        return new(null, new(
-            changeType: ChangeType switch
-            {
-                StowageChangeType.Created => WatcherChangeTypes.Created,
-                StowageChangeType.Changed => WatcherChangeTypes.Changed,
-                StowageChangeType.Deleted => WatcherChangeTypes.Deleted,
-                _ => throw new ArgumentOutOfRangeException()
-            },
-            directory: System.IO.Path.GetDirectoryName(Path).OrEmpty(),
-            name: System.IO.Path.GetFileName(Path)
-        ));
+        return new(
+            null,
+            new(
+                changeType: ChangeType switch
+                {
+                    StowageChangeType.Created => WatcherChangeTypes.Created,
+                    StowageChangeType.Changed => WatcherChangeTypes.Changed,
+                    StowageChangeType.Deleted => WatcherChangeTypes.Deleted,
+                    _ => throw new ArgumentOutOfRangeException(),
+                },
+                directory: System.IO.Path.GetDirectoryName(Path).OrEmpty(),
+                name: System.IO.Path.GetFileName(Path)
+            )
+        );
     }
 
     public FileSystemEventArgs ToFileSystemEventArgsEventArgs(string folder = "")
@@ -36,10 +44,11 @@ public class StowageWatcherEventArgs : EventArgs
                 StowageChangeType.Created => WatcherChangeTypes.Created,
                 StowageChangeType.Changed => WatcherChangeTypes.Changed,
                 StowageChangeType.Deleted => WatcherChangeTypes.Deleted,
-                _ => throw new ArgumentOutOfRangeException()
+                _ => throw new ArgumentOutOfRangeException(),
             },
             System.IO.Path.GetDirectoryName(folder + Path).OrEmpty(),
-            System.IO.Path.GetFileName(folder + Path));
+            System.IO.Path.GetFileName(folder + Path)
+        );
     }
 }
 
@@ -63,7 +72,8 @@ internal class StowageWatcher : IDisposable
 
     public void Watch(TimeSpan interval)
     {
-        if (_runTask != null) return;
+        if (_runTask != null)
+            return;
         _cts = new();
         _runTask = Task.Run(() => WatchLoopAsync(interval, _cts.Token));
     }
@@ -76,8 +86,14 @@ internal class StowageWatcher : IDisposable
 
         while (await timer.WaitForNextTickAsync(ct))
         {
-            try { await Scan(initial: false); }
-            catch (Exception ex) { Console.WriteLine($"Fout: {ex.Message}"); }
+            try
+            {
+                await Scan(initial: false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Fout: {ex.Message}");
+            }
         }
     }
 
@@ -88,53 +104,73 @@ internal class StowageWatcher : IDisposable
 
         ConcurrentBag<string> foundPaths = [];
 
-        Parallel.ForEach(files, entry =>
-        {
-            foundPaths.Add(entry.Path);
+        Parallel.ForEach(
+            files,
+            entry =>
+            {
+                foundPaths.Add(entry.Path);
 
-            if (!_snapshot.TryGetValue(entry.Path, out IOEntry? oldEntry))
-            {
-                _snapshot[entry.Path] = entry;
-                if (initial) return;
-                Created?.Invoke(new()
+                if (!_snapshot.TryGetValue(entry.Path, out IOEntry? oldEntry))
                 {
-                    Path = entry.Path.ToString(),
-                    ChangeType = StowageChangeType.Created,
-                    Entry = entry,
-                    EventTimestamp = DateTime.UtcNow
-                });
-            }
-            // Check op LastModification of Size (Stowage entries hebben deze eigenschappen ook)
-            else if (entry.LastModificationTime > oldEntry.LastModificationTime || entry.Size != oldEntry.Size)
-            {
-                _snapshot[entry.Path] = entry;
-                if (initial) return;
-                Changed?.Invoke(new()
+                    _snapshot[entry.Path] = entry;
+                    if (initial)
+                        return;
+                    Created?.Invoke(
+                        new()
+                        {
+                            Path = entry.Path.ToString(),
+                            ChangeType = StowageChangeType.Created,
+                            Entry = entry,
+                            EventTimestamp = DateTime.UtcNow,
+                        }
+                    );
+                }
+                // Check op LastModification of Size (Stowage entries hebben deze eigenschappen ook)
+                else if (
+                    entry.LastModificationTime > oldEntry.LastModificationTime
+                    || entry.Size != oldEntry.Size
+                )
                 {
-                    Path = entry.Path.ToString(),
-                    ChangeType = StowageChangeType.Changed,
-                    Entry = entry,
-                    EventTimestamp = DateTime.UtcNow
-                });
+                    _snapshot[entry.Path] = entry;
+                    if (initial)
+                        return;
+                    Changed?.Invoke(
+                        new()
+                        {
+                            Path = entry.Path.ToString(),
+                            ChangeType = StowageChangeType.Changed,
+                            Entry = entry,
+                            EventTimestamp = DateTime.UtcNow,
+                        }
+                    );
+                }
             }
-        });
+        );
 
         ICollection<string> snapshotKeys = _snapshot.Keys;
         HashSet<string> currentPathsSet = new(foundPaths);
 
-        Parallel.ForEach(snapshotKeys, path =>
-        {
-            if (currentPathsSet.Contains(path)) return;
-            if (!_snapshot.TryRemove(path, out IOEntry? oldEntry)) return;
-            if (initial) return;
-            Deleted?.Invoke(new()
+        Parallel.ForEach(
+            snapshotKeys,
+            path =>
             {
-                Path = path,
-                ChangeType = StowageChangeType.Deleted,
-                Entry = null,
-                EventTimestamp = DateTime.UtcNow
-            });
-        });
+                if (currentPathsSet.Contains(path))
+                    return;
+                if (!_snapshot.TryRemove(path, out IOEntry? oldEntry))
+                    return;
+                if (initial)
+                    return;
+                Deleted?.Invoke(
+                    new()
+                    {
+                        Path = path,
+                        ChangeType = StowageChangeType.Deleted,
+                        Entry = null,
+                        EventTimestamp = DateTime.UtcNow,
+                    }
+                );
+            }
+        );
     }
 
     public void Dispose()

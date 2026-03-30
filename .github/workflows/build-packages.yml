@@ -25,18 +25,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        package-type: [deb, rpm, arch, windows-installer, macos-installer]
-        os: [self-hosted]
+        package-type: [deb, rpm, arch]
+        os: [ubuntu-latest]
         include:
           - package-type: windows-installer
-            os: self-hosted
+            os: windows-latest
           - package-type: macos-installer
-            os: self-hosted
-        exclude:
-          - package-type: windows-installer
-            os: self-hosted
-          - package-type: macos-installer
-            os: self-hosted
+            os: macos-latest
       fail-fast: false
 
     steps:

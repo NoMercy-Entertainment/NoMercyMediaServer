@@ -17,8 +17,7 @@ public partial class MainWindow : Window
         Closing += OnWindowClosing;
     }
 
-    private async void OnWindowOpened(
-        object? sender, EventArgs e)
+    private async void OnWindowOpened(object? sender, EventArgs e)
     {
         await _viewModel.ServerControlViewModel.RefreshStatusAsync();
         _viewModel.ServerControlViewModel.StartPolling();
@@ -32,8 +31,7 @@ public partial class MainWindow : Window
             await _viewModel.LogViewerViewModel.RefreshLogsAsync();
     }
 
-    private void OnWindowClosing(
-        object? sender, WindowClosingEventArgs e)
+    private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
         _viewModel.ServerControlViewModel.StopPolling();
         _viewModel.LogViewerViewModel.StopAutoRefresh();

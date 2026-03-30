@@ -11,32 +11,54 @@ namespace NoMercy.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "PriorityProvider");
+            migrationBuilder.DropTable(name: "PriorityProvider");
 
-            migrationBuilder.DropTable(
-                name: "Providers");
+            migrationBuilder.DropTable(name: "Providers");
 
             migrationBuilder.CreateTable(
                 name: "Companies",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table
+                        .Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    Headquarters = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    Description = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 256,
+                        nullable: true
+                    ),
+                    Headquarters = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 256,
+                        nullable: true
+                    ),
                     Homepage = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     LogoPath = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    OriginCountry = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
+                    OriginCountry = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 256,
+                        nullable: true
+                    ),
                     ParentCompany = table.Column<int>(type: "INTEGER", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
+                    UpdatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Companies", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "Networks",
@@ -45,14 +67,29 @@ namespace NoMercy.Database.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                     Logo = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    OriginCountry = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    OriginCountry = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 256,
+                        nullable: true
+                    ),
+                    CreatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
+                    UpdatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Networks", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "CompanyMovie",
@@ -60,8 +97,18 @@ namespace NoMercy.Database.Migrations
                 {
                     CompanyId = table.Column<int>(type: "INTEGER", nullable: false),
                     MovieId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
+                    UpdatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
                 },
                 constraints: table =>
                 {
@@ -71,14 +118,17 @@ namespace NoMercy.Database.Migrations
                         column: x => x.CompanyId,
                         principalTable: "Companies",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Cascade
+                    );
                     table.ForeignKey(
                         name: "FK_CompanyMovie_Movies_MovieId",
                         column: x => x.MovieId,
                         principalTable: "Movies",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "CompanyTv",
@@ -86,8 +136,18 @@ namespace NoMercy.Database.Migrations
                 {
                     CompanyId = table.Column<int>(type: "INTEGER", nullable: false),
                     TvId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
+                    UpdatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
                 },
                 constraints: table =>
                 {
@@ -97,14 +157,17 @@ namespace NoMercy.Database.Migrations
                         column: x => x.CompanyId,
                         principalTable: "Companies",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Cascade
+                    );
                     table.ForeignKey(
                         name: "FK_CompanyTv_Tvs_TvId",
                         column: x => x.TvId,
                         principalTable: "Tvs",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "NetworkTv",
@@ -112,8 +175,18 @@ namespace NoMercy.Database.Migrations
                 {
                     NetworkId = table.Column<int>(type: "INTEGER", nullable: false),
                     TvId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", rowVersion: true, nullable: false, defaultValueSql: "CURRENT_TIMESTAMP")
+                    CreatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
+                    UpdatedAt = table.Column<DateTime>(
+                        type: "TEXT",
+                        rowVersion: true,
+                        nullable: false,
+                        defaultValueSql: "CURRENT_TIMESTAMP"
+                    ),
                 },
                 constraints: table =>
                 {
@@ -123,82 +196,88 @@ namespace NoMercy.Database.Migrations
                         column: x => x.NetworkId,
                         principalTable: "Networks",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Cascade
+                    );
                     table.ForeignKey(
                         name: "FK_NetworkTv_Tvs_TvId",
                         column: x => x.TvId,
                         principalTable: "Tvs",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_CompanyMovie_CompanyId_MovieId",
                 table: "CompanyMovie",
                 columns: new[] { "CompanyId", "MovieId" },
-                unique: true);
+                unique: true
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_CompanyMovie_MovieId",
                 table: "CompanyMovie",
-                column: "MovieId");
+                column: "MovieId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_CompanyTv_CompanyId_TvId",
                 table: "CompanyTv",
                 columns: new[] { "CompanyId", "TvId" },
-                unique: true);
+                unique: true
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_CompanyTv_TvId",
                 table: "CompanyTv",
-                column: "TvId");
+                column: "TvId"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_Networks_Name",
                 table: "Networks",
-                column: "Name");
+                column: "Name"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkTv_NetworkId_TvId",
                 table: "NetworkTv",
                 columns: new[] { "NetworkId", "TvId" },
-                unique: true);
+                unique: true
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkTv_TvId",
                 table: "NetworkTv",
-                column: "TvId");
+                column: "TvId"
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "CompanyMovie");
+            migrationBuilder.DropTable(name: "CompanyMovie");
 
-            migrationBuilder.DropTable(
-                name: "CompanyTv");
+            migrationBuilder.DropTable(name: "CompanyTv");
 
-            migrationBuilder.DropTable(
-                name: "NetworkTv");
+            migrationBuilder.DropTable(name: "NetworkTv");
 
-            migrationBuilder.DropTable(
-                name: "Companies");
+            migrationBuilder.DropTable(name: "Companies");
 
-            migrationBuilder.DropTable(
-                name: "Networks");
+            migrationBuilder.DropTable(name: "Networks");
 
             migrationBuilder.CreateTable(
                 name: "Providers",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
+                    Id = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Providers", x => x.Id);
-                });
+                }
+            );
 
             migrationBuilder.CreateTable(
                 name: "PriorityProvider",
@@ -206,33 +285,50 @@ namespace NoMercy.Database.Migrations
                 {
                     Priority = table.Column<int>(type: "INTEGER", nullable: false),
                     Country = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    ProviderId = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false)
+                    ProviderId = table.Column<string>(
+                        type: "TEXT",
+                        maxLength: 256,
+                        nullable: false
+                    ),
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PriorityProvider", x => new { x.Priority, x.Country, x.ProviderId });
+                    table.PrimaryKey(
+                        "PK_PriorityProvider",
+                        x => new
+                        {
+                            x.Priority,
+                            x.Country,
+                            x.ProviderId,
+                        }
+                    );
                     table.ForeignKey(
                         name: "FK_PriorityProvider_Providers_ProviderId",
                         column: x => x.ProviderId,
                         principalTable: "Providers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                        onDelete: ReferentialAction.Cascade
+                    );
+                }
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_PriorityProvider_Country",
                 table: "PriorityProvider",
-                column: "Country");
+                column: "Country"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_PriorityProvider_Priority",
                 table: "PriorityProvider",
-                column: "Priority");
+                column: "Priority"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_PriorityProvider_ProviderId",
                 table: "PriorityProvider",
-                column: "ProviderId");
+                column: "ProviderId"
+            );
         }
     }
 }

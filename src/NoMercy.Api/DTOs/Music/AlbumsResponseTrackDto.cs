@@ -7,26 +7,62 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record AlbumsResponseTrackDto
 {
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("cover")] public string? Cover { get; set; }
-    [JsonProperty("date")] public DateTime? Date { get; set; }
-    [JsonProperty("disc")] public int? Disc { get; set; }
-    [JsonProperty("duration")] public string? Duration { get; set; }
-    [JsonProperty("favorite")] public bool Favorite { get; set; }
-    [JsonProperty("filename")] public string? Filename { get; set; }
-    [JsonProperty("folder")] public string? Folder { get; set; }
-    [JsonProperty("id")] public Guid Id { get; set; }
-    [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
-    [JsonProperty("origin")] public Guid Origin { get; set; }
-    [JsonProperty("path")] public string Path { get; set; }
-    [JsonProperty("quality")] public int? Quality { get; set; }
-    [JsonProperty("track")] public int? Track { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
 
-    [JsonProperty("album_track")] public List<AlbumDto> Album { get; set; }
-    [JsonProperty("artist_track")] public List<ArtistDto> Artist { get; set; }
+    [JsonProperty("cover")]
+    public string? Cover { get; set; }
+
+    [JsonProperty("date")]
+    public DateTime? Date { get; set; }
+
+    [JsonProperty("disc")]
+    public int? Disc { get; set; }
+
+    [JsonProperty("duration")]
+    public string? Duration { get; set; }
+
+    [JsonProperty("favorite")]
+    public bool Favorite { get; set; }
+
+    [JsonProperty("filename")]
+    public string? Filename { get; set; }
+
+    [JsonProperty("folder")]
+    public string? Folder { get; set; }
+
+    [JsonProperty("id")]
+    public Guid Id { get; set; }
+
+    [JsonProperty("library_id")]
+    public Ulid LibraryId { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("origin")]
+    public Guid Origin { get; set; }
+
+    [JsonProperty("path")]
+    public string Path { get; set; }
+
+    [JsonProperty("quality")]
+    public int? Quality { get; set; }
+
+    [JsonProperty("track")]
+    public int? Track { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; }
+
+    [JsonProperty("album_track")]
+    public List<AlbumDto> Album { get; set; }
+
+    [JsonProperty("artist_track")]
+    public List<ArtistDto> Artist { get; set; }
 
     public AlbumsResponseTrackDto(AlbumTrack artistTrack, Ulid libraryId, string country)
     {
@@ -50,12 +86,12 @@ public record AlbumsResponseTrackDto
         Type = "track";
         Link = new($"/music/album/{artistTrack.AlbumId}", UriKind.Relative);
 
-        Album = artistTrack.Track.AlbumTrack
-            .Select(albumTrack => new AlbumDto(albumTrack, country))
+        Album = artistTrack
+            .Track.AlbumTrack.Select(albumTrack => new AlbumDto(albumTrack, country))
             .ToList();
 
-        Artist = artistTrack.Track.ArtistTrack
-            .Select(trackArtist => new ArtistDto(trackArtist, country))
+        Artist = artistTrack
+            .Track.ArtistTrack.Select(trackArtist => new ArtistDto(trackArtist, country))
             .ToList();
     }
 }

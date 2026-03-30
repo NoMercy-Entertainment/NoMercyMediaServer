@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 
-
 namespace NoMercy.Database.Models.Movies;
 
 [PrimaryKey(nameof(Id))]
@@ -16,24 +15,45 @@ public class Collection : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("title_sort")] public string? TitleSort { get; set; }
-    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
-    [JsonProperty("poster")] public string? Poster { get; set; }
-    [MaxLength(4096)] [JsonProperty("overview")] public string? Overview { get; set; }
-    [JsonProperty("parts")] public int Parts { get; set; }
-    [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
+    [JsonProperty("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonProperty("title_sort")]
+    public string? TitleSort { get; set; }
+
+    [JsonProperty("backdrop")]
+    public string? Backdrop { get; set; }
+
+    [JsonProperty("poster")]
+    public string? Poster { get; set; }
+
+    [MaxLength(4096)]
+    [JsonProperty("overview")]
+    public string? Overview { get; set; }
+
+    [JsonProperty("parts")]
+    public int Parts { get; set; }
+
+    [JsonProperty("library_id")]
+    public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
-    [JsonProperty("collection_movies")] public ICollection<CollectionMovie> CollectionMovies { get; set; } = [];
-    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; } = [];
-    [JsonProperty("images")] public ICollection<Image> Images { get; set; } = [];
-    [JsonProperty("collection_user")] public ICollection<CollectionUser> CollectionUser { get; set; } = [];
-    [JsonProperty("user_data")] public ICollection<UserData> UserData { get; set; } = [];
+    [JsonProperty("collection_movies")]
+    public ICollection<CollectionMovie> CollectionMovies { get; set; } = [];
 
-    public Collection()
-    {
-    }
+    [JsonProperty("translations")]
+    public ICollection<Translation> Translations { get; set; } = [];
+
+    [JsonProperty("images")]
+    public ICollection<Image> Images { get; set; } = [];
+
+    [JsonProperty("collection_user")]
+    public ICollection<CollectionUser> CollectionUser { get; set; } = [];
+
+    [JsonProperty("user_data")]
+    public ICollection<UserData> UserData { get; set; } = [];
+
+    public Collection() { }
 
     // public Collection(TmdbCollectionAppends tmdbCollection, Ulid libraryId)
     // {

@@ -33,14 +33,16 @@ public class StartupTaskRunner
 
         foreach (StartupTask task in _tasks)
         {
-            if (task.DependsOn is null) continue;
+            if (task.DependsOn is null)
+                continue;
 
             foreach (string dep in task.DependsOn)
             {
                 if (!taskNames.Contains(dep))
                 {
                     throw new InvalidOperationException(
-                        $"Startup task '{task.Name}' depends on '{dep}' which does not exist");
+                        $"Startup task '{task.Name}' depends on '{dep}' which does not exist"
+                    );
                 }
             }
         }
@@ -54,15 +56,18 @@ public class StartupTaskRunner
             if (HasCycle(task.Name, visited, inStack))
             {
                 throw new InvalidOperationException(
-                    $"Circular dependency detected involving task '{task.Name}'");
+                    $"Circular dependency detected involving task '{task.Name}'"
+                );
             }
         }
     }
 
     private bool HasCycle(string taskName, HashSet<string> visited, HashSet<string> inStack)
     {
-        if (inStack.Contains(taskName)) return true;
-        if (visited.Contains(taskName)) return false;
+        if (inStack.Contains(taskName))
+            return true;
+        if (visited.Contains(taskName))
+            return false;
 
         visited.Add(taskName);
         inStack.Add(taskName);
@@ -72,7 +77,8 @@ public class StartupTaskRunner
         {
             foreach (string dep in task.DependsOn)
             {
-                if (HasCycle(dep, visited, inStack)) return true;
+                if (HasCycle(dep, visited, inStack))
+                    return true;
             }
         }
 
@@ -97,14 +103,16 @@ public class StartupTaskRunner
                     if (task.CanDefer)
                     {
                         Logger.Setup(
-                            $"Startup task '{task.Name}' deferred — will retry in background");
+                            $"Startup task '{task.Name}' deferred — will retry in background"
+                        );
                         _deferredTasks.Add(task);
                         continue;
                     }
 
                     throw new InvalidOperationException(
-                        $"Required startup task '{task.Name}' cannot run — " +
-                        $"dependencies not met: {string.Join(", ", GetUnmetDependencies(task))}");
+                        $"Required startup task '{task.Name}' cannot run — "
+                            + $"dependencies not met: {string.Join(", ", GetUnmetDependencies(task))}"
+                    );
                 }
 
                 try
@@ -115,14 +123,16 @@ public class StartupTaskRunner
                 catch (Exception ex) when (task.CanDefer)
                 {
                     Logger.Setup(
-                        $"Startup task '{task.Name}' not ready: {ex.Message} — will retry in background");
+                        $"Startup task '{task.Name}' not ready: {ex.Message} — will retry in background"
+                    );
                     _deferredTasks.Add(task);
                 }
                 catch (Exception ex) when (!task.CanDefer)
                 {
                     Logger.Setup(
                         $"Required startup task '{task.Name}' failed: {ex.Message}",
-                        LogEventLevel.Fatal);
+                        LogEventLevel.Fatal
+                    );
                     throw;
                 }
             }
@@ -131,13 +141,15 @@ public class StartupTaskRunner
 
     internal bool AreDependenciesMet(StartupTask task)
     {
-        if (task.DependsOn is null) return true;
+        if (task.DependsOn is null)
+            return true;
         return task.DependsOn.All(dep => _completedTasks.Contains(dep));
     }
 
     private IEnumerable<string> GetUnmetDependencies(StartupTask task)
     {
-        if (task.DependsOn is null) return [];
+        if (task.DependsOn is null)
+            return [];
         return task.DependsOn.Where(dep => !_completedTasks.Contains(dep));
     }
 }

@@ -23,7 +23,8 @@ public class NetworkDiscovery : INetworkDiscovery
         get => _internalIp ?? GetInternalIp();
         set
         {
-            if (_internalIp == value) return;
+            if (_internalIp == value)
+                return;
             _internalIp = value;
         }
     }
@@ -33,7 +34,8 @@ public class NetworkDiscovery : INetworkDiscovery
         get => _externalIp ?? "0.0.0.0";
         set
         {
-            if (_externalIp == value) return;
+            if (_externalIp == value)
+                return;
             _externalIp = value;
         }
     }
@@ -47,7 +49,8 @@ public class NetworkDiscovery : INetworkDiscovery
         get => _externalIpV6;
         set
         {
-            if (_externalIpV6 == value) return;
+            if (_externalIpV6 == value)
+                return;
             _externalIpV6 = value;
         }
     }
@@ -58,9 +61,8 @@ public class NetworkDiscovery : INetworkDiscovery
     public string ExternalDomain => $"{ExternalIp.SafeHost()}.{Info.DeviceId}.nomercy.tv";
     public string ExternalAddress => $"https://{ExternalDomain}:{Config.ExternalServerPort}";
 
-    public string? ExternalAddressV6 => ExternalIpV6 is not null
-        ? $"https://[{ExternalIpV6}]:{Config.ExternalServerPort}"
-        : null;
+    public string? ExternalAddressV6 =>
+        ExternalIpV6 is not null ? $"https://[{ExternalIpV6}]:{Config.ExternalServerPort}" : null;
 
     public bool Ipv6Enabled => CheckIpv6();
 
@@ -72,7 +74,8 @@ public class NetworkDiscovery : INetworkDiscovery
         await _discoverySemaphore.WaitAsync();
         try
         {
-            if (_discoveryCompleted) return;
+            if (_discoveryCompleted)
+                return;
 
             Logger.Setup("Discovering Networking");
 
@@ -83,8 +86,10 @@ public class NetworkDiscovery : INetworkDiscovery
 
             _ = Task.Run(() => NatUtility.StartDiscovery());
 
-            if (!_hasFoundDevice) await Task.Delay(TimeSpan.FromSeconds(5));
-            if (!_hasFoundDevice) await Task.Delay(TimeSpan.FromSeconds(10));
+            if (!_hasFoundDevice)
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            if (!_hasFoundDevice)
+                await Task.Delay(TimeSpan.FromSeconds(10));
 
             if (!_hasFoundDevice)
             {
@@ -128,7 +133,8 @@ public class NetworkDiscovery : INetworkDiscovery
 
     private void DeviceFound(object? sender, DeviceEventArgs args)
     {
-        if (_hasFoundDevice) return;
+        if (_hasFoundDevice)
+            return;
 
         Logger.Setup("UPNP router Found: " + args.Device.DeviceEndpoint);
 
@@ -150,19 +156,25 @@ public class NetworkDiscovery : INetworkDiscovery
         {
             Logger.Setup("Trying to add UPNP records");
 
-            _device.CreatePortMap(new(
-                Protocol.Tcp,
-                Config.InternalServerPort,
-                Config.ExternalServerPort,
-                0,
-                "NoMercy MediaServer (TCP)"));
+            _device.CreatePortMap(
+                new(
+                    Protocol.Tcp,
+                    Config.InternalServerPort,
+                    Config.ExternalServerPort,
+                    0,
+                    "NoMercy MediaServer (TCP)"
+                )
+            );
 
-            _device.CreatePortMap(new(
-                Protocol.Udp,
-                Config.InternalServerPort,
-                Config.ExternalServerPort,
-                0,
-                "NoMercy MediaServer (UDP)"));
+            _device.CreatePortMap(
+                new(
+                    Protocol.Udp,
+                    Config.InternalServerPort,
+                    Config.ExternalServerPort,
+                    0,
+                    "NoMercy MediaServer (UDP)"
+                )
+            );
 
             string ip = _device.GetExternalIP().ToString();
 
@@ -197,8 +209,10 @@ public class NetworkDiscovery : INetworkDiscovery
 
         if (completedTask == delayTask)
         {
-            Logger.Setup($"Timeout checking {ExternalIp}:{Config.ExternalServerPort} after {timeoutMilliseconds}ms.",
-                LogEventLevel.Verbose);
+            Logger.Setup(
+                $"Timeout checking {ExternalIp}:{Config.ExternalServerPort} after {timeoutMilliseconds}ms.",
+                LogEventLevel.Verbose
+            );
             return false;
         }
 
@@ -211,13 +225,16 @@ public class NetworkDiscovery : INetworkDiscovery
         {
             Logger.Setup(
                 $"SocketException checking {ExternalIp}:{Config.ExternalServerPort}: {ex.SocketErrorCode} ({ex.Message})",
-                LogEventLevel.Debug);
+                LogEventLevel.Debug
+            );
             return false;
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Exception checking {ExternalIp}:{Config.ExternalServerPort}: {ex.Message}",
-                LogEventLevel.Debug);
+            Logger.Setup(
+                $"Exception checking {ExternalIp}:{Config.ExternalServerPort}: {ex.Message}",
+                LogEventLevel.Debug
+            );
             return false;
         }
     }
@@ -243,16 +260,25 @@ public class NetworkDiscovery : INetworkDiscovery
         {
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
-                if (nic.OperationalStatus != OperationalStatus.Up) continue;
-                if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback
-                    or NetworkInterfaceType.Tunnel) continue;
-                if (IsVirtualNetworkInterface(nic)) continue;
+                if (nic.OperationalStatus != OperationalStatus.Up)
+                    continue;
+                if (
+                    nic.NetworkInterfaceType
+                    is NetworkInterfaceType.Loopback
+                        or NetworkInterfaceType.Tunnel
+                )
+                    continue;
+                if (IsVirtualNetworkInterface(nic))
+                    continue;
 
                 foreach (UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses)
                 {
-                    if (addr.Address.AddressFamily != AddressFamily.InterNetwork) continue;
-                    if (IPAddress.IsLoopback(addr.Address)) continue;
-                    if (IsDockerOrWslAddress(addr.Address)) continue;
+                    if (addr.Address.AddressFamily != AddressFamily.InterNetwork)
+                        continue;
+                    if (IPAddress.IsLoopback(addr.Address))
+                        continue;
+                    if (IsDockerOrWslAddress(addr.Address))
+                        continue;
 
                     return addr.Address.ToString();
                 }
@@ -273,8 +299,15 @@ public class NetworkDiscovery : INetworkDiscovery
 
         string[] virtualKeywords =
         [
-            "hyper-v", "virtual", "vethernet", "docker", "wsl",
-            "vpn", "vmware", "virtualbox", "vbox"
+            "hyper-v",
+            "virtual",
+            "vethernet",
+            "docker",
+            "wsl",
+            "vpn",
+            "vmware",
+            "virtualbox",
+            "vbox",
         ];
 
         foreach (string keyword in virtualKeywords)
@@ -289,7 +322,8 @@ public class NetworkDiscovery : INetworkDiscovery
     private static bool IsDockerOrWslAddress(IPAddress address)
     {
         byte[] bytes = address.GetAddressBytes();
-        if (bytes.Length != 4) return false;
+        if (bytes.Length != 4)
+            return false;
 
         // Docker default bridge: 172.17.0.0/16, and common Docker networks: 172.18-31.0.0/16
         if (bytes[0] == 172 && bytes[1] >= 17 && bytes[1] <= 31)
@@ -308,15 +342,23 @@ public class NetworkDiscovery : INetworkDiscovery
         {
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
-                if (nic.OperationalStatus != OperationalStatus.Up) continue;
-                if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback
-                    or NetworkInterfaceType.Tunnel) continue;
+                if (nic.OperationalStatus != OperationalStatus.Up)
+                    continue;
+                if (
+                    nic.NetworkInterfaceType
+                    is NetworkInterfaceType.Loopback
+                        or NetworkInterfaceType.Tunnel
+                )
+                    continue;
 
                 foreach (UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses)
                 {
-                    if (addr.Address.AddressFamily != AddressFamily.InterNetworkV6) continue;
-                    if (addr.Address.IsIPv6LinkLocal) continue;
-                    if (addr.Address.IsIPv6SiteLocal) continue;
+                    if (addr.Address.AddressFamily != AddressFamily.InterNetworkV6)
+                        continue;
+                    if (addr.Address.IsIPv6LinkLocal)
+                        continue;
+                    if (addr.Address.IsIPv6SiteLocal)
+                        continue;
 
                     return addr.Address.ToString();
                 }
@@ -407,24 +449,30 @@ public class NetworkDiscovery : INetworkDiscovery
         // 1. Try the NoMercy API over IPv6
         try
         {
-            using System.Net.Http.HttpClient httpClient = new(new SocketsHttpHandler
-            {
-                ConnectCallback = async (context, ct) =>
+            using System.Net.Http.HttpClient httpClient = new(
+                new SocketsHttpHandler
                 {
-                    Socket socket = new(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
-                    socket.NoDelay = true;
-                    try
+                    ConnectCallback = async (context, ct) =>
                     {
-                        await socket.ConnectAsync(context.DnsEndPoint, ct);
-                        return new NetworkStream(socket, ownsSocket: true);
-                    }
-                    catch
-                    {
-                        socket.Dispose();
-                        throw;
-                    }
+                        Socket socket = new(
+                            AddressFamily.InterNetworkV6,
+                            SocketType.Stream,
+                            ProtocolType.Tcp
+                        );
+                        socket.NoDelay = true;
+                        try
+                        {
+                            await socket.ConnectAsync(context.DnsEndPoint, ct);
+                            return new NetworkStream(socket, ownsSocket: true);
+                        }
+                        catch
+                        {
+                            socket.Dispose();
+                            throw;
+                        }
+                    },
                 }
-            });
+            );
             httpClient.Timeout = TimeSpan.FromSeconds(5);
             httpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
             string ip = await httpClient.GetStringAsync($"{Config.ApiBaseUrl}v1/ip");
@@ -442,31 +490,37 @@ public class NetworkDiscovery : INetworkDiscovery
         [
             "https://api64.ipify.org",
             "https://v6.ident.me",
-            "https://ipv6.icanhazip.com"
+            "https://ipv6.icanhazip.com",
         ];
 
         foreach (string service in ipv6Services)
         {
             try
             {
-                using System.Net.Http.HttpClient httpClient = new(new SocketsHttpHandler
-                {
-                    ConnectCallback = async (context, ct) =>
+                using System.Net.Http.HttpClient httpClient = new(
+                    new SocketsHttpHandler
                     {
-                        Socket socket = new(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
-                        socket.NoDelay = true;
-                        try
+                        ConnectCallback = async (context, ct) =>
                         {
-                            await socket.ConnectAsync(context.DnsEndPoint, ct);
-                            return new NetworkStream(socket, ownsSocket: true);
-                        }
-                        catch
-                        {
-                            socket.Dispose();
-                            throw;
-                        }
+                            Socket socket = new(
+                                AddressFamily.InterNetworkV6,
+                                SocketType.Stream,
+                                ProtocolType.Tcp
+                            );
+                            socket.NoDelay = true;
+                            try
+                            {
+                                await socket.ConnectAsync(context.DnsEndPoint, ct);
+                                return new NetworkStream(socket, ownsSocket: true);
+                            }
+                            catch
+                            {
+                                socket.Dispose();
+                                throw;
+                            }
+                        },
                     }
-                });
+                );
                 httpClient.Timeout = TimeSpan.FromSeconds(5);
                 string ip = (await httpClient.GetStringAsync(service)).Trim();
                 if (!string.IsNullOrEmpty(ip) && ip.Contains(':'))
@@ -498,7 +552,8 @@ public class NetworkDiscovery : INetworkDiscovery
     {
         try
         {
-            if (!File.Exists(ExternalIpCacheFile)) return null;
+            if (!File.Exists(ExternalIpCacheFile))
+                return null;
             string cached = File.ReadAllText(ExternalIpCacheFile).Trim();
             return string.IsNullOrEmpty(cached) ? null : cached;
         }
@@ -510,7 +565,8 @@ public class NetworkDiscovery : INetworkDiscovery
 
     private static bool CheckIpv6()
     {
-        if (!Socket.OSSupportsIPv6) return false;
+        if (!Socket.OSSupportsIPv6)
+            return false;
 
         foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             if (nic.Supports(NetworkInterfaceComponent.IPv6))

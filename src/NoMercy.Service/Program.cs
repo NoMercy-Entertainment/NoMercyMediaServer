@@ -12,10 +12,10 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NoMercy.Networking;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercyQueue;
 using NoMercy.Service.Configuration;
 using NoMercy.Service.Seeds;
 using NoMercy.Setup;
+using NoMercyQueue;
 
 namespace NoMercy.Service;
 
@@ -60,7 +60,9 @@ public static class Program
                 if (_shutdownAttempts == 1)
                 {
                     e.Cancel = true; // Prevent immediate termination
-                    Logger.App("Graceful shutdown initiated... (Press Ctrl+C again to force shutdown)");
+                    Logger.App(
+                        "Graceful shutdown initiated... (Press Ctrl+C again to force shutdown)"
+                    );
                     _applicationShutdownCts?.Cancel();
                 }
                 else if (_shutdownAttempts >= 2)
@@ -72,7 +74,8 @@ public static class Program
             }
         };
 
-        await Parser.Default.ParseArguments<StartupOptions>(args)
+        await Parser
+            .Default.ParseArguments<StartupOptions>(args)
             .MapResult(Start, ErrorParsingArguments);
 
         static Task ErrorParsingArguments(IEnumerable<Error> errors)
@@ -96,9 +99,11 @@ public static class Program
             string exeDir = AppContext.BaseDirectory;
             Directory.SetCurrentDirectory(exeDir);
 
-            string platform = Software.IsWindows ? "Windows service" :
-                              Software.IsLinux ? "systemd service" :
-                              Software.IsMac ? "launchd service" : "service";
+            string platform =
+                Software.IsWindows ? "Windows service"
+                : Software.IsLinux ? "systemd service"
+                : Software.IsMac ? "launchd service"
+                : "service";
             Logger.App($"Running as {platform}, content root: {exeDir}");
         }
 
@@ -115,7 +120,9 @@ public static class Program
 
         Version version = Assembly.GetExecutingAssembly().GetName().Version!;
         Software.Version = version;
-        Logger.App($"NoMercy MediaServer version: v{version.Major}.{version.Minor}.{version.Build}");
+        Logger.App(
+            $"NoMercy MediaServer version: v{version.Major}.{version.Minor}.{version.Build}"
+        );
 
         Stopwatch stopWatch = new();
         stopWatch.Start();
@@ -170,11 +177,15 @@ public static class Program
             }
 
             // Show addresses and server box after all startup tasks complete
-            NoMercy.Networking.Discovery.INetworkDiscovery? networkDiscovery = app.Services.GetService<NoMercy.Networking.Discovery.INetworkDiscovery>();
+            NoMercy.Networking.Discovery.INetworkDiscovery? networkDiscovery =
+                app.Services.GetService<NoMercy.Networking.Discovery.INetworkDiscovery>();
             if (networkDiscovery is not null)
             {
                 Logger.App($"Internal Address: {networkDiscovery.InternalAddress}");
-                if (!string.IsNullOrEmpty(networkDiscovery.ExternalIp) && networkDiscovery.ExternalIp != "0.0.0.0")
+                if (
+                    !string.IsNullOrEmpty(networkDiscovery.ExternalIp)
+                    && networkDiscovery.ExternalIp != "0.0.0.0"
+                )
                     Logger.App($"External Address: {networkDiscovery.ExternalAddress}");
                 if (networkDiscovery.ExternalAddressV6 is not null)
                     Logger.App($"External IPv6 Address: {networkDiscovery.ExternalAddressV6}");
@@ -187,7 +198,11 @@ public static class Program
 
             // Auto-open setup URL in browser if in setup mode and desktop environment
             SetupState? setupState = app.Services.GetService<SetupState>();
-            if (setupState?.IsSetupRequired == true && !IsRunningAsService && Auth.IsDesktopEnvironment())
+            if (
+                setupState?.IsSetupRequired == true
+                && !IsRunningAsService
+                && Auth.IsDesktopEnvironment()
+            )
             {
                 try
                 {
@@ -200,7 +215,9 @@ public static class Program
                 {
                     Logger.App($"Could not open browser automatically: {ex.Message}");
                     string internalIp2 = networkDiscovery?.InternalIp ?? "127.0.0.1";
-                    Logger.App($"Please open your browser and navigate to: http://{internalIp2}:{Config.InternalServerPort}/setup");
+                    Logger.App(
+                        $"Please open your browser and navigate to: http://{internalIp2}:{Config.InternalServerPort}/setup"
+                    );
                 }
             }
 
@@ -262,19 +279,24 @@ public static class Program
 
     private static void RegisterLifetimeEvents(WebApplication app, Stopwatch stopWatch)
     {
-        app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStarted.Register(() =>
-        {
-            Config.Started = true;
-            stopWatch.Stop();
-        });
+        app.Services.GetService<IHostApplicationLifetime>()
+            ?.ApplicationStarted.Register(() =>
+            {
+                Config.Started = true;
+                stopWatch.Stop();
+            });
 
-        app.Services.GetService<IHostApplicationLifetime>()?.ApplicationStopping.Register(() =>
-        {
-            Logger.App("Application is shutting down...");
-        });
+        app.Services.GetService<IHostApplicationLifetime>()
+            ?.ApplicationStopping.Register(() =>
+            {
+                Logger.App("Application is shutting down...");
+            });
     }
 
-    private static async Task<bool> RunWithHttpsRestart(WebApplication httpHost, StartupOptions options)
+    private static async Task<bool> RunWithHttpsRestart(
+        WebApplication httpHost,
+        StartupOptions options
+    )
     {
         SetupState setupState = httpHost.Services.GetRequiredService<SetupState>();
 
@@ -283,8 +305,10 @@ public static class Program
         {
             await httpHost.StartAsync(_applicationShutdownCts!.Token);
         }
-        catch (IOException ex) when (ex.InnerException is SocketException
-                                     || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
+        catch (IOException ex)
+            when (ex.InnerException is SocketException
+                || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
+            )
         {
             bool shouldRetry = await HandlePortInUse(Config.InternalServerPort, ex);
             await httpHost.DisposeAsync();
@@ -293,7 +317,9 @@ public static class Program
 
         // Wait for either setup completion or shutdown
         Task shutdownTask = Task.Delay(Timeout.Infinite, _applicationShutdownCts!.Token);
-        Task setupCompleteTask = setupState.WaitForSetupCompleteAsync(_applicationShutdownCts.Token);
+        Task setupCompleteTask = setupState.WaitForSetupCompleteAsync(
+            _applicationShutdownCts.Token
+        );
 
         Task completedTask = await Task.WhenAny(setupCompleteTask, shutdownTask);
 
@@ -368,8 +394,10 @@ public static class Program
         {
             await host.RunAsync(_applicationShutdownCts!.Token);
         }
-        catch (IOException ex) when (ex.InnerException is SocketException
-                                     || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
+        catch (IOException ex)
+            when (ex.InnerException is SocketException
+                || ex.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
+            )
         {
             bool shouldRetry = await HandlePortInUse(Config.InternalServerPort, ex);
             await host.DisposeAsync();
@@ -398,17 +426,37 @@ public static class Program
 
         if (blockingPid <= 0)
         {
-            Logger.Error($"Port {port} is in use but cannot identify the process. Please free it manually.");
+            // Cannot identify the process — apply registered-server rules conservatively.
+            if (Certificate.HasValidCertificate())
+            {
+                Logger.Error(
+                    $"Port {port} is in use by an unknown process. "
+                        + "NoMercy is registered on this port and cannot use a different one. "
+                        + "Free the port and restart."
+                );
+            }
+            else
+            {
+                Logger.Error(
+                    $"Port {port} is in use but cannot identify the process. Please free it manually."
+                );
+            }
+
             Environment.ExitCode = 1;
             Environment.Exit(1);
             return;
         }
 
         bool isStaleInstance = false;
+        string blockingProcessName = "unknown";
         try
         {
             Process blockingProcess = Process.GetProcessById(blockingPid);
-            isStaleInstance = blockingProcess.ProcessName == "NoMercyMediaServer";
+            blockingProcessName = blockingProcess.ProcessName;
+            // NOTE: ProcessName cannot distinguish between a stale instance of this server
+            // and a different valid NoMercy instance on the same machine. Auto-kill is
+            // acceptable because two instances sharing the same port is never valid.
+            isStaleInstance = blockingProcessName == "NoMercyMediaServer";
         }
         catch
         {
@@ -417,28 +465,38 @@ public static class Program
 
         if (isStaleInstance)
         {
-            Logger.App($"Stale NoMercyMediaServer instance detected (PID {blockingPid}). Auto-killing...");
+            Logger.App(
+                $"Stale NoMercyMediaServer instance detected (PID {blockingPid}). Auto-killing..."
+            );
         }
         else
         {
-            bool isInteractive = !IsRunningAsService && !Console.IsInputRedirected && !Console.IsOutputRedirected;
-            if (!isInteractive)
+            // A different process is holding the port.
+            bool isRegistered = Certificate.HasValidCertificate();
+
+            if (isRegistered)
             {
-                Logger.Error($"Port {port} is in use by PID {blockingPid}. Stop it manually and restart.");
+                // Registered servers CANNOT switch ports — the port is embedded in DNS
+                // records, the SSL certificate, and any firewall rules the user configured.
+                Logger.Error(
+                    $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}). "
+                        + "NoMercy is registered on this port and cannot use a different one. "
+                        + "Free the port and restart."
+                );
                 Environment.ExitCode = 1;
                 Environment.Exit(1);
                 return;
             }
 
-            Console.Write($"\nPort {port} is in use by process {blockingPid}. Kill it and retry? [y/N] ");
-            string? answer = Console.ReadLine();
-            if (string.IsNullOrEmpty(answer) || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase))
-            {
-                Logger.App("User declined. Exiting.");
-                Environment.ExitCode = 1;
-                Environment.Exit(1);
-                return;
-            }
+            // Not yet registered — find the next available port so first-time setup
+            // can proceed without the user having to manually free the default port.
+            int alternativePort = FindNextAvailablePort(port + 1);
+            Logger.App(
+                $"Port {port} is in use by {blockingProcessName} (PID {blockingPid}). "
+                    + $"Server is not yet registered — using port {alternativePort} instead."
+            );
+            Config.InternalServerPort = alternativePort;
+            return;
         }
 
         try
@@ -481,6 +539,22 @@ public static class Program
         Logger.App("Port freed — continuing startup...");
     }
 
+    private static int FindNextAvailablePort(int startPort)
+    {
+        const int MaxPort = 65535;
+
+        for (int candidate = startPort; candidate <= MaxPort; candidate++)
+        {
+            if (IsPortAvailable(candidate))
+                return candidate;
+        }
+
+        Logger.Error($"No available port found in range {startPort}–{MaxPort}.");
+        Environment.ExitCode = 1;
+        Environment.Exit(1);
+        return -1;
+    }
+
     private static bool IsPortAvailable(int port)
     {
         try
@@ -513,7 +587,9 @@ public static class Program
 
         if (blockingPid <= 0)
         {
-            Logger.Error("Could not determine the PID of the blocking process. Please free the port manually.");
+            Logger.Error(
+                "Could not determine the PID of the blocking process. Please free the port manually."
+            );
             Environment.ExitCode = 1;
             return false;
         }
@@ -532,16 +608,21 @@ public static class Program
 
         if (isStaleInstance)
         {
-            Logger.App($"Stale NoMercyMediaServer instance detected (PID {blockingPid}). Auto-killing...");
+            Logger.App(
+                $"Stale NoMercyMediaServer instance detected (PID {blockingPid}). Auto-killing..."
+            );
         }
         else
         {
-            bool isInteractive = !IsRunningAsService && !Console.IsInputRedirected && !Console.IsOutputRedirected;
+            bool isInteractive =
+                !IsRunningAsService && !Console.IsInputRedirected && !Console.IsOutputRedirected;
 
             if (!isInteractive)
             {
-                Logger.Error("Running non-interactively — cannot prompt to kill the blocking process. "
-                            + "Stop the other process manually and restart the server.");
+                Logger.Error(
+                    "Running non-interactively — cannot prompt to kill the blocking process. "
+                        + "Stop the other process manually and restart the server."
+                );
                 Environment.ExitCode = 1;
                 return false;
             }
@@ -549,7 +630,10 @@ public static class Program
             Console.Write($"\nWould you like to kill process {blockingPid} and retry? [y/N] ");
             string? answer = Console.ReadLine();
 
-            if (string.IsNullOrEmpty(answer) || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase))
+            if (
+                string.IsNullOrEmpty(answer)
+                || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase)
+            )
             {
                 Logger.App("User declined to kill the blocking process. Exiting.");
                 Environment.ExitCode = 1;
@@ -604,7 +688,10 @@ public static class Program
                 List<string> matches = [];
                 foreach (string line in lines)
                 {
-                    if (line.Contains($":{port} ") && line.Contains("LISTENING", StringComparison.OrdinalIgnoreCase))
+                    if (
+                        line.Contains($":{port} ")
+                        && line.Contains("LISTENING", StringComparison.OrdinalIgnoreCase)
+                    )
                         matches.Add(line.Trim());
                 }
 
@@ -700,18 +787,18 @@ public static class Program
 
     private static WebApplication CreateWebApplication(StartupOptions options)
     {
-        List<IPAddress> localAddresses =
-        [
-            IPAddress.Any
-        ];
+        List<IPAddress> localAddresses = [IPAddress.Any];
 
-        if(Software.IsWindows || Software.IsMac)
+        if (Software.IsWindows || Software.IsMac)
             localAddresses.Add(IPAddress.IPv6Any);
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
 
         builder.Services.AddSingleton(options);
-        builder.Services.AddSingleton<IApiVersionDescriptionProvider, DefaultApiVersionDescriptionProvider>();
+        builder.Services.AddSingleton<
+            IApiVersionDescriptionProvider,
+            DefaultApiVersionDescriptionProvider
+        >();
         builder.Services.AddSingleton<ISunsetPolicyManager, DefaultSunsetPolicyManager>();
         builder.Services.AddSingleton(typeof(ILogger<>), typeof(CustomLogger<>));
 
@@ -739,29 +826,39 @@ public static class Program
             // Main server endpoints — HTTPS when certificate is available, with HTTP/3 (QUIC) support
             foreach (IPAddress address in localAddresses)
             {
-                kestrelOptions.Listen(address, Config.InternalServerPort, listenOptions =>
-                {
-                    listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
-                    Certificate.ConfigureHttpsListener(listenOptions);
-                });
+                kestrelOptions.Listen(
+                    address,
+                    Config.InternalServerPort,
+                    listenOptions =>
+                    {
+                        listenOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
+                        Certificate.ConfigureHttpsListener(listenOptions);
+                    }
+                );
             }
 
             // Health check endpoint — HTTP only, localhost only (for Docker HEALTHCHECK)
-            kestrelOptions.Listen(IPAddress.Loopback, Config.InternalServerPort + 1, listenOptions =>
-            {
-                listenOptions.Protocols = HttpProtocols.Http1;
-            });
+            kestrelOptions.Listen(
+                IPAddress.Loopback,
+                Config.InternalServerPort + 1,
+                listenOptions =>
+                {
+                    listenOptions.Protocols = HttpProtocols.Http1;
+                }
+            );
 
             // IPC transport — named pipe (Windows) or Unix socket (Linux/macOS)
             if (Software.IsWindows)
             {
-                kestrelOptions.ListenNamedPipe(Config.ManagementPipeName, listenOptions =>
-                {
-                    listenOptions.Protocols = HttpProtocols.Http1;
-                });
+                kestrelOptions.ListenNamedPipe(
+                    Config.ManagementPipeName,
+                    listenOptions =>
+                    {
+                        listenOptions.Protocols = HttpProtocols.Http1;
+                    }
+                );
 
-                Logger.App(
-                    $"IPC listening on named pipe: {Config.ManagementPipeName}");
+                Logger.App($"IPC listening on named pipe: {Config.ManagementPipeName}");
             }
             else
             {
@@ -771,14 +868,15 @@ public static class Program
                 if (File.Exists(socketPath))
                     File.Delete(socketPath);
 
-                kestrelOptions.ListenUnixSocket(socketPath, listenOptions =>
-                {
-                    listenOptions.Protocols =
-                        HttpProtocols.Http1;
-                });
+                kestrelOptions.ListenUnixSocket(
+                    socketPath,
+                    listenOptions =>
+                    {
+                        listenOptions.Protocols = HttpProtocols.Http1;
+                    }
+                );
 
-                Logger.App(
-                    $"IPC listening on Unix socket: {socketPath}");
+                Logger.App($"IPC listening on Unix socket: {socketPath}");
             }
         });
 
@@ -796,7 +894,8 @@ public static class Program
         WebApplication app = builder.Build();
 
         // Configure middleware from Startup.Configure
-        IApiVersionDescriptionProvider provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+        IApiVersionDescriptionProvider provider =
+            app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
         ApplicationConfiguration.ConfigureApp(app, provider);
 
         return app;

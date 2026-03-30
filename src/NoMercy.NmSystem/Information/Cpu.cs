@@ -6,11 +6,14 @@ public static class Cpu
 {
     internal static List<string> Vendors()
     {
-        if (Software.IsWindows) return GetCpuVendorsWindows();
+        if (Software.IsWindows)
+            return GetCpuVendorsWindows();
 
-        if (Software.IsLinux) return GetCpuVendorsLinux();
+        if (Software.IsLinux)
+            return GetCpuVendorsLinux();
 
-        if (Software.IsMac) return GetCpuVendorsMac();
+        if (Software.IsMac)
+            return GetCpuVendorsMac();
 
         return ["Unknown"];
     }
@@ -24,7 +27,8 @@ public static class Cpu
         foreach (ManagementBaseObject? o in searcher.Get())
         {
             ManagementObject? item = (ManagementObject)o;
-            if (item["Name"] is string cpuName) vendors.Add(cpuName.Trim());
+            if (item["Name"] is string cpuName)
+                vendors.Add(cpuName.Trim());
         }
 #pragma warning restore CA1416
 
@@ -63,14 +67,16 @@ public static class Cpu
         return vendors;
     }
 
-
     internal static List<string> Names()
     {
-        if (Software.IsWindows) return GetCpuNamesWindows();
+        if (Software.IsWindows)
+            return GetCpuNamesWindows();
 
-        if (Software.IsLinux) return GetCpuNamesLinux();
+        if (Software.IsLinux)
+            return GetCpuNamesLinux();
 
-        if (Software.IsMac) return GetCpuNamesMac();
+        if (Software.IsMac)
+            return GetCpuNamesMac();
 
         return ["Unknown"];
     }
@@ -84,7 +90,8 @@ public static class Cpu
         foreach (ManagementBaseObject? o in searcher.Get())
         {
             ManagementObject? item = (ManagementObject)o;
-            if (item["Name"] is string cpuName) cpus.Add(cpuName.Trim());
+            if (item["Name"] is string cpuName)
+                cpus.Add(cpuName.Trim());
         }
 #pragma warning restore CA1416
 

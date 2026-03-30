@@ -8,15 +8,15 @@ namespace NoMercy.Database.Models.Music;
 [Index(nameof(MusicGenreId))]
 public class ArtistMusicGenre
 {
-    [JsonProperty("artist_id")] public Guid ArtistId { get; set; }
+    [JsonProperty("artist_id")]
+    public Guid ArtistId { get; set; }
     public Artist Artist { get; set; } = null!;
 
-    [JsonProperty("music_genre_id")] public Guid MusicGenreId { get; set; }
+    [JsonProperty("music_genre_id")]
+    public Guid MusicGenreId { get; set; }
     public MusicGenre MusicGenre { get; set; } = null!;
 
-    public ArtistMusicGenre()
-    {
-    }
+    public ArtistMusicGenre() { }
 
     public ArtistMusicGenre(Guid artistId, Guid musicGenreId)
     {

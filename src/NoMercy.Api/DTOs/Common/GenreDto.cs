@@ -3,15 +3,18 @@ using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Providers.TMDB.Models.Shared;
 
 namespace NoMercy.Api.DTOs.Common;
 
 public record GenreDto
 {
-    [JsonProperty("id")] public dynamic Id { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
+    [JsonProperty("id")]
+    public dynamic Id { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
 
     public Uri Link { get; set; }
 

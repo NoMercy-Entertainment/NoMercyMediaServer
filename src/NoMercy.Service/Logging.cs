@@ -34,18 +34,28 @@ public class CustomLogger<T> : ILogger<T>
         _categoryName = typeof(T).Name;
     }
 
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
-        Func<TState, Exception?, string> formatter)
+    public void Log<TState>(
+        LogLevel logLevel,
+        EventId eventId,
+        TState state,
+        Exception? exception,
+        Func<TState, Exception?, string> formatter
+    )
     {
         string message = formatter(state, exception);
-        
+
         // Filter out specific ASP.NET Core middleware messages
-        if (ShouldFilterMessage(message)) return; // Skip logging this message
+        if (ShouldFilterMessage(message))
+            return; // Skip logging this message
 
         LogEventLevel level = ConvertLogLevel(logLevel);
 
         // Route logs to appropriate category based on the class name
-        if (_categoryName.Contains("Queue") || _categoryName.Contains("Cron") || _categoryName.Contains("Job"))
+        if (
+            _categoryName.Contains("Queue")
+            || _categoryName.Contains("Cron")
+            || _categoryName.Contains("Job")
+        )
             Logger.Queue($"{message}", level);
         else
             Logger.System($"{message}", level);
@@ -62,7 +72,8 @@ public class CustomLogger<T> : ILogger<T>
         return true;
     }
 
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    public IDisposable? BeginScope<TState>(TState state)
+        where TState : notnull
     {
         return null;
     }
@@ -77,7 +88,7 @@ public class CustomLogger<T> : ILogger<T>
             LogLevel.Warning => LogEventLevel.Warning,
             LogLevel.Error => LogEventLevel.Error,
             LogLevel.Critical => LogEventLevel.Fatal,
-            _ => LogEventLevel.Information
+            _ => LogEventLevel.Information,
         };
     }
 }

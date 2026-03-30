@@ -29,23 +29,36 @@ public class CoverArtBaseClient : IDisposable
 
     private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 3, Interval = 1000, Start = true });
+        return _queue ??= new(
+            new()
+            {
+                Concurrent = 3,
+                Interval = 1000,
+                Start = true,
+            }
+        );
     }
 
     protected Guid Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false)
+    protected async Task<T?> Get<T>(
+        string url,
+        Dictionary<string, string>? query = null,
+        bool? priority = false
+    )
         where T : class
     {
         query ??= new();
 
         string newUrl = QueryHelpers.AddQueryString(url, query!);
 
-        if (CacheController.Read(newUrl, out T? result)) return result;
+        if (CacheController.Read(newUrl, out T? result))
+            return result;
 
         Logger.CoverArt(_baseUrl + newUrl, LogEventLevel.Verbose);
 
-        string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+        string response = await GetQueue()
+            .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
         await CacheController.Write(newUrl, response);
 

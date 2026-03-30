@@ -7,6 +7,8 @@ using NoMercy.Encoder;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Audio;
 using NoMercy.Encoder.Format.Container;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Libraries;
@@ -17,8 +19,6 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Events;
-using NoMercy.Events.Encoding;
 using NoMercy.Providers.MusicBrainz.Models;
 using Serilog.Events;
 
@@ -39,10 +39,11 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
         await using LibraryRepository libraryRepository = new(context);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
-        if (folder is null) return;
+        if (folder is null)
+            return;
 
-        List<EncoderProfile> profiles = folder.EncoderProfileFolder
-            .Select(e => e.EncoderProfile)
+        List<EncoderProfile> profiles = folder
+            .EncoderProfileFolder.Select(e => e.EncoderProfile)
             .ToList();
 
         foreach (EncoderProfile profile in profiles)
@@ -52,7 +53,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                 Id = FoundTrack.Id,
                 Name = FoundTrack.Title,
                 FolderId = folder.Id,
-                TrackNumber = FoundTrack.Position
+                TrackNumber = FoundTrack.Position,
             };
 
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -61,21 +62,27 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
             {
                 if (EventBusProvider.IsConfigured)
                 {
-                    await EventBusProvider.Current.PublishAsync(new EncodingStartedEvent
-                    {
-                        JobId = track.Id.GetHashCode(),
-                        InputPath = MediaFile.Path,
-                        OutputPath = FolderMetaData.BasePath,
-                        ProfileName = profile.Name
-                    });
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingStartedEvent
+                        {
+                            JobId = track.Id.GetHashCode(),
+                            InputPath = MediaFile.Path,
+                            OutputPath = FolderMetaData.BasePath,
+                            ProfileName = profile.Name,
+                        }
+                    );
                 }
 
                 BaseContainer container = BaseContainer.Create(profile.Container);
 
-                BuildAudioStreams(profile, ref container, FoundTrack, FolderMetaData.MusicBrainzRelease);
+                BuildAudioStreams(
+                    profile,
+                    ref container,
+                    FoundTrack,
+                    FolderMetaData.MusicBrainzRelease
+                );
 
-                VideoAudioFile ffmpeg = await new FfMpeg()
-                    .OpenAsync(MediaFile.Path);
+                VideoAudioFile ffmpeg = await new FfMpeg().OpenAsync(MediaFile.Path);
 
                 ffmpeg.SetBasePath(FolderMetaData.BasePath);
                 ffmpeg.SetTitle(MediaFile.Name);
@@ -94,7 +101,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                     Id = track.Id,
                     Title = FoundTrack.Title,
                     BaseFolder = FolderMetaData.BasePath,
-                    Type = "audio"
+                    Type = "audio",
                 };
 
                 Logger.Encoder(fullCommand);
@@ -104,21 +111,25 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
                 if (EventBusProvider.IsConfigured)
                 {
-                    await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
-                    {
-                        JobId = track.Id,
-                        Status = "completed",
-                        Title = FoundTrack.Title,
-                        Message = "Done"
-                    });
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingStageChangedEvent
+                        {
+                            JobId = track.Id,
+                            Status = "completed",
+                            Title = FoundTrack.Title,
+                            Message = "Done",
+                        }
+                    );
 
                     stopwatch.Stop();
-                    await EventBusProvider.Current.PublishAsync(new EncodingCompletedEvent
-                    {
-                        JobId = track.Id.GetHashCode(),
-                        OutputPath = FolderMetaData.BasePath,
-                        Duration = stopwatch.Elapsed
-                    });
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingCompletedEvent
+                        {
+                            JobId = track.Id.GetHashCode(),
+                            OutputPath = FolderMetaData.BasePath,
+                            Duration = stopwatch.Elapsed,
+                        }
+                    );
                 }
             }
             catch (Exception e)
@@ -127,22 +138,29 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
 
                 if (EventBusProvider.IsConfigured)
                 {
-                    await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
-                    {
-                        JobId = track.Id,
-                        Status = "failed",
-                        Title = FoundTrack.Title,
-                        Message = e.Message
-                    });
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingStageChangedEvent
+                        {
+                            JobId = track.Id,
+                            Status = "failed",
+                            Title = FoundTrack.Title,
+                            Message = e.Message,
+                        }
+                    );
 
-                    await EventBusProvider.Current.PublishAsync(new EncodingFailedEvent
-                    {
-                        JobId = track.Id.GetHashCode(),
-                        InputPath = MediaFile.Path,
-                        ErrorMessage = e.Message,
-                        ExceptionType = e.GetType().Name
-                    });
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingFailedEvent
+                        {
+                            JobId = track.Id.GetHashCode(),
+                            InputPath = MediaFile.Path,
+                            ErrorMessage = e.Message,
+                            ExceptionType = e.GetType().Name,
+                        }
+                    );
                 }
+
+                // Re-throw so the queue system marks this job as failed and can retry it.
+                throw;
             }
         }
     }
@@ -158,7 +176,11 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
         ArtistManager artistManager = new(artistRepository, musicGenreRepository, jobDispatcher);
 
         RecordingRepository recordingRepository = new(context);
-        RecordingManager recordingManager = new(recordingRepository, musicGenreRepository, artistRepository);
+        RecordingManager recordingManager = new(
+            recordingRepository,
+            musicGenreRepository,
+            artistRepository
+        );
 
         await using MediaScan mediaScan = new();
 
@@ -173,49 +195,92 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
         mediaFolder.Files?.FilterConcurrentBag([container.FileName]);
 
         CoverArtImageManagerManager.CoverPalette? coverPalette =
-            await CoverArtImageManagerManager.Add(FolderMetaData.MusicBrainzRelease.MusicBrainzReleaseGroup.Id);
+            await CoverArtImageManagerManager.Add(
+                FolderMetaData.MusicBrainzRelease.MusicBrainzReleaseGroup.Id
+            );
 
-        await Parallel.ForEachAsync(FolderMetaData.MusicBrainzRelease.Media, Config.ParallelOptions, async (media, t) =>
-        {
-            if (!await recordingManager.Store(FolderMetaData.MusicBrainzRelease, FoundTrack, media,
-                    folder, mediaFolder, coverPalette)) return;
-
-            Library? albumLibrary = folder.FolderLibraries
-                .FirstOrDefault(f => f.LibraryId == LibraryId)?.Library;
-
-            if (albumLibrary is null)
+        await Parallel.ForEachAsync(
+            FolderMetaData.MusicBrainzRelease.Media,
+            Config.ParallelOptions,
+            async (media, t) =>
             {
-                Logger.MusicBrainz($"Album Library not found: {LibraryId}", LogEventLevel.Error);
-                return;
+                if (
+                    !await recordingManager.Store(
+                        FolderMetaData.MusicBrainzRelease,
+                        FoundTrack,
+                        media,
+                        folder,
+                        mediaFolder,
+                        coverPalette
+                    )
+                )
+                    return;
+
+                Library? albumLibrary = folder
+                    .FolderLibraries.FirstOrDefault(f => f.LibraryId == LibraryId)
+                    ?.Library;
+
+                if (albumLibrary is null)
+                {
+                    Logger.MusicBrainz(
+                        $"Album Library not found: {LibraryId}",
+                        LogEventLevel.Error
+                    );
+                    return;
+                }
+
+                await Parallel.ForEachAsync(
+                    FoundTrack.ArtistCredit,
+                    Config.ParallelOptions,
+                    async (artist, _) =>
+                    {
+                        Logger.MusicBrainz(
+                            $"Storing Artist: {artist.MusicBrainzArtist.Name}",
+                            LogEventLevel.Verbose
+                        );
+                        await artistManager.Store(
+                            artist.MusicBrainzArtist,
+                            albumLibrary,
+                            folder,
+                            mediaFolder,
+                            FoundTrack
+                        );
+
+                        jobDispatcher.DispatchJob<MusicMetadataJob>(artist.MusicBrainzArtist);
+                    }
+                );
             }
-
-            await Parallel.ForEachAsync(FoundTrack.ArtistCredit, Config.ParallelOptions, async (artist, _) =>
-            {
-                Logger.MusicBrainz($"Storing Artist: {artist.MusicBrainzArtist.Name}", LogEventLevel.Verbose);
-                await artistManager.Store(artist.MusicBrainzArtist, albumLibrary, folder, mediaFolder, FoundTrack);
-
-                jobDispatcher.DispatchJob<MusicMetadataJob>(artist.MusicBrainzArtist);
-            });
-        });
+        );
     }
 
-    private static void BuildAudioStreams(EncoderProfile encoderProfile, ref BaseContainer container,
-        MusicBrainzTrack track, MusicBrainzReleaseAppends musicBrainzRelease)
+    private static void BuildAudioStreams(
+        EncoderProfile encoderProfile,
+        ref BaseContainer container,
+        MusicBrainzTrack track,
+        MusicBrainzReleaseAppends musicBrainzRelease
+    )
     {
         foreach (IAudioProfile profile in encoderProfile.AudioProfiles)
         {
-            MusicBrainzMedia album = musicBrainzRelease.Media
-                .First(m => m.Tracks.Any(t => t.Title == track.Title));
+            MusicBrainzMedia album = musicBrainzRelease.Media.First(m =>
+                m.Tracks.Any(t => t.Title == track.Title)
+            );
 
-            string albumArtist = string.Join("/", musicBrainzRelease.ArtistCredit.Select(c => c.Name));
+            string albumArtist = string.Join(
+                "/",
+                musicBrainzRelease.ArtistCredit.Select(c => c.Name)
+            );
             string albumNumber = musicBrainzRelease.Title;
             string artist = string.Join("/", track.ArtistCredit.Select(c => c.Name));
-            int date = musicBrainzRelease.ReleaseEvents?[0].DateTime.ParseYear() ??
-                       track.Recording.FirstReleaseDate.ParseYear();
+            int date =
+                musicBrainzRelease.ReleaseEvents?[0].DateTime.ParseYear()
+                ?? track.Recording.FirstReleaseDate.ParseYear();
             string disambiguation = track.Recording.Disambiguation;
             string discNumber = $"{album.Position}/{musicBrainzRelease.Media.Length}";
-            string genre = string.Join("/",
-                musicBrainzRelease.MusicBrainzReleaseGroup?.Genres?.Select(c => c.Name) ?? []);
+            string genre = string.Join(
+                "/",
+                musicBrainzRelease.MusicBrainzReleaseGroup?.Genres?.Select(c => c.Name) ?? []
+            );
             string title = track.Title;
             string trackNumber = $"{track.Number}/{album.TrackCount}";
 
@@ -226,7 +291,8 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
             Guid musicBrainzAlbumArtistId = musicBrainzRelease.ArtistCredit[0].MusicBrainzArtist.Id;
             Guid? musicBrainzReleaseGroupId = musicBrainzRelease.MusicBrainzReleaseGroup?.Id;
 
-            BaseAudio stream = BaseAudio.Create(profile.Codec)
+            BaseAudio stream = BaseAudio
+                .Create(profile.Codec)
                 .SetAudioChannels(profile.Channels)
                 .SetAllowedLanguages(profile.AllowedLanguages)
                 .SetSampleRate(profile.SampleRate)
@@ -235,24 +301,26 @@ public class MusicEncodeJob : AbstractMusicEncoderJob
                 .AddOpts(profile.Opts)
                 .AddCustomArguments(profile.CustomArguments)
                 .SetLanguage(musicBrainzRelease.MusicBrainzTextRepresentation.Language)
-                .AddId3Tags(new()
-                {
-                    { "album", albumNumber },
-                    { "album_artist", albumArtist },
-                    { "artist", artist },
-                    { "date", date.ToString() },
-                    { "disc", discNumber },
-                    { "genre", genre },
-                    { "title", title },
-                    { "track", trackNumber },
-                    { "Disambiguation", disambiguation },
-                    { "MusicBrainzReleaseId", musicBrainzReleaseId },
-                    { "MusicBrainzRecordingId", musicBrainzRecordingId },
-                    { "MusicBrainzTrackId", musicBrainzTrackId },
-                    { "MusicBrainzArtistId", musicBrainzArtistId },
-                    { "MusicBrainzAlbumArtistId", musicBrainzAlbumArtistId },
-                    { "MusicBrainzReleaseGroupId", musicBrainzReleaseGroupId }
-                });
+                .AddId3Tags(
+                    new()
+                    {
+                        { "album", albumNumber },
+                        { "album_artist", albumArtist },
+                        { "artist", artist },
+                        { "date", date.ToString() },
+                        { "disc", discNumber },
+                        { "genre", genre },
+                        { "title", title },
+                        { "track", trackNumber },
+                        { "Disambiguation", disambiguation },
+                        { "MusicBrainzReleaseId", musicBrainzReleaseId },
+                        { "MusicBrainzRecordingId", musicBrainzRecordingId },
+                        { "MusicBrainzTrackId", musicBrainzTrackId },
+                        { "MusicBrainzArtistId", musicBrainzArtistId },
+                        { "MusicBrainzAlbumArtistId", musicBrainzAlbumArtistId },
+                        { "MusicBrainzReleaseGroupId", musicBrainzReleaseGroupId },
+                    }
+                );
 
             container.AddStream(stream);
         }

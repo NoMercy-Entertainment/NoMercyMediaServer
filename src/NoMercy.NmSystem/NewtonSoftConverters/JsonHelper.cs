@@ -23,7 +23,10 @@ public static class JsonHelper
         DefaultValueHandling = DefaultValueHandling.Include, // Include default values
 
         // Error handling
-        Error = (_, ev) => { ev.ErrorContext.Handled = true; }, // Handle errors silently
+        Error = (_, ev) =>
+        {
+            ev.ErrorContext.Handled = true;
+        }, // Handle errors silently
 
         // Type handling
         TypeNameHandling = TypeNameHandling.None, // Do not include type names
@@ -39,12 +42,14 @@ public static class JsonHelper
             new ParseNumbersAsInt32Converter(), // Custom converter for parsing numbers as int
             new StringEnumConverter(), // Convert enums to strings
             new DoubleConverter(), // Custom converter for double values
-        }
+        },
     };
 
     public static T? FromJson<T>(this string? json)
     {
-        return string.IsNullOrEmpty(json) ? default : JsonConvert.DeserializeObject<T>(json, Settings);
+        return string.IsNullOrEmpty(json)
+            ? default
+            : JsonConvert.DeserializeObject<T>(json, Settings);
     }
 
     public static string ToJson<T>(this T self)

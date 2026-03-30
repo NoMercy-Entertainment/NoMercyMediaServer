@@ -16,7 +16,12 @@ public class CastHub : ConnectionHub
 {
     private readonly IClientMessenger _clientMessenger;
 
-    public CastHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory, ConnectedClients connectedClients, IClientMessenger clientMessenger)
+    public CastHub(
+        IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<MediaContext> contextFactory,
+        ConnectedClients connectedClients,
+        IClientMessenger clientMessenger
+    )
         : base(httpContextAccessor, contextFactory, connectedClients)
     {
         _clientMessenger = clientMessenger;
@@ -24,69 +29,153 @@ public class CastHub : ConnectionHub
 
     public class TimeData
     {
-        [JsonProperty("currentTime")] public double CurrentTime { get; set; }
-        [JsonProperty("duration")] public double Duration { get; set; }
-        [JsonProperty("percentage")] public double Percentage { get; set; }
-        [JsonProperty("remaining")] public double Remaining { get; set; }
-        [JsonProperty("currentTimeHuman")] public string CurrentTimeHuman { get; set; } = string.Empty;
-        [JsonProperty("durationHuman")] public string DurationHuman { get; set; } = string.Empty;
-        [JsonProperty("remainingHuman")] public string RemainingHuman { get; set; } = string.Empty;
+        [JsonProperty("currentTime")]
+        public double CurrentTime { get; set; }
+
+        [JsonProperty("duration")]
+        public double Duration { get; set; }
+
+        [JsonProperty("percentage")]
+        public double Percentage { get; set; }
+
+        [JsonProperty("remaining")]
+        public double Remaining { get; set; }
+
+        [JsonProperty("currentTimeHuman")]
+        public string CurrentTimeHuman { get; set; } = string.Empty;
+
+        [JsonProperty("durationHuman")]
+        public string DurationHuman { get; set; } = string.Empty;
+
+        [JsonProperty("remainingHuman")]
+        public string RemainingHuman { get; set; } = string.Empty;
     }
 
     public class TextTrack
     {
-        [JsonProperty("id")] public int Id { get; set; }
-        [JsonProperty("default")] public bool Default { get; set; }
-        [JsonProperty("file")] public string File { get; set; } = string.Empty;
-        [JsonProperty("kind")] public string Kind { get; set; } = string.Empty;
-        [JsonProperty("label")] public string? Label { get; set; }
-        [JsonProperty("language")] public string? Language { get; set; }
-        [JsonProperty("type")] public string? Type { get; set; }
-        [JsonProperty("ext")] public string? Ext { get; set; }
+        [JsonProperty("id")]
+        public int Id { get; set; }
+
+        [JsonProperty("default")]
+        public bool Default { get; set; }
+
+        [JsonProperty("file")]
+        public string File { get; set; } = string.Empty;
+
+        [JsonProperty("kind")]
+        public string Kind { get; set; } = string.Empty;
+
+        [JsonProperty("label")]
+        public string? Label { get; set; }
+
+        [JsonProperty("language")]
+        public string? Language { get; set; }
+
+        [JsonProperty("type")]
+        public string? Type { get; set; }
+
+        [JsonProperty("ext")]
+        public string? Ext { get; set; }
     }
 
     public class AudioTrack
     {
-        [JsonProperty("id")] public int Id { get; set; }
-        [JsonProperty("language")] public string Language { get; set; } = string.Empty;
-        [JsonProperty("label")] public string Label { get; set; } = string.Empty;
+        [JsonProperty("id")]
+        public int Id { get; set; }
+
+        [JsonProperty("language")]
+        public string Language { get; set; } = string.Empty;
+
+        [JsonProperty("label")]
+        public string Label { get; set; } = string.Empty;
     }
 
     public class PlaylistItem
     {
-        [JsonProperty("id")] public string Id { get; set; } = string.Empty;
-        [JsonProperty("uuid")] public string Uuid { get; set; } = string.Empty;
-        [JsonProperty("seasonName")] public string SeasonName { get; set; } = string.Empty;
-        [JsonProperty("progress")] public ProgressDto Progress { get; set; } = new();
-        [JsonProperty("duration")] public string Duration { get; set; } = string.Empty;
-        [JsonProperty("file")] public string File { get; set; } = string.Empty;
-        [JsonProperty("image")] public string Image { get; set; } = string.Empty;
-        [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-        [JsonProperty("tracks")] public TextTrack[] Tracks { get; set; } = [];
-        [JsonProperty("withCredentials")] public bool WithCredentials { get; set; }
-        [JsonProperty("description")] public string Description { get; set; } = string.Empty;
-        [JsonProperty("season")] public int Season { get; set; }
-        [JsonProperty("episode")] public int Episode { get; set; }
-        [JsonProperty("show")] public string Show { get; set; } = string.Empty;
-        [JsonProperty("year")] public int Year { get; set; }
-        [JsonProperty("logo")] public string Logo { get; set; } = string.Empty;
-        [JsonProperty("rating")] public RatingDto Rating { get; set; } = new();
+        [JsonProperty("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonProperty("uuid")]
+        public string Uuid { get; set; } = string.Empty;
+
+        [JsonProperty("seasonName")]
+        public string SeasonName { get; set; } = string.Empty;
+
+        [JsonProperty("progress")]
+        public ProgressDto Progress { get; set; } = new();
+
+        [JsonProperty("duration")]
+        public string Duration { get; set; } = string.Empty;
+
+        [JsonProperty("file")]
+        public string File { get; set; } = string.Empty;
+
+        [JsonProperty("image")]
+        public string Image { get; set; } = string.Empty;
+
+        [JsonProperty("title")]
+        public string Title { get; set; } = string.Empty;
+
+        [JsonProperty("tracks")]
+        public TextTrack[] Tracks { get; set; } = [];
+
+        [JsonProperty("withCredentials")]
+        public bool WithCredentials { get; set; }
+
+        [JsonProperty("description")]
+        public string Description { get; set; } = string.Empty;
+
+        [JsonProperty("season")]
+        public int Season { get; set; }
+
+        [JsonProperty("episode")]
+        public int Episode { get; set; }
+
+        [JsonProperty("show")]
+        public string Show { get; set; } = string.Empty;
+
+        [JsonProperty("year")]
+        public int Year { get; set; }
+
+        [JsonProperty("logo")]
+        public string Logo { get; set; } = string.Empty;
+
+        [JsonProperty("rating")]
+        public RatingDto Rating { get; set; } = new();
     }
 
     public class CastPlayerState
     {
-        [JsonProperty("time")] public TimeData TimeData { get; set; } = new();
-        [JsonProperty("volume")] public int Volume { get; set; }
-        [JsonProperty("muted")] public bool Muted { get; set; }
-        [JsonProperty("isPlaying")] public bool IsPlaying { get; set; }
-        [JsonProperty("playlist")] public PlaylistItem[] Playlist { get; set; } = [];
-        [JsonProperty("currentPlaylistItem")] public PlaylistItem? CurrentPlaylistItem { get; set; }
-        [JsonProperty("subtitles")] public TextTrack[] Subtitles { get; set; } = [];
-        [JsonProperty("currentSubtitleTrack")] public TextTrack CurrentSubtitleTextTrack { get; set; } = new();
-        [JsonProperty("audioTracks")] public AudioTrack[] AudioTracks { get; set; } = [];
-        [JsonProperty("currentAudioTrack")] public int CurrentAudioTrack { get; set; }
-    }
+        [JsonProperty("time")]
+        public TimeData TimeData { get; set; } = new();
 
+        [JsonProperty("volume")]
+        public int Volume { get; set; }
+
+        [JsonProperty("muted")]
+        public bool Muted { get; set; }
+
+        [JsonProperty("isPlaying")]
+        public bool IsPlaying { get; set; }
+
+        [JsonProperty("playlist")]
+        public PlaylistItem[] Playlist { get; set; } = [];
+
+        [JsonProperty("currentPlaylistItem")]
+        public PlaylistItem? CurrentPlaylistItem { get; set; }
+
+        [JsonProperty("subtitles")]
+        public TextTrack[] Subtitles { get; set; } = [];
+
+        [JsonProperty("currentSubtitleTrack")]
+        public TextTrack CurrentSubtitleTextTrack { get; set; } = new();
+
+        [JsonProperty("audioTracks")]
+        public AudioTrack[] AudioTracks { get; set; } = [];
+
+        [JsonProperty("currentAudioTrack")]
+        public int CurrentAudioTrack { get; set; }
+    }
 
     public override async Task OnConnectedAsync()
     {

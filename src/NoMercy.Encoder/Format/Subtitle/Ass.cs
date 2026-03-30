@@ -9,13 +9,7 @@ public class Ass : BaseSubtitle
         SetSubtitleCodec(subtitleCodec);
     }
 
-    public override CodecDto[] AvailableCodecs =>
-    [
-        SubtitleCodecs.Ass
-    ];
+    public override CodecDto[] AvailableCodecs => [SubtitleCodecs.Ass];
 
-    protected override string[] AvailableContainers =>
-    [
-        SubtitleContainers.Ass
-    ];
+    protected override string[] AvailableContainers => [SubtitleContainers.Ass];
 }
