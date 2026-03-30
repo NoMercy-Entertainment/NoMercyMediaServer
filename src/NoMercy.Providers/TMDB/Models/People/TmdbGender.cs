@@ -5,5 +5,5 @@ public enum TmdbGender
     Unknown,
     Female,
     Male,
-    NonBinary
+    NonBinary,
 }

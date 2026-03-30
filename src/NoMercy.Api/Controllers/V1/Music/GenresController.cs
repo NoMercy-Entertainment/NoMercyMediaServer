@@ -24,7 +24,7 @@ public class GenresController : BaseController
     {
         _genreRepository = genreRepository;
     }
-    
+
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -38,28 +38,36 @@ public class GenresController : BaseController
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 
-        ComponentEnvelope response = Component.Grid()
-            .WithItems(genres.Select(Component.GenreCard));
+        ComponentEnvelope response = Component.Grid().WithItems(genres.Select(Component.GenreCard));
 
         return Ok(ComponentResponse.From(response));
     }
 
     [HttpGet]
     [Route("letter/{letter}")]
-    public async Task<IActionResult> LibraryByLetter(Ulid libraryId, string letter, [FromQuery] PageRequestDto request)
+    public async Task<IActionResult> LibraryByLetter(
+        Ulid libraryId,
+        string letter,
+        [FromQuery] PageRequestDto request
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view genres");
 
         Guid userId = User.UserId();
 
-        List<MusicGenreCardDto> genreCards = await _genreRepository.GetPaginatedMusicGenreCardsAsync(userId, letter, request.Take, request.Page);
+        List<MusicGenreCardDto> genreCards =
+            await _genreRepository.GetPaginatedMusicGenreCardsAsync(
+                userId,
+                letter,
+                request.Take,
+                request.Page
+            );
         IEnumerable<NmGenreCardDto> genres = genreCards
             .Select(genre => new NmGenreCardDto(genre))
             .DistinctBy(genre => genre.Title);
 
-        ComponentEnvelope response = Component.Grid()
-            .WithItems(genres.Select(Component.GenreCard));
+        ComponentEnvelope response = Component.Grid().WithItems(genres.Select(Component.GenreCard));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -79,9 +87,6 @@ public class GenresController : BaseController
         if (genre is null)
             return NotFoundResponse("Albums not found");
 
-        return Ok(new GenreResponseDto
-        {
-            Data = new(genre, language)
-        });
+        return Ok(new GenreResponseDto { Data = new(genre, language) });
     }
 }

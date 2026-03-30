@@ -4,23 +4,34 @@ using NoMercy.Providers.TMDB.Models.Shared;
 
 namespace NoMercy.Api.DTOs.Media;
 
-
 public class WatchProviderDto
 {
-    [JsonProperty("id")] public Ulid Id { get; set; }
-    [JsonProperty("provider_id")] public int WatchProviderId { get; set; }
-    [JsonProperty("country_code")] public string CountryCode { get; set; } = string.Empty;
-    [JsonProperty("type")] public string ProviderType { get; set; } = string.Empty; // "flatrate", "buy", "rent", "ads", "free"
-    [JsonProperty("link")] public string? Link { get; set; }
-    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
-    [JsonProperty("logo")] public string? LogoPath { get; set; }
-    [JsonProperty("display_priority")] public int DisplayPriority { get; set; }
+    [JsonProperty("id")]
+    public Ulid Id { get; set; }
 
-    public WatchProviderDto()
-    {
-        
-    }
-    
+    [JsonProperty("provider_id")]
+    public int WatchProviderId { get; set; }
+
+    [JsonProperty("country_code")]
+    public string CountryCode { get; set; } = string.Empty;
+
+    [JsonProperty("type")]
+    public string ProviderType { get; set; } = string.Empty; // "flatrate", "buy", "rent", "ads", "free"
+
+    [JsonProperty("link")]
+    public string? Link { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonProperty("logo")]
+    public string? LogoPath { get; set; }
+
+    [JsonProperty("display_priority")]
+    public int DisplayPriority { get; set; }
+
+    public WatchProviderDto() { }
+
     public WatchProviderDto(WatchProviderMedia wpm)
     {
         Id = wpm.Id;
@@ -33,7 +44,9 @@ public class WatchProviderDto
         DisplayPriority = wpm.WatchProvider.DisplayPriority;
     }
 
-    public WatchProviderDto((string CountryCode, string ProviderType, TmdbPaymentDetails Provider, string? Link) argKey)
+    public WatchProviderDto(
+        (string CountryCode, string ProviderType, TmdbPaymentDetails Provider, string? Link) argKey
+    )
     {
         CountryCode = argKey.CountryCode;
         ProviderType = argKey.ProviderType;

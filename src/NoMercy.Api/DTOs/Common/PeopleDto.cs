@@ -3,28 +3,52 @@ using NoMercy.Api.DTOs.Media;
 using NoMercy.Database;
 using NoMercy.Database.Models.People;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Providers.TMDB.Models.Shared;
 using TmdbGender = NoMercy.Providers.TMDB.Models.People.TmdbGender;
 
 namespace NoMercy.Api.DTOs.Common;
 
 public record PeopleDto
 {
-    [JsonProperty("character")] public string? Character { get; set; }
-    [JsonProperty("job")] public string? Job { get; set; }
-    [JsonProperty("profile")] public string? ProfilePath { get; set; }
-    [JsonProperty("gender")] public string Gender { get; set; }
-    [JsonProperty("id")] public long Id { get; set; }
-    [JsonProperty("known_for_department")] public string? KnownForDepartment { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
-    [JsonProperty("popularity")] public double Popularity { get; set; }
-    [JsonProperty("deathday")] public DateTime? DeathDay { get; set; }
-    [JsonProperty("translations")] public TranslationDto[] Translations { get; set; }
-    [JsonProperty("order")] public int? Order { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("character")]
+    public string? Character { get; set; }
 
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
+    [JsonProperty("job")]
+    public string? Job { get; set; }
+
+    [JsonProperty("profile")]
+    public string? ProfilePath { get; set; }
+
+    [JsonProperty("gender")]
+    public string Gender { get; set; }
+
+    [JsonProperty("id")]
+    public long Id { get; set; }
+
+    [JsonProperty("known_for_department")]
+    public string? KnownForDepartment { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("popularity")]
+    public double Popularity { get; set; }
+
+    [JsonProperty("deathday")]
+    public DateTime? DeathDay { get; set; }
+
+    [JsonProperty("translations")]
+    public TranslationDto[] Translations { get; set; }
+
+    [JsonProperty("order")]
+    public int? Order { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; }
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
 
     public PeopleDto()
     {

@@ -33,21 +33,22 @@ public class CoverArtImageJob : IShouldQueue
     {
         try
         {
-            if (MusicBrainzRelease is null) return;
+            if (MusicBrainzRelease is null)
+                return;
 
             Uri? coverPalette = await FetchCover(MusicBrainzRelease);
-            if (coverPalette is null) return;
+            if (coverPalette is null)
+                return;
 
             await using MediaContext mediaContext = new();
-            Album? album = await mediaContext.Albums
-                .Include(a => a.AlbumTrack)
-                .ThenInclude(a => a.Track)
+            Album? album = await mediaContext
+                .Albums.Include(a => a.AlbumTrack)
+                    .ThenInclude(a => a.Track)
                 .FirstOrDefaultAsync(a => a.Id == MusicBrainzRelease.Id);
-            if (album is null) return;
+            if (album is null)
+                return;
 
-            album.Cover = coverPalette is not null
-                ? "/" + coverPalette.FileName()
-                : album.Cover;
+            album.Cover = coverPalette is not null ? "/" + coverPalette.FileName() : album.Cover;
 
             await mediaContext.SaveChangesAsync();
 
@@ -62,7 +63,8 @@ public class CoverArtImageJob : IShouldQueue
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404")) return;
+            if (e.Message.Contains("404"))
+                return;
             Logger.CoverArt(e.Message, LogEventLevel.Verbose);
         }
     }
@@ -70,19 +72,22 @@ public class CoverArtImageJob : IShouldQueue
     private static async Task<Uri?> FetchCover(MusicBrainzReleaseAppends musicBrainzReleaseAppends)
     {
         bool hasCover = musicBrainzReleaseAppends.CoverArtArchive.Front;
-        if (!hasCover) return null;
+        if (!hasCover)
+            return null;
 
         CoverArtCoverArtClient coverArtCoverArtClient = new(musicBrainzReleaseAppends.Id);
         CoverArtCovers? covers = await coverArtCoverArtClient.Cover();
-        if (covers is null) return null;
+        if (covers is null)
+            return null;
 
-        List<CoverArtImage> coverList = covers.Images
-            .Where(image => image.Types.Contains("Front"))
+        List<CoverArtImage> coverList = covers
+            .Images.Where(image => image.Types.Contains("Front"))
             .ToList();
 
         foreach (CoverArtImage coverItem in coverList)
         {
-            if (!coverItem.CoverArtThumbnails.Large.HasSuccessStatus("image/*")) continue;
+            if (!coverItem.CoverArtThumbnails.Large.HasSuccessStatus("image/*"))
+                continue;
 
             return coverItem.CoverArtThumbnails.Large;
         }

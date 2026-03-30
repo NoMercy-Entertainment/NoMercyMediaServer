@@ -18,7 +18,7 @@ public class PluginRepository : IPluginRepository
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
-        WriteIndented = true
+        WriteIndented = true,
     };
 
     public PluginRepository(HttpClient httpClient, ILogger logger, string pluginsPath)
@@ -57,12 +57,14 @@ public class PluginRepository : IPluginRepository
                 throw new InvalidOperationException($"Repository '{name}' already exists.");
             }
 
-            _repositories.Add(new()
-            {
-                Name = name,
-                Url = url,
-                Enabled = true
-            });
+            _repositories.Add(
+                new()
+                {
+                    Name = name,
+                    Url = url,
+                    Enabled = true,
+                }
+            );
         }
 
         SaveRepositoriesToDisk();
@@ -100,12 +102,20 @@ public class PluginRepository : IPluginRepository
         {
             try
             {
-                List<PluginRepositoryEntry> plugins = await FetchRepositoryPluginsAsync(repo.Url, ct);
+                List<PluginRepositoryEntry> plugins = await FetchRepositoryPluginsAsync(
+                    repo.Url,
+                    ct
+                );
                 allPlugins.AddRange(plugins);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("Failed to refresh repository '{Name}' ({Url}): {Error}", repo.Name, repo.Url, ex.Message);
+                _logger.LogWarning(
+                    "Failed to refresh repository '{Name}' ({Url}): {Error}",
+                    repo.Name,
+                    repo.Url,
+                    ex.Message
+                );
             }
         }
 
@@ -143,13 +153,19 @@ public class PluginRepository : IPluginRepository
         }
     }
 
-    internal async Task<List<PluginRepositoryEntry>> FetchRepositoryPluginsAsync(string url, CancellationToken ct = default)
+    internal async Task<List<PluginRepositoryEntry>> FetchRepositoryPluginsAsync(
+        string url,
+        CancellationToken ct = default
+    )
     {
         using HttpResponseMessage response = await _httpClient.GetAsync(url, ct);
         response.EnsureSuccessStatusCode();
 
         string json = await response.Content.ReadAsStringAsync(ct);
-        PluginRepositoryManifest? manifest = JsonSerializer.Deserialize<PluginRepositoryManifest>(json, JsonOptions);
+        PluginRepositoryManifest? manifest = JsonSerializer.Deserialize<PluginRepositoryManifest>(
+            json,
+            JsonOptions
+        );
 
         if (manifest is null)
         {
@@ -172,7 +188,12 @@ public class PluginRepository : IPluginRepository
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to fetch repository '{Name}' ({Url}): {Error}", name, url, ex.Message);
+            _logger.LogWarning(
+                "Failed to fetch repository '{Name}' ({Url}): {Error}",
+                name,
+                url,
+                ex.Message
+            );
         }
     }
 
@@ -186,7 +207,9 @@ public class PluginRepository : IPluginRepository
         try
         {
             string json = File.ReadAllText(_repositoriesFilePath);
-            List<PluginRepositoryInfo>? repos = JsonSerializer.Deserialize<List<PluginRepositoryInfo>>(json, JsonOptions);
+            List<PluginRepositoryInfo>? repos = JsonSerializer.Deserialize<
+                List<PluginRepositoryInfo>
+            >(json, JsonOptions);
             if (repos is not null)
             {
                 _repositories.AddRange(repos);
@@ -194,7 +217,11 @@ public class PluginRepository : IPluginRepository
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to load repositories from {Path}: {Error}", _repositoriesFilePath, ex.Message);
+            _logger.LogWarning(
+                "Failed to load repositories from {Path}: {Error}",
+                _repositoriesFilePath,
+                ex.Message
+            );
         }
     }
 
@@ -207,7 +234,11 @@ public class PluginRepository : IPluginRepository
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to save repositories to {Path}: {Error}", _repositoriesFilePath, ex.Message);
+            _logger.LogWarning(
+                "Failed to save repositories to {Path}: {Error}",
+                _repositoriesFilePath,
+                ex.Message
+            );
         }
     }
 }

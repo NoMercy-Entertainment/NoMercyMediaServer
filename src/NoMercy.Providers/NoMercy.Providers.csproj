@@ -1,53 +1,51 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Product>NoMercy API Providers</Product>
+    <LangVersion>12</LangVersion>
+    <BuildFrameworkVersion>6.0.2</BuildFrameworkVersion>
+    <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Product>NoMercy API Providers</Product>
-        <LangVersion>12</LangVersion>
-        <BuildFrameworkVersion>6.0.2</BuildFrameworkVersion>
-        <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
-    </PropertyGroup>
-    <PropertyGroup>
-        <IsTestProject>false</IsTestProject>
-    </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="NoMercy.Tests.Providers" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <InternalsVisibleTo Include="NoMercy.Tests.Providers" />
-    </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Database\**" />
+    <EmbeddedResource Remove="Database\**" />
+    <None Remove="Database\**" />
+    <Compile Remove="Helpers\TokenBucketRateLimiterOptions.cs" />
+    <Compile Remove="AniDb\core\**" />
+    <EmbeddedResource Remove="AniDb\core\**" />
+    <None Remove="AniDb\core\**" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <Compile Remove="Database\**"/>
-        <EmbeddedResource Remove="Database\**"/>
-        <None Remove="Database\**"/>
-        <Compile Remove="Helpers\TokenBucketRateLimiterOptions.cs"/>
-        <Compile Remove="AniDb\core\**"/>
-        <EmbeddedResource Remove="AniDb\core\**"/>
-        <None Remove="AniDb\core\**"/>
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AcoustID.NET" />
+    <PackageReference Include="ExtendedNumerics.BigRational" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="MusixmatchClientLib" />
+    <PackageReference Include="Newtonsoft.Json" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="AcoustID.NET"/>
-        <PackageReference Include="ExtendedNumerics.BigRational" />
-        <PackageReference Include="Microsoft.Extensions.Http" />
-        <PackageReference Include="MusixmatchClientLib"/>
-        <PackageReference Include="Newtonsoft.Json" />
-    </ItemGroup>
+  <ItemGroup>
+    <Reference Include="AniDB">
+      <HintPath>AniDb\core\AniDB.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
-    <ItemGroup>
-        <Reference Include="AniDB">
-            <HintPath>AniDb\core\AniDB.dll</HintPath>
-        </Reference>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
-        <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
-        <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj"/>
-        <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
-        <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
-        <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj"/>
-        <ProjectReference Include="..\NoMercy.Setup\NoMercy.Setup.csproj"/>
-    </ItemGroup>
-
+  <ItemGroup>
+    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
+    <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
+    <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
+    <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
+    <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj" />
+    <ProjectReference Include="..\NoMercy.Setup\NoMercy.Setup.csproj" />
+  </ItemGroup>
 </Project>

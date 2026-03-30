@@ -14,7 +14,10 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     private readonly IConnectivityManager _connectivityManager;
     private readonly SemaphoreSlim _reevaluationLock = new(1, 1);
 
-    public NetworkChangeMonitor(INetworkDiscovery networkDiscovery, IConnectivityManager connectivityManager)
+    public NetworkChangeMonitor(
+        INetworkDiscovery networkDiscovery,
+        IConnectivityManager connectivityManager
+    )
     {
         _networkDiscovery = networkDiscovery;
         _connectivityManager = connectivityManager;
@@ -29,7 +32,8 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
 
     private async void OnNetworkAddressChanged(object? sender, EventArgs e)
     {
-        if (!await _reevaluationLock.WaitAsync(0)) return;
+        if (!await _reevaluationLock.WaitAsync(0))
+            return;
 
         try
         {
@@ -37,7 +41,8 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
             // Force re-discovery by reading from interfaces
             string newIp = GetCurrentInternalIp();
 
-            if (newIp == oldIp) return;
+            if (newIp == oldIp)
+                return;
 
             Logger.Setup($"Network address changed: {oldIp} → {newIp}");
             _networkDiscovery.InternalIp = newIp;
@@ -67,14 +72,21 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         {
             foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
             {
-                if (nic.OperationalStatus != OperationalStatus.Up) continue;
-                if (nic.NetworkInterfaceType is NetworkInterfaceType.Loopback
-                    or NetworkInterfaceType.Tunnel) continue;
+                if (nic.OperationalStatus != OperationalStatus.Up)
+                    continue;
+                if (
+                    nic.NetworkInterfaceType
+                    is NetworkInterfaceType.Loopback
+                        or NetworkInterfaceType.Tunnel
+                )
+                    continue;
 
                 foreach (UnicastIPAddressInformation addr in nic.GetIPProperties().UnicastAddresses)
                 {
-                    if (addr.Address.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork) continue;
-                    if (System.Net.IPAddress.IsLoopback(addr.Address)) continue;
+                    if (addr.Address.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
+                        continue;
+                    if (System.Net.IPAddress.IsLoopback(addr.Address))
+                        continue;
 
                     return addr.Address.ToString();
                 }
@@ -104,20 +116,30 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
                 { "version", NmSystem.Information.Software.Version!.ToString() },
                 { "platform", NmSystem.Information.Info.Platform },
                 { "stun_public_ip", NmSystem.Information.Config.StunPublicIp.OrEmpty() },
-                { "stun_public_port", (NmSystem.Information.Config.StunPublicPort?.ToString()).OrEmpty() },
-                { "stun_nat_type", NmSystem.Information.Config.NatStatus.ToString() }
+                {
+                    "stun_public_port",
+                    (NmSystem.Information.Config.StunPublicPort?.ToString()).OrEmpty()
+                },
+                { "stun_nat_type", NmSystem.Information.Config.NatStatus.ToString() },
             };
 
             Logger.Register("Your IP address has changed, updating server information...");
 
             GenericHttpClient authClient = new(NmSystem.Information.Config.ApiServerBaseUrl);
-            authClient.SetDefaultHeaders(NmSystem.Information.Config.UserAgent, Globals.Globals.AccessToken);
-            string response =
-                await authClient.SendAndReadAsync(HttpMethod.Post, "ping", new FormUrlEncodedContent(serverData));
+            authClient.SetDefaultHeaders(
+                NmSystem.Information.Config.UserAgent,
+                Globals.Globals.AccessToken
+            );
+            string response = await authClient.SendAndReadAsync(
+                HttpMethod.Post,
+                "ping",
+                new FormUrlEncodedContent(serverData)
+            );
 
             object? data = Newtonsoft.Json.JsonConvert.DeserializeObject(response);
 
-            if (data == null) throw new("Failed to update server information");
+            if (data == null)
+                throw new("Failed to update server information");
 
             Logger.Register("Server information updated successfully");
         }

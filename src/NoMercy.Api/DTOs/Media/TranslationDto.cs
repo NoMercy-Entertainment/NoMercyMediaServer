@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using NoMercy.Database.Models.Media;
-using NoMercy.Providers.TMDB.Models.Combined;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Providers.TMDB.Models.Combined;
 
 namespace NoMercy.Api.DTOs.Media;
 
@@ -25,9 +25,18 @@ public record TranslationDto
         Biography = translation.Data.Biography.OrEmpty();
     }
 
-    [JsonProperty("iso_3166_1")] public string Iso31661 { get; set; } = string.Empty;
-    [JsonProperty("iso_639_1")] public string Iso6391 { get; set; } = string.Empty;
-    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
-    [JsonProperty("english_name")] public string EnglishName { get; set; } = string.Empty;
-    [JsonProperty("biography")] public string Biography { get; set; } = string.Empty;
+    [JsonProperty("iso_3166_1")]
+    public string Iso31661 { get; set; } = string.Empty;
+
+    [JsonProperty("iso_639_1")]
+    public string Iso6391 { get; set; } = string.Empty;
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonProperty("english_name")]
+    public string EnglishName { get; set; } = string.Empty;
+
+    [JsonProperty("biography")]
+    public string Biography { get; set; } = string.Empty;
 }

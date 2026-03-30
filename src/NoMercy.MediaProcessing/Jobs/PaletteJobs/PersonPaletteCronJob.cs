@@ -23,27 +23,32 @@ public class PersonPaletteCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        List<Person[]> people = _context.People
-            .Where(x => string.IsNullOrEmpty(x._colorPalette))
+        List<Person[]> people = _context
+            .People.Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
             .Take(100)
             .ToList()
             .Chunk(10)
             .ToList();
 
-        if (people.Count == 0) return;
+        if (people.Count == 0)
+            return;
 
         _logger.LogTrace("Found {Count} person chunks to process", people.Count);
 
         foreach (Person[] peopleChunk in people)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
             foreach (Person person in peopleChunk)
             {
                 try
                 {
-                    person._colorPalette = await MovieDbImageManager.ColorPalette("profile", person.Profile);
+                    person._colorPalette = await MovieDbImageManager.ColorPalette(
+                        "profile",
+                        person.Profile
+                    );
                 }
                 catch (Exception)
                 {
@@ -54,7 +59,9 @@ public class PersonPaletteCronJob : ICronJobExecutor
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        _logger.LogTrace("Person palette job completed, updated: {Count}", people.Sum(x => x.Length));
-
+        _logger.LogTrace(
+            "Person palette job completed, updated: {Count}",
+            people.Sum(x => x.Length)
+        );
     }
 }

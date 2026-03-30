@@ -17,7 +17,8 @@ public class VideoPlayerStateFactory
         VideoPlaylistResponseDto item,
         List<VideoPlaylistResponseDto> playlist,
         string type,
-        dynamic listId)
+        dynamic listId
+    )
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync();
 
@@ -29,8 +30,8 @@ public class VideoPlayerStateFactory
         TryParse(id, out int parsedId);
 
         // Include playback preferences and their Library collections to ensure data available for matching
-        User? userPreference = await context.Users
-            .Include(u => u.PlaybackPreferences)
+        User? userPreference = await context
+            .Users.Include(u => u.PlaybackPreferences)
                 .ThenInclude(playbackPreference => playbackPreference.Library)
                     .ThenInclude(library => library!.LibraryTvs)
             .Include(u => u.PlaybackPreferences)
@@ -64,19 +65,24 @@ public class VideoPlayerStateFactory
                         Pausing = false,
                         Resuming = true,
                         Previous = playlist.IndexOf(item) == 0,
-                        Next = playlist.IndexOf(item) == playlist.Count - 1
-                    }
-                }
+                        Next = playlist.IndexOf(item) == playlist.Count - 1,
+                    },
+                },
             };
         }
 
-        PlaybackPreference? playbackPreference = FindPlaybackPreference(userPreference, id, parsedId, type);
+        PlaybackPreference? playbackPreference = FindPlaybackPreference(
+            userPreference,
+            id,
+            parsedId,
+            type
+        );
 
         if (playbackPreference is null)
         {
             playbackPreference = CreateDefaultPlaybackPreference(item);
         }
-        
+
         return new()
         {
             DeviceId = device.DeviceId,
@@ -100,28 +106,48 @@ public class VideoPlayerStateFactory
                     Pausing = false,
                     Resuming = true,
                     Previous = playlist.IndexOf(item) == 0,
-                    Next = playlist.IndexOf(item) == playlist.Count - 1
-                }
-            }
+                    Next = playlist.IndexOf(item) == playlist.Count - 1,
+                },
+            },
         };
     }
 
-    private static PlaybackPreference? FindPlaybackPreference(User userPreference, string id, int parsedId, string type)
+    private static PlaybackPreference? FindPlaybackPreference(
+        User userPreference,
+        string id,
+        int parsedId,
+        string type
+    )
     {
-        PlaybackPreference? byIds = userPreference.PlaybackPreferences
-            .FirstOrDefault(p =>
-                (p.MovieId is not null && p.MovieId.ToString() == id && Config.MovieMediaType == type) ||
-                (p.TvId is not null && p.TvId.ToString() == id && Config.TvMediaType == type) ||
-                (p.CollectionId is not null && p.CollectionId.ToString() == id && Config.CollectionMediaType == type) ||
-                (p.SpecialId is not null && p.SpecialId.ToString() == id && Config.SpecialMediaType == type));
+        PlaybackPreference? byIds = userPreference.PlaybackPreferences.FirstOrDefault(p =>
+            (p.MovieId is not null && p.MovieId.ToString() == id && Config.MovieMediaType == type)
+            || (p.TvId is not null && p.TvId.ToString() == id && Config.TvMediaType == type)
+            || (
+                p.CollectionId is not null
+                && p.CollectionId.ToString() == id
+                && Config.CollectionMediaType == type
+            )
+            || (
+                p.SpecialId is not null
+                && p.SpecialId.ToString() == id
+                && Config.SpecialMediaType == type
+            )
+        );
 
         if (byIds is not null)
             return byIds;
 
-        return userPreference.PlaybackPreferences
-            .FirstOrDefault(p => p.Library != null && (p.Library.Type == type ||
-                                                      (type == Config.TvMediaType && p.Library.LibraryTvs.Any(t => t.TvId == parsedId)) ||
-                                                      (type == Config.MovieMediaType && p.Library.LibraryMovies.Any(m => m.MovieId == parsedId))));
+        return userPreference.PlaybackPreferences.FirstOrDefault(p =>
+            p.Library != null
+            && (
+                p.Library.Type == type
+                || (type == Config.TvMediaType && p.Library.LibraryTvs.Any(t => t.TvId == parsedId))
+                || (
+                    type == Config.MovieMediaType
+                    && p.Library.LibraryMovies.Any(m => m.MovieId == parsedId)
+                )
+            )
+        );
     }
 
     private static PlaybackPreference CreateDefaultPlaybackPreference(VideoPlaylistResponseDto item)
@@ -134,23 +160,16 @@ public class VideoPlayerStateFactory
 
         return new()
         {
-            Video = width.HasValue
-                ? new()
-                {
-                    Width = width.Value
-                }
-                : null,
-            Audio = audioLanguage is not null
-                ? new() { Language = audioLanguage }
-                : null,
+            Video = width.HasValue ? new() { Width = width.Value } : null,
+            Audio = audioLanguage is not null ? new() { Language = audioLanguage } : null,
             Subtitle = subtitleLanguage is not null
                 ? new()
                 {
                     Language = subtitleLanguage,
                     Type = subtitleType,
-                    Codec = subtitleCodec
+                    Codec = subtitleCodec,
                 }
-                : null
+                : null,
         };
     }
 }

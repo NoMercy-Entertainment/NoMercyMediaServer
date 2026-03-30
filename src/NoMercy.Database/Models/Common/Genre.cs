@@ -12,12 +12,14 @@ public class Genre
     [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
 
     public ICollection<GenreMovie> GenreMovies { get; set; } = [];
     public ICollection<GenreTv> GenreTvShows { get; set; } = [];
 
-    [JsonProperty("translations")] public ICollection<Translation> Translations { get; set; } = [];
+    [JsonProperty("translations")]
+    public ICollection<Translation> Translations { get; set; } = [];
 
     public Genre()
     {

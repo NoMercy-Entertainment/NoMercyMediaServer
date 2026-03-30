@@ -39,25 +39,29 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
     {
         if (MusicBrainzArtist != null)
             await HandleArtist();
-        else if (MusicBrainzReleaseGroup != null) await HandleReleaseGroup();
+        else if (MusicBrainzReleaseGroup != null)
+            await HandleReleaseGroup();
     }
 
     private async Task HandleArtist()
     {
-        if (MusicBrainzArtist == null) return;
+        if (MusicBrainzArtist == null)
+            return;
 
         try
         {
             TadbArtistClient artistClient = new();
             TadbArtist? result = artistClient.ByMusicBrainzId(MusicBrainzArtist.Id);
-            if (result?.Descriptions is null) return;
+            if (result?.Descriptions is null)
+                return;
 
             await using MediaContext context = new();
             Artist? artist = await context.Artists.FindAsync(MusicBrainzArtist.Id);
-            if (artist == null) return;
+            if (artist == null)
+                return;
 
-            artist.Description = result.Descriptions
-                .Where(x => x.Iso31661 == "EN")
+            artist.Description = result
+                .Descriptions.Where(x => x.Iso31661 == "EN")
                 .Select(x => x.Description)
                 .FirstOrDefault();
             artist.Year = result.IntFormedYear?.ToInt();
@@ -67,46 +71,57 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
             {
                 ArtistId = MusicBrainzArtist.Id,
                 Iso31661 = x.Iso31661,
-                Description = x.Description
+                Description = x.Description,
             });
 
-            await context.Translations.UpsertRange(translations)
+            await context
+                .Translations.UpsertRange(translations)
                 .On(x => new { x.ArtistId, x.Iso31661 })
-                .WhenMatched((s, i) => new()
-                {
-                    ArtistId = s.ArtistId,
-                    Iso31661 = s.Iso31661,
-                    Description = s.Description
-                })
+                .WhenMatched(
+                    (s, i) =>
+                        new()
+                        {
+                            ArtistId = s.ArtistId,
+                            Iso31661 = s.Iso31661,
+                            Description = s.Description,
+                        }
+                )
                 .RunAsync();
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404")) return;
+            if (e.Message.Contains("404"))
+                return;
             Logger.AudioDb(e.Message, LogEventLevel.Verbose);
         }
     }
 
     private async Task HandleReleaseGroup()
     {
-        if (MusicBrainzReleaseGroup == null) return;
+        if (MusicBrainzReleaseGroup == null)
+            return;
 
         try
         {
             TadbReleaseGroupClient releaseClient = new();
             TadbAlbum? result = releaseClient.ByMusicBrainzId(MusicBrainzReleaseGroup.Id);
-            if (result?.Descriptions is null) return;
+            if (result?.Descriptions is null)
+                return;
 
             await using MediaContext context = new();
-            ReleaseGroup? releaseGroup = await context.ReleaseGroups.FindAsync(MusicBrainzReleaseGroup.Id);
-            if (releaseGroup == null) return;
+            ReleaseGroup? releaseGroup = await context.ReleaseGroups.FindAsync(
+                MusicBrainzReleaseGroup.Id
+            );
+            if (releaseGroup == null)
+                return;
 
-            string? description = result.Descriptions
-                .Where(x => x.Iso31661 == "EN")
+            string? description = result
+                .Descriptions.Where(x => x.Iso31661 == "EN")
                 .Select(x => x.Description)
                 .FirstOrDefault();
 
-            bool hasUpdatedDescription = !string.IsNullOrEmpty(description) && releaseGroup.Description != description;
+            bool hasUpdatedDescription =
+                !string.IsNullOrEmpty(description) && releaseGroup.Description != description;
 
             releaseGroup.Description = description;
             if (hasUpdatedDescription)
@@ -116,22 +131,27 @@ public class MusicMetadataJob : AbstractMusicDescriptionJob
             {
                 ReleaseGroupId = MusicBrainzReleaseGroup.Id,
                 Iso31661 = x.Iso31661,
-                Description = x.Description
+                Description = x.Description,
             });
 
-            await context.Translations.UpsertRange(translations)
+            await context
+                .Translations.UpsertRange(translations)
                 .On(x => new { x.ReleaseGroupId, x.Iso31661 })
-                .WhenMatched((s, i) => new()
-                {
-                    ReleaseGroupId = s.ReleaseGroupId,
-                    Iso31661 = s.Iso31661,
-                    Description = s.Description
-                })
+                .WhenMatched(
+                    (s, i) =>
+                        new()
+                        {
+                            ReleaseGroupId = s.ReleaseGroupId,
+                            Iso31661 = s.Iso31661,
+                            Description = s.Description,
+                        }
+                )
                 .RunAsync();
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404")) return;
+            if (e.Message.Contains("404"))
+                return;
             Logger.AudioDb(e.Message, LogEventLevel.Verbose);
         }
     }

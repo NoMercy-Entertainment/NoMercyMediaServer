@@ -12,7 +12,12 @@ public class PluginContext : IPluginContext
     public string DataFolderPath { get; }
     public IPluginConfiguration Configuration { get; }
 
-    public PluginContext(IEventBus eventBus, IServiceProvider services, ILogger logger, string dataFolderPath)
+    public PluginContext(
+        IEventBus eventBus,
+        IServiceProvider services,
+        ILogger logger,
+        string dataFolderPath
+    )
     {
         EventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         Services = services ?? throw new ArgumentNullException(nameof(services));

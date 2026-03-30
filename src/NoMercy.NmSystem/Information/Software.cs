@@ -30,15 +30,9 @@ public static class Software
     internal static Guid GetDeviceId()
     {
         string? generatedId = new DeviceIdBuilder()
-            .OnWindows(windows => windows
-                .AddMotherboardSerialNumber()
-                .AddSystemDriveSerialNumber())
-            .OnLinux(linux => linux
-                .AddMotherboardSerialNumber()
-                .AddSystemDriveSerialNumber())
-            .OnMac(mac => mac
-                .AddSystemDriveSerialNumber()
-                .AddPlatformSerialNumber())
+            .OnWindows(windows => windows.AddMotherboardSerialNumber().AddSystemDriveSerialNumber())
+            .OnLinux(linux => linux.AddMotherboardSerialNumber().AddSystemDriveSerialNumber())
+            .OnMac(mac => mac.AddSystemDriveSerialNumber().AddPlatformSerialNumber())
             .ToString();
 
         byte[] hash = MD5.HashData(Encoding.UTF8.GetBytes(generatedId));
@@ -81,7 +75,11 @@ public static class Software
                 return null;
 
             FileVersionInfo fileInfo = FileVersionInfo.GetVersionInfo(exePath);
-            if (fileInfo.FileMajorPart == 0 && fileInfo.FileMinorPart == 0 && fileInfo.FileBuildPart == 0)
+            if (
+                fileInfo.FileMajorPart == 0
+                && fileInfo.FileMinorPart == 0
+                && fileInfo.FileBuildPart == 0
+            )
                 return null;
 
             return $"{fileInfo.FileMajorPart}.{fileInfo.FileMinorPart}.{fileInfo.FileBuildPart}";
@@ -97,7 +95,9 @@ public static class Software
         if (IsWindows)
         {
 #pragma warning disable CA1416
-            ManagementObjectSearcher searcher = new("select LastBootUpTime from Win32_OperatingSystem");
+            ManagementObjectSearcher searcher = new(
+                "select LastBootUpTime from Win32_OperatingSystem"
+            );
             foreach (ManagementBaseObject? o in searcher.Get())
             {
                 ManagementObject? item = (ManagementObject)o;
@@ -108,7 +108,9 @@ public static class Software
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             string output = SystemCalls.Shell.ExecCommand("sysctl -n kern.boottime");
-            return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(long.Parse(output.Split(' ').Last()));
+            return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(
+                long.Parse(output.Split(' ').Last())
+            );
         }
         else
         {

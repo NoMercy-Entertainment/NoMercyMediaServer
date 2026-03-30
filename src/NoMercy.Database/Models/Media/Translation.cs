@@ -32,47 +32,75 @@ public class Translation : Timestamps
     [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty("iso_3166_1")] public string? Iso31661 { get; set; }
-    [JsonProperty("iso_639_1")] public string? Iso6391 { get; set; }
-    [JsonProperty("name")] public string? Name { get; set; }
-    [JsonProperty("english_name")] public string? EnglishName { get; set; }
-    [JsonProperty("title")] public string? Title { get; set; }
-    [MaxLength(4096)] [JsonProperty("overview")] public string? Overview { get; set; }
-    [MaxLength(4096)] [JsonProperty("description")] public string? Description { get; set; }
-    [JsonProperty("homepage")] public string? Homepage { get; set; }
-    [MaxLength(4096)] [JsonProperty("biography")] public string? Biography { get; set; }
+    [JsonProperty("iso_3166_1")]
+    public string? Iso31661 { get; set; }
 
-    [JsonProperty("tv_id")] public int? TvId { get; set; }
+    [JsonProperty("iso_639_1")]
+    public string? Iso6391 { get; set; }
+
+    [JsonProperty("name")]
+    public string? Name { get; set; }
+
+    [JsonProperty("english_name")]
+    public string? EnglishName { get; set; }
+
+    [JsonProperty("title")]
+    public string? Title { get; set; }
+
+    [MaxLength(4096)]
+    [JsonProperty("overview")]
+    public string? Overview { get; set; }
+
+    [MaxLength(4096)]
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    [JsonProperty("homepage")]
+    public string? Homepage { get; set; }
+
+    [MaxLength(4096)]
+    [JsonProperty("biography")]
+    public string? Biography { get; set; }
+
+    [JsonProperty("tv_id")]
+    public int? TvId { get; set; }
     public Tv? Tv { get; set; }
 
-    [JsonProperty("season_id")] public int? SeasonId { get; set; }
+    [JsonProperty("season_id")]
+    public int? SeasonId { get; set; }
     public Season? Season { get; set; }
 
-    [JsonProperty("episode_id")] public int? EpisodeId { get; set; }
+    [JsonProperty("episode_id")]
+    public int? EpisodeId { get; set; }
     public Episode? Episode { get; set; }
 
-    [JsonProperty("movie_id")] public int? MovieId { get; set; }
+    [JsonProperty("movie_id")]
+    public int? MovieId { get; set; }
     public Movie? Movie { get; set; }
 
-    [JsonProperty("collection_id")] public int? CollectionId { get; set; }
+    [JsonProperty("collection_id")]
+    public int? CollectionId { get; set; }
     public Collection? Collection { get; set; }
 
-    [JsonProperty("person_id")] public int? PersonId { get; set; }
+    [JsonProperty("person_id")]
+    public int? PersonId { get; set; }
     public Person? People { get; set; }
 
-    [JsonProperty("release_group_id")] public Guid? ReleaseGroupId { get; set; }
+    [JsonProperty("release_group_id")]
+    public Guid? ReleaseGroupId { get; set; }
     public ReleaseGroup? ReleaseGroup { get; set; }
 
-    [JsonProperty("artist_id")] public Guid? ArtistId { get; set; }
+    [JsonProperty("artist_id")]
+    public Guid? ArtistId { get; set; }
     public Artist? Artist { get; set; }
 
-    [JsonProperty("release_id")] public Guid? AlbumId { get; set; }
+    [JsonProperty("release_id")]
+    public Guid? AlbumId { get; set; }
     public Album? Album { get; set; }
 
-    [JsonProperty("genre_id")] public int? GenreId { get; set; }
+    [JsonProperty("genre_id")]
+    public int? GenreId { get; set; }
     public Genre? Genre { get; set; }
 
-    public Translation()
-    {
-    }
+    public Translation() { }
 }

@@ -2,6 +2,4 @@
 
 namespace NoMercy.Providers.TMDB.Models.People;
 
-public class TmdbPersonPopular : TmdbPaginatedResponse<TmdbPerson>
-{
-}
+public class TmdbPersonPopular : TmdbPaginatedResponse<TmdbPerson> { }

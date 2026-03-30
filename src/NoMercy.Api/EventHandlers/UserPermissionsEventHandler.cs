@@ -13,18 +13,22 @@ public class UserPermissionsEventHandler : IDisposable
     public UserPermissionsEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(eventBus.Subscribe<UserPermissionsChangedEvent>(OnUserPermissionsChanged));
+        _subscriptions.Add(
+            eventBus.Subscribe<UserPermissionsChangedEvent>(OnUserPermissionsChanged)
+        );
     }
 
     internal Task OnUserPermissionsChanged(UserPermissionsChangedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll("RefreshPermissions", "dashboardHub", new
-        {
-            userId = @event.UserId,
-            changedBy = @event.ChangedBy
-        });
+        _clientMessenger.SendToAll(
+            "RefreshPermissions",
+            "dashboardHub",
+            new { userId = @event.UserId, changedBy = @event.ChangedBy }
+        );
 
-        Logger.Socket($"User permissions changed: UserId={@event.UserId}, ChangedBy={@event.ChangedBy}");
+        Logger.Socket(
+            $"User permissions changed: UserId={@event.UserId}, ChangedBy={@event.ChangedBy}"
+        );
         return Task.CompletedTask;
     }
 

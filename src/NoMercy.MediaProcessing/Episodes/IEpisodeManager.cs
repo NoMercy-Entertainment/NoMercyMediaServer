@@ -6,5 +6,9 @@ namespace NoMercy.MediaProcessing.Episodes;
 
 public interface IEpisodeManager
 {
-    public Task<IEnumerable<Episode>> Add(TmdbTvShow show, TmdbSeasonAppends season, bool? priority = false);
+    public Task<IEnumerable<Episode>> Add(
+        TmdbTvShow show,
+        TmdbSeasonAppends season,
+        bool? priority = false
+    );
 }

@@ -18,11 +18,17 @@ public class Wip
     {
         // string fileName = "E:/";
         // string fileName = @"M:\Anime\Download\Bleach\[BDMV] Bleach [BD-BOX] [SET-1]\BLEACH SET 1 DISC 2";
-        IDirectoryInfo directoryInfo =
-            new DirectoryInfo(
-                @"E:\TV.Shows\Download\The.Pink.Panther\The Pink Panther - La Pantera Rosa Vol 2 (1966-1968) [Bluray 1080p AVC Eng DTS-HD MA 2.0]");
+        IDirectoryInfo directoryInfo = new DirectoryInfo(
+            @"E:\TV.Shows\Download\The.Pink.Panther\The Pink Panther - La Pantera Rosa Vol 2 (1966-1968) [Bluray 1080p AVC Eng DTS-HD MA 2.0]"
+        );
 
-        string metadataFile = Path.Combine(directoryInfo.FullName, "BDMV", "META", "DL", "bdmt_eng.xml");
+        string metadataFile = Path.Combine(
+            directoryInfo.FullName,
+            "BDMV",
+            "META",
+            "DL",
+            "bdmt_eng.xml"
+        );
 
         string xmlContent = File.ReadAllText(metadataFile);
 
@@ -41,11 +47,15 @@ public class Wip
 
         string title = doc.Descendants(di + "name").FirstOrDefault()?.Value ?? bDRom.VolumeLabel;
 
-        string playlistString = Shell.ExecStdOutSync(AppFiles.FfProbePath,
-            $" -hide_banner -v info -i \"bluray:{directoryInfo.FullName}\"");
+        string playlistString = Shell.ExecStdOutSync(
+            AppFiles.FfProbePath,
+            $" -hide_banner -v info -i \"bluray:{directoryInfo.FullName}\""
+        );
 
-        string ffprobeString = Shell.ExecStdOutSync(AppFiles.FfProbePath,
-            $" -v quiet -show_programs -show_format -show_streams -show_data -show_chapters -sexagesimal -print_format json \"bluray:{directoryInfo.FullName}\"");
+        string ffprobeString = Shell.ExecStdOutSync(
+            AppFiles.FfProbePath,
+            $" -v quiet -show_programs -show_format -show_streams -show_data -show_chapters -sexagesimal -print_format json \"bluray:{directoryInfo.FullName}\""
+        );
 
         File.WriteAllText(Path.Combine(AppFiles.TempPath, "bdrom.json"), bDRom.ToJson());
         File.WriteAllText(Path.Combine(AppFiles.TempPath, "analysis.json"), ffprobeString);
@@ -53,7 +63,9 @@ public class Wip
         // string playlistString = HlsPlaylistGenerator.RunProcess(AppFiles.FfmpegPath,
         //     $" -v info \"bluray:{fileName}\"");
 
-        Regex regex = new(@"\[bluray.*?playlist\s(?<playlist>\d+).mpls\s\((?<duration>\d{1,}:\d{1,}:\d{1,})\)");
+        Regex regex = new(
+            @"\[bluray.*?playlist\s(?<playlist>\d+).mpls\s\((?<duration>\d{1,}:\d{1,}:\d{1,})\)"
+        );
         List<Match> matches = regex.Matches(playlistString).ToList();
 
         foreach (Match match in matches)
@@ -64,12 +76,17 @@ public class Wip
             int matchIndex = matches.IndexOf(match);
 
             string matchTitle = $"{title} {matchIndex + 1}".Replace(":", "");
-            string outputFile = Path.Combine(@"G:\TV.Shows\Download\The.Pink.Panther", $"{matchTitle}.mkv");
+            string outputFile = Path.Combine(
+                @"G:\TV.Shows\Download\The.Pink.Panther",
+                $"{matchTitle}.mkv"
+            );
             string chaptersFile = Path.Combine(AppFiles.TempPath, $"{matchTitle}.txt");
 
             string playlist = match.Groups["playlist"].Value;
 
-            TSPlaylistFile playlistFile = bDRom.PlaylistFiles.FirstOrDefault(c => c.Key.StartsWith(playlist)).Value;
+            TSPlaylistFile playlistFile = bDRom
+                .PlaylistFiles.FirstOrDefault(c => c.Key.StartsWith(playlist))
+                .Value;
             List<TSStream> streams = playlistFile.PlaylistStreams.Values.ToList();
             int duration = playlistFile.TotalLength.ToInt();
             List<double>? chapters = playlistFile.Chapters;
@@ -94,7 +111,8 @@ public class Wip
             foreach (double start in chapters)
             {
                 int chapterIndex = chapters.IndexOf(start);
-                double end = chapterIndex < chapters.Count - 1 ? chapters[chapterIndex + 1] : duration;
+                double end =
+                    chapterIndex < chapters.Count - 1 ? chapters[chapterIndex + 1] : duration;
 
                 chapterSb.AppendLine("[CHAPTER]");
                 chapterSb.AppendLine("TIMEBASE=1/1000");
@@ -117,7 +135,8 @@ public class Wip
                 string language = stream.LanguageName;
 
                 sb.Append(
-                    $" -map 0:{index} -metadata:s:{index} language={languageCode} -metadata:s:{index} title=\"{language ?? matchTitle}\"");
+                    $" -map 0:{index} -metadata:s:{index} language={languageCode} -metadata:s:{index} title=\"{language ?? matchTitle}\""
+                );
             }
 
             sb.Append($" -f matroska \"{outputFile}\" -y");

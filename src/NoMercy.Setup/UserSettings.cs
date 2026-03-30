@@ -17,28 +17,24 @@ public static class UserSettings
         {
             using MediaContext mediaContext = new();
             List<Configuration> configuration = mediaContext.Configuration.ToList();
-            
+
             foreach (Configuration config in configuration)
             {
                 switch (config.Key)
                 {
                     case "internalPort" when Config.InternalServerPort != int.Parse(config.Value):
                         config.Value = Config.InternalServerPort.ToString();
-                        mediaContext.Configuration.Upsert(new()
-                            {
-                            Key = config.Key,
-                            Value = config.Value
-                        }).On(c => c.Key)
-                        .Run();
+                        mediaContext
+                            .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
+                            .On(c => c.Key)
+                            .Run();
                         break;
                     case "externalPort" when Config.ExternalServerPort != int.Parse(config.Value):
                         config.Value = Config.ExternalServerPort.ToString();
-                        mediaContext.Configuration.Upsert(new()
-                            {
-                            Key = config.Key,
-                            Value = config.Value
-                        }).On(c => c.Key)
-                        .Run();
+                        mediaContext
+                            .Configuration.Upsert(new() { Key = config.Key, Value = config.Value })
+                            .On(c => c.Key)
+                            .Run();
                         break;
                 }
                 settings[config.Key] = config.Value;
@@ -59,7 +55,7 @@ public static class UserSettings
         {
             if (!silent)
                 Logger.App($"Configuration: {setting.Key} = {setting.Value}");
-            
+
             switch (setting.Key)
             {
                 case "internalPort" when Config.InternalServerPort == int.Parse(setting.Value):
@@ -67,23 +63,31 @@ public static class UserSettings
                     break;
                 case "internalPort" when Config.InternalServerPort != int.Parse(setting.Value):
                     Config.InternalServerPort = int.Parse(setting.Value);
-                    mediaContext.Configuration.Upsert(new()
-                        {
-                        Key = setting.Key,
-                        Value = Config.InternalServerPort.ToString()
-                    }).On(c => c.Key)
-                    .Run();
-                break;
+                    mediaContext
+                        .Configuration.Upsert(
+                            new()
+                            {
+                                Key = setting.Key,
+                                Value = Config.InternalServerPort.ToString(),
+                            }
+                        )
+                        .On(c => c.Key)
+                        .Run();
+                    break;
                 case "externalPort" when Config.ExternalServerPort == int.Parse(setting.Value):
                     Config.ExternalServerPort = int.Parse(setting.Value);
                     break;
                 case "externalPort" when Config.ExternalServerPort != int.Parse(setting.Value):
                     Config.ExternalServerPort = int.Parse(setting.Value);
-                    mediaContext.Configuration.Upsert(new()
-                        {
-                            Key = setting.Key,
-                            Value = Config.ExternalServerPort.ToString()
-                        }).On(c => c.Key)
+                    mediaContext
+                        .Configuration.Upsert(
+                            new()
+                            {
+                                Key = setting.Key,
+                                Value = Config.ExternalServerPort.ToString(),
+                            }
+                        )
+                        .On(c => c.Key)
                         .Run();
                     break;
                 case "libraryRunners":

@@ -40,13 +40,13 @@ public static class Certificate
             listenOptions.Protocols = HttpProtocols.Http1;
         }
     }
-    
+
     private static HttpsConnectionAdapterOptions HttpsConnectionAdapterOptions()
     {
         return new()
         {
             SslProtocols = SslProtocols.Tls12,
-            ServerCertificate = CombinePublicAndPrivateCerts()
+            ServerCertificate = CombinePublicAndPrivateCerts(),
         };
     }
 
@@ -54,19 +54,18 @@ public static class Certificate
     {
         if (!File.Exists(AppFiles.CertFile))
             throw new FileNotFoundException($"Certificate file not found: {AppFiles.CertFile}");
-        
+
         if (!File.Exists(AppFiles.KeyFile))
             throw new FileNotFoundException($"Private key file not found: {AppFiles.KeyFile}");
 
         string certPem = File.ReadAllText(AppFiles.CertFile);
         string keyPem = File.ReadAllText(AppFiles.KeyFile);
-        
+
         using X509Certificate2 tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
-        
+
         byte[] pkcs12Data = tempCert.Export(X509ContentType.Pkcs12);
         return X509CertificateLoader.LoadPkcs12(pkcs12Data, null);
     }
-
 
     private static bool ValidateSslCertificate()
     {
@@ -85,7 +84,8 @@ public static class Certificate
             if (certificate.NotAfter < DateTime.Now.AddDays(30))
             {
                 Logger.Certificate(
-                    $"SSL cert expires {certificate.NotAfter:yyyy-MM-dd} — will attempt renewal");
+                    $"SSL cert expires {certificate.NotAfter:yyyy-MM-dd} — will attempt renewal"
+                );
                 return false; // Expiring soon — trigger renewal
             }
 
@@ -93,8 +93,10 @@ public static class Certificate
         }
         catch (Exception e)
         {
-            Logger.Certificate($"Failed to validate certificate: {e.Message}",
-                Serilog.Events.LogEventLevel.Warning);
+            Logger.Certificate(
+                $"Failed to validate certificate: {e.Message}",
+                Serilog.Events.LogEventLevel.Warning
+            );
             return false;
         }
     }
@@ -111,15 +113,16 @@ public static class Certificate
 
         bool hasExistingCert = File.Exists(AppFiles.CertFile);
 
-        Logger.Certificate(!hasExistingCert
-            ? "Generating SSL Certificate..."
-            : "Renewing SSL Certificate...");
+        Logger.Certificate(
+            !hasExistingCert ? "Generating SSL Certificate..." : "Renewing SSL Certificate..."
+        );
 
         try
         {
             if (string.IsNullOrEmpty(Globals.Globals.AccessToken))
                 throw new InvalidOperationException(
-                    "No access token available for certificate request — re-authentication required");
+                    "No access token available for certificate request — re-authentication required"
+                );
 
             using HttpClient client = DnsHttpClient.WithDns();
             client.BaseAddress = new(Config.ApiServerBaseUrl);
@@ -134,20 +137,28 @@ public static class Certificate
             for (int attempt = 1; attempt <= maxRetries; attempt++)
                 try
                 {
-                    CertificateDto? result = await FetchCertificate(client, serverUrl, hasExistingCert);
+                    CertificateDto? result = await FetchCertificate(
+                        client,
+                        serverUrl,
+                        hasExistingCert
+                    );
                     if (result != null)
                         return;
 
                     // null means 202 — cert not ready yet, wait and retry
                     Logger.Certificate(
-                        $"Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})");
+                        $"Certificate not ready, waiting {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})"
+                    );
                     await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
                 }
-                catch (Exception ex) when (attempt < maxRetries &&
-                    (ex is HttpRequestException || ex is InvalidOperationException))
+                catch (Exception ex)
+                    when (attempt < maxRetries
+                        && (ex is HttpRequestException || ex is InvalidOperationException)
+                    )
                 {
                     Logger.Certificate(
-                        $"Certificate attempt failed: {ex.Message}, retrying in {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})");
+                        $"Certificate attempt failed: {ex.Message}, retrying in {CertRetryDelaySeconds}s (attempt {attempt}/{maxRetries})"
+                    );
                     await Task.Delay(TimeSpan.FromSeconds(CertRetryDelaySeconds));
                 }
         }
@@ -157,12 +168,16 @@ public static class Certificate
             // The existing cert is usable — don't block boot
             Logger.Certificate(
                 $"Certificate renewal failed: {ex.Message}. Using existing certificate.",
-                Serilog.Events.LogEventLevel.Warning);
+                Serilog.Events.LogEventLevel.Warning
+            );
         }
     }
 
-    private static async Task<CertificateDto?> FetchCertificate(HttpClient client, string serverUrl,
-        bool hasExistingCert)
+    private static async Task<CertificateDto?> FetchCertificate(
+        HttpClient client,
+        string serverUrl,
+        bool hasExistingCert
+    )
     {
         using HttpResponseMessage response = await client.GetAsync(serverUrl);
 
@@ -177,16 +192,22 @@ public static class Certificate
 
         response.EnsureSuccessStatusCode();
         string content = await response.Content.ReadAsStringAsync();
-        ApiResponse<CertificateResponse> data = content.FromJson<ApiResponse<CertificateResponse>>()
-                                                ?? throw new("Failed to deserialize certificate JSON");
+        ApiResponse<CertificateResponse> data =
+            content.FromJson<ApiResponse<CertificateResponse>>()
+            ?? throw new("Failed to deserialize certificate JSON");
 
         if (data.Data is null)
             throw new InvalidOperationException(
-                $"Certificate API returned no data (status: {data.Status ?? "unknown"}, message: {data.Message ?? "none"})");
+                $"Certificate API returned no data (status: {data.Status ?? "unknown"}, message: {data.Message ?? "none"})"
+            );
 
-        if (string.IsNullOrEmpty(data.Data.PrivateKey) || string.IsNullOrEmpty(data.Data.Certificate))
+        if (
+            string.IsNullOrEmpty(data.Data.PrivateKey)
+            || string.IsNullOrEmpty(data.Data.Certificate)
+        )
             throw new InvalidOperationException(
-                $"Certificate API returned incomplete data (status: {data.Status ?? "unknown"})");
+                $"Certificate API returned incomplete data (status: {data.Status ?? "unknown"})"
+            );
 
         if (File.Exists(AppFiles.KeyFile))
             File.Delete(AppFiles.KeyFile);
@@ -197,12 +218,14 @@ public static class Certificate
 
         await File.WriteAllTextAsync(AppFiles.KeyFile, data.Data.PrivateKey);
         await File.WriteAllTextAsync(AppFiles.CaFile, data.Data.CertificateAuthority);
-        await File.WriteAllTextAsync(AppFiles.CertFile,
-            $"{data.Data.Certificate}\n{data.Data.IssuerCertificate}");
+        await File.WriteAllTextAsync(
+            AppFiles.CertFile,
+            $"{data.Data.Certificate}\n{data.Data.IssuerCertificate}"
+        );
 
-        Logger.Certificate(!hasExistingCert
-            ? "SSL Certificate created"
-            : "SSL Certificate renewed");
+        Logger.Certificate(
+            !hasExistingCert ? "SSL Certificate created" : "SSL Certificate renewed"
+        );
         return new CertificateDto();
     }
 
@@ -211,17 +234,31 @@ public static class Certificate
 
     public class ApiResponse<T>
     {
-        [JsonProperty("status")] public string? Status { get; set; }
-        [JsonProperty("message")] public string? Message { get; set; }
-        [JsonProperty("data")] public T Data { get; set; } = default!;
+        [JsonProperty("status")]
+        public string? Status { get; set; }
+
+        [JsonProperty("message")]
+        public string? Message { get; set; }
+
+        [JsonProperty("data")]
+        public T Data { get; set; } = default!;
     }
 
     public class CertificateResponse
     {
-        [JsonProperty("status")] public string Status { get; set; } = null!;
-        [JsonProperty("certificate")] public string Certificate { get; set; } = null!;
-        [JsonProperty("private_key")] public string PrivateKey { get; set; } = null!;
-        [JsonProperty("issuer_certificate")] public string IssuerCertificate { get; set; } = null!;
-        [JsonProperty("certificate_authority")] public string CertificateAuthority { get; set; } = null!;
+        [JsonProperty("status")]
+        public string Status { get; set; } = null!;
+
+        [JsonProperty("certificate")]
+        public string Certificate { get; set; } = null!;
+
+        [JsonProperty("private_key")]
+        public string PrivateKey { get; set; } = null!;
+
+        [JsonProperty("issuer_certificate")]
+        public string IssuerCertificate { get; set; } = null!;
+
+        [JsonProperty("certificate_authority")]
+        public string CertificateAuthority { get; set; } = null!;
     }
 }

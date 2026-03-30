@@ -2,14 +2,14 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Api.Services;
+using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.Database.Models.Music;
 using NoMercy.Helpers.Extensions;
-using NoMercy.Api.DTOs.Common;
-using NoMercy.Api.Services;
-using NoMercy.Database;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 
@@ -37,12 +37,9 @@ public class SetupController(
             .Select(library => new LibrariesResponseItemDto(library))
             .ToList();
 
-        return Ok(new LibrariesDto
-        {
-            Data = response.OrderBy(library => library.Order)
-        });
+        return Ok(new LibrariesDto { Data = response.OrderBy(library => library.Order) });
     }
-    
+
     [HttpGet]
     [Route("server-info")]
     [ResponseCache(NoStore = true, Duration = 0)]
@@ -51,30 +48,33 @@ public class SetupController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view server information");
 
-        bool setupComplete = context.Libraries.Any()
-                             && context.Folders.Any()
-                             && context.EncoderProfiles.Any();
-        
-        Configuration? device = context.Configuration.FirstOrDefault(device => device.Key == "serverName");
+        bool setupComplete =
+            context.Libraries.Any() && context.Folders.Any() && context.EncoderProfiles.Any();
+
+        Configuration? device = context.Configuration.FirstOrDefault(device =>
+            device.Key == "serverName"
+        );
         string serverName = device?.Value ?? Environment.MachineName;
 
-        return Ok(new StatusResponseDto<ServerInfoDto>
-        {
-            Status = "ok",
-            Data = new()
+        return Ok(
+            new StatusResponseDto<ServerInfoDto>
             {
-                Server = serverName,
-                Cpu = Info.CpuNames,
-                Gpu = Info.GpuNames,
-                Os = $"{Info.Platform.ToTitleCase()} {Info.OsVersion}",
-                Arch = Info.Architecture,
-                Version = Software.GetReleaseVersion(),
-                BootTime = Info.StartTime,
-                SetupComplete = setupComplete
+                Status = "ok",
+                Data = new()
+                {
+                    Server = serverName,
+                    Cpu = Info.CpuNames,
+                    Gpu = Info.GpuNames,
+                    Os = $"{Info.Platform.ToTitleCase()} {Info.OsVersion}",
+                    Arch = Info.Architecture,
+                    Version = Software.GetReleaseVersion(),
+                    BootTime = Info.StartTime,
+                    SetupComplete = setupComplete,
+                },
             }
-        });
+        );
     }
-    
+
     [HttpGet]
     [Route("permissions")]
     public IActionResult Permissions()
@@ -82,14 +82,15 @@ public class SetupController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have access to this server");
 
-        return Ok(new
-        {
-            owner = User.IsOwner(),
-            manager = User.IsModerator(),
-            allowed = User.IsAllowed()
-        });
+        return Ok(
+            new
+            {
+                owner = User.IsOwner(),
+                manager = User.IsModerator(),
+                allowed = User.IsAllowed(),
+            }
+        );
     }
-
 
     [HttpGet("music-playlists")]
     public async Task<IActionResult> Index()
@@ -100,13 +101,15 @@ public class SetupController(
 
         List<Playlist> playlistItems = await setupService.GetSetupPlaylistsAsync(userId);
 
-        return Ok(new StatusResponseDto<List<PlaylistDto>>
-        {
-            Status = "ok",
-            Data = playlistItems.Select(p => new PlaylistDto(p)).ToList(),
-        });
+        return Ok(
+            new StatusResponseDto<List<PlaylistDto>>
+            {
+                Status = "ok",
+                Data = playlistItems.Select(p => new PlaylistDto(p)).ToList(),
+            }
+        );
     }
-    
+
     [HttpGet]
     [Route("screensaver")]
     public async Task<IActionResult> Screensaver()
@@ -125,14 +128,14 @@ public class SetupController(
     [ResponseCache(Duration = 30)]
     public IActionResult Status()
     {
-        return Ok(new
-        {
-            Status = "ok",
-            Version = "1.0",
-            Message = "NoMercy MediaServer API is running",
-            Timestamp = DateTime.UtcNow
-        });
+        return Ok(
+            new
+            {
+                Status = "ok",
+                Version = "1.0",
+                Message = "NoMercy MediaServer API is running",
+                Timestamp = DateTime.UtcNow,
+            }
+        );
     }
-
-
 }

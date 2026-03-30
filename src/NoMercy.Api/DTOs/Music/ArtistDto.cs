@@ -7,21 +7,38 @@ namespace NoMercy.Api.DTOs.Music;
 
 public class ArtistDto
 {
-    [JsonProperty("id")] public Guid Id { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
-    [JsonProperty("disambiguation")] public string? Disambiguation { get; set; }
-    [JsonProperty("description")] public string? Description { get; set; }
-    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
-    [JsonProperty("cover")] public string? Cover { get; set; }
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
+    [JsonProperty("id")]
+    public Guid Id { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("disambiguation")]
+    public string? Disambiguation { get; set; }
+
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    [JsonProperty("backdrop")]
+    public string? Backdrop { get; set; }
+
+    [JsonProperty("cover")]
+    public string? Cover { get; set; }
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; }
 
     public ArtistDto(AlbumArtist albumArtist, string country)
     {
-        string? description = albumArtist.Artist.Translations
-            .FirstOrDefault(translation => translation.Iso31661 == country)?
-            .Description;
+        string? description = albumArtist
+            .Artist.Translations.FirstOrDefault(translation => translation.Iso31661 == country)
+            ?.Description;
 
         Image? img = albumArtist.Artist.Images.FirstOrDefault(image => image.Type == "background");
 
@@ -48,9 +65,9 @@ public class ArtistDto
 
     public ArtistDto(ArtistTrack artistTrack, string country)
     {
-        string? description = artistTrack.Artist.Translations
-            .FirstOrDefault(translation => translation.Iso31661 == country)?
-            .Description;
+        string? description = artistTrack
+            .Artist.Translations.FirstOrDefault(translation => translation.Iso31661 == country)
+            ?.Description;
         Image? img = artistTrack.Artist.Images.FirstOrDefault(image => image.Type == "background");
 
         Id = artistTrack.Artist.Id;

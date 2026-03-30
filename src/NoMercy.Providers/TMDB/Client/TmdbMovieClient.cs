@@ -12,7 +12,13 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
 {
     private readonly MovieResponseMocks? _mockDataProvider;
 
-    public TmdbMovieClient(int? id = 0, string[]? appendices = null, MovieResponseMocks? mockDataProvider = null, string? language = "en-US") : base((int)id!, language!)
+    public TmdbMovieClient(
+        int? id = 0,
+        string[]? appendices = null,
+        MovieResponseMocks? mockDataProvider = null,
+        string? language = "en-US"
+    )
+        : base((int)id!, language!)
     {
         _mockDataProvider = mockDataProvider;
     }
@@ -26,7 +32,7 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["append_to_response"] = string.Join(",", appendices)
+            ["append_to_response"] = string.Join(",", appendices),
         };
 
         return Get<TmdbMovieAppends>("movie/" + Id, queryParams, priority);
@@ -39,30 +45,39 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
             return Task.FromResult(_mockDataProvider.MockMovieAppendsResponse());
         }
 
-        return WithAppends([
-            "alternative_titles",
-            "release_dates",
-            "changes",
-            "credits",
-            "keywords",
-            "recommendations",
-            "similar",
-            "translations",
-            "external_ids",
-            "videos",
-            "images",
-            "watch/providers"
-        ], priority);
+        return WithAppends(
+            [
+                "alternative_titles",
+                "release_dates",
+                "changes",
+                "credits",
+                "keywords",
+                "recommendations",
+                "similar",
+                "translations",
+                "external_ids",
+                "videos",
+                "images",
+                "watch/providers",
+            ],
+            priority
+        );
     }
 
     public Task<TmdbMovieAggregatedCredits?> AggregatedCredits(bool? priority = false)
     {
-        return Get<TmdbMovieAggregatedCredits>("movie/" + Id + "/aggregate_credits", priority: priority);
+        return Get<TmdbMovieAggregatedCredits>(
+            "movie/" + Id + "/aggregate_credits",
+            priority: priority
+        );
     }
 
     public Task<TmdbMovieAlternativeTitles?> AlternativeTitles(bool? priority = false)
     {
-        return Get<TmdbMovieAlternativeTitles>("movie/" + Id + "/alternative_titles", priority: priority);
+        return Get<TmdbMovieAlternativeTitles>(
+            "movie/" + Id + "/alternative_titles",
+            priority: priority
+        );
     }
 
     public Task<TmdbMovieChanges?> Changes(string startDate, string endDate)
@@ -70,7 +85,7 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
         Dictionary<string, string?> queryParams = new()
         {
             ["start_date"] = startDate,
-            ["end_date"] = endDate
+            ["end_date"] = endDate,
         };
 
         return Get<TmdbMovieChanges>("movie/" + Id + "/changes", queryParams);
@@ -103,7 +118,10 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
 
     public Task<TmdbMovieRecommendations?> Recommendations(bool? priority = false)
     {
-        return Get<TmdbMovieRecommendations>("movie/" + Id + "/recommendations", priority: priority);
+        return Get<TmdbMovieRecommendations>(
+            "movie/" + Id + "/recommendations",
+            priority: priority
+        );
     }
 
     public Task<TmdbMovieReleaseDates?> ReleaseDates(bool? priority = false)
@@ -168,9 +186,10 @@ public class TmdbMovieClient : TmdbBaseClient, ITmdbMovieClient
 
     public Task<TmdbGenreMovies?> Genres(string language = "en", bool? priority = false)
     {
-        return Get<TmdbGenreMovies>("genre/movie/list", new Dictionary<string, string?>
-        {
-            ["language"] = language
-        }, priority: priority);
+        return Get<TmdbGenreMovies>(
+            "genre/movie/list",
+            new Dictionary<string, string?> { ["language"] = language },
+            priority: priority
+        );
     }
 }

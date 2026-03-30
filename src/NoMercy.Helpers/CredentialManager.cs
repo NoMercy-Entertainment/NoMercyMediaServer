@@ -13,7 +13,8 @@ public static class CredentialManager
         public T Deserialize<T>(SecureBuffer serialized)
         {
             string decoded = Encoding.UTF8.GetString(serialized.Buffer);
-            return JsonConvert.DeserializeObject<T>(decoded) ?? throw new InvalidOperationException();
+            return JsonConvert.DeserializeObject<T>(decoded)
+                ?? throw new InvalidOperationException();
         }
 
         SecureBuffer ISecretSerializer.Serialize<T>(T input)
@@ -25,23 +26,31 @@ public static class CredentialManager
 
     public static UserPass? Credential(string target)
     {
-        if (!File.Exists(AppFiles.SecretsStore)) return null;
+        if (!File.Exists(AppFiles.SecretsStore))
+            return null;
 
         using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);
         secretsManager.DefaultSerializer = new SecretSerializer();
         secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
 
-        if (secretsManager.TryGetValue(target, out UserPass? output)) return output;
+        if (secretsManager.TryGetValue(target, out UserPass? output))
+            return output;
 
         return null;
     }
 
-    public static void SetCredentials(string target, string username, string password, string apiKey)
+    public static void SetCredentials(
+        string target,
+        string username,
+        string password,
+        string apiKey
+    )
     {
         bool exists = File.Exists(AppFiles.SecretsStore);
 
-        using SecretsManager secretsManager =
-            exists ? SecretsManager.LoadStore(AppFiles.SecretsStore) : SecretsManager.CreateStore();
+        using SecretsManager secretsManager = exists
+            ? SecretsManager.LoadStore(AppFiles.SecretsStore)
+            : SecretsManager.CreateStore();
         secretsManager.DefaultSerializer = new SecretSerializer();
         if (!exists)
         {
@@ -60,13 +69,13 @@ public static class CredentialManager
 
     public static bool RemoveCredentials(string target)
     {
-        if (!File.Exists(AppFiles.SecretsStore)) return false;
+        if (!File.Exists(AppFiles.SecretsStore))
+            return false;
 
         using SecretsManager secretsManager = SecretsManager.LoadStore(AppFiles.SecretsStore);
         secretsManager.LoadKeyFromFile(AppFiles.SecretsKey);
         return secretsManager.Delete(target);
     }
-
 
     public static SecureString ConvertToSecureString(string password)
     {

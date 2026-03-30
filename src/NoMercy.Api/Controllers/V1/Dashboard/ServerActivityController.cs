@@ -2,9 +2,9 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.DTOs.Dashboard;
-using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.Controllers.V1.Music;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Database;
 using NoMercy.Helpers.Extensions;
 
@@ -23,8 +23,8 @@ public class ServerActivityController(MediaContext mediaContext) : BaseControlle
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view activity");
 
-        ServerActivityDto[] activityDtos = mediaContext.ActivityLogs
-            .OrderByDescending(x => x.CreatedAt)
+        ServerActivityDto[] activityDtos = mediaContext
+            .ActivityLogs.OrderByDescending(x => x.CreatedAt)
             .Take((request.Take ?? 10) + 1)
             .Select(x => new ServerActivityDto
             {
@@ -35,15 +35,13 @@ public class ServerActivityController(MediaContext mediaContext) : BaseControlle
                 UserId = x.UserId,
                 DeviceId = x.DeviceId,
                 Device = x.Device.Name,
-                User = x.User.Name
+                User = x.User.Name,
             })
             .ToArray();
 
-        return Ok(new StatusResponseDto<ServerActivityDto[]>
-        {
-            Status = "ok",
-            Data = activityDtos,
-        });
+        return Ok(
+            new StatusResponseDto<ServerActivityDto[]> { Status = "ok", Data = activityDtos }
+        );
     }
 
     [HttpPost]
@@ -52,10 +50,7 @@ public class ServerActivityController(MediaContext mediaContext) : BaseControlle
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to create activity");
 
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpDelete]
@@ -64,9 +59,6 @@ public class ServerActivityController(MediaContext mediaContext) : BaseControlle
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete activity");
 
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 }

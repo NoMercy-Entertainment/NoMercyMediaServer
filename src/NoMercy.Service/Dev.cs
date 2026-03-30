@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
-using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Encoder.Core;
 using NoMercy.NmSystem.Information;
+using NoMercy.NmSystem.SystemCalls;
 using VideoFile = NoMercy.Database.Models.Media.VideoFile;
 
 namespace NoMercy.Service;
@@ -27,56 +27,60 @@ public static class Dev
         //         await DeleteEmptyPlaylists(folder);
         //     }
         // }
-        
-        
+
         await using MediaContext context = new();
 
-        List<Tv> shows = await context.Tvs
+        List<Tv> shows = await context
+            .Tvs
             // .Where(tv => tv.Library.Type == "tv")
             .Include(tv => tv.Episodes)
-            .ThenInclude(episode => episode.VideoFiles)
-            .ThenInclude(videoFile => videoFile.Metadata)
+                .ThenInclude(episode => episode.VideoFiles)
+                    .ThenInclude(videoFile => videoFile.Metadata)
             // .Where(tv => tv.Id == 218613)
             .ToListAsync();
-            
+
         foreach (Tv show in shows)
         foreach (Episode episode in show.Episodes)
         {
             foreach (VideoFile videoFile in episode.VideoFiles)
             {
-                if (videoFile.Metadata == null) continue;
-        
+                if (videoFile.Metadata == null)
+                    continue;
+
                 string hostFolder = videoFile.Metadata.HostFolder;
-                if (string.IsNullOrEmpty(hostFolder)) continue;
-        
+                if (string.IsNullOrEmpty(hostFolder))
+                    continue;
+
                 // Logger.App($"Processing Episode: {episode.Title} (S{episode.SeasonNumber}E{episode.EpisodeNumber})");
                 // Logger.App($"Host Folder: {hostFolder}");
-                
+
                 // DiagnoseMasterFolder(hostFolder);
 
                 // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
             }
         }
-        
-        List<Movie> movies = await context.Movies
-            .Where(tv => tv.Library.Type == Config.MovieMediaType)
+
+        List<Movie> movies = await context
+            .Movies.Where(tv => tv.Library.Type == Config.MovieMediaType)
             .Include(episode => episode.VideoFiles)
-            .ThenInclude(videoFile => videoFile.Metadata)
+                .ThenInclude(videoFile => videoFile.Metadata)
             // .Where(tv => tv.Id == 60808)
             .ToListAsync();
-        
+
         foreach (Movie movie in movies)
         {
             foreach (VideoFile videoFile in movie.VideoFiles)
             {
-                if (videoFile.Metadata == null) continue;
+                if (videoFile.Metadata == null)
+                    continue;
 
                 string hostFolder = videoFile.Metadata.HostFolder;
-                if (string.IsNullOrEmpty(hostFolder)) continue;
+                if (string.IsNullOrEmpty(hostFolder))
+                    continue;
 
                 // Logger.App($"Processing Movie: {movie.Title}");
                 // Logger.App($"Host Folder: {hostFolder}");
-                
+
                 //DiagnoseMasterFolder(hostFolder);
 
                 // await RecreateMasterPlaylist(hostFolder, videoFile.Filename);
@@ -85,22 +89,33 @@ public static class Dev
 
         await Task.CompletedTask;
     }
-    
-    
+
     private static Task DeleteEmptyPlaylists(string episodeFolder)
     {
         if (!Directory.Exists(episodeFolder))
             return Task.CompletedTask;
 
-        IEnumerable<string> m3U8Files = Directory.GetFiles(episodeFolder, "*.m3u8", SearchOption.TopDirectoryOnly);
+        IEnumerable<string> m3U8Files = Directory.GetFiles(
+            episodeFolder,
+            "*.m3u8",
+            SearchOption.TopDirectoryOnly
+        );
 
         foreach (string playlistPath in m3U8Files)
         {
             string[] lines;
-            try { lines = File.ReadAllLines(playlistPath); }
-            catch { continue; }
+            try
+            {
+                lines = File.ReadAllLines(playlistPath);
+            }
+            catch
+            {
+                continue;
+            }
 
-            bool hasSegments = lines.Any(line => !line.Trim().StartsWith("#") && !string.IsNullOrWhiteSpace(line));
+            bool hasSegments = lines.Any(line =>
+                !line.Trim().StartsWith("#") && !string.IsNullOrWhiteSpace(line)
+            );
             if (!hasSegments)
             {
                 try
@@ -125,23 +140,43 @@ public static class Dev
         if (!Directory.Exists(episodeFolder))
             return results;
 
-        IEnumerable<string> m3U8Files = Directory.GetFiles(episodeFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
+        IEnumerable<string> m3U8Files = Directory
+            .GetFiles(episodeFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
             .Where(f =>
             {
-                try { return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF"); }
-                catch { return false; }
+                try
+                {
+                    return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF");
+                }
+                catch
+                {
+                    return false;
+                }
             });
 
         foreach (string masterPath in m3U8Files)
         {
             string masterDir = Path.GetDirectoryName(masterPath) ?? episodeFolder;
             string[] lines;
-            try { lines = File.ReadAllLines(masterPath); }
-            catch { continue; }
+            try
+            {
+                lines = File.ReadAllLines(masterPath);
+            }
+            catch
+            {
+                continue;
+            }
 
             for (int i = 0; i < lines.Length; i++)
             {
-                if (!lines[i].Trim().StartsWith("#EXT-X-STREAM-INF", StringComparison.InvariantCultureIgnoreCase))
+                if (
+                    !lines[i]
+                        .Trim()
+                        .StartsWith(
+                            "#EXT-X-STREAM-INF",
+                            StringComparison.InvariantCultureIgnoreCase
+                        )
+                )
                     continue;
 
                 // next non-comment line is the variant URI
@@ -149,24 +184,34 @@ public static class Dev
                 for (int j = i + 1; j < lines.Length; j++)
                 {
                     string nxt = lines[j].Trim();
-                    if (string.IsNullOrEmpty(nxt) || nxt.StartsWith("#")) continue;
+                    if (string.IsNullOrEmpty(nxt) || nxt.StartsWith("#"))
+                        continue;
                     variantUri = nxt;
                     break;
                 }
 
-                if (variantUri == null) continue;
-                if (Uri.IsWellFormedUriString(variantUri, UriKind.Absolute)) continue;
+                if (variantUri == null)
+                    continue;
+                if (Uri.IsWellFormedUriString(variantUri, UriKind.Absolute))
+                    continue;
 
                 string variantPath = Path.GetFullPath(Path.Combine(masterDir, variantUri));
-                if (!File.Exists(variantPath)) continue;
+                if (!File.Exists(variantPath))
+                    continue;
 
                 long totalBytes = 0L;
                 double totalSeconds = 0.0;
 
                 string variantDir = Path.GetDirectoryName(variantPath) ?? masterDir;
                 string[] vlines;
-                try { vlines = File.ReadAllLines(variantPath); }
-                catch { continue; }
+                try
+                {
+                    vlines = File.ReadAllLines(variantPath);
+                }
+                catch
+                {
+                    continue;
+                }
 
                 foreach (string raw in vlines)
                 {
@@ -176,19 +221,30 @@ public static class Dev
                         string payload = vline.Substring("#EXTINF:".Length);
                         int comma = payload.IndexOf(',');
                         string durStr = comma >= 0 ? payload.Substring(0, comma) : payload;
-                        if (double.TryParse(durStr, NumberStyles.Any, CultureInfo.InvariantCulture, out double d))
+                        if (
+                            double.TryParse(
+                                durStr,
+                                NumberStyles.Any,
+                                CultureInfo.InvariantCulture,
+                                out double d
+                            )
+                        )
                             totalSeconds += d;
 
                         continue;
                     }
 
-                    if (vline.StartsWith("#")) continue;
+                    if (vline.StartsWith("#"))
+                        continue;
                     string segRef = vline.Split(new[] { '?', '#' }, 2)[0];
-                    if (string.IsNullOrWhiteSpace(segRef)) continue;
-                    if (Uri.IsWellFormedUriString(segRef, UriKind.Absolute)) continue;
+                    if (string.IsNullOrWhiteSpace(segRef))
+                        continue;
+                    if (Uri.IsWellFormedUriString(segRef, UriKind.Absolute))
+                        continue;
 
                     string segPath = Path.GetFullPath(Path.Combine(variantDir, segRef));
-                    if (!File.Exists(segPath)) continue;
+                    if (!File.Exists(segPath))
+                        continue;
 
                     try
                     {
@@ -212,12 +268,16 @@ public static class Dev
                     double bits = totalBytes * 8.0;
                     long bitrate = (long)Math.Round(bits / totalSeconds);
                     results[variantUri] = bitrate;
-                    Logger.App($"Computed bitrate for {variantUri}: {bitrate} bps (bytes={totalBytes}, seconds={totalSeconds:F2})");
+                    Logger.App(
+                        $"Computed bitrate for {variantUri}: {bitrate} bps (bytes={totalBytes}, seconds={totalSeconds:F2})"
+                    );
                 }
                 else
                 {
                     results[variantUri] = 0;
-                    Logger.App($"Could not compute bitrate for {variantUri} (bytes={totalBytes}, seconds={totalSeconds:F2})");
+                    Logger.App(
+                        $"Could not compute bitrate for {variantUri} (bytes={totalBytes}, seconds={totalSeconds:F2})"
+                    );
                 }
             }
         }
@@ -251,11 +311,18 @@ public static class Dev
         try
         {
             // Instead of writing a diagnostic JSON file, update the master playlists in-place
-            IEnumerable<string> masters = Directory.GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
+            IEnumerable<string> masters = Directory
+                .GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
                 .Where(f =>
                 {
-                    try { return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF"); }
-                    catch { return false; }
+                    try
+                    {
+                        return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF");
+                    }
+                    catch
+                    {
+                        return false;
+                    }
                 });
 
             Regex bwRegex = new(@"BANDWIDTH\s*=\s*\d+", RegexOptions.IgnoreCase);
@@ -268,7 +335,14 @@ public static class Dev
 
                 for (int i = 0; i < lines.Length; i++)
                 {
-                    if (!lines[i].Trim().StartsWith("#EXT-X-STREAM-INF", StringComparison.InvariantCultureIgnoreCase))
+                    if (
+                        !lines[i]
+                            .Trim()
+                            .StartsWith(
+                                "#EXT-X-STREAM-INF",
+                                StringComparison.InvariantCultureIgnoreCase
+                            )
+                    )
                         continue;
 
                     // Find next non-empty, non-comment line for the variant URI
@@ -276,16 +350,21 @@ public static class Dev
                     for (int j = i + 1; j < lines.Length; j++)
                     {
                         string nxt = lines[j].Trim();
-                        if (string.IsNullOrEmpty(nxt) || nxt.StartsWith("#")) continue;
+                        if (string.IsNullOrEmpty(nxt) || nxt.StartsWith("#"))
+                            continue;
                         variantUri = nxt;
                         break;
                     }
 
-                    if (variantUri == null) continue;
-                    if (Uri.IsWellFormedUriString(variantUri, UriKind.Absolute)) continue;
+                    if (variantUri == null)
+                        continue;
+                    if (Uri.IsWellFormedUriString(variantUri, UriKind.Absolute))
+                        continue;
 
-                    if (!bitrates.TryGetValue(variantUri, out long computed)) continue;
-                    if (computed <= 0) continue;
+                    if (!bitrates.TryGetValue(variantUri, out long computed))
+                        continue;
+                    if (computed <= 0)
+                        continue;
 
                     string tag = lines[i];
 
@@ -304,7 +383,9 @@ public static class Dev
                     {
                         lines[i] = tag;
                         changed = true;
-                        Logger.App($"Updated playlist tag in {masterPath}: {variantUri} -> BANDWIDTH={computed}");
+                        Logger.App(
+                            $"Updated playlist tag in {masterPath}: {variantUri} -> BANDWIDTH={computed}"
+                        );
                     }
                 }
 
@@ -328,10 +409,10 @@ public static class Dev
         }
     }
 
-
     private static async Task RecreateMasterPlaylist(string hostFolder, string filename)
     {
-        if (string.IsNullOrEmpty(hostFolder)) return;
+        if (string.IsNullOrEmpty(hostFolder))
+            return;
         if (!Directory.Exists(hostFolder))
         {
             Logger.App($"Host folder does not exist: {hostFolder}");
@@ -343,17 +424,27 @@ public static class Dev
         try
         {
             // Find master playlists in the folder (those containing EXT-X-STREAM-INF)
-            List<string> masters = Directory.GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
+            List<string> masters = Directory
+                .GetFiles(hostFolder, "*.m3u8", SearchOption.TopDirectoryOnly)
                 .Where(f =>
                 {
-                    try { return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF"); }
-                    catch { return false; }
+                    try
+                    {
+                        return File.ReadAllText(f).Contains("#EXT-X-STREAM-INF");
+                    }
+                    catch
+                    {
+                        return false;
+                    }
                 })
                 .ToList();
 
             if (masters.Any())
             {
-                string backupDir = Path.Combine(hostFolder, "_m3u8_backup_" + DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
+                string backupDir = Path.Combine(
+                    hostFolder,
+                    "_m3u8_backup_" + DateTime.UtcNow.ToString("yyyyMMddHHmmss")
+                );
                 Directory.CreateDirectory(backupDir);
                 foreach (string m in masters)
                 {

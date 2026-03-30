@@ -12,8 +12,10 @@ public class ComponentBuilder<T>
 
     public ComponentBuilder<T> WithUpdate(string? when = null, string? link = null)
     {
-        if (when is not null) _component.Update.When = when;
-        if (link is not null) _component.Update.Link = new(link, UriKind.Relative);
+        if (when is not null)
+            _component.Update.When = when;
+        if (link is not null)
+            _component.Update.Link = new(link, UriKind.Relative);
         return this;
     }
 

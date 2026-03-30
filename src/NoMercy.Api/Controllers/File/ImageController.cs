@@ -17,7 +17,11 @@ namespace NoMercy.Api.Controllers.File;
 public class ImageController : BaseController
 {
     [HttpGet]
-    public async Task<IActionResult> Image(string type, string path, [FromQuery] ImageConvertArguments request)
+    public async Task<IActionResult> Image(
+        string type,
+        string path,
+        [FromQuery] ImageConvertArguments request
+    )
     {
         try
         {
@@ -26,14 +30,17 @@ public class ImageController : BaseController
             Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
             string folder = Path.Join(AppFiles.ImagesPath, type);
-            if (!Directory.Exists(folder)) return NotFoundResponse("Image folder not found");
+            if (!Directory.Exists(folder))
+                return NotFoundResponse("Image folder not found");
 
             string filePath = Path.Join(folder, path.Replace("/", ""));
             try
             {
                 if (!System.IO.File.Exists(filePath) && type == "original")
                 {
-                    using Image<Rgba32>? downloadedImage = await TmdbImageClient.Download("/" + path)!;
+                    using Image<Rgba32>? downloadedImage = await TmdbImageClient.Download(
+                        "/" + path
+                    )!;
                 }
             }
             catch (Exception)
@@ -41,22 +48,32 @@ public class ImageController : BaseController
                 //
             }
 
-            if (!System.IO.File.Exists(filePath)) return NotFoundResponse("Image not found");
+            if (!System.IO.File.Exists(filePath))
+                return NotFoundResponse("Image not found");
 
             FileInfo fileInfo = new(filePath);
             long originalFileSize = fileInfo.Length;
             string originalMimeType = MimeUtility.GetMimeMapping(filePath);
 
-            bool emptyArguments = request.Width is null && request.Type is null && request.Quality is 100;
+            bool emptyArguments =
+                request.Width is null && request.Type is null && request.Quality is 100;
 
-            if (emptyArguments || path.Contains(".svg") ||
-                (originalFileSize < request.Width && originalMimeType == request.Format.DefaultMimeType))
+            if (
+                emptyArguments
+                || path.Contains(".svg")
+                || (
+                    originalFileSize < request.Width
+                    && originalMimeType == request.Format.DefaultMimeType
+                )
+            )
                 return PhysicalFile(filePath, originalMimeType);
-            
+
             string encodedUrl = Request.GetEncodedUrl();
 
-            string hashedUrl = CacheController.GenerateFileName(encodedUrl) + "." +
-                               request.Format.FileExtensions.First();
+            string hashedUrl =
+                CacheController.GenerateFileName(encodedUrl)
+                + "."
+                + request.Format.FileExtensions.First();
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
             if (System.IO.File.Exists(cachedImagePath))
@@ -71,7 +88,10 @@ public class ImageController : BaseController
             }
             catch (Exception e)
             {
-                Logger.App($"Image conversion failed for {filePath}: {e.Message}", LogEventLevel.Warning);
+                Logger.App(
+                    $"Image conversion failed for {filePath}: {e.Message}",
+                    LogEventLevel.Warning
+                );
                 return PhysicalFile(filePath, originalMimeType);
             }
         }
@@ -83,14 +103,20 @@ public class ImageController : BaseController
     }
 
     [HttpDelete]
-    public IActionResult DeleteCache(string type, string path, [FromQuery] ImageConvertArguments request)
+    public IActionResult DeleteCache(
+        string type,
+        string path,
+        [FromQuery] ImageConvertArguments request
+    )
     {
         try
         {
             string encodedUrl = Request.GetEncodedUrl();
 
-            string hashedUrl = CacheController.GenerateFileName(encodedUrl) + "." +
-                               request.Format.FileExtensions.First();
+            string hashedUrl =
+                CacheController.GenerateFileName(encodedUrl)
+                + "."
+                + request.Format.FileExtensions.First();
 
             string cachedImagePath = Path.Join(AppFiles.TempImagesPath, hashedUrl);
             if (System.IO.File.Exists(cachedImagePath))

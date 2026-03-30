@@ -38,10 +38,13 @@ public static partial class Str
             for (int j = 1; j <= s2.Length; j++)
             {
                 int cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
-                curr[j] = Math.Min(Math.Min(
-                        prev[j] + 1,       // Deletion
-                        curr[j - 1] + 1),  // Insertion
-                    prev[j - 1] + cost);    // Substitution
+                curr[j] = Math.Min(
+                    Math.Min(
+                        prev[j] + 1, // Deletion
+                        curr[j - 1] + 1
+                    ), // Insertion
+                    prev[j - 1] + cost
+                ); // Substitution
             }
 
             (prev, curr) = (curr, prev);
@@ -50,14 +53,22 @@ public static partial class Str
         return prev[s2.Length];
     }
 
-    public static List<T> SortByMatchPercentage<T>(IEnumerable<T> array, Func<T, string> keySelector, string match)
+    public static List<T> SortByMatchPercentage<T>(
+        IEnumerable<T> array,
+        Func<T, string> keySelector,
+        string match
+    )
         where T : class
     {
         return array.OrderBy(item => MatchPercentage(match, keySelector(item))).ToList();
     }
 
-    public static List<T> ToSortByMatchPercentage<T>(this IEnumerable<T> array, Func<T, string> keySelector,
-        string match) where T : class
+    public static List<T> ToSortByMatchPercentage<T>(
+        this IEnumerable<T> array,
+        Func<T, string> keySelector,
+        string match
+    )
+        where T : class
     {
         return array.OrderBy(item => MatchPercentage(match, keySelector(item))).ToList();
     }
@@ -68,7 +79,8 @@ public static partial class Str
         Encoding destEncoding = Encoding.GetEncoding("ISO-8859-1");
 
         return destEncoding.GetString(
-            Encoding.Convert(Encoding.UTF8, destEncoding, Encoding.UTF8.GetBytes(s)));
+            Encoding.Convert(Encoding.UTF8, destEncoding, Encoding.UTF8.GetBytes(s))
+        );
     }
 
     [Pure]
@@ -80,7 +92,8 @@ public static partial class Str
         foreach (char ch in formD)
         {
             UnicodeCategory uc = CharUnicodeInfo.GetUnicodeCategory(ch);
-            if (uc != UnicodeCategory.NonSpacingMark) sb.Append(ch);
+            if (uc != UnicodeCategory.NonSpacingMark)
+                sb.Append(ch);
         }
 
         return sb.ToString().Normalize(NormalizationForm.FormC);
@@ -96,7 +109,8 @@ public static partial class Str
 
     public static string? TryGetYear(this string str)
     {
-        if (!MatchYearRegex().Match(str).Success) return null;
+        if (!MatchYearRegex().Match(str).Success)
+            return null;
         return MatchYearRegex().Match(str).Value;
     }
 
@@ -158,7 +172,8 @@ public static partial class Str
 
     public static int ToInt(this string value)
     {
-        if (string.IsNullOrEmpty(value)) return 0;
+        if (string.IsNullOrEmpty(value))
+            return 0;
         return (int)Math.Round(double.Parse(value, CultureInfo.InvariantCulture));
     }
 
@@ -174,7 +189,8 @@ public static partial class Str
 
     public static double ToDouble(this string value)
     {
-        if (string.IsNullOrEmpty(value)) return 0;
+        if (string.IsNullOrEmpty(value))
+            return 0;
         return double.Parse(value, CultureInfo.InvariantCulture);
     }
 
@@ -185,13 +201,15 @@ public static partial class Str
 
     public static long ToLong(this string value)
     {
-        if (string.IsNullOrEmpty(value)) return 0;
+        if (string.IsNullOrEmpty(value))
+            return 0;
         return long.Parse(value, CultureInfo.InvariantCulture);
     }
 
     public static bool ToBoolean(this string value)
     {
-        if (string.IsNullOrEmpty(value)) return false;
+        if (string.IsNullOrEmpty(value))
+            return false;
         return bool.Parse(value);
     }
 
@@ -204,7 +222,8 @@ public static partial class Str
     {
         StringBuilder spacing = new();
         spacing.Append(text);
-        for (int i = 0; i < padding - text.Length; i++) spacing.Append(' ');
+        for (int i = 0; i < padding - text.Length; i++)
+            spacing.Append(' ');
 
         return spacing.ToString();
     }
@@ -212,7 +231,8 @@ public static partial class Str
     private static string SpacerBegin(string text, int padding)
     {
         StringBuilder spacing = new();
-        for (int i = 0; i < padding - text.Length; i++) spacing.Append(' ');
+        for (int i = 0; i < padding - text.Length; i++)
+            spacing.Append(' ');
         spacing.Append(text);
 
         return spacing.ToString();
@@ -252,7 +272,8 @@ public static partial class Str
 
     public static bool ContainsSanitized(this string str, string? value)
     {
-        if (value == null) return false;
+        if (value == null)
+            return false;
 
         str = str.Sanitize().ToLower();
         value = value.Sanitize().ToLower();
@@ -278,9 +299,12 @@ public static partial class Str
 
     public static string ToQueryUri(this string str, Dictionary<string, string>? parameters)
     {
-        return str + (parameters is not null && parameters.Count > 0
-            ? "?" + string.Join("&", parameters.Select(pair => $"{pair.Key}={pair.Value}"))
-            : string.Empty);
+        return str
+            + (
+                parameters is not null && parameters.Count > 0
+                    ? "?" + string.Join("&", parameters.Select(pair => $"{pair.Key}={pair.Value}"))
+                    : string.Empty
+            );
     }
 
     public static string EscapeQuotes(this string str)
@@ -290,7 +314,8 @@ public static partial class Str
 
     private static string _parseTitleSort(string? value = null, DateTime? date = null)
     {
-        if (string.IsNullOrWhiteSpace(value)) return "";
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
 
         // Remove leading "The ", "An ", "A " (case-insensitive)
         value = Regex.Replace(value, @"^(The|An|A)\s+", "", RegexOptions.IgnoreCase);
@@ -313,7 +338,8 @@ public static partial class Str
 
     private static string _cleanFileName(string? name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return "";
+        if (string.IsNullOrWhiteSpace(name))
+            return "";
 
         // Replace invalid file system characters with dots
         string invalidChars = $"{string.Join("", Path.GetInvalidFileNameChars())}:?*<>|\"";
@@ -373,7 +399,8 @@ public static partial class Str
         string fileName = Path.GetFileName(filePath);
 
         // Replace problematic Unicode characters with ASCII equivalents
-        fileName = fileName.Replace('\u2019', '\'') // Right single quote
+        fileName = fileName
+            .Replace('\u2019', '\'') // Right single quote
             .Replace('\u2018', '\'') // Left single quote
             .Replace('\u201C', '"') // Left double quote
             .Replace('\u201D', '"') // Right double quote
@@ -388,14 +415,16 @@ public static partial class Str
 
     public static string DirectorySafeName(this string? self)
     {
-        if (string.IsNullOrEmpty(self)) return string.Empty;
+        if (string.IsNullOrEmpty(self))
+            return string.Empty;
         string name = Regex.Replace(self, @"[/\\|:*?\""<>{}]", " ");
         return name.Trim().SanitizeFileName();
     }
 
     public static string MusicBrainzSafeName(this string? self)
     {
-        if (string.IsNullOrEmpty(self)) return string.Empty;
+        if (string.IsNullOrEmpty(self))
+            return string.Empty;
         string name = Regex.Replace(self, @"[/\\|:*?\""<>{}]", "_");
         return name.Trim().SanitizeFileName();
     }
@@ -413,7 +442,8 @@ public static partial class Str
 
     public static string? FindMatchingDirectory(string rootPath, string expectedFolderName)
     {
-        if (!Directory.Exists(rootPath)) return null;
+        if (!Directory.Exists(rootPath))
+            return null;
 
         string normalizedExpected = expectedFolderName.NormalizeForComparison();
 
@@ -429,7 +459,10 @@ public static partial class Str
 
     public static string TitleSort(this object self, int? parseYear)
     {
-        return _parseTitleSort(self.ToString(), parseYear != null ? new DateTime(parseYear.Value, 1, 1) : null);
+        return _parseTitleSort(
+            self.ToString(),
+            parseYear != null ? new DateTime(parseYear.Value, 1, 1) : null
+        );
     }
 
     public static string Capitalize(this string str)
@@ -483,10 +516,12 @@ public static partial class Str
 
     public static int ToSeconds(this string? hms)
     {
-        if (string.IsNullOrEmpty(hms)) return 0;
+        if (string.IsNullOrEmpty(hms))
+            return 0;
 
         int[] parts = hms.Split('.').ElementAt(0).Split(':').Select(int.Parse).ToArray();
-        if (parts.Length < 3) parts = new[] { 0 }.Concat(parts).ToArray();
+        if (parts.Length < 3)
+            parts = new[] { 0 }.Concat(parts).ToArray();
 
         return parts[0] * 60 * 60 + parts[1] * 60 + parts[2];
     }
@@ -533,7 +568,7 @@ public static partial class Str
                 '\u2013' => '-', // En dash
                 '\u2014' => '-', // Em dash
                 '\u2212' => '-', // Minus sign
-                _ => c
+                _ => c,
             };
             stringBuilder.Append(char.ToLowerInvariant(appended));
         }
@@ -549,7 +584,7 @@ public static partial class Str
     public enum TextDirection
     {
         LTR,
-        RTL
+        RTL,
     }
 
     public static TextDirection GetTextDirection(this string str)
@@ -557,21 +592,28 @@ public static partial class Str
         // Check for presence of RTL characters
         foreach (char c in str)
         {
-            if ((c >= '\u0590' && c <= '\u05FF') || // Hebrew
-                (c >= '\u0600' && c <= '\u06FF') || // Arabic
-                (c >= '\u0750' && c <= '\u077F') || // Arabic Supplement
-                (c >= '\u08A0' && c <= '\u08FF') || // Arabic Extended-A
-                (c >= '\uFB50' && c <= '\uFDFF') || // Arabic Presentation Forms-A
-                (c >= '\uFE70' && c <= '\uFEFF'))   // Arabic Presentation Forms-B
+            if (
+                (c >= '\u0590' && c <= '\u05FF')
+                || // Hebrew
+                (c >= '\u0600' && c <= '\u06FF')
+                || // Arabic
+                (c >= '\u0750' && c <= '\u077F')
+                || // Arabic Supplement
+                (c >= '\u08A0' && c <= '\u08FF')
+                || // Arabic Extended-A
+                (c >= '\uFB50' && c <= '\uFDFF')
+                || // Arabic Presentation Forms-A
+                (c >= '\uFE70' && c <= '\uFEFF')
+            ) // Arabic Presentation Forms-B
             {
                 return TextDirection.RTL;
             }
         }
         return TextDirection.LTR;
     }
-    
-    public static string ToSlug(this string value){
 
+    public static string ToSlug(this string value)
+    {
         //First to lower case
         value = value.ToLowerInvariant();
 
@@ -583,17 +625,17 @@ public static partial class Str
         value = Regex.Replace(value, @"\s", "-", RegexOptions.Compiled);
 
         //Remove invalid chars
-        value = Regex.Replace(value, @"[^a-z0-9\s-_]", "",RegexOptions.Compiled);
+        value = Regex.Replace(value, @"[^a-z0-9\s-_]", "", RegexOptions.Compiled);
 
         //Trim dashes from end
         value = value.Trim('-', '_');
 
         //Replace double occurences of - or _
         value = Regex.Replace(value, @"([-_]){2,}", "$1", RegexOptions.Compiled);
-        
+
         // random id
         value += "-" + Guid.NewGuid().ToString("n").Substring(0, 8);
 
-        return value ;
+        return value;
     }
 }

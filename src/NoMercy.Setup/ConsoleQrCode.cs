@@ -14,8 +14,11 @@ public class ConsoleQrCode
     /// Show the QR code and device auth UI in the terminal.
     /// Builds the setup page URL from the server's port and localhost.
     /// </summary>
-    public static void Display(string verificationUriComplete, string verificationUri,
-        string userCode)
+    public static void Display(
+        string verificationUriComplete,
+        string verificationUri,
+        string userCode
+    )
     {
         string setupPageUrl = $"http://localhost:{Config.InternalServerPort}/setup";
         Display(verificationUriComplete, verificationUri, userCode, setupPageUrl);
@@ -24,8 +27,12 @@ public class ConsoleQrCode
     /// <summary>
     /// Show the QR code and device auth UI in the terminal with a specific setup page URL.
     /// </summary>
-    public static void Display(string verificationUriComplete, string verificationUri,
-        string userCode, string setupPageUrl)
+    public static void Display(
+        string verificationUriComplete,
+        string verificationUri,
+        string userCode,
+        string setupPageUrl
+    )
     {
         if (!SetupTerminalUi.IsInteractiveTerminal)
         {
@@ -55,7 +62,8 @@ public class ConsoleQrCode
         {
             Uri uri = new(verificationUriComplete);
             displayUri = $"{uri.Scheme}://{uri.Host}";
-            if (!uri.IsDefaultPort) displayUri += $":{uri.Port}";
+            if (!uri.IsDefaultPort)
+                displayUri += $":{uri.Port}";
             displayUri += uri.AbsolutePath.TrimEnd('/');
         }
         catch

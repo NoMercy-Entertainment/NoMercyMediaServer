@@ -4,6 +4,9 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record LogoDto
 {
-    [JsonProperty("aspectRatio")] public double AspectRatio { get; set; }
-    [JsonProperty("src")] public string Src { get; set; } = string.Empty;
+    [JsonProperty("aspectRatio")]
+    public double AspectRatio { get; set; }
+
+    [JsonProperty("src")]
+    public string Src { get; set; } = string.Empty;
 }

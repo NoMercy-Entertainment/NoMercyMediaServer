@@ -31,35 +31,40 @@ public class CollectionImportJob : AbstractMediaJob
         MovieManager movieManager = new(movieRepository, jobDispatcher);
 
         CollectionRepository collectionRepository = new(context);
-        CollectionManager collectionManager = new(collectionRepository, movieManager, jobDispatcher);
+        CollectionManager collectionManager = new(
+            collectionRepository,
+            movieManager,
+            jobDispatcher
+        );
 
-        Library collectionLibrary = await context.Libraries
-            .Where(f => f.Id == LibraryId)
+        Library collectionLibrary = await context
+            .Libraries.Where(f => f.Id == LibraryId)
             .Include(f => f.FolderLibraries)
-            .ThenInclude(f => f.Folder)
+                .ThenInclude(f => f.Folder)
             .FirstAsync();
 
-        TmdbCollectionAppends? collectionAppends = await collectionManager.Add(Id, collectionLibrary);
-        if (collectionAppends == null) return;
+        TmdbCollectionAppends? collectionAppends = await collectionManager.Add(
+            Id,
+            collectionLibrary
+        );
+        if (collectionAppends == null)
+            return;
 
         await collectionManager.AddCollectionMovies(collectionAppends, collectionLibrary);
 
         if (EventBusProvider.IsConfigured)
         {
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["libraries", LibraryId.ToString()]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["libraries", LibraryId.ToString()] }
+            );
 
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["collection"]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["collection"] }
+            );
 
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["collection", Id.ToString()]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["collection", Id.ToString()] }
+            );
         }
     }
 }

@@ -9,18 +9,26 @@ public class SqliteQueueContext : IQueueContext
 {
     private readonly QueueDbContext _context;
 
-    internal static readonly Func<QueueDbContext, byte, string, long?, QueueJobEntity?> ReserveJobQuery =
-        EF.CompileQuery((QueueDbContext context, byte maxAttempts, string name, long? currentJobId) =>
-            context.QueueJobs
-                .Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
+    internal static readonly Func<
+        QueueDbContext,
+        byte,
+        string,
+        long?,
+        QueueJobEntity?
+    > ReserveJobQuery = EF.CompileQuery(
+        (QueueDbContext context, byte maxAttempts, string name, long? currentJobId) =>
+            context
+                .QueueJobs.Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
                 .Where(j => currentJobId == null)
                 .Where(j => j.Queue == name)
                 .OrderByDescending(j => j.Priority)
-                .FirstOrDefault());
+                .FirstOrDefault()
+    );
 
-    internal static readonly Func<QueueDbContext, string, bool> ExistsQuery =
-        EF.CompileQuery((QueueDbContext context, string payloadString) =>
-            context.QueueJobs.Any(j => j.Payload == payloadString));
+    internal static readonly Func<QueueDbContext, string, bool> ExistsQuery = EF.CompileQuery(
+        (QueueDbContext context, string payloadString) =>
+            context.QueueJobs.Any(j => j.Payload == payloadString)
+    );
 
     internal SqliteQueueContext(QueueDbContext context)
     {
@@ -37,7 +45,7 @@ public class SqliteQueueContext : IQueueContext
             Attempts = job.Attempts,
             ReservedAt = job.ReservedAt,
             AvailableAt = job.AvailableAt,
-            CreatedAt = job.CreatedAt
+            CreatedAt = job.CreatedAt,
         };
         _context.QueueJobs.Add(entity);
         SaveAndClear();
@@ -53,7 +61,7 @@ public class SqliteQueueContext : IQueueContext
             {
                 Id = job.Id,
                 Payload = job.Payload,
-                Queue = job.Queue
+                Queue = job.Queue,
             };
             _context.QueueJobs.Attach(entity);
         }
@@ -70,7 +78,8 @@ public class SqliteQueueContext : IQueueContext
         }
 
         QueueJobEntity? job = ReserveJobQuery(_context, maxAttempts, queueName, currentJobId);
-        if (job == null) return null;
+        if (job == null)
+            return null;
 
         return ToModel(job);
     }
@@ -89,7 +98,8 @@ public class SqliteQueueContext : IQueueContext
     public void UpdateJob(QueueJobModel job)
     {
         QueueJobEntity? entity = _context.QueueJobs.Find(job.Id);
-        if (entity == null) return;
+        if (entity == null)
+            return;
 
         entity.Priority = job.Priority;
         entity.Queue = job.Queue;
@@ -117,7 +127,7 @@ public class SqliteQueueContext : IQueueContext
             Queue = failedJob.Queue,
             Payload = failedJob.Payload,
             Exception = failedJob.Exception,
-            FailedAt = failedJob.FailedAt
+            FailedAt = failedJob.FailedAt,
         };
         _context.FailedJobs.Add(entity);
     }
@@ -143,22 +153,24 @@ public class SqliteQueueContext : IQueueContext
         if (failedJobId.HasValue)
             query = query.Where(j => j.Id == failedJobId.Value);
 
-        return query.Select(j => new FailedJobModel
-        {
-            Id = j.Id,
-            Uuid = j.Uuid,
-            Connection = j.Connection,
-            Queue = j.Queue,
-            Payload = j.Payload,
-            Exception = j.Exception,
-            FailedAt = j.FailedAt
-        }).ToList();
+        return query
+            .Select(j => new FailedJobModel
+            {
+                Id = j.Id,
+                Uuid = j.Uuid,
+                Connection = j.Connection,
+                Queue = j.Queue,
+                Payload = j.Payload,
+                Exception = j.Exception,
+                FailedAt = j.FailedAt,
+            })
+            .ToList();
     }
 
     public IReadOnlyList<CronJobModel> GetEnabledCronJobs()
     {
-        return _context.CronJobs
-            .Where(c => c.IsEnabled)
+        return _context
+            .CronJobs.Where(c => c.IsEnabled)
             .Select(c => new CronJobModel
             {
                 Id = c.Id,
@@ -168,8 +180,9 @@ public class SqliteQueueContext : IQueueContext
                 Parameters = c.Parameters,
                 IsEnabled = c.IsEnabled,
                 LastRun = c.LastRun,
-                NextRun = c.NextRun
-            }).ToList();
+                NextRun = c.NextRun,
+            })
+            .ToList();
     }
 
     public CronJobModel? FindCronJobByName(string name)
@@ -188,7 +201,7 @@ public class SqliteQueueContext : IQueueContext
             Parameters = cronJob.Parameters,
             IsEnabled = cronJob.IsEnabled,
             LastRun = cronJob.LastRun,
-            NextRun = cronJob.NextRun
+            NextRun = cronJob.NextRun,
         };
         _context.CronJobs.Add(entity);
         SaveAndClear();
@@ -197,7 +210,8 @@ public class SqliteQueueContext : IQueueContext
     public void UpdateCronJob(CronJobModel cronJob)
     {
         CronJobEntity? entity = _context.CronJobs.Find(cronJob.Id);
-        if (entity == null) return;
+        if (entity == null)
+            return;
 
         entity.CronExpression = cronJob.CronExpression;
         entity.IsEnabled = cronJob.IsEnabled;
@@ -246,7 +260,7 @@ public class SqliteQueueContext : IQueueContext
             Attempts = entity.Attempts,
             ReservedAt = entity.ReservedAt,
             AvailableAt = entity.AvailableAt,
-            CreatedAt = entity.CreatedAt
+            CreatedAt = entity.CreatedAt,
         };
     }
 
@@ -260,7 +274,7 @@ public class SqliteQueueContext : IQueueContext
             Queue = entity.Queue,
             Payload = entity.Payload,
             Exception = entity.Exception,
-            FailedAt = entity.FailedAt
+            FailedAt = entity.FailedAt,
         };
     }
 
@@ -275,7 +289,7 @@ public class SqliteQueueContext : IQueueContext
             Parameters = entity.Parameters,
             IsEnabled = entity.IsEnabled,
             LastRun = entity.LastRun,
-            NextRun = entity.NextRun
+            NextRun = entity.NextRun,
         };
     }
 }

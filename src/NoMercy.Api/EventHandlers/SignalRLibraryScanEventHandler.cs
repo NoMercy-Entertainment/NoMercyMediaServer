@@ -22,12 +22,16 @@ public class SignalRLibraryScanEventHandler : IDisposable
 
     internal Task OnScanStarted(LibraryScanStartedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll("LibraryScanStarted", "dashboardHub", new
-        {
-            LibraryId = @event.LibraryId.ToString(),
-            @event.LibraryName,
-            @event.Timestamp
-        });
+        _clientMessenger.SendToAll(
+            "LibraryScanStarted",
+            "dashboardHub",
+            new
+            {
+                LibraryId = @event.LibraryId.ToString(),
+                @event.LibraryName,
+                @event.Timestamp,
+            }
+        );
 
         Logger.Socket($"Library scan started: {@event.LibraryName}");
         return Task.CompletedTask;
@@ -35,43 +39,57 @@ public class SignalRLibraryScanEventHandler : IDisposable
 
     internal Task OnScanCompleted(LibraryScanCompletedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll("LibraryScanCompleted", "dashboardHub", new
-        {
-            LibraryId = @event.LibraryId.ToString(),
-            @event.LibraryName,
-            @event.ItemsFound,
-            Duration = @event.Duration.TotalSeconds,
-            @event.Timestamp
-        });
+        _clientMessenger.SendToAll(
+            "LibraryScanCompleted",
+            "dashboardHub",
+            new
+            {
+                LibraryId = @event.LibraryId.ToString(),
+                @event.LibraryName,
+                @event.ItemsFound,
+                Duration = @event.Duration.TotalSeconds,
+                @event.Timestamp,
+            }
+        );
 
-        Logger.Socket($"Library scan completed: {@event.LibraryName}, {@event.ItemsFound} items found");
+        Logger.Socket(
+            $"Library scan completed: {@event.LibraryName}, {@event.ItemsFound} items found"
+        );
         return Task.CompletedTask;
     }
 
     internal Task OnMediaAdded(MediaAddedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll("MediaAdded", "dashboardHub", new
-        {
-            @event.MediaId,
-            @event.MediaType,
-            @event.Title,
-            LibraryId = @event.LibraryId.ToString(),
-            @event.Timestamp
-        });
+        _clientMessenger.SendToAll(
+            "MediaAdded",
+            "dashboardHub",
+            new
+            {
+                @event.MediaId,
+                @event.MediaType,
+                @event.Title,
+                LibraryId = @event.LibraryId.ToString(),
+                @event.Timestamp,
+            }
+        );
 
         return Task.CompletedTask;
     }
 
     internal Task OnMediaRemoved(MediaRemovedEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll("MediaRemoved", "dashboardHub", new
-        {
-            @event.MediaId,
-            @event.MediaType,
-            @event.Title,
-            LibraryId = @event.LibraryId.ToString(),
-            @event.Timestamp
-        });
+        _clientMessenger.SendToAll(
+            "MediaRemoved",
+            "dashboardHub",
+            new
+            {
+                @event.MediaId,
+                @event.MediaType,
+                @event.Title,
+                LibraryId = @event.LibraryId.ToString(),
+                @event.Timestamp,
+            }
+        );
 
         return Task.CompletedTask;
     }

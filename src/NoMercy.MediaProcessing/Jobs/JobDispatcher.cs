@@ -24,27 +24,55 @@ public class JobDispatcher
     }
 
     private QueueJobDispatcher Dispatcher =>
-        _dispatcher ?? throw new InvalidOperationException(
-            "JobDispatcher requires a QueueRunner instance. Ensure QueueRunner is initialized before dispatching jobs.");
+        _dispatcher
+        ?? throw new InvalidOperationException(
+            "JobDispatcher requires a QueueRunner instance. Ensure QueueRunner is initialized before dispatching jobs."
+        );
 
-    public virtual void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string id, string inputFile)
+    public virtual void DispatchJob<TJob>(
+        Ulid libraryId,
+        Ulid folderId,
+        string id,
+        string inputFile
+    )
         where TJob : AbstractEncoderJob, new()
     {
-        TJob job = new() { LibraryId = libraryId, FolderId = folderId, Id = id, InputFile = inputFile };
+        TJob job = new()
+        {
+            LibraryId = libraryId,
+            FolderId = folderId,
+            Id = id,
+            InputFile = inputFile,
+        };
         Dispatcher.Dispatch(job);
     }
 
-    public virtual void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, Guid releaseId, string filePath)
+    public virtual void DispatchJob<TJob>(
+        Ulid libraryId,
+        Ulid folderId,
+        Guid releaseId,
+        string filePath
+    )
         where TJob : AbstractMusicFolderJob, new()
     {
-        TJob job = new() { LibraryId = libraryId, ReleaseId = releaseId, InputFolder = filePath };
+        TJob job = new()
+        {
+            LibraryId = libraryId,
+            ReleaseId = releaseId,
+            InputFolder = filePath,
+        };
         Dispatcher.Dispatch(job);
     }
 
     public virtual void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, string filePath)
         where TJob : AbstractMusicFolderJob, new()
     {
-        TJob job = new() { LibraryId = libraryId, FolderId = folderId, InputFolder = filePath };
+        TJob job = new()
+        {
+            LibraryId = libraryId,
+            FolderId = folderId,
+            InputFolder = filePath,
+        };
         Dispatcher.Dispatch(job);
     }
 
@@ -90,17 +118,33 @@ public class JobDispatcher
         Dispatcher.Dispatch(job);
     }
 
-    public virtual void DispatchJob<TJob>(Ulid libraryId, Guid id, Folder baseFolder, MediaFolderExtend mediaFolder)
+    public virtual void DispatchJob<TJob>(
+        Ulid libraryId,
+        Guid id,
+        Folder baseFolder,
+        MediaFolderExtend mediaFolder
+    )
         where TJob : AbstractReleaseJob, new()
     {
-        TJob job = new() { LibraryId = libraryId, Id = id, BaseFolder = baseFolder, MediaFolder = mediaFolder };
+        TJob job = new()
+        {
+            LibraryId = libraryId,
+            Id = id,
+            BaseFolder = baseFolder,
+            MediaFolder = mediaFolder,
+        };
         Dispatcher.Dispatch(job);
     }
 
     public virtual void DispatchJob<TJob>(Guid id1, Guid? id2 = null, Guid? id3 = null)
         where TJob : AbstractFanArtDataJob, new()
     {
-        TJob job = new() { Id1 = id1, Id2 = id2, Id3 = id3 };
+        TJob job = new()
+        {
+            Id1 = id1,
+            Id2 = id2,
+            Id3 = id3,
+        };
         Dispatcher.Dispatch(job);
     }
 
@@ -134,9 +178,12 @@ public class JobDispatcher
         {
             Id = id,
             FolderId = folderId,
-            FoundTrack = foundTrack, FolderMetaData = folderMetaData,
-            MediaFile = mediaFile, LibraryId = libraryId,
-            InputFolder = inputFolder, InputFile = inputFile
+            FoundTrack = foundTrack,
+            FolderMetaData = folderMetaData,
+            MediaFile = mediaFile,
+            LibraryId = libraryId,
+            InputFolder = inputFolder,
+            InputFile = inputFile,
         };
         Dispatcher.Dispatch(job);
     }

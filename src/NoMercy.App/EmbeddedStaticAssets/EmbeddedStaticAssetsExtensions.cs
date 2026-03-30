@@ -20,9 +20,14 @@ public static class EmbeddedStaticAssetsExtensions
     public static IApplicationBuilder UseEmbeddedStaticAssets(
         this IApplicationBuilder app,
         Assembly? assembly = null,
-        string embeddedResourceRoot = "wwwroot")
+        string embeddedResourceRoot = "wwwroot"
+    )
     {
-        return app.UseEmbeddedStaticAssets(new EmbeddedStaticAssetsOptions(), assembly, embeddedResourceRoot);
+        return app.UseEmbeddedStaticAssets(
+            new EmbeddedStaticAssetsOptions(),
+            assembly,
+            embeddedResourceRoot
+        );
     }
 
     /// <summary>
@@ -37,7 +42,8 @@ public static class EmbeddedStaticAssetsExtensions
         this IApplicationBuilder app,
         EmbeddedStaticAssetsOptions options,
         Assembly? assembly = null,
-        string embeddedResourceRoot = "wwwroot")
+        string embeddedResourceRoot = "wwwroot"
+    )
     {
         assembly ??= Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
 
@@ -60,7 +66,8 @@ public static class EmbeddedStaticAssetsExtensions
         this IApplicationBuilder app,
         Action<EmbeddedStaticAssetsOptions> configure,
         Assembly? assembly = null,
-        string embeddedResourceRoot = "wwwroot")
+        string embeddedResourceRoot = "wwwroot"
+    )
     {
         EmbeddedStaticAssetsOptions options = new();
         configure(options);

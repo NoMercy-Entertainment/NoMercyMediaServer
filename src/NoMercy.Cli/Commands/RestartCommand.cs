@@ -6,25 +6,24 @@ internal static class RestartCommand
 {
     public static Command Create(Option<string?> pipeOption)
     {
-        Command command = new("restart")
-        {
-            Description = "Restart the server"
-        };
+        Command command = new("restart") { Description = "Restart the server" };
 
-        command.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
-        {
-            string? pipe = parseResult.GetValue(pipeOption);
-            using CliClient client = new(pipe);
-            bool ok = await client.PostAsync("/manage/restart", null, ct);
-
-            if (ok)
+        command.SetAction(
+            async (ParseResult parseResult, CancellationToken ct) =>
             {
-                Console.WriteLine("Server restart requested.");
-                return 0;
-            }
+                string? pipe = parseResult.GetValue(pipeOption);
+                using CliClient client = new(pipe);
+                bool ok = await client.PostAsync("/manage/restart", null, ct);
 
-            return 1;
-        });
+                if (ok)
+                {
+                    Console.WriteLine("Server restart requested.");
+                    return 0;
+                }
+
+                return 1;
+            }
+        );
 
         return command;
     }

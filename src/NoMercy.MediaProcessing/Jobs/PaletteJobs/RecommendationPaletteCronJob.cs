@@ -16,7 +16,10 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
     public string CronExpression => new CronExpressionBuilder().EveryMinutes(30);
     public string JobName => "Recommendations ColorPalette Job";
 
-    public RecommendationPaletteCronJob(ILogger<RecommendationPaletteCronJob> logger, MediaContext context)
+    public RecommendationPaletteCronJob(
+        ILogger<RecommendationPaletteCronJob> logger,
+        MediaContext context
+    )
     {
         _logger = logger;
         _context = context;
@@ -24,42 +27,49 @@ public class RecommendationPaletteCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        List<Recommendation[]> recommendations = _context.Recommendations
-            .Where(x => string.IsNullOrEmpty(x._colorPalette))
+        List<Recommendation[]> recommendations = _context
+            .Recommendations.Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.TvFrom != null ? x.TvFrom.UpdatedAt : x.MovieFrom!.UpdatedAt)
             .Take(100)
             .ToList()
             .Chunk(10)
             .ToList();
 
-        if (recommendations.Count == 0) return;
+        if (recommendations.Count == 0)
+            return;
 
         _logger.LogTrace("Found {Count} recommendation chunks to process", recommendations.Count);
 
         foreach (Recommendation[] recommendationChunk in recommendations)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
-            await Parallel.ForEachAsync(recommendationChunk, Config.ParallelOptions, async (recommendation, _) =>
-            {
-                try
+            await Parallel.ForEachAsync(
+                recommendationChunk,
+                Config.ParallelOptions,
+                async (recommendation, _) =>
                 {
-                    recommendation._colorPalette = await MovieDbImageManager
-                        .MultiColorPalette([
+                    try
+                    {
+                        recommendation._colorPalette = await MovieDbImageManager.MultiColorPalette([
                             new("poster", recommendation.Poster),
-                            new("backdrop", recommendation.Backdrop)
+                            new("backdrop", recommendation.Backdrop),
                         ]);
+                    }
+                    catch (Exception)
+                    {
+                        recommendation._colorPalette = "{}";
+                    }
                 }
-                catch (Exception)
-                {
-                    recommendation._colorPalette = "{}";
-                }
-            });
+            );
 
             await _context.SaveChangesAsync(cancellationToken);
-
         }
 
-        _logger.LogTrace("Recommendation palette job completed, updated: {Count}", recommendations.Sum(x => x.Length));
+        _logger.LogTrace(
+            "Recommendation palette job completed, updated: {Count}",
+            recommendations.Sum(x => x.Length)
+        );
     }
 }

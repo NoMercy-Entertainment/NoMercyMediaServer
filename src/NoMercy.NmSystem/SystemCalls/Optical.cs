@@ -24,7 +24,8 @@ public static class Optical
         foreach (DriveInfo drive in DriveInfo.GetDrives())
             if (drive is { DriveType: DriveType.CDRom, IsReady: true })
                 drives[drive.Name] = drive.VolumeLabel.Length > 0 ? drive.VolumeLabel : null;
-            else if (drive.DriveType == DriveType.CDRom) drives[drive.Name] = null;
+            else if (drive.DriveType == DriveType.CDRom)
+                drives[drive.Name] = null;
 
         return drives;
     }
@@ -37,7 +38,8 @@ public static class Optical
         foreach (string line in output)
         {
             string[] parts = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 2) continue;
+            if (parts.Length < 2)
+                continue;
 
             string path = $"/dev/{parts[0]}";
             drives[path] = parts.Length > 2 ? parts[2] : null;
@@ -54,11 +56,13 @@ public static class Optical
         foreach (string line in output)
         {
             string[] parts = line.Split([' '], StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length <= 0) continue;
+            if (parts.Length <= 0)
+                continue;
 
             string path = parts[^1]; // Last item is typically the disk identifier (e.g., /dev/disk2)
-            drives[path] =
-                RunShellCommand($"diskutil info {path} | grep 'Volume Name'").FirstOrDefault()?.Split(": ")[1];
+            drives[path] = RunShellCommand($"diskutil info {path} | grep 'Volume Name'")
+                .FirstOrDefault()
+                ?.Split(": ")[1];
         }
 
         return drives;
@@ -71,7 +75,9 @@ public static class Optical
         try
         {
             string result = Shell.ExecCommand(command);
-            outputLines.AddRange(result.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries));
+            outputLines.AddRange(
+                result.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries)
+            );
         }
         catch (Exception ex)
         {
@@ -108,18 +114,28 @@ public static class Optical
     #region Windows Optical Drive Control
 
     [DllImport("winmm.dll", EntryPoint = "mciSendString")]
-    public static extern int mciSendString(string lpstrCommand, string lpstrReturnString, int uReturnLength,
-        int hwndCallback);
+    public static extern int mciSendString(
+        string lpstrCommand,
+        string lpstrReturnString,
+        int uReturnLength,
+        int hwndCallback
+    );
 
     private static bool OpenWindowsOpticalDrives(string drivePath)
     {
-        if (!IsOpticalDrive(drivePath)) return false; // Early check
+        if (!IsOpticalDrive(drivePath))
+            return false; // Early check
 
         try
         {
-            int locked = mciSendString($"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}", string.Empty, 0,
-                0);
-            if (locked != 0) return false; // Check if open was successful
+            int locked = mciSendString(
+                $"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}",
+                string.Empty,
+                0,
+                0
+            );
+            if (locked != 0)
+                return false; // Check if open was successful
 
             int result = mciSendString($"set drive{drivePath[0]} door open", string.Empty, 0, 0);
             int released = mciSendString($"close drive{drivePath[0]}", string.Empty, 0, 0);
@@ -128,20 +144,28 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to open Windows optical drive '{drivePath}': {ex.Message}");
+            Console.WriteLine(
+                $"[ERROR] Failed to open Windows optical drive '{drivePath}': {ex.Message}"
+            );
             return false;
         }
     }
 
     private static bool CloseWindowsOpticalDrives(string drivePath)
     {
-        if (!IsOpticalDrive(drivePath)) return false; //Early check
+        if (!IsOpticalDrive(drivePath))
+            return false; //Early check
 
         try
         {
-            int locked = mciSendString($"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}", string.Empty, 0,
-                0);
-            if (locked != 0) return false; // check if open was successful
+            int locked = mciSendString(
+                $"open {drivePath[0]}: type CDAudio alias drive{drivePath[0]}",
+                string.Empty,
+                0,
+                0
+            );
+            if (locked != 0)
+                return false; // check if open was successful
 
             int result = mciSendString($"set drive{drivePath[0]} door closed", string.Empty, 0, 0);
             int released = mciSendString($"close drive{drivePath[0]}", string.Empty, 0, 0);
@@ -150,7 +174,9 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to close Windows optical drive '{drivePath}': {ex.Message}");
+            Console.WriteLine(
+                $"[ERROR] Failed to close Windows optical drive '{drivePath}': {ex.Message}"
+            );
             return false;
         }
     }
@@ -174,7 +200,9 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to open Linux optical drive '{drivePath}': {ex.Message}");
+            Console.WriteLine(
+                $"[ERROR] Failed to open Linux optical drive '{drivePath}': {ex.Message}"
+            );
             return false;
         }
     }
@@ -188,7 +216,9 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to close Linux optical drive '{drivePath}': {ex.Message}");
+            Console.WriteLine(
+                $"[ERROR] Failed to close Linux optical drive '{drivePath}': {ex.Message}"
+            );
             return false;
         }
     }
@@ -206,7 +236,9 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to open macOS optical drive '{drivePath}': {ex.Message}");
+            Console.WriteLine(
+                $"[ERROR] Failed to open macOS optical drive '{drivePath}': {ex.Message}"
+            );
             return false;
         }
     }
@@ -220,7 +252,9 @@ public static class Optical
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to close macOS optical drive '{drivePath}': {ex.Message}");
+            Console.WriteLine(
+                $"[ERROR] Failed to close macOS optical drive '{drivePath}': {ex.Message}"
+            );
             return false;
         }
     }

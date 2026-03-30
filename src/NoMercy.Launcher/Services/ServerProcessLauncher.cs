@@ -10,11 +10,9 @@ public class ServerProcessLauncher
     private Process? _serverProcess;
     private Process? _appProcess;
 
-    public bool IsServerProcessRunning =>
-        _serverProcess is { HasExited: false };
+    public bool IsServerProcessRunning => _serverProcess is { HasExited: false };
 
-    public bool IsAppProcessRunning =>
-        _appProcess is { HasExited: false };
+    public bool IsAppProcessRunning => _appProcess is { HasExited: false };
 
     public Process? ServerProcess => _serverProcess;
 
@@ -47,11 +45,7 @@ public class ServerProcessLauncher
         if (installDir is not null)
             startInfo.Environment["NOMERCY_INSTALL_DIR"] = installDir;
 
-        _serverProcess = new()
-        {
-            StartInfo = startInfo,
-            EnableRaisingEvents = true
-        };
+        _serverProcess = new() { StartInfo = startInfo, EnableRaisingEvents = true };
 
         _serverProcess.Exited += (_, _) =>
         {
@@ -82,11 +76,7 @@ public class ServerProcessLauncher
             startInfo.ArgumentList.Add(route);
         }
 
-        _appProcess = new()
-        {
-            StartInfo = startInfo,
-            EnableRaisingEvents = true
-        };
+        _appProcess = new() { StartInfo = startInfo, EnableRaisingEvents = true };
 
         _appProcess.Exited += (_, _) =>
         {
@@ -158,7 +148,8 @@ public class ServerProcessLauncher
         if (File.Exists(currentPath))
         {
             LauncherLog.Info($"Backing up current binary to {backupPath}");
-            if (File.Exists(backupPath)) File.Delete(backupPath);
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
             File.Move(currentPath, backupPath);
         }
 
@@ -169,7 +160,8 @@ public class ServerProcessLauncher
             LauncherLog.Info("Binary replacement successful");
 
             // Clean up backup on success
-            if (File.Exists(backupPath)) File.Delete(backupPath);
+            if (File.Exists(backupPath))
+                File.Delete(backupPath);
         }
         catch (Exception ex)
         {
@@ -190,7 +182,9 @@ public class ServerProcessLauncher
     {
         string tempPath = AppFiles.ServerTempExePath;
 
-        LauncherLog.Info($"Checking for staged update at {tempPath}: exists={File.Exists(tempPath)}");
+        LauncherLog.Info(
+            $"Checking for staged update at {tempPath}: exists={File.Exists(tempPath)}"
+        );
 
         if (File.Exists(tempPath))
             await ApplyUpdateAsync();
@@ -204,14 +198,20 @@ public class ServerProcessLauncher
     private static string? GetInstallDirectory()
     {
         string? ownDir = Path.GetDirectoryName(
-            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+        );
 
         if (ownDir is null)
             return null;
 
         // If the Launcher is in the binaries path, this is a standalone deployment
-        if (string.Equals(Path.GetFullPath(ownDir), Path.GetFullPath(AppFiles.BinariesPath),
-                StringComparison.OrdinalIgnoreCase))
+        if (
+            string.Equals(
+                Path.GetFullPath(ownDir),
+                Path.GetFullPath(AppFiles.BinariesPath),
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
             return null;
 
         return ownDir;
@@ -224,17 +224,14 @@ public class ServerProcessLauncher
         if (!File.Exists(exePath))
             return null;
 
-        return new(exePath)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        return new(exePath) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateInstalledStartInfo()
     {
         string? ownDir = Path.GetDirectoryName(
-            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+        );
 
         if (ownDir is null)
             return null;
@@ -244,11 +241,7 @@ public class ServerProcessLauncher
         if (!File.Exists(candidate))
             return null;
 
-        return new(candidate)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        return new(candidate) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateDevBinaryStartInfo()
@@ -261,7 +254,7 @@ public class ServerProcessLauncher
         ProcessStartInfo startInfo = new(serverBinary)
         {
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
         };
 
         startInfo.ArgumentList.Add("--dev");
@@ -279,7 +272,7 @@ public class ServerProcessLauncher
         ProcessStartInfo startInfo = new("dotnet")
         {
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
         };
 
         startInfo.ArgumentList.Add("run");
@@ -302,8 +295,20 @@ public class ServerProcessLauncher
 
         string[] searchPaths =
         [
-            Path.Combine(serverProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName),
-            Path.Combine(serverProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName)
+            Path.Combine(
+                serverProjectDir,
+                "bin",
+                "Debug",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
+            ),
+            Path.Combine(
+                serverProjectDir,
+                "bin",
+                "Release",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
+            ),
         ];
 
         foreach (string path in searchPaths)
@@ -322,17 +327,14 @@ public class ServerProcessLauncher
         if (!File.Exists(exePath))
             return null;
 
-        return new(exePath)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        return new(exePath) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateAppInstalledStartInfo()
     {
         string? ownDir = Path.GetDirectoryName(
-            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+        );
 
         if (ownDir is null)
             return null;
@@ -342,11 +344,7 @@ public class ServerProcessLauncher
         if (!File.Exists(candidate))
             return null;
 
-        return new(candidate)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        return new(candidate) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateAppDevBinaryStartInfo()
@@ -360,8 +358,20 @@ public class ServerProcessLauncher
 
         string[] searchPaths =
         [
-            Path.Combine(appProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName),
-            Path.Combine(appProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName)
+            Path.Combine(
+                appProjectDir,
+                "bin",
+                "Debug",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
+            ),
+            Path.Combine(
+                appProjectDir,
+                "bin",
+                "Release",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
+            ),
         ];
 
         foreach (string path in searchPaths)
@@ -383,7 +393,7 @@ public class ServerProcessLauncher
         ProcessStartInfo startInfo = new("dotnet")
         {
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
         };
 
         startInfo.ArgumentList.Add("run");
@@ -400,16 +410,13 @@ public class ServerProcessLauncher
 
     private static string? FindProjectDirectory(string projectName)
     {
-        string? assemblyLocation =
-            Path.GetDirectoryName(
-                Assembly.GetExecutingAssembly().Location);
+        string? assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         string? directory = assemblyLocation;
 
         while (directory is not null)
         {
-            string candidate = Path.Combine(
-                directory, "src", projectName);
+            string candidate = Path.Combine(directory, "src", projectName);
 
             if (Directory.Exists(candidate))
                 return candidate;

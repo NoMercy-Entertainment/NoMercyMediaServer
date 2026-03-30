@@ -28,9 +28,7 @@ public class BaseAudio : Classes
     // ReSharper disable once InconsistentNaming
     public long _bitRate = -1;
 
-    private long BitRate => _bitRate == -1
-        ? AudioStream?.BitRate ?? -1
-        : _bitRate;
+    private long BitRate => _bitRate == -1 ? AudioStream?.BitRate ?? -1 : _bitRate;
 
     public int AudioChannels { get; set; }
 
@@ -48,26 +46,36 @@ public class BaseAudio : Classes
 
     protected virtual string[] AvailableContainers { get; set; } =
     [
-        AudioContainers.Mp3, AudioContainers.Flac, AudioContainers.M4A,
-        AudioContainers.Aac, AudioContainers.Ogg, AudioContainers.Wav
+        AudioContainers.Mp3,
+        AudioContainers.Flac,
+        AudioContainers.M4A,
+        AudioContainers.Aac,
+        AudioContainers.Ogg,
+        AudioContainers.Wav,
     ];
 
     public virtual CodecDto[] AvailableCodecs { get; set; } =
     [
-        AudioCodecs.Aac, AudioCodecs.Opus, AudioCodecs.Vorbis,
-        AudioCodecs.Mp3, AudioCodecs.Flac, AudioCodecs.Ac3,
-        AudioCodecs.Eac3, AudioCodecs.TrueHd
+        AudioCodecs.Aac,
+        AudioCodecs.Opus,
+        AudioCodecs.Vorbis,
+        AudioCodecs.Mp3,
+        AudioCodecs.Flac,
+        AudioCodecs.Ac3,
+        AudioCodecs.Eac3,
+        AudioCodecs.TrueHd,
     ];
 
     private string _hlsSegmentFilename = "";
 
     public string HlsSegmentFilename
     {
-        get => _hlsSegmentFilename
-            .Replace(":language:", Language)
-            .Replace(":codec:", AudioCodec.SimpleValue)
-            .Replace(":filename:", FileName)
-            .Replace(":type:", Type);
+        get =>
+            _hlsSegmentFilename
+                .Replace(":language:", Language)
+                .Replace(":codec:", AudioCodec.SimpleValue)
+                .Replace(":filename:", FileName)
+                .Replace(":type:", Type);
         set => _hlsSegmentFilename = value;
     }
 
@@ -80,11 +88,12 @@ public class BaseAudio : Classes
 
     public string HlsPlaylistFilename
     {
-        get => _hlsPlaylistFilename
-            .Replace(":language:", Language)
-            .Replace(":codec:", AudioCodec.SimpleValue)
-            .Replace(":filename:", FileName)
-            .Replace(":type:", Type);
+        get =>
+            _hlsPlaylistFilename
+                .Replace(":language:", Language)
+                .Replace(":codec:", AudioCodec.SimpleValue)
+                .Replace(":filename:", FileName)
+                .Replace(":type:", Type);
         set => _hlsPlaylistFilename = value;
     }
 
@@ -116,13 +125,12 @@ public class BaseAudio : Classes
     {
         if (AvailableCodecs.All(codec => codec.Value != audioCodec))
             throw new(
-                $"Wrong audio codec value for {audioCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}");
+                $"Wrong audio codec value for {audioCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}"
+            );
 
         AudioCodec = AvailableCodecs.First(codec => codec.Value == audioCodec);
 
-        lock (AudioCodec.SimpleValue)
-        {
-        }
+        lock (AudioCodec.SimpleValue) { }
 
         return this;
     }
@@ -222,14 +230,15 @@ public class BaseAudio : Classes
         List<BaseAudio> streams = [];
 
         foreach (string allowedLanguage in AllowedLanguages.Append("und"))
-        foreach (FfProbeAudioStream stream in AudioStreams.Where(audioStream =>
-                     audioStream.Language is null || audioStream.Language == allowedLanguage))
+        foreach (
+            FfProbeAudioStream stream in AudioStreams.Where(audioStream =>
+                audioStream.Language is null || audioStream.Language == allowedLanguage
+            )
+        )
         {
             BaseAudio newStream = (BaseAudio)MemberwiseClone();
 
-            newStream.Language = stream.Language == "und"
-                ? "eng"
-                : stream.Language ?? "eng";
+            newStream.Language = stream.Language == "und" ? "eng" : stream.Language ?? "eng";
 
             newStream.IsAudio = true;
 
@@ -237,7 +246,8 @@ public class BaseAudio : Classes
 
             newStream.Index = AudioStreams.IndexOf(newStream.AudioStream);
 
-            if (streams.Any(s => s.HlsPlaylistFilename == newStream.HlsPlaylistFilename)) continue;
+            if (streams.Any(s => s.HlsPlaylistFilename == newStream.HlsPlaylistFilename))
+                continue;
 
             streams.Add(newStream);
         }
@@ -287,7 +297,7 @@ public class BaseAudio : Classes
             "libmp3lame" => new Mp3(),
             "flac" => new Flac(),
             "vorbis" => new Vorbis(),
-            _ => throw new($"Audio codec {codec} is not supported")
+            _ => throw new($"Audio codec {codec} is not supported"),
         };
     }
 

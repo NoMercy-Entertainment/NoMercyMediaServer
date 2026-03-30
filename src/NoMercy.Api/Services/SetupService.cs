@@ -16,24 +16,28 @@ public class SetupService
     private readonly LibraryRepository _libraryRepository;
     private readonly HomeRepository _homeRepository;
 
-    public SetupService(HomeRepository homeRepository, LibraryRepository libraryRepository, MediaContext mediaContext)
+    public SetupService(
+        HomeRepository homeRepository,
+        LibraryRepository libraryRepository,
+        MediaContext mediaContext
+    )
     {
         _homeRepository = homeRepository;
         _libraryRepository = libraryRepository;
         _mediaContext = mediaContext;
     }
-    
+
     public Task<List<Library>> GetSetupLibraries(Guid userId)
     {
-        return _mediaContext.Libraries
-            .AsNoTracking()
+        return _mediaContext
+            .Libraries.AsNoTracking()
             .Where(library => library.LibraryUsers.Any(u => u.UserId == userId))
             .Include(library => library.FolderLibraries)
-            .ThenInclude(fl => fl.Folder)
-            .ThenInclude(f => f.EncoderProfileFolder)
-            .ThenInclude(epf => epf.EncoderProfile)
+                .ThenInclude(fl => fl.Folder)
+                    .ThenInclude(f => f.EncoderProfileFolder)
+                        .ThenInclude(epf => epf.EncoderProfile)
             .Include(library => library.LanguageLibraries)
-            .ThenInclude(ll => ll.Language)
+                .ThenInclude(ll => ll.Language)
             .Include(library => library.LibraryMovies)
             .Include(library => library.LibraryTvs)
             .OrderBy(library => library.Order)
@@ -42,26 +46,30 @@ public class SetupService
 
     public Task<List<Playlist>> GetSetupPlaylistsAsync(Guid userId)
     {
-        return _mediaContext.Playlists
-            .AsNoTracking()
+        return _mediaContext
+            .Playlists.AsNoTracking()
             .Where(playlist => playlist.UserId == userId)
             .ToListAsync();
     }
-    
 
     public async Task<ScreensaverDto> GetSetupScreensaverContent(Guid userId)
     {
-        HashSet<Image> data = await _homeRepository.GetScreensaverImagesAsync(_mediaContext, userId);
+        HashSet<Image> data = await _homeRepository.GetScreensaverImagesAsync(
+            _mediaContext,
+            userId
+        );
 
         IEnumerable<Image> logos = data.Where(image => image.Type == "logo");
 
-        IEnumerable<ScreensaverDataDto> tvCollection = data
-            .Where(image => image is { TvId: not null, Type: "backdrop" })
+        IEnumerable<ScreensaverDataDto> tvCollection = data.Where(image =>
+                image is { TvId: not null, Type: "backdrop" }
+            )
             .DistinctBy(image => image.TvId)
             .Select(image => new ScreensaverDataDto(image, logos, Config.TvMediaType));
 
-        IEnumerable<ScreensaverDataDto> movieCollection = data
-            .Where(image => image is { MovieId: not null, Type: "backdrop" })
+        IEnumerable<ScreensaverDataDto> movieCollection = data.Where(image =>
+                image is { MovieId: not null, Type: "backdrop" }
+            )
             .DistinctBy(image => image.MovieId)
             .Select(image => new ScreensaverDataDto(image, logos, Config.MovieMediaType));
 
@@ -70,8 +78,7 @@ public class SetupService
             Data = tvCollection
                 .Concat(movieCollection)
                 .Where(image => image.Meta?.Logo != null)
-                .Randomize()
+                .Randomize(),
         };
     }
-
 }

@@ -3,13 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Query;
-using NoMercy.Api.DTOs.Dashboard;
-using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.Controllers.V1.Music;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
-
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -31,9 +30,12 @@ public class DevicesController : BaseController
     public Task<IActionResult> Index()
     {
         if (!User.IsModerator())
-            return Task.FromResult(UnauthorizedResponse("You do not have permission to view devices"));
+            return Task.FromResult(
+                UnauthorizedResponse("You do not have permission to view devices")
+            );
 
-        IIncludableQueryable<Device, ICollection<ActivityLog>> devices = _deviceRepository.GetDevices();
+        IIncludableQueryable<Device, ICollection<ActivityLog>> devices =
+            _deviceRepository.GetDevices();
 
         DevicesDto[] devicesDtos = devices
             .Select(x => new DevicesDto
@@ -49,25 +51,21 @@ public class DevicesController : BaseController
                 Version = x.Version,
                 Ip = x.Ip,
                 CreatedAt = x.CreatedAt,
-                ActivityLogs = x.ActivityLogs
-                    .Select(activityLog => new ActivityLogDto
-                    {
-                        Id = activityLog.Id,
-                        Type = activityLog.Type,
-                        Time = activityLog.Time,
-                        CreatedAt = activityLog.CreatedAt,
-                        UserId = activityLog.UserId,
-                        DeviceId = activityLog.DeviceId.ToString()
-                    })
+                ActivityLogs = x.ActivityLogs.Select(activityLog => new ActivityLogDto
+                {
+                    Id = activityLog.Id,
+                    Type = activityLog.Type,
+                    Time = activityLog.Time,
+                    CreatedAt = activityLog.CreatedAt,
+                    UserId = activityLog.UserId,
+                    DeviceId = activityLog.DeviceId.ToString(),
+                }),
             })
             .ToArray();
 
-
-        return Task.FromResult<IActionResult>(Ok(new StatusResponseDto<DevicesDto[]>
-        {
-            Status = "ok",
-            Data = devicesDtos,
-        }));
+        return Task.FromResult<IActionResult>(
+            Ok(new StatusResponseDto<DevicesDto[]> { Status = "ok", Data = devicesDtos })
+        );
     }
 
     [HttpPost]
@@ -77,10 +75,7 @@ public class DevicesController : BaseController
             return UnauthorizedResponse("You do not have permission to create devices");
 
         // Add device creation logic here
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpDelete]
@@ -90,9 +85,6 @@ public class DevicesController : BaseController
             return UnauthorizedResponse("You do not have permission to delete devices");
 
         // Add device deletion logic here
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 }

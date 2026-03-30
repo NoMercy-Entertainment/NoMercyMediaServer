@@ -8,11 +8,20 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record ComponentEnvelope
 {
-    [JsonProperty("id")] public Ulid Id { get; set; } = Ulid.NewUlid();
-    [JsonProperty("component")] public string Component { get; set; } = string.Empty;
-    [JsonProperty("props")] public object Props { get; set; } = new();
-    [JsonProperty("update", NullValueHandling = NullValueHandling.Ignore)] public UpdateDto? Update { get; set; }
-    [JsonProperty("replacing", NullValueHandling = NullValueHandling.Ignore)] public Ulid? Replacing { get; set; }
+    [JsonProperty("id")]
+    public Ulid Id { get; set; } = Ulid.NewUlid();
+
+    [JsonProperty("component")]
+    public string Component { get; set; } = string.Empty;
+
+    [JsonProperty("props")]
+    public object Props { get; set; } = new();
+
+    [JsonProperty("update", NullValueHandling = NullValueHandling.Ignore)]
+    public UpdateDto? Update { get; set; }
+
+    [JsonProperty("replacing", NullValueHandling = NullValueHandling.Ignore)]
+    public Ulid? Replacing { get; set; }
 }
 
 /// <summary>

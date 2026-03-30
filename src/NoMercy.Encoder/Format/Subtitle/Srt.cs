@@ -9,13 +9,7 @@ public class Srt : BaseSubtitle
         SetSubtitleCodec(subtitleCodec);
     }
 
-    public override CodecDto[] AvailableCodecs =>
-    [
-        SubtitleCodecs.Srt
-    ];
+    public override CodecDto[] AvailableCodecs => [SubtitleCodecs.Srt];
 
-    protected override string[] AvailableContainers =>
-    [
-        SubtitleContainers.Srt
-    ];
+    protected override string[] AvailableContainers => [SubtitleContainers.Srt];
 }

@@ -54,11 +54,7 @@ public class AppProcessManager
             if (startInfo is null)
                 return false;
 
-            _appProcess = new()
-            {
-                StartInfo = startInfo,
-                EnableRaisingEvents = true
-            };
+            _appProcess = new() { StartInfo = startInfo, EnableRaisingEvents = true };
 
             _appProcess.Exited += (_, _) =>
             {
@@ -113,17 +109,14 @@ public class AppProcessManager
         if (!File.Exists(exePath))
             return null;
 
-        return new(exePath)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        return new(exePath) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateInstalledStartInfo()
     {
         string? ownDir = Path.GetDirectoryName(
-            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location);
+            Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location
+        );
 
         if (ownDir is null)
             return null;
@@ -133,11 +126,7 @@ public class AppProcessManager
         if (!File.Exists(candidate))
             return null;
 
-        return new(candidate)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+        return new(candidate) { UseShellExecute = false, CreateNoWindow = true };
     }
 
     private static ProcessStartInfo? CreateDevBinaryStartInfo()
@@ -151,8 +140,20 @@ public class AppProcessManager
 
         string[] searchPaths =
         [
-            Path.Combine(appProjectDir, "bin", "Debug", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName),
-            Path.Combine(appProjectDir, "bin", "Release", $"net{Environment.Version.Major}.{Environment.Version.Minor}", execName)
+            Path.Combine(
+                appProjectDir,
+                "bin",
+                "Debug",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
+            ),
+            Path.Combine(
+                appProjectDir,
+                "bin",
+                "Release",
+                $"net{Environment.Version.Major}.{Environment.Version.Minor}",
+                execName
+            ),
         ];
 
         foreach (string path in searchPaths)
@@ -174,7 +175,7 @@ public class AppProcessManager
         ProcessStartInfo startInfo = new("dotnet")
         {
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
         };
 
         startInfo.ArgumentList.Add("run");
@@ -186,9 +187,7 @@ public class AppProcessManager
 
     private static string? FindProjectDirectory(string projectName)
     {
-        string? assemblyLocation =
-            Path.GetDirectoryName(
-                Assembly.GetExecutingAssembly().Location);
+        string? assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         string? directory = assemblyLocation;
 

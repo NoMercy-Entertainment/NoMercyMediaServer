@@ -8,9 +8,14 @@ namespace NoMercy.Helpers;
 
 public class ImageConvertArguments
 {
-    [JsonProperty("width")] public int? Width { get; set; }
-    [JsonProperty("type")] public string? Type { get; set; }
-    [JsonProperty("quality")] public int Quality { get; set; } = 100;
+    [JsonProperty("width")]
+    public int? Width { get; set; }
+
+    [JsonProperty("type")]
+    public string? Type { get; set; }
+
+    [JsonProperty("quality")]
+    public int Quality { get; set; } = 100;
 
     public IImageFormat Format
     {

@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Data.Repositories;
 using NoMercy.Database.Models.Media;
 using NoMercy.Encoder.Format.Container;
@@ -47,26 +47,30 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
                 Id = Ulid.NewUlid(),
                 Name = $"Profile {encoderProfiles}",
                 Container = "mp4",
-                Param = JsonConvert.SerializeObject(new ParamsDto
-                {
-                    Width = 1920,
-                    Crf = 23,
-                    Preset = "medium",
-                    Profile = "main",
-                    Codec = "libx264",
-                    Audio = "aac"
-                })
+                Param = JsonConvert.SerializeObject(
+                    new ParamsDto
+                    {
+                        Width = 1920,
+                        Crf = 23,
+                        Preset = "medium",
+                        Profile = "main",
+                        Codec = "libx264",
+                        Audio = "aac",
+                    }
+                ),
             };
 
             await encoderRepository.AddEncoderProfileAsync(profile);
 
-            return Ok(new StatusResponseDto<EncoderProfile>
-            {
-                Status = "ok",
-                Data = profile,
-                Message = "Successfully created a new encoder profile.",
-                Args = []
-            });
+            return Ok(
+                new StatusResponseDto<EncoderProfile>
+                {
+                    Status = "ok",
+                    Data = profile,
+                    Message = "Successfully created a new encoder profile.",
+                    Args = [],
+                }
+            );
         }
         catch (Exception)
         {
@@ -88,11 +92,7 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
 
         await encoderRepository.DeleteEncoderProfileAsync(profile);
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Data = "Profile removed"
-        });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Data = "Profile removed" });
     }
 
     [HttpGet]
@@ -102,13 +102,11 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to remove encoder profiles");
 
-        ContainerDto[] containers = BaseContainer.AvailableContainers
-            .Select(container => new ContainerDto(container)).ToArray();
+        ContainerDto[] containers = BaseContainer
+            .AvailableContainers.Select(container => new ContainerDto(container))
+            .ToArray();
 
-        return Ok(new DataResponseDto<ContainerDto[]>
-        {
-            Data = containers
-        });
+        return Ok(new DataResponseDto<ContainerDto[]> { Data = containers });
     }
 
     [HttpGet]
@@ -120,9 +118,6 @@ public class EncoderController(EncoderRepository encoderRepository) : BaseContro
 
         Classes.VideoQualityDto[] frameSizes = BaseVideo.AvailableVideoSizes;
 
-        return Ok(new DataResponseDto<Classes.VideoQualityDto[]>
-        {
-            Data = frameSizes.ToArray()
-        });
+        return Ok(new DataResponseDto<Classes.VideoQualityDto[]> { Data = frameSizes.ToArray() });
     }
 }

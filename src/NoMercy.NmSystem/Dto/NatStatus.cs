@@ -8,5 +8,5 @@ public enum NatStatus
     Closed,
     Filtered,
     HolePunched,
-    Tunneled
+    Tunneled,
 }

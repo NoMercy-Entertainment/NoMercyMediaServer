@@ -7,11 +7,10 @@ namespace NoMercy.NmSystem.SystemCalls;
 public static class Download
 {
     private static readonly HttpClient HttpClient = new();
-    
+
     static Download()
     {
         HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        
     }
 
     public static async Task<string> DownloadFile(string name, Uri url, string? outputPath = null)
@@ -33,13 +32,25 @@ public static class Download
         if (directory is not null && !Directory.Exists(directory))
             Directory.CreateDirectory(directory);
 
-        using HttpResponseMessage result = await HttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+        using HttpResponseMessage result = await HttpClient.GetAsync(
+            url,
+            HttpCompletionOption.ResponseHeadersRead
+        );
         result.EnsureSuccessStatusCode();
 
         long? expectedLength = result.Content.Headers.ContentLength;
 
         await using (Stream contentStream = await result.Content.ReadAsStreamAsync())
-        await using (FileStream fileStream = new(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true))
+        await using (
+            FileStream fileStream = new(
+                filePath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                81920,
+                true
+            )
+        )
         {
             await contentStream.CopyToAsync(fileStream);
             await fileStream.FlushAsync();
@@ -60,10 +71,14 @@ public static class Download
         {
             Logger.System(
                 $"Download of {name}: size mismatch (expected {expectedLength.Value} bytes, got {actualLength} bytes)",
-                LogEventLevel.Warning);
+                LogEventLevel.Warning
+            );
         }
 
-        Logger.System($"Downloaded {name} to {filePath} ({actualLength} bytes)", LogEventLevel.Verbose);
+        Logger.System(
+            $"Downloaded {name} to {filePath} ({actualLength} bytes)",
+            LogEventLevel.Verbose
+        );
 
         return filePath;
     }
@@ -72,9 +87,11 @@ public static class Download
     {
         try
         {
-            if (!File.Exists(filePath)) return Task.CompletedTask;
+            if (!File.Exists(filePath))
+                return Task.CompletedTask;
 
-            if (Locking.IsFileLocked(filePath)) Locking.CloseApplicationLockingFile(filePath);
+            if (Locking.IsFileLocked(filePath))
+                Locking.CloseApplicationLockingFile(filePath);
 
             File.Delete(filePath);
 
@@ -82,7 +99,10 @@ public static class Download
         }
         catch (Exception ex)
         {
-            Logger.System($"Failed to delete source download {filePath}: {ex.Message}", LogEventLevel.Warning);
+            Logger.System(
+                $"Failed to delete source download {filePath}: {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
 
         return Task.CompletedTask;

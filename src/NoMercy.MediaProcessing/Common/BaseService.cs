@@ -1,5 +1,3 @@
 namespace NoMercy.MediaProcessing.Common;
 
-public class BaseService
-{
-}
+public class BaseService { }

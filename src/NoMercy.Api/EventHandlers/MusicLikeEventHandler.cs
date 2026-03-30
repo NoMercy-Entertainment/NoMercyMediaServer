@@ -20,7 +20,8 @@ public class MusicLikeEventHandler : IDisposable
         IEventBus eventBus,
         MusicPlayerStateManager musicPlayerStateManager,
         MusicPlaybackService musicPlaybackService,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory
+    )
     {
         _musicPlayerStateManager = musicPlayerStateManager;
         _musicPlaybackService = musicPlaybackService;
@@ -42,10 +43,13 @@ public class MusicLikeEventHandler : IDisposable
                 track.Favorite = @event.Liked;
 
         await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
-        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<
+            IDbContextFactory<MediaContext>
+        >();
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         User? user = await context.Users.FirstOrDefaultAsync(u => u.Id == @event.UserId, ct);
-        if (user is null) return;
+        if (user is null)
+            return;
 
         await _musicPlaybackService.UpdatePlaybackState(user, playerState);
     }

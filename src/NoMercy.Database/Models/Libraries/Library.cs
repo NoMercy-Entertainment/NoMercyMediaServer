@@ -18,19 +18,35 @@ public class Library : Timestamps
     [JsonProperty("chapter_images")]
     public bool ChapterImages { get; set; }
 
-    [JsonProperty("extract_chapters")] public bool ExtractChapters { get; set; }
-    [JsonProperty("extract_chapters_during")] public bool ExtractChaptersDuring { get; set; }
-    [JsonProperty("image")] public string? Image { get; set; }
-    [JsonProperty("auto_refresh_interval")] public int AutoRefreshInterval { get; set; }
-    [JsonProperty("order")] public int? Order { get; set; }
+    [JsonProperty("extract_chapters")]
+    public bool ExtractChapters { get; set; }
+
+    [JsonProperty("extract_chapters_during")]
+    public bool ExtractChaptersDuring { get; set; }
+
+    [JsonProperty("image")]
+    public string? Image { get; set; }
+
+    [JsonProperty("auto_refresh_interval")]
+    public int AutoRefreshInterval { get; set; }
+
+    [JsonProperty("order")]
+    public int? Order { get; set; }
 
     [JsonProperty("perfect_subtitle_match")]
     public bool PerfectSubtitleMatch { get; set; }
 
-    [JsonProperty("realtime")] public bool Realtime { get; set; }
-    [JsonProperty("special_season_name")] public string? SpecialSeasonName { get; set; }
-    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
+    [JsonProperty("realtime")]
+    public bool Realtime { get; set; }
+
+    [JsonProperty("special_season_name")]
+    public string? SpecialSeasonName { get; set; }
+
+    [JsonProperty("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonProperty("type")]
+    public string Type { get; set; } = string.Empty;
 
     [JsonProperty("folder_libraries")]
     public ICollection<FolderLibrary> FolderLibraries { get; set; } = [];
@@ -41,7 +57,8 @@ public class Library : Timestamps
     [JsonProperty("library_users")]
     public ICollection<LibraryUser> LibraryUsers { get; set; } = [];
 
-    [JsonProperty("library_tvs")] public ICollection<LibraryTv> LibraryTvs { get; set; } = [];
+    [JsonProperty("library_tvs")]
+    public ICollection<LibraryTv> LibraryTvs { get; set; } = [];
 
     [JsonProperty("library_movies")]
     public ICollection<LibraryMovie> LibraryMovies { get; set; } = [];
@@ -57,7 +74,7 @@ public class Library : Timestamps
 
     [JsonProperty("artist_libraries")]
     public ICollection<ArtistLibrary> ArtistLibraries { get; set; } = [];
-    
-    [JsonProperty("playback_preferences")] 
+
+    [JsonProperty("playback_preferences")]
     public ICollection<PlaybackPreference> PlaybackPreferences { get; set; } = [];
 }

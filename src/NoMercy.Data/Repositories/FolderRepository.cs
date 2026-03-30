@@ -8,9 +8,10 @@ public class FolderRepository(MediaContext context)
 {
     public async Task<Folder?> GetFolderByIdAsync(Ulid folderId)
     {
-        return await context.Folders.Where(folder => folder.Id == folderId)
+        return await context
+            .Folders.Where(folder => folder.Id == folderId)
             .Include(folder => folder.FolderLibraries)
-            .ThenInclude(folderLibrary => folderLibrary.Library)
+                .ThenInclude(folderLibrary => folderLibrary.Library)
             .FirstOrDefaultAsync();
     }
 
@@ -21,8 +22,8 @@ public class FolderRepository(MediaContext context)
 
     public Task<List<Folder>> GetFoldersByLibraryIdAsync(FolderLibraryDto[] folderLibraries)
     {
-        return context.Folders
-            .Where(folder => folderLibraries.Select(f => f.FolderId).Contains(folder.Id))
+        return context
+            .Folders.Where(folder => folderLibraries.Select(f => f.FolderId).Contains(folder.Id))
             .ToListAsync();
     }
 
@@ -33,57 +34,46 @@ public class FolderRepository(MediaContext context)
 
     public Task<List<Folder>> GetFoldersByLibraryIdAsync(Ulid libraryId)
     {
-        return context.FolderLibrary
-            .Where(fl => fl.LibraryId == libraryId)
+        return context
+            .FolderLibrary.Where(fl => fl.LibraryId == libraryId)
             .Select(fl => fl.Folder)
             .ToListAsync();
     }
 
     public Task<Folder?> GetFolderById(Ulid folderId)
     {
-        return context.Folders
-            .Where(folder => folder.Id == folderId)
-            .FirstOrDefaultAsync();
+        return context.Folders.Where(folder => folder.Id == folderId).FirstOrDefaultAsync();
     }
 
     public Task<Folder?> GetFolderByPath(string path)
     {
-        return context.Folders
-            .FirstOrDefaultAsync(folder => folder.Path == path);
+        return context.Folders.FirstOrDefaultAsync(folder => folder.Path == path);
     }
 
     public Task<int> AddFolderAsync(Folder folder)
     {
-        return context.Folders.Upsert(folder)
+        return context
+            .Folders.Upsert(folder)
             .On(f => new { f.Path })
-            .WhenMatched((fs, fi) => new()
-            {
-                Path = fi.Path
-            })
+            .WhenMatched((fs, fi) => new() { Path = fi.Path })
             .RunAsync();
     }
 
     public Task<int> AddFolderLibraryAsync(FolderLibrary folderLibrary)
     {
-        return context.FolderLibrary.Upsert(folderLibrary)
+        return context
+            .FolderLibrary.Upsert(folderLibrary)
             .On(fl => new { fl.LibraryId, fl.FolderId })
-            .WhenMatched((fls, fli) => new()
-            {
-                LibraryId = fli.LibraryId,
-                FolderId = fli.FolderId
-            })
+            .WhenMatched((fls, fli) => new() { LibraryId = fli.LibraryId, FolderId = fli.FolderId })
             .RunAsync();
     }
 
     public Task<int> AddFolderLibraryAsync(FolderLibrary[] folderLibraries)
     {
-        return context.FolderLibrary.UpsertRange(folderLibraries)
+        return context
+            .FolderLibrary.UpsertRange(folderLibraries)
             .On(fl => new { fl.LibraryId, fl.FolderId })
-            .WhenMatched((fls, fli) => new()
-            {
-                LibraryId = fli.LibraryId,
-                FolderId = fli.FolderId
-            })
+            .WhenMatched((fls, fli) => new() { LibraryId = fli.LibraryId, FolderId = fli.FolderId })
             .RunAsync();
     }
 
@@ -99,12 +89,15 @@ public class FolderRepository(MediaContext context)
         return context.SaveChangesAsync();
     }
 
-    public async Task<int> SyncFolderLibraryAsync(FolderLibrary[] folderLibraries, List<Folder> folders)
+    public async Task<int> SyncFolderLibraryAsync(
+        FolderLibrary[] folderLibraries,
+        List<Folder> folders
+    )
     {
-        await context.FolderLibrary
-            .Where(epf => folders.Select(f => f.Id).Contains(epf.FolderId))
+        await context
+            .FolderLibrary.Where(epf => folders.Select(f => f.Id).Contains(epf.FolderId))
             .ExecuteDeleteAsync();
-        
+
         return await AddFolderLibraryAsync(folderLibraries);
     }
 }

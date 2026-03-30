@@ -8,10 +8,12 @@ namespace NoMercy.Database.Models.Libraries;
 [Index(nameof(LibraryId))]
 public class FolderLibrary
 {
-    [JsonProperty("folder_id")] public Ulid FolderId { get; set; }
+    [JsonProperty("folder_id")]
+    public Ulid FolderId { get; set; }
     public Folder Folder { get; set; } = null!;
 
-    [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
+    [JsonProperty("library_id")]
+    public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
     public FolderLibrary(Ulid folderId, Ulid libraryId)
@@ -20,7 +22,5 @@ public class FolderLibrary
         LibraryId = libraryId;
     }
 
-    public FolderLibrary()
-    {
-    }
+    public FolderLibrary() { }
 }

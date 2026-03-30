@@ -27,7 +27,7 @@ public class JobDispatcher : IJobDispatcher
             Queue = onQueue,
             Payload = SerializationHelper.Serialize(job),
             AvailableAt = DateTime.UtcNow,
-            Priority = priority
+            Priority = priority,
         };
 
         try

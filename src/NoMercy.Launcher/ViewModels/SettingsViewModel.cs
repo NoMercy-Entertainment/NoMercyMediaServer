@@ -28,85 +28,141 @@ public class SettingsViewModel : INotifyPropertyChanged
     public bool IsServerRunning
     {
         get => _isServerRunning;
-        set { _isServerRunning = value; OnPropertyChanged(); }
+        set
+        {
+            _isServerRunning = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool ConfigLoaded
     {
         get => _configLoaded;
-        set { _configLoaded = value; OnPropertyChanged(); }
+        set
+        {
+            _configLoaded = value;
+            OnPropertyChanged();
+        }
     }
 
     public string ConfigServerName
     {
         get => _configServerName;
-        set { _configServerName = value; OnPropertyChanged(); }
+        set
+        {
+            _configServerName = value;
+            OnPropertyChanged();
+        }
     }
 
     public int InternalPort
     {
         get => _internalPort;
-        set { _internalPort = value; OnPropertyChanged(); }
+        set
+        {
+            _internalPort = value;
+            OnPropertyChanged();
+        }
     }
 
     public int ExternalPort
     {
         get => _externalPort;
-        set { _externalPort = value; OnPropertyChanged(); }
+        set
+        {
+            _externalPort = value;
+            OnPropertyChanged();
+        }
     }
 
     public int LibraryWorkers
     {
         get => _libraryWorkers;
-        set { _libraryWorkers = value; OnPropertyChanged(); }
+        set
+        {
+            _libraryWorkers = value;
+            OnPropertyChanged();
+        }
     }
 
     public int ImportWorkers
     {
         get => _importWorkers;
-        set { _importWorkers = value; OnPropertyChanged(); }
+        set
+        {
+            _importWorkers = value;
+            OnPropertyChanged();
+        }
     }
 
     public int ExtrasWorkers
     {
         get => _extrasWorkers;
-        set { _extrasWorkers = value; OnPropertyChanged(); }
+        set
+        {
+            _extrasWorkers = value;
+            OnPropertyChanged();
+        }
     }
 
     public int EncoderWorkers
     {
         get => _encoderWorkers;
-        set { _encoderWorkers = value; OnPropertyChanged(); }
+        set
+        {
+            _encoderWorkers = value;
+            OnPropertyChanged();
+        }
     }
 
     public int CronWorkers
     {
         get => _cronWorkers;
-        set { _cronWorkers = value; OnPropertyChanged(); }
+        set
+        {
+            _cronWorkers = value;
+            OnPropertyChanged();
+        }
     }
 
     public int ImageWorkers
     {
         get => _imageWorkers;
-        set { _imageWorkers = value; OnPropertyChanged(); }
+        set
+        {
+            _imageWorkers = value;
+            OnPropertyChanged();
+        }
     }
 
     public int FileWorkers
     {
         get => _fileWorkers;
-        set { _fileWorkers = value; OnPropertyChanged(); }
+        set
+        {
+            _fileWorkers = value;
+            OnPropertyChanged();
+        }
     }
 
     public int MusicWorkers
     {
         get => _musicWorkers;
-        set { _musicWorkers = value; OnPropertyChanged(); }
+        set
+        {
+            _musicWorkers = value;
+            OnPropertyChanged();
+        }
     }
 
     public string ActionStatus
     {
         get => _actionStatus;
-        set { _actionStatus = value; OnPropertyChanged(); }
+        set
+        {
+            _actionStatus = value;
+            OnPropertyChanged();
+        }
     }
 
     public SettingsViewModel(ServerConnection serverConnection)
@@ -114,17 +170,18 @@ public class SettingsViewModel : INotifyPropertyChanged
         _serverConnection = serverConnection;
     }
 
-    public async Task LoadConfigAsync(
-        CancellationToken cancellationToken = default)
+    public async Task LoadConfigAsync(CancellationToken cancellationToken = default)
     {
         if (!_serverConnection.IsConnected)
             await _serverConnection.ConnectAsync(cancellationToken);
 
-        ServerConfigResponse? config =
-            await _serverConnection.GetAsync<ServerConfigResponse>(
-                "/manage/config", cancellationToken);
+        ServerConfigResponse? config = await _serverConnection.GetAsync<ServerConfigResponse>(
+            "/manage/config",
+            cancellationToken
+        );
 
-        if (config is null) return;
+        if (config is null)
+            return;
 
         ConfigServerName = config.ServerName.OrEmpty();
         InternalPort = config.InternalPort;
@@ -140,8 +197,7 @@ public class SettingsViewModel : INotifyPropertyChanged
         ConfigLoaded = true;
     }
 
-    public async Task SaveConfigAsync(
-        CancellationToken cancellationToken = default)
+    public async Task SaveConfigAsync(CancellationToken cancellationToken = default)
     {
         ActionStatus = "Saving configuration...";
 
@@ -159,13 +215,12 @@ public class SettingsViewModel : INotifyPropertyChanged
                     cron_workers = CronWorkers,
                     image_workers = ImageWorkers,
                     file_workers = FileWorkers,
-                    music_workers = MusicWorkers
+                    music_workers = MusicWorkers,
                 },
-                cancellationToken);
+                cancellationToken
+            );
 
-            ActionStatus = success
-                ? "Configuration saved"
-                : "Failed to save configuration";
+            ActionStatus = success ? "Configuration saved" : "Failed to save configuration";
         }
         catch
         {
@@ -175,10 +230,8 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    protected void OnPropertyChanged(
-        [CallerMemberName] string? propertyName = null)
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
-        PropertyChanged?.Invoke(
-            this, new(propertyName));
+        PropertyChanged?.Invoke(this, new(propertyName));
     }
 }

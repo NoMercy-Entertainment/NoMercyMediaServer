@@ -3,7 +3,7 @@ namespace NoMercy.Providers.Helpers;
 public enum QueueProcessingOrder
 {
     OldestFirst,
-    NewestFirst
+    NewestFirst,
 }
 
 public class TokenBucketRateLimiterOptions

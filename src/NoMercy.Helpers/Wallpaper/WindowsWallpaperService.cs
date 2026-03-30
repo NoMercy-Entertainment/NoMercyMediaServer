@@ -10,7 +10,8 @@ public class WindowsWallpaperService : IWallpaperService
 {
     private const string DesktopRegPath = @"Control Panel\Desktop";
     private const string DesktopRegColor = @"Control Panel\Colors";
-    private const string HistoryRegPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers";
+    private const string HistoryRegPath =
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers";
     private const string WallpaperStyleRegPath = "WallpaperStyle";
     private const string WallpaperStyleRegColor = "WallpaperColor";
     private const string TileWallpaperRegPath = "TileWallpaper";
@@ -26,7 +27,11 @@ public class WindowsWallpaperService : IWallpaperService
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern int SystemParametersInfo(
-        int uAction, int uParam, string? lpvParam, int fuWinIni);
+        int uAction,
+        int uParam,
+        string? lpvParam,
+        int fuWinIni
+    );
 
     private BackupState? _backup;
     private bool _historyRestored;
@@ -93,7 +98,7 @@ public class WindowsWallpaperService : IWallpaperService
             Config = GetWallpaperConfig(),
             History = history,
             Wallpaper = history[0],
-            Color = history.Length > 1 ? history[1] : string.Empty
+            Color = history.Length > 1 ? history[1] : string.Empty,
         };
 
         _historyRestored = false;
@@ -101,19 +106,23 @@ public class WindowsWallpaperService : IWallpaperService
 
     private void RestoreHistory()
     {
-        if (_historyRestored) return;
-        if (!_backup.HasValue) return;
+        if (_historyRestored)
+            return;
+        if (!_backup.HasValue)
+            return;
 
         BackupState state = _backup.Value;
 
         using RegistryKey? key = Registry.CurrentUser.OpenSubKey(HistoryRegPath, true);
-        if (key is null) return;
+        if (key is null)
+            return;
 
         for (int i = 0; i < HistoryMaxEntries; i++)
             key.SetValue(
                 $"BackgroundHistoryPath{i}",
                 state.History[i].OrEmpty(),
-                RegistryValueKind.String);
+                RegistryValueKind.String
+            );
 
         _historyRestored = true;
     }
@@ -127,7 +136,7 @@ public class WindowsWallpaperService : IWallpaperService
         {
             Style = ParseRegistryInt(desktopKey, WallpaperStyleRegPath, 0),
             IsTile = ParseRegistryBool(desktopKey, TileWallpaperRegPath, false),
-            Color = ParseRegistryString(colorKey, WallpaperStyleRegColor, "#FF0000")
+            Color = ParseRegistryString(colorKey, WallpaperStyleRegColor, "#FF0000"),
         };
     }
 
@@ -156,13 +165,43 @@ public class WindowsWallpaperService : IWallpaperService
     {
         WallpaperConfig config = style switch
         {
-            WallpaperStyle.Fill => new() { Style = 10, IsTile = false, Color = "000000" },
-            WallpaperStyle.Fit => new() { Style = 6, IsTile = false, Color = "000000" },
-            WallpaperStyle.Stretch => new() { Style = 2, IsTile = false, Color = "000000" },
-            WallpaperStyle.Tile => new() { Style = 0, IsTile = true, Color = "000000" },
-            WallpaperStyle.Center => new() { Style = 0, IsTile = false, Color = "000000" },
-            WallpaperStyle.Span => new() { Style = 22, IsTile = false, Color = "000000" },
-            _ => throw new ArgumentOutOfRangeException(nameof(style))
+            WallpaperStyle.Fill => new()
+            {
+                Style = 10,
+                IsTile = false,
+                Color = "000000",
+            },
+            WallpaperStyle.Fit => new()
+            {
+                Style = 6,
+                IsTile = false,
+                Color = "000000",
+            },
+            WallpaperStyle.Stretch => new()
+            {
+                Style = 2,
+                IsTile = false,
+                Color = "000000",
+            },
+            WallpaperStyle.Tile => new()
+            {
+                Style = 0,
+                IsTile = true,
+                Color = "000000",
+            },
+            WallpaperStyle.Center => new()
+            {
+                Style = 0,
+                IsTile = false,
+                Color = "000000",
+            },
+            WallpaperStyle.Span => new()
+            {
+                Style = 22,
+                IsTile = false,
+                Color = "000000",
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(style)),
         };
 
         SetWallpaperConfig(config);
@@ -170,14 +209,19 @@ public class WindowsWallpaperService : IWallpaperService
 
     private static void ApplyWallpaper(string? filename)
     {
-        SystemParametersInfo(SpiSetdeskwallpaper, 0, filename,
-            SpifUpdateinifile | SpifSendwininichange);
+        SystemParametersInfo(
+            SpiSetdeskwallpaper,
+            0,
+            filename,
+            SpifUpdateinifile | SpifSendwininichange
+        );
     }
 
     public static int HexToWin32Color(string hex)
     {
         string clean = hex.TrimStart('#');
-        if (clean.Length < 6) clean = clean.PadRight(6, '0');
+        if (clean.Length < 6)
+            clean = clean.PadRight(6, '0');
 
         int r = Convert.ToInt32(clean.Substring(0, 2), 16);
         int g = Convert.ToInt32(clean.Substring(2, 2), 16);

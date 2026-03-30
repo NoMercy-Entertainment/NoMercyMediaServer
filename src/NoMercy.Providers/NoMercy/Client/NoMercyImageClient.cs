@@ -17,24 +17,30 @@ public abstract class NoMercyImageClient : TmdbBaseClient
 
         async Task<Image<Rgba32>?> Task()
         {
-            if (path is null) return null;
+            if (path is null)
+                return null;
 
             try
             {
                 string folder = Path.Join(AppFiles.ImagesPath, "original");
 
-                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                if (!Directory.Exists(folder))
+                    Directory.CreateDirectory(folder);
 
                 string filePath = Path.Combine(folder, path.Replace("/", "").Replace("\\", ""));
 
-                if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
+                if (File.Exists(filePath))
+                    return Image.Load<Rgba32>(filePath);
 
-                HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.NoMercyImage);
+                HttpClient httpClient = HttpClientProvider.CreateClient(
+                    HttpClientNames.NoMercyImage
+                );
 
                 string url = path.StartsWith("http") ? path : $"original{path}";
 
                 using HttpResponseMessage response = await httpClient.GetAsync(url);
-                if (!response.IsSuccessStatusCode) return null;
+                if (!response.IsSuccessStatusCode)
+                    return null;
 
                 byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 
@@ -45,7 +51,10 @@ public abstract class NoMercyImageClient : TmdbBaseClient
             }
             catch (Exception e)
             {
-                Logger.MovieDb($"Error downloading image: {path} - {e.Message}", LogEventLevel.Error);
+                Logger.MovieDb(
+                    $"Error downloading image: {path} - {e.Message}",
+                    LogEventLevel.Error
+                );
             }
 
             return null;

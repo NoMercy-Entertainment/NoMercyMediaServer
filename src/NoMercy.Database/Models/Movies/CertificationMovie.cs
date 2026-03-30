@@ -8,10 +8,12 @@ namespace NoMercy.Database.Models.Movies;
 [Index(nameof(MovieId))]
 public class CertificationMovie
 {
-    [JsonProperty("certification_id")] public int CertificationId { get; set; }
+    [JsonProperty("certification_id")]
+    public int CertificationId { get; set; }
     public Certification Certification { get; set; } = null!;
 
-    [JsonProperty("movie_id")] public int MovieId { get; set; }
+    [JsonProperty("movie_id")]
+    public int MovieId { get; set; }
     public Movie Movie { get; set; } = null!;
 
     public CertificationMovie()

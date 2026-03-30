@@ -9,7 +9,7 @@ public enum ServerState
 {
     Disconnected,
     Starting,
-    Running
+    Running,
 }
 
 public static class TrayIconFactory
@@ -26,7 +26,8 @@ public static class TrayIconFactory
             new(width, height),
             baseIcon.Dpi,
             PixelFormat.Bgra8888,
-            AlphaFormat.Premul);
+            AlphaFormat.Premul
+        );
 
         using (ILockedFramebuffer buffer = overlay.Lock())
         {
@@ -43,10 +44,10 @@ public static class TrayIconFactory
 
     private static Bitmap LoadBaseIcon()
     {
-        if (_baseIcon is not null) return _baseIcon;
+        if (_baseIcon is not null)
+            return _baseIcon;
 
-        string iconPath = Path.Combine(
-            AppContext.BaseDirectory, "Assets", "icon.png");
+        string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "icon.png");
 
         if (File.Exists(iconPath))
         {
@@ -54,8 +55,9 @@ public static class TrayIconFactory
             return _baseIcon;
         }
 
-        Stream? resourceStream = typeof(TrayIconFactory).Assembly
-            .GetManifestResourceStream("NoMercy.Launcher.icon.png");
+        Stream? resourceStream = typeof(TrayIconFactory).Assembly.GetManifestResourceStream(
+            "NoMercy.Launcher.icon.png"
+        );
 
         if (resourceStream is not null)
         {
@@ -74,7 +76,8 @@ public static class TrayIconFactory
             new(size, size),
             new(96, 96),
             PixelFormat.Bgra8888,
-            AlphaFormat.Premul);
+            AlphaFormat.Premul
+        );
 
         using (ILockedFramebuffer buffer = bmp.Lock())
         {
@@ -97,8 +100,8 @@ public static class TrayIconFactory
                         if (dx * dx + dy * dy <= radius * radius)
                         {
                             ptr[offset + 0] = 180; // B
-                            ptr[offset + 1] = 80;  // G
-                            ptr[offset + 2] = 40;  // R
+                            ptr[offset + 1] = 80; // G
+                            ptr[offset + 2] = 40; // R
                             ptr[offset + 3] = 255; // A
                         }
                     }
@@ -112,19 +115,14 @@ public static class TrayIconFactory
         return new(stream);
     }
 
-    private static unsafe void DrawStatusDot(
-        ILockedFramebuffer buffer, ServerState state)
+    private static unsafe void DrawStatusDot(ILockedFramebuffer buffer, ServerState state)
     {
         (byte r, byte g, byte b) = state switch
         {
-            ServerState.Running =>
-                ((byte)34, (byte)197, (byte)94),
-            ServerState.Starting =>
-                ((byte)234, (byte)179, (byte)8),
-            ServerState.Disconnected =>
-                ((byte)239, (byte)68, (byte)68),
-            _ =>
-                ((byte)239, (byte)68, (byte)68)
+            ServerState.Running => ((byte)34, (byte)197, (byte)94),
+            ServerState.Starting => ((byte)234, (byte)179, (byte)8),
+            ServerState.Disconnected => ((byte)239, (byte)68, (byte)68),
+            _ => ((byte)239, (byte)68, (byte)68),
         };
 
         int width = buffer.Size.Width;
@@ -138,13 +136,17 @@ public static class TrayIconFactory
         byte* ptr = (byte*)buffer.Address;
         int outerRadius = dotRadius + borderWidth;
 
-        for (int y = Math.Max(0, cy - outerRadius);
-             y <= Math.Min(height - 1, cy + outerRadius);
-             y++)
+        for (
+            int y = Math.Max(0, cy - outerRadius);
+            y <= Math.Min(height - 1, cy + outerRadius);
+            y++
+        )
         {
-            for (int x = Math.Max(0, cx - outerRadius);
-                 x <= Math.Min(width - 1, cx + outerRadius);
-                 x++)
+            for (
+                int x = Math.Max(0, cx - outerRadius);
+                x <= Math.Min(width - 1, cx + outerRadius);
+                x++
+            )
             {
                 int dx = x - cx;
                 int dy = y - cy;

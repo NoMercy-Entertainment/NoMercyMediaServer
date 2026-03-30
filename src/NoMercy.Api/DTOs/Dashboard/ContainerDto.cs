@@ -16,10 +16,17 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ContainerDto
 {
-    [JsonProperty("label")] public string Label { get; set; } = string.Empty;
-    [JsonProperty("value")] public string Value { get; set; } = string.Empty;
-    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
-    [JsonProperty("default")] public bool IsDefault { get; set; }
+    [JsonProperty("label")]
+    public string Label { get; set; } = string.Empty;
+
+    [JsonProperty("value")]
+    public string Value { get; set; } = string.Empty;
+
+    [JsonProperty("type")]
+    public string Type { get; set; } = string.Empty;
+
+    [JsonProperty("default")]
+    public bool IsDefault { get; set; }
 
     [JsonProperty("available_video_codecs")]
     public VideoCodecDto[] AvailableVideoCodecs { get; set; }
@@ -46,19 +53,19 @@ public record ContainerDto
             { Name: "mp3" } => new Mp3(),
             { Name: "vtt" } => new Vtt(),
             { Name: "srt" } => new Srt(),
-            _ => throw new ArgumentOutOfRangeException(nameof(container.Name))
+            _ => throw new ArgumentOutOfRangeException(nameof(container.Name)),
         };
 
-        VideoCodecDto[] videoCodecs = containerData.AvailableVideoCodecs
-            .Select(c => new VideoCodecDto(c))
+        VideoCodecDto[] videoCodecs = containerData
+            .AvailableVideoCodecs.Select(c => new VideoCodecDto(c))
             .ToArray();
 
-        AudioCodecDto[] audioCodecs = containerData.AvailableAudioCodecs
-            .Select(c => new AudioCodecDto(c))
+        AudioCodecDto[] audioCodecs = containerData
+            .AvailableAudioCodecs.Select(c => new AudioCodecDto(c))
             .ToArray();
 
-        SubtitleCodecDto[] subtitleCodecs = containerData.AvailableSubtitleCodecs
-            .Select(c => new SubtitleCodecDto(c))
+        SubtitleCodecDto[] subtitleCodecs = containerData
+            .AvailableSubtitleCodecs.Select(c => new SubtitleCodecDto(c))
             .ToArray();
 
         Label = BaseContainer.GetName(container.Name);
@@ -69,18 +76,23 @@ public record ContainerDto
         AvailableAudioCodecs = audioCodecs;
         AvailableSubtitleCodecs = subtitleCodecs;
 
-        AvailableVideoSizes = container.Type == "video"
-            ? BaseVideo.AvailableVideoSizes
-            : [];
+        AvailableVideoSizes = container.Type == "video" ? BaseVideo.AvailableVideoSizes : [];
     }
 }
 
 public class VideoCodecDto : Classes.CodecDto
 {
-    [JsonProperty("color_spaces")] public LabelValueDto[] AvailableVideoColorSpaces { get; set; }
-    [JsonProperty("tunes")] public LabelValueDto[] AvailableVideoTunes { get; set; }
-    [JsonProperty("profiles")] public LabelValueDto[] AvailableVideoProfiles { get; set; }
-    [JsonProperty("presets")] public LabelValueDto[] AvailablePresets { get; set; }
+    [JsonProperty("color_spaces")]
+    public LabelValueDto[] AvailableVideoColorSpaces { get; set; }
+
+    [JsonProperty("tunes")]
+    public LabelValueDto[] AvailableVideoTunes { get; set; }
+
+    [JsonProperty("profiles")]
+    public LabelValueDto[] AvailableVideoProfiles { get; set; }
+
+    [JsonProperty("presets")]
+    public LabelValueDto[] AvailablePresets { get; set; }
 
     public VideoCodecDto(Classes.CodecDto codecDto)
     {
@@ -92,7 +104,7 @@ public class VideoCodecDto : Classes.CodecDto
             { SimpleValue: "hevc_nvenc" } => new X265("hevc_nvenc"),
             { SimpleValue: "vp9" } => new Vp9(),
             { SimpleValue: "vp9_nvenc" } => new Vp9("vp9_nvenc"),
-            _ => throw new ArgumentOutOfRangeException(nameof(codecDto.SimpleValue))
+            _ => throw new ArgumentOutOfRangeException(nameof(codecDto.SimpleValue)),
         };
 
         Name = codecDto.Name;
@@ -100,8 +112,12 @@ public class VideoCodecDto : Classes.CodecDto
         SimpleValue = codecDto.SimpleValue;
         RequiresGpu = codecDto.RequiresGpu;
         IsDefault = codecDto.IsDefault;
-        AvailableVideoColorSpaces = codecData.AvailableColorSpaces.Select(p => new LabelValueDto(p)).ToArray();
-        AvailableVideoProfiles = codecData.AvailableProfiles.Select(p => new LabelValueDto(p)).ToArray();
+        AvailableVideoColorSpaces = codecData
+            .AvailableColorSpaces.Select(p => new LabelValueDto(p))
+            .ToArray();
+        AvailableVideoProfiles = codecData
+            .AvailableProfiles.Select(p => new LabelValueDto(p))
+            .ToArray();
         AvailableVideoTunes = codecData.AvailableTune.Select(t => new LabelValueDto(t)).ToArray();
         AvailablePresets = codecData.AvailablePresets.Select(p => new LabelValueDto(p)).ToArray();
     }
@@ -109,15 +125,23 @@ public class VideoCodecDto : Classes.CodecDto
 
 public class AudioCodecDto : Classes.CodecDto
 {
-    [JsonProperty("available_languages")] public LabelValueDto[] AvailableLanguages { get; set; }
-    [JsonProperty("audio_quality_level")] public int AudioQualityLevel { get; set; }
-    [JsonProperty("audio_channels")] public int AudioChannels { get; set; }
-    [JsonProperty("hls_segment_filename")] public string HlsSegmentFilename { get; set; }
+    [JsonProperty("available_languages")]
+    public LabelValueDto[] AvailableLanguages { get; set; }
+
+    [JsonProperty("audio_quality_level")]
+    public int AudioQualityLevel { get; set; }
+
+    [JsonProperty("audio_channels")]
+    public int AudioChannels { get; set; }
+
+    [JsonProperty("hls_segment_filename")]
+    public string HlsSegmentFilename { get; set; }
 
     [JsonProperty("hls_playlist_filename")]
     public string HlsPlaylistFilename { get; set; }
 
-    [JsonProperty("bit_rate")] public long BitRate { get; set; }
+    [JsonProperty("bit_rate")]
+    public long BitRate { get; set; }
 
     public AudioCodecDto(Classes.CodecDto codecDto)
     {
@@ -131,7 +155,7 @@ public class AudioCodecDto : Classes.CodecDto
             { SimpleValue: "opus" } => new Opus(),
             { SimpleValue: "truehd" } => new TrueHd(),
             { SimpleValue: "vorbis" } => new Vorbis(),
-            _ => throw new ArgumentOutOfRangeException(nameof(codecDto.SimpleValue))
+            _ => throw new ArgumentOutOfRangeException(nameof(codecDto.SimpleValue)),
         };
 
         Name = codecDto.Name;
@@ -143,19 +167,24 @@ public class AudioCodecDto : Classes.CodecDto
         HlsSegmentFilename = codecData.HlsSegmentFilename;
         HlsPlaylistFilename = codecData.HlsPlaylistFilename;
         BitRate = codecData._bitRate;
-        AvailableLanguages = Languages.AllLanguages()
+        AvailableLanguages = Languages
+            .AllLanguages()
             .Select(l => new LabelValueDto
             {
                 Label = IsoLanguageMapper.IsoToLanguage[l].ToTitleCase(),
-                Value = l
-            }).ToArray();
+                Value = l,
+            })
+            .ToArray();
     }
 }
 
 public class SubtitleCodecDto : Classes.CodecDto
 {
-    [JsonProperty("available_languages")] public LabelValueDto[] AvailableLanguages { get; set; }
-    [JsonProperty("hls_segment_filename")] public string HlsSegmentFilename { get; set; }
+    [JsonProperty("available_languages")]
+    public LabelValueDto[] AvailableLanguages { get; set; }
+
+    [JsonProperty("hls_segment_filename")]
+    public string HlsSegmentFilename { get; set; }
 
     [JsonProperty("hls_playlist_filename")]
     public string HlsPlaylistFilename { get; set; }
@@ -168,7 +197,7 @@ public class SubtitleCodecDto : Classes.CodecDto
             { SimpleValue: "srt" } => new Encoder.Format.Subtitle.Srt(),
             { SimpleValue: "ass" } => new Encoder.Format.Subtitle.Ass(),
             { SimpleValue: "copy" } => new Copy(),
-            _ => throw new ArgumentOutOfRangeException(nameof(codecDto.SimpleValue))
+            _ => throw new ArgumentOutOfRangeException(nameof(codecDto.SimpleValue)),
         };
 
         Name = codecDto.Name;
@@ -177,19 +206,24 @@ public class SubtitleCodecDto : Classes.CodecDto
         IsDefault = codecDto.IsDefault;
         HlsSegmentFilename = codecData.HlsSegmentFilename;
         HlsPlaylistFilename = codecData.HlsPlaylistFilename;
-        AvailableLanguages = Languages.AllLanguages()
+        AvailableLanguages = Languages
+            .AllLanguages()
             .Select(l => new LabelValueDto
             {
                 Label = IsoLanguageMapper.IsoToLanguage[l].ToTitleCase(),
-                Value = l
-            }).ToArray();
+                Value = l,
+            })
+            .ToArray();
     }
 }
 
 public class LabelValueDto
 {
-    [JsonProperty("label")] public string Label { get; set; } = string.Empty;
-    [JsonProperty("value")] public string Value { get; set; } = string.Empty;
+    [JsonProperty("label")]
+    public string Label { get; set; } = string.Empty;
+
+    [JsonProperty("value")]
+    public string Value { get; set; } = string.Empty;
 
     public LabelValueDto(string s)
     {

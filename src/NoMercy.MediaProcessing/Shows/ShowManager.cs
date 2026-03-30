@@ -18,19 +18,23 @@ using Serilog.Events;
 
 namespace NoMercy.MediaProcessing.Shows;
 
-public class ShowManager(
-    IShowRepository showRepository,
-    JobDispatcher jobDispatcher
-) : BaseManager, IShowManager
+public class ShowManager(IShowRepository showRepository, JobDispatcher jobDispatcher)
+    : BaseManager,
+        IShowManager
 {
-    public async Task<TmdbTvShowAppends?> AddShowAsync(int id, Library library, bool? priority = false)
+    public async Task<TmdbTvShowAppends?> AddShowAsync(
+        int id,
+        Library library,
+        bool? priority = false
+    )
     {
         Logger.MovieDb($"Show {id}: Adding to Library {library.Title}");
 
         using TmdbTvClient showClient = new(id);
         TmdbTvShowAppends? showAppends = await showClient.WithAllAppends(priority);
 
-        if (showAppends == null) return null;
+        if (showAppends == null)
+            return null;
 
         string baseUrl = BaseUrl(showAppends.Name, showAppends.FirstAirDate);
         string mediaType = showRepository.GetMediaType(showAppends);
@@ -43,17 +47,22 @@ public class ShowManager(
 
             if (!Directory.Exists(folderName))
             {
-                string? match = Str.FindMatchingDirectory(folderLibrary.Folder.Path, baseUrl.Replace("/", ""));
+                string? match = Str.FindMatchingDirectory(
+                    folderLibrary.Folder.Path,
+                    baseUrl.Replace("/", "")
+                );
                 if (match != null)
                     folderName = match;
             }
 
-            if (!Directory.Exists(folderName)) continue;
+            if (!Directory.Exists(folderName))
+                continue;
 
             DirectoryInfo folderInfo = new(folderName);
             folderCreatedAt = folderInfo.CreationTimeUtc;
 
-            if(folderCreatedAt != DateTime.UtcNow) break;
+            if (folderCreatedAt != DateTime.UtcNow)
+                break;
         }
 
         Tv show = new()
@@ -85,29 +94,30 @@ public class ShowManager(
             Type = showAppends.Type,
             VoteAverage = showAppends.VoteAverage,
             VoteCount = showAppends.VoteCount,
-            
+
             CreatedAt = folderCreatedAt,
 
-            Duration = showAppends.EpisodeRunTime?.Length > 0
-                ? (int?)showAppends.EpisodeRunTime?.Average()
-                : 0,
-            OriginCountry = showAppends.OriginCountry.Length > 0
-                ? showAppends.OriginCountry[0]
-                : null,
-            SpokenLanguages = showAppends.SpokenLanguages.Length > 0
-                ? showAppends.SpokenLanguages[0].Name
-                : null,
-            Trailer = showAppends.Videos.Results.Length > 0
-                ? showAppends.Videos.Results[0].Key
-                : null
+            Duration =
+                showAppends.EpisodeRunTime?.Length > 0
+                    ? (int?)showAppends.EpisodeRunTime?.Average()
+                    : 0,
+            OriginCountry =
+                showAppends.OriginCountry.Length > 0 ? showAppends.OriginCountry[0] : null,
+            SpokenLanguages =
+                showAppends.SpokenLanguages.Length > 0 ? showAppends.SpokenLanguages[0].Name : null,
+            Trailer =
+                showAppends.Videos.Results.Length > 0 ? showAppends.Videos.Results[0].Key : null,
         };
 
         await showRepository.AddAsync(show);
         Logger.MovieDb($"Show {show.Title}: Added to Database", LogEventLevel.Debug);
 
         await showRepository.LinkToLibrary(library, show);
-        Logger.MovieDb($"Show {show.Title}: Linked to Library {library.Title}", LogEventLevel.Debug);
-        
+        Logger.MovieDb(
+            $"Show {show.Title}: Linked to Library {library.Title}",
+            LogEventLevel.Debug
+        );
+
         ShowManager showManager = new(showRepository, jobDispatcher);
         await showManager.StoreGenres(showAppends);
         await showManager.StoreContentRatings(showAppends);
@@ -132,13 +142,14 @@ public class ShowManager(
 
     internal async Task StoreAlternativeTitles(TmdbTvShowAppends show)
     {
-        IEnumerable<AlternativeTitle> alternativeTitles =
-            show.AlternativeTitles.Results.Select(tmdbShowAlternativeTitles => new AlternativeTitle
+        IEnumerable<AlternativeTitle> alternativeTitles = show.AlternativeTitles.Results.Select(
+            tmdbShowAlternativeTitles => new AlternativeTitle
             {
                 Iso31661 = tmdbShowAlternativeTitles.Iso31661,
                 Title = tmdbShowAlternativeTitles.Title,
-                TvId = show.Id
-            });
+                TvId = show.Id,
+            }
+        );
 
         await showRepository.StoreAlternativeTitles(alternativeTitles);
 
@@ -147,8 +158,8 @@ public class ShowManager(
 
     internal async Task StoreTranslations(TmdbTvShowAppends show)
     {
-        List<Translation> translations = show.Translations.Translations
-            .Select(translation => new Translation
+        List<Translation> translations = show
+            .Translations.Translations.Select(translation => new Translation
             {
                 Iso31661 = translation.Iso31661,
                 Iso6391 = translation.Iso6391,
@@ -158,9 +169,10 @@ public class ShowManager(
                 EnglishName = translation.EnglishName,
                 Homepage = translation.Data.Homepage?.ToString(),
                 Biography = translation.Data.Biography,
-                TvId = show.Id
-            }).ToList();
-        
+                TvId = show.Id,
+            })
+            .ToList();
+
         await showRepository.StoreTranslations(translations);
 
         Logger.MovieDb($"Show {show.Name}: Translations stored", LogEventLevel.Debug);
@@ -168,15 +180,18 @@ public class ShowManager(
 
     internal async Task StoreContentRatings(TmdbTvShowAppends show)
     {
-        List<CertificationCriteria> certificationCriteria = show.ContentRatings.Results
-            .Select(r => new CertificationCriteria
+        List<CertificationCriteria> certificationCriteria = show
+            .ContentRatings.Results.Select(r => new CertificationCriteria
             {
                 Iso31661 = r.Iso31661,
-                Certification = r.Rating
-            }).ToList();
+                Certification = r.Rating,
+            })
+            .ToList();
 
-        IEnumerable<CertificationTv> certificationTvs = showRepository
-            .GetCertificationTvs(show, certificationCriteria);
+        IEnumerable<CertificationTv> certificationTvs = showRepository.GetCertificationTvs(
+            show,
+            certificationCriteria
+        );
 
         await showRepository.StoreContentRatings(certificationTvs);
 
@@ -185,8 +200,8 @@ public class ShowManager(
 
     internal async Task StoreSimilar(TmdbTvShowAppends show)
     {
-        IEnumerable<Similar> similar = show.Similar.Results
-            .Select(similar => new Similar
+        IEnumerable<Similar> similar = show
+            .Similar.Results.Select(similar => new Similar
             {
                 Backdrop = similar.BackdropPath,
                 Overview = similar.Overview,
@@ -194,7 +209,7 @@ public class ShowManager(
                 Title = similar.Name,
                 TitleSort = similar.Name,
                 MediaId = similar.Id,
-                TvFromId = show.Id
+                TvFromId = show.Id,
             })
             .ToArray();
 
@@ -205,8 +220,8 @@ public class ShowManager(
 
     internal async Task StoreRecommendations(TmdbTvShowAppends show)
     {
-        IEnumerable<Recommendation> recommendations = show.Recommendations.Results
-            .Select(recommendation => new Recommendation
+        IEnumerable<Recommendation> recommendations = show
+            .Recommendations.Results.Select(recommendation => new Recommendation
             {
                 Backdrop = recommendation.BackdropPath,
                 Overview = recommendation.Overview,
@@ -214,7 +229,7 @@ public class ShowManager(
                 Title = recommendation.Name,
                 TitleSort = recommendation.Name.TitleSort(),
                 MediaId = recommendation.Id,
-                TvFromId = show.Id
+                TvFromId = show.Id,
             })
             .ToArray();
 
@@ -225,18 +240,17 @@ public class ShowManager(
 
     internal async Task StoreVideos(TmdbTvShowAppends show)
     {
-        IEnumerable<Media> videos = show.Videos.Results
-            .Select(media => new Media
-            {
-                Id = Ulid.NewUlid(),
-                Iso6391 = media.Iso6391,
-                Name = media.Name,
-                Site = media.Site,
-                Size = media.Size,
-                Src = media.Key,
-                Type = media.Type,
-                TvId = show.Id
-            });
+        IEnumerable<Media> videos = show.Videos.Results.Select(media => new Media
+        {
+            Id = Ulid.NewUlid(),
+            Iso6391 = media.Iso6391,
+            Name = media.Name,
+            Site = media.Site,
+            Size = media.Size,
+            Src = media.Key,
+            Type = media.Type,
+            TvId = show.Id,
+        });
 
         await showRepository.StoreVideos(videos);
 
@@ -245,8 +259,8 @@ public class ShowManager(
 
     internal async Task StoreImages(TmdbTvShowAppends show)
     {
-        IEnumerable<Image> posters = show.Images.Posters
-            .Select(image => new Image
+        IEnumerable<Image> posters = show
+            .Images.Posters.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
@@ -257,14 +271,14 @@ public class ShowManager(
                 VoteCount = image.VoteCount,
                 TvId = show.Id,
                 Type = "poster",
-                Site = "https://image.tmdb.org/t/p/"
+                Site = "https://image.tmdb.org/t/p/",
             })
             .ToArray();
 
         await showRepository.StoreImages(posters);
 
-        IEnumerable<Image> backdrops = show.Images.Backdrops
-            .Select(image => new Image
+        IEnumerable<Image> backdrops = show
+            .Images.Backdrops.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
@@ -275,14 +289,15 @@ public class ShowManager(
                 VoteCount = image.VoteCount,
                 TvId = show.Id,
                 Type = "backdrop",
-                Site = "https://image.tmdb.org/t/p/"
+                Site = "https://image.tmdb.org/t/p/",
             })
             .ToArray();
 
         await showRepository.StoreImages(backdrops);
         Logger.MovieDb($"Show {show.Name}: backdrops stored", LogEventLevel.Debug);
 
-        IEnumerable<Image> logos = show.Images.Logos.Select(image => new Image
+        IEnumerable<Image> logos = show
+            .Images.Logos.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
@@ -293,20 +308,20 @@ public class ShowManager(
                 VoteCount = image.VoteCount,
                 TvId = show.Id,
                 Type = "logo",
-                Site = "https://image.tmdb.org/t/p/"
+                Site = "https://image.tmdb.org/t/p/",
             })
             .ToArray();
 
         await showRepository.StoreImages(logos);
         Logger.MovieDb($"Show {show.Name}: Logos stored", LogEventLevel.Debug);
-   }
+    }
 
     internal async Task StoreKeywords(TmdbTvShowAppends show)
     {
         IEnumerable<Keyword> keywords = show.Keywords.Results.Select(keyword => new Keyword
         {
             Id = keyword.Id,
-            Name = keyword.Name
+            Name = keyword.Name,
         });
 
         await showRepository.StoreKeywords(keywords);
@@ -315,7 +330,7 @@ public class ShowManager(
         IEnumerable<KeywordTv> keywordTvs = show.Keywords.Results.Select(keyword => new KeywordTv
         {
             KeywordId = keyword.Id,
-            TvId = show.Id
+            TvId = show.Id,
         });
 
         await showRepository.LinkKeywordsToTv(keywordTvs);
@@ -327,7 +342,7 @@ public class ShowManager(
         IEnumerable<GenreTv> genreShows = show.Genres.Select(genre => new GenreTv
         {
             GenreId = genre.Id,
-            TvId = show.Id
+            TvId = show.Id,
         });
 
         await showRepository.StoreGenres(genreShows);
@@ -339,27 +354,38 @@ public class ShowManager(
         List<WatchProvider> watchProviders = [];
         List<WatchProviderMedia> watchProviderMedias = [];
 
-        foreach ((string countryCode, string providerType, TmdbPaymentDetails provider, string? link) in TmdbWatchProviders.ExtractProviders(show.WatchProviders.TmdbWatchProviderResults))
+        foreach (
+            (
+                string countryCode,
+                string providerType,
+                TmdbPaymentDetails provider,
+                string? link
+            ) in TmdbWatchProviders.ExtractProviders(show.WatchProviders.TmdbWatchProviderResults)
+        )
         {
             if (watchProviders.All(wp => wp.Id != provider.ProviderId))
             {
-                watchProviders.Add(new()
-                {
-                    Id = provider.ProviderId,
-                    Name = provider.ProviderName,
-                    Logo = provider.LogoPath,
-                    DisplayPriority = provider.DisplayPriority
-                });
+                watchProviders.Add(
+                    new()
+                    {
+                        Id = provider.ProviderId,
+                        Name = provider.ProviderName,
+                        Logo = provider.LogoPath,
+                        DisplayPriority = provider.DisplayPriority,
+                    }
+                );
             }
 
-            watchProviderMedias.Add(new()
-            {
-                WatchProviderId = provider.ProviderId,
-                TvId = show.Id,
-                CountryCode = countryCode,
-                ProviderType = providerType,
-                Link = link
-            });
+            watchProviderMedias.Add(
+                new()
+                {
+                    WatchProviderId = provider.ProviderId,
+                    TvId = show.Id,
+                    CountryCode = countryCode,
+                    ProviderType = providerType,
+                    Link = link,
+                }
+            );
         }
 
         if (watchProviders.Count != 0)
@@ -373,41 +399,41 @@ public class ShowManager(
 
     internal async Task StoreNetworks(TmdbTvShowAppends show)
     {
-        if (show.Networks.Length == 0) 
+        if (show.Networks.Length == 0)
         {
             Logger.MovieDb($"Show {show.Name}: No networks found", LogEventLevel.Debug);
             return;
         }
-        
+
         TmdbTvClient showClient = new(show.Id);
 
         List<Network> networks = [];
 
-        foreach (TmdbNetwork network in show.Networks)   
+        foreach (TmdbNetwork network in show.Networks)
         {
             TmdbTmdbNetworkDetails? nw = await showClient.NetworkDetails(network.Id);
-            if (nw == null) continue;
-            
+            if (nw == null)
+                continue;
+
             if (networks.All(n => n.Id != nw.Id))
             {
-                networks.Add(new()
-                {
-                    Id = nw.Id,
-                    Name = nw.Name,
-                    Logo = nw.LogoPath,
-                    OriginCountry = nw.OriginCountry,
-                    Headquarters = nw.Headquarters,
-                    Homepage = nw.Homepage,
-                });
+                networks.Add(
+                    new()
+                    {
+                        Id = nw.Id,
+                        Name = nw.Name,
+                        Logo = nw.LogoPath,
+                        OriginCountry = nw.OriginCountry,
+                        Headquarters = nw.Headquarters,
+                        Homepage = nw.Homepage,
+                    }
+                );
             }
         }
 
-        List<NetworkTv> networkTvs = show.Networks
-            .Select(network => new NetworkTv
-            {
-                NetworkId = network.Id,
-                TvId = show.Id
-            }).ToList();
+        List<NetworkTv> networkTvs = show
+            .Networks.Select(network => new NetworkTv { NetworkId = network.Id, TvId = show.Id })
+            .ToList();
 
         if (networks.Count != 0)
             await showRepository.StoreNetworks(networks);
@@ -430,30 +456,35 @@ public class ShowManager(
 
         ConcurrentDictionary<int, Company> companiesDict = new();
 
-        await Parallel.ForEachAsync(show.ProductionCompanies, Config.ParallelOptions, async (productionCompany, _) =>
-        {
-            TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(productionCompany.Id);
-            if (nw == null) return;
-
-            companiesDict.TryAdd(nw.Id, new()
+        await Parallel.ForEachAsync(
+            show.ProductionCompanies,
+            Config.ParallelOptions,
+            async (productionCompany, _) =>
             {
-                Id = nw.Id,
-                Name = nw.Name,
-                Logo = nw.LogoPath,
-                OriginCountry = nw.OriginCountry,
-                Headquarters = nw.Headquarters,
-                Homepage = nw.Homepage,
-            });
-        });
+                TmdbTmdbNetworkDetails? nw = await showClient.CompanyDetails(productionCompany.Id);
+                if (nw == null)
+                    return;
+
+                companiesDict.TryAdd(
+                    nw.Id,
+                    new()
+                    {
+                        Id = nw.Id,
+                        Name = nw.Name,
+                        Logo = nw.LogoPath,
+                        OriginCountry = nw.OriginCountry,
+                        Headquarters = nw.Headquarters,
+                        Homepage = nw.Homepage,
+                    }
+                );
+            }
+        );
 
         List<Company> companies = companiesDict.Values.ToList();
 
         List<CompanyTv> companyTvs = companies
-            .Select(company => new CompanyTv
-            {
-                CompanyId = company.Id,
-                TvId = show.Id
-            }).ToList();
+            .Select(company => new CompanyTv { CompanyId = company.Id, TvId = show.Id })
+            .ToList();
 
         if (companies.Count != 0)
             await showRepository.StoreCompanies(companies);

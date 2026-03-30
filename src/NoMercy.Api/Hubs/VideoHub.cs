@@ -3,8 +3,8 @@ using System.Security.Claims;
 using FlexLabs.EntityFrameworkCore.Upsert;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.Services.Video;
 using NoMercy.Api.DTOs.Media;
+using NoMercy.Api.Services.Video;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Helpers.Extensions;
@@ -37,7 +37,8 @@ public class VideoHub : ConnectionHub
         VideoPlayerStateManager videoPlayerStateManager,
         VideoDeviceManager videoDeviceManager,
         VideoPlaylistManager videoPlaylistManager,
-        VideoPlaybackCommandHandler commandHandler)
+        VideoPlaybackCommandHandler commandHandler
+    )
         : base(httpContextAccessor, contextFactory, connectedClients)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -49,33 +50,42 @@ public class VideoHub : ConnectionHub
         _videoPlaylistManager = videoPlaylistManager;
         _commandHandler = commandHandler;
     }
-    
+
     public async Task SetTime(VideoProgressRequest request)
     {
         Guid userId = Context.User.UserId();
 
         User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
-        if (user is null) return;
+        if (user is null)
+            return;
 
         await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
 
         bool videoFileExists = await mediaContext.VideoFiles.AnyAsync(v => v.Id == request.VideoId);
-        if (!videoFileExists) return;
+        if (!videoFileExists)
+            return;
 
         int? movieId = request.PlaylistType == Config.MovieMediaType ? request.TmdbId : null;
         int? tvId = request.PlaylistType == Config.TvMediaType ? request.TmdbId : null;
-        int? collectionId = request.PlaylistType == Config.CollectionMediaType
-            ? int.Parse(request.PlaylistId)
-            : null;
-        Ulid? specialId = request.PlaylistType == Config.SpecialMediaType
-            ? Ulid.Parse(request.PlaylistId)
-            : null;
+        int? collectionId =
+            request.PlaylistType == Config.CollectionMediaType
+                ? int.Parse(request.PlaylistId)
+                : null;
+        Ulid? specialId =
+            request.PlaylistType == Config.SpecialMediaType ? Ulid.Parse(request.PlaylistId) : null;
 
-        if (movieId is not null && !await mediaContext.Movies.AnyAsync(m => m.Id == movieId)) return;
-        if (tvId is not null && !await mediaContext.Tvs.AnyAsync(t => t.Id == tvId)) return;
-        if (collectionId is not null && !await mediaContext.Collections.AnyAsync(c => c.Id == collectionId)) return;
-        if (specialId is not null && !await mediaContext.Specials.AnyAsync(s => s.Id == specialId)) return;
+        if (movieId is not null && !await mediaContext.Movies.AnyAsync(m => m.Id == movieId))
+            return;
+        if (tvId is not null && !await mediaContext.Tvs.AnyAsync(t => t.Id == tvId))
+            return;
+        if (
+            collectionId is not null
+            && !await mediaContext.Collections.AnyAsync(c => c.Id == collectionId)
+        )
+            return;
+        if (specialId is not null && !await mediaContext.Specials.AnyAsync(s => s.Id == specialId))
+            return;
 
         UserData userdata = new()
         {
@@ -89,75 +99,118 @@ public class VideoHub : ConnectionHub
             MovieId = movieId,
             TvId = tvId,
             CollectionId = collectionId,
-            SpecialId = specialId
+            SpecialId = specialId,
         };
 
         UpsertCommandBuilder<UserData> query = mediaContext.UserData.Upsert(userdata);
 
         query = request.PlaylistType switch
         {
-            Config.MovieMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.MovieId }),
-            Config.TvMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.TvId }),
-            Config.CollectionMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.CollectionId }),
-            Config.SpecialMediaType => query.On(x => new { x.VideoFileId, x.UserId, x.SpecialId }),
-            _ => throw new ArgumentException("Invalid playlist type", request.PlaylistType)
+            Config.MovieMediaType => query.On(x => new
+            {
+                x.VideoFileId,
+                x.UserId,
+                x.MovieId,
+            }),
+            Config.TvMediaType => query.On(x => new
+            {
+                x.VideoFileId,
+                x.UserId,
+                x.TvId,
+            }),
+            Config.CollectionMediaType => query.On(x => new
+            {
+                x.VideoFileId,
+                x.UserId,
+                x.CollectionId,
+            }),
+            Config.SpecialMediaType => query.On(x => new
+            {
+                x.VideoFileId,
+                x.UserId,
+                x.SpecialId,
+            }),
+            _ => throw new ArgumentException("Invalid playlist type", request.PlaylistType),
         };
 
-        await query.WhenMatched((uds, udi) => new()
-            {
-                Id = uds.Id,
-                Type = udi.Type,
-                MovieId = udi.MovieId,
-                TvId = udi.TvId,
-                CollectionId = udi.CollectionId,
-                SpecialId = udi.SpecialId,
-                Time = udi.Time,
-                Audio = udi.Audio,
-                Subtitle = udi.Subtitle,
-                SubtitleType = udi.SubtitleType,
-                LastPlayedDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-            })
+        await query
+            .WhenMatched(
+                (uds, udi) =>
+                    new()
+                    {
+                        Id = uds.Id,
+                        Type = udi.Type,
+                        MovieId = udi.MovieId,
+                        TvId = udi.TvId,
+                        CollectionId = udi.CollectionId,
+                        SpecialId = udi.SpecialId,
+                        Time = udi.Time,
+                        Audio = udi.Audio,
+                        Subtitle = udi.Subtitle,
+                        SubtitleType = udi.SubtitleType,
+                        LastPlayedDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    }
+            )
             .RunAsync();
     }
 
     public async Task RemoveWatched(VideoProgressRequest request)
     {
-        Guid userId = Guid.Parse((Context.User?.FindFirstValue(ClaimTypes.NameIdentifier)).OrEmpty());
+        Guid userId = Guid.Parse(
+            (Context.User?.FindFirstValue(ClaimTypes.NameIdentifier)).OrEmpty()
+        );
 
         User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
 
-        if (user is null) return;
+        if (user is null)
+            return;
 
         await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
-        UserData[] userdata = await mediaContext.UserData
-            .Where(x => x.UserId == user.Id)
+        UserData[] userdata = await mediaContext
+            .UserData.Where(x => x.UserId == user.Id)
             .Where(x => x.Type == request.PlaylistType)
-            .Where(x => x.MovieId == request.TmdbId
-                        || x.TvId == request.TmdbId
-                        || x.SpecialId == request.SpecialId
-                        || x.CollectionId == request.TmdbId)
+            .Where(x =>
+                x.MovieId == request.TmdbId
+                || x.TvId == request.TmdbId
+                || x.SpecialId == request.SpecialId
+                || x.CollectionId == request.TmdbId
+            )
             .ToArrayAsync();
 
         mediaContext.UserData.RemoveRange(userdata);
 
         await mediaContext.SaveChangesAsync();
     }
-    
+
     private static readonly ConcurrentDictionary<Guid, Device> CurrentDevice = new();
 
     public async Task StartPlaybackCommand(string type, dynamic listId, int? itemId)
     {
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         string language = GetLanguageFromContext();
         string country = GetCountryFromContext();
 
         try
         {
-            dynamic? playlistResult = await _videoPlaylistManager.GetPlaylist(user.Id, type, listId, itemId, language, country);
-            
-            await HandlePlaybackState(user, type, listId, playlistResult.Item1, playlistResult.Item2);
+            dynamic? playlistResult = await _videoPlaylistManager.GetPlaylist(
+                user.Id,
+                type,
+                listId,
+                itemId,
+                language,
+                country
+            );
+
+            await HandlePlaybackState(
+                user,
+                type,
+                listId,
+                playlistResult.Item1,
+                playlistResult.Item2
+            );
         }
         catch (ArgumentException ex)
         {
@@ -170,12 +223,21 @@ public class VideoHub : ConnectionHub
         }
     }
 
-    private async Task HandlePlaybackState(User user, string type, dynamic listId, VideoPlaylistResponseDto item,
-        List<VideoPlaylistResponseDto> playlist)
+    private async Task HandlePlaybackState(
+        User user,
+        string type,
+        dynamic listId,
+        VideoPlaylistResponseDto item,
+        List<VideoPlaylistResponseDto> playlist
+    )
     {
         VideoPlayerState? playerState = _videoPlayerStateManager.GetState(user.Id);
 
-        if (playerState is null || playerState.CurrentItem is null || playerState.Playlist.Count == 0)
+        if (
+            playerState is null
+            || playerState.CurrentItem is null
+            || playerState.Playlist.Count == 0
+        )
             await HandleNewPlayerState(user, type, listId, item, playlist);
         else if (IsCurrentPlaylist(playerState, type, listId, item.Id))
             await HandleExistingPlaylistState(user, playerState);
@@ -183,11 +245,24 @@ public class VideoHub : ConnectionHub
             await HandlePlaylistChange(user, playerState, type, listId, item, playlist);
     }
 
-    private async Task HandleNewPlayerState(User user, string type, dynamic listId, VideoPlaylistResponseDto item,
-        List<VideoPlaylistResponseDto> playlist)
+    private async Task HandleNewPlayerState(
+        User user,
+        string type,
+        dynamic listId,
+        VideoPlaylistResponseDto item,
+        List<VideoPlaylistResponseDto> playlist
+    )
     {
         Device device = GetCurrentDevice(user);
-        VideoPlayerState videoPlayerState = await VideoPlayerStateFactory.Create(_contextFactory, user, device, item, playlist, type, listId);
+        VideoPlayerState videoPlayerState = await VideoPlayerStateFactory.Create(
+            _contextFactory,
+            user,
+            device,
+            item,
+            playlist,
+            type,
+            listId
+        );
 
         _videoPlayerStateManager.UpdateState(user.Id, videoPlayerState);
         _videoPlaybackService.StartPlaybackTimer(user);
@@ -200,17 +275,22 @@ public class VideoHub : ConnectionHub
         if (CurrentDevice.TryGetValue(user.Id, out Device? device))
             return device;
 
-        device = ConnectedClients.Clients
-            .FirstOrDefault(d => d.Key == Context.ConnectionId).Value;
+        device = ConnectedClients.Clients.FirstOrDefault(d => d.Key == Context.ConnectionId).Value;
         CurrentDevice[user.Id] = device;
 
         return device;
     }
 
-    private static bool IsCurrentPlaylist(VideoPlayerState state, string type, dynamic listId, int itemId)
+    private static bool IsCurrentPlaylist(
+        VideoPlayerState state,
+        string type,
+        dynamic listId,
+        int itemId
+    )
     {
-        return state.CurrentItem is not null && state.CurrentList.ToString().Contains($"{type}/{listId}") &&
-               state.CurrentItem?.Id == itemId;
+        return state.CurrentItem is not null
+            && state.CurrentList.ToString().Contains($"{type}/{listId}")
+            && state.CurrentItem?.Id == itemId;
     }
 
     private async Task HandleExistingPlaylistState(User user, VideoPlayerState state)
@@ -224,8 +304,11 @@ public class VideoHub : ConnectionHub
         state.Actions.Disallows.Stopping = false;
         state.Actions.Disallows.Seeking = false;
         state.Actions.Disallows.Muting = false;
-        state.Actions.Disallows.Previous = state.CurrentItem is null || state.Playlist.IndexOf(state.CurrentItem) == 0;
-        state.Actions.Disallows.Next = state.CurrentItem is null || state.Playlist.IndexOf(state.CurrentItem) == state.Playlist.Count - 1;
+        state.Actions.Disallows.Previous =
+            state.CurrentItem is null || state.Playlist.IndexOf(state.CurrentItem) == 0;
+        state.Actions.Disallows.Next =
+            state.CurrentItem is null
+            || state.Playlist.IndexOf(state.CurrentItem) == state.Playlist.Count - 1;
 
         _videoPlaybackService.StartPlaybackTimer(user);
         UpdateDeviceInfo(state);
@@ -233,8 +316,14 @@ public class VideoHub : ConnectionHub
         await _videoPlaybackService.PublishStartedEventAsync(user.Id, state);
     }
 
-    private async Task HandlePlaylistChange(User user, VideoPlayerState state, string type, dynamic listId,
-        VideoPlaylistResponseDto item, List<VideoPlaylistResponseDto> playlist)
+    private async Task HandlePlaylistChange(
+        User user,
+        VideoPlayerState state,
+        string type,
+        dynamic listId,
+        VideoPlaylistResponseDto item,
+        List<VideoPlaylistResponseDto> playlist
+    )
     {
         UpdateDeviceInfo(state);
         UpdatePlaylistInfo(state, type, listId, item, playlist);
@@ -246,13 +335,19 @@ public class VideoHub : ConnectionHub
 
     private void UpdateDeviceInfo(VideoPlayerState state)
     {
-        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device)) return;
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
+            return;
         state.DeviceId = device.DeviceId;
         state.VolumePercentage = device.VolumePercent;
     }
 
-    private void UpdatePlaylistInfo(VideoPlayerState state, string type, dynamic listId, VideoPlaylistResponseDto item,
-        List<VideoPlaylistResponseDto> playlist)
+    private void UpdatePlaylistInfo(
+        VideoPlayerState state,
+        string type,
+        dynamic listId,
+        VideoPlaylistResponseDto item,
+        List<VideoPlaylistResponseDto> playlist
+    )
     {
         state.CurrentItem = item;
         state.PlayState = true;
@@ -270,18 +365,20 @@ public class VideoHub : ConnectionHub
                 Pausing = !state.PlayState,
                 Resuming = state.PlayState,
                 Previous = playlist.IndexOf(item) == 0,
-                Next = playlist.IndexOf(item) == playlist.Count - 1
-            }
+                Next = playlist.IndexOf(item) == playlist.Count - 1,
+            },
         };
     }
 
     public VideoPlayerState? GetStateCommand()
     {
         User? user = Context.User.User();
-        if (user is null) return null;
+        if (user is null)
+            return null;
 
         _videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? playerState);
-        if (playerState is null) return null;
+        if (playerState is null)
+            return null;
 
         return playerState;
     }
@@ -289,7 +386,8 @@ public class VideoHub : ConnectionHub
     public async Task PlaybackCommand(string command, object? data = null)
     {
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         if (!_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? state))
         {
@@ -314,11 +412,17 @@ public class VideoHub : ConnectionHub
     public async Task ChangeDeviceCommand(string deviceId)
     {
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         List<Device> connectedDevices = Devices();
 
-        await _clientMessenger.SendTo("ConnectedDevicesState", "videoHub", user.Id, connectedDevices);
+        await _clientMessenger.SendTo(
+            "ConnectedDevicesState",
+            "videoHub",
+            user.Id,
+            connectedDevices
+        );
 
         if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
         {
@@ -340,10 +444,10 @@ public class VideoHub : ConnectionHub
                     {
                         Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                         BroadcastStatus = VideoEventType.BroadcastUnavailable,
-                        DeviceId = deviceId
-                    }
-                }
-            ]
+                        DeviceId = deviceId,
+                    },
+                },
+            ],
         };
 
         await _clientMessenger.SendTo("ChangeDevice", "videoHub", user.Id, payload);
@@ -352,7 +456,8 @@ public class VideoHub : ConnectionHub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         User? user = Context.User.User();
-        if (user == null) return;
+        if (user == null)
+            return;
 
         bool stopPlayback = false;
 
@@ -387,8 +492,8 @@ public class VideoHub : ConnectionHub
                         Pausing = true,
                         Muting = true,
                         Seeking = true,
-                        Stopping = true
-                    }
+                        Stopping = true,
+                    },
                 };
             }
             else if (stopPlayback)
@@ -403,9 +508,14 @@ public class VideoHub : ConnectionHub
                         Stopping = true,
                         Seeking = true,
                         Muting = true,
-                        Previous = playerState.CurrentItem is null || playerState.Playlist.IndexOf(playerState.CurrentItem) == 0,
-                        Next = playerState.CurrentItem is null || playerState.Playlist.IndexOf(playerState.CurrentItem) == playerState.Playlist.Count - 1
-                    }
+                        Previous =
+                            playerState.CurrentItem is null
+                            || playerState.Playlist.IndexOf(playerState.CurrentItem) == 0,
+                        Next =
+                            playerState.CurrentItem is null
+                            || playerState.Playlist.IndexOf(playerState.CurrentItem)
+                                == playerState.Playlist.Count - 1,
+                    },
                 };
             }
         }

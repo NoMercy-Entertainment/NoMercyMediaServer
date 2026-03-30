@@ -1,33 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
-    </PropertyGroup>
-    <PropertyGroup>
-        <IsTestProject>false</IsTestProject>
-    </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="NoMercy.Tests.MediaProcessing" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <InternalsVisibleTo Include="NoMercy.Tests.MediaProcessing"/>
-        <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj" />
+    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
+    <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
+    <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
+    <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj" />
+    <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj"/>
-        <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
-        <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
-        <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj"/>
-        <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
-        <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj"/>
-        <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" />
-        <PackageReference Include="Stowage" />
-        <PackageReference Include="SubtitlesParserV2" />
-        <PackageReference Include="TagLibSharp"/>
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Stowage" />
+    <PackageReference Include="SubtitlesParserV2" />
+    <PackageReference Include="TagLibSharp" />
+  </ItemGroup>
 </Project>

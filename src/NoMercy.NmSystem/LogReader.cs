@@ -9,7 +9,8 @@ public static class LogReader
 {
     public static async Task<List<LogEntry>> GetLogsAsync(
         string logDirectoryPath,
-        Func<LogEntry, bool>? filter = null)
+        Func<LogEntry, bool>? filter = null
+    )
     {
         if (!Directory.Exists(logDirectoryPath))
             throw new DirectoryNotFoundException($"Log directory not found: {logDirectoryPath}");
@@ -18,24 +19,28 @@ public static class LogReader
         List<LogEntry> logEntries = [];
 
         IEnumerable<Task<IEnumerable<LogEntry>>> tasks = logFiles.Select(fileInfo =>
-            ProcessFileAsync(fileInfo.FullName, filter));
+            ProcessFileAsync(fileInfo.FullName, filter)
+        );
         IEnumerable<LogEntry>[] results = await Task.WhenAll(tasks);
 
-        foreach (IEnumerable<LogEntry> entries in results) logEntries.AddRange(entries);
+        foreach (IEnumerable<LogEntry> entries in results)
+            logEntries.AddRange(entries);
 
         return logEntries;
     }
 
     private static IOrderedEnumerable<FileInfo> GetLogFilesSortedByDate(string logDirectoryPath)
     {
-        return Directory.GetFiles(logDirectoryPath, "*.txt")
+        return Directory
+            .GetFiles(logDirectoryPath, "*.txt")
             .Select(file => new FileInfo(file))
             .OrderByDescending(f => f.LastWriteTime);
     }
 
     private static async Task<IEnumerable<LogEntry>> ProcessFileAsync(
         string filePath,
-        Func<LogEntry, bool>? filter)
+        Func<LogEntry, bool>? filter
+    )
     {
         List<LogEntry> logEntries = new();
         FileInfo fileInfo = new(filePath);
@@ -48,7 +53,12 @@ public static class LogReader
 
         try
         {
-            await using FileStream fileStream = new(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            await using FileStream fileStream = new(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite
+            );
             using StreamReader reader = new(fileStream);
 
             while (await reader.ReadLineAsync() is { } line)

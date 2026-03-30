@@ -1,5 +1,3 @@
 namespace NoMercy.Providers.TVDB.Client;
 
-public class TvdbMovieClient
-{
-}
+public class TvdbMovieClient { }

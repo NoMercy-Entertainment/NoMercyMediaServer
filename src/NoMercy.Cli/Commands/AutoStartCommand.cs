@@ -8,52 +8,48 @@ internal static class AutoStartCommand
 {
     public static Command Create(Option<string?> pipeOption)
     {
-        Command statusCmd = new("status")
-        {
-            Description = "Check if autostart is enabled"
-        };
+        Command statusCmd = new("status") { Description = "Check if autostart is enabled" };
 
-        statusCmd.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
-        {
-            string? pipe = parseResult.GetValue(pipeOption);
-            using CliClient client = new(pipe);
-            AutoStartResponse? response = await client.GetAsync<AutoStartResponse>(
-                "/manage/autostart", ct);
-
-            if (response is null)
+        statusCmd.SetAction(
+            async (ParseResult parseResult, CancellationToken ct) =>
             {
-                Console.Error.WriteLine("Could not retrieve autostart status.");
-                return 1;
+                string? pipe = parseResult.GetValue(pipeOption);
+                using CliClient client = new(pipe);
+                AutoStartResponse? response = await client.GetAsync<AutoStartResponse>(
+                    "/manage/autostart",
+                    ct
+                );
+
+                if (response is null)
+                {
+                    Console.Error.WriteLine("Could not retrieve autostart status.");
+                    return 1;
+                }
+
+                Console.WriteLine($"Autostart:    {(response.Enabled ? "enabled" : "disabled")}");
+                return 0;
             }
+        );
 
-            Console.WriteLine($"Autostart:    {(response.Enabled ? "enabled" : "disabled")}");
-            return 0;
-        });
+        Command enableCmd = new("enable") { Description = "Enable autostart" };
 
-        Command enableCmd = new("enable")
-        {
-            Description = "Enable autostart"
-        };
+        enableCmd.SetAction(
+            async (ParseResult parseResult, CancellationToken ct) =>
+            {
+                return await SetAutoStart(parseResult, pipeOption, true, ct);
+            }
+        );
 
-        enableCmd.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
-        {
-            return await SetAutoStart(parseResult, pipeOption, true, ct);
-        });
+        Command disableCmd = new("disable") { Description = "Disable autostart" };
 
-        Command disableCmd = new("disable")
-        {
-            Description = "Disable autostart"
-        };
+        disableCmd.SetAction(
+            async (ParseResult parseResult, CancellationToken ct) =>
+            {
+                return await SetAutoStart(parseResult, pipeOption, false, ct);
+            }
+        );
 
-        disableCmd.SetAction(async (ParseResult parseResult, CancellationToken ct) =>
-        {
-            return await SetAutoStart(parseResult, pipeOption, false, ct);
-        });
-
-        Command command = new("autostart")
-        {
-            Description = "Manage server autostart"
-        };
+        Command command = new("autostart") { Description = "Manage server autostart" };
         command.Subcommands.Add(statusCmd);
         command.Subcommands.Add(enableCmd);
         command.Subcommands.Add(disableCmd);
@@ -65,7 +61,8 @@ internal static class AutoStartCommand
         ParseResult parseResult,
         Option<string?> pipeOption,
         bool enabled,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         string? pipe = parseResult.GetValue(pipeOption);
         using CliClient client = new(pipe);
@@ -86,6 +83,7 @@ internal static class AutoStartCommand
 
     private class AutoStartResponse
     {
-        [JsonProperty("enabled")] public bool Enabled { get; set; }
+        [JsonProperty("enabled")]
+        public bool Enabled { get; set; }
     }
 }

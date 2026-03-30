@@ -9,19 +9,28 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCronWorker(this IServiceCollection services)
     {
         services.AddSingleton<CronWorker>();
-        services.AddHostedService<CronWorker>(provider => provider.GetRequiredService<CronWorker>());
-            
+        services.AddHostedService<CronWorker>(provider =>
+            provider.GetRequiredService<CronWorker>()
+        );
+
         return services;
     }
 
-    public static IServiceCollection RegisterCronJob<T>(this IServiceCollection services, string jobType)
+    public static IServiceCollection RegisterCronJob<T>(
+        this IServiceCollection services,
+        string jobType
+    )
         where T : class, ICronJobExecutor
     {
         services.AddScoped<T>();
         return services;
     }
-    
-    public static void RegisterJobWithSchedule<T>(this CronWorker cronWorker, string jobType, IServiceProvider serviceProvider)
+
+    public static void RegisterJobWithSchedule<T>(
+        this CronWorker cronWorker,
+        string jobType,
+        IServiceProvider serviceProvider
+    )
         where T : class, ICronJobExecutor
     {
         using IServiceScope scope = serviceProvider.CreateScope();

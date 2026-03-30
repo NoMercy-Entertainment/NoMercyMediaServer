@@ -33,13 +33,14 @@ public class BaseImageManager : IBaseImageManager, IDisposable
     {
         Dictionary<string, PaletteColors?> palette = new();
 
-        foreach (ColorPaletteArgument item in items) palette.Add(item.Key, ColorPaletteFromImage(item.ImageData));
+        foreach (ColorPaletteArgument item in items)
+            palette.Add(item.Key, ColorPaletteFromImage(item.ImageData));
 
-        IEnumerable<KeyValuePair<string, PaletteColors?>> palettes = palette
-            .Where(x => x.Value != null);
+        IEnumerable<KeyValuePair<string, PaletteColors?>> palettes = palette.Where(x =>
+            x.Value != null
+        );
 
-        Dictionary<string, PaletteColors?> dict = palettes
-            .ToDictionary(x => x.Key, x => x.Value);
+        Dictionary<string, PaletteColors?> dict = palettes.ToDictionary(x => x.Key, x => x.Value);
 
         return JsonConvert.SerializeObject(dict);
     }
@@ -62,58 +63,65 @@ public class BaseImageManager : IBaseImageManager, IDisposable
         return GetColorPaletteColors(image);
     }
 
-    public static async Task<string> ColorPalette(DownloadUrl client, string type, Uri path, bool? download = true)
+    public static async Task<string> ColorPalette(
+        DownloadUrl client,
+        string type,
+        Uri path,
+        bool? download = true
+    )
     {
         Image<Rgba32>? imageData = await client.Invoke(path, download);
         if (imageData == null)
             return "";
 
-        return GenerateColorPalette(new List<ColorPaletteArgument>
-        {
-            new()
+        return GenerateColorPalette(
+            new List<ColorPaletteArgument>
             {
-                Key = type,
-                ImageData = imageData
+                new() { Key = type, ImageData = imageData },
             }
-        });
+        );
     }
 
-    public static async Task<string> MultiColorPalette(DownloadUrl client, IEnumerable<MultiUriType> items,
-        bool? download = true)
+    public static async Task<string> MultiColorPalette(
+        DownloadUrl client,
+        IEnumerable<MultiUriType> items,
+        bool? download = true
+    )
     {
         List<ColorPaletteArgument> list = new();
         foreach (MultiUriType item in items)
         {
             Image<Rgba32>? imageData = await client.Invoke(item.Url, download);
-            list.Add(new()
-            {
-                Key = item.Key,
-                ImageData = imageData
-            });
+            list.Add(new() { Key = item.Key, ImageData = imageData });
         }
 
         return GenerateColorPalette(list);
     }
 
-    public static async Task<string> ColorPalette(DownloadPath client, string type, string? path,
-        bool? download = true)
+    public static async Task<string> ColorPalette(
+        DownloadPath client,
+        string type,
+        string? path,
+        bool? download = true
+    )
     {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
         Image<Rgba32>? imageData = await client.Invoke(path, download);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
 
-        return GenerateColorPalette(new List<ColorPaletteArgument>
-        {
-            new()
+        return GenerateColorPalette(
+            new List<ColorPaletteArgument>
             {
-                Key = type,
-                ImageData = imageData
+                new() { Key = type, ImageData = imageData },
             }
-        });
+        );
     }
 
-    public static async Task<string> MultiColorPalette(DownloadPath client, IEnumerable<MultiStringType> items,
-        bool? download = true)
+    public static async Task<string> MultiColorPalette(
+        DownloadPath client,
+        IEnumerable<MultiStringType> items,
+        bool? download = true
+    )
     {
         List<ColorPaletteArgument> list = new();
         foreach (MultiStringType item in items)
@@ -121,19 +129,13 @@ public class BaseImageManager : IBaseImageManager, IDisposable
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
             Image<Rgba32>? imageData = await client.Invoke(item.Path, download);
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
-            list.Add(new()
-            {
-                Key = item.Key,
-                ImageData = imageData
-            });
+            list.Add(new() { Key = item.Key, ImageData = imageData });
         }
 
         return GenerateColorPalette(list);
     }
 
-    public void Dispose()
-    {
-    }
+    public void Dispose() { }
 
     public static PaletteColors GetColorPaletteColors(Image<Rgba32> image)
     {

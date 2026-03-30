@@ -23,31 +23,32 @@ public class SimilarPaletteCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        List<Similar[]> similars = _context.Similar
-            .Where(x => string.IsNullOrEmpty(x._colorPalette))
+        List<Similar[]> similars = _context
+            .Similar.Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.TvFrom != null ? x.TvFrom.UpdatedAt : x.MovieFrom!.UpdatedAt)
             .Take(100)
             .ToList()
             .Chunk(10)
             .ToList();
 
-        if (similars.Count == 0) return;
+        if (similars.Count == 0)
+            return;
 
         _logger.LogTrace("Found {Count} similar chunks to process", similars.Count);
 
         foreach (Similar[] similarChunk in similars)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
             foreach (Similar similar in similarChunk)
             {
                 try
                 {
-                    similar._colorPalette = await MovieDbImageManager
-                        .MultiColorPalette([
-                            new("poster", similar.Poster),
-                            new("backdrop", similar.Backdrop)
-                        ]);
+                    similar._colorPalette = await MovieDbImageManager.MultiColorPalette([
+                        new("poster", similar.Poster),
+                        new("backdrop", similar.Backdrop),
+                    ]);
                 }
                 catch (Exception)
                 {
@@ -56,10 +57,11 @@ public class SimilarPaletteCronJob : ICronJobExecutor
             }
 
             await _context.SaveChangesAsync(cancellationToken);
-
         }
 
-        _logger.LogTrace("Similar palette job completed, updated: {Count}", similars.Sum(x => x.Length));
-
+        _logger.LogTrace(
+            "Similar palette job completed, updated: {Count}",
+            similars.Sum(x => x.Length)
+        );
     }
 }

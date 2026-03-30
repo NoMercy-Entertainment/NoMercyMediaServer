@@ -11,13 +11,19 @@ public static class FileAttributes
         {
             File.SetCreationTimeUtc(filePath, createdAt.UtcDateTime);
 
-            Logger.System($"Set creation and modification dates for {filePath} to {createdAt}", LogEventLevel.Verbose);
+            Logger.System(
+                $"Set creation and modification dates for {filePath} to {createdAt}",
+                LogEventLevel.Verbose
+            );
         }
         catch (Exception ex)
         {
-            Logger.System($"Failed to set file attributes for {filePath}: {ex.Message}", LogEventLevel.Warning);
+            Logger.System(
+                $"Failed to set file attributes for {filePath}: {ex.Message}",
+                LogEventLevel.Warning
+            );
         }
-        
+
         return Task.CompletedTask;
     }
 }

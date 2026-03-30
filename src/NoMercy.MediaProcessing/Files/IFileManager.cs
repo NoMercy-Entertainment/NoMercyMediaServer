@@ -1,5 +1,3 @@
 namespace NoMercy.MediaProcessing.Files;
 
-public interface IFileManager
-{
-}
+public interface IFileManager { }

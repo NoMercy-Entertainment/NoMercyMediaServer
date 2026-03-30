@@ -1,6 +1,5 @@
 // using NoMercy.Database.Models.Common;
 
-
 //
 // namespace NoMercy.Data.Repositories;
 //
@@ -13,4 +12,3 @@
 //     Task AddMovieAsync(int id);
 //     Task DeleteMovieAsync(int id);
 // }
-

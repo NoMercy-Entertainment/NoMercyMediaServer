@@ -70,15 +70,19 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
             else if (keyValuePair.Value.IsSubtitle)
             {
                 (keyValuePair.Value as BaseSubtitle)!.SubtitleStreams = ffProbeData.SubtitleStreams;
-                (keyValuePair.Value as BaseSubtitle)!.SubtitleStream = ffProbeData.PrimarySubtitleStream!;
+                (keyValuePair.Value as BaseSubtitle)!.SubtitleStream =
+                    ffProbeData.PrimarySubtitleStream!;
 
                 List<BaseSubtitle> x = (keyValuePair.Value as BaseSubtitle)!.Build();
                 foreach (BaseSubtitle newStream in x)
                     newStream.Extension = BaseSubtitle.GetExtension(newStream);
 
                 Container.SubtitleStreams.AddRange(
-                    x.Where(s => Container.SubtitleStreams.All(
-                        existing => existing.HlsPlaylistFilename != s.HlsPlaylistFilename))
+                    x.Where(s =>
+                        Container.SubtitleStreams.All(existing =>
+                            existing.HlsPlaylistFilename != s.HlsPlaylistFilename
+                        )
+                    )
                 );
             }
             else if (keyValuePair.Value.IsImage)
@@ -145,32 +149,40 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
 
         List<string> results = [];
 
-        Parallel.For(0, sections, Config.ParallelOptions, (i, _) =>
-        {
-            string cropSection =
-                $"-threads 1 -nostats -hide_banner -ss {i * step} -i \"{path}\" -vframes 10 -vf cropdetect -t {1} -f null -";
-
-            string result = Shell.ExecStdErrSync(FfmpegPath, cropSection);
-            results.Add(result);
-        });
-
-        Parallel.ForEach(results, Config.ParallelOptions, (output) =>
-        {
-            MatchCollection matches = regex.Matches(output);
-
-            foreach (Match match in matches)
+        Parallel.For(
+            0,
+            sections,
+            Config.ParallelOptions,
+            (i, _) =>
             {
-                string crop = match.Groups[1].Value;
-                if (!counts.TryAdd(crop, 1)) counts[crop]++;
+                string cropSection =
+                    $"-threads 1 -nostats -hide_banner -ss {i * step} -i \"{path}\" -vframes 10 -vf cropdetect -t {1} -f null -";
+
+                string result = Shell.ExecStdErrSync(FfmpegPath, cropSection);
+                results.Add(result);
             }
-        });
+        );
+
+        Parallel.ForEach(
+            results,
+            Config.ParallelOptions,
+            (output) =>
+            {
+                MatchCollection matches = regex.Matches(output);
+
+                foreach (Match match in matches)
+                {
+                    string crop = match.Groups[1].Value;
+                    if (!counts.TryAdd(crop, 1))
+                        counts[crop]++;
+                }
+            }
+        );
 
         return ChooseCrop(counts);
     }
 
-    public void Build()
-    {
-    }
+    public void Build() { }
 
     public VideoAudioFile Prioritize()
     {
@@ -202,19 +214,32 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
         return FfMpeg.Run(fullCommand, basePath, progressMeta);
     }
 
-    public async Task ConvertSubtitles(List<BaseSubtitle> subtitles, int id, string title, string? imgPath)
+    public async Task ConvertSubtitles(
+        List<BaseSubtitle> subtitles,
+        int id,
+        string title,
+        string? imgPath
+    )
     {
         foreach (BaseSubtitle? subtitle in subtitles)
         {
             // Ensure the Tesseract language file exists before attempting OCR
-            bool languageFileExists = await TesseractLanguageDownloader.EnsureLanguageFileExists(subtitle.Language);
+            bool languageFileExists = await TesseractLanguageDownloader.EnsureLanguageFileExists(
+                subtitle.Language
+            );
             if (!languageFileExists)
             {
-                Logger.Encoder($"Failed to obtain Tesseract language file for {subtitle.Language}. Skipping OCR for this subtitle.", LogEventLevel.Warning);
+                Logger.Encoder(
+                    $"Failed to obtain Tesseract language file for {subtitle.Language}. Skipping OCR for this subtitle.",
+                    LogEventLevel.Warning
+                );
                 continue;
             }
 
-            string input = Path.Combine(BasePath, $"{subtitle.HlsPlaylistFilename}.{subtitle.Extension}");
+            string input = Path.Combine(
+                BasePath,
+                $"{subtitle.HlsPlaylistFilename}.{subtitle.Extension}"
+            );
             string orcFile = Path.Combine(BasePath, "subtitles", "temp.txt");
             string output = Path.Combine(BasePath, $"{subtitle.HlsPlaylistFilename}.vtt");
 
@@ -222,46 +247,57 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
                 $" -i \"{input}\" -f lavfi -i color=black:s=hd720 -filter_complex \"[0:s:0]ocr=language={subtitle.Language},metadata=print:key=lavfi.ocr.text:file=temp.txt\" -an -f null -";
 
             if (EventBusProvider.IsConfigured)
-                _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
-                {
-                    ProgressData = new Progress
+                _ = EventBusProvider.Current.PublishAsync(
+                    new EncoderProgressBroadcastEvent
                     {
-                        Id = id,
-                        Status = "running",
-                        Title = title,
-                        Thumbnail = $"/images/original{imgPath}",
-                        Message = $"OCR {IsoLanguageMapper.IsoToLanguage[subtitle.Language]}"
+                        ProgressData = new Progress
+                        {
+                            Id = id,
+                            Status = "running",
+                            Title = title,
+                            Thumbnail = $"/images/original{imgPath}",
+                            Message = $"OCR {IsoLanguageMapper.IsoToLanguage[subtitle.Language]}",
+                        },
                     }
-                });
+                );
 
-            Logger.Encoder($"Converting {IsoLanguageMapper.IsoToLanguage[subtitle.Language]} subtitle to WebVtt");
+            Logger.Encoder(
+                $"Converting {IsoLanguageMapper.IsoToLanguage[subtitle.Language]} subtitle to WebVtt"
+            );
             Logger.Encoder(AppFiles.FfmpegPath + ocrCommand, LogEventLevel.Debug);
 
-            Task<string> execTask = Shell.ExecStdErrAsync(AppFiles.FfmpegPath, ocrCommand, new()
-            {
-                WorkingDirectory = Path.Combine(BasePath, "subtitles"),
-                EnvironmentVariables = new()
+            Task<string> execTask = Shell.ExecStdErrAsync(
+                AppFiles.FfmpegPath,
+                ocrCommand,
+                new()
                 {
-                    ["TESSDATA_PREFIX"] = AppFiles.TesseractModelsFolder
+                    WorkingDirectory = Path.Combine(BasePath, "subtitles"),
+                    EnvironmentVariables = new()
+                    {
+                        ["TESSDATA_PREFIX"] = AppFiles.TesseractModelsFolder,
+                    },
                 }
-            });
+            );
 
             Task progressTask = Task.Run(async () =>
             {
                 while (!execTask.IsCompleted)
                 {
                     if (EventBusProvider.IsConfigured)
-                        _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
-                        {
-                            ProgressData = new Progress
+                        _ = EventBusProvider.Current.PublishAsync(
+                            new EncoderProgressBroadcastEvent
                             {
-                                Id = id,
-                                Status = "running",
-                                Title = title,
-                                Thumbnail = $"/images/original{imgPath}",
-                                Message = $"OCR {IsoLanguageMapper.IsoToLanguage[subtitle.Language]}"
+                                ProgressData = new Progress
+                                {
+                                    Id = id,
+                                    Status = "running",
+                                    Title = title,
+                                    Thumbnail = $"/images/original{imgPath}",
+                                    Message =
+                                        $"OCR {IsoLanguageMapper.IsoToLanguage[subtitle.Language]}",
+                                },
                             }
-                        });
+                        );
 
                     await Task.Delay(1000);
                 }
@@ -269,9 +305,12 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
 
             await Task.WhenAll(execTask, progressTask);
 
-            Logger.Encoder($"Converting {IsoLanguageMapper.IsoToLanguage[subtitle.Language]} subtitle to WebVtt");
+            Logger.Encoder(
+                $"Converting {IsoLanguageMapper.IsoToLanguage[subtitle.Language]} subtitle to WebVtt"
+            );
 
-            if (!File.Exists(orcFile)) return;
+            if (!File.Exists(orcFile))
+                return;
 
             Subtitle[] parsedSubtitles = SubtitleParser.ParseSubtitles(orcFile);
 
@@ -281,41 +320,53 @@ public partial class VideoAudioFile(FfProbeData ffProbeData, string ffmpegPath) 
         }
 
         if (EventBusProvider.IsConfigured)
-            _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
-            {
-                ProgressData = new Progress
+            _ = EventBusProvider.Current.PublishAsync(
+                new EncoderProgressBroadcastEvent
                 {
-                    Id = id,
-                    Status = "completed",
-                    Title = title,
-                    Thumbnail = $"/images/original{imgPath}",
-                    Message = "Completed converting subtitles to WebVtt"
+                    ProgressData = new Progress
+                    {
+                        Id = id,
+                        Status = "completed",
+                        Title = title,
+                        Thumbnail = $"/images/original{imgPath}",
+                        Message = "Completed converting subtitles to WebVtt",
+                    },
                 }
-            });
+            );
     }
-    
-    public static async Task GetSubtitleFromWhisperAi(string inputFile, string basePath, string fileName, string language)
+
+    public static async Task GetSubtitleFromWhisperAi(
+        string inputFile,
+        string basePath,
+        string fileName,
+        string language
+    )
     {
         string whisperCommand =
             $@" -i ""{inputFile}"" -vn -af ""whisper=model={AppFiles.WhisperModelPath}:language={language}:queue=3:destination={fileName}:format=srt"" -f null -";
 
-        Logger.Encoder($"Generating {IsoLanguageMapper.IsoToLanguage[language]} subtitle with Whisper AI");
-        
+        Logger.Encoder(
+            $"Generating {IsoLanguageMapper.IsoToLanguage[language]} subtitle with Whisper AI"
+        );
+
         Logger.Encoder(AppFiles.FfmpegPath + " " + whisperCommand, LogEventLevel.Debug);
-        
+
         if (!Directory.Exists(Path.Combine(basePath, "subtitles")))
             Directory.CreateDirectory(Path.Combine(basePath, "subtitles"));
-        
-        
-        Task<string> execTask = Shell.ExecStdErrAsync(AppFiles.FfmpegPath, whisperCommand, new()
-        {
-            WorkingDirectory = Path.Combine(basePath, "subtitles"),
-            EnvironmentVariables = new()
+
+        Task<string> execTask = Shell.ExecStdErrAsync(
+            AppFiles.FfmpegPath,
+            whisperCommand,
+            new()
             {
-                ["TESSDATA_PREFIX"] = AppFiles.TesseractModelsFolder
+                WorkingDirectory = Path.Combine(basePath, "subtitles"),
+                EnvironmentVariables = new()
+                {
+                    ["TESSDATA_PREFIX"] = AppFiles.TesseractModelsFolder,
+                },
             }
-        });
-        
+        );
+
         await execTask;
     }
 }

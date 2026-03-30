@@ -13,12 +13,10 @@ namespace NoMercy.Database.Migrations
             migrationBuilder.RenameColumn(
                 name: "LogoPath",
                 table: "WatchProviders",
-                newName: "Logo");
+                newName: "Logo"
+            );
 
-            migrationBuilder.RenameColumn(
-                name: "LogoPath",
-                table: "Companies",
-                newName: "Logo");
+            migrationBuilder.RenameColumn(name: "LogoPath", table: "Companies", newName: "Logo");
         }
 
         /// <inheritdoc />
@@ -27,12 +25,10 @@ namespace NoMercy.Database.Migrations
             migrationBuilder.RenameColumn(
                 name: "Logo",
                 table: "WatchProviders",
-                newName: "LogoPath");
+                newName: "LogoPath"
+            );
 
-            migrationBuilder.RenameColumn(
-                name: "Logo",
-                table: "Companies",
-                newName: "LogoPath");
+            migrationBuilder.RenameColumn(name: "Logo", table: "Companies", newName: "LogoPath");
         }
     }
 }

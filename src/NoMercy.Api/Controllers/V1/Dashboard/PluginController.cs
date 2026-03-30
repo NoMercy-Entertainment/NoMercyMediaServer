@@ -2,12 +2,12 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
-using NoMercy.Plugins.Abstractions;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Plugins.Abstractions;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -26,10 +26,12 @@ public class PluginController(IPluginManager pluginManager) : BaseController
 
         IReadOnlyList<PluginInfo> plugins = pluginManager.GetInstalledPlugins();
 
-        return Ok(new DataResponseDto<IEnumerable<PluginInfoDto>>
-        {
-            Data = plugins.Select(p => new PluginInfoDto(p))
-        });
+        return Ok(
+            new DataResponseDto<IEnumerable<PluginInfoDto>>
+            {
+                Data = plugins.Select(p => new PluginInfoDto(p)),
+            }
+        );
     }
 
     [HttpGet("{id:guid}")]
@@ -42,10 +44,7 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         if (plugin is null)
             return NotFoundResponse("Plugin not found");
 
-        return Ok(new DataResponseDto<PluginInfoDto>
-        {
-            Data = new(plugin)
-        });
+        return Ok(new DataResponseDto<PluginInfoDto> { Data = new(plugin) });
     }
 
     [HttpPost("{id:guid}/enable")]
@@ -58,11 +57,13 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         {
             await pluginManager.EnablePluginAsync(id);
 
-            return Ok(new StatusResponseDto<string>
-            {
-                Status = "ok",
-                Message = "Plugin enabled successfully"
-            });
+            return Ok(
+                new StatusResponseDto<string>
+                {
+                    Status = "ok",
+                    Message = "Plugin enabled successfully",
+                }
+            );
         }
         catch (InvalidOperationException ex)
         {
@@ -80,11 +81,13 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         {
             await pluginManager.DisablePluginAsync(id);
 
-            return Ok(new StatusResponseDto<string>
-            {
-                Status = "ok",
-                Message = "Plugin disabled successfully"
-            });
+            return Ok(
+                new StatusResponseDto<string>
+                {
+                    Status = "ok",
+                    Message = "Plugin disabled successfully",
+                }
+            );
         }
         catch (InvalidOperationException ex)
         {
@@ -102,11 +105,13 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         {
             await pluginManager.UninstallPluginAsync(id);
 
-            return Ok(new StatusResponseDto<string>
-            {
-                Status = "ok",
-                Message = "Plugin uninstalled successfully"
-            });
+            return Ok(
+                new StatusResponseDto<string>
+                {
+                    Status = "ok",
+                    Message = "Plugin uninstalled successfully",
+                }
+            );
         }
         catch (InvalidOperationException ex)
         {
@@ -126,12 +131,14 @@ public class PluginController(IPluginManager pluginManager) : BaseController
         if (aniDb == null)
             return NotFoundResponse("No credentials found for AniDb");
 
-        return Ok(new AniDbCredentialsResponseDto
-        {
-            Key = "AniDb",
-            Username = aniDb.Username,
-            ApiKey = aniDb.ApiKey
-        });
+        return Ok(
+            new AniDbCredentialsResponseDto
+            {
+                Key = "AniDb",
+                Username = aniDb.Username,
+                ApiKey = aniDb.ApiKey,
+            }
+        );
     }
 
     [HttpPost]
@@ -142,32 +149,48 @@ public class PluginController(IPluginManager pluginManager) : BaseController
             return UnauthorizedResponse("You do not have permission to set credentials");
 
         UserPass? aniDb = CredentialManager.Credential(requestDto.Key);
-        CredentialManager.SetCredentials(requestDto.Key, requestDto.Username,
+        CredentialManager.SetCredentials(
+            requestDto.Key,
+            requestDto.Username,
             requestDto.Password ?? (aniDb?.Password).OrEmpty(),
-            requestDto.ApiKey);
+            requestDto.ApiKey
+        );
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Credentials set successfully for {0}",
-            Args = [requestDto.Key]
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Credentials set successfully for {0}",
+                Args = [requestDto.Key],
+            }
+        );
     }
 }
 
 public record PluginInfoDto
 {
-    [Newtonsoft.Json.JsonProperty("id")] public Guid Id { get; init; }
-    [Newtonsoft.Json.JsonProperty("name")] public string Name { get; init; } = null!;
-    [Newtonsoft.Json.JsonProperty("description")] public string Description { get; init; } = null!;
-    [Newtonsoft.Json.JsonProperty("version")] public string Version { get; init; } = null!;
-    [Newtonsoft.Json.JsonProperty("status")] public string Status { get; init; } = null!;
-    [Newtonsoft.Json.JsonProperty("author")] public string? Author { get; init; }
-    [Newtonsoft.Json.JsonProperty("project_url")] public string? ProjectUrl { get; init; }
+    [Newtonsoft.Json.JsonProperty("id")]
+    public Guid Id { get; init; }
 
-    public PluginInfoDto()
-    {
-    }
+    [Newtonsoft.Json.JsonProperty("name")]
+    public string Name { get; init; } = null!;
+
+    [Newtonsoft.Json.JsonProperty("description")]
+    public string Description { get; init; } = null!;
+
+    [Newtonsoft.Json.JsonProperty("version")]
+    public string Version { get; init; } = null!;
+
+    [Newtonsoft.Json.JsonProperty("status")]
+    public string Status { get; init; } = null!;
+
+    [Newtonsoft.Json.JsonProperty("author")]
+    public string? Author { get; init; }
+
+    [Newtonsoft.Json.JsonProperty("project_url")]
+    public string? ProjectUrl { get; init; }
+
+    public PluginInfoDto() { }
 
     public PluginInfoDto(PluginInfo info)
     {

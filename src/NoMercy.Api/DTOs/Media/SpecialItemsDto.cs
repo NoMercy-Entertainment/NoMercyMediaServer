@@ -12,38 +12,83 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record SpecialItemsDto
 {
-    [JsonProperty("id")] public int Id { get; set; }
-    [JsonProperty("episode_ids")] public int[] EpisodeIds { get; set; }
-    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
-    [JsonProperty("favorite")] public bool Favorite { get; set; }
-    [JsonProperty("watched")] public bool Watched { get; set; }
-    [JsonProperty("logo")] public string? Logo { get; set; }
-    [JsonProperty("media_type")] public string MediaType { get; set; }
-    [JsonProperty("overview")] public string? Overview { get; set; }
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("poster")] public string? Poster { get; set; }
-    [JsonProperty("title")] public string? Title { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
-    [JsonProperty("year")] public long Year { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("id")]
+    public int Id { get; set; }
 
-    [JsonProperty("genres")] public IEnumerable<GenreDto> Genres { get; set; }
-    [JsonProperty("backdrops")] public IEnumerable<ImageDto> Backdrops { get; set; }
-    [JsonProperty("posters")] public IEnumerable<ImageDto> Posters { get; set; }
+    [JsonProperty("episode_ids")]
+    public int[] EpisodeIds { get; set; }
 
-    [JsonProperty("cast")] public IEnumerable<PeopleDto> Cast { get; set; }
-    [JsonProperty("crew")] public IEnumerable<PeopleDto> Crew { get; set; }
+    [JsonProperty("backdrop")]
+    public string? Backdrop { get; set; }
 
-    [JsonProperty("rating")] public Certification Rating { get; set; }
+    [JsonProperty("favorite")]
+    public bool Favorite { get; set; }
 
-    [JsonProperty("videoId")] public string? VideoId { get; set; }
+    [JsonProperty("watched")]
+    public bool Watched { get; set; }
 
-    [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
-    [JsonProperty("have_items")] public int HaveItems { get; set; }
-    [JsonProperty("duration")] public int Duration { get; set; }
+    [JsonProperty("logo")]
+    public string? Logo { get; set; }
 
-    [JsonProperty("total_duration")] public int TotalDuration { get; set; }
-    [JsonProperty("vote_average")] public double? VoteAverage { get; set; }
+    [JsonProperty("media_type")]
+    public string MediaType { get; set; }
+
+    [JsonProperty("overview")]
+    public string? Overview { get; set; }
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
+
+    [JsonProperty("poster")]
+    public string? Poster { get; set; }
+
+    [JsonProperty("title")]
+    public string? Title { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; }
+
+    [JsonProperty("year")]
+    public long Year { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; }
+
+    [JsonProperty("genres")]
+    public IEnumerable<GenreDto> Genres { get; set; }
+
+    [JsonProperty("backdrops")]
+    public IEnumerable<ImageDto> Backdrops { get; set; }
+
+    [JsonProperty("posters")]
+    public IEnumerable<ImageDto> Posters { get; set; }
+
+    [JsonProperty("cast")]
+    public IEnumerable<PeopleDto> Cast { get; set; }
+
+    [JsonProperty("crew")]
+    public IEnumerable<PeopleDto> Crew { get; set; }
+
+    [JsonProperty("rating")]
+    public Certification Rating { get; set; }
+
+    [JsonProperty("videoId")]
+    public string? VideoId { get; set; }
+
+    [JsonProperty("number_of_items")]
+    public int? NumberOfItems { get; set; }
+
+    [JsonProperty("have_items")]
+    public int HaveItems { get; set; }
+
+    [JsonProperty("duration")]
+    public int Duration { get; set; }
+
+    [JsonProperty("total_duration")]
+    public int TotalDuration { get; set; }
+
+    [JsonProperty("vote_average")]
+    public double? VoteAverage { get; set; }
 
     public SpecialItemsDto(Movie movie)
     {
@@ -54,17 +99,15 @@ public record SpecialItemsDto
 
         Backdrop = movie.Backdrop;
         // Watched = movie.Watched;
-        Logo = movie.Images
-            .FirstOrDefault(media => media.Type == "logo")
-            ?.FilePath;
+        Logo = movie.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
 
-        Backdrops = movie.Images
-            .Where(media => media.Type == "backdrop")
+        Backdrops = movie
+            .Images.Where(media => media.Type == "backdrop")
             .Take(2)
             .Select(media => new ImageDto(media));
 
-        Posters = movie.Images
-            .Where(media => media.Type == "poster")
+        Posters = movie
+            .Images.Where(media => media.Type == "poster")
             .Take(2)
             .Select(media => new ImageDto(media));
 
@@ -78,13 +121,14 @@ public record SpecialItemsDto
 
         TotalDuration = movie.Runtime * 60 ?? 0;
 
-        Genres = movie.GenreMovies
-            .Select(genreMovie => new GenreDto(genreMovie.Genre));
+        Genres = movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie.Genre));
 
-        Rating = movie.CertificationMovies
-            .Select(certificationMovie => certificationMovie.Certification)
-            .FirstOrDefault() ?? new Certification();
-        
+        Rating =
+            movie
+                .CertificationMovies.Select(certificationMovie => certificationMovie.Certification)
+                .FirstOrDefault()
+            ?? new Certification();
+
         VoteAverage = movie.VoteAverage;
 
         NumberOfItems = 1;
@@ -92,38 +136,30 @@ public record SpecialItemsDto
 
         VideoId = movie.Video;
 
-        Cast = movie.Cast
-            .Take(15)
-            .Select(cast => new PeopleDto(cast));
+        Cast = movie.Cast.Take(15).Select(cast => new PeopleDto(cast));
 
-        Crew = movie.Crew
-            .Take(15)
-            .Select(crew => new PeopleDto(crew));
+        Crew = movie.Crew.Take(15).Select(crew => new PeopleDto(crew));
     }
 
     public SpecialItemsDto(Tv tv)
     {
         Id = tv.Id;
-        EpisodeIds = tv.Episodes
-            .Select(episode => episode.Id)
-            .ToArray();
+        EpisodeIds = tv.Episodes.Select(episode => episode.Id).ToArray();
 
         Title = tv.Title;
         Overview = tv.Overview;
 
         Backdrop = tv.Backdrop;
         // Watched = tv.Watched;
-        Logo = tv.Images
-            .FirstOrDefault(media => media.Type == "logo")
-            ?.FilePath;
+        Logo = tv.Images.FirstOrDefault(media => media.Type == "logo")?.FilePath;
 
-        Backdrops = tv.Images
-            .Where(media => media.Type == "backdrop")
+        Backdrops = tv
+            .Images.Where(media => media.Type == "backdrop")
             .Take(2)
             .Select(media => new ImageDto(media));
 
-        Posters = tv.Images
-            .Where(media => media.Type == "poster")
+        Posters = tv
+            .Images.Where(media => media.Type == "poster")
             .Take(2)
             .Select(media => new ImageDto(media));
 
@@ -133,25 +169,28 @@ public record SpecialItemsDto
         Type = "tv";
         Link = new($"/tv/{Id}", UriKind.Relative);
         Year = tv.FirstAirDate.ParseYear();
-        
+
         VoteAverage = tv.VoteAverage;
 
-        Genres = tv.GenreTvs
-            .Select(genreTv => new GenreDto(genreTv.Genre));
+        Genres = tv.GenreTvs.Select(genreTv => new GenreDto(genreTv.Genre));
 
-        Rating = tv.CertificationTvs
-            .Select(certificationTv => certificationTv.Certification)
-            .FirstOrDefault() ?? new Certification();
+        Rating =
+            tv.CertificationTvs.Select(certificationTv => certificationTv.Certification)
+                .FirstOrDefault()
+            ?? new Certification();
 
         NumberOfItems = tv.Episodes.Count(e => e.SeasonNumber > 0);
-        int have = tv.Episodes.Where(e => e.SeasonNumber > 0)
+        int have = tv
+            .Episodes.Where(e => e.SeasonNumber > 0)
             .Count(episode => episode.VideoFiles.Count != 0);
 
         HaveItems = have;
 
         Duration = tv.Duration * have * 60 ?? 0;
 
-        TotalDuration = tv.Episodes.Sum(item => item.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds() ?? 0);
+        TotalDuration = tv.Episodes.Sum(item =>
+            item.VideoFiles.FirstOrDefault()?.Duration?.ToSeconds() ?? 0
+        );
 
         // Watched = tv.Episodes
         //     .SelectMany(episode => episode!.VideoFiles
@@ -160,13 +199,9 @@ public record SpecialItemsDto
 
         VideoId = tv.Trailer;
 
-        Cast = tv.Cast
-            .Take(15)
-            .Select(cast => new PeopleDto(cast));
+        Cast = tv.Cast.Take(15).Select(cast => new PeopleDto(cast));
 
-        Crew = tv.Crew
-            .Take(15)
-            .Select(crew => new PeopleDto(crew));
+        Crew = tv.Crew.Take(15).Select(crew => new PeopleDto(crew));
     }
 
     public SpecialItemsDto(SpecialMovieProjection movie)
@@ -181,9 +216,10 @@ public record SpecialItemsDto
         Backdrops = movie.Backdrops.Select(i => new ImageDto
         {
             Id = i.Id,
-            Src = i.Site == "https://image.tmdb.org/t/p/"
-                ? new Uri(i.FilePath!, UriKind.Relative).ToString()
-                : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+            Src =
+                i.Site == "https://image.tmdb.org/t/p/"
+                    ? new Uri(i.FilePath!, UriKind.Relative).ToString()
+                    : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
             Width = i.Width,
             Type = i.Type,
             Height = i.Height,
@@ -192,15 +228,16 @@ public record SpecialItemsDto
             VoteCount = i.VoteCount,
             ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
                 ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
-                : null
+                : null,
         });
 
         Posters = movie.Posters.Select(i => new ImageDto
         {
             Id = i.Id,
-            Src = i.Site == "https://image.tmdb.org/t/p/"
-                ? new Uri(i.FilePath!, UriKind.Relative).ToString()
-                : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+            Src =
+                i.Site == "https://image.tmdb.org/t/p/"
+                    ? new Uri(i.FilePath!, UriKind.Relative).ToString()
+                    : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
             Width = i.Width,
             Type = i.Type,
             Height = i.Height,
@@ -209,7 +246,7 @@ public record SpecialItemsDto
             VoteCount = i.VoteCount,
             ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
                 ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
-                : null
+                : null,
         });
 
         MediaType = Config.MovieMediaType;
@@ -228,13 +265,13 @@ public record SpecialItemsDto
         {
             Id = g.Id,
             Name = g.Name,
-            Link = new($"/genres/{g.Id}", UriKind.Relative)
+            Link = new($"/genres/{g.Id}", UriKind.Relative),
         });
 
         Rating = new()
         {
             Rating = movie.CertificationRating.OrEmpty(),
-            Iso31661 = movie.CertificationCountry.OrEmpty()
+            Iso31661 = movie.CertificationCountry.OrEmpty(),
         };
 
         NumberOfItems = 1;
@@ -255,7 +292,7 @@ public record SpecialItemsDto
             Character = c.Character,
             Order = c.Order,
             Link = new($"/person/{c.PersonId}", UriKind.Relative),
-            Translations = []
+            Translations = [],
         });
 
         Crew = movie.Crew.Select(c => new PeopleDto
@@ -272,7 +309,7 @@ public record SpecialItemsDto
             Job = c.Task,
             Order = c.Order,
             Link = new($"/person/{c.PersonId}", UriKind.Relative),
-            Translations = []
+            Translations = [],
         });
     }
 
@@ -288,9 +325,10 @@ public record SpecialItemsDto
         Backdrops = tv.Backdrops.Select(i => new ImageDto
         {
             Id = i.Id,
-            Src = i.Site == "https://image.tmdb.org/t/p/"
-                ? new Uri(i.FilePath!, UriKind.Relative).ToString()
-                : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+            Src =
+                i.Site == "https://image.tmdb.org/t/p/"
+                    ? new Uri(i.FilePath!, UriKind.Relative).ToString()
+                    : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
             Width = i.Width,
             Type = i.Type,
             Height = i.Height,
@@ -299,15 +337,16 @@ public record SpecialItemsDto
             VoteCount = i.VoteCount,
             ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
                 ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
-                : null
+                : null,
         });
 
         Posters = tv.Posters.Select(i => new ImageDto
         {
             Id = i.Id,
-            Src = i.Site == "https://image.tmdb.org/t/p/"
-                ? new Uri(i.FilePath!, UriKind.Relative).ToString()
-                : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
+            Src =
+                i.Site == "https://image.tmdb.org/t/p/"
+                    ? new Uri(i.FilePath!, UriKind.Relative).ToString()
+                    : new Uri($"/images/music{i.FilePath}", UriKind.Relative).ToString(),
             Width = i.Width,
             Type = i.Type,
             Height = i.Height,
@@ -316,7 +355,7 @@ public record SpecialItemsDto
             VoteCount = i.VoteCount,
             ColorPalette = !string.IsNullOrEmpty(i.ColorPalette)
                 ? JsonConvert.DeserializeObject<IColorPalettes>(i.ColorPalette)
-                : null
+                : null,
         });
 
         MediaType = "tv";
@@ -333,13 +372,13 @@ public record SpecialItemsDto
         {
             Id = g.Id,
             Name = g.Name,
-            Link = new($"/genres/{g.Id}", UriKind.Relative)
+            Link = new($"/genres/{g.Id}", UriKind.Relative),
         });
 
         Rating = new()
         {
             Rating = tv.CertificationRating.OrEmpty(),
-            Iso31661 = tv.CertificationCountry.OrEmpty()
+            Iso31661 = tv.CertificationCountry.OrEmpty(),
         };
 
         NumberOfItems = tv.NumberOfEpisodes;
@@ -362,7 +401,7 @@ public record SpecialItemsDto
             Character = c.Character,
             Order = c.Order,
             Link = new($"/person/{c.PersonId}", UriKind.Relative),
-            Translations = []
+            Translations = [],
         });
 
         Crew = tv.Crew.Select(c => new PeopleDto
@@ -379,7 +418,7 @@ public record SpecialItemsDto
             Job = c.Task,
             Order = c.Order,
             Link = new($"/person/{c.PersonId}", UriKind.Relative),
-            Translations = []
+            Translations = [],
         });
     }
 }

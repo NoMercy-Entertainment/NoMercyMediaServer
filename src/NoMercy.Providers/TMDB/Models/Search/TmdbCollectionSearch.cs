@@ -2,6 +2,4 @@
 
 namespace NoMercy.Providers.TMDB.Models.Search;
 
-public class TmdbCollectionSearch : TmdbPaginatedResponse<TmdbCollectionSearchResult>
-{
-}
+public class TmdbCollectionSearch : TmdbPaginatedResponse<TmdbCollectionSearchResult> { }

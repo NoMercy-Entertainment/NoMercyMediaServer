@@ -26,7 +26,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         lock (_writeLock)
         {
             bool exists = context.JobExists(queueJob.Payload);
-            if (exists) return;
+            if (exists)
+                return;
 
             context.AddJob(queueJob);
         }
@@ -37,7 +38,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         lock (_writeLock)
         {
             QueueJobModel? job = context.GetNextJob("", 255, null);
-            if (job == null) return job;
+            if (job == null)
+                return job;
 
             context.RemoveJob(job);
 
@@ -53,7 +55,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             {
                 QueueJobModel? job = context.GetNextJob(name, maxAttempts, currentJobId);
 
-                if (job == null) return job;
+                if (job == null)
+                    return job;
 
                 job.ReservedAt = DateTime.UtcNow;
                 job.Attempts++;
@@ -65,7 +68,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         }
         catch (Exception e)
         {
-            if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return null;
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+                return null;
             if (attempt < MaxDbRetryAttempts)
             {
                 Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
@@ -94,8 +98,10 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                         Connection = "default",
                         Queue = queueJob.Queue,
                         Payload = queueJob.Payload,
-                        Exception = JsonConvert.SerializeObject(exception.InnerException ?? exception),
-                        FailedAt = DateTime.UtcNow
+                        Exception = JsonConvert.SerializeObject(
+                            exception.InnerException ?? exception
+                        ),
+                        FailedAt = DateTime.UtcNow,
                     };
 
                     context.AddFailedJob(failedJob);
@@ -111,7 +117,8 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
         }
         catch (Exception e)
         {
-            if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return;
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+                return;
             if (attempt < MaxDbRetryAttempts)
             {
                 Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
@@ -133,9 +140,7 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
                 context.RemoveJob(queueJob);
             }
         }
-        catch (Exception)
-        {
-        }
+        catch (Exception) { }
     }
 
     public void RequeueFailedJob(int failedJobId, int attempt = 0)
@@ -145,23 +150,27 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
             lock (_writeLock)
             {
                 FailedJobModel? failedJob = context.FindFailedJob(failedJobId);
-                if (failedJob == null) return;
+                if (failedJob == null)
+                    return;
 
                 context.RemoveFailedJob(failedJob);
-                context.AddJob(new()
-                {
-                    Queue = failedJob.Queue,
-                    Payload = failedJob.Payload,
-                    AvailableAt = DateTime.UtcNow,
-                    Attempts = 0
-                });
+                context.AddJob(
+                    new()
+                    {
+                        Queue = failedJob.Queue,
+                        Payload = failedJob.Payload,
+                        AvailableAt = DateTime.UtcNow,
+                        Attempts = 0,
+                    }
+                );
 
                 context.SaveChanges();
             }
         }
         catch (Exception e)
         {
-            if (e.Source == "Microsoft.EntityFrameworkCore.Relational") return;
+            if (e.Source == "Microsoft.EntityFrameworkCore.Relational")
+                return;
             if (attempt < MaxDbRetryAttempts)
             {
                 Thread.Sleep(BaseRetryDelayMs + Random.Shared.Next(MaxJitterMs));
@@ -182,13 +191,15 @@ public class JobQueue(IQueueContext context, byte maxAttempts = 3, ILogger<JobQu
 
             foreach (FailedJobModel failedJob in failedJobs)
             {
-                context.AddJob(new()
-                {
-                    Queue = failedJob.Queue,
-                    Payload = failedJob.Payload,
-                    AvailableAt = DateTime.UtcNow,
-                    Attempts = 0
-                });
+                context.AddJob(
+                    new()
+                    {
+                        Queue = failedJob.Queue,
+                        Payload = failedJob.Payload,
+                        AvailableAt = DateTime.UtcNow,
+                        Attempts = 0,
+                    }
+                );
 
                 context.RemoveFailedJob(failedJob);
             }

@@ -6,5 +6,5 @@ public enum MediaType
     TvShow,
     Music,
     Episode,
-    Season
+    Season,
 }

@@ -9,8 +9,7 @@ public class DeviceRepository(MediaContext context)
 {
     public IIncludableQueryable<Device, ICollection<ActivityLog>> GetDevices()
     {
-        return context.Devices
-            .Include(device => device.ActivityLogs);
+        return context.Devices.Include(device => device.ActivityLogs);
     }
 
     public async Task AddDeviceAsync(Device device)

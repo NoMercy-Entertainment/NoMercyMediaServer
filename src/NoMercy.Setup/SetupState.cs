@@ -15,7 +15,7 @@ public enum SetupPhase
     Registering,
     Registered,
     CertificateAcquired,
-    Complete
+    Complete,
 }
 
 public enum TokenState
@@ -24,7 +24,7 @@ public enum TokenState
     Expired,
     Missing,
     Corrupt,
-    NoRefreshToken
+    NoRefreshToken,
 }
 
 public class SetupState
@@ -35,27 +35,47 @@ public class SetupState
     private string? _errorMessage;
     private string _phaseDetail = "";
     private string? _serverUrl;
-    private TaskCompletionSource _changeSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private TaskCompletionSource _setupCompletedSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private TaskCompletionSource _changeSignal = new(
+        TaskCreationOptions.RunContinuationsAsynchronously
+    );
+    private TaskCompletionSource _setupCompletedSignal = new(
+        TaskCreationOptions.RunContinuationsAsynchronously
+    );
 
     public SetupPhase CurrentPhase
     {
-        get { lock (_lock) return _currentPhase; }
+        get
+        {
+            lock (_lock)
+                return _currentPhase;
+        }
     }
 
     public string? ErrorMessage
     {
-        get { lock (_lock) return _errorMessage; }
+        get
+        {
+            lock (_lock)
+                return _errorMessage;
+        }
     }
 
     public string PhaseDetail
     {
-        get { lock (_lock) return _phaseDetail; }
+        get
+        {
+            lock (_lock)
+                return _phaseDetail;
+        }
     }
 
     public string? ServerUrl
     {
-        get { lock (_lock) return _serverUrl; }
+        get
+        {
+            lock (_lock)
+                return _serverUrl;
+        }
     }
 
     public bool IsSetupRequired => CurrentPhase < SetupPhase.Complete;
@@ -94,7 +114,8 @@ public class SetupState
             {
                 Logger.Setup(
                     $"Invalid setup transition: {_currentPhase} → {targetPhase}",
-                    LogEventLevel.Warning);
+                    LogEventLevel.Warning
+                );
                 return false;
             }
 
@@ -110,7 +131,7 @@ public class SetupState
                 SetupPhase.Registered => "Setting up your server address...",
                 SetupPhase.CertificateAcquired => "Connection secured",
                 SetupPhase.Complete => "All done — opening NoMercy...",
-                _ => ""
+                _ => "",
             };
 
             Logger.Setup($"Setup phase: {previousPhase} → {targetPhase}");
@@ -198,7 +219,7 @@ public class SetupState
             // Certificate failure can go back to registered (retry cert)
             (SetupPhase.Registered, SetupPhase.Registered) => true,
 
-            _ => false
+            _ => false,
         };
     }
 
@@ -272,21 +293,23 @@ public class SetupState
                 TokenState.Expired => SetupPhase.Unauthenticated,
                 TokenState.Missing => SetupPhase.Unauthenticated,
                 TokenState.Corrupt => SetupPhase.Unauthenticated,
-                _ => SetupPhase.Unauthenticated
+                _ => SetupPhase.Unauthenticated,
             };
 
             if (tokenState == TokenState.NoRefreshToken)
             {
                 Logger.Setup(
                     "Token valid but no refresh token — will need re-auth later",
-                    LogEventLevel.Warning);
+                    LogEventLevel.Warning
+                );
             }
 
             if (tokenState == TokenState.Corrupt)
             {
                 Logger.Setup(
                     "Token file is corrupted — entering setup mode",
-                    LogEventLevel.Warning);
+                    LogEventLevel.Warning
+                );
             }
 
             return _currentPhase;

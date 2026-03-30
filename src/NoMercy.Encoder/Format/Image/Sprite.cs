@@ -10,15 +10,9 @@ public class Sprite : BaseImage
         FrameRate = 10;
     }
 
-    private protected override CodecDto[] AvailableCodecs =>
-    [
-        ImageCodecs.Jpeg
-    ];
+    private protected override CodecDto[] AvailableCodecs => [ImageCodecs.Jpeg];
 
-    private protected override string[] AvailableContainers =>
-    [
-        "jpeg"
-    ];
+    private protected override string[] AvailableContainers => ["jpeg"];
 
     private protected override string[] AvailablePresets => [];
 

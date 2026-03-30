@@ -4,5 +4,6 @@ namespace NoMercy.Providers.TMDB.Models.Episode;
 
 public class TmdbEpisodeChanges
 {
-    [JsonProperty("changes")] public TmdbEpisodeChange[] Changes { get; set; } = [];
+    [JsonProperty("changes")]
+    public TmdbEpisodeChange[] Changes { get; set; } = [];
 }

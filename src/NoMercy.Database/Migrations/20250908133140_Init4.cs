@@ -12,13 +12,22 @@ namespace NoMercy.Database.Migrations
         {
             migrationBuilder.DropIndex(
                 name: "IX_WatchProviderMedia_WatchProviderId",
-                table: "WatchProviderMedia");
+                table: "WatchProviderMedia"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_WatchProviderMedia_WatchProviderId_CountryCode_ProviderType_MovieId_TvId",
                 table: "WatchProviderMedia",
-                columns: new[] { "WatchProviderId", "CountryCode", "ProviderType", "MovieId", "TvId" },
-                unique: true);
+                columns: new[]
+                {
+                    "WatchProviderId",
+                    "CountryCode",
+                    "ProviderType",
+                    "MovieId",
+                    "TvId",
+                },
+                unique: true
+            );
         }
 
         /// <inheritdoc />
@@ -26,12 +35,14 @@ namespace NoMercy.Database.Migrations
         {
             migrationBuilder.DropIndex(
                 name: "IX_WatchProviderMedia_WatchProviderId_CountryCode_ProviderType_MovieId_TvId",
-                table: "WatchProviderMedia");
+                table: "WatchProviderMedia"
+            );
 
             migrationBuilder.CreateIndex(
                 name: "IX_WatchProviderMedia_WatchProviderId",
                 table: "WatchProviderMedia",
-                column: "WatchProviderId");
+                column: "WatchProviderId"
+            );
         }
     }
 }

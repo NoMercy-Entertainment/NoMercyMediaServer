@@ -15,12 +15,13 @@ public class FanArtImageClient : FanArtBaseClient
     {
         Configuration.ClientKey = ApiInfo.AcousticIdKey;
     }
-    
-    public FanArtImageClient(Guid id) : base(id)
+
+    public FanArtImageClient(Guid id)
+        : base(id)
     {
         Configuration.ClientKey = ApiInfo.AcousticIdKey;
     }
-    
+
     public Task<CoverArtCovers?> Cover(bool priority = false)
     {
         Dictionary<string, string> queryParams = new()
@@ -35,12 +36,14 @@ public class FanArtImageClient : FanArtBaseClient
     {
         string filePath = Path.Combine(AppFiles.MusicImagesPath, Path.GetFileName(url.LocalPath));
 
-        if (File.Exists(filePath)) return Image.Load<Rgba32>(filePath);
+        if (File.Exists(filePath))
+            return Image.Load<Rgba32>(filePath);
 
         HttpClient httpClient = HttpClientProvider.CreateClient(HttpClientNames.FanArtImage);
 
         using HttpResponseMessage response = await httpClient.GetAsync(url);
-        if (!response.IsSuccessStatusCode) return null;
+        if (!response.IsSuccessStatusCode)
+            return null;
 
         byte[] bytes = await response.Content.ReadAsByteArrayAsync();
 

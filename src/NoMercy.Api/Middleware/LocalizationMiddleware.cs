@@ -22,7 +22,8 @@ public class LocalizationMiddleware
         string userLanguages = context.Request.Headers["Accept-Language"].ToString();
 
         // if the language string does not match the format "{language}-{country}" we add the uppercase version of the language
-        if (!userLanguages.Contains("-")) userLanguages = userLanguages + "-" + userLanguages.ToUpper();
+        if (!userLanguages.Contains("-"))
+            userLanguages = userLanguages + "-" + userLanguages.ToUpper();
 
         string[]? firstLang = userLanguages.Split(',').FirstOrDefault()?.Split('-');
 
@@ -33,12 +34,15 @@ public class LocalizationMiddleware
 
         string language = firstLang?.FirstOrDefault() ?? "en";
 
-        Localizer localizer = LocalizerCache.GetOrAdd(language, lang =>
-        {
-            Localizer newLocalizer = new();
-            newLocalizer.LoadXML(ResourceAssembly, "Resources.I18N.xml", lang);
-            return newLocalizer;
-        });
+        Localizer localizer = LocalizerCache.GetOrAdd(
+            language,
+            lang =>
+            {
+                Localizer newLocalizer = new();
+                newLocalizer.LoadXML(ResourceAssembly, "Resources.I18N.xml", lang);
+                return newLocalizer;
+            }
+        );
 
         LocalizationHelper.GlobalLocalizer = localizer;
 

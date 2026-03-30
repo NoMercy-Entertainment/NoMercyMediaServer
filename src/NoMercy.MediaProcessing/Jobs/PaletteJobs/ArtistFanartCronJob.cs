@@ -28,10 +28,12 @@ public class ArtistFanartCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        List<Image[]> imagesWithoutPalette = _context.Images
-            .Where(i => string.IsNullOrEmpty(i._colorPalette) &&
-                        i.Site != null &&
-                        i.Site.StartsWith("https://assets.fanart.tv"))
+        List<Image[]> imagesWithoutPalette = _context
+            .Images.Where(i =>
+                string.IsNullOrEmpty(i._colorPalette)
+                && i.Site != null
+                && i.Site.StartsWith("https://assets.fanart.tv")
+            )
             .Take(25)
             .ToList()
             .Chunk(5)
@@ -47,13 +49,17 @@ public class ArtistFanartCronJob : ICronJobExecutor
 
             foreach (Image[] imageChunk in imagesWithoutPalette)
             {
-                if (cancellationToken.IsCancellationRequested) break;
+                if (cancellationToken.IsCancellationRequested)
+                    break;
 
                 foreach (Image image in imageChunk)
                 {
                     try
                     {
-                        image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
+                        image._colorPalette = await FanArtImageManager.ColorPalette(
+                            "image",
+                            new(image.Site + image.FilePath)
+                        );
                     }
                     catch (Exception)
                     {
@@ -64,24 +70,28 @@ public class ArtistFanartCronJob : ICronJobExecutor
                 await _context.SaveChangesAsync(cancellationToken);
             }
 
-            _logger.LogTrace("Fanart Images job completed, updated: {Count}", imagesWithoutPalette.Sum(x => x.Length));
+            _logger.LogTrace(
+                "Fanart Images job completed, updated: {Count}",
+                imagesWithoutPalette.Sum(x => x.Length)
+            );
         }
 
-        if (cancellationToken.IsCancellationRequested) return;
+        if (cancellationToken.IsCancellationRequested)
+            return;
 
-        List<Artist[]> artists = _context.Artists
-            .Include(artist => artist.AlbumArtist)
-            .ThenInclude(albumArtist => albumArtist.Album)
+        List<Artist[]> artists = _context
+            .Artists.Include(artist => artist.AlbumArtist)
+                .ThenInclude(albumArtist => albumArtist.Album)
             .Include(artist => artist.Images)
-
-            .Where(x => (string.IsNullOrEmpty(x._colorPalette) && x.Cover != null) ||
-                        !x.Images.Any(i =>
-                            string.IsNullOrEmpty(i._colorPalette) &&
-                            i.Site != null &&
-                            i.Site.StartsWith("https://assets.fanart.tv"))
+            .Where(x =>
+                (string.IsNullOrEmpty(x._colorPalette) && x.Cover != null)
+                || !x.Images.Any(i =>
+                    string.IsNullOrEmpty(i._colorPalette)
+                    && i.Site != null
+                    && i.Site.StartsWith("https://assets.fanart.tv")
+                )
             )
             .OrderByDescending(artist => artist.UpdatedAt)
-
             .Take(25)
             .ToList()
             .Chunk(5)
@@ -97,7 +107,8 @@ public class ArtistFanartCronJob : ICronJobExecutor
 
         foreach (Artist[] artistChunk in artists)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
             foreach (Artist artist in artistChunk)
             {
@@ -107,7 +118,10 @@ public class ArtistFanartCronJob : ICronJobExecutor
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        _logger.LogTrace("Fanart Artist images job completed, updated: {Count}", artists.Sum(x => x.Length));
+        _logger.LogTrace(
+            "Fanart Artist images job completed, updated: {Count}",
+            artists.Sum(x => x.Length)
+        );
     }
 
     private async Task ProcessImages(Artist artist, CancellationToken cancellationToken)
@@ -119,11 +133,20 @@ public class ArtistFanartCronJob : ICronJobExecutor
         try
         {
             FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(artist.Id);
-            if (fanArt is null) return;
+            if (fanArt is null)
+                return;
 
-            List<Image> releaseImages = await imageManager.StoreReleaseImages(fanArt.ArtistAlbum, artist.Id, artist);
+            List<Image> releaseImages = await imageManager.StoreReleaseImages(
+                fanArt.ArtistAlbum,
+                artist.Id,
+                artist
+            );
 
-            ICollection<Image> artistImages = await imageManager.StoreArtistImages(fanArt, artist.Id, artist);
+            ICollection<Image> artistImages = await imageManager.StoreArtistImages(
+                fanArt,
+                artist.Id,
+                artist
+            );
 
             List<Image> images = releaseImages
                 .Concat(artistImages)
@@ -132,23 +155,26 @@ public class ArtistFanartCronJob : ICronJobExecutor
 
             if (images.Count == 0)
             {
-                Image? artistCover = artistImages
-                    .FirstOrDefault(i => !string.IsNullOrEmpty(i._colorPalette));
+                Image? artistCover = artistImages.FirstOrDefault(i =>
+                    !string.IsNullOrEmpty(i._colorPalette)
+                );
 
-                string artistColorPalette = artistCover != null
-                    ? artistCover._colorPalette.OrEmpty().Replace("\"image\"", "\"cover\"")
-                    : "{}";
+                string artistColorPalette =
+                    artistCover != null
+                        ? artistCover._colorPalette.OrEmpty().Replace("\"image\"", "\"cover\"")
+                        : "{}";
 
-                string coverPath = artistCover != null
-                    ? artistCover.FilePath
-                    : artist.Cover.OrEmpty();
+                string coverPath =
+                    artistCover != null ? artistCover.FilePath : artist.Cover.OrEmpty();
 
-                await _context.Artists
-                    .Where(a => a.Id == artist.Id)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(a => a.Cover, coverPath)
-                        .SetProperty(a => a._colorPalette, artistColorPalette),
-                        cancellationToken);
+                await _context
+                    .Artists.Where(a => a.Id == artist.Id)
+                    .ExecuteUpdateAsync(
+                        s =>
+                            s.SetProperty(a => a.Cover, coverPath)
+                                .SetProperty(a => a._colorPalette, artistColorPalette),
+                        cancellationToken
+                    );
 
                 return;
             }
@@ -157,7 +183,10 @@ public class ArtistFanartCronJob : ICronJobExecutor
             {
                 try
                 {
-                    image._colorPalette = await FanArtImageManager.ColorPalette("image", new(image.Site + image.FilePath));
+                    image._colorPalette = await FanArtImageManager.ColorPalette(
+                        "image",
+                        new(image.Site + image.FilePath)
+                    );
                 }
                 catch (Exception)
                 {
@@ -165,32 +194,30 @@ public class ArtistFanartCronJob : ICronJobExecutor
                 }
             }
 
-            await _context.Images.UpsertRange(images.Where(i => i.ArtistId != null))
+            await _context
+                .Images.UpsertRange(images.Where(i => i.ArtistId != null))
                 .On(i => new { i.FilePath, i.ArtistId })
-                .WhenMatched((db, src) => new()
-                {
-                    _colorPalette = src._colorPalette
-                })
+                .WhenMatched((db, src) => new() { _colorPalette = src._colorPalette })
                 .RunAsync(cancellationToken);
 
-            await _context.Images.UpsertRange(images.Where(i => i.AlbumId != null))
+            await _context
+                .Images.UpsertRange(images.Where(i => i.AlbumId != null))
                 .On(i => new { i.FilePath, i.AlbumId })
-                .WhenMatched((db, src) => new()
-                {
-                    _colorPalette = src._colorPalette
-                })
+                .WhenMatched((db, src) => new() { _colorPalette = src._colorPalette })
                 .RunAsync(cancellationToken);
 
             Image? cover = releaseImages.FirstOrDefault(i => i.Type == "thumb");
 
-            if (cover == null) return;
+            if (cover == null)
+                return;
 
             artist.Cover = cover.FilePath;
             artist._colorPalette = cover._colorPalette.OrEmpty().Replace("\"image\"", "\"cover\"");
         }
         catch (Exception e)
         {
-            if (e.Message.Contains("404")) return;
+            if (e.Message.Contains("404"))
+                return;
             _logger.LogError(e, "Error while processing image {Id}: {Err}", artist.Id, e);
         }
     }

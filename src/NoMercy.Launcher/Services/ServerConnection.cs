@@ -1,7 +1,7 @@
 using System.Text;
 using Newtonsoft.Json;
-using NoMercy.Networking;
 using NoMercy.Launcher.Models;
+using NoMercy.Networking;
 
 namespace NoMercy.Launcher.Services;
 
@@ -11,16 +11,17 @@ public sealed class ServerConnection : IDisposable
 
     public bool IsConnected { get; internal set; }
 
-    public async Task<bool> ConnectAsync(
-        CancellationToken cancellationToken = default)
+    public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             Disconnect();
             _client = new();
 
-            using HttpResponseMessage response =
-                await _client.GetAsync("/manage/status", cancellationToken);
+            using HttpResponseMessage response = await _client.GetAsync(
+                "/manage/status",
+                cancellationToken
+            );
 
             IsConnected = response.IsSuccessStatusCode;
             return IsConnected;
@@ -32,21 +33,20 @@ public sealed class ServerConnection : IDisposable
         }
     }
 
-    public async Task<T?> GetAsync<T>(
-        string path,
-        CancellationToken cancellationToken = default) where T : class
+    public async Task<T?> GetAsync<T>(string path, CancellationToken cancellationToken = default)
+        where T : class
     {
-        if (_client is null) return null;
+        if (_client is null)
+            return null;
 
         try
         {
-            using HttpResponseMessage response =
-                await _client.GetAsync(path, cancellationToken);
+            using HttpResponseMessage response = await _client.GetAsync(path, cancellationToken);
 
-            if (!response.IsSuccessStatusCode) return null;
+            if (!response.IsSuccessStatusCode)
+                return null;
 
-            string json = await response.Content
-                .ReadAsStringAsync(cancellationToken);
+            string json = await response.Content.ReadAsStringAsync(cancellationToken);
 
             return JsonConvert.DeserializeObject<T>(json);
         }
@@ -57,16 +57,18 @@ public sealed class ServerConnection : IDisposable
         }
     }
 
-    public async Task<bool> PostAsync(
-        string path,
-        CancellationToken cancellationToken = default)
+    public async Task<bool> PostAsync(string path, CancellationToken cancellationToken = default)
     {
-        if (_client is null) return false;
+        if (_client is null)
+            return false;
 
         try
         {
             using HttpResponseMessage response = await _client.PostAsync(
-                path, null, cancellationToken);
+                path,
+                null,
+                cancellationToken
+            );
 
             return response.IsSuccessStatusCode;
         }
@@ -79,14 +81,19 @@ public sealed class ServerConnection : IDisposable
 
     public async Task<(bool Success, string? Body)> PostWithBodyAsync(
         string path,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        if (_client is null) return (false, null);
+        if (_client is null)
+            return (false, null);
 
         try
         {
             using HttpResponseMessage response = await _client.PostAsync(
-                path, null, cancellationToken);
+                path,
+                null,
+                cancellationToken
+            );
 
             string body = await response.Content.ReadAsStringAsync(cancellationToken);
 
@@ -102,16 +109,21 @@ public sealed class ServerConnection : IDisposable
     public async Task<bool> PostAsync<T>(
         string path,
         T body,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        if (_client is null) return false;
+        if (_client is null)
+            return false;
 
         try
         {
             string json = JsonConvert.SerializeObject(body);
             using StringContent content = new(json, Encoding.UTF8, "application/json");
             using HttpResponseMessage response = await _client.PostAsync(
-                path, content, cancellationToken);
+                path,
+                content,
+                cancellationToken
+            );
 
             return response.IsSuccessStatusCode;
         }
@@ -125,16 +137,21 @@ public sealed class ServerConnection : IDisposable
     public async Task<bool> PutAsync<T>(
         string path,
         T body,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        if (_client is null) return false;
+        if (_client is null)
+            return false;
 
         try
         {
             string json = JsonConvert.SerializeObject(body);
             using StringContent content = new(json, Encoding.UTF8, "application/json");
             using HttpResponseMessage response = await _client.PutAsync(
-                path, content, cancellationToken);
+                path,
+                content,
+                cancellationToken
+            );
 
             return response.IsSuccessStatusCode;
         }
@@ -149,7 +166,8 @@ public sealed class ServerConnection : IDisposable
         Action<LogEntryResponse> onEntry,
         CancellationToken cancellationToken,
         Action? onConnected = null,
-        Action? onDisconnected = null)
+        Action? onDisconnected = null
+    )
     {
         int retryDelay = 1000;
         const int MaxRetryDelay = 30000;
@@ -175,7 +193,9 @@ public sealed class ServerConnection : IDisposable
                 // shared _client used for status polling / other requests.
                 streamClient = new();
                 using HttpResponseMessage response = await streamClient.GetStreamAsync(
-                    "/manage/logs/stream", cancellationToken);
+                    "/manage/logs/stream",
+                    cancellationToken
+                );
                 using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 using StreamReader reader = new(stream);
 
@@ -194,7 +214,8 @@ public sealed class ServerConnection : IDisposable
                         break;
                     }
 
-                    if (!line.StartsWith("data: ")) continue;
+                    if (!line.StartsWith("data: "))
+                        continue;
 
                     string json = line[6..];
                     LogEntryResponse? entry = JsonConvert.DeserializeObject<LogEntryResponse>(json);
@@ -216,7 +237,8 @@ public sealed class ServerConnection : IDisposable
                 streamClient?.Dispose();
             }
 
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
             await Task.Delay(retryDelay, cancellationToken);
             retryDelay = Math.Min(retryDelay * 2, MaxRetryDelay);

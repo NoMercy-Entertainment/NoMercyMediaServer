@@ -14,13 +14,17 @@ public class Language
     [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty("iso_639_1")] public string Iso6391 { get; set; } = string.Empty;
+    [JsonProperty("iso_639_1")]
+    public string Iso6391 { get; set; } = string.Empty;
 
-    [JsonProperty("english_name")] public string EnglishName { get; set; } = string.Empty;
+    [JsonProperty("english_name")]
+    public string EnglishName { get; set; } = string.Empty;
 
-    [JsonProperty("name")] public string? Name { get; set; }
+    [JsonProperty("name")]
+    public string? Name { get; set; }
 
-    [JsonProperty("language_library")] public ICollection<LanguageLibrary> LanguageLibrary { get; set; } = [];
+    [JsonProperty("language_library")]
+    public ICollection<LanguageLibrary> LanguageLibrary { get; set; } = [];
 
     public Language()
     {

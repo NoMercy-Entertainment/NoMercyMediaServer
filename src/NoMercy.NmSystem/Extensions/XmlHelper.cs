@@ -16,7 +16,8 @@ public static class XmlHelper
 
     public static T? FromXml<T>(this string xml)
     {
-        if (string.IsNullOrEmpty(xml)) return default;
+        if (string.IsNullOrEmpty(xml))
+            return default;
 
         XmlSerializer serializer = new(typeof(T));
         using StringReader stringReader = new(xml);

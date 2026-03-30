@@ -4,9 +4,8 @@ namespace NoMercy.Providers.TVDB.Client;
 
 public class TvdbArtworkClient : TvdbBaseClient
 {
-    public TvdbArtworkClient(int id) : base(id)
-    {
-    }
+    public TvdbArtworkClient(int id)
+        : base(id) { }
 
     public Task<TvdbArtWorkResponse?> Details()
     {

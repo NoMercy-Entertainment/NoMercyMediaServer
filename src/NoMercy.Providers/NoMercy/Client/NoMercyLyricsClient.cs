@@ -16,7 +16,10 @@ public static partial class NoMercyLyricsClient
         LrclibClient lrclibClient = new();
         dynamic? lyric = null;
         int recursiveCount = 0;
-        string artistNames = string.Join(",", track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name));
+        string artistNames = string.Join(
+            ",",
+            track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name)
+        );
         string duration = track.Duration.ToSeconds().ToString(CultureInfo.InvariantCulture);
         string albumName = (track.AlbumTrack.FirstOrDefault()?.Album.Name).OrEmpty();
         while (true)
@@ -29,7 +32,9 @@ public static partial class NoMercyLyricsClient
                     if (recursiveCount == 4)
                     {
                         lyric = await lrclibClient.SongSearch(
-                            artists: track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
+                            artists: track
+                                .ArtistTrack.Select(artistTrack => artistTrack.Artist.Name)
+                                .ToArray(),
                             trackName: track.Name,
                             albumName: track.AlbumTrack.FirstOrDefault()?.Album.Name,
                             duration: track.Duration?.ToSeconds()
@@ -37,9 +42,20 @@ public static partial class NoMercyLyricsClient
                         lyric ??= ToFormatLyrics(lyrics);
                         break;
                     }
-                    lyrics = await musixmatchClient.SongSearch(new() { Album = albumName, Artist = artistNames, Title = track.Name, Duration = duration, Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc });
-                    lyric = lyrics?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList
-                        .FirstOrDefault()
+                    lyrics = await musixmatchClient.SongSearch(
+                        new()
+                        {
+                            Album = albumName,
+                            Artist = artistNames,
+                            Title = track.Name,
+                            Duration = duration,
+                            Sort = MusixMatchTrackSearchParameters
+                                .MusixMatchSortStrategy
+                                .TrackRatingDesc,
+                        }
+                    );
+                    lyric = lyrics
+                        ?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList.FirstOrDefault()
                         ?.Subtitle?.SubtitleBody;
                     break;
                 case 1:
@@ -47,16 +63,28 @@ public static partial class NoMercyLyricsClient
                     if (recursiveCount == 5)
                     {
                         lyric = await lrclibClient.SongSearch(
-                            artists: track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
+                            artists: track
+                                .ArtistTrack.Select(artistTrack => artistTrack.Artist.Name)
+                                .ToArray(),
                             trackName: track.Name,
                             duration: track.Duration?.ToSeconds()
                         );
                         lyric ??= ToFormatLyrics(lyrics);
                         break;
                     }
-                    lyrics = await musixmatchClient.SongSearch(new() { Artist = artistNames, Title = track.Name, Duration = duration, Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc });
-                    lyric = lyrics?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList
-                        .FirstOrDefault()
+                    lyrics = await musixmatchClient.SongSearch(
+                        new()
+                        {
+                            Artist = artistNames,
+                            Title = track.Name,
+                            Duration = duration,
+                            Sort = MusixMatchTrackSearchParameters
+                                .MusixMatchSortStrategy
+                                .TrackRatingDesc,
+                        }
+                    );
+                    lyric = lyrics
+                        ?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList.FirstOrDefault()
                         ?.Subtitle?.SubtitleBody;
                     break;
                 case 2:
@@ -64,15 +92,26 @@ public static partial class NoMercyLyricsClient
                     if (recursiveCount == 6)
                     {
                         lyric = await lrclibClient.SongSearch(
-                            artists: track.ArtistTrack.Select(artistTrack => artistTrack.Artist.Name).ToArray(),
+                            artists: track
+                                .ArtistTrack.Select(artistTrack => artistTrack.Artist.Name)
+                                .ToArray(),
                             trackName: track.Name
                         );
                         lyric ??= ToFormatLyrics(lyrics);
                         break;
                     }
-                    lyrics = await musixmatchClient.SongSearch(new() { Artist = artistNames, Title = track.Name, Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc });
-                    lyric = lyrics?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList
-                        .FirstOrDefault()
+                    lyrics = await musixmatchClient.SongSearch(
+                        new()
+                        {
+                            Artist = artistNames,
+                            Title = track.Name,
+                            Sort = MusixMatchTrackSearchParameters
+                                .MusixMatchSortStrategy
+                                .TrackRatingDesc,
+                        }
+                    );
+                    lyric = lyrics
+                        ?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList.FirstOrDefault()
                         ?.Subtitle?.SubtitleBody;
                     break;
                 case 3:
@@ -82,13 +121,22 @@ public static partial class NoMercyLyricsClient
                         lyric = ToFormatLyrics(lyrics);
                         break;
                     }
-                    lyrics = await musixmatchClient.SongSearch(new() { Title = track.Name, Sort = MusixMatchTrackSearchParameters.MusixMatchSortStrategy.TrackRatingDesc });
-                    lyric = lyrics?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList
-                        .FirstOrDefault()
+                    lyrics = await musixmatchClient.SongSearch(
+                        new()
+                        {
+                            Title = track.Name,
+                            Sort = MusixMatchTrackSearchParameters
+                                .MusixMatchSortStrategy
+                                .TrackRatingDesc,
+                        }
+                    );
+                    lyric = lyrics
+                        ?.Message?.Body?.MacroCalls?.TrackSubtitlesGet?.Message?.Body?.SubtitleList.FirstOrDefault()
                         ?.Subtitle?.SubtitleBody;
                     break;
             }
-            if (lyric is not null || recursiveCount >= 7) break;
+            if (lyric is not null || recursiveCount >= 7)
+                break;
             recursiveCount += 1;
         }
         musixmatchClient.Dispose();
@@ -98,11 +146,26 @@ public static partial class NoMercyLyricsClient
 
     private static dynamic? ToFormatLyrics(MusixMatchSubtitleGet? lyrics)
     {
-        string text = FormatLyricsRegex().Replace(input: (lyrics?.Message?.Body?.MacroCalls?.TrackLyricsGet?.Message?.Body?.Lyrics?.LyricsBody).OrEmpty(), replacement: "");
+        string text = FormatLyricsRegex()
+            .Replace(
+                input: (
+                    lyrics
+                        ?.Message
+                        ?.Body
+                        ?.MacroCalls
+                        ?.TrackLyricsGet
+                        ?.Message
+                        ?.Body
+                        ?.Lyrics
+                        ?.LyricsBody
+                ).OrEmpty(),
+                replacement: ""
+            );
         if (string.IsNullOrEmpty(text))
             return null;
-        
-        return new[]{
+
+        return new[]
+        {
             new MusixMatchFormattedLyric
             {
                 Text = text,
@@ -111,9 +174,9 @@ public static partial class NoMercyLyricsClient
                     Total = 0.0,
                     Minutes = 0,
                     Seconds = 0,
-                    Hundredths = 0
-                }
-            }
+                    Hundredths = 0,
+                },
+            },
         };
     }
 

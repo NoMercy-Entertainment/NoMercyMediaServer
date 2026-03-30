@@ -11,7 +11,12 @@ public class DashboardHub : ConnectionHub
 {
     private readonly IClientMessenger _clientMessenger;
 
-    public DashboardHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory, ConnectedClients connectedClients, IClientMessenger clientMessenger)
+    public DashboardHub(
+        IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<MediaContext> contextFactory,
+        ConnectedClients connectedClients,
+        IClientMessenger clientMessenger
+    )
         : base(httpContextAccessor, contextFactory, connectedClients)
     {
         _clientMessenger = clientMessenger;

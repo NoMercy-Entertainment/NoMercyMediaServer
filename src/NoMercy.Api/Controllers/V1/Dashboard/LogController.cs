@@ -21,54 +21,66 @@ public class LogController : BaseController
         [FromQuery] int limit = 50,
         [FromQuery] string[]? types = null,
         [FromQuery] string[]? levels = null,
-        [FromQuery] string? filter = null)
+        [FromQuery] string? filter = null
+    )
     {
-        List<LogEntry> logs = await Logger.GetLogs(limit, entry =>
-        {
-            bool typeMatch = types == null || types.Length == 0 ||
-                             types.Any(t => string.Equals(t, entry.Type, StringComparison.OrdinalIgnoreCase));
-            bool levelMatch = levels == null || levels.Length == 0 ||
-                              levels.Contains(entry.Level.ToString(), StringComparer.OrdinalIgnoreCase);
-
-            if (!string.IsNullOrEmpty(filter))
+        List<LogEntry> logs = await Logger.GetLogs(
+            limit,
+            entry =>
             {
-                return typeMatch && levelMatch &&
-                       entry.Message.Contains(filter, StringComparison.CurrentCultureIgnoreCase);
+                bool typeMatch =
+                    types == null
+                    || types.Length == 0
+                    || types.Any(t =>
+                        string.Equals(t, entry.Type, StringComparison.OrdinalIgnoreCase)
+                    );
+                bool levelMatch =
+                    levels == null
+                    || levels.Length == 0
+                    || levels.Contains(entry.Level.ToString(), StringComparer.OrdinalIgnoreCase);
+
+                if (!string.IsNullOrEmpty(filter))
+                {
+                    return typeMatch
+                        && levelMatch
+                        && entry.Message.Contains(
+                            filter,
+                            StringComparison.CurrentCultureIgnoreCase
+                        );
+                }
+
+                return typeMatch && levelMatch;
             }
+        );
 
-            return typeMatch && levelMatch;
-        });
-
-        return Ok(new DataResponseDto<List<LogEntry>>
-        {
-            Data = logs
-        });
+        return Ok(new DataResponseDto<List<LogEntry>> { Data = logs });
     }
 
     [HttpGet]
     [Route("levels")]
     public IActionResult GetLogLevels()
     {
-        return Ok(new DataResponseDto<string[]>
-        {
-            Data =
-            [
-                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Verbose)).ToString(),
-                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Debug)).ToString(),
-                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Information)).ToString(),
-                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Error)).ToString(),
-                Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Fatal)).ToString()
-            ]
-        });
+        return Ok(
+            new DataResponseDto<string[]>
+            {
+                Data =
+                [
+                    Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Verbose)).ToString(),
+                    Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Debug)).ToString(),
+                    Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Information)).ToString(),
+                    Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Error)).ToString(),
+                    Enum.Parse<LogEventLevel>(nameof(LogEventLevel.Fatal)).ToString(),
+                ],
+            }
+        );
     }
 
     [HttpGet]
     [Route("types")]
     public IActionResult GetLogTypes()
     {
-        return Ok(new DataResponseDto<IEnumerable<Logger.LogType>>
-        {
-            Data = Logger.LogTypes.Values
-        });
+        return Ok(
+            new DataResponseDto<IEnumerable<Logger.LogType>> { Data = Logger.LogTypes.Values }
+        );
     }
 }

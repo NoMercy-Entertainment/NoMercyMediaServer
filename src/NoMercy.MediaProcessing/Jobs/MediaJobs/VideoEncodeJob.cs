@@ -6,17 +6,17 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder;
-using NoMercy.MediaProcessing.Libraries;
 using NoMercy.Encoder.Core;
 using NoMercy.Encoder.Format.Audio;
-using NoMercy.Events;
-using NoMercy.Events.Encoding;
 using NoMercy.Encoder.Format.Container;
 using NoMercy.Encoder.Format.Image;
 using NoMercy.Encoder.Format.Rules;
 using NoMercy.Encoder.Format.Subtitle;
 using NoMercy.Encoder.Format.Video;
+using NoMercy.Events;
+using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -40,16 +40,19 @@ public class VideoEncodeJob : AbstractEncoderJob
         FileManager fileManager = new(fileRepository);
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
-        if (folder is null) return;
+        if (folder is null)
+            return;
 
-        List<EncoderProfile> profiles = folder.EncoderProfileFolder
-            .Select(e => e.EncoderProfile)
+        List<EncoderProfile> profiles = folder
+            .EncoderProfileFolder.Select(e => e.EncoderProfile)
             .ToList();
 
-        if (profiles.Count == 0) return;
+        if (profiles.Count == 0)
+            return;
 
         FileMetadata fileMetadata = await GetFileMetaData(folder, context);
-        if (!fileMetadata.Success) return;
+        if (!fileMetadata.Success)
+            return;
 
         Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -61,30 +64,41 @@ public class VideoEncodeJob : AbstractEncoderJob
             {
                 if (EventBusProvider.IsConfigured)
                 {
-                    await EventBusProvider.Current.PublishAsync(new EncodingStartedEvent
-                    {
-                        JobId = fileMetadata.Id,
-                        InputPath = InputFile,
-                        OutputPath = fileMetadata.Path,
-                        ProfileName = profile.Name
-                    });
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingStartedEvent
+                        {
+                            JobId = fileMetadata.Id,
+                            InputPath = InputFile,
+                            OutputPath = fileMetadata.Path,
+                            ProfileName = profile.Name,
+                        }
+                    );
                 }
 
-                await PublishStageAsync(fileMetadata, folder, container, "running", "Preparing to encode");
+                await PublishStageAsync(
+                    fileMetadata,
+                    folder,
+                    container,
+                    "running",
+                    "Preparing to encode"
+                );
 
                 BuildVideoStreams(profile, ref container);
                 BuildAudioStreams(profile, ref container);
                 BuildSubtitleStreams(profile, ref container);
 
-                await PublishStageAsync(fileMetadata, folder, container, "running", "Preparing to encode");
+                await PublishStageAsync(
+                    fileMetadata,
+                    folder,
+                    container,
+                    "running",
+                    "Preparing to encode"
+                );
 
-                BaseImage sprite = new Sprite()
-                    .SetScale(320)
-                    .SetFilename("thumbs_:framesize:");
+                BaseImage sprite = new Sprite().SetScale(320).SetFilename("thumbs_:framesize:");
                 container.AddStream(sprite);
 
-                VideoAudioFile ffmpeg = await new FfMpeg()
-                    .OpenAsync(InputFile);
+                VideoAudioFile ffmpeg = await new FfMpeg().OpenAsync(InputFile);
 
                 ffmpeg.SetBasePath(fileMetadata.Path);
                 ffmpeg.SetTitle(fileMetadata.Title);
@@ -105,30 +119,57 @@ public class VideoEncodeJob : AbstractEncoderJob
                     Title = fileMetadata.Title,
                     BaseFolder = fileMetadata.Path,
                     ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
-                    AudioStreams = container.AudioStreams
-                        .Select(x => $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}").Distinct().ToList(),
-                    VideoStreams = container.VideoStreams
-                        .Select(x => $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}").Distinct()
+                    AudioStreams = container
+                        .AudioStreams.Select(x =>
+                            $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}"
+                        )
+                        .Distinct()
                         .ToList(),
-                    SubtitleStreams = container.SubtitleStreams
-                        .Select(x => $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}").Distinct().ToList(),
+                    VideoStreams = container
+                        .VideoStreams.Select(x =>
+                            $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}"
+                        )
+                        .Distinct()
+                        .ToList(),
+                    SubtitleStreams = container
+                        .SubtitleStreams.Select(x =>
+                            $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}"
+                        )
+                        .Distinct()
+                        .ToList(),
                     HasGpu = container.VideoStreams.Any(x =>
-                        x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value ||
-                        x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value),
-                    IsHdr = container.VideoStreams.Any(x => x.IsHdr)
+                        x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value
+                        || x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value
+                    ),
+                    IsHdr = container.VideoStreams.Any(x => x.IsHdr),
                 };
 
                 await ffmpeg.Run(fullCommand, fileMetadata.Path, progressMeta);
 
-                await PublishStageAsync(fileMetadata, progressMeta, "running", "Building sprite images");
+                await PublishStageAsync(
+                    fileMetadata,
+                    progressMeta,
+                    "running",
+                    "Building sprite images"
+                );
 
                 await sprite.BuildSprite(progressMeta);
 
-                await PublishStageAsync(fileMetadata, progressMeta, "running", "Building Master Playlist");
+                await PublishStageAsync(
+                    fileMetadata,
+                    progressMeta,
+                    "running",
+                    "Building Master Playlist"
+                );
 
                 await container.BuildMasterPlaylist();
 
-                await PublishStageAsync(fileMetadata, progressMeta, "running", "Extracting chapters");
+                await PublishStageAsync(
+                    fileMetadata,
+                    progressMeta,
+                    "running",
+                    "Extracting chapters"
+                );
 
                 await container.ExtractChapters();
 
@@ -138,31 +179,46 @@ public class VideoEncodeJob : AbstractEncoderJob
 
                 if (ffmpeg.Container.SubtitleStreams.Any(x => x.ConvertSubtitle))
                 {
-                    await PublishStageAsync(fileMetadata, progressMeta, "running", "Converting subtitles");
+                    await PublishStageAsync(
+                        fileMetadata,
+                        progressMeta,
+                        "running",
+                        "Converting subtitles"
+                    );
 
-                    List<BaseSubtitle> streams = ffmpeg.Container.SubtitleStreams
-                        .Where(x => x.ConvertSubtitle)
+                    List<BaseSubtitle> streams = ffmpeg
+                        .Container.SubtitleStreams.Where(x => x.ConvertSubtitle)
                         .ToList();
-                    await ffmpeg.ConvertSubtitles(streams, Id.ToInt(), fileMetadata.Title, fileMetadata.ImgPath);
+                    await ffmpeg.ConvertSubtitles(
+                        streams,
+                        Id.ToInt(),
+                        fileMetadata.Title,
+                        fileMetadata.ImgPath
+                    );
                 }
 
                 await PublishStageAsync(fileMetadata, progressMeta, "running", "Scanning files");
 
                 fileManager.FilterFiles(container.FileName);
 
-                await fileManager.FindFiles(fileMetadata.Id, folder.FolderLibraries.First().Library);
+                await fileManager.FindFiles(
+                    fileMetadata.Id,
+                    folder.FolderLibraries.First().Library
+                );
 
                 await PublishStageAsync(fileMetadata, progressMeta, "completed", "Done");
 
                 if (EventBusProvider.IsConfigured)
                 {
                     stopwatch.Stop();
-                    await EventBusProvider.Current.PublishAsync(new EncodingCompletedEvent
-                    {
-                        JobId = fileMetadata.Id,
-                        OutputPath = fileMetadata.Path,
-                        Duration = stopwatch.Elapsed
-                    });
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingCompletedEvent
+                        {
+                            JobId = fileMetadata.Id,
+                            OutputPath = fileMetadata.Path,
+                            Duration = stopwatch.Elapsed,
+                        }
+                    );
                 }
             }
             catch (Exception e)
@@ -176,21 +232,25 @@ public class VideoEncodeJob : AbstractEncoderJob
 
                 if (EventBusProvider.IsConfigured)
                 {
-                    await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
-                    {
-                        JobId = fileMetadata.Id,
-                        Status = "failed",
-                        Title = fileMetadata.Title,
-                        Message = e.Message
-                    });
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingStageChangedEvent
+                        {
+                            JobId = fileMetadata.Id,
+                            Status = "failed",
+                            Title = fileMetadata.Title,
+                            Message = e.Message,
+                        }
+                    );
 
-                    await EventBusProvider.Current.PublishAsync(new EncodingFailedEvent
-                    {
-                        JobId = fileMetadata.Id,
-                        InputPath = InputFile,
-                        ErrorMessage = e.Message,
-                        ExceptionType = e.GetType().Name
-                    });
+                    await EventBusProvider.Current.PublishAsync(
+                        new EncodingFailedEvent
+                        {
+                            JobId = fileMetadata.Id,
+                            InputPath = InputFile,
+                            ErrorMessage = e.Message,
+                            ExceptionType = e.GetType().Name,
+                        }
+                    );
                 }
 
                 throw;
@@ -198,73 +258,97 @@ public class VideoEncodeJob : AbstractEncoderJob
         }
     }
 
-    private static async Task PublishStageAsync(FileMetadata fileMetadata, Folder folder, BaseContainer container,
-        string status, string message)
+    private static async Task PublishStageAsync(
+        FileMetadata fileMetadata,
+        Folder folder,
+        BaseContainer container,
+        string status,
+        string message
+    )
     {
-        if (!EventBusProvider.IsConfigured) return;
-        await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
-        {
-            JobId = fileMetadata.Id,
-            Status = status,
-            Title = fileMetadata.Title,
-            Message = message,
-            BaseFolder = fileMetadata.Path,
-            ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
-            VideoStreams = container.VideoStreams
-                .Select(x => $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}").Distinct()
-                .ToList(),
-            AudioStreams = container.AudioStreams
-                .Select(x => $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}").Distinct().ToList(),
-            SubtitleStreams = container.SubtitleStreams
-                .Select(x => $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}").Distinct().ToList(),
-            HasGpu = container.VideoStreams.Any(x =>
-                x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value ||
-                x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value),
-            IsHdr = container.VideoStreams.Any(x => x.IsHdr)
-        });
+        if (!EventBusProvider.IsConfigured)
+            return;
+        await EventBusProvider.Current.PublishAsync(
+            new EncodingStageChangedEvent
+            {
+                JobId = fileMetadata.Id,
+                Status = status,
+                Title = fileMetadata.Title,
+                Message = message,
+                BaseFolder = fileMetadata.Path,
+                ShareBasePath = folder.Id + "/" + fileMetadata.FolderName,
+                VideoStreams = container
+                    .VideoStreams.Select(x =>
+                        $"{x.StreamIndex}:{x.Scale.W}x{x.Scale.H}_{x.VideoCodec.SimpleValue}"
+                    )
+                    .Distinct()
+                    .ToList(),
+                AudioStreams = container
+                    .AudioStreams.Select(x =>
+                        $"{x.StreamIndex}:{x.Language}_{x.AudioCodec.SimpleValue}"
+                    )
+                    .Distinct()
+                    .ToList(),
+                SubtitleStreams = container
+                    .SubtitleStreams.Select(x =>
+                        $"{x.StreamIndex}:{x.Language}_{x.SubtitleCodec.SimpleValue}"
+                    )
+                    .Distinct()
+                    .ToList(),
+                HasGpu = container.VideoStreams.Any(x =>
+                    x.VideoCodec.Value == VideoCodecs.H264Nvenc.Value
+                    || x.VideoCodec.Value == VideoCodecs.H265Nvenc.Value
+                ),
+                IsHdr = container.VideoStreams.Any(x => x.IsHdr),
+            }
+        );
     }
 
-    private static async Task PublishStageAsync(FileMetadata fileMetadata, ProgressMeta progressMeta,
-        string status, string message)
+    private static async Task PublishStageAsync(
+        FileMetadata fileMetadata,
+        ProgressMeta progressMeta,
+        string status,
+        string message
+    )
     {
-        if (!EventBusProvider.IsConfigured) return;
-        await EventBusProvider.Current.PublishAsync(new EncodingStageChangedEvent
-        {
-            JobId = fileMetadata.Id,
-            Status = status,
-            Title = fileMetadata.Title,
-            Message = message,
-            BaseFolder = progressMeta.BaseFolder,
-            ShareBasePath = progressMeta.ShareBasePath,
-            VideoStreams = progressMeta.VideoStreams,
-            AudioStreams = progressMeta.AudioStreams,
-            SubtitleStreams = progressMeta.SubtitleStreams,
-            HasGpu = progressMeta.HasGpu,
-            IsHdr = progressMeta.IsHdr
-        });
+        if (!EventBusProvider.IsConfigured)
+            return;
+        await EventBusProvider.Current.PublishAsync(
+            new EncodingStageChangedEvent
+            {
+                JobId = fileMetadata.Id,
+                Status = status,
+                Title = fileMetadata.Title,
+                Message = message,
+                BaseFolder = progressMeta.BaseFolder,
+                ShareBasePath = progressMeta.ShareBasePath,
+                VideoStreams = progressMeta.VideoStreams,
+                AudioStreams = progressMeta.AudioStreams,
+                SubtitleStreams = progressMeta.SubtitleStreams,
+                HasGpu = progressMeta.HasGpu,
+                IsHdr = progressMeta.IsHdr,
+            }
+        );
     }
 
     private async Task<FileMetadata> GetFileMetaData(Folder folder, MediaContext context)
     {
         Movie? movie = folder.FolderLibraries.Any(x => x.Library.Type == Config.MovieMediaType)
-            ? await context.Movies
-                .FirstOrDefaultAsync(x => x.Id == Id.ToInt())
+            ? await context.Movies.FirstOrDefaultAsync(x => x.Id == Id.ToInt())
             : null;
 
-        Episode? episode = folder.FolderLibraries.Any(x => x.Library.Type == Config.TvMediaType || x.Library.Type == Config.AnimeMediaType)
-            ? await context.Episodes
-                .Include(x => x.Tv)
-                .FirstOrDefaultAsync(x => x.Id == Id.ToInt())
+        Episode? episode = folder.FolderLibraries.Any(x =>
+            x.Library.Type == Config.TvMediaType || x.Library.Type == Config.AnimeMediaType
+        )
+            ? await context.Episodes.Include(x => x.Tv).FirstOrDefaultAsync(x => x.Id == Id.ToInt())
             : null;
 
         if (movie is null && episode is null)
-            return new()
-            {
-                Success = false
-            };
+            return new() { Success = false };
 
-        string folderName = movie?.CreateFolderName().Replace("/", "") ??
-                            episode!.Tv.CreateFolderName().Replace("/", "") + episode.CreateFolderName();
+        string folderName =
+            movie?.CreateFolderName().Replace("/", "")
+            ?? episode!.Tv.CreateFolderName().Replace("/", "") + episode.CreateFolderName();
 
         string title = movie?.CreateTitle() ?? episode!.CreateTitle();
         string fileName = movie?.CreateFileName() ?? episode!.CreateFileName();
@@ -280,7 +364,7 @@ public class VideoEncodeJob : AbstractEncoderJob
             FileName = fileName,
             Path = basePath,
             Id = baseId,
-            ImgPath = imgPath
+            ImgPath = imgPath,
         };
     }
 
@@ -295,14 +379,18 @@ public class VideoEncodeJob : AbstractEncoderJob
         public string? ImgPath { get; set; }
     }
 
-    private static void BuildVideoStreams(EncoderProfile encoderProfile, ref BaseContainer container)
+    private static void BuildVideoStreams(
+        EncoderProfile encoderProfile,
+        ref BaseContainer container
+    )
     {
         foreach (IVideoProfile profile in encoderProfile.VideoProfiles)
         {
             // Automatically select the best codec based on system capabilities
             string resolvedCodec = CodecSelector.ResolveBestCodec(profile.Codec);
 
-            BaseVideo stream = BaseVideo.Create(resolvedCodec)
+            BaseVideo stream = BaseVideo
+                .Create(resolvedCodec)
                 .SetScale(profile.Width, profile.Height)
                 .SetConstantRateFactor(profile.Crf)
                 .SetFrameRate(profile.Framerate)
@@ -323,11 +411,15 @@ public class VideoEncodeJob : AbstractEncoderJob
         }
     }
 
-    private static void BuildAudioStreams(EncoderProfile encoderProfile, ref BaseContainer container)
+    private static void BuildAudioStreams(
+        EncoderProfile encoderProfile,
+        ref BaseContainer container
+    )
     {
         foreach (IAudioProfile profile in encoderProfile.AudioProfiles)
         {
-            BaseAudio stream = BaseAudio.Create(profile.Codec)
+            BaseAudio stream = BaseAudio
+                .Create(profile.Codec)
                 .SetAudioChannels(profile.Channels)
                 .SetAllowedLanguages(profile.AllowedLanguages)
                 .SetSampleRate(profile.SampleRate)
@@ -340,11 +432,15 @@ public class VideoEncodeJob : AbstractEncoderJob
         }
     }
 
-    private static void BuildSubtitleStreams(EncoderProfile? encoderProfile, ref BaseContainer container)
+    private static void BuildSubtitleStreams(
+        EncoderProfile? encoderProfile,
+        ref BaseContainer container
+    )
     {
         foreach (ISubtitleProfile profile in encoderProfile?.SubtitleProfiles ?? [])
         {
-            BaseSubtitle stream = BaseSubtitle.Create(profile.Codec)
+            BaseSubtitle stream = BaseSubtitle
+                .Create(profile.Codec)
                 .SetAllowedLanguages(profile.AllowedLanguages)
                 .SetHlsSegmentFilename(profile.SegmentName)
                 .SetHlsPlaylistFilename(profile.PlaylistName)
@@ -396,7 +492,8 @@ public class VideoEncodeJob : AbstractEncoderJob
         {
             Logger.Encoder(
                 $"Failed to clean up partial output at {basePath}: {cleanupEx.Message}",
-                LogEventLevel.Warning);
+                LogEventLevel.Warning
+            );
         }
     }
 }

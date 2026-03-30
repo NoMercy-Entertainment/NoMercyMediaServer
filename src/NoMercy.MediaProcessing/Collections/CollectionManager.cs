@@ -26,21 +26,22 @@ public class CollectionManager(
         TmdbCollectionClient collectionClient = new(id);
         TmdbCollectionAppends? collectionAppends = await collectionClient.WithAllAppends();
 
-        if (collectionAppends is null) return null;
+        if (collectionAppends is null)
+            return null;
 
         Collection collection = new()
         {
             Id = collectionAppends.Id,
             Title = collectionAppends.Name,
-            TitleSort = collectionAppends.Name
-                .TitleSort(collectionAppends.Parts
-                    .MinBy(movie => movie.ReleaseDate)?.ReleaseDate),
+            TitleSort = collectionAppends.Name.TitleSort(
+                collectionAppends.Parts.MinBy(movie => movie.ReleaseDate)?.ReleaseDate
+            ),
             Backdrop = collectionAppends.BackdropPath,
             Poster = collectionAppends.PosterPath,
             Overview = collectionAppends.Overview,
             Parts = collectionAppends.Parts.Length,
 
-            LibraryId = library.Id
+            LibraryId = library.Id,
         };
 
         await collectionRepository.Store(collection);
@@ -51,7 +52,10 @@ public class CollectionManager(
 
         jobDispatcher.DispatchJob<CollectionExtrasJob, TmdbCollectionAppends>(collectionAppends);
 
-        Logger.MovieDb($"Collection: {collectionAppends.Name}: Added to Library {library.Title}", LogEventLevel.Debug);
+        Logger.MovieDb(
+            $"Collection: {collectionAppends.Name}: Added to Library {library.Title}",
+            LogEventLevel.Debug
+        );
 
         return collectionAppends;
     }
@@ -68,8 +72,8 @@ public class CollectionManager(
 
     private async Task StoreTranslations(TmdbCollectionAppends collection)
     {
-        IEnumerable<Translation> translations = collection.Translations.Translations
-            .Select(translation => new Translation
+        IEnumerable<Translation> translations = collection.Translations.Translations.Select(
+            translation => new Translation
             {
                 Iso31661 = translation.Iso31661,
                 Iso6391 = translation.Iso6391,
@@ -78,8 +82,9 @@ public class CollectionManager(
                 Overview = translation.Data.Overview == "" ? null : translation.Data.Overview,
                 EnglishName = translation.EnglishName,
                 Homepage = translation.Data.Homepage?.ToString(),
-                CollectionId = collection.Id
-            });
+                CollectionId = collection.Id,
+            }
+        );
 
         await collectionRepository.StoreTranslations(translations);
 
@@ -88,8 +93,8 @@ public class CollectionManager(
 
     internal async Task StoreImages(TmdbCollectionAppends collection)
     {
-        IEnumerable<Image> posters = collection.Images.Posters
-            .Select(image => new Image
+        IEnumerable<Image> posters = collection
+            .Images.Posters.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 FilePath = image.FilePath,
@@ -100,15 +105,15 @@ public class CollectionManager(
                 Width = image.Width,
                 CollectionId = collection.Id,
                 Type = "poster",
-                Site = "https://image.tmdb.org/t/p/"
+                Site = "https://image.tmdb.org/t/p/",
             })
             .ToArray();
 
         await collectionRepository.StoreImages(posters);
         Logger.MovieDb($"Movie: {collection.Name}: Posters stored", LogEventLevel.Debug);
 
-        IEnumerable<Image> backdrops = collection.Images.Backdrops
-            .Select(image => new Image
+        IEnumerable<Image> backdrops = collection
+            .Images.Backdrops.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 FilePath = image.FilePath,
@@ -119,14 +124,15 @@ public class CollectionManager(
                 Width = image.Width,
                 CollectionId = collection.Id,
                 Type = "backdrop",
-                Site = "https://image.tmdb.org/t/p/"
+                Site = "https://image.tmdb.org/t/p/",
             })
             .ToArray();
 
         await collectionRepository.StoreImages(backdrops);
         Logger.MovieDb($"Collection: {collection.Name}: backdrops stored", LogEventLevel.Debug);
 
-        IEnumerable<Image> logos = collection.Images.Logos.Select(image => new Image
+        IEnumerable<Image> logos = collection
+            .Images.Logos.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 FilePath = image.FilePath,
@@ -137,7 +143,7 @@ public class CollectionManager(
                 Width = image.Width,
                 CollectionId = collection.Id,
                 Type = "logo",
-                Site = "https://image.tmdb.org/t/p/"
+                Site = "https://image.tmdb.org/t/p/",
             })
             .ToArray();
 
@@ -149,16 +155,22 @@ public class CollectionManager(
     {
         List<TmdbMovieAppends> movies = [];
 
-        await Parallel.ForEachAsync(collectionAppends.Parts, Config.ParallelOptions, async (movie, _) =>
-        {
-            TmdbMovieClient movieClient = new(movie.Id);
-            TmdbMovieAppends? movieAppends = await movieClient.WithAllAppends();
-            if (movieAppends is null) return;
+        await Parallel.ForEachAsync(
+            collectionAppends.Parts,
+            Config.ParallelOptions,
+            async (movie, _) =>
+            {
+                TmdbMovieClient movieClient = new(movie.Id);
+                TmdbMovieAppends? movieAppends = await movieClient.WithAllAppends();
+                if (movieAppends is null)
+                    return;
 
-            movies.Add(movieAppends);
-        });
+                movies.Add(movieAppends);
+            }
+        );
 
-        foreach (TmdbMovieAppends movie in movies) await movieManager.Add(movie.Id, library);
+        foreach (TmdbMovieAppends movie in movies)
+            await movieManager.Add(movie.Id, library);
 
         await collectionRepository.LinkToMovies(collectionAppends);
 

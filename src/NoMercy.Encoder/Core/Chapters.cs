@@ -26,11 +26,14 @@ public static class Chapters
             FfProbeThrottle.Release();
         }
 
-        if (string.IsNullOrEmpty(result)) return;
+        if (string.IsNullOrEmpty(result))
+            return;
 
         FfprobeChapterRoot? root = JsonConvert.DeserializeObject<FfprobeChapterRoot>(result);
-        if (root?.Chapters is null) return;
-        if (root.Chapters.Length == 0) return;
+        if (root?.Chapters is null)
+            return;
+        if (root.Chapters.Length == 0)
+            return;
 
         StringBuilder sb = new();
 
@@ -51,22 +54,37 @@ public static class Chapters
 
     private class FfprobeChapterRoot
     {
-        [JsonProperty("chapters")] public FfprobeChapter[] Chapters { get; set; } = [];
+        [JsonProperty("chapters")]
+        public FfprobeChapter[] Chapters { get; set; } = [];
     }
 
     private class FfprobeChapter
     {
-        [JsonProperty("id")] public double Id { get; set; }
-        [JsonProperty("time_base")] public string TimeBase { get; set; } = string.Empty;
-        [JsonProperty("start")] public long Start { get; set; }
-        [JsonProperty("start_time")] public double StartTime { get; set; }
-        [JsonProperty("end")] public long End { get; set; }
-        [JsonProperty("end_time")] public double EndTime { get; set; }
-        [JsonProperty("tags")] public FfprobeTags FfprobeTags { get; set; } = new();
+        [JsonProperty("id")]
+        public double Id { get; set; }
+
+        [JsonProperty("time_base")]
+        public string TimeBase { get; set; } = string.Empty;
+
+        [JsonProperty("start")]
+        public long Start { get; set; }
+
+        [JsonProperty("start_time")]
+        public double StartTime { get; set; }
+
+        [JsonProperty("end")]
+        public long End { get; set; }
+
+        [JsonProperty("end_time")]
+        public double EndTime { get; set; }
+
+        [JsonProperty("tags")]
+        public FfprobeTags FfprobeTags { get; set; } = new();
     }
 
     private class FfprobeTags
     {
-        [JsonProperty("title")] public string Title { get; set; } = string.Empty;
+        [JsonProperty("title")]
+        public string Title { get; set; } = string.Empty;
     }
 }

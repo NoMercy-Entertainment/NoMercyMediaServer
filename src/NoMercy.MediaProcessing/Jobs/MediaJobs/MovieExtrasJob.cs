@@ -41,11 +41,10 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
         await movieManager.StoreVideos(Storage);
         await movieManager.StoreCompanies(Storage);
         await movieManager.StoreKeywords(Storage);
-        
+
         if (EventBusProvider.IsConfigured)
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["base", "info", Storage.Id.ToString()]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["base", "info", Storage.Id.ToString()] }
+            );
     }
 }

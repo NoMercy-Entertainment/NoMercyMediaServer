@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using NoMercy.Api.DTOs.Dashboard;
-using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.Controllers.V1.Music;
+using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Movies;
@@ -22,9 +22,8 @@ using NoMercy.Helpers.Extensions;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
-using NoMercyQueue;
 using NoMercy.Queue.MediaServer;
-
+using NoMercyQueue;
 
 namespace NoMercy.Api.Controllers.V1.Dashboard;
 
@@ -49,8 +48,8 @@ public class TasksController(MediaContext mediaContext) : BaseController
                 Title = "Scan media library",
                 Value = 0,
                 Type = "library",
-                CreatedAt = DateTime.Parse("2024-01-25 09:26:56")
-            }
+                CreatedAt = DateTime.Parse("2024-01-25 09:26:56"),
+            },
         ];
 
         return Ok(list);
@@ -62,10 +61,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to create tasks");
 
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpPatch]
@@ -74,10 +70,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update tasks");
 
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpDelete]
@@ -86,10 +79,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete tasks");
 
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpPost]
@@ -123,10 +113,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to view task workers");
 
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpGet]
@@ -138,39 +125,40 @@ public class TasksController(MediaContext mediaContext) : BaseController
 
         await using QueueContext queueContext = new();
 
-        ImmutableList<QueueJob> jobs = queueContext.QueueJobs
-            .Where(j => j.Queue == "encoder")
+        ImmutableList<QueueJob> jobs = queueContext
+            .QueueJobs.Where(j => j.Queue == "encoder")
             .OrderByDescending(j => j.Priority)
             .ThenBy(j => j.CreatedAt)
             .ToImmutableList();
 
-        List<VideoEncodeJob> encoderJobs = jobs
-            .Select(job => job.Payload.FromJson<VideoEncodeJob>())
+        List<VideoEncodeJob> encoderJobs = jobs.Select(job =>
+                job.Payload.FromJson<VideoEncodeJob>()
+            )
             .Where(job => job is not null)
             .ToList()!;
 
         List<Ulid> folderIds = encoderJobs.Select(j => j.FolderId).ToList();
 
         // Load folders into memory first
-        List<Folder> folders = await mediaContext.Folders
-            .Where(f => folderIds.Contains(f.Id))
+        List<Folder> folders = await mediaContext
+            .Folders.Where(f => folderIds.Contains(f.Id))
             .Include(f => f.EncoderProfileFolder)
-            .ThenInclude(e => e.EncoderProfile)
+                .ThenInclude(e => e.EncoderProfile)
             .Include(f => f.FolderLibraries)
-            .ThenInclude(f => f.Library)
-            .ThenInclude(f => f.LibraryTvs)
-            .ThenInclude(libraryTv => libraryTv.Tv)
-            .ThenInclude(tv => tv.Episodes)
+                .ThenInclude(f => f.Library)
+                    .ThenInclude(f => f.LibraryTvs)
+                        .ThenInclude(libraryTv => libraryTv.Tv)
+                            .ThenInclude(tv => tv.Episodes)
             .Include(f => f.FolderLibraries)
-            .ThenInclude(f => f.Library)
-            .ThenInclude(f => f.LibraryMovies)
-            .ThenInclude(libraryMovie => libraryMovie.Movie)
+                .ThenInclude(f => f.Library)
+                    .ThenInclude(f => f.LibraryMovies)
+                        .ThenInclude(libraryMovie => libraryMovie.Movie)
             .Include(f => f.FolderLibraries)
-            .ThenInclude(f => f.Library)
-            .ThenInclude(f => f.LibraryTracks)
-            .ThenInclude(libraryTrack => libraryTrack.Track)
-            .ThenInclude(track => track.AlbumTrack)
-            .ThenInclude(albumTrack => albumTrack.Album)
+                .ThenInclude(f => f.Library)
+                    .ThenInclude(f => f.LibraryTracks)
+                        .ThenInclude(libraryTrack => libraryTrack.Track)
+                            .ThenInclude(track => track.AlbumTrack)
+                                .ThenInclude(albumTrack => albumTrack.Album)
             .ToListAsync();
 
         QueueJobDto[] queueJobs = encoderJobs
@@ -183,52 +171,56 @@ public class TasksController(MediaContext mediaContext) : BaseController
                 Type = j.GetType().Name,
                 Status = j.Status.ToString(),
                 InputFile = j.InputFile,
-                Profile = folders.FirstOrDefault(f => f.Id == j.FolderId)
+                Profile = folders
+                    .FirstOrDefault(f => f.Id == j.FolderId)
                     ?.EncoderProfileFolder.FirstOrDefault()
-                    ?.EncoderProfile.Name
-            }).ToArray();
+                    ?.EncoderProfile.Name,
+            })
+            .ToArray();
 
-        IEnumerable<VideoEncodeJob> runningJobs = encoderJobs
-            .Where(j => j.Status == "running");
+        IEnumerable<VideoEncodeJob> runningJobs = encoderJobs.Where(j => j.Status == "running");
 
         if (EventBusProvider.IsConfigured)
             foreach (VideoEncodeJob job in runningJobs)
-                _ = EventBusProvider.Current.PublishAsync(new EncoderProgressBroadcastEvent
-                {
-                    ProgressData = new Progress
+                _ = EventBusProvider.Current.PublishAsync(
+                    new EncoderProgressBroadcastEvent
                     {
-                        Id = job.Id,
-                        Status = "running",
-                        Title = GetTitle(folders, job),
-                        Message = "Encoding video"
+                        ProgressData = new Progress
+                        {
+                            Id = job.Id,
+                            Status = "running",
+                            Title = GetTitle(folders, job),
+                            Message = "Encoding video",
+                        },
                     }
-                });
+                );
 
-        return Ok(new DataResponseDto<QueueJobDto[]>
-        {
-            Data = queueJobs
-        });
+        return Ok(new DataResponseDto<QueueJobDto[]> { Data = queueJobs });
     }
 
     private static string GetTitle(List<Folder> folders, VideoEncodeJob j)
     {
-        Movie? movie = folders.FirstOrDefault(f => f.Id == j.FolderId)
+        Movie? movie = folders
+            .FirstOrDefault(f => f.Id == j.FolderId)
             ?.FolderLibraries.FirstOrDefault()
-            ?.Library.LibraryMovies.FirstOrDefault(m => m.MovieId == j.Id.ToInt())?.Movie;
+            ?.Library.LibraryMovies.FirstOrDefault(m => m.MovieId == j.Id.ToInt())
+            ?.Movie;
 
-        Tv? tv = folders.FirstOrDefault(f => f.Id == j.FolderId)
+        Tv? tv = folders
+            .FirstOrDefault(f => f.Id == j.FolderId)
             ?.FolderLibraries.FirstOrDefault()
-            ?.Library.LibraryTvs.FirstOrDefault(m => m.Tv.Episodes.Any(e => e.Id == j.Id.ToInt()))?.Tv;
+            ?.Library.LibraryTvs.FirstOrDefault(m => m.Tv.Episodes.Any(e => e.Id == j.Id.ToInt()))
+            ?.Tv;
 
         Episode? episode = tv?.Episodes.FirstOrDefault(e => e.Id == j.Id.ToInt());
 
-        Track? track = folders.FirstOrDefault(f => f.Id == j.FolderId)
+        Track? track = folders
+            .FirstOrDefault(f => f.Id == j.FolderId)
             ?.FolderLibraries.FirstOrDefault()
-            ?.Library.LibraryTracks.FirstOrDefault(m => m.TrackId == j.Id.ToGuid())?.Track;
+            ?.Library.LibraryTracks.FirstOrDefault(m => m.TrackId == j.Id.ToGuid())
+            ?.Track;
 
-        return (movie?.CreateTitle()
-               ?? episode?.CreateTitle()
-               ?? track?.CreateName()).OrEmpty();
+        return (movie?.CreateTitle() ?? episode?.CreateTitle() ?? track?.CreateName()).OrEmpty();
     }
 
     [HttpDelete]
@@ -239,8 +231,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
             return UnauthorizedResponse("You do not have permission to clear encoder queue");
 
         await using QueueContext queueContext = new();
-        QueueJob? job = queueContext.QueueJobs
-            .FirstOrDefault(job => job.Id == id);
+        QueueJob? job = queueContext.QueueJobs.FirstOrDefault(job => job.Id == id);
 
         if (job is null)
             return NotFoundResponse("Job not found");
@@ -249,11 +240,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
 
         await queueContext.SaveChangesAsync();
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Message = "Job removed",
-            Status = "success"
-        });
+        return Ok(new StatusResponseDto<string> { Message = "Job removed", Status = "success" });
     }
 
     [HttpPatch]
@@ -265,8 +252,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
 
         await using QueueContext queueContext = new();
 
-        QueueJob? job = queueContext.QueueJobs
-            .FirstOrDefault(job => job.Id == id);
+        QueueJob? job = queueContext.QueueJobs.FirstOrDefault(job => job.Id == id);
 
         if (job is null)
             return NotFoundResponse("Job not found");
@@ -275,11 +261,9 @@ public class TasksController(MediaContext mediaContext) : BaseController
 
         await queueContext.SaveChangesAsync();
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Message = "Priority updated",
-            Status = "success"
-        });
+        return Ok(
+            new StatusResponseDto<string> { Message = "Priority updated", Status = "success" }
+        );
     }
 
     [HttpPost]
@@ -307,11 +291,7 @@ public class TasksController(MediaContext mediaContext) : BaseController
             ? "Failed job has been queued for retry"
             : "All failed jobs have been queued for retry";
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Message = message,
-            Status = "success"
-        });
+        return Ok(new StatusResponseDto<string> { Message = message, Status = "success" });
     }
 
     [HttpGet]
@@ -323,30 +303,43 @@ public class TasksController(MediaContext mediaContext) : BaseController
 
         await using QueueContext queueContext = new();
 
-        List<FailedJob> failedJobs = await queueContext.FailedJobs
-            .OrderByDescending(j => j.FailedAt)
+        List<FailedJob> failedJobs = await queueContext
+            .FailedJobs.OrderByDescending(j => j.FailedAt)
             .ToListAsync();
 
-        return Ok(new DataResponseDto<List<FailedJob>>
-        {
-            Data = failedJobs
-        });
+        return Ok(new DataResponseDto<List<FailedJob>> { Data = failedJobs });
     }
 }
 
 public class QueueJobDto
 {
-    [JsonProperty("id")] public int Id { get; set; }
-    [JsonProperty("payload_id")] public string PayloadId { get; set; } = string.Empty;
-    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
-    [JsonProperty("status")] public string Status { get; set; } = string.Empty;
-    [JsonProperty("input_file")] public string InputFile { get; set; } = string.Empty;
-    [JsonProperty("profile")] public string? Profile { get; set; }
-    [JsonProperty("priority")] public int Priority { get; set; }
+    [JsonProperty("id")]
+    public int Id { get; set; }
+
+    [JsonProperty("payload_id")]
+    public string PayloadId { get; set; } = string.Empty;
+
+    [JsonProperty("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonProperty("type")]
+    public string Type { get; set; } = string.Empty;
+
+    [JsonProperty("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [JsonProperty("input_file")]
+    public string InputFile { get; set; } = string.Empty;
+
+    [JsonProperty("profile")]
+    public string? Profile { get; set; }
+
+    [JsonProperty("priority")]
+    public int Priority { get; set; }
 }
 
 public class PatchQueueItemDto
 {
-    [JsonProperty("priority")] public int Priority { get; set; }
+    [JsonProperty("priority")]
+    public int Priority { get; set; }
 }

@@ -20,7 +20,5 @@ public abstract class AbstractMediaJob : IShouldQueue
 
     public abstract Task Handle();
 
-    public void Dispose()
-    {
-    }
+    public void Dispose() { }
 }

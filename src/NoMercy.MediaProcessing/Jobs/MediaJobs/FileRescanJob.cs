@@ -25,25 +25,22 @@ public class FileRescanJob : AbstractMediaJob
 
         LibraryRepository libraryRepository = new(context);
         LibraryManager libraryManager = new(libraryRepository, jobDispatcher, context);
-        
+
         await libraryManager.RescanFiles(LibraryId, Id);
 
         if (EventBusProvider.IsConfigured)
         {
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["base", "info", Id.ToString()]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["base", "info", Id.ToString()] }
+            );
 
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["libraries", LibraryId.ToString()]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["libraries", LibraryId.ToString()] }
+            );
 
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["home"]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["home"] }
+            );
         }
     }
 }

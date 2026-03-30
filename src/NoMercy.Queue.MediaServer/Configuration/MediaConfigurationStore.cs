@@ -32,7 +32,9 @@ public class MediaConfigurationStore : IConfigurationStore
     public async Task SetValueAsync(string key, string value, Guid? modifiedBy = null)
     {
         await using MediaContext context = new();
-        DbConfiguration? existing = await context.Configuration.FirstOrDefaultAsync(c => c.Key == key);
+        DbConfiguration? existing = await context.Configuration.FirstOrDefaultAsync(c =>
+            c.Key == key
+        );
         if (existing is not null)
         {
             existing.Value = value;
@@ -40,7 +42,14 @@ public class MediaConfigurationStore : IConfigurationStore
         }
         else
         {
-            context.Configuration.Add(new() { Key = key, Value = value, ModifiedBy = modifiedBy });
+            context.Configuration.Add(
+                new()
+                {
+                    Key = key,
+                    Value = value,
+                    ModifiedBy = modifiedBy,
+                }
+            );
         }
         await context.SaveChangesAsync();
     }

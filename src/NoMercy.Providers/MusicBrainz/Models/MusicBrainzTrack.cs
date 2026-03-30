@@ -6,8 +6,12 @@ namespace NoMercy.Providers.MusicBrainz.Models;
 public class MusicBrainzTrack
 {
     private int _number;
-    [JsonProperty("artist-credit")] public ReleaseArtistCredit[] ArtistCredit { get; set; } = [];
-    [JsonProperty("id")] public Guid Id { get; set; }
+
+    [JsonProperty("artist-credit")]
+    public ReleaseArtistCredit[] ArtistCredit { get; set; } = [];
+
+    [JsonProperty("id")]
+    public Guid Id { get; set; }
 
     /** Track length in milliseconds */
     [JsonProperty("length")]
@@ -27,13 +31,21 @@ public class MusicBrainzTrack
             }
             catch (Exception)
             {
-                _number = value.ToString().Replace("A", "").Split("-").LastOrDefault()?.ToInt() ?? 0;
+                _number =
+                    value.ToString().Replace("A", "").Split("-").LastOrDefault()?.ToInt() ?? 0;
             }
         }
     }
 
-    [JsonProperty("position")] public int Position { get; set; }
-    [JsonProperty("recording")] public TrackRecording Recording { get; set; } = new();
-    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("genres")] public MusicBrainzGenreDetails[]? Genres { get; set; }
+    [JsonProperty("position")]
+    public int Position { get; set; }
+
+    [JsonProperty("recording")]
+    public TrackRecording Recording { get; set; } = new();
+
+    [JsonProperty("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonProperty("genres")]
+    public MusicBrainzGenreDetails[]? Genres { get; set; }
 }
