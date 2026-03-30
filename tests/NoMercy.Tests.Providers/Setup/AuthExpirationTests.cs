@@ -163,15 +163,15 @@ public class AuthExpirationTests
     }
 
     [Fact]
-    public void ElseBranch_ThrowsForExpiredToken()
+    public void ElseBranch_AttemptsReAuthThenThrowsForExpiredToken()
     {
-        // Verify the control flow: else → throw (expired tokens require re-auth through /setup UI)
+        // Verify the control flow: else → try auto re-auth → throw if that fails
         string source = GetSourceCode();
         string initMethod = ExtractInitMethod(source);
 
-        // The else branch should throw an InvalidOperationException for expired tokens
-        Regex elseBranch = new(@"else\s*\{[^}]*throw\s+new\s+InvalidOperationException", RegexOptions.Singleline);
+        // The else branch should attempt TokenByBrowserOrDeviceGrant before throwing
+        Regex elseBranch = new(@"else\s*\{.*?TokenByBrowserOrDeviceGrant.*?throw\s+new\s+InvalidOperationException", RegexOptions.Singleline);
         Assert.True(elseBranch.IsMatch(initMethod),
-            "Init() should throw InvalidOperationException in the else branch (expired token)");
+            "Init() should attempt automatic re-authentication before throwing in the else branch (expired token)");
     }
 }

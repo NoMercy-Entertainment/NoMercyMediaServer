@@ -65,21 +65,46 @@ public static class Auth
             }
             catch (Exception)
             {
-                // Token refresh failed — need to re-authenticate through /setup UI
                 Logger.Auth(
-                    "Token refresh failed — re-authentication required through /setup UI",
+                    "Refresh token rejected — attempting automatic re-authentication",
                     LogEventLevel.Warning
                 );
-                throw new InvalidOperationException("Token refresh failed - setup required");
+                try
+                {
+                    await TokenByBrowserOrDeviceGrant();
+                    Logger.Auth(
+                        "Automatic re-authentication successful",
+                        LogEventLevel.Information
+                    );
+                }
+                catch (Exception)
+                {
+                    Logger.Auth(
+                        "Automatic re-authentication failed — manual setup required at /setup",
+                        LogEventLevel.Error
+                    );
+                    throw new InvalidOperationException("Token refresh failed - setup required");
+                }
             }
         else
         {
-            // Token expired — need to re-authenticate through /setup UI
             Logger.Auth(
-                "Token expired — re-authentication required through /setup UI",
+                "Refresh token rejected — attempting automatic re-authentication",
                 LogEventLevel.Warning
             );
-            throw new InvalidOperationException("Token expired - setup required");
+            try
+            {
+                await TokenByBrowserOrDeviceGrant();
+                Logger.Auth("Automatic re-authentication successful", LogEventLevel.Information);
+            }
+            catch (Exception)
+            {
+                Logger.Auth(
+                    "Automatic re-authentication failed — manual setup required at /setup",
+                    LogEventLevel.Error
+                );
+                throw new InvalidOperationException("Token expired - setup required");
+            }
         }
 
         if (Globals.Globals.AccessToken == null || RefreshToken == null || ExpiresIn == null)
@@ -168,10 +193,28 @@ public static class Auth
                 LogEventLevel.Error
             );
 
-            // Clear the expired token so downstream code doesn't attempt
-            // to use it and fail with repeated 401s
-            Globals.Globals.AccessToken = null;
-            return false;
+            Logger.Auth(
+                "Refresh token rejected — attempting automatic re-authentication",
+                LogEventLevel.Warning
+            );
+            try
+            {
+                await TokenByBrowserOrDeviceGrant();
+                Logger.Auth("Automatic re-authentication successful", LogEventLevel.Information);
+                return true;
+            }
+            catch (Exception)
+            {
+                Logger.Auth(
+                    "Automatic re-authentication failed — manual setup required at /setup",
+                    LogEventLevel.Error
+                );
+
+                // Clear the expired token so downstream code doesn't attempt
+                // to use it and fail with repeated 401s
+                Globals.Globals.AccessToken = null;
+                return false;
+            }
         }
     }
 
