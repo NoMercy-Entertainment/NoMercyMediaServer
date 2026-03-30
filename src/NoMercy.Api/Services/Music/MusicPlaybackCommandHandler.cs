@@ -12,39 +12,48 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         switch (command.ToLower())
         {
             case "play":
-                if(state.Actions.Disallows.Resuming) break;
+                if (state.Actions.Disallows.Resuming)
+                    break;
                 HandlePlay(user, state);
                 break;
             case "pause":
-                if(state.Actions.Disallows.Pausing) break;
+                if (state.Actions.Disallows.Pausing)
+                    break;
                 HandlePause(user, state);
                 break;
             case "seek":
-                if(state.Actions.Disallows.Seeking) break;
+                if (state.Actions.Disallows.Seeking)
+                    break;
                 HandleSeek(state, data);
                 break;
             case "next":
-                if(state.Actions.Disallows.Next) break;
+                if (state.Actions.Disallows.Next)
+                    break;
                 HandleNext(user, state);
                 break;
             case "previous":
-                if(state.Actions.Disallows.Previous) break;
+                if (state.Actions.Disallows.Previous)
+                    break;
                 HandlePrevious(user, state);
                 break;
             case "stop":
-                if(state.Actions.Disallows.Stopping) break;
+                if (state.Actions.Disallows.Stopping)
+                    break;
                 HandleStop(state);
                 break;
             case "mute":
-                if(state.Actions.Disallows.Muting) break;
+                if (state.Actions.Disallows.Muting)
+                    break;
                 state.Muted = !state.Muted;
                 break;
             case "shuffle":
-                if(state.Actions.Disallows.TogglingShuffle) break;
+                if (state.Actions.Disallows.TogglingShuffle)
+                    break;
                 state.Shuffle = !state.Shuffle;
                 break;
             case "repeat":
-                if(state.Actions.Disallows.TogglingRepeatContext) break;
+                if (state.Actions.Disallows.TogglingRepeatContext)
+                    break;
                 HandleRepeat(state);
                 break;
         }
@@ -71,8 +80,14 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
         {
             seekSeconds = intValue;
         }
-        else if (double.TryParse(raw, System.Globalization.NumberStyles.Float,
-                     System.Globalization.CultureInfo.InvariantCulture, out double floatValue))
+        else if (
+            double.TryParse(
+                raw,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out double floatValue
+            )
+        )
         {
             seekSeconds = (int)floatValue;
         }
@@ -87,7 +102,8 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
 
     private void HandleNext(User user, MusicPlayerState state)
     {
-        if (state.CurrentItem == null) return;
+        if (state.CurrentItem == null)
+            return;
         musicPlaybackService.RemoveTimer(user.Id);
         state.CrossfadeSignalSent = false; // Reset for new track
 
@@ -156,7 +172,8 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
 
     private void HandlePrevious(User user, MusicPlayerState state)
     {
-        if (state.CurrentItem == null) return;
+        if (state.CurrentItem == null)
+            return;
         state.CrossfadeSignalSent = false; // Reset for new/restarted track
 
         // If we're more than 3 seconds into the song, restart it
@@ -219,8 +236,8 @@ public class MusicPlaybackCommandHandler(MusicPlaybackService musicPlaybackServi
                 Muting = true,
                 TogglingShuffle = true,
                 TogglingRepeatContext = true,
-                TogglingRepeatTrack = true
-            }
+                TogglingRepeatTrack = true,
+            },
         };
     }
 }

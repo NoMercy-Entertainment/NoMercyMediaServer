@@ -36,7 +36,10 @@ public static class DatabaseSeeder
         catch (Exception ex)
         {
             CronWorker.SignalDatabaseReady(false);
-            Logger.Setup($"Database schema initialization failed: {ex.Message}", LogEventLevel.Fatal);
+            Logger.Setup(
+                $"Database schema initialization failed: {ex.Message}",
+                LogEventLevel.Fatal
+            );
             throw;
         }
     }
@@ -91,7 +94,7 @@ public static class DatabaseSeeder
             await MusicGenresSeed.Init(mediaDbContext);
             await UsersSeed.Init(mediaDbContext);
 
-            ClaimsPrincipleExtensions.Initialize(mediaDbContext);
+            await ClaimsPrincipleExtensions.InitializeAsync(mediaDbContext);
 
             if (ShouldSeedMarvel)
             {
@@ -104,7 +107,7 @@ public static class DatabaseSeeder
             Logger.Setup($"Database seeding failed: {ex.Message}", LogEventLevel.Warning);
         }
     }
-    
+
     private static Task Migrate(DbContext context)
     {
         string contextName = context.GetType().Name;
@@ -121,7 +124,8 @@ public static class DatabaseSeeder
             if (connection.State != System.Data.ConnectionState.Open)
                 connection.Open();
             using System.Data.Common.DbCommand command = connection.CreateCommand();
-            command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'";
+            command.CommandText =
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'";
             migrationTableExists = Convert.ToInt64(command.ExecuteScalar()) > 0;
         }
         catch
@@ -136,7 +140,10 @@ public static class DatabaseSeeder
 
         if (migrationTableExists && appliedMigrations.Count == availableMigrations.Count)
         {
-            Logger.Setup($"{contextName}: Database is up to date. No migrations needed.", LogEventLevel.Verbose);
+            Logger.Setup(
+                $"{contextName}: Database is up to date. No migrations needed.",
+                LogEventLevel.Verbose
+            );
         }
         else
         {
@@ -144,16 +151,30 @@ public static class DatabaseSeeder
 
             if (pendingMigrations.Count > 0)
             {
-                Logger.Setup($"{contextName}: Applying {pendingMigrations.Count} migration(s)...", LogEventLevel.Verbose);
+                Logger.Setup(
+                    $"{contextName}: Applying {pendingMigrations.Count} migration(s)...",
+                    LogEventLevel.Verbose
+                );
                 try
                 {
                     context.Database.Migrate();
-                    Logger.Setup($"{contextName}: Migrations applied successfully.", LogEventLevel.Verbose);
+                    Logger.Setup(
+                        $"{contextName}: Migrations applied successfully.",
+                        LogEventLevel.Verbose
+                    );
                 }
                 catch (Exception ex) when (ex.Message.Contains("already exists"))
                 {
-                    Logger.Setup($"{contextName}: Tables already exist. Syncing migration history...", LogEventLevel.Verbose);
-                    SyncMigrationHistory(context, migrationTableExists, pendingMigrations, availableMigrations);
+                    Logger.Setup(
+                        $"{contextName}: Tables already exist. Syncing migration history...",
+                        LogEventLevel.Verbose
+                    );
+                    SyncMigrationHistory(
+                        context,
+                        migrationTableExists,
+                        pendingMigrations,
+                        availableMigrations
+                    );
                 }
             }
             else
@@ -169,8 +190,12 @@ public static class DatabaseSeeder
         return Task.CompletedTask;
     }
 
-    private static void SyncMigrationHistory(DbContext context, bool migrationTableExists,
-        List<string> pendingMigrations, List<string> availableMigrations)
+    private static void SyncMigrationHistory(
+        DbContext context,
+        bool migrationTableExists,
+        List<string> pendingMigrations,
+        List<string> availableMigrations
+    )
     {
         string version = context.GetType().Assembly.GetName().Version?.ToString() ?? "1.0.0";
 
@@ -178,35 +203,47 @@ public static class DatabaseSeeder
         // or it may already exist from a previous installation.
         if (!migrationTableExists)
         {
-            context.Database.ExecuteSqlRaw(@"
+            context.Database.ExecuteSqlRaw(
+                @"
                 CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (
                     MigrationId TEXT NOT NULL CONSTRAINT PK___EFMigrationsHistory PRIMARY KEY,
                     ProductVersion TEXT NOT NULL
-                );");
+                );"
+            );
             Logger.Setup("Migration history table created.", LogEventLevel.Verbose);
         }
 
         // Mark all relevant migrations as applied — use OR IGNORE to skip duplicates.
-        List<string> migrationsToRecord = migrationTableExists ? pendingMigrations : availableMigrations;
+        List<string> migrationsToRecord = migrationTableExists
+            ? pendingMigrations
+            : availableMigrations;
         foreach (string migration in migrationsToRecord)
         {
             try
             {
                 context.Database.ExecuteSqlRaw(
                     "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ({0}, {1})",
-                    migration, version);
+                    migration,
+                    version
+                );
                 Logger.Setup($"Added migration {migration} to history", LogEventLevel.Verbose);
             }
             catch
             {
-                Logger.Setup($"Failed to add migration {migration} to history", LogEventLevel.Fatal);
+                Logger.Setup(
+                    $"Failed to add migration {migration} to history",
+                    LogEventLevel.Fatal
+                );
             }
         }
     }
-    
+
     private static async Task EnsureDatabaseCreated(DbContext context)
     {
-        Logger.Setup($"Ensuring database is created for {context.GetType().Name}", LogEventLevel.Verbose);
+        Logger.Setup(
+            $"Ensuring database is created for {context.GetType().Name}",
+            LogEventLevel.Verbose
+        );
         await context.Database.EnsureCreatedAsync();
     }
 }

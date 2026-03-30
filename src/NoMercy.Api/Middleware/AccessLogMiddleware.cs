@@ -29,39 +29,31 @@ public class AccessLogMiddleware
         "/favicon",
         "/transcode",
         "/manage",
-        "/health"
+        "/health",
     ];
 
-    private readonly string[] _ignoreExact =
-    [
-        "/",
-        "/api/v1/dashboard/logs"
-    ];
+    private readonly string[] _ignoreExact = ["/", "/api/v1/dashboard/logs"];
 
-    private readonly string[] _ignoreIfAuthenticated =
-    [
-        "/videoHub",
-        "/musicHub"
-    ];
+    private readonly string[] _ignoreIfAuthenticated = ["/videoHub", "/musicHub"];
 
-    private readonly string[] _ignoreIfGuest =
-    [
-        "/status"
-    ];
+    private readonly string[] _ignoreIfGuest = ["/status"];
 
     public async Task InvokeAsync(HttpContext context)
     {
         string path = HttpUtility.UrlDecode(context.Request.Path);
 
-        bool ignoreStart = _ignoredStartsWithRoutes
-            .Any(route => context.Request.Path.ToString().StartsWith(route));
+        bool ignoreStart = _ignoredStartsWithRoutes.Any(route =>
+            context.Request.Path.ToString().StartsWith(route)
+        );
 
-        bool ignoreExactRoute = _ignoreExact
-            .Any(route => context.Request.Path.ToString().Equals(route));
+        bool ignoreExactRoute = _ignoreExact.Any(route =>
+            context.Request.Path.ToString().Equals(route)
+        );
 
         // Skip logging for file access paths (folder ID prefix)
-        bool isFolderPath = ClaimsPrincipleExtensions.FolderIds
-            .Any(x => path.StartsWith("/" + x, StringComparison.OrdinalIgnoreCase));
+        bool isFolderPath = ClaimsPrincipleExtensions.FolderIds.Any(x =>
+            path.StartsWith("/" + x, StringComparison.OrdinalIgnoreCase)
+        );
 
         if (ignoreStart || ignoreExactRoute || isFolderPath)
         {
@@ -69,8 +61,9 @@ public class AccessLogMiddleware
             return;
         }
 
-        bool ignoreIfGuest = _ignoreIfGuest
-            .Any(route => context.Request.Path.ToString().Equals(route));
+        bool ignoreIfGuest = _ignoreIfGuest.Any(route =>
+            context.Request.Path.ToString().Equals(route)
+        );
 
         string? guid = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (guid is null)
@@ -87,7 +80,6 @@ public class AccessLogMiddleware
             return;
         }
 
-
         Guid userId = Guid.Parse(guid);
         if (userId == Guid.Empty)
         {
@@ -103,8 +95,9 @@ public class AccessLogMiddleware
             return;
         }
 
-        bool ignoreIfAuthenticated = _ignoreIfAuthenticated
-            .Any(route => context.Request.Path.ToString().Equals(route));
+        bool ignoreIfAuthenticated = _ignoreIfAuthenticated.Any(route =>
+            context.Request.Path.ToString().Equals(route)
+        );
 
         if (ignoreIfAuthenticated)
         {
@@ -117,7 +110,7 @@ public class AccessLogMiddleware
         {
             // User cache may not be populated yet during startup — try refreshing from DB
             MediaContext mediaContext = context.RequestServices.GetRequiredService<MediaContext>();
-            ClaimsPrincipleExtensions.RefreshUsers(mediaContext);
+            await ClaimsPrincipleExtensions.RefreshUsersAsync(mediaContext);
             user = ClaimsPrincipleExtensions.Users.FirstOrDefault(x => x.Id.Equals(userId));
         }
 

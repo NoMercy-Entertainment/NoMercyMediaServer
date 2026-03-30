@@ -3,10 +3,10 @@ using I18N.DotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NoMercy.Api.Constraints;
@@ -15,8 +15,11 @@ using NoMercy.Api.Services;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Audit;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Helpers.Monitoring;
+using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.Files;
@@ -36,28 +39,25 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
-using NoMercy.Providers.Helpers;
-using NoMercy.Events;
-using NoMercy.Events.Audit;
 using NoMercy.Plugins;
-using NoMercyQueue.Extensions;
+using NoMercy.Providers.Helpers;
 using NoMercy.Queue.MediaServer;
 using NoMercy.Queue.MediaServer.Jobs;
-using NoMercy.Service.Extensions;
-using NoMercy.Helpers.Wallpaper;
 using NoMercy.Service.Configuration.Swagger;
+using NoMercy.Service.Extensions;
 using NoMercy.Setup;
+using NoMercyQueue.Extensions;
 using CollectionRepository = NoMercy.Data.Repositories.CollectionRepository;
 using LibraryRepository = NoMercy.Data.Repositories.LibraryRepository;
-using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
+using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
+using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;
+using MediaProcessingFileRepository = NoMercy.MediaProcessing.Files.FileRepository;
 using MediaProcessingLibraryRepository = NoMercy.MediaProcessing.Libraries.LibraryRepository;
 using MediaProcessingMovieRepository = NoMercy.MediaProcessing.Movies.MovieRepository;
-using MediaProcessingCollectionRepository = NoMercy.MediaProcessing.Collections.CollectionRepository;
-using MediaProcessingShowRepository = NoMercy.MediaProcessing.Shows.ShowRepository;
-using MediaProcessingSeasonRepository = NoMercy.MediaProcessing.Seasons.SeasonRepository;
-using MediaProcessingEpisodeRepository = NoMercy.MediaProcessing.Episodes.EpisodeRepository;
 using MediaProcessingPersonRepository = NoMercy.MediaProcessing.People.PersonRepository;
-using MediaProcessingFileRepository = NoMercy.MediaProcessing.Files.FileRepository;
+using MediaProcessingSeasonRepository = NoMercy.MediaProcessing.Seasons.SeasonRepository;
+using MediaProcessingShowRepository = NoMercy.MediaProcessing.Shows.ShowRepository;
+using MovieRepository = NoMercy.Data.Repositories.MovieRepository;
 
 namespace NoMercy.Service.Configuration;
 
@@ -75,146 +75,195 @@ public static class ServiceConfiguration
         ConfigureCronJobs(services);
     }
 
-    private static void ConfigureKestrel(IServiceCollection services)
-    {
-    }
+    private static void ConfigureKestrel(IServiceCollection services) { }
 
     private static void ConfigureHttpClients(IServiceCollection services)
     {
         TimeSpan defaultTimeout = TimeSpan.FromMinutes(5);
 
-        services.AddHttpClient(HttpClientNames.Tmdb, client =>
-        {
-            client.BaseAddress = new("https://api.themoviedb.org/3/");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.Timeout = defaultTimeout;
-        });
+        services.AddHttpClient(
+            HttpClientNames.Tmdb,
+            client =>
+            {
+                client.BaseAddress = new("https://api.themoviedb.org/3/");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.Timeout = defaultTimeout;
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.TmdbImage, client =>
-        {
-            client.BaseAddress = new("https://image.tmdb.org/t/p/");
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.DefaultRequestHeaders.Add("Accept", "image/*");
-            client.Timeout = defaultTimeout;
-        });
+        services.AddHttpClient(
+            HttpClientNames.TmdbImage,
+            client =>
+            {
+                client.BaseAddress = new("https://image.tmdb.org/t/p/");
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("Accept", "image/*");
+                client.Timeout = defaultTimeout;
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.Tvdb, client =>
-        {
-            client.BaseAddress = new("https://api4.thetvdb.com/v4/");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.Timeout = defaultTimeout;
-        });
+        services.AddHttpClient(
+            HttpClientNames.Tvdb,
+            client =>
+            {
+                client.BaseAddress = new("https://api4.thetvdb.com/v4/");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.Timeout = defaultTimeout;
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.TvdbLogin, client =>
-        {
-            client.BaseAddress = new("https://api4.thetvdb.com/v4/");
-            client.DefaultRequestHeaders.Add("Accept", "application/json");
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        });
+        services.AddHttpClient(
+            HttpClientNames.TvdbLogin,
+            client =>
+            {
+                client.BaseAddress = new("https://api4.thetvdb.com/v4/");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.MusicBrainz, client =>
-        {
-            client.BaseAddress = new("https://musicbrainz.org/ws/2/");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
-        });
+        services.AddHttpClient(
+            HttpClientNames.MusicBrainz,
+            client =>
+            {
+                client.BaseAddress = new("https://musicbrainz.org/ws/2/");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.AcoustId, client =>
-        {
-            client.BaseAddress = new("https://api.acoustid.org/v2/");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        });
+        services.AddHttpClient(
+            HttpClientNames.AcoustId,
+            client =>
+            {
+                client.BaseAddress = new("https://api.acoustid.org/v2/");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.OpenSubtitles, client =>
-        {
-            client.BaseAddress = new("https://api.opensubtitles.org/xml-rpc");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.Timeout = defaultTimeout;
-        });
+        services.AddHttpClient(
+            HttpClientNames.OpenSubtitles,
+            client =>
+            {
+                client.BaseAddress = new("https://api.opensubtitles.org/xml-rpc");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("text/xml"));
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.Timeout = defaultTimeout;
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.FanArt, client =>
-        {
-            client.BaseAddress = new("https://webservice.fanart.tv/v3/");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        });
+        services.AddHttpClient(
+            HttpClientNames.FanArt,
+            client =>
+            {
+                client.BaseAddress = new("https://webservice.fanart.tv/v3/");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.FanArtImage, client =>
-        {
-            client.BaseAddress = new("https://assets.fanart.tv");
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.DefaultRequestHeaders.Add("Accept", "image/*");
-        });
+        services.AddHttpClient(
+            HttpClientNames.FanArtImage,
+            client =>
+            {
+                client.BaseAddress = new("https://assets.fanart.tv");
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("Accept", "image/*");
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.CoverArt, client =>
-        {
-            client.BaseAddress = new("https://coverartarchive.org/");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-        });
+        services.AddHttpClient(
+            HttpClientNames.CoverArt,
+            client =>
+            {
+                client.BaseAddress = new("https://coverartarchive.org/");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.CoverArtImage, client =>
-        {
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.DefaultRequestHeaders.Add("Accept", "image/*");
-        });
+        services.AddHttpClient(
+            HttpClientNames.CoverArtImage,
+            client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("Accept", "image/*");
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.Lrclib, client =>
-        {
-            client.BaseAddress = new("https://lrclib.net/api/get");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
-        });
+        services.AddHttpClient(
+            HttpClientNames.Lrclib,
+            client =>
+            {
+                client.BaseAddress = new("https://lrclib.net/api/get");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", "anonymous");
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.MusixMatch, client =>
-        {
-            client.BaseAddress = new("https://apic-desktop.musixmatch.com/ws/1.1/");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.DefaultRequestHeaders.Add("authority", "apic-desktop.musixmatch.com");
-            client.DefaultRequestHeaders.Add("cookie", "x-mxm-token-guid=");
-        });
+        services.AddHttpClient(
+            HttpClientNames.MusixMatch,
+            client =>
+            {
+                client.BaseAddress = new("https://apic-desktop.musixmatch.com/ws/1.1/");
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("authority", "apic-desktop.musixmatch.com");
+                client.DefaultRequestHeaders.Add("cookie", "x-mxm-token-guid=");
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.Tadb, client =>
-        {
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.Timeout = defaultTimeout;
-        });
+        services.AddHttpClient(
+            HttpClientNames.Tadb,
+            client =>
+            {
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new("application/json"));
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.Timeout = defaultTimeout;
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.NoMercyImage, client =>
-        {
-            client.BaseAddress = new("https://image.nomercy.tv/");
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.DefaultRequestHeaders.Add("Accept", "image/*");
-            client.Timeout = defaultTimeout;
-        });
+        services.AddHttpClient(
+            HttpClientNames.NoMercyImage,
+            client =>
+            {
+                client.BaseAddress = new("https://image.nomercy.tv/");
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.DefaultRequestHeaders.Add("Accept", "image/*");
+                client.Timeout = defaultTimeout;
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.KitsuIo, client =>
-        {
-            client.BaseAddress = new("https://kitsu.io/api/edge/");
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
-        });
+        services.AddHttpClient(
+            HttpClientNames.KitsuIo,
+            client =>
+            {
+                client.BaseAddress = new("https://kitsu.io/api/edge/");
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(Config.UserAgent);
+            }
+        );
 
-        services.AddHttpClient(HttpClientNames.General, client =>
-        {
-            client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
-            client.Timeout = defaultTimeout;
-        });
+        services.AddHttpClient(
+            HttpClientNames.General,
+            client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
+                client.Timeout = defaultTimeout;
+            }
+        );
     }
 
     private static void ConfigureCronJobs(IServiceCollection services)
@@ -239,7 +288,6 @@ public static class ServiceConfiguration
         // TODO: Remove after all palettes are regenerated with the new Median Cut algorithm
         services.RegisterCronJob<ReprocessAllPalettesCronJob>("reprocess-all-palettes-job");
     }
-    
 
     private static void ConfigureCoreServices(IServiceCollection services)
     {
@@ -257,14 +305,19 @@ public static class ServiceConfiguration
 
         // Register Event Bus with audit logging and event audit trail
         InMemoryEventBus innerBus = new();
-        LoggingEventBusDecorator loggingBus = new(innerBus, message => Logger.App(message, Serilog.Events.LogEventLevel.Verbose));
-        EventAuditLog auditLog = new(new()
-        {
-            Enabled = true,
-            MaxEntries = 10_000,
-            CompactionPercentage = 0.25,
-            ExcludedEventTypes = ["EncodingProgressEvent", "PlaybackProgressEvent"]
-        });
+        LoggingEventBusDecorator loggingBus = new(
+            innerBus,
+            message => Logger.App(message, Serilog.Events.LogEventLevel.Verbose)
+        );
+        EventAuditLog auditLog = new(
+            new()
+            {
+                Enabled = true,
+                MaxEntries = 10_000,
+                CompactionPercentage = 0.25,
+                ExcludedEventTypes = ["EncodingProgressEvent", "PlaybackProgressEvent"],
+            }
+        );
         AuditingEventBusDecorator eventBus = new(loggingBus, auditLog);
         services.AddSingleton<IEventBus>(eventBus);
         services.AddSingleton(auditLog);
@@ -293,15 +346,19 @@ public static class ServiceConfiguration
         services.AddSingleton<IClientMessenger, ClientMessenger>();
 
         // Connectivity strategies (ordered by priority)
-        services.AddSingleton<IConnectivityStrategy>(sp =>
-            new PortForwardStrategy((NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>()));
+        services.AddSingleton<IConnectivityStrategy>(sp => new PortForwardStrategy(
+            (NetworkDiscovery)sp.GetRequiredService<INetworkDiscovery>()
+        ));
         services.AddSingleton<IConnectivityStrategy, StunHolePunchStrategy>();
-        services.AddSingleton<IConnectivityStrategy>(sp =>
-            new CloudflareTunnelStrategy(Register.GetTunnelAvailability));
+        services.AddSingleton<IConnectivityStrategy>(sp => new CloudflareTunnelStrategy(
+            Register.GetTunnelAvailability
+        ));
 
         // Connectivity manager (replaces ServerRegistrationService + CloudflareTunnelService)
         services.AddSingleton<IConnectivityManager, ConnectivityManager>();
-        services.AddHostedService(sp => (ConnectivityManager)sp.GetRequiredService<IConnectivityManager>());
+        services.AddHostedService(sp =>
+            (ConnectivityManager)sp.GetRequiredService<IConnectivityManager>()
+        );
 
         // Network change monitor
         services.AddSingleton<NetworkChangeMonitor>();
@@ -320,17 +377,24 @@ public static class ServiceConfiguration
 
         services.AddDbContext<MediaContext>(optionsAction =>
         {
-            optionsAction.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+            optionsAction.UseSqlite(
+                $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
+                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+            );
             optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
         });
 
-        services.AddDbContextFactory<MediaContext>(optionsAction =>
-        {
-            optionsAction.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
-                o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
-            optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
-        }, ServiceLifetime.Scoped);
+        services.AddDbContextFactory<MediaContext>(
+            optionsAction =>
+            {
+                optionsAction.UseSqlite(
+                    $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True;",
+                    o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                );
+                optionsAction.AddInterceptors(new SqliteNormalizeSearchInterceptor());
+            },
+            ServiceLifetime.Scoped
+        );
 
         // Add Repositories
         services.AddScoped<HomeRepository>();
@@ -388,7 +452,6 @@ public static class ServiceConfiguration
         services.AddScoped<ILocalizer, Localizer>();
     }
 
-    
     private static void ConfigureLogging(IServiceCollection services)
     {
         services.AddLogging(logging =>
@@ -401,29 +464,39 @@ public static class ServiceConfiguration
     private static void ConfigureAuth(IServiceCollection services)
     {
         // Configure Authorization
-        services.AddAuthorizationBuilder()
-            .AddPolicy("api", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.AddAuthenticationSchemes(IdentityConstants.BearerScheme);
-                policy.RequireClaim("scope", "openid", "profile");
-                policy.AddRequirements(new AssertionRequirement(context =>
+        services
+            .AddAuthorizationBuilder()
+            .AddPolicy(
+                "api",
+                policy =>
                 {
-                    User? user = ClaimsPrincipleExtensions.Users
-                        .FirstOrDefault(user =>
-                            user.Id == Guid.Parse(context.User.FindFirstValue(ClaimTypes.NameIdentifier) ??
-                                                  string.Empty));
+                    policy.RequireAuthenticatedUser();
+                    policy.AddAuthenticationSchemes(IdentityConstants.BearerScheme);
+                    policy.RequireClaim("scope", "openid", "profile");
+                    policy.AddRequirements(
+                        new AssertionRequirement(context =>
+                        {
+                            User? user = ClaimsPrincipleExtensions.Users.FirstOrDefault(user =>
+                                user.Id
+                                == Guid.Parse(
+                                    context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                                        ?? string.Empty
+                                )
+                            );
 
-                    Logger.App($"User: {user?.Name ?? "Unknown"}");
-                    return user is not null;
-                }));
-            });
+                            Logger.App($"User: {user?.Name ?? "Unknown"}");
+                            return user is not null;
+                        })
+                    );
+                }
+            );
 
         // Eagerly load cached signing key so it's available before auth init completes
         OfflineJwksCache.LoadCachedPublicKey();
 
         // Configure Authentication
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
                 options.Authority = Config.AuthBaseUrl;
@@ -433,17 +506,21 @@ public static class ServiceConfiguration
                 // Enable offline token validation via cached signing keys
                 options.TokenValidationParameters.ValidateIssuerSigningKey = true;
                 options.TokenValidationParameters.ValidIssuer = Config.AuthBaseUrl;
-                options.TokenValidationParameters.IssuerSigningKeyResolver =
-                    (token, securityToken, kid, parameters) =>
-                    {
-                        // When OIDC metadata fetch fails, the default key resolver returns nothing.
-                        // Fall back to cached public key for offline validation.
-                        RsaSecurityKey? cachedKey = OfflineJwksCache.CachedSigningKey;
-                        if (cachedKey is not null)
-                            return [cachedKey];
+                options.TokenValidationParameters.IssuerSigningKeyResolver = (
+                    token,
+                    securityToken,
+                    kid,
+                    parameters
+                ) =>
+                {
+                    // When OIDC metadata fetch fails, the default key resolver returns nothing.
+                    // Fall back to cached public key for offline validation.
+                    RsaSecurityKey? cachedKey = OfflineJwksCache.CachedSigningKey;
+                    if (cachedKey is not null)
+                        return [cachedKey];
 
-                        return [];
-                    };
+                    return [];
+                };
 
                 options.Events = new()
                 {
@@ -452,10 +529,11 @@ public static class ServiceConfiguration
                         StringValues accessToken = context.Request.Query["access_token"];
                         string[] result = accessToken.ToString().Split('&');
 
-                        if (result.Length > 0 && !string.IsNullOrEmpty(result[0])) context.Token = result[0];
+                        if (result.Length > 0 && !string.IsNullOrEmpty(result[0]))
+                            context.Token = result[0];
 
                         return Task.CompletedTask;
-                    }
+                    },
                 };
             });
     }
@@ -463,9 +541,10 @@ public static class ServiceConfiguration
     private static void ConfigureApi(IServiceCollection services)
     {
         ConfigureApiVersioning(services);
-            
+
         // Add Controllers and JSON Options
-        services.AddControllers(options =>
+        services
+            .AddControllers(options =>
             {
                 options.EnableEndpointRouting = true;
             })
@@ -489,27 +568,35 @@ public static class ServiceConfiguration
         services.AddEndpointsApiExplorer();
 
         services.AddHttpContextAccessor();
-        services.AddSignalR(o =>
+        services
+            .AddSignalR(o =>
             {
                 o.EnableDetailedErrors = Config.IsDev;
                 o.MaximumReceiveMessageSize = 2 * 1024 * 1024; // 2MB — realistic max is ~1MB for large playlists
 
                 o.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
                 o.KeepAliveInterval = TimeSpan.FromSeconds(15);
-                
+
                 // Add error logging filter for invalid method calls and wrong arguments
                 o.AddFilter<HubErrorLoggingFilter>();
             })
-            .AddNewtonsoftJsonProtocol(options => { options.PayloadSerializerSettings = JsonHelper.Settings; });
+            .AddNewtonsoftJsonProtocol(options =>
+            {
+                options.PayloadSerializerSettings = JsonHelper.Settings;
+            });
 
-        services.AddResponseCompression(options => { options.EnableForHttps = true; });
+        services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+        });
 
         SwaggerConfiguration.AddSwagger(services);
     }
 
     private static void ConfigureApiVersioning(IServiceCollection services)
     {
-        services.AddApiVersioning(config =>
+        services
+            .AddApiVersioning(config =>
             {
                 config.ReportApiVersions = true;
                 config.AssumeDefaultVersionWhenUnspecified = true;
@@ -524,13 +611,13 @@ public static class ServiceConfiguration
             });
     }
 
-
     private static void ConfigureCors(IServiceCollection services)
     {
         // Configure CORS
         services.AddCors(options =>
         {
-            options.AddPolicy("AllowNoMercyOrigins",
+            options.AddPolicy(
+                "AllowNoMercyOrigins",
                 builder =>
                 {
                     List<string> origins =
@@ -539,7 +626,7 @@ public static class ServiceConfiguration
                         "https://*.nomercy.tv",
                         "https://cast.nomercy.tv",
                         "https://hlsjs.video-dev.org",
-                        "http://localhost:7625"
+                        "http://localhost:7625",
                     ];
 
                     if (Config.IsDev)
@@ -559,8 +646,8 @@ public static class ServiceConfiguration
                         .WithHeaders("Access-Control-Allow-Private-Network", "true")
                         .WithHeaders("Access-Control-Allow-Headers", "*")
                         .AllowAnyHeader();
-                });
+                }
+            );
         });
     }
 }
-

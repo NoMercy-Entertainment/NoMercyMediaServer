@@ -14,22 +14,20 @@ public static class FolderRootsSeed
 {
     public static async Task Init(this MediaContext dbContext)
     {
-        if (!File.Exists(AppFiles.FolderRootsSeedFile)) return;
+        if (!File.Exists(AppFiles.FolderRootsSeedFile))
+            return;
 
         Logger.Setup("Adding Folder Roots", LogEventLevel.Verbose);
 
-        Folder[] folders = File.ReadAllTextAsync(AppFiles.FolderRootsSeedFile)
-            .Result.FromJson<Folder[]>() ?? [];
-        
+        Folder[] folders =
+            File.ReadAllTextAsync(AppFiles.FolderRootsSeedFile).Result.FromJson<Folder[]>() ?? [];
+
         try
         {
-            await dbContext.Folders.UpsertRange(folders)
+            await dbContext
+                .Folders.UpsertRange(folders)
                 .On(v => new { v.Id })
-                .WhenMatched((vs, vi) => new()
-                {
-                    Id = vi.Id,
-                    Path = vi.Path
-                })
+                .WhenMatched((vs, vi) => new() { Id = vi.Id, Path = vi.Path })
                 .RunAsync();
         }
         catch (Exception e)
@@ -41,6 +39,6 @@ public static class FolderRootsSeed
         foreach (Folder folder in folders.Where(f => Directory.Exists(f.Path)))
             DynamicStaticFilesMiddleware.AddPath(folder.Id, folder.Path);
 
-        ClaimsPrincipleExtensions.RefreshFolderIds(dbContext);
+        await ClaimsPrincipleExtensions.RefreshFolderIdsAsync(dbContext);
     }
 }

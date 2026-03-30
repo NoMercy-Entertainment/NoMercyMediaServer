@@ -1,33 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Product>NoMercy Helper Functions</Product>
+    <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
+    <Platforms>AnyCPU;x64;x86;ARM32</Platforms>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <Product>NoMercy Helper Functions</Product>
-        <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
-        <Platforms>AnyCPU;x64;x86;ARM32</Platforms>
-    </PropertyGroup>
-    <PropertyGroup>
-        <IsTestProject>false</IsTestProject>
-    </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="HeyRed.ImageSharp.Heif" />
+    <PackageReference Include="LibHeif.Native" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="SecureStore" />
+    <PackageReference Include="Serilog.Expressions" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="HeyRed.ImageSharp.Heif"/>
-        <PackageReference Include="LibHeif.Native"/>
-        <PackageReference Include="LibreHardwareMonitorLib" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc"/>
-        <PackageReference Include="Newtonsoft.Json" />
-        <PackageReference Include="SecureStore"/>
-        <PackageReference Include="Serilog.Expressions" />
-        <PackageReference Include="Serilog.Formatting.Compact"/>
-        <PackageReference Include="Serilog.Sinks.Console" />
-        <PackageReference Include="Serilog.Sinks.File" />
-        <PackageReference Include="SixLabors.ImageSharp" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
-        <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
-        <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
+    <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
+    <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+  </ItemGroup>
 </Project>

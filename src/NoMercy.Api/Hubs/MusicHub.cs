@@ -32,7 +32,8 @@ public class MusicHub : ConnectionHub
         MusicPlayerStateManager musicPlayerStateManager,
         MusicDeviceManager musicDeviceManager,
         MusicPlaylistManager musicPlaylistManager,
-        MusicPlaybackCommandHandler commandHandler)
+        MusicPlaybackCommandHandler commandHandler
+    )
         : base(httpContextAccessor, contextFactory, connectedClients)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -55,7 +56,8 @@ public class MusicHub : ConnectionHub
     public async Task StartPlaybackCommand(string type, Guid listId, Guid trackId)
     {
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
@@ -81,8 +83,13 @@ public class MusicHub : ConnectionHub
         }
     }
 
-    private async Task HandlePlaybackState(User user, string type, Guid listId, PlaylistTrackDto item,
-        List<PlaylistTrackDto> playlist)
+    private async Task HandlePlaybackState(
+        User user,
+        string type,
+        Guid listId,
+        PlaylistTrackDto item,
+        List<PlaylistTrackDto> playlist
+    )
     {
         MusicPlayerState? playerState = _musicPlayerStateManager.GetState(user.Id);
 
@@ -110,11 +117,22 @@ public class MusicHub : ConnectionHub
             await HandlePlaylistChange(user, playerState, type, listId, item, playlist);
     }
 
-    private async Task HandleNewPlayerState(User user, string type, Guid listId, PlaylistTrackDto item,
-        List<PlaylistTrackDto> playlist)
+    private async Task HandleNewPlayerState(
+        User user,
+        string type,
+        Guid listId,
+        PlaylistTrackDto item,
+        List<PlaylistTrackDto> playlist
+    )
     {
         Device device = GetCurrentDevice(user);
-        MusicPlayerState musicPlayerState = MusicPlayerStateFactory.Create(device, item, playlist, type, listId);
+        MusicPlayerState musicPlayerState = MusicPlayerStateFactory.Create(
+            device,
+            item,
+            playlist,
+            type,
+            listId
+        );
         musicPlayerState.IgnoreCurrentTimeUntil = DateTime.UtcNow.AddSeconds(1);
 
         _musicPlaybackService.RemoveTimer(user.Id);
@@ -127,7 +145,9 @@ public class MusicHub : ConnectionHub
     private Device GetCurrentDevice(User user)
     {
         if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
-            throw new InvalidOperationException($"Connection {Context.ConnectionId} not found in ConnectedClients");
+            throw new InvalidOperationException(
+                $"Connection {Context.ConnectionId} not found in ConnectedClients"
+            );
 
         CurrentDevice[user.Id] = device;
 
@@ -136,10 +156,16 @@ public class MusicHub : ConnectionHub
 
     private static bool IsSamePlaylist(MusicPlayerState state, string type, Guid listId)
     {
-        return state.CurrentItem is not null && state.CurrentList.ToString().Contains($"{type}/{listId}");
+        return state.CurrentItem is not null
+            && state.CurrentList.ToString().Contains($"{type}/{listId}");
     }
 
-    private static bool IsSamePlaylistAndTrack(MusicPlayerState state, string type, Guid listId, Guid itemId)
+    private static bool IsSamePlaylistAndTrack(
+        MusicPlayerState state,
+        string type,
+        Guid listId,
+        Guid itemId
+    )
     {
         return IsSamePlaylist(state, type, listId) && state.CurrentItem?.Id == itemId;
     }
@@ -173,10 +199,10 @@ public class MusicHub : ConnectionHub
             await _musicPlaybackService.UpdatePlaybackState(user, state);
             return;
         }
-        
+
         // Find the track in the current playlist
         int playlistIndex = state.Playlist.FindIndex(t => t.Id == item.Id);
-        
+
         if (playlistIndex != -1)
         {
             // Track is in the upcoming playlist
@@ -185,16 +211,16 @@ public class MusicHub : ConnectionHub
             {
                 state.Backlog.Add(state.CurrentItem);
             }
-            
+
             // Add all tracks BEFORE the selected one to backlog (they're being skipped over)
             for (int i = 0; i < playlistIndex; i++)
             {
                 state.Backlog.Add(state.Playlist[i]);
             }
-            
+
             // Remove everything up to and including the selected track
             state.Playlist.RemoveRange(0, playlistIndex + 1);
-            
+
             // Set the selected track as current
             // The remaining playlist continues naturally from here
             state.CurrentItem = item;
@@ -234,14 +260,20 @@ public class MusicHub : ConnectionHub
                 return;
             }
         }
-        
+
         UpdateActionsDisallows(state);
         _musicPlaybackService.StartPlaybackTimer(user);
         await _musicPlaybackService.UpdatePlaybackState(user, state);
     }
 
-    private async Task HandlePlaylistChange(User user, MusicPlayerState state, string type, Guid listId,
-        PlaylistTrackDto item, List<PlaylistTrackDto> playlist)
+    private async Task HandlePlaylistChange(
+        User user,
+        MusicPlayerState state,
+        string type,
+        Guid listId,
+        PlaylistTrackDto item,
+        List<PlaylistTrackDto> playlist
+    )
     {
         _musicPlaybackService.RemoveTimer(user.Id);
 
@@ -256,13 +288,19 @@ public class MusicHub : ConnectionHub
 
     private void UpdateDeviceInfo(MusicPlayerState state)
     {
-        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device)) return;
+        if (!ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? device))
+            return;
         state.DeviceId = device.DeviceId;
         state.VolumePercentage = device.VolumePercent;
     }
 
-    private void UpdatePlaylistInfo(MusicPlayerState state, string type, Guid listId, PlaylistTrackDto item,
-        List<PlaylistTrackDto> playlist)
+    private void UpdatePlaylistInfo(
+        MusicPlayerState state,
+        string type,
+        Guid listId,
+        PlaylistTrackDto item,
+        List<PlaylistTrackDto> playlist
+    )
     {
         (List<PlaylistTrackDto> before, List<PlaylistTrackDto> after) =
             _musicPlaylistManager.SplitPlaylist(playlist, item.Id);
@@ -300,18 +338,20 @@ public class MusicHub : ConnectionHub
                 Muting = false,
                 TogglingShuffle = false,
                 TogglingRepeatContext = false,
-                TogglingRepeatTrack = false
-            }
+                TogglingRepeatTrack = false,
+            },
         };
     }
 
     public MusicPlayerState? GetStateCommand()
     {
         User? user = Context.User.User();
-        if (user is null) return null;
+        if (user is null)
+            return null;
 
         _musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState);
-        if (playerState is null) return null;
+        if (playerState is null)
+            return null;
 
         return playerState;
     }
@@ -319,7 +359,8 @@ public class MusicHub : ConnectionHub
     public async Task PlaybackCommand(string command, object? data = null)
     {
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         SemaphoreSlim userLock = GetUserLock(user.Id);
         await userLock.WaitAsync();
@@ -342,7 +383,8 @@ public class MusicHub : ConnectionHub
 
             UpdateActionsDisallows(state);
 
-            bool isSkipCommand = command.Equals("next", StringComparison.OrdinalIgnoreCase)
+            bool isSkipCommand =
+                command.Equals("next", StringComparison.OrdinalIgnoreCase)
                 || command.Equals("previous", StringComparison.OrdinalIgnoreCase);
 
             if (isSkipCommand)
@@ -359,11 +401,13 @@ public class MusicHub : ConnectionHub
     public async Task CurrentTimeCommand(int time)
     {
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
-            if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil) return;
+            if (DateTime.UtcNow < playerState.IgnoreCurrentTimeUntil)
+                return;
 
             playerState.Time = time * 1000;
 
@@ -378,11 +422,17 @@ public class MusicHub : ConnectionHub
     public async Task ChangeDeviceCommand(string deviceId)
     {
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         List<Device> connectedDevices = Devices();
 
-        await _clientMessenger.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
+        await _clientMessenger.SendTo(
+            "ConnectedDevicesState",
+            "musicHub",
+            user.Id,
+            connectedDevices
+        );
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
@@ -404,10 +454,10 @@ public class MusicHub : ConnectionHub
                     {
                         Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                         BroadcastStatus = MusicEventType.BroadcastUnavailable,
-                        DeviceId = deviceId
-                    }
-                }
-            ]
+                        DeviceId = deviceId,
+                    },
+                },
+            ],
         };
 
         await _clientMessenger.SendTo("ChangeDevice", "musicHub", user.Id, payload);
@@ -416,7 +466,8 @@ public class MusicHub : ConnectionHub
     public async Task ChangeVolumeCommand(int volume)
     {
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
@@ -430,13 +481,16 @@ public class MusicHub : ConnectionHub
         }
 
         if (ConnectedClients.Clients.TryGetValue(Context.ConnectionId, out Client? client))
-            if (CurrentDevice.TryGetValue(user.Id, out Device? device) && device.DeviceId == client.DeviceId)
+            if (
+                CurrentDevice.TryGetValue(user.Id, out Device? device)
+                && device.DeviceId == client.DeviceId
+            )
             {
                 device.VolumePercent = volume;
 
                 await using MediaContext mediaContext = new();
-                await mediaContext.Devices
-                    .Where(d => d.DeviceId == device.DeviceId)
+                await mediaContext
+                    .Devices.Where(d => d.DeviceId == device.DeviceId)
                     .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, volume));
             }
     }
@@ -446,13 +500,19 @@ public class MusicHub : ConnectionHub
         await base.OnConnectedAsync();
 
         User? user = Context.User.User();
-        if (user is null) return;
+        if (user is null)
+            return;
 
         await Task.Delay(500);
 
         // Send updated device list to all connected devices for this user
         List<Device> connectedDevices = Devices();
-        await _clientMessenger.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
+        await _clientMessenger.SendTo(
+            "ConnectedDevicesState",
+            "musicHub",
+            user.Id,
+            connectedDevices
+        );
 
         if (_musicPlayerStateManager.TryGetValue(user.Id, out MusicPlayerState? playerState))
         {
@@ -462,7 +522,6 @@ public class MusicHub : ConnectionHub
         else
         {
             await _musicPlaybackService.UpdatePlaybackState(user, new());
-
         }
 
         Logger.Socket("Music client connected");
@@ -471,7 +530,8 @@ public class MusicHub : ConnectionHub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         User? user = Context.User.User();
-        if (user == null) return;
+        if (user == null)
+            return;
 
         bool stopPlayback = false;
         bool wasCurrentDevice = false;
@@ -495,12 +555,17 @@ public class MusicHub : ConnectionHub
             List<Device> connectedDevices = Devices();
 
             // Send updated device list to all remaining connected devices
-            await _clientMessenger.SendTo("ConnectedDevicesState", "musicHub", user.Id, connectedDevices);
+            await _clientMessenger.SendTo(
+                "ConnectedDevicesState",
+                "musicHub",
+                user.Id,
+                connectedDevices
+            );
 
             if (connectedDevices.Count == 0)
             {
                 CurrentDevice.TryRemove(user.Id, out _);
-                
+
                 playerState.DeviceId = null;
                 playerState.PlayState = false;
                 playerState.Actions = new()
@@ -516,8 +581,8 @@ public class MusicHub : ConnectionHub
                         Muting = true,
                         TogglingShuffle = true,
                         TogglingRepeatContext = true,
-                        TogglingRepeatTrack = true
-                    }
+                        TogglingRepeatTrack = true,
+                    },
                 };
             }
             else if (stopPlayback)
@@ -527,7 +592,7 @@ public class MusicHub : ConnectionHub
                 {
                     CurrentDevice.TryRemove(user.Id, out _);
                 }
-                
+
                 playerState.PlayState = false;
                 playerState.Actions = new()
                 {
@@ -535,17 +600,22 @@ public class MusicHub : ConnectionHub
                     {
                         Pausing = true,
                         Resuming = false,
-                        Previous = playerState.CurrentItem == null || playerState.Backlog.Count <= 1,
-                        Next = playerState.CurrentItem == null || 
-                               (playerState.Playlist.IndexOf(playerState.CurrentItem) >= playerState.Playlist.Count - 1 && 
-                                playerState.Repeat == "off"),
+                        Previous =
+                            playerState.CurrentItem == null || playerState.Backlog.Count <= 1,
+                        Next =
+                            playerState.CurrentItem == null
+                            || (
+                                playerState.Playlist.IndexOf(playerState.CurrentItem)
+                                    >= playerState.Playlist.Count - 1
+                                && playerState.Repeat == "off"
+                            ),
                         Seeking = false,
                         Stopping = false,
                         Muting = false,
                         TogglingShuffle = false,
                         TogglingRepeatContext = false,
-                        TogglingRepeatTrack = false
-                    }
+                        TogglingRepeatTrack = false,
+                    },
                 };
             }
         }

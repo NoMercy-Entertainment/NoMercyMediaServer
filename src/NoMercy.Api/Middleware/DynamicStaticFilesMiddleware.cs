@@ -12,12 +12,30 @@ namespace NoMercy.Api.Middleware;
 public class DynamicStaticFilesMiddleware(RequestDelegate next)
 {
     private static readonly ConcurrentDictionary<Ulid, PhysicalFileProvider> Providers = new();
-    
+
     // Define streamable media file extensions
-    private static readonly HashSet<string> StreamableExtensions = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> StreamableExtensions = new(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
-        ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".3gp", ".ogv",
-        ".mp3", ".aac", ".flac", ".ogg", ".wav", ".wma", ".m4a", ".opus"
+        ".mp4",
+        ".mkv",
+        ".avi",
+        ".mov",
+        ".wmv",
+        ".flv",
+        ".webm",
+        ".m4v",
+        ".3gp",
+        ".ogv",
+        ".mp3",
+        ".aac",
+        ".flac",
+        ".ogg",
+        ".wav",
+        ".wma",
+        ".m4a",
+        ".opus",
     };
 
     public async Task InvokeAsync(HttpContext context)
@@ -29,21 +47,25 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         }
 
         string? pathValue = context.Request.Path.Value;
-        string[] pathSegments = context.Request.Path.ToString().Split('/', StringSplitOptions.RemoveEmptyEntries);
-        
+        string[] pathSegments = context
+            .Request.Path.ToString()
+            .Split('/', StringSplitOptions.RemoveEmptyEntries);
+
         if (pathSegments.Length == 0)
         {
             await next(context);
             return;
         }
-        
+
         string rootPath = pathSegments[0];
-        
+
         // Allow API endpoints, Swagger, and other system paths to pass through
-        if (rootPath.Equals("api", StringComparison.OrdinalIgnoreCase) || 
-            rootPath.Equals("index.html", StringComparison.OrdinalIgnoreCase) || 
-            rootPath.StartsWith("swagger", StringComparison.OrdinalIgnoreCase) || 
-            rootPath.Equals("images", StringComparison.OrdinalIgnoreCase))
+        if (
+            rootPath.Equals("api", StringComparison.OrdinalIgnoreCase)
+            || rootPath.Equals("index.html", StringComparison.OrdinalIgnoreCase)
+            || rootPath.StartsWith("swagger", StringComparison.OrdinalIgnoreCase)
+            || rootPath.Equals("images", StringComparison.OrdinalIgnoreCase)
+        )
         {
             await next(context);
             return;
@@ -73,14 +95,17 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         }
         catch (Exception ex)
         {
-            Logger.App($"DynamicStaticFilesMiddleware unhandled exception for path '{context.Request.Path}': {ex.Message}");
+            Logger.App(
+                $"DynamicStaticFilesMiddleware unhandled exception for path '{context.Request.Path}': {ex.Message}"
+            );
             await next(context);
         }
     }
 
     private static async Task ServeFile(HttpContext context, IFileInfo file)
     {
-        if (file.PhysicalPath is not { } filePhysicalPath) return;
+        if (file.PhysicalPath is not { } filePhysicalPath)
+            return;
 
         FileInfo fileInfo = new(filePhysicalPath);
         long fileLength = fileInfo.Length;
@@ -88,7 +113,10 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         context.Response.ContentType = MimeTypes.GetMimeTypeFromFile(file.PhysicalPath);
 
         bool isStreamableMedia = IsStreamableMedia(filePhysicalPath);
-        bool hasRangeRequest = context.Request.Headers.TryGetValue("Range", out StringValues rangeValue);
+        bool hasRangeRequest = context.Request.Headers.TryGetValue(
+            "Range",
+            out StringValues rangeValue
+        );
 
         // Force partial content for streamable media files or when range is requested
         if (!hasRangeRequest && !isStreamableMedia)
@@ -106,15 +134,14 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
 
         if (hasRangeRequest)
         {
-            string?[] ranges = rangeValue.ToString()
-                .Replace("bytes=", "")
-                .Split('-')
-                .ToArray();
+            string?[] ranges = rangeValue.ToString().Replace("bytes=", "").Split('-').ToArray();
 
             if (!long.TryParse(ranges[0], out start))
             {
                 context.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                context.Response.Headers.ContentRange = new ContentRangeHeaderValue(fileLength).ToString();
+                context.Response.Headers.ContentRange = new ContentRangeHeaderValue(
+                    fileLength
+                ).ToString();
                 return;
             }
 
@@ -124,7 +151,9 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
                 if (!long.TryParse(ranges[1], out end))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-                    context.Response.Headers.ContentRange = new ContentRangeHeaderValue(fileLength).ToString();
+                    context.Response.Headers.ContentRange = new ContentRangeHeaderValue(
+                        fileLength
+                    ).ToString();
                     return;
                 }
             }
@@ -148,18 +177,25 @@ public class DynamicStaticFilesMiddleware(RequestDelegate next)
         long length = end - start + 1;
 
         context.Response.StatusCode = (int)HttpStatusCode.PartialContent;
-        context.Response.Headers.ContentRange = new ContentRangeHeaderValue(start, end, fileLength).ToString();
+        context.Response.Headers.ContentRange = new ContentRangeHeaderValue(
+            start,
+            end,
+            fileLength
+        ).ToString();
         context.Response.Headers.AcceptRanges = "bytes";
         context.Response.ContentLength = length;
 
         await using FileStream fs = File.OpenRead(file.PhysicalPath);
-        
+
         fs.Seek(start, SeekOrigin.Begin);
         byte[] buffer = new byte[64 * 1024];
         int bytesRead;
         long bytesToRead = length;
 
-        while ((bytesRead = fs.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead))) > 0 && bytesToRead > 0)
+        while (
+            (bytesRead = fs.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead))) > 0
+            && bytesToRead > 0
+        )
         {
             await context.Response.Body.WriteAsync(buffer, 0, bytesRead);
             bytesToRead -= bytesRead;
