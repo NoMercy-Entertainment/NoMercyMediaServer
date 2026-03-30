@@ -35,10 +35,10 @@ public class MovieImportJob : AbstractMediaJob
         MovieRepository movieRepository = new(context);
         MovieManager movieManager = new(movieRepository, jobDispatcher);
 
-        Library? movieLibrary = await context.Libraries
-            .Where(f => f.Id == LibraryId)
+        Library? movieLibrary = await context
+            .Libraries.Where(f => f.Id == LibraryId)
             .Include(f => f.FolderLibraries)
-            .ThenInclude(f => f.Folder)
+                .ThenInclude(f => f.Folder)
             .FirstOrDefaultAsync();
 
         if (movieLibrary is null)
@@ -50,38 +50,42 @@ public class MovieImportJob : AbstractMediaJob
         bool wasEmpty = !await context.LibraryMovie.AnyAsync(lm => lm.LibraryId == LibraryId);
 
         TmdbMovieAppends? movieAppends = await movieManager.Add(Id, movieLibrary);
-        if (movieAppends == null) return;
+        if (movieAppends == null)
+            return;
 
         if (EventBusProvider.IsConfigured)
         {
-            await EventBusProvider.Current.PublishAsync(new MediaAddedEvent
-            {
-                MediaId = Id,
-                MediaType = "movie",
-                Title = movieAppends.Title ?? $"Movie {Id}",
-                LibraryId = LibraryId
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new MediaAddedEvent
+                {
+                    MediaId = Id,
+                    MediaType = "movie",
+                    Title = movieAppends.Title ?? $"Movie {Id}",
+                    LibraryId = LibraryId,
+                }
+            );
         }
 
         if (movieAppends.BelongsToCollection != null)
-            jobDispatcher.DispatchJob<CollectionImportJob>(movieAppends.BelongsToCollection.Id, LibraryId);
+            jobDispatcher.DispatchJob<CollectionImportJob>(
+                movieAppends.BelongsToCollection.Id,
+                LibraryId
+            );
 
         jobDispatcher.DispatchJob<FileRescanJob>(Id, movieLibrary);
 
         Logger.App($"Movie {Id} added to library, extra data will be added in the background");
-        
+
         if (EventBusProvider.IsConfigured)
         {
-            await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-            {
-                QueryKey = ["base", "info", Id.ToString()]
-            });
+            await EventBusProvider.Current.PublishAsync(
+                new LibraryRefreshEvent { QueryKey = ["base", "info", Id.ToString()] }
+            );
 
             if (wasEmpty)
-                await EventBusProvider.Current.PublishAsync(new LibraryRefreshEvent
-                {
-                    QueryKey = ["libraries"]
-                });
+                await EventBusProvider.Current.PublishAsync(
+                    new LibraryRefreshEvent { QueryKey = ["libraries"] }
+                );
         }
     }
 }

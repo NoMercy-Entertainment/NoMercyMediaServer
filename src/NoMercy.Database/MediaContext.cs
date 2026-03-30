@@ -8,107 +8,116 @@ namespace NoMercy.Database;
 
 public class MediaContext : DbContext
 {
-    public MediaContext(DbContextOptions<MediaContext> options) : base(options)
+    public MediaContext(DbContextOptions<MediaContext> options)
+        : base(options)
     {
         //
     }
 
-    public MediaContext()
-    {
-
-    }
+    public MediaContext() { }
 
     [DbFunction("normalize_search", IsBuiltIn = true)]
-    public static string NormalizeSearch(string? input)
-        => throw new NotSupportedException("This method is for EF Core query translation only.");
+    public static string NormalizeSearch(string? input) =>
+        throw new NotSupportedException("This method is for EF Core query translation only.");
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
-        options.UseSqlite($"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True; Default Timeout=30;",
-            o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+        options.UseSqlite(
+            $"Data Source={AppFiles.MediaDatabase}; Pooling=True; Cache=Shared; Foreign Keys=True; Default Timeout=30;",
+            o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+        );
 
         if (Config.IsDev)
             options.EnableSensitiveDataLogging();
 
         options.AddInterceptors(
             new EntityBaseUpdatedAtInterceptor(),
-            new SqliteNormalizeSearchInterceptor());
+            new SqliteNormalizeSearchInterceptor()
+        );
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
 
-        configurationBuilder.Properties<string>()
-            .HaveMaxLength(256);
+        configurationBuilder.Properties<string>().HaveMaxLength(256);
 
-        configurationBuilder
-            .Properties<Ulid>()
-            .HaveConversion<UlidToStringConverter>();
+        configurationBuilder.Properties<Ulid>().HaveConversion<UlidToStringConverter>();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDbFunction(
-            typeof(MediaContext).GetMethod(nameof(NormalizeSearch), [typeof(string)])!);
+            typeof(MediaContext).GetMethod(nameof(NormalizeSearch), [typeof(string)])!
+        );
 
-        modelBuilder.Model.GetEntityTypes()
+        modelBuilder
+            .Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.Name is "CreatedAt" or "UpdatedAt")
             .ToList()
             .ForEach(p => p.SetDefaultValueSql("CURRENT_TIMESTAMP"));
 
-        modelBuilder.Model.GetEntityTypes()
+        // Default to Restrict to prevent accidental cascading deletes across the schema.
+        // Relationships that genuinely need cascading (e.g. owned/dependent records) are
+        // configured explicitly below with OnDelete(DeleteBehavior.Cascade).
+        modelBuilder
+            .Model.GetEntityTypes()
             .SelectMany(t => t.GetForeignKeys())
             .ToList()
-            .ForEach(p => p.DeleteBehavior = DeleteBehavior.Cascade);
+            .ForEach(p => p.DeleteBehavior = DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Cast>()
-            .Property(t => t.RoleId)
-            .IsRequired(false);
+        modelBuilder.Entity<Cast>().Property(t => t.RoleId).IsRequired(false);
 
-        modelBuilder.Entity<Crew>()
-            .Property(t => t.JobId)
-            .IsRequired(false);
+        modelBuilder.Entity<Crew>().Property(t => t.JobId).IsRequired(false);
 
-        modelBuilder.Entity<Metadata>()
+        // Metadata owns its AudioTrack — delete the track when metadata is removed.
+        modelBuilder
+            .Entity<Metadata>()
             .HasOne(m => m.AudioTrack)
             .WithOne()
             .HasForeignKey<Metadata>(m => m.AudioTrackId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Track>()
+        // Track owns its Metadata row — delete metadata when the track is removed.
+        modelBuilder
+            .Entity<Track>()
             .HasOne(t => t.Metadata)
             .WithMany()
             .HasForeignKey(t => t.MetadataId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Model.GetEntityTypes()
+        modelBuilder
+            .Model.GetEntityTypes()
             .SelectMany(t => t.GetProperties())
             .Where(p => p.ClrType == typeof(string))
             .ToList()
             .ForEach(p =>
             {
-                MaxLengthAttribute? maxLengthAttr = p.PropertyInfo
-                    ?.GetCustomAttribute<MaxLengthAttribute>();
+                MaxLengthAttribute? maxLengthAttr =
+                    p.PropertyInfo?.GetCustomAttribute<MaxLengthAttribute>();
                 if (maxLengthAttr is not null)
                     p.SetMaxLength(maxLengthAttr.Length);
             });
 
-        List<IMutableEntityType> entityTypes = modelBuilder.Model.GetEntityTypes()
-            .Where(t => t.ClrType.IsSubclassOf(typeof(Timestamps)) || t.ClrType == typeof(Timestamps))
+        List<IMutableEntityType> entityTypes = modelBuilder
+            .Model.GetEntityTypes()
+            .Where(t =>
+                t.ClrType.IsSubclassOf(typeof(Timestamps)) || t.ClrType == typeof(Timestamps)
+            )
             .ToList();
 
         foreach (IMutableEntityType entityType in entityTypes)
         {
             string? tableName = entityType.GetTableName();
-            modelBuilder.Entity(entityType.ClrType)
+            modelBuilder
+                .Entity(entityType.ClrType)
                 .ToTable(tb => tb.HasTrigger($"update_{tableName}_updated_at"));
         }
 
         base.OnModelCreating(modelBuilder);
     }
-    
+
     public virtual DbSet<ActivityLog> ActivityLogs { get; init; }
     public virtual DbSet<Cast> Casts { get; init; }
     public virtual DbSet<CertificationMovie> CertificationMovie { get; init; }
@@ -200,6 +209,6 @@ public class MediaContext : DbContext
     public virtual DbSet<AlbumReleaseGroup> AlbumReleaseGroup { get; init; }
     public virtual DbSet<ArtistReleaseGroup> ArtistReleaseGroup { get; init; }
     public virtual DbSet<MusicGenreReleaseGroup> MusicGenreReleaseGroup { get; init; }
-    
+
     public virtual DbSet<PlaybackPreference> PlaybackPreferences { get; init; }
 }

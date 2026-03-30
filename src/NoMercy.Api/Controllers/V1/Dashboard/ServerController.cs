@@ -6,18 +6,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
-using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Common;
+using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Events;
+using NoMercy.Events.Library;
 using NoMercy.Helpers;
 using NoMercy.Helpers.Extensions;
 using NoMercy.Helpers.Monitoring;
 using NoMercy.Helpers.Wallpaper;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
-using NoMercy.Events;
-using NoMercy.Events.Library;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
@@ -51,7 +51,8 @@ public class ServerController(
     IEventBus eventBus,
     IWallpaperService wallpaperService,
     INetworkDiscovery networkDiscovery,
-    IHttpClientFactory httpClientFactory) : BaseController
+    IHttpClientFactory httpClientFactory
+) : BaseController
 {
     private IHostApplicationLifetime ApplicationLifetime { get; } = appLifetime;
 
@@ -72,15 +73,13 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to access the setup");
 
-        List<Library> libraries = await context.Libraries
-            .Include(library => library.FolderLibraries)
-            .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .ThenInclude(folder => folder.EncoderProfileFolder)
-            .ThenInclude(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
-            .Include(library => library.LibraryUsers
-                .Where(x => x.UserId.Equals(userId))
-            )
-            .ThenInclude(libraryUser => libraryUser.User)
+        List<Library> libraries = await context
+            .Libraries.Include(library => library.FolderLibraries)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
+                    .ThenInclude(folder => folder.EncoderProfileFolder)
+                        .ThenInclude(encoderProfileFolder => encoderProfileFolder.EncoderProfile)
+            .Include(library => library.LibraryUsers.Where(x => x.UserId.Equals(userId)))
+                .ThenInclude(libraryUser => libraryUser.User)
             .ToListAsync();
 
         int libraryCount = libraries.Count;
@@ -95,16 +94,16 @@ public class ServerController(
             .Select(folderLibrary => folderLibrary.Folder)
             .Count(folder => folder.EncoderProfileFolder.Count > 0);
 
-        return Ok(new StatusResponseDto<SetupResponseDto>
-        {
-            Status = "ok",
-            Data = new()
+        return Ok(
+            new StatusResponseDto<SetupResponseDto>
             {
-                SetupComplete = libraryCount > 0
-                                && folderCount > 0
-                                && encoderProfileCount > 0
+                Status = "ok",
+                Data = new()
+                {
+                    SetupComplete = libraryCount > 0 && folderCount > 0 && encoderProfileCount > 0,
+                },
             }
-        });
+        );
     }
 
     [HttpPost]
@@ -127,25 +126,23 @@ public class ServerController(
         ApplicationLifetime.StopApplication();
         return Content("Done");
     }
-    
+
     public class InvalidateRequest
     {
         [JsonProperty("queryKey")]
         public dynamic[] QueryKey { get; set; } = [];
     }
-    
 
     [HttpPost]
     [Route("invalidate")]
     public async Task<IActionResult> Invalidate([FromBody] InvalidateRequest request)
     {
         if (!User.IsModerator())
-            return UnauthorizedResponse("You do not have permission to invalidate the library cache");
+            return UnauthorizedResponse(
+                "You do not have permission to invalidate the library cache"
+            );
 
-        await eventBus.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = request.QueryKey
-        });
+        await eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = request.QueryKey });
 
         return Content("Done");
     }
@@ -163,10 +160,7 @@ public class ServerController(
     [HttpGet("update/check")]
     public async Task<IActionResult> CheckForUpdate()
     {
-        return Ok(new
-        {
-            updateAvailable = await UpdateChecker.IsUpdateAvailableAsync()
-        });
+        return Ok(new { updateAvailable = await UpdateChecker.IsUpdateAvailableAsync() });
     }
 
     [HttpPost]
@@ -199,7 +193,9 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add files");
 
-        Library? library = await context.Libraries.FirstOrDefaultAsync(x => x.Id == request.LibraryId);
+        Library? library = await context.Libraries.FirstOrDefaultAsync(x =>
+            x.Id == request.LibraryId
+        );
 
         if (library == null)
             return NotFoundResponse("Library not found");
@@ -214,7 +210,8 @@ public class ServerController(
                     library.Id,
                     request.FolderId,
                     request.Files[0].Id.ToGuid(),
-                    directoryPath);
+                    directoryPath
+                );
 
                 return Ok(request);
             }
@@ -249,15 +246,13 @@ public class ServerController(
         {
             List<DirectoryTree> array = fileRepository.GetDirectoryTree(request.Folder);
 
-            return Ok(new StatusResponseDto<List<DirectoryTree>>
-            {
-                Status = "ok",
-                Data = array
-            });
+            return Ok(new StatusResponseDto<List<DirectoryTree>> { Status = "ok", Data = array });
         }
         catch (Exception)
         {
-            return InternalServerErrorResponse("Something went wrong retrieving the directory tree");
+            return InternalServerErrorResponse(
+                "Something went wrong retrieving the directory tree"
+            );
         }
     }
 
@@ -270,39 +265,46 @@ public class ServerController(
 
         if (request.Type == "music")
         {
-            List<FileItem> fileList = await FileRepository.GetMusicBrainzReleasesInDirectory(request.Folder);
-            return Ok(new DataResponseDto<FileListResponseDto>
-            {
-                Data = new()
+            List<FileItem> fileList = await FileRepository.GetMusicBrainzReleasesInDirectory(
+                request.Folder
+            );
+            return Ok(
+                new DataResponseDto<FileListResponseDto>
                 {
-                    Status = "ok",
-                    Files = fileList
-                        .OrderBy(file => file.Path)
-                        .ToList()
+                    Data = new()
+                    {
+                        Status = "ok",
+                        Files = fileList.OrderBy(file => file.Path).ToList(),
+                    },
                 }
-            });
+            );
         }
         else
         {
-            List<FileItem> fileList = await fileRepository.GetFilesInDirectory(request.Folder, request.Type);
+            List<FileItem> fileList = await fileRepository.GetFilesInDirectory(
+                request.Folder,
+                request.Type
+            );
 
-            return Ok(new DataResponseDto<FileListResponseDto>
-            {
-                Data = new()
+            return Ok(
+                new DataResponseDto<FileListResponseDto>
                 {
-                    Status = "ok",
-                    Files = fileList
-                        .OrderBy(file => file.Path)
-                        .ToList()
+                    Data = new()
+                    {
+                        Status = "ok",
+                        Files = fileList.OrderBy(file => file.Path).ToList(),
+                    },
                 }
-            });
+            );
         }
     }
 
     [NonAction]
     private string DeviceName()
     {
-        Configuration? device = context.Configuration.FirstOrDefault(device => device.Key == "serverName");
+        Configuration? device = context.Configuration.FirstOrDefault(device =>
+            device.Key == "serverName"
+        );
         return device?.Value ?? Environment.MachineName;
     }
 
@@ -314,27 +316,27 @@ public class ServerController(
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view server information");
 
-        bool setupComplete = context.Libraries.Any()
-                             && context.Folders.Any()
-                             && context.EncoderProfiles.Any();
+        bool setupComplete =
+            context.Libraries.Any() && context.Folders.Any() && context.EncoderProfiles.Any();
 
-        return Ok(new StatusResponseDto<ServerInfoDto>
-        {
-            Status = "ok",
-            Data = new()
+        return Ok(
+            new StatusResponseDto<ServerInfoDto>
             {
-                Server = DeviceName(),
-                Cpu = Info.CpuNames,
-                Gpu = Info.GpuNames,
-                Os = $"{Info.Platform.ToTitleCase()} {Info.OsVersion}",
-                Arch = Info.Architecture,
-                Version = Software.GetReleaseVersion(),
-                BootTime = Info.StartTime,
-                SetupComplete = setupComplete
+                Status = "ok",
+                Data = new()
+                {
+                    Server = DeviceName(),
+                    Cpu = Info.CpuNames,
+                    Gpu = Info.GpuNames,
+                    Os = $"{Info.Platform.ToTitleCase()} {Info.OsVersion}",
+                    Arch = Info.Architecture,
+                    Version = Software.GetReleaseVersion(),
+                    BootTime = Info.StartTime,
+                    SetupComplete = setupComplete,
+                },
             }
-        });
+        );
     }
-
 
     [HttpPatch]
     [Route("info")]
@@ -344,8 +346,8 @@ public class ServerController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to update server information");
 
-        Configuration? configuration = await context.Configuration
-            .AsTracking()
+        Configuration? configuration = await context
+            .Configuration.AsTracking()
             .FirstOrDefaultAsync(configuration => configuration.Key == "serverName");
 
         try
@@ -356,7 +358,7 @@ public class ServerController(
                 {
                     Key = "serverName",
                     Value = request.Name,
-                    ModifiedBy = userId
+                    ModifiedBy = userId,
                 };
                 await context.Configuration.AddAsync(configuration);
             }
@@ -368,33 +370,41 @@ public class ServerController(
 
             await context.SaveChangesAsync();
 
-            System.Net.Http.HttpClient client = httpClientFactory.CreateClient(HttpClientNames.General);
+            System.Net.Http.HttpClient client = httpClientFactory.CreateClient(
+                HttpClientNames.General
+            );
             client.BaseAddress = new(Config.ApiServerBaseUrl);
             client.DefaultRequestHeaders.Authorization = new("Bearer", Globals.Globals.AccessToken);
 
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Patch, "name")
             {
-                Content = new FormUrlEncodedContent(new Dictionary<string, string>
-                {
-                    ["id"] = Info.DeviceId.ToString(),
-                    ["name"] = request.Name
-                })
+                Content = new FormUrlEncodedContent(
+                    new Dictionary<string, string>
+                    {
+                        ["id"] = Info.DeviceId.ToString(),
+                        ["name"] = request.Name,
+                    }
+                ),
             };
 
             HttpResponseMessage httpResponse = await client.SendAsync(httpRequestMessage);
             string response = await httpResponse.Content.ReadAsStringAsync();
 
-            StatusResponseDto<string>? data = JsonConvert.DeserializeObject<StatusResponseDto<string>>(response);
+            StatusResponseDto<string>? data = JsonConvert.DeserializeObject<
+                StatusResponseDto<string>
+            >(response);
 
             if (data == null)
                 return UnprocessableEntityResponse("Server name could not be updated");
 
-            return Ok(new StatusResponseDto<string>
-            {
-                Status = data.Status,
-                Message = data.Message,
-                Args = []
-            });
+            return Ok(
+                new StatusResponseDto<string>
+                {
+                    Status = data.Status,
+                    Message = data.Message,
+                    Args = [],
+                }
+            );
         }
         catch (Exception e)
         {
@@ -417,18 +427,22 @@ public class ServerController(
         }
         catch (Exception e)
         {
-            return UnprocessableEntityResponse("Resource monitor could not be started: " + e.Message);
+            return UnprocessableEntityResponse(
+                "Resource monitor could not be started: " + e.Message
+            );
         }
 
         List<ResourceMonitorDto> storage = StorageMonitor.Main();
 
-        return Ok(new ResourceInfoDto
-        {
-            Cpu = resource.Cpu,
-            Gpu = resource.Gpu,
-            Memory = resource.Memory,
-            Storage = storage
-        });
+        return Ok(
+            new ResourceInfoDto
+            {
+                Cpu = resource.Cpu,
+                Gpu = resource.Gpu,
+                Memory = resource.Memory,
+                Storage = storage,
+            }
+        );
     }
 
     [HttpGet]
@@ -441,26 +455,10 @@ public class ServerController(
 
         List<ServerPathsDto> list =
         [
-            new()
-            {
-                Key = "Cache",
-                Value = AppFiles.CachePath
-            },
-            new()
-            {
-                Key = "Logs",
-                Value = AppFiles.LogPath
-            },
-            new()
-            {
-                Key = "Transcodes",
-                Value = AppFiles.TranscodePath
-            },
-            new()
-            {
-                Key = "Configs",
-                Value = AppFiles.ConfigPath
-            }
+            new() { Key = "Cache", Value = AppFiles.CachePath },
+            new() { Key = "Logs", Value = AppFiles.LogPath },
+            new() { Key = "Transcodes", Value = AppFiles.TranscodePath },
+            new() { Key = "Configs", Value = AppFiles.ConfigPath },
         ];
 
         return Ok(list);
@@ -520,23 +518,26 @@ public class ServerController(
         if (!wallpaperService.IsSupported)
             return BadRequestResponse("Wallpaper setting is not supported on this platform");
 
-        Image? wallpaper = await context.Images
-            .FirstOrDefaultAsync(config => config.FilePath == request.Path);
+        Image? wallpaper = await context.Images.FirstOrDefaultAsync(config =>
+            config.FilePath == request.Path
+        );
 
         if (wallpaper?.FilePath is null)
             return NotFoundResponse("Wallpaper not found");
 
-        string path = Path.Combine(AppFiles.ImagesPath, "original", wallpaper.FilePath.Replace("/", ""));
+        string path = Path.Combine(
+            AppFiles.ImagesPath,
+            "original",
+            wallpaper.FilePath.Replace("/", "")
+        );
 
         string color = request.Color ?? await GetDominantColorAsync(path);
 
         wallpaperService.SetSilent(path, request.Style, color);
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Wallpaper set successfully"
-        });
+        return Ok(
+            new StatusResponseDto<string> { Status = "ok", Message = "Wallpaper set successfully" }
+        );
     }
 
     private static readonly ConcurrentDictionary<string, string> DominantColorCache = new();
@@ -549,19 +550,16 @@ public class ServerController(
         string color = await Task.Run(() =>
         {
             using Image<Rgb24> image = SixLabors.ImageSharp.Image.Load<Rgb24>(path);
-            image.Mutate(x => x
-                .Resize(new ResizeOptions
-                {
-                    Sampler = KnownResamplers.NearestNeighbor,
-                    Size = new(100, 0)
-                })
-                .Quantize(new OctreeQuantizer
-                {
-                    Options =
-                    {
-                        MaxColors = 1
-                    }
-                }));
+            image.Mutate(x =>
+                x.Resize(
+                        new ResizeOptions
+                        {
+                            Sampler = KnownResamplers.NearestNeighbor,
+                            Size = new(100, 0),
+                        }
+                    )
+                    .Quantize(new OctreeQuantizer { Options = { MaxColors = 1 } })
+            );
 
             Rgb24 dominant = image[0, 0];
             return dominant.ToHexString();
@@ -585,11 +583,13 @@ public class ServerController(
 
         networkDiscovery.InternalIp = request.Ip;
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = $"IP address changed to {request.Ip}"
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = $"IP address changed to {request.Ip}",
+            }
+        );
     }
 
     public class ChangeIpRequest
