@@ -9,15 +9,18 @@ public static class AppFiles
 {
     public static readonly string ApplicationName = "NoMercy MediaServer";
 
-    public static readonly string AppDataPath = Environment.OSVersion.Platform == PlatformID.Unix
-        ? Path.Combine(
-            Environment.GetEnvironmentVariable("HOME") ?? "/home/current",
-            ".local/share")
-        : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    public static readonly string AppDataPath =
+        Environment.OSVersion.Platform == PlatformID.Unix
+            ? Path.Combine(
+                Environment.GetEnvironmentVariable("HOME") ?? "/home/current",
+                ".local/share"
+            )
+            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-    public static string AppPath => Config.IsDev
-        ? Path.Combine(AppDataPath, "NoMercy_dev")
-        : Path.Combine(AppDataPath, "NoMercy");
+    public static string AppPath =>
+        Config.IsDev
+            ? Path.Combine(AppDataPath, "NoMercy_dev")
+            : Path.Combine(AppDataPath, "NoMercy");
 
     // ── Config ───────────────────────────────────────────────────────────
 
@@ -31,7 +34,8 @@ public static class AppFiles
     public static string SeedsPath => Path.Combine(ConfigPath, "seeds");
     public static string FolderRootsSeedFile => Path.Combine(SeedsPath, "folderRoots.jsonc");
     public static string LibrariesSeedFile => Path.Combine(SeedsPath, "libraries.jsonc");
-    public static string EncoderProfilesSeedFile => Path.Combine(SeedsPath, "encoderProfiles.jsonc");
+    public static string EncoderProfilesSeedFile =>
+        Path.Combine(SeedsPath, "encoderProfiles.jsonc");
 
     // ── Data & Logs ──────────────────────────────────────────────────────
 
@@ -90,15 +94,21 @@ public static class AppFiles
     public static string WhisperModel { get; set; } = "ggml-large-v3";
     public static string WhisperModelPath => Path.Combine(DependenciesPath, WhisperModel + ".bin");
 
-    public static string CloudflareDPath => Path.Combine(DependenciesPath, "cloudflared" + Info.ExecSuffix);
+    public static string CloudflareDPath =>
+        Path.Combine(DependenciesPath, "cloudflared" + Info.ExecSuffix);
 
-    public static string ServerExePath => Path.Combine(BinariesPath, "NoMercyMediaServer" + Info.ExecSuffix);
+    public static string ServerExePath =>
+        Path.Combine(BinariesPath, "NoMercyMediaServer" + Info.ExecSuffix);
     public static string AppExePath => Path.Combine(BinariesPath, "NoMercyApp" + Info.ExecSuffix);
-    public static string LauncherExePath => Path.Combine(BinariesPath, "NoMercyLauncher" + Info.ExecSuffix);
+    public static string LauncherExePath =>
+        Path.Combine(BinariesPath, "NoMercyLauncher" + Info.ExecSuffix);
     public static string CliExePath => Path.Combine(BinariesPath, "nomercy" + Info.ExecSuffix);
-    public static string ServerTempExePath => Path.Combine(BinariesPath, "NoMercyMediaServer_temp" + Info.ExecSuffix);
-    public static string LauncherTempExePath => Path.Combine(BinariesPath, "NoMercyLauncher_temp" + Info.ExecSuffix);
-    public static string CliTempExePath => Path.Combine(BinariesPath, "nomercy_temp" + Info.ExecSuffix);
+    public static string ServerTempExePath =>
+        Path.Combine(BinariesPath, "NoMercyMediaServer_temp" + Info.ExecSuffix);
+    public static string LauncherTempExePath =>
+        Path.Combine(BinariesPath, "NoMercyLauncher_temp" + Info.ExecSuffix);
+    public static string CliTempExePath =>
+        Path.Combine(BinariesPath, "nomercy_temp" + Info.ExecSuffix);
 
     // ── Security ─────────────────────────────────────────────────────────
 
@@ -148,7 +158,7 @@ public static class AppFiles
             TempImagesPath,
             TempPath,
             TesseractModelsFolder,
-            TranscodePath
+            TranscodePath,
         ];
     }
 
@@ -169,9 +179,14 @@ public static class AppFiles
                 DirectoryInfo dirInfo = new(path);
                 if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
                 {
-                    dirInfo.UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-                                           UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
-                                           UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
+                    dirInfo.UnixFileMode =
+                        UnixFileMode.UserRead
+                        | UnixFileMode.UserWrite
+                        | UnixFileMode.UserExecute
+                        | UnixFileMode.GroupRead
+                        | UnixFileMode.GroupExecute
+                        | UnixFileMode.OtherRead
+                        | UnixFileMode.OtherExecute;
                 }
             }
         }

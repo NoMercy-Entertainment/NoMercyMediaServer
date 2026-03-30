@@ -11,7 +11,8 @@ public static class LogBroadcaster
 
     public static void StartBroadcasting(IClientMessenger clientMessenger)
     {
-        if (_broadcasting) return;
+        if (_broadcasting)
+            return;
         _clientMessenger = clientMessenger;
         _broadcasting = true;
         Logger.LogEmitted += OnLogEmitted;

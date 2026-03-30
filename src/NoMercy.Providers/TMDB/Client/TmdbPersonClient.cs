@@ -6,9 +6,8 @@ namespace NoMercy.Providers.TMDB.Client;
 
 public class TmdbPersonClient : TmdbBaseClient
 {
-    public TmdbPersonClient(int? id = 0, string[]? appendices = null) : base((int)id!)
-    {
-    }
+    public TmdbPersonClient(int? id = 0, string[]? appendices = null)
+        : base((int)id!) { }
 
     public Task<TmdbPersonDetails?> Details()
     {
@@ -19,7 +18,7 @@ public class TmdbPersonClient : TmdbBaseClient
     {
         Dictionary<string, string?> queryParams = new()
         {
-            ["append_to_response"] = string.Join(",", appendices)
+            ["append_to_response"] = string.Join(",", appendices),
         };
 
         return Get<TmdbPersonAppends>("person/" + Id, queryParams, priority);
@@ -27,16 +26,19 @@ public class TmdbPersonClient : TmdbBaseClient
 
     public Task<TmdbPersonAppends?> WithAllAppends(bool? priority = false)
     {
-        return WithAppends([
-            "changes",
-            "credits",
-            "movie_credits",
-            "combined_credits",
-            "tv_credits",
-            "external_ids",
-            "images",
-            "translations"
-        ], priority);
+        return WithAppends(
+            [
+                "changes",
+                "credits",
+                "movie_credits",
+                "combined_credits",
+                "tv_credits",
+                "external_ids",
+                "images",
+                "translations",
+            ],
+            priority
+        );
     }
 
     public Task<TmdbPersonChanges?> Changes(string startDate, string endDate)
@@ -44,7 +46,7 @@ public class TmdbPersonClient : TmdbBaseClient
         Dictionary<string, string?> queryParams = new()
         {
             ["start_date"] = startDate,
-            ["end_date"] = endDate
+            ["end_date"] = endDate,
         };
 
         return Get<TmdbPersonChanges>("person/" + Id + "/changes", queryParams);

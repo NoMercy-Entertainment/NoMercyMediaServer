@@ -15,7 +15,6 @@ public static class Date
         "yyyy-MM-dd HH:mm:ss",
         "yyyy-MM-dd HH:mm",
         "yyyy-MM-dd HH",
-
         // American notations of time
         "MM/dd/yyyy",
         "MM/dd/yyyy HH:mm:ss",
@@ -25,7 +24,6 @@ public static class Date
         "M/d/yyyy HH:mm:ss",
         "M/d/yyyy hh:mm:ss tt",
         "M/d/yyyy hh:mm tt",
-
         "MM-dd-yyyy",
         "MM-dd-yyyy HH:mm:ss",
         "MM-dd-yyyy hh:mm:ss tt", // 12-hour clock with AM/PM
@@ -33,29 +31,39 @@ public static class Date
         "M-d-yyyy",
         "M-d-yyyy HH:mm:ss",
         "M-d-yyyy hh:mm:ss tt",
-        "M-d-yyyy hh:mm tt"
+        "M-d-yyyy hh:mm tt",
     ];
 
     private static int _parseYear(DateTime? dateString = null)
     {
-        if (string.IsNullOrEmpty(dateString.ToString())) return new DateTime().Year;
+        if (string.IsNullOrEmpty(dateString.ToString()))
+            return new DateTime().Year;
 
         DateTime date;
         try
         {
-            date = DateTime.ParseExact(dateString.ToString().OrEmpty(), "d-M-yyyy HH:mm:ss",
-                CultureInfo.InvariantCulture);
+            date = DateTime.ParseExact(
+                dateString.ToString().OrEmpty(),
+                "d-M-yyyy HH:mm:ss",
+                CultureInfo.InvariantCulture
+            );
         }
         catch (Exception)
         {
             try
             {
-                date = DateTime.ParseExact(dateString.ToString().OrEmpty(), "d/M/yyyy HH:mm:ss",
-                    CultureInfo.InvariantCulture);
+                date = DateTime.ParseExact(
+                    dateString.ToString().OrEmpty(),
+                    "d/M/yyyy HH:mm:ss",
+                    CultureInfo.InvariantCulture
+                );
             }
             catch (Exception)
             {
-                date = DateTime.Parse(dateString.ToString().OrEmpty(), CultureInfo.InvariantCulture);
+                date = DateTime.Parse(
+                    dateString.ToString().OrEmpty(),
+                    CultureInfo.InvariantCulture
+                );
             }
         }
 
@@ -69,23 +77,29 @@ public static class Date
 
     public static bool TryParseToDateTime(this string value, out DateTime dateTime)
     {
-        return DateTime.TryParseExact(value, ValidFormats, CultureInfo.InvariantCulture, DateTimeStyles.None,
-                   out dateTime)
-               || (DateTime.TryParse(value, DateTimeFormatInfo.InvariantInfo, out dateTime)
-                   && dateTime != default);
+        return DateTime.TryParseExact(
+                value,
+                ValidFormats,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out dateTime
+            )
+            || (
+                DateTime.TryParse(value, DateTimeFormatInfo.InvariantInfo, out dateTime)
+                && dateTime != default
+            );
     }
 
     public static DateTime SubDays(this DateTime self, int days)
     {
-        if (days < 0) throw new ArgumentOutOfRangeException(nameof(days), "Days must be positive.");
+        if (days < 0)
+            throw new ArgumentOutOfRangeException(nameof(days), "Days must be positive.");
         return self.Subtract(new TimeSpan(days, 0, 0, 0));
     }
 
     public static int ParseYear(this DateTime? self)
     {
-        return string.IsNullOrEmpty(self.ToString())
-            ? 0
-            : _parseYear(self);
+        return string.IsNullOrEmpty(self.ToString()) ? 0 : _parseYear(self);
     }
 
     public static int ParseYear(this DateTime self)
@@ -112,7 +126,7 @@ public static class Date
             return t.ToString(@"hh\:mm\:ss");
         return t.ToString(@"mm\:ss");
     }
-    
+
     public static string ToHumanTime(this double time)
     {
         TimeSpan t = TimeSpan.FromSeconds(time);
@@ -120,7 +134,7 @@ public static class Date
             return t.ToString(@"hh\:mm\:ss");
         return t.ToString(@"mm\:ss");
     }
-    
+
     public static string ToHumanTime(this long time)
     {
         TimeSpan t = TimeSpan.FromSeconds(time);

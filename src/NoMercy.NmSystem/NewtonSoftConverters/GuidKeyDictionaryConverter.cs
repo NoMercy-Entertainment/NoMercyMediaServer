@@ -5,15 +5,20 @@ using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.NmSystem.NewtonSoftConverters;
 
-public class GuidKeyDictionaryConverter<TValue> : JsonConverter where TValue : class
+public class GuidKeyDictionaryConverter<TValue> : JsonConverter
+    where TValue : class
 {
     public override bool CanConvert(Type objectType)
     {
         return objectType == typeof(Dictionary<Guid, TValue>);
     }
 
-    public override object ReadJson(JsonReader reader, Type objectType, object? existingValue,
-        JsonSerializer serializer)
+    public override object ReadJson(
+        JsonReader reader,
+        Type objectType,
+        object? existingValue,
+        JsonSerializer serializer
+    )
     {
         Dictionary<Guid, TValue?> dictionary = new();
         if (reader.TokenType == JsonToken.Null)

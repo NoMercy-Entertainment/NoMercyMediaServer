@@ -25,8 +25,10 @@ public interface IMovieRepository
     Task StoreWatchProviders(List<WatchProvider> watchProviders);
     Task StoreCompanies(List<Company> companies);
 
-    IEnumerable<CertificationMovie> GetCertificationMovies(TmdbMovieAppends movie,
-        IEnumerable<CertificationCriteria> certificationCriteria);
+    IEnumerable<CertificationMovie> GetCertificationMovies(
+        TmdbMovieAppends movie,
+        IEnumerable<CertificationCriteria> certificationCriteria
+    );
 
     Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias);
     Task StoreCompanyMovies(List<CompanyMovie> companyMovies);

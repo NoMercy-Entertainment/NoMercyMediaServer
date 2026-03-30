@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
 
-
 namespace NoMercy.Providers.TMDB.Models.Certifications;
 
 public class TvShowCertifications

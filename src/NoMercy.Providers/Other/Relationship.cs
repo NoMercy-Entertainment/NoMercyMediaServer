@@ -4,5 +4,6 @@ namespace NoMercy.Providers.Other;
 
 public class Relationship
 {
-    [JsonProperty("links")] public RelationshipLinks Links { get; set; } = new();
+    [JsonProperty("links")]
+    public RelationshipLinks Links { get; set; } = new();
 }

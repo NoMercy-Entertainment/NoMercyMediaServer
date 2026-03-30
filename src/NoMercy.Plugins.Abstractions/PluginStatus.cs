@@ -5,5 +5,5 @@ public enum PluginStatus
     Active,
     Disabled,
     Malfunctioned,
-    Deleted
+    Deleted,
 }

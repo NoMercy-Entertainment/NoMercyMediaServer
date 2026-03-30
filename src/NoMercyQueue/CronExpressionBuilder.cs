@@ -19,7 +19,10 @@ public class CronExpressionBuilder
     public CronExpressionBuilder EveryMinutes(int minutes)
     {
         if (minutes is < 1 or > 59)
-            throw new ArgumentOutOfRangeException(nameof(minutes), "Minutes must be between 1 and 59");
+            throw new ArgumentOutOfRangeException(
+                nameof(minutes),
+                "Minutes must be between 1 and 59"
+            );
         _minute = $"*/{minutes}";
         return this;
     }
@@ -27,7 +30,10 @@ public class CronExpressionBuilder
     public CronExpressionBuilder AtMinute(int minute)
     {
         if (minute is < 0 or > 59)
-            throw new ArgumentOutOfRangeException(nameof(minute), "Minute must be between 0 and 59");
+            throw new ArgumentOutOfRangeException(
+                nameof(minute),
+                "Minute must be between 0 and 59"
+            );
         _minute = minute.ToString();
         return this;
     }
@@ -36,7 +42,10 @@ public class CronExpressionBuilder
     {
         if (minutes.Any(minute => minute is < 0 or > 59))
         {
-            throw new ArgumentOutOfRangeException(nameof(minutes), "Minutes must be between 0 and 59");
+            throw new ArgumentOutOfRangeException(
+                nameof(minutes),
+                "Minutes must be between 0 and 59"
+            );
         }
         _minute = string.Join(",", minutes);
         return this;
@@ -118,7 +127,10 @@ public class CronExpressionBuilder
         foreach (int day in days)
         {
             if (day is < 1 or > 31)
-                throw new ArgumentOutOfRangeException(nameof(days), "Days must be between 1 and 31");
+                throw new ArgumentOutOfRangeException(
+                    nameof(days),
+                    "Days must be between 1 and 31"
+                );
         }
         _dayOfMonth = string.Join(",", days);
         return this;
@@ -171,7 +183,10 @@ public class CronExpressionBuilder
         foreach (int month in months)
         {
             if (month is < 1 or > 12)
-                throw new ArgumentOutOfRangeException(nameof(months), "Months must be between 1 and 12");
+                throw new ArgumentOutOfRangeException(
+                    nameof(months),
+                    "Months must be between 1 and 12"
+                );
         }
         _month = string.Join(",", months);
         return this;
@@ -262,8 +277,11 @@ public class CronExpressionBuilder
         if (hour is < 0 or > 23)
             throw new ArgumentOutOfRangeException(nameof(hour), "Hour must be between 0 and 23");
         if (minute is < 0 or > 59)
-            throw new ArgumentOutOfRangeException(nameof(minute), "Minute must be between 0 and 59");
-        
+            throw new ArgumentOutOfRangeException(
+                nameof(minute),
+                "Minute must be between 0 and 59"
+            );
+
         _minute = minute.ToString();
         _hour = hour.ToString();
         _dayOfMonth = "*";
@@ -277,8 +295,11 @@ public class CronExpressionBuilder
         if (hour is < 0 or > 23)
             throw new ArgumentOutOfRangeException(nameof(hour), "Hour must be between 0 and 23");
         if (minute is < 0 or > 59)
-            throw new ArgumentOutOfRangeException(nameof(minute), "Minute must be between 0 and 59");
-        
+            throw new ArgumentOutOfRangeException(
+                nameof(minute),
+                "Minute must be between 0 and 59"
+            );
+
         _minute = minute.ToString();
         _hour = hour.ToString();
         _dayOfMonth = "*";
@@ -294,8 +315,11 @@ public class CronExpressionBuilder
         if (hour is < 0 or > 23)
             throw new ArgumentOutOfRangeException(nameof(hour), "Hour must be between 0 and 23");
         if (minute is < 0 or > 59)
-            throw new ArgumentOutOfRangeException(nameof(minute), "Minute must be between 0 and 59");
-        
+            throw new ArgumentOutOfRangeException(
+                nameof(minute),
+                "Minute must be between 0 and 59"
+            );
+
         _minute = minute.ToString();
         _hour = hour.ToString();
         _dayOfMonth = day.ToString();
@@ -313,8 +337,11 @@ public class CronExpressionBuilder
         if (hour is < 0 or > 23)
             throw new ArgumentOutOfRangeException(nameof(hour), "Hour must be between 0 and 23");
         if (minute is < 0 or > 59)
-            throw new ArgumentOutOfRangeException(nameof(minute), "Minute must be between 0 and 59");
-        
+            throw new ArgumentOutOfRangeException(
+                nameof(minute),
+                "Minute must be between 0 and 59"
+            );
+
         _minute = minute.ToString();
         _hour = hour.ToString();
         _dayOfMonth = day.ToString();
@@ -326,8 +353,11 @@ public class CronExpressionBuilder
     public CronExpressionBuilder Hourly(int minute = 0)
     {
         if (minute is < 0 or > 59)
-            throw new ArgumentOutOfRangeException(nameof(minute), "Minute must be between 0 and 59");
-        
+            throw new ArgumentOutOfRangeException(
+                nameof(minute),
+                "Minute must be between 0 and 59"
+            );
+
         _minute = minute.ToString();
         _hour = "*";
         _dayOfMonth = "*";

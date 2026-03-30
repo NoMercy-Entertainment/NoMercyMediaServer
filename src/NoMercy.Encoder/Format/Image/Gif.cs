@@ -11,15 +11,9 @@ public class Gif : BaseImage
         throw new NotImplementedException("Gif is not implemented yet");
     }
 
-    private protected override CodecDto[] AvailableCodecs =>
-    [
-        ImageCodecs.Gif
-    ];
+    private protected override CodecDto[] AvailableCodecs => [ImageCodecs.Gif];
 
-    private protected override string[] AvailableContainers =>
-    [
-        "gif"
-    ];
+    private protected override string[] AvailableContainers => ["gif"];
 
     private protected override string[] AvailablePresets => [];
 

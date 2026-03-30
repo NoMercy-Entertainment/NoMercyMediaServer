@@ -25,28 +25,24 @@ public class BaseSubtitle : Classes
     private readonly Dictionary<string, dynamic> _ops = [];
 
     public virtual CodecDto[] AvailableCodecs =>
-    [
-        SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass,
-        SubtitleCodecs.Copy
-    ];
+        [SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass, SubtitleCodecs.Copy];
 
     protected virtual string[] AvailableContainers =>
-    [
-        SubtitleContainers.WebVtt, SubtitleContainers.Srt, SubtitleContainers.Ass
-    ];
+        [SubtitleContainers.WebVtt, SubtitleContainers.Srt, SubtitleContainers.Ass];
 
     protected string Variant { get; set; } = "full";
     private string _hlsSegmentFilename = "";
 
     public string HlsSegmentFilename
     {
-        get => _hlsSegmentFilename
-            .Replace(":language:", Language)
-            .Replace(":codec:", SubtitleCodec.SimpleValue)
-            .Replace(":type:", Type)
-            .Replace(":filename:", FileName)
-            .Replace("\\", Str.DirectorySeparator)
-            .Replace("/", Str.DirectorySeparator);
+        get =>
+            _hlsSegmentFilename
+                .Replace(":language:", Language)
+                .Replace(":codec:", SubtitleCodec.SimpleValue)
+                .Replace(":type:", Type)
+                .Replace(":filename:", FileName)
+                .Replace("\\", Str.DirectorySeparator)
+                .Replace("/", Str.DirectorySeparator);
         set => _hlsSegmentFilename = value;
     }
 
@@ -54,14 +50,15 @@ public class BaseSubtitle : Classes
 
     public string HlsPlaylistFilename
     {
-        get => _hlsPlaylistFilename
-            .Replace(":language:", Language)
-            .Replace(":codec:", SubtitleCodec.SimpleValue)
-            .Replace(":type:", Type)
-            .Replace(":variant:", Variant)
-            .Replace(":filename:", FileName)
-            .Replace("\\", Str.DirectorySeparator)
-            .Replace("/", Str.DirectorySeparator);
+        get =>
+            _hlsPlaylistFilename
+                .Replace(":language:", Language)
+                .Replace(":codec:", SubtitleCodec.SimpleValue)
+                .Replace(":type:", Type)
+                .Replace(":variant:", Variant)
+                .Replace(":filename:", FileName)
+                .Replace("\\", Str.DirectorySeparator)
+                .Replace("/", Str.DirectorySeparator);
         set => _hlsPlaylistFilename = value;
     }
 
@@ -74,7 +71,8 @@ public class BaseSubtitle : Classes
         CodecDto[] availableCodecs = AvailableCodecs;
         if (availableCodecs.All(codec => codec.Value != subtitleCodec))
             throw new(
-                $"Wrong subtitle codec value for {subtitleCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}");
+                $"Wrong subtitle codec value for {subtitleCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}"
+            );
 
         SubtitleCodec = availableCodecs.First(codec => codec.Value == subtitleCodec);
 
@@ -143,9 +141,14 @@ public class BaseSubtitle : Classes
 
         foreach (string allowedLanguage in AllowedLanguages)
         {
-            if (SubtitleStreams.All(stream => stream.Language != allowedLanguage)) continue;
+            if (SubtitleStreams.All(stream => stream.Language != allowedLanguage))
+                continue;
 
-            foreach (FfProbeSubtitleStream? stream in SubtitleStreams.Where(stream => stream.Language == allowedLanguage))
+            foreach (
+                FfProbeSubtitleStream? stream in SubtitleStreams.Where(stream =>
+                    stream.Language == allowedLanguage
+                )
+            )
             {
                 BaseSubtitle newStream = (BaseSubtitle)MemberwiseClone();
 
@@ -157,7 +160,8 @@ public class BaseSubtitle : Classes
 
                 newStream.Variant = GetVariant(newStream);
 
-                if (newStream.SubtitleStream!.CodecName == newStream.SubtitleCodec.SimpleValue) continue;
+                if (newStream.SubtitleStream!.CodecName == newStream.SubtitleCodec.SimpleValue)
+                    continue;
 
                 List<FfProbeSubtitleStream> subTitleStreams = SubtitleStreams
                     .Where(s => s.Language == stream.Language)
@@ -165,10 +169,14 @@ public class BaseSubtitle : Classes
 
                 int currentStreamIndex = subTitleStreams.IndexOf(stream);
 
-                if (newStream.SubtitleStream!.Tags?.TryGetValue("title", out _) == false && currentStreamIndex > 0)
+                if (
+                    newStream.SubtitleStream!.Tags?.TryGetValue("title", out _) == false
+                    && currentStreamIndex > 0
+                )
                     newStream.Variant = "sdh";
 
-                if (streams.Any(s => s.HlsPlaylistFilename == newStream.HlsPlaylistFilename)) continue;
+                if (streams.Any(s => s.HlsPlaylistFilename == newStream.HlsPlaylistFilename))
+                    continue;
 
                 streams.Add(newStream);
             }
@@ -184,7 +192,8 @@ public class BaseSubtitle : Classes
         string variant = "full";
 
         string? description = "";
-        if (stream.SubtitleStream!.Tags?.TryGetValue("title", out description) is false) return variant;
+        if (stream.SubtitleStream!.Tags?.TryGetValue("title", out description) is false)
+            return variant;
 
         if (
             description?.Contains("sign", StringComparison.CurrentCultureIgnoreCase) == true
@@ -192,7 +201,8 @@ public class BaseSubtitle : Classes
             || description?.Contains("s&s", StringComparison.CurrentCultureIgnoreCase) == true
         )
             variant = "sign";
-        else if (description?.Contains("sdh", StringComparison.CurrentCultureIgnoreCase) == true) variant = "sdh";
+        else if (description?.Contains("sdh", StringComparison.CurrentCultureIgnoreCase) == true)
+            variant = "sdh";
 
         return variant;
     }
@@ -228,14 +238,19 @@ public class BaseSubtitle : Classes
         return extension;
     }
 
-    public void AddToDictionary(Dictionary<string, dynamic> commandDictionary, int sourceIndex, int outputIndex)
+    public void AddToDictionary(
+        Dictionary<string, dynamic> commandDictionary,
+        int sourceIndex,
+        int outputIndex
+    )
     {
         commandDictionary["-map"] = $"s:{sourceIndex}";
         commandDictionary["-c:s"] = SubtitleCodec.Value;
 
         if (!IsoLanguageMapper.IsoToLanguage.TryGetValue(Language, out string? language))
             throw new($"Language {Language} is not supported");
-        commandDictionary[$"-metadata:s:s:{outputIndex}"] = $"title=\"{language}\" -metadata:s:s:{outputIndex} language=\"{Language}\"";
+        commandDictionary[$"-metadata:s:s:{outputIndex}"] =
+            $"title=\"{language}\" -metadata:s:s:{outputIndex} language=\"{Language}\"";
 
         foreach (KeyValuePair<string, dynamic> extraParameter in _extraParameters)
             commandDictionary[extraParameter.Key] = extraParameter.Value;
@@ -243,7 +258,10 @@ public class BaseSubtitle : Classes
 
     public void CreateFolder()
     {
-        string path = Path.Combine(BasePath, HlsPlaylistFilename.Split(Str.DirectorySeparator).First());
+        string path = Path.Combine(
+            BasePath,
+            HlsPlaylistFilename.Split(Str.DirectorySeparator).First()
+        );
 
         if (!Directory.Exists(path))
         {
@@ -262,7 +280,7 @@ public class BaseSubtitle : Classes
             "srt" => new Srt(),
             "ass" => new Ass(),
             "_" => throw new($"Subtitle {profileCodec} is not supported"),
-            _ => throw new ArgumentOutOfRangeException(nameof(profileCodec), profileCodec, null)
+            _ => throw new ArgumentOutOfRangeException(nameof(profileCodec), profileCodec, null),
         };
     }
 }

@@ -21,7 +21,8 @@ public class LinuxWallpaperService : IWallpaperService
 
     public void Set(string imagePath, WallpaperStyle style, string hexColor)
     {
-        if (!IsSupported) return;
+        if (!IsSupported)
+            return;
 
         SaveCurrentWallpaper();
         ApplyColor(hexColor);
@@ -35,7 +36,8 @@ public class LinuxWallpaperService : IWallpaperService
 
     public void Restore()
     {
-        if (!IsSupported) return;
+        if (!IsSupported)
+            return;
 
         if (_previousWallpaper is not null)
             ApplyWallpaper(_previousWallpaper, WallpaperStyle.Fill);
@@ -52,10 +54,18 @@ public class LinuxWallpaperService : IWallpaperService
         DesktopEnvironment de = DetectDesktopEnvironment();
         if (de == DesktopEnvironment.Gnome)
         {
-            _previousWallpaper = RunCommand("gsettings",
-                "get org.gnome.desktop.background picture-uri")?.Trim().Trim('\'');
-            _previousColor = RunCommand("gsettings",
-                "get org.gnome.desktop.background primary-color")?.Trim().Trim('\'');
+            _previousWallpaper = RunCommand(
+                "gsettings",
+                "get org.gnome.desktop.background picture-uri"
+            )
+                ?.Trim()
+                .Trim('\'');
+            _previousColor = RunCommand(
+                "gsettings",
+                "get org.gnome.desktop.background primary-color"
+            )
+                ?.Trim()
+                .Trim('\'');
         }
     }
 
@@ -67,30 +77,40 @@ public class LinuxWallpaperService : IWallpaperService
         {
             case DesktopEnvironment.Gnome:
                 string gnomeStyle = MapStyleToGnome(style);
-                RunCommand("gsettings",
-                    $"set org.gnome.desktop.background picture-options '{gnomeStyle}'");
-                RunCommand("gsettings",
-                    $"set org.gnome.desktop.background picture-uri 'file://{imagePath}'");
-                RunCommand("gsettings",
-                    $"set org.gnome.desktop.background picture-uri-dark 'file://{imagePath}'");
+                RunCommand(
+                    "gsettings",
+                    $"set org.gnome.desktop.background picture-options '{gnomeStyle}'"
+                );
+                RunCommand(
+                    "gsettings",
+                    $"set org.gnome.desktop.background picture-uri 'file://{imagePath}'"
+                );
+                RunCommand(
+                    "gsettings",
+                    $"set org.gnome.desktop.background picture-uri-dark 'file://{imagePath}'"
+                );
                 break;
 
             case DesktopEnvironment.Kde:
                 string kdeScript =
-                    "var allDesktops = desktops();" +
-                    "for (var i = 0; i < allDesktops.length; i++) {" +
-                    "  var d = allDesktops[i];" +
-                    "  d.wallpaperPlugin = 'org.kde.image';" +
-                    "  d.currentConfigGroup = Array('Wallpaper','org.kde.image','General');" +
-                    $"  d.writeConfig('Image', 'file://{imagePath}');" +
-                    "}";
-                RunCommand("qdbus",
-                    $"org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \"{kdeScript}\"");
+                    "var allDesktops = desktops();"
+                    + "for (var i = 0; i < allDesktops.length; i++) {"
+                    + "  var d = allDesktops[i];"
+                    + "  d.wallpaperPlugin = 'org.kde.image';"
+                    + "  d.currentConfigGroup = Array('Wallpaper','org.kde.image','General');"
+                    + $"  d.writeConfig('Image', 'file://{imagePath}');"
+                    + "}";
+                RunCommand(
+                    "qdbus",
+                    $"org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript \"{kdeScript}\""
+                );
                 break;
 
             case DesktopEnvironment.Xfce:
-                RunCommand("xfconf-query",
-                    $"-c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s \"{imagePath}\"");
+                RunCommand(
+                    "xfconf-query",
+                    $"-c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s \"{imagePath}\""
+                );
                 break;
 
             case DesktopEnvironment.Fallback:
@@ -105,14 +125,14 @@ public class LinuxWallpaperService : IWallpaperService
 
         if (de == DesktopEnvironment.Gnome)
         {
-            RunCommand("gsettings",
-                $"set org.gnome.desktop.background primary-color '{hexColor}'");
+            RunCommand("gsettings", $"set org.gnome.desktop.background primary-color '{hexColor}'");
         }
     }
 
     public static DesktopEnvironment DetectDesktopEnvironment()
     {
-        string? xdgDesktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP")
+        string? xdgDesktop = Environment
+            .GetEnvironmentVariable("XDG_CURRENT_DESKTOP")
             ?.ToUpperInvariant();
 
         if (xdgDesktop is not null)
@@ -138,7 +158,7 @@ public class LinuxWallpaperService : IWallpaperService
             WallpaperStyle.Tile => "wallpaper",
             WallpaperStyle.Center => "centered",
             WallpaperStyle.Span => "spanned",
-            _ => "zoom"
+            _ => "zoom",
         };
     }
 
@@ -154,7 +174,7 @@ public class LinuxWallpaperService : IWallpaperService
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
             process.Start();
@@ -174,6 +194,6 @@ public class LinuxWallpaperService : IWallpaperService
         Gnome,
         Kde,
         Xfce,
-        Fallback
+        Fallback,
     }
 }

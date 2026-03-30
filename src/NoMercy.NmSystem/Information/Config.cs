@@ -23,7 +23,8 @@ public static class Config
 
     public static readonly string DnsServer = "1.1.1.1";
 
-    public static string UserAgent => $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
+    public static string UserAgent =>
+        $"NoMercy MediaServer/{Software.Version} ( admin@nomercy.tv )";
 
     public static bool Started { get; set; }
     public static string? CloudflareTunnelToken { get; set; }
@@ -34,7 +35,7 @@ public static class Config
     public static string? StunPublicIp { get; set; }
     public static int? StunPublicPort { get; set; }
     public static int StunPort => InternalServerPort + 1;
-    
+
     private static int? _internalServerPort = null;
 
     public static int InternalServerPort
@@ -42,7 +43,7 @@ public static class Config
         get => _internalServerPort ?? 7626;
         set => _internalServerPort = value;
     }
-    
+
     private static int? _externalServerPort = null;
 
     public static int ExternalServerPort
@@ -77,17 +78,17 @@ public static class Config
     public static KeyValuePair<string, int> ImageWorkers { get; set; } = new("image", 10);
     public static KeyValuePair<string, int> FileWorkers { get; set; } = new("file", 4);
     public static KeyValuePair<string, int> MusicWorkers { get; set; } = new("music", 2);
-    
+
     public static readonly ParallelOptions ParallelOptions = new()
     {
         MaxDegreeOfParallelism = (int)Math.Floor(Environment.ProcessorCount / 2.0),
     };
 
     public static string? AllowAdultContent { get; set; } = "false";
-    
+
     public const int MaximumCardsInCarousel = 36;
     public const int MaximumItemsPerPage = 500;
-    
+
     public const string TvMediaType = "tv";
     public const string MovieMediaType = "movie";
     public const string AnimeMediaType = "anime";

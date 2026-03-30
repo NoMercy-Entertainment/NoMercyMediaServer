@@ -8,10 +8,12 @@ namespace NoMercy.Database.Models.TvShows;
 [Index(nameof(TvId))]
 public class LibraryTv
 {
-    [JsonProperty("library_id")] public Ulid LibraryId { get; set; }
+    [JsonProperty("library_id")]
+    public Ulid LibraryId { get; set; }
     public Library Library { get; set; } = null!;
 
-    [JsonProperty("tv_id")] public int TvId { get; set; }
+    [JsonProperty("tv_id")]
+    public int TvId { get; set; }
     public Tv Tv { get; set; } = null!;
 
     public LibraryTv()

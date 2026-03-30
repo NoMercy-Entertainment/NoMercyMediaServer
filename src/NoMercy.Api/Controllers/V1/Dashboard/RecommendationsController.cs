@@ -19,27 +19,33 @@ namespace NoMercy.Api.Controllers.V1.Dashboard;
 [Route("api/v{version:apiVersion}/dashboard/recommendations")]
 public class RecommendationsController(
     RecommendationService recommendationService,
-    IDbContextFactory<MediaContext> contextFactory) : BaseController
+    IDbContextFactory<MediaContext> contextFactory
+) : BaseController
 {
     [HttpGet("movies")]
     public async Task<IActionResult> GetMovieRecommendations(
         [FromQuery] int take = 200,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view recommendations");
 
         Guid userId = User.UserId();
 
-        List<RecommendationDto> recommendations = await recommendationService
-            .GetPersonalizedRecommendationsAsync(userId, Config.MovieMediaType, take, ct);
+        List<RecommendationDto> recommendations =
+            await recommendationService.GetPersonalizedRecommendationsAsync(
+                userId,
+                Config.MovieMediaType,
+                take,
+                ct
+            );
 
-        ComponentEnvelope response = Component.Grid()
+        ComponentEnvelope response = Component
+            .Grid()
             .WithId("recommendations-movies")
             .WithTitle("Recommended Movies")
-            .WithItems(recommendations.Select(rec => Component.Card()
-                .WithData(new CardData(rec))
-            ));
+            .WithItems(recommendations.Select(rec => Component.Card().WithData(new CardData(rec))));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -47,22 +53,27 @@ public class RecommendationsController(
     [HttpGet("tv")]
     public async Task<IActionResult> GetTvRecommendations(
         [FromQuery] int take = 200,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view recommendations");
 
         Guid userId = User.UserId();
 
-        List<RecommendationDto> recommendations = await recommendationService
-            .GetPersonalizedRecommendationsAsync(userId, Config.TvMediaType, take, ct);
+        List<RecommendationDto> recommendations =
+            await recommendationService.GetPersonalizedRecommendationsAsync(
+                userId,
+                Config.TvMediaType,
+                take,
+                ct
+            );
 
-        ComponentEnvelope response = Component.Grid()
+        ComponentEnvelope response = Component
+            .Grid()
             .WithId("recommendations-tv")
             .WithTitle("Recommended TV Shows")
-            .WithItems(recommendations.Select(rec => Component.Card()
-                .WithData(new CardData(rec))
-            ));
+            .WithItems(recommendations.Select(rec => Component.Card().WithData(new CardData(rec))));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -70,22 +81,27 @@ public class RecommendationsController(
     [HttpGet("anime")]
     public async Task<IActionResult> GetAnimeRecommendations(
         [FromQuery] int take = 200,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view recommendations");
 
         Guid userId = User.UserId();
 
-        List<RecommendationDto> recommendations = await recommendationService
-            .GetPersonalizedRecommendationsAsync(userId, Config.AnimeMediaType, take, ct);
+        List<RecommendationDto> recommendations =
+            await recommendationService.GetPersonalizedRecommendationsAsync(
+                userId,
+                Config.AnimeMediaType,
+                take,
+                ct
+            );
 
-        ComponentEnvelope response = Component.Grid()
+        ComponentEnvelope response = Component
+            .Grid()
             .WithId("recommendations-anime")
             .WithTitle("Recommended Anime")
-            .WithItems(recommendations.Select(rec => Component.Card()
-                .WithData(new CardData(rec))
-            ));
+            .WithItems(recommendations.Select(rec => Component.Card().WithData(new CardData(rec))));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -99,60 +115,77 @@ public class RecommendationsController(
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
 
         // Count by Library.Type (container level)
-        int animeByLibraryType = await context.Tvs
-            .CountAsync(t => t.Library.Type == Config.AnimeMediaType, ct);
+        int animeByLibraryType = await context.Tvs.CountAsync(
+            t => t.Library.Type == Config.AnimeMediaType,
+            ct
+        );
 
         // Count by Tv.MediaType (per-show Kitsu.io detection)
-        int animeByMediaType = await context.Tvs
-            .CountAsync(t => t.MediaType == Config.AnimeMediaType, ct);
+        int animeByMediaType = await context.Tvs.CountAsync(
+            t => t.MediaType == Config.AnimeMediaType,
+            ct
+        );
 
-        int totalRecsWithTv = await context.Recommendations
-            .CountAsync(r => r.TvFromId != null, ct);
+        int totalRecsWithTv = await context.Recommendations.CountAsync(r => r.TvFromId != null, ct);
 
-        int animeRecsByMediaType = await context.Recommendations
-            .CountAsync(r => r.TvFromId != null
-                && context.Tvs.Any(t => t.Id == r.TvFromId && t.MediaType == Config.AnimeMediaType), ct);
+        int animeRecsByMediaType = await context.Recommendations.CountAsync(
+            r =>
+                r.TvFromId != null
+                && context.Tvs.Any(t => t.Id == r.TvFromId && t.MediaType == Config.AnimeMediaType),
+            ct
+        );
 
-        int totalSimWithTv = await context.Similar
-            .CountAsync(s => s.TvFromId != null, ct);
+        int totalSimWithTv = await context.Similar.CountAsync(s => s.TvFromId != null, ct);
 
-        int animeSimByMediaType = await context.Similar
-            .CountAsync(s => s.TvFromId != null
-                && context.Tvs.Any(t => t.Id == s.TvFromId && t.MediaType == Config.AnimeMediaType), ct);
+        int animeSimByMediaType = await context.Similar.CountAsync(
+            s =>
+                s.TvFromId != null
+                && context.Tvs.Any(t => t.Id == s.TvFromId && t.MediaType == Config.AnimeMediaType),
+            ct
+        );
 
-        List<string> libraryTypes = await context.Libraries
-            .Select(l => l.Title + " (" + l.Type + ")")
+        List<string> libraryTypes = await context
+            .Libraries.Select(l => l.Title + " (" + l.Type + ")")
             .ToListAsync(ct);
 
         // Sample: first 5 anime show IDs (by Tv.MediaType)
-        List<int> sampleAnimeIds = await context.Tvs
-            .Where(t => t.MediaType == Config.AnimeMediaType)
+        List<int> sampleAnimeIds = await context
+            .Tvs.Where(t => t.MediaType == Config.AnimeMediaType)
             .OrderBy(t => t.Id)
             .Take(5)
             .Select(t => t.Id)
             .ToListAsync(ct);
 
-        int sampleRecsCount = sampleAnimeIds.Count > 0
-            ? await context.Recommendations.CountAsync(r => sampleAnimeIds.Contains(r.TvFromId!.Value), ct)
-            : 0;
+        int sampleRecsCount =
+            sampleAnimeIds.Count > 0
+                ? await context.Recommendations.CountAsync(
+                    r => sampleAnimeIds.Contains(r.TvFromId!.Value),
+                    ct
+                )
+                : 0;
 
-        return Ok(new
-        {
-            libraries = libraryTypes,
-            animeByLibraryType,
-            animeByMediaType,
-            totalRecsWithTv,
-            animeRecsByMediaType,
-            totalSimWithTv,
-            animeSimByMediaType,
-            sampleAnimeIds,
-            sampleRecsCount
-        });
+        return Ok(
+            new
+            {
+                libraries = libraryTypes,
+                animeByLibraryType,
+                animeByMediaType,
+                totalRecsWithTv,
+                animeRecsByMediaType,
+                totalSimWithTv,
+                animeSimByMediaType,
+                sampleAnimeIds,
+                sampleRecsCount,
+            }
+        );
     }
 
     [HttpGet("{type}/{id:int}")]
     public async Task<IActionResult> GetRecommendationDetail(
-        string type, int id, CancellationToken ct = default)
+        string type,
+        int id,
+        CancellationToken ct = default
+    )
     {
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view recommendations");
@@ -167,8 +200,14 @@ public class RecommendationsController(
         string country = Country();
         string language = Language();
 
-        RecommendationDetailDto? detail = await recommendationService
-            .GetRecommendationDetailAsync(userId, id, resolvedType, country, language, ct);
+        RecommendationDetailDto? detail = await recommendationService.GetRecommendationDetailAsync(
+            userId,
+            id,
+            resolvedType,
+            country,
+            language,
+            ct
+        );
 
         if (detail is not null)
             detail.MediaType = type;

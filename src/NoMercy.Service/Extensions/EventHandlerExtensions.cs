@@ -91,7 +91,9 @@ public static class EventHandlerExtensions
         return services;
     }
 
-    public static IServiceProvider InitializeSignalREventHandlers(this IServiceProvider serviceProvider)
+    public static IServiceProvider InitializeSignalREventHandlers(
+        this IServiceProvider serviceProvider
+    )
     {
         // Resolve handlers to trigger their construction and event subscriptions
         serviceProvider.GetRequiredService<SignalRPlaybackEventHandler>();

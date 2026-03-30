@@ -6,16 +6,35 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record MusicPlaylistResponseItemDto
 {
-    [JsonProperty("id")] public Guid Id { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
-    [JsonProperty("description")] public string? Description { get; set; }
-    [JsonProperty("cover")] public string? Cover { get; set; }
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("created_at")] public DateTime CreatedAt { get; set; }
-    [JsonProperty("updated_at")] public DateTime UpdatedAt { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
-    [JsonProperty("tracks")] public ICollection<PlaylistTrack> Tracks { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("id")]
+    public Guid Id { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    [JsonProperty("cover")]
+    public string? Cover { get; set; }
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
+
+    [JsonProperty("created_at")]
+    public DateTime CreatedAt { get; set; }
+
+    [JsonProperty("updated_at")]
+    public DateTime UpdatedAt { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; }
+
+    [JsonProperty("tracks")]
+    public ICollection<PlaylistTrack> Tracks { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; }
 
     public MusicPlaylistResponseItemDto(Playlist playlist)
     {

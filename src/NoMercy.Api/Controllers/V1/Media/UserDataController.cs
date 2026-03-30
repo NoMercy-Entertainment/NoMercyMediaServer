@@ -2,9 +2,9 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Media;
-using NoMercy.Api.Controllers.V1.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
@@ -20,7 +20,11 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [ApiVersion(1.0)]
 [Authorize]
 [Route("api/v{version:apiVersion}/userData")]
-public class UserDataController(HomeRepository homeRepository, MediaContext mediaContext, IEventBus eventBus) : BaseController
+public class UserDataController(
+    HomeRepository homeRepository,
+    MediaContext mediaContext,
+    IEventBus eventBus
+) : BaseController
 {
     [HttpGet]
     public IActionResult Index()
@@ -29,10 +33,7 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
         if (!User.IsAllowed())
             return UnauthenticatedResponse("You do not have permission to view user data");
 
-        return Ok(new PlaceholderResponse
-        {
-            Data = []
-        });
+        return Ok(new PlaceholderResponse { Data = [] });
     }
 
     [HttpGet]
@@ -47,15 +48,21 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
         string language = Language();
         string country = Country();
 
-        HashSet<UserData> continueWatching = await homeRepository
-            .GetContinueWatchingAsync(mediaContext, userId, language, country);
+        HashSet<UserData> continueWatching = await homeRepository.GetContinueWatchingAsync(
+            mediaContext,
+            userId,
+            language,
+            country
+        );
 
-        return Ok(new CarouselResponseDto<NmCardDto>
-        {
-            Data = continueWatching
-                .Select(item => new NmCardDto(item, country))
-                .DistinctBy(item => item.Link)
-        });
+        return Ok(
+            new CarouselResponseDto<NmCardDto>
+            {
+                Data = continueWatching
+                    .Select(item => new NmCardDto(item, country))
+                    .DistinctBy(item => item.Link),
+            }
+        );
     }
 
     [HttpDelete]
@@ -64,32 +71,33 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
-            return UnauthenticatedResponse("You do not have permission to remove continue watching");
-
+            return UnauthenticatedResponse(
+                "You do not have permission to remove continue watching"
+            );
 
         List<UserData>? userData = body.Type switch
         {
-            Config.MovieMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.MovieMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.MovieId == int.Parse(body.Id))
                 .ToListAsync(),
-            Config.TvMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.TvMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.TvId == int.Parse(body.Id))
                 .ToListAsync(),
-            Config.SpecialMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.SpecialMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.SpecialId == Ulid.Parse(body.Id))
                 .ToListAsync(),
-            Config.CollectionMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.CollectionMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.CollectionId == int.Parse(body.Id))
                 .ToListAsync(),
-            _ => null
+            _ => null,
         };
 
         if (userData == null || userData.Count == 0)
@@ -100,16 +108,9 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
         mediaContext.UserData.RemoveRange(userData);
         await mediaContext.SaveChangesAsync();
 
-        await eventBus.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = ["continue-watching"]
-        });
+        await eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["continue-watching"] });
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Item removed"
-        });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Item removed" });
     }
 
     [HttpGet]
@@ -120,30 +121,29 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
         if (!User.IsAllowed())
             return UnauthenticatedResponse("You do not have permission to view watched");
 
-
         UserData? userData = body.Type switch
         {
-            Config.MovieMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.MovieMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.MovieId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            Config.TvMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.TvMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.TvId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            Config.SpecialMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.SpecialMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.SpecialId == Ulid.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            Config.CollectionMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.CollectionMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.CollectionId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            _ => null
+            _ => null,
         };
 
         if (userData == null)
@@ -151,11 +151,9 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
 
         await mediaContext.SaveChangesAsync();
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Item marked as watched"
-        });
+        return Ok(
+            new StatusResponseDto<string> { Status = "ok", Message = "Item marked as watched" }
+        );
     }
 
     [HttpGet]
@@ -166,30 +164,29 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
         if (!User.IsAllowed())
             return UnauthenticatedResponse("You do not have permission to view favorites");
 
-
         UserData? userData = body.Type switch
         {
-            Config.MovieMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.MovieMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.MovieId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            Config.TvMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.TvMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.TvId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            Config.SpecialMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.SpecialMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.SpecialId == Ulid.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            Config.CollectionMediaType => await mediaContext.UserData
-                .AsNoTracking()
+            Config.CollectionMediaType => await mediaContext
+                .UserData.AsNoTracking()
                 .Where(data => data.UserId.Equals(userId))
                 .Where(data => data.CollectionId == int.Parse(body.Id))
                 .FirstOrDefaultAsync(),
-            _ => null
+            _ => null,
         };
 
         if (userData is null)
@@ -197,10 +194,8 @@ public class UserDataController(HomeRepository homeRepository, MediaContext medi
 
         await mediaContext.SaveChangesAsync();
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Item marked as favorite"
-        });
+        return Ok(
+            new StatusResponseDto<string> { Status = "ok", Message = "Item marked as favorite" }
+        );
     }
 }

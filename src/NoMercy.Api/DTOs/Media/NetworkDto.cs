@@ -6,14 +6,27 @@ namespace NoMercy.Api.DTOs.Media;
 
 public class NetworkDto
 {
-    [JsonProperty("id")] public int Id { get; set; }
-    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
-    [JsonProperty("description")] public string? Description { get; set; }
-    [JsonProperty("headquarters")] public string? Headquarters { get; set; }
-    [JsonProperty("link")] public Uri? Homepage { get; set; }
-    [JsonProperty("logo")] public string? Logo { get; set; }
-    [JsonProperty("origin_country")] public string? OriginCountry { get; set; } 
-    
+    [JsonProperty("id")]
+    public int Id { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    [JsonProperty("headquarters")]
+    public string? Headquarters { get; set; }
+
+    [JsonProperty("link")]
+    public Uri? Homepage { get; set; }
+
+    [JsonProperty("logo")]
+    public string? Logo { get; set; }
+
+    [JsonProperty("origin_country")]
+    public string? OriginCountry { get; set; }
+
     public NetworkDto(NetworkTv ntv)
     {
         Id = ntv.Network.Id;

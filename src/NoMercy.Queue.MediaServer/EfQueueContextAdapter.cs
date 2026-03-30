@@ -9,17 +9,20 @@ namespace NoMercy.Queue.MediaServer;
 public class EfQueueContextAdapter : IQueueContext
 {
     public static readonly Func<QueueContext, byte, string, long?, QueueJob?> ReserveJobQuery =
-        EF.CompileQuery((QueueContext queueContext, byte maxAttempts, string name, long? currentJobId) =>
-            queueContext.QueueJobs
-                .Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
-                .Where(j => currentJobId == null)
-                .Where(j => j.Queue == name)
-                .OrderByDescending(j => j.Priority)
-                .FirstOrDefault());
+        EF.CompileQuery(
+            (QueueContext queueContext, byte maxAttempts, string name, long? currentJobId) =>
+                queueContext
+                    .QueueJobs.Where(j => j.ReservedAt == null && j.Attempts <= maxAttempts)
+                    .Where(j => currentJobId == null)
+                    .Where(j => j.Queue == name)
+                    .OrderByDescending(j => j.Priority)
+                    .FirstOrDefault()
+        );
 
-    public static readonly Func<QueueContext, string, bool> ExistsQuery =
-        EF.CompileQuery((QueueContext queueContext, string payloadString) =>
-            queueContext.QueueJobs.Any(queueJob => queueJob.Payload == payloadString));
+    public static readonly Func<QueueContext, string, bool> ExistsQuery = EF.CompileQuery(
+        (QueueContext queueContext, string payloadString) =>
+            queueContext.QueueJobs.Any(queueJob => queueJob.Payload == payloadString)
+    );
 
     private readonly Func<QueueContext> _contextFactory;
     private readonly bool _ownsContext;
@@ -47,7 +50,8 @@ public class EfQueueContextAdapter : IQueueContext
 
     private void ReleaseContext(QueueContext context)
     {
-        if (_ownsContext) context.Dispose();
+        if (_ownsContext)
+            context.Dispose();
     }
 
     public void AddJob(QueueJobModel job)
@@ -63,7 +67,7 @@ public class EfQueueContextAdapter : IQueueContext
                 Attempts = job.Attempts,
                 ReservedAt = job.ReservedAt,
                 AvailableAt = job.AvailableAt,
-                CreatedAt = job.CreatedAt
+                CreatedAt = job.CreatedAt,
             };
             context.QueueJobs.Add(entity);
             context.SaveChanges();
@@ -88,7 +92,7 @@ public class EfQueueContextAdapter : IQueueContext
                 {
                     Id = job.Id,
                     Payload = job.Payload,
-                    Queue = job.Queue
+                    Queue = job.Queue,
                 };
                 context.QueueJobs.Attach(entity);
             }
@@ -155,7 +159,8 @@ public class EfQueueContextAdapter : IQueueContext
         try
         {
             QueueJob? entity = context.QueueJobs.Find(job.Id);
-            if (entity == null) return;
+            if (entity == null)
+                return;
 
             entity.Priority = job.Priority;
             entity.Queue = job.Queue;
@@ -201,7 +206,7 @@ public class EfQueueContextAdapter : IQueueContext
                 Queue = failedJob.Queue,
                 Payload = failedJob.Payload,
                 Exception = failedJob.Exception,
-                FailedAt = failedJob.FailedAt
+                FailedAt = failedJob.FailedAt,
             };
             context.FailedJobs.Add(entity);
             context.SaveChanges();
@@ -255,16 +260,18 @@ public class EfQueueContextAdapter : IQueueContext
             if (failedJobId.HasValue)
                 query = query.Where(j => j.Id == failedJobId.Value);
 
-            return query.Select(j => new FailedJobModel
-            {
-                Id = j.Id,
-                Uuid = j.Uuid,
-                Connection = j.Connection,
-                Queue = j.Queue,
-                Payload = j.Payload,
-                Exception = j.Exception,
-                FailedAt = j.FailedAt
-            }).ToList();
+            return query
+                .Select(j => new FailedJobModel
+                {
+                    Id = j.Id,
+                    Uuid = j.Uuid,
+                    Connection = j.Connection,
+                    Queue = j.Queue,
+                    Payload = j.Payload,
+                    Exception = j.Exception,
+                    FailedAt = j.FailedAt,
+                })
+                .ToList();
         }
         finally
         {
@@ -277,8 +284,8 @@ public class EfQueueContextAdapter : IQueueContext
         QueueContext context = AcquireContext();
         try
         {
-            return context.CronJobs
-                .Where(c => c.IsEnabled)
+            return context
+                .CronJobs.Where(c => c.IsEnabled)
                 .Select(c => new CronJobModel
                 {
                     Id = c.Id,
@@ -288,8 +295,9 @@ public class EfQueueContextAdapter : IQueueContext
                     Parameters = c.Parameters,
                     IsEnabled = c.IsEnabled,
                     LastRun = c.LastRun,
-                    NextRun = c.NextRun
-                }).ToList();
+                    NextRun = c.NextRun,
+                })
+                .ToList();
         }
         finally
         {
@@ -324,7 +332,7 @@ public class EfQueueContextAdapter : IQueueContext
                 Parameters = cronJob.Parameters,
                 IsEnabled = cronJob.IsEnabled,
                 LastRun = cronJob.LastRun,
-                NextRun = cronJob.NextRun
+                NextRun = cronJob.NextRun,
             };
             context.CronJobs.Add(entity);
             context.SaveChanges();
@@ -342,7 +350,8 @@ public class EfQueueContextAdapter : IQueueContext
         try
         {
             CronJob? entity = context.CronJobs.Find(cronJob.Id);
-            if (entity == null) return;
+            if (entity == null)
+                return;
 
             entity.CronExpression = cronJob.CronExpression;
             entity.IsEnabled = cronJob.IsEnabled;
@@ -397,7 +406,7 @@ public class EfQueueContextAdapter : IQueueContext
             Attempts = entity.Attempts,
             ReservedAt = entity.ReservedAt,
             AvailableAt = entity.AvailableAt,
-            CreatedAt = entity.CreatedAt
+            CreatedAt = entity.CreatedAt,
         };
     }
 
@@ -411,7 +420,7 @@ public class EfQueueContextAdapter : IQueueContext
             Queue = entity.Queue,
             Payload = entity.Payload,
             Exception = entity.Exception,
-            FailedAt = entity.FailedAt
+            FailedAt = entity.FailedAt,
         };
     }
 
@@ -426,7 +435,7 @@ public class EfQueueContextAdapter : IQueueContext
             Parameters = entity.Parameters,
             IsEnabled = entity.IsEnabled,
             LastRun = entity.LastRun,
-            NextRun = entity.NextRun
+            NextRun = entity.NextRun,
         };
     }
 }

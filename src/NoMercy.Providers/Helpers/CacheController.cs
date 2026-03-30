@@ -52,7 +52,8 @@ public static class CacheController
         return Convert.ToHexString(hashBytes);
     }
 
-    public static bool Read<T>(string url, out T? value, bool xml = false) where T : class?
+    public static bool Read<T>(string url, out T? value, bool xml = false)
+        where T : class?
     {
         if (Config.IsDev == false)
         {
@@ -115,7 +116,8 @@ public static class CacheController
 
     public static async Task Write(string url, string data)
     {
-        if (Config.IsDev == false) return;
+        if (Config.IsDev == false)
+            return;
 
         string fullname = Path.Combine(AppFiles.ApiCachePath, GenerateFileName(url));
         SemaphoreSlim fileLock = GetLock(fullname);
@@ -130,9 +132,7 @@ public static class CacheController
                 PruneCache();
                 return;
             }
-            catch (Exception) when (retry < 10)
-            {
-            }
+            catch (Exception) when (retry < 10) { }
             finally
             {
                 fileLock.Release();
@@ -152,17 +152,17 @@ public static class CacheController
     internal static void PruneCache(string cachePath, long maxSizeBytes)
     {
         DirectoryInfo cacheDir = new(cachePath);
-        if (cacheDir.Exists == false) return;
+        if (cacheDir.Exists == false)
+            return;
 
-        FileInfo[] files = cacheDir.GetFiles()
-            .OrderBy(f => f.CreationTime)
-            .ToArray();
+        FileInfo[] files = cacheDir.GetFiles().OrderBy(f => f.CreationTime).ToArray();
 
         long totalSize = files.Sum(f => f.Length);
 
         foreach (FileInfo file in files)
         {
-            if (totalSize <= maxSizeBytes) break;
+            if (totalSize <= maxSizeBytes)
+                break;
 
             try
             {

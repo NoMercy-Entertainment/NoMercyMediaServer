@@ -32,12 +32,14 @@ public static class Component
     /// <summary>
     /// Creates an NMCarousel component - displays items in a horizontal scrollable carousel.
     /// </summary>
-    public static ContainerComponentBuilder Carousel() => new(ComponentTypes.Carousel, new CarouselProps());
+    public static ContainerComponentBuilder Carousel() =>
+        new(ComponentTypes.Carousel, new CarouselProps());
 
     /// <summary>
     /// Creates an NMContainer component - generic container for grouping components.
     /// </summary>
-    public static ContainerComponentBuilder Container() => new(ComponentTypes.Container, new NmContainerProps());
+    public static ContainerComponentBuilder Container() =>
+        new(ComponentTypes.Container, new NmContainerProps());
 
     #endregion
 
@@ -51,7 +53,8 @@ public static class Component
     /// <summary>
     /// Creates an NMCard component with data.
     /// </summary>
-    public static LeafComponentBuilder<CardData> Card(CardData data) => new LeafComponentBuilder<CardData>(ComponentTypes.Card).WithData(data);
+    public static LeafComponentBuilder<CardData> Card(CardData data) =>
+        new LeafComponentBuilder<CardData>(ComponentTypes.Card).WithData(data);
 
     /// <summary>
     /// Creates an NMHomeCard component - featured home page card.
@@ -61,7 +64,8 @@ public static class Component
     /// <summary>
     /// Creates an NMHomeCard component with data.
     /// </summary>
-    public static LeafComponentBuilder<HomeCardData> HomeCard(HomeCardData data) => new LeafComponentBuilder<HomeCardData>(ComponentTypes.HomeCard).WithData(data);
+    public static LeafComponentBuilder<HomeCardData> HomeCard(HomeCardData data) =>
+        new LeafComponentBuilder<HomeCardData>(ComponentTypes.HomeCard).WithData(data);
 
     /// <summary>
     /// Creates an NMGenreCard component - genre category card.
@@ -71,7 +75,8 @@ public static class Component
     /// <summary>
     /// Creates an NMGenreCard component with data.
     /// </summary>
-    public static LeafComponentBuilder<NmGenreCardDto> GenreCard(NmGenreCardDto data) => new LeafComponentBuilder<NmGenreCardDto>(ComponentTypes.GenreCard).WithData(data);
+    public static LeafComponentBuilder<NmGenreCardDto> GenreCard(NmGenreCardDto data) =>
+        new LeafComponentBuilder<NmGenreCardDto>(ComponentTypes.GenreCard).WithData(data);
 
     /// <summary>
     /// Creates an NMMusicCard component - music album/artist card.
@@ -81,12 +86,14 @@ public static class Component
     /// <summary>
     /// Creates an NMMusicHomeCard component - music home featured card.
     /// </summary>
-    public static LeafComponentBuilder<MusicHomeCardData> MusicHomeCard() => new(ComponentTypes.MusicHomeCard);
+    public static LeafComponentBuilder<MusicHomeCardData> MusicHomeCard() =>
+        new(ComponentTypes.MusicHomeCard);
 
     /// <summary>
     /// Creates an NMMusicHomeCard component with data.
     /// </summary>
-    public static LeafComponentBuilder<MusicHomeCardData> MusicHomeCard(MusicHomeCardData data) => new LeafComponentBuilder<MusicHomeCardData>(ComponentTypes.MusicHomeCard).WithData(data);
+    public static LeafComponentBuilder<MusicHomeCardData> MusicHomeCard(MusicHomeCardData data) =>
+        new LeafComponentBuilder<MusicHomeCardData>(ComponentTypes.MusicHomeCard).WithData(data);
 
     /// <summary>
     /// Creates an NMTrackRow component - single track in a list.
@@ -96,62 +103,75 @@ public static class Component
     /// <summary>
     /// Creates an NMTrackRow component with data.
     /// </summary>
-    public static TrackRowComponentBuilder TrackRow(TrackRowData data) => new TrackRowComponentBuilder().WithData(data);
+    public static TrackRowComponentBuilder TrackRow(TrackRowData data) =>
+        new TrackRowComponentBuilder().WithData(data);
 
     /// <summary>
     /// Creates an NMTopResultCard component - search top result.
     /// </summary>
-    public static LeafComponentBuilder<TopResultCardData> TopResultCard() => new(ComponentTypes.TopResultCard);
+    public static LeafComponentBuilder<TopResultCardData> TopResultCard() =>
+        new(ComponentTypes.TopResultCard);
 
     /// <summary>
     /// Creates an NMTopResultCard component with data.
     /// </summary>
-    public static LeafComponentBuilder<TopResultCardData> TopResultCard(TopResultCardData data) => new LeafComponentBuilder<TopResultCardData>(ComponentTypes.TopResultCard).WithData(data);
+    public static LeafComponentBuilder<TopResultCardData> TopResultCard(TopResultCardData data) =>
+        new LeafComponentBuilder<TopResultCardData>(ComponentTypes.TopResultCard).WithData(data);
 
     /// <summary>
     /// Creates an NMSeasonCard component - episode in a season.
     /// </summary>
-    public static LeafComponentBuilder<SeasonCardData> SeasonCard() => new(ComponentTypes.SeasonCard);
+    public static LeafComponentBuilder<SeasonCardData> SeasonCard() =>
+        new(ComponentTypes.SeasonCard);
 
     /// <summary>
     /// Creates an NMSeasonCard component with data.
     /// </summary>
-    public static LeafComponentBuilder<SeasonCardData> SeasonCard(SeasonCardData data) => new LeafComponentBuilder<SeasonCardData>(ComponentTypes.SeasonCard).WithData(data);
+    public static LeafComponentBuilder<SeasonCardData> SeasonCard(SeasonCardData data) =>
+        new LeafComponentBuilder<SeasonCardData>(ComponentTypes.SeasonCard).WithData(data);
 
     /// <summary>
     /// Creates an NMSeasonTitle component - season header.
     /// </summary>
-    public static LeafComponentBuilder<SeasonTitleData> SeasonTitle() => new(ComponentTypes.SeasonTitle);
+    public static LeafComponentBuilder<SeasonTitleData> SeasonTitle() =>
+        new(ComponentTypes.SeasonTitle);
 
     /// <summary>
     /// Creates an NMSeasonTitle component with data.
     /// </summary>
-    public static LeafComponentBuilder<SeasonTitleData> SeasonTitle(SeasonTitleData data) => new LeafComponentBuilder<SeasonTitleData>(ComponentTypes.SeasonTitle).WithData(data);
+    public static LeafComponentBuilder<SeasonTitleData> SeasonTitle(SeasonTitleData data) =>
+        new LeafComponentBuilder<SeasonTitleData>(ComponentTypes.SeasonTitle).WithData(data);
 
     /// <summary>
     /// Creates an NMEmptyState component - shown when there is no content to display.
     /// </summary>
-    public static LeafComponentBuilder<EmptyStateData> EmptyState() => new(ComponentTypes.EmptyState);
+    public static LeafComponentBuilder<EmptyStateData> EmptyState() =>
+        new(ComponentTypes.EmptyState);
 
     /// <summary>
     /// Creates an NMEmptyState component with data.
     /// </summary>
-    public static LeafComponentBuilder<EmptyStateData> EmptyState(EmptyStateData data) => new LeafComponentBuilder<EmptyStateData>(ComponentTypes.EmptyState).WithData(data);
+    public static LeafComponentBuilder<EmptyStateData> EmptyState(EmptyStateData data) =>
+        new LeafComponentBuilder<EmptyStateData>(ComponentTypes.EmptyState).WithData(data);
 
     #endregion
 
-    public static ComponentEnvelope MusicCard(ArtistsResponseItemDto data) => new LeafComponentBuilder<ArtistsResponseItemDto>(ComponentTypes.MusicCard).WithData(data);
+    public static ComponentEnvelope MusicCard(ArtistsResponseItemDto data) =>
+        new LeafComponentBuilder<ArtistsResponseItemDto>(ComponentTypes.MusicCard).WithData(data);
 
-    public static ComponentEnvelope MusicCard(AlbumsResponseItemDto data) => new LeafComponentBuilder<AlbumsResponseItemDto>(ComponentTypes.MusicCard).WithData(data);
+    public static ComponentEnvelope MusicCard(AlbumsResponseItemDto data) =>
+        new LeafComponentBuilder<AlbumsResponseItemDto>(ComponentTypes.MusicCard).WithData(data);
 
-    public static ComponentEnvelope MusicCard(PlaylistResponseItemDto data) => new LeafComponentBuilder<PlaylistResponseItemDto>(ComponentTypes.MusicCard).WithData(data);
+    public static ComponentEnvelope MusicCard(PlaylistResponseItemDto data) =>
+        new LeafComponentBuilder<PlaylistResponseItemDto>(ComponentTypes.MusicCard).WithData(data);
 
     /// <summary>
     /// Creates an NMMusicCard component with data.
     /// </summary>
     // public static LeafComponentBuilder<MusicCardData> MusicCard(MusicCardData data) => new LeafComponentBuilder<MusicCardData>(ComponentTypes.MusicCard).WithData(data);
-    
-    public static ComponentEnvelope MusicCard(MusicCardData data) => new LeafComponentBuilder<MusicCardData>(ComponentTypes.MusicCard).WithData(data);
+
+    public static ComponentEnvelope MusicCard(MusicCardData data) =>
+        new LeafComponentBuilder<MusicCardData>(ComponentTypes.MusicCard).WithData(data);
 }
 
 /// <summary>
@@ -165,11 +185,7 @@ public class ContainerComponentBuilder : IComponentBuilder
     public ContainerComponentBuilder(string componentType, ContainerProps props)
     {
         _props = props;
-        _envelope = new()
-        {
-            Component = componentType,
-            Props = props
-        };
+        _envelope = new() { Component = componentType, Props = props };
     }
 
     public ContainerComponentBuilder WithId(dynamic id)
@@ -178,7 +194,10 @@ public class ContainerComponentBuilder : IComponentBuilder
         return this;
     }
 
-    public ContainerComponentBuilder WithNavigation(dynamic? previousId = null, dynamic? nextId = null)
+    public ContainerComponentBuilder WithNavigation(
+        dynamic? previousId = null,
+        dynamic? nextId = null
+    )
     {
         _props.PreviousId = previousId;
         _props.NextId = nextId;
@@ -257,7 +276,7 @@ public class ContainerComponentBuilder : IComponentBuilder
         {
             When = when,
             Link = new(link, UriKind.Relative),
-            Body = new { replace_id = _envelope.Id }
+            Body = new { replace_id = _envelope.Id },
         };
         return this;
     }
@@ -273,7 +292,8 @@ public class ContainerComponentBuilder : IComponentBuilder
         return _envelope;
     }
 
-    public static implicit operator ComponentEnvelope(ContainerComponentBuilder builder) => builder.Build();
+    public static implicit operator ComponentEnvelope(ContainerComponentBuilder builder) =>
+        builder.Build();
 }
 
 /// <summary>
@@ -287,11 +307,7 @@ public class LeafComponentBuilder<TData> : IComponentBuilder
     public LeafComponentBuilder(string componentType)
     {
         _props = new();
-        _envelope = new()
-        {
-            Component = componentType,
-            Props = _props
-        };
+        _envelope = new() { Component = componentType, Props = _props };
     }
 
     public LeafComponentBuilder<TData> WithId(dynamic id)
@@ -300,7 +316,10 @@ public class LeafComponentBuilder<TData> : IComponentBuilder
         return this;
     }
 
-    public LeafComponentBuilder<TData> WithNavigation(dynamic? previousId = null, dynamic? nextId = null)
+    public LeafComponentBuilder<TData> WithNavigation(
+        dynamic? previousId = null,
+        dynamic? nextId = null
+    )
     {
         _props.PreviousId = previousId;
         _props.NextId = nextId;
@@ -355,7 +374,7 @@ public class LeafComponentBuilder<TData> : IComponentBuilder
         {
             When = when,
             Link = new(link, UriKind.Relative),
-            Body = new { replace_id = _envelope.Id }
+            Body = new { replace_id = _envelope.Id },
         };
         return this;
     }
@@ -371,7 +390,8 @@ public class LeafComponentBuilder<TData> : IComponentBuilder
         return _envelope;
     }
 
-    public static implicit operator ComponentEnvelope(LeafComponentBuilder<TData> builder) => builder.Build();
+    public static implicit operator ComponentEnvelope(LeafComponentBuilder<TData> builder) =>
+        builder.Build();
 }
 
 /// <summary>
@@ -385,11 +405,7 @@ public class TrackRowComponentBuilder : IComponentBuilder
     public TrackRowComponentBuilder()
     {
         _props = new();
-        _envelope = new()
-        {
-            Component = ComponentTypes.TrackRow,
-            Props = _props
-        };
+        _envelope = new() { Component = ComponentTypes.TrackRow, Props = _props };
     }
 
     public TrackRowComponentBuilder WithId(dynamic id)
@@ -398,7 +414,10 @@ public class TrackRowComponentBuilder : IComponentBuilder
         return this;
     }
 
-    public TrackRowComponentBuilder WithNavigation(dynamic? previousId = null, dynamic? nextId = null)
+    public TrackRowComponentBuilder WithNavigation(
+        dynamic? previousId = null,
+        dynamic? nextId = null
+    )
     {
         _props.PreviousId = previousId;
         _props.NextId = nextId;
@@ -452,7 +471,8 @@ public class TrackRowComponentBuilder : IComponentBuilder
         return _envelope;
     }
 
-    public static implicit operator ComponentEnvelope(TrackRowComponentBuilder builder) => builder.Build();
+    public static implicit operator ComponentEnvelope(TrackRowComponentBuilder builder) =>
+        builder.Build();
 
     public TrackRowComponentBuilder WithProperties(Dictionary<string, dynamic>? properties)
     {

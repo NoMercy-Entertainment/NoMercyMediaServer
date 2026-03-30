@@ -12,7 +12,8 @@ public class BaseContainer : Classes
 {
     #region Properties
 
-    public new virtual ContainerDto ContainerDto { get; protected set; } = AvailableContainers.First(c => c.IsDefault);
+    public new virtual ContainerDto ContainerDto { get; protected set; } =
+        AvailableContainers.First(c => c.IsDefault);
 
     public FfProbeData FfProbeData = null!;
     public readonly List<BaseVideo> VideoStreams = [];
@@ -21,14 +22,44 @@ public class BaseContainer : Classes
     public readonly List<BaseImage> ImageStreams = [];
 
     public static ContainerDto[] AvailableContainers =>
-    [
-        new() { Name = VideoContainers.Hls, Type = "video", IsDefault = false },
-        new() { Name = VideoContainers.Mkv, Type = "video", IsDefault = false },
-        new() { Name = VideoContainers.Mp4, Type = "video", IsDefault = true },
-        new() { Name = VideoContainers.Webm, Type = "video", IsDefault = false },
-        new() { Name = AudioContainers.Flac, Type = "audio", IsDefault = false },
-        new() { Name = AudioContainers.Mp3, Type = "audio", IsDefault = true }
-    ];
+        [
+            new()
+            {
+                Name = VideoContainers.Hls,
+                Type = "video",
+                IsDefault = false,
+            },
+            new()
+            {
+                Name = VideoContainers.Mkv,
+                Type = "video",
+                IsDefault = false,
+            },
+            new()
+            {
+                Name = VideoContainers.Mp4,
+                Type = "video",
+                IsDefault = true,
+            },
+            new()
+            {
+                Name = VideoContainers.Webm,
+                Type = "video",
+                IsDefault = false,
+            },
+            new()
+            {
+                Name = AudioContainers.Flac,
+                Type = "audio",
+                IsDefault = false,
+            },
+            new()
+            {
+                Name = AudioContainers.Mp3,
+                Type = "audio",
+                IsDefault = true,
+            },
+        ];
 
     public static string GetName(string container)
     {
@@ -41,29 +72,35 @@ public class BaseContainer : Classes
             "flv" => "Flv",
             "flac" => "Flac",
             "mp3" => "Mp3",
-            _ => throw new ArgumentOutOfRangeException(nameof(container), container, null)
+            _ => throw new ArgumentOutOfRangeException(nameof(container), container, null),
         };
     }
 
     public virtual CodecDto[] AvailableVideoCodecs =>
-    [
-        VideoCodecs.H264, VideoCodecs.H264Nvenc,
-        VideoCodecs.H265, VideoCodecs.H265Nvenc,
-        VideoCodecs.Vp9, VideoCodecs.Vp9Nvenc
-    ];
+        [
+            VideoCodecs.H264,
+            VideoCodecs.H264Nvenc,
+            VideoCodecs.H265,
+            VideoCodecs.H265Nvenc,
+            VideoCodecs.Vp9,
+            VideoCodecs.Vp9Nvenc,
+        ];
 
     public virtual CodecDto[] AvailableAudioCodecs =>
-    [
-        AudioCodecs.Aac, AudioCodecs.Opus, AudioCodecs.Vorbis,
-        AudioCodecs.Mp3, AudioCodecs.Flac, AudioCodecs.Ac3,
-        AudioCodecs.Eac3, AudioCodecs.LibOpus, AudioCodecs.TrueHd
-    ];
+        [
+            AudioCodecs.Aac,
+            AudioCodecs.Opus,
+            AudioCodecs.Vorbis,
+            AudioCodecs.Mp3,
+            AudioCodecs.Flac,
+            AudioCodecs.Ac3,
+            AudioCodecs.Eac3,
+            AudioCodecs.LibOpus,
+            AudioCodecs.TrueHd,
+        ];
 
     public virtual CodecDto[] AvailableSubtitleCodecs =>
-    [
-        SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass,
-        SubtitleCodecs.Copy
-    ];
+        [SubtitleCodecs.Webvtt, SubtitleCodecs.Srt, SubtitleCodecs.Ass, SubtitleCodecs.Copy];
 
     internal readonly Dictionary<string, dynamic> _extraParameters = new();
     private readonly Dictionary<string, dynamic> _ops = new();
@@ -84,7 +121,8 @@ public class BaseContainer : Classes
         ContainerDto[] availableCodecs = AvailableContainers;
         if (availableCodecs.All(container => container.Name != videoContainer))
             throw new(
-                $"Wrong video container value for {videoContainer}, available formats are {string.Join(", ", AvailableContainers.Select(container => container.Name))}");
+                $"Wrong video container value for {videoContainer}, available formats are {string.Join(", ", AvailableContainers.Select(container => container.Name))}"
+            );
 
         ContainerDto = availableCodecs.First(container => container.Name == videoContainer);
         Extension = ContainerDto.Name switch
@@ -100,7 +138,11 @@ public class BaseContainer : Classes
             "mp3" => "mp3",
             "flac" => "flac",
             "m3u8" => "m3u8",
-            _ => throw new ArgumentOutOfRangeException(nameof(videoContainer), videoContainer, null)
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(videoContainer),
+                videoContainer,
+                null
+            ),
         };
 
         return this;
@@ -174,7 +216,7 @@ public class BaseContainer : Classes
             "mp3" => new Mp3(),
             "flac" => new Flac(),
             "m3u8" => new Hls().SetHlsFlags("independent_segments"),
-            _ => throw new($"Container {profileContainer} not supported")
+            _ => throw new($"Container {profileContainer} not supported"),
         };
     }
 

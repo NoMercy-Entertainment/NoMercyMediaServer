@@ -24,18 +24,18 @@ public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAs
 
     public async Task<bool> Process()
     {
-        Library? library = await _mediaContext.Libraries
-            .AsNoTracking()
+        Library? library = await _mediaContext
+            .Libraries.AsNoTracking()
             .Include(library => library.FolderLibraries)
-            .ThenInclude(folderLibrary => folderLibrary.Folder)
+                .ThenInclude(folderLibrary => folderLibrary.Folder)
             .FirstOrDefaultAsync(library => library.Id == Id);
 
-        if (library is null) return false;
+        if (library is null)
+            return false;
 
         Library = library;
 
-        Paths.AddRange(Library.FolderLibraries
-            .Select(folderLibrary => folderLibrary.Folder.Path));
+        Paths.AddRange(Library.FolderLibraries.Select(folderLibrary => folderLibrary.Folder.Path));
 
         GetDepth();
 
@@ -56,7 +56,7 @@ public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAs
         Depth = Library.Type switch
         {
             "music" => 3,
-            _ => 1
+            _ => 1,
         };
     }
 
@@ -76,15 +76,16 @@ public class LibraryLogic(Ulid id, MediaContext mediaContext) : IDisposable, IAs
     private async Task ScanAudioFolder(string path)
     {
         await using MediaScan mediaScan = new();
-        IEnumerable<MediaFolderExtend> rootFolders = (await mediaScan
-                .DisableRegexFilter()
-                .Process(path, 2))
+        IEnumerable<MediaFolderExtend> rootFolders = (
+            await mediaScan.DisableRegexFilter().Process(path, 2)
+        )
             .SelectMany(r => r.SubFolders ?? [])
             .ToList();
 
         foreach (MediaFolderExtend rootFolder in rootFolders)
         {
-            if (rootFolder.Path == path) return;
+            if (rootFolder.Path == path)
+                return;
 
             Titles.Add(rootFolder.Path);
 

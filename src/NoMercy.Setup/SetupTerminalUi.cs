@@ -37,8 +37,10 @@ public sealed class SetupTerminalUi : IDisposable
     {
         get
         {
-            if (!Environment.UserInteractive) return false;
-            if (Console.IsOutputRedirected) return false;
+            if (!Environment.UserInteractive)
+                return false;
+            if (Console.IsOutputRedirected)
+                return false;
 
             try
             {
@@ -61,7 +63,8 @@ public sealed class SetupTerminalUi : IDisposable
         string verificationUriComplete,
         string verificationUri,
         string userCode,
-        string setupPageUrl)
+        string setupPageUrl
+    )
     {
         _verificationUriComplete = verificationUriComplete;
         _verificationUri = verificationUri;
@@ -103,7 +106,8 @@ public sealed class SetupTerminalUi : IDisposable
     /// </summary>
     public void ShowProgress(string phase, string detail)
     {
-        if (!IsInteractiveTerminal) return;
+        if (!IsInteractiveTerminal)
+            return;
 
         _isActive = false;
         StopResizeWatcher();
@@ -120,13 +124,13 @@ public sealed class SetupTerminalUi : IDisposable
 
         string phaseLabel = phase switch
         {
-            "Authenticating"      => "Signed in successfully!",
-            "Authenticated"       => "Signed in successfully!",
-            "Registering"         => "Connecting your server to NoMercy...",
-            "Registered"          => "Setting up your server address...",
+            "Authenticating" => "Signed in successfully!",
+            "Authenticated" => "Signed in successfully!",
+            "Registering" => "Connecting your server to NoMercy...",
+            "Registered" => "Setting up your server address...",
             "CertificateAcquired" => "Securing your connection...",
-            "Complete"            => "All done!",
-            _                     => phase
+            "Complete" => "All done!",
+            _ => phase,
         };
 
         Console.WriteLine();
@@ -141,7 +145,8 @@ public sealed class SetupTerminalUi : IDisposable
     /// </summary>
     public void ShowComplete(string serverUrl)
     {
-        if (!IsInteractiveTerminal) return;
+        if (!IsInteractiveTerminal)
+            return;
 
         StopResizeWatcher();
         _isActive = false;
@@ -172,7 +177,8 @@ public sealed class SetupTerminalUi : IDisposable
 
     private void Draw()
     {
-        if (!IsInteractiveTerminal) return;
+        if (!IsInteractiveTerminal)
+            return;
 
         int width = GetTerminalWidth();
         bool canDrawQr = width >= MinWidthForQr;
@@ -246,7 +252,8 @@ public sealed class SetupTerminalUi : IDisposable
             string raw = qrCode.GetGraphic(1);
             string[] lines = raw.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-            if (lines.Length == 0) return [];
+            if (lines.Length == 0)
+                return [];
 
             int qrWidth = lines[0].Length;
             if (qrWidth + 4 > terminalWidth)
@@ -268,32 +275,36 @@ public sealed class SetupTerminalUi : IDisposable
 
     private void StartResizeWatcher()
     {
-        _resizeWatchTask = Task.Run(async () =>
-        {
-            while (!_cts.Token.IsCancellationRequested && _isActive)
+        _resizeWatchTask = Task.Run(
+            async () =>
             {
-                try
+                while (!_cts.Token.IsCancellationRequested && _isActive)
                 {
-                    await Task.Delay(250, _cts.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
+                    try
+                    {
+                        await Task.Delay(250, _cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
 
-                if (!IsInteractiveTerminal) continue;
+                    if (!IsInteractiveTerminal)
+                        continue;
 
-                int newWidth  = GetTerminalWidth();
-                int newHeight = GetTerminalHeight();
+                    int newWidth = GetTerminalWidth();
+                    int newHeight = GetTerminalHeight();
 
-                if (newWidth != _lastKnownWidth || newHeight != _lastKnownHeight)
-                {
-                    _lastKnownWidth  = newWidth;
-                    _lastKnownHeight = newHeight;
-                    Draw();
+                    if (newWidth != _lastKnownWidth || newHeight != _lastKnownHeight)
+                    {
+                        _lastKnownWidth = newWidth;
+                        _lastKnownHeight = newHeight;
+                        Draw();
+                    }
                 }
-            }
-        }, _cts.Token);
+            },
+            _cts.Token
+        );
     }
 
     private void StopResizeWatcher()
@@ -312,15 +323,29 @@ public sealed class SetupTerminalUi : IDisposable
 
     private static int GetTerminalWidth()
     {
-        if (!Environment.UserInteractive) return 0;
-        try { return Console.WindowWidth; }
-        catch (IOException) { return 0; }
+        if (!Environment.UserInteractive)
+            return 0;
+        try
+        {
+            return Console.WindowWidth;
+        }
+        catch (IOException)
+        {
+            return 0;
+        }
     }
 
     private static int GetTerminalHeight()
     {
-        if (!Environment.UserInteractive) return 0;
-        try { return Console.WindowHeight; }
-        catch (IOException) { return 0; }
+        if (!Environment.UserInteractive)
+            return 0;
+        try
+        {
+            return Console.WindowHeight;
+        }
+        catch (IOException)
+        {
+            return 0;
+        }
     }
 }

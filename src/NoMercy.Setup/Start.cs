@@ -26,78 +26,140 @@ public class Start
         return
         [
             // ── PHASE 1: MUST SUCCEED (no network) ─────────────────────
-            new("UserSettings", async () =>
-            {
-                if (UserSettings.TryGetUserSettings(out Dictionary<string, string> settings))
-                    UserSettings.ApplySettings(settings);
-            }, CanDefer: false, Phase: 1),
-
-            new("CreateAppFolders", AppFiles.CreateAppFolders,
-                CanDefer: false, Phase: 1, DependsOn: ["UserSettings"]),
-
-            new("ApiInfo", ApiInfo.RequestInfo,
-                CanDefer: false, Phase: 1, DependsOn: ["CreateAppFolders"]),
-
-            // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
-            new("NetworkProbe", async () =>
-            {
-                hasNetwork = await NetworkProbe.CheckConnectivity();
-            }, CanDefer: false, Phase: 2, DependsOn: ["ApiInfo"]),
-
-            new("Auth", async () =>
-            {
-                if (hasNetwork)
+            new(
+                "UserSettings",
+                async () =>
                 {
-                    try
+                    if (UserSettings.TryGetUserSettings(out Dictionary<string, string> settings))
+                        UserSettings.ApplySettings(settings);
+                },
+                CanDefer: false,
+                Phase: 1
+            ),
+            new(
+                "CreateAppFolders",
+                AppFiles.CreateAppFolders,
+                CanDefer: false,
+                Phase: 1,
+                DependsOn: ["UserSettings"]
+            ),
+            new(
+                "ApiInfo",
+                ApiInfo.RequestInfo,
+                CanDefer: false,
+                Phase: 1,
+                DependsOn: ["CreateAppFolders"]
+            ),
+            // ── PHASE 2: BEST-EFFORT (network, with fallback) ──────────
+            new(
+                "NetworkProbe",
+                async () =>
+                {
+                    hasNetwork = await NetworkProbe.CheckConnectivity();
+                },
+                CanDefer: false,
+                Phase: 2,
+                DependsOn: ["ApiInfo"]
+            ),
+            new(
+                "Auth",
+                async () =>
+                {
+                    if (hasNetwork)
                     {
-                        await Auth.Init();
-                        if (Globals.Globals.AccessToken is null)
-                            throw new InvalidOperationException("No access token after auth");
+                        try
+                        {
+                            await Auth.Init();
+                            if (Globals.Globals.AccessToken is null)
+                                throw new InvalidOperationException("No access token after auth");
+                        }
+                        catch (Exception)
+                        {
+                            Logger.Setup("Auth not yet available, checking for cached tokens");
+                            bool result = await Auth.InitWithFallback();
+                            if (!result)
+                                throw new InvalidOperationException(
+                                    "Auth failed and no cached tokens available"
+                                );
+                        }
                     }
-                    catch (Exception)
+                    else
                     {
-                        Logger.Setup("Auth not yet available, checking for cached tokens");
                         bool result = await Auth.InitWithFallback();
                         if (!result)
-                            throw new InvalidOperationException("Auth failed and no cached tokens available");
+                            throw new InvalidOperationException(
+                                "No network and no cached tokens available"
+                            );
                     }
-                }
-                else
-                {
-                    bool result = await Auth.InitWithFallback();
-                    if (!result)
-                        throw new InvalidOperationException("No network and no cached tokens available");
-                }
-            }, CanDefer: true, Phase: 2, DependsOn: ["NetworkProbe"]),
-
-            new("Binaries", Binaries.DownloadAll,
-                CanDefer: false, Phase: 2, DependsOn: ["NetworkProbe"]),
-
+                },
+                CanDefer: true,
+                Phase: 2,
+                DependsOn: ["NetworkProbe"]
+            ),
+            new(
+                "Binaries",
+                Binaries.DownloadAll,
+                CanDefer: false,
+                Phase: 2,
+                DependsOn: ["NetworkProbe"]
+            ),
             // ── PHASE 3: NETWORK-DEPENDENT (run if possible, degrade if not) ──
-            new("Networking", async () =>
-            {
-                if (NetworkDiscovery is not null)
-                    await NetworkDiscovery.DiscoverExternalIpAsync();
-            }, CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
-
-            new("ChromeCast", ChromeCast.Init,
-                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
-
-            new("UpdateChecker", UpdateChecker.StartPeriodicUpdateCheck,
-                CanDefer: true, Phase: 3, DependsOn: ["NetworkProbe"]),
-
-            new("DesktopIcon", () => Task.Run(() =>
-                DesktopIconCreator.CreateDesktopIcon(
-                    AppFiles.ApplicationName, AppFiles.ServerExePath, AppFiles.AppIcon)),
-                CanDefer: true, Phase: 3),
-
-            .. callerTasks.Select((TaskDelegate taskDelegate, int i) =>
-                new StartupTask($"CallerTask_{i}", taskDelegate.Invoke,
-                    CanDefer: true, Phase: 3, DependsOn: ["Auth"])),
-
+            new(
+                "Networking",
+                async () =>
+                {
+                    if (NetworkDiscovery is not null)
+                        await NetworkDiscovery.DiscoverExternalIpAsync();
+                },
+                CanDefer: true,
+                Phase: 3,
+                DependsOn: ["NetworkProbe"]
+            ),
+            new(
+                "ChromeCast",
+                ChromeCast.Init,
+                CanDefer: true,
+                Phase: 3,
+                DependsOn: ["NetworkProbe"]
+            ),
+            new(
+                "UpdateChecker",
+                UpdateChecker.StartPeriodicUpdateCheck,
+                CanDefer: true,
+                Phase: 3,
+                DependsOn: ["NetworkProbe"]
+            ),
+            new(
+                "DesktopIcon",
+                () =>
+                    Task.Run(() =>
+                        DesktopIconCreator.CreateDesktopIcon(
+                            AppFiles.ApplicationName,
+                            AppFiles.ServerExePath,
+                            AppFiles.AppIcon
+                        )
+                    ),
+                CanDefer: true,
+                Phase: 3
+            ),
+            .. callerTasks.Select(
+                (TaskDelegate taskDelegate, int i) =>
+                    new StartupTask(
+                        $"CallerTask_{i}",
+                        taskDelegate.Invoke,
+                        CanDefer: true,
+                        Phase: 3,
+                        DependsOn: ["Auth"]
+                    )
+            ),
             // ── PHASE 4: REGISTRATION (needs Auth + Networking) ────────
-            new("Register", () => Register.Init(),
-                CanDefer: true, Phase: 4, DependsOn: ["Auth", "Networking"]),
+            new(
+                "Register",
+                () => Register.Init(),
+                CanDefer: true,
+                Phase: 4,
+                DependsOn: ["Auth", "Networking"]
+            ),
         ];
     }
 
@@ -111,7 +173,7 @@ public class Start
 
         await runner.RunAll();
 
-        _phase1Completed = [..runner.CompletedTasks];
+        _phase1Completed = [.. runner.CompletedTasks];
     }
 
     public static async Task InitRemaining()
@@ -124,9 +186,12 @@ public class Start
         if (runner.DeferredTasks.Count > 0)
         {
             IsDegradedMode = true;
-            Logger.Setup("Some startup tasks were deferred — they will be retried in the background");
             Logger.Setup(
-                $"  Deferred tasks: {string.Join(", ", runner.DeferredTasks.Select(t => t.Name))}");
+                "Some startup tasks were deferred — they will be retried in the background"
+            );
+            Logger.Setup(
+                $"  Deferred tasks: {string.Join(", ", runner.DeferredTasks.Select(t => t.Name))}"
+            );
 
             DeferredTasks deferred = new()
             {
@@ -135,7 +200,7 @@ public class Start
                 NetworkDiscovered = runner.CompletedTasks.Contains("Networking"),
                 SeedsRun = runner.DeferredTasks.All(t => !t.Name.StartsWith("CallerTask_")),
                 Registered = runner.CompletedTasks.Contains("Register"),
-                CallerTasks = _callerTasks
+                CallerTasks = _callerTasks,
             };
             _ = Task.Run(() => DegradedModeRecovery.StartRecoveryLoop(deferred));
         }
@@ -150,8 +215,8 @@ public class Start
             await FFmpegHardwareConfig.InitializeAsync();
             if (FFmpegHardwareConfig.Accelerators.Count > 0)
             {
-                List<string> gpus = FFmpegHardwareConfig.Accelerators
-                    .Select(a => $"{a.Vendor}/{a.Accelerator}")
+                List<string> gpus = FFmpegHardwareConfig
+                    .Accelerators.Select(a => $"{a.Vendor}/{a.Accelerator}")
                     .ToList();
                 Logger.Encoder($"GPU acceleration: {string.Join(", ", gpus)}", LogEventLevel.Debug);
             }
@@ -164,7 +229,10 @@ public class Start
             }
             else
             {
-                Logger.Setup("QueueRunner.Current is null — skipping Initialize from InitRemaining (will be initialized after host restart)", LogEventLevel.Warning);
+                Logger.Setup(
+                    "QueueRunner.Current is null — skipping Initialize from InitRemaining (will be initialized after host restart)",
+                    LogEventLevel.Warning
+                );
             }
         });
     }

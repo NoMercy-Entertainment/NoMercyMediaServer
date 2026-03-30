@@ -5,5 +5,6 @@ namespace NoMercy.Providers.TMDB.Models.Genres;
 
 public class TmdbGenreTv
 {
-    [JsonProperty("genres")] public TmdbGenre[] Genres { get; set; } = [];
+    [JsonProperty("genres")]
+    public TmdbGenre[] Genres { get; set; } = [];
 }

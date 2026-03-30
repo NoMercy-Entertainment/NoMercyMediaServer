@@ -7,7 +7,7 @@ public static class Url
         UriBuilder uriBuilder = new(url)
         {
             Scheme = Uri.UriSchemeHttps,
-            Port = -1 // default port for scheme
+            Port = -1, // default port for scheme
         };
 
         return uriBuilder.Uri;

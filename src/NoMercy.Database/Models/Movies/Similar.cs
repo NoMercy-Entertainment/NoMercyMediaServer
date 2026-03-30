@@ -20,23 +20,39 @@ public class Similar : ColorPaletteTimeStamps
     [JsonProperty("id")]
     public int Id { get; set; }
 
-    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
-    [MaxLength(4096)] [JsonProperty("overview")] public string? Overview { get; set; }
-    [JsonProperty("poster")] public string? Poster { get; set; }
-    [JsonProperty("title")] public string? Title { get; set; }
-    [JsonProperty("titleSort")] public string? TitleSort { get; set; }
-    [JsonProperty("media_id")] public int MediaId { get; set; }
+    [JsonProperty("backdrop")]
+    public string? Backdrop { get; set; }
 
-    [JsonProperty("tv_from_id")] public int? TvFromId { get; set; }
+    [MaxLength(4096)]
+    [JsonProperty("overview")]
+    public string? Overview { get; set; }
+
+    [JsonProperty("poster")]
+    public string? Poster { get; set; }
+
+    [JsonProperty("title")]
+    public string? Title { get; set; }
+
+    [JsonProperty("titleSort")]
+    public string? TitleSort { get; set; }
+
+    [JsonProperty("media_id")]
+    public int MediaId { get; set; }
+
+    [JsonProperty("tv_from_id")]
+    public int? TvFromId { get; set; }
     public Tv? TvFrom { get; set; }
 
-    [JsonProperty("tv_to_id")] public int? TvToId { get; set; }
+    [JsonProperty("tv_to_id")]
+    public int? TvToId { get; set; }
     public Tv? TvTo { get; set; }
 
-    [JsonProperty("movie_from_id")] public int? MovieFromId { get; set; }
+    [JsonProperty("movie_from_id")]
+    public int? MovieFromId { get; set; }
     public Movie? MovieFrom { get; set; }
 
-    [JsonProperty("movie_to_id")] public int? MovieToId { get; set; }
+    [JsonProperty("movie_to_id")]
+    public int? MovieToId { get; set; }
     public Movie? MovieTo { get; set; }
 
     public Similar()

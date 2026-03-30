@@ -1,49 +1,47 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="NoMercy.Tests.Setup" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <InternalsVisibleTo Include="NoMercy.Tests.Setup" />
-    </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="Polly" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
-        <PackageReference Include="Polly" />
-        <PackageReference Include="Serilog" />
-        <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" />
-        <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
-        <PackageReference Include="QRCoder" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
+    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
+    <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj" />
+    <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
+    <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
+    <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj"/>
-        <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
-        <ProjectReference Include="..\NoMercy.Database\NoMercy.Database.csproj"/>
-        <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj"/>
-        <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
-        <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
-        <ProjectReference Include="..\NoMercyQueue\NoMercyQueue.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Update="..\..\assets\icons\icon.png" Link="Assets\icon.png">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-        <None Update="..\..\assets\icons\icon.icns" Link="Assets\icon.icns">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
-    <ItemGroup>
-        <EmbeddedResource Include="..\..\assets\icons\icon.ico" Link="Assets\icon.ico"/>
-        <EmbeddedResource Include="Resources\setup.html"/>
-    </ItemGroup>
-
+  <ItemGroup>
+    <None Update="..\..\assets\icons\icon.png" Link="Assets\icon.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="..\..\assets\icons\icon.icns" Link="Assets\icon.icns">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\assets\icons\icon.ico" Link="Assets\icon.ico" />
+    <EmbeddedResource Include="Resources\setup.html" />
+  </ItemGroup>
 </Project>

@@ -7,7 +7,10 @@ namespace NoMercy.Plugins;
 
 public static class PluginServiceCollectionExtensions
 {
-    public static IServiceCollection AddPluginSystem(this IServiceCollection services, string pluginsPath)
+    public static IServiceCollection AddPluginSystem(
+        this IServiceCollection services,
+        string pluginsPath
+    )
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginsPath);
@@ -22,7 +25,10 @@ public static class PluginServiceCollectionExtensions
         return services;
     }
 
-    public static void RegisterPluginServices(this IServiceCollection services, PluginManager pluginManager)
+    public static void RegisterPluginServices(
+        this IServiceCollection services,
+        PluginManager pluginManager
+    )
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(pluginManager);

@@ -26,7 +26,7 @@ public static class DegradedModeRecovery
         TimeSpan.FromMinutes(1),
         TimeSpan.FromMinutes(5),
         TimeSpan.FromMinutes(15),
-        TimeSpan.FromMinutes(30)
+        TimeSpan.FromMinutes(30),
     ];
 
     public static async Task StartRecoveryLoop(DeferredTasks tasks)
@@ -42,7 +42,9 @@ public static class DegradedModeRecovery
             if (!hasNetwork)
             {
                 attempt++;
-                Logger.App($"Network still unavailable. Next retry in {BackoffSchedule[Math.Min(attempt, BackoffSchedule.Length - 1)]}");
+                Logger.App(
+                    $"Network still unavailable. Next retry in {BackoffSchedule[Math.Min(attempt, BackoffSchedule.Length - 1)]}"
+                );
                 continue;
             }
 
@@ -83,7 +85,10 @@ public static class DegradedModeRecovery
                 }
                 catch (Exception e)
                 {
-                    Logger.App($"Deferred network discovery failed: {e.Message}", LogEventLevel.Warning);
+                    Logger.App(
+                        $"Deferred network discovery failed: {e.Message}",
+                        LogEventLevel.Warning
+                    );
                 }
             }
 
@@ -124,8 +129,11 @@ public static class DegradedModeRecovery
                             try
                             {
                                 JwtSecurityTokenHandler tokenHandler = new();
-                                JwtSecurityToken parsedToken = tokenHandler.ReadJwtToken(Globals.Globals.AccessToken);
-                                tokenNeedsRefresh = parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(30);
+                                JwtSecurityToken parsedToken = tokenHandler.ReadJwtToken(
+                                    Globals.Globals.AccessToken
+                                );
+                                tokenNeedsRefresh =
+                                    parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(30);
                             }
                             catch
                             {
@@ -135,8 +143,10 @@ public static class DegradedModeRecovery
 
                         if (tokenNeedsRefresh)
                         {
-                            Logger.App("Access token missing or expired before deferred registration — re-authenticating",
-                                LogEventLevel.Warning);
+                            Logger.App(
+                                "Access token missing or expired before deferred registration — re-authenticating",
+                                LogEventLevel.Warning
+                            );
                             tasks.Authenticated = await Auth.InitWithFallback();
                         }
 
@@ -146,17 +156,28 @@ public static class DegradedModeRecovery
                     catch (InvalidOperationException e) when (e.Message.Contains("cooldown"))
                     {
                         // Cooldown active — will retry on next loop iteration
-                        Logger.App($"Deferred registration deferred: {e.Message}", LogEventLevel.Debug);
+                        Logger.App(
+                            $"Deferred registration deferred: {e.Message}",
+                            LogEventLevel.Debug
+                        );
                     }
                     catch (Exception e)
                     {
-                        Logger.App($"Deferred registration failed: {e.Message}", LogEventLevel.Warning);
+                        Logger.App(
+                            $"Deferred registration failed: {e.Message}",
+                            LogEventLevel.Warning
+                        );
                     }
                 }
             }
 
-            if (tasks.ApiKeysLoaded && tasks.Authenticated && tasks.NetworkDiscovered
-                && tasks.SeedsRun && tasks.Registered)
+            if (
+                tasks.ApiKeysLoaded
+                && tasks.Authenticated
+                && tasks.NetworkDiscovered
+                && tasks.SeedsRun
+                && tasks.Registered
+            )
             {
                 tasks.AllCompleted = true;
                 Logger.App("Full mode restored — all deferred tasks completed");

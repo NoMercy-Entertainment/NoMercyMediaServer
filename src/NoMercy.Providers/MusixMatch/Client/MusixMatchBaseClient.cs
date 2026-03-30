@@ -30,12 +30,23 @@ public class MusixMatchBaseClient : IDisposable
 
     private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 2, Interval = 1000, Start = true });
+        return _queue ??= new(
+            new()
+            {
+                Concurrent = 2,
+                Interval = 1000,
+                Start = true,
+            }
+        );
     }
 
     protected Guid Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string?> query, bool? priority = false)
+    protected async Task<T?> Get<T>(
+        string url,
+        Dictionary<string, string?> query,
+        bool? priority = false
+    )
         where T : class
     {
         query.Add("format", "json");
@@ -46,11 +57,13 @@ public class MusixMatchBaseClient : IDisposable
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (CacheController.Read(newUrl, out T? result)) return result;
+        if (CacheController.Read(newUrl, out T? result))
+            return result;
 
         Logger.MusixMatch(_baseUrl + newUrl, LogEventLevel.Verbose);
 
-        string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+        string response = await GetQueue()
+            .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
         await CacheController.Write(newUrl, response);
 

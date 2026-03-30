@@ -9,18 +9,14 @@ public class Mp3 : BaseAudio
         SetAudioCodec(audioCodec);
     }
 
-    public override CodecDto[] AvailableCodecs =>
-    [
-        AudioCodecs.Mp3
-    ];
+    public override CodecDto[] AvailableCodecs => [AudioCodecs.Mp3];
 
     protected override string[] AvailableContainers =>
-    [
-        AudioContainers.Mp3,
-
-        VideoContainers.Mkv,
-        VideoContainers.Mp4,
-        VideoContainers.Flv,
-        VideoContainers.Hls
-    ];
+        [
+            AudioContainers.Mp3,
+            VideoContainers.Mkv,
+            VideoContainers.Mp4,
+            VideoContainers.Flv,
+            VideoContainers.Hls,
+        ];
 }

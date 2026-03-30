@@ -35,7 +35,10 @@ public class CollectionsController(
     [HttpGet]
     [Route("/api/v{version:apiVersion}/collection")]
     [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page", "version"])]
-    public async Task<IActionResult> Collections([FromQuery] PageRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> Collections(
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -45,49 +48,54 @@ public class CollectionsController(
         string country = Country();
 
         // Use optimized query that projects only needed data
-        List<CollectionListDto> collectionDtos =
-            await collectionRepository.GetCollectionsListAsync(userId, language, country, request.Take, request.Page);
+        List<CollectionListDto> collectionDtos = await collectionRepository.GetCollectionsListAsync(
+            userId,
+            language,
+            country,
+            request.Take,
+            request.Page
+        );
 
         if (request.Version != "lolomo")
         {
-            List<CardData> cardItems = collectionDtos
-                .Select(dto => new CardData(dto))
-                .ToList();
+            List<CardData> cardItems = collectionDtos.Select(dto => new CardData(dto)).ToList();
 
-            ComponentEnvelope response = Component.Grid()
-                .WithItems(cardItems.Select(item => Component.Card()
-                    .WithData(item)
-                    ))
-                ;
+            ComponentEnvelope response = Component
+                .Grid()
+                .WithItems(cardItems.Select(item => Component.Card().WithData(item)));
 
             return Ok(ComponentResponse.From(response));
         }
 
         List<ComponentEnvelope> carousels = Letters
-            .Select((letter, index) =>
-            {
-                List<CardData> letterItems = collectionDtos
-                    .Where(dto => letter == "#"
-                        ? Numbers.Any(p => dto.Title.StartsWith(p))
-                        : dto.Title.StartsWith(letter))
-                    .Select(dto => new CardData(dto))
-                    .OrderBy(item => item.TitleSort)
-                    .ToList();
+            .Select(
+                (letter, index) =>
+                {
+                    List<CardData> letterItems = collectionDtos
+                        .Where(dto =>
+                            letter == "#"
+                                ? Numbers.Any(p => dto.Title.StartsWith(p))
+                                : dto.Title.StartsWith(letter)
+                        )
+                        .Select(dto => new CardData(dto))
+                        .OrderBy(item => item.TitleSort)
+                        .ToList();
 
-                return Component.Carousel()
-                    .WithId(letter)
-                    .WithTitle(letter)
-                    .WithNavigation(
-                        index == 0 ? null : Letters[index - 1],
-                        index == Letters.Length - 1 ? null : Letters[index + 1])
-                    .WithItems(letterItems.Select(item => Component.Card()
-                        .WithData(item)))
-                    .Build();
-            })
+                    return Component
+                        .Carousel()
+                        .WithId(letter)
+                        .WithTitle(letter)
+                        .WithNavigation(
+                            index == 0 ? null : Letters[index - 1],
+                            index == Letters.Length - 1 ? null : Letters[index + 1]
+                        )
+                        .WithItems(letterItems.Select(item => Component.Card().WithData(item)))
+                        .Build();
+                }
+            )
             .ToList();
 
-        ComponentEnvelope containerResponse = Component.Container()
-            .WithItems(carousels);
+        ComponentEnvelope containerResponse = Component.Container().WithItems(carousels);
 
         return Ok(containerResponse);
     }
@@ -103,13 +111,19 @@ public class CollectionsController(
         string language = Language();
         string country = Country();
 
-        Collection? collection = await collectionRepository.GetCollectionAsync(userId, id, language, country);
+        Collection? collection = await collectionRepository.GetCollectionAsync(
+            userId,
+            id,
+            language,
+            country
+        );
 
-        if (collection is not null && collection.CollectionMovies.Count > 0 && collection.Images.Count > 0)
-            return Ok(new CollectionResponseDto
-            {
-                Data = new(collection)
-            });
+        if (
+            collection is not null
+            && collection.CollectionMovies.Count > 0
+            && collection.Images.Count > 0
+        )
+            return Ok(new CollectionResponseDto { Data = new(collection) });
 
         TmdbCollectionClient tmdbCollectionsClient = new(id, language: language);
         TmdbCollectionAppends? collectionAppends = await tmdbCollectionsClient.WithAllAppends(true);
@@ -117,10 +131,7 @@ public class CollectionsController(
         if (collectionAppends is null)
             return NotFoundResponse("Collection not found");
 
-        return Ok(new CollectionResponseDto
-        {
-            Data = new(collectionAppends)
-        });
+        return Ok(new CollectionResponseDto { Data = new(collectionAppends) });
     }
 
     [HttpGet]
@@ -133,22 +144,21 @@ public class CollectionsController(
 
         Collection? collection = await collectionRepository.GetAvailableCollectionAsync(userId, id);
 
-        bool available = collection is not null && collection.CollectionMovies
-            .Select(movie => movie.Movie.VideoFiles)
-            .Any();
+        bool available =
+            collection is not null
+            && collection.CollectionMovies.Select(movie => movie.Movie.VideoFiles).Any();
 
         if (!available)
             return NotFoundResponse("Collection not found");
 
-        return Ok(new StatusResponseDto<AvailableResponseDto>
-        {
-            Data = new()
+        return Ok(
+            new StatusResponseDto<AvailableResponseDto>
             {
-                Available = true
-            },
-            Status = "ok",
-            Message = "Collection is available"
-        });
+                Data = new() { Available = true },
+                Status = "ok",
+                Message = "Collection is available",
+            }
+        );
     }
 
     [HttpGet]
@@ -162,18 +172,38 @@ public class CollectionsController(
         string language = Language();
         string country = Country();
 
-        Collection? collection = await collectionRepository.GetCollectionPlaylistAsync(userId, id, language, country);
+        Collection? collection = await collectionRepository.GetCollectionPlaylistAsync(
+            userId,
+            id,
+            language,
+            country
+        );
 
         if (collection is null)
             return NotFoundResponse("Collection not found");
 
-        return Ok(collection.CollectionMovies
-            .Select((movie, index) => new VideoPlaylistResponseDto(movie.Movie, "collection", id, country, index + 1, collection)));
+        return Ok(
+            collection.CollectionMovies.Select(
+                (movie, index) =>
+                    new VideoPlaylistResponseDto(
+                        movie.Movie,
+                        "collection",
+                        id,
+                        country,
+                        index + 1,
+                        collection
+                    )
+            )
+        );
     }
 
     [HttpPost]
     [Route("like")]
-    public async Task<IActionResult> Like(int id, [FromBody] LikeRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> Like(
+        int id,
+        [FromBody] LikeRequestDto request,
+        CancellationToken ct = default
+    )
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -184,20 +214,23 @@ public class CollectionsController(
         if (!success)
             return UnprocessableEntityResponse("Collection not found");
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "{1}",
-            Args = new object[]
+        return Ok(
+            new StatusResponseDto<string>
             {
-                request.Value ? "liked" : "unliked"
+                Status = "ok",
+                Message = "{1}",
+                Args = new object[] { request.Value ? "liked" : "unliked" },
             }
-        });
+        );
     }
 
     [HttpPost]
     [Route("watch-list")]
-    public async Task<IActionResult> AddToWatchList(int id, [FromBody] WatchListRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> AddToWatchList(
+        int id,
+        [FromBody] WatchListRequestDto request,
+        CancellationToken ct = default
+    )
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -208,13 +241,17 @@ public class CollectionsController(
         if (!success)
             return UnprocessableEntityResponse("Collection not found");
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = request.Add ? "Collection added to watch list" : "Collection removed from watch list"
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = request.Add
+                    ? "Collection added to watch list"
+                    : "Collection removed from watch list",
+            }
+        );
     }
-    
+
     [HttpDelete]
     public async Task<IActionResult> DeleteMovie(int id, CancellationToken ct = default)
     {
@@ -223,13 +260,9 @@ public class CollectionsController(
 
         await collectionRepository.DeleteAsync(id, ct);
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Movie deleted"
-        });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Movie deleted" });
     }
-    
+
     [HttpPost]
     [Route("rescan")]
     public async Task<IActionResult> Rescan(int id, CancellationToken ct = default)
@@ -237,13 +270,13 @@ public class CollectionsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan movies");
 
-        Collection? collection = await mediaContext.Collections
-            .AsNoTracking()
+        Collection? collection = await mediaContext
+            .Collections.AsNoTracking()
             .Include(collection => collection.CollectionMovies)
-            .ThenInclude(cm => cm.Movie)
-            .ThenInclude(movie => movie.Library)
-            .ThenInclude(f => f.FolderLibraries)
-            .ThenInclude(f => f.Folder)
+                .ThenInclude(cm => cm.Movie)
+                    .ThenInclude(movie => movie.Library)
+                        .ThenInclude(f => f.FolderLibraries)
+                            .ThenInclude(f => f.Folder)
             .FirstOrDefaultAsync(collection => collection.Id == id, ct);
 
         if (collection is null)
@@ -253,7 +286,10 @@ public class CollectionsController(
         {
             foreach (CollectionMovie collectionMovie in collection.CollectionMovies)
             {
-                jobDispatcher.DispatchJob<FileRescanJob>(collectionMovie.MovieId, collectionMovie.Movie.LibraryId);
+                jobDispatcher.DispatchJob<FileRescanJob>(
+                    collectionMovie.MovieId,
+                    collectionMovie.Movie.LibraryId
+                );
             }
         }
         catch (Exception e)
@@ -262,12 +298,14 @@ public class CollectionsController(
             return InternalServerErrorResponse(e.Message);
         }
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Rescanning {0} for files in the background",
-            Args = [collection.Title]
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Rescanning {0} for files in the background",
+                Args = [collection.Title],
+            }
+        );
     }
 
     [HttpPost]
@@ -276,14 +314,14 @@ public class CollectionsController(
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to refresh movies");
-        
-        Collection? collection = await mediaContext.Collections
-            .AsNoTracking()
+
+        Collection? collection = await mediaContext
+            .Collections.AsNoTracking()
             .Include(collection => collection.CollectionMovies)
-            .ThenInclude(cm => cm.Movie)
-            .ThenInclude(movie => movie.Library)
+                .ThenInclude(cm => cm.Movie)
+                    .ThenInclude(movie => movie.Library)
             .FirstOrDefaultAsync(movie => movie.Id == id, ct);
-            
+
         if (collection is null)
             return UnprocessableEntityResponse("Collection not found");
 
@@ -291,7 +329,10 @@ public class CollectionsController(
         {
             foreach (CollectionMovie collectionMovie in collection.CollectionMovies)
             {
-                jobDispatcher.DispatchJob<MovieImportJob>(collectionMovie.MovieId, collectionMovie.Movie.LibraryId);
+                jobDispatcher.DispatchJob<MovieImportJob>(
+                    collectionMovie.MovieId,
+                    collectionMovie.Movie.LibraryId
+                );
             }
         }
         catch (Exception e)
@@ -300,12 +341,14 @@ public class CollectionsController(
             return InternalServerErrorResponse(e.Message);
         }
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Refreshing {0} in the background",
-            Args = [collection.Title]
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Refreshing {0} in the background",
+                Args = [collection.Title],
+            }
+        );
     }
 
     [HttpPost]
@@ -315,20 +358,20 @@ public class CollectionsController(
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to add tv shows");
 
-        Library? library = await mediaContext.Libraries
-            .Where(f => f.Type == Config.MovieMediaType)
+        Library? library = await mediaContext
+            .Libraries.Where(f => f.Type == Config.MovieMediaType)
             .FirstOrDefaultAsync(ct);
 
         if (library is null)
             return UnprocessableEntityResponse("No movie library found");
-        
-        Collection? collection = await mediaContext.Collections
-            .AsNoTracking()
+
+        Collection? collection = await mediaContext
+            .Collections.AsNoTracking()
             .Include(collection => collection.CollectionMovies)
-            .ThenInclude(cm => cm.Movie)
-            .ThenInclude(movie => movie.Library)
+                .ThenInclude(cm => cm.Movie)
+                    .ThenInclude(movie => movie.Library)
             .FirstOrDefaultAsync(movie => movie.Id == id, ct);
-        
+
         if (collection is null)
             return UnprocessableEntityResponse("Collection not found");
 
@@ -336,7 +379,10 @@ public class CollectionsController(
         {
             foreach (CollectionMovie collectionMovie in collection.CollectionMovies)
             {
-                jobDispatcher.DispatchJob<MovieImportJob>(collectionMovie.MovieId, collectionMovie.Movie.LibraryId);
+                jobDispatcher.DispatchJob<MovieImportJob>(
+                    collectionMovie.MovieId,
+                    collectionMovie.Movie.LibraryId
+                );
             }
         }
         catch (Exception e)
@@ -345,11 +391,13 @@ public class CollectionsController(
             return InternalServerErrorResponse(e.Message);
         }
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Adding {0} in the background",
-            Args = [library.Title]
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Adding {0} in the background",
+                Args = [library.Title],
+            }
+        );
     }
 }

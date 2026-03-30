@@ -4,5 +4,6 @@ namespace NoMercy.Providers.Tadb.Models;
 
 public class TadbArtistResponse
 {
-    [JsonProperty("artists")] public TadbArtist[]? Artists { get; set; }
+    [JsonProperty("artists")]
+    public TadbArtist[]? Artists { get; set; }
 }

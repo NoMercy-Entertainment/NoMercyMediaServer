@@ -6,25 +6,42 @@ namespace NoMercy.Api.DTOs.Music;
 
 public record MusicSearchResponseItemDto
 {
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("cover")] public string? Cover { get; set; }
-    [JsonProperty("disambiguation")] public string? Disambiguation { get; set; }
-    [JsonProperty("description")] public string? Description { get; set; }
-    [JsonProperty("id")] public Guid Id { get; set; }
-    [JsonProperty("name")] public string Name { get; set; }
-    [JsonProperty("track_id")] public string? TrackId { get; set; }
-    [JsonProperty("type")] public string Type { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; }
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
 
-    [JsonProperty("tracks")] public int Tracks { get; set; }
+    [JsonProperty("cover")]
+    public string? Cover { get; set; }
+
+    [JsonProperty("disambiguation")]
+    public string? Disambiguation { get; set; }
+
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    [JsonProperty("id")]
+    public Guid Id { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    [JsonProperty("track_id")]
+    public string? TrackId { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; }
+
+    [JsonProperty("tracks")]
+    public int Tracks { get; set; }
 
     public MusicSearchResponseItemDto(Artist artist)
     {
         ColorPalette = artist.ColorPalette;
-        Cover = artist.Cover ?? artist.Images
-            .FirstOrDefault()?.FilePath;
-        Cover = !string.IsNullOrEmpty(Cover) 
-            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() 
+        Cover = artist.Cover ?? artist.Images.FirstOrDefault()?.FilePath;
+        Cover = !string.IsNullOrEmpty(Cover)
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = artist.Disambiguation;
         Description = artist.Description;
@@ -33,18 +50,15 @@ public record MusicSearchResponseItemDto
         Type = "artist";
         Link = new($"/music/artist/{Id}", UriKind.Relative);
 
-        Tracks = artist.ArtistTrack
-            .Select(artistTrack => artistTrack.Track)
-            .Count();
+        Tracks = artist.ArtistTrack.Select(artistTrack => artistTrack.Track).Count();
     }
 
     public MusicSearchResponseItemDto(Album album)
     {
         ColorPalette = album.ColorPalette;
-        Cover = album.Cover ?? album.Images
-            .FirstOrDefault()?.FilePath;
-        Cover = !string.IsNullOrEmpty(Cover) 
-            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString() 
+        Cover = album.Cover ?? album.Images.FirstOrDefault()?.FilePath;
+        Cover = !string.IsNullOrEmpty(Cover)
+            ? new Uri($"/images/music{Cover}", UriKind.Relative).ToString()
             : null;
         Disambiguation = album.Disambiguation;
         Description = album.Description;
@@ -53,8 +67,6 @@ public record MusicSearchResponseItemDto
         Type = "album";
         Link = new($"/music/album/{Id}", UriKind.Relative);
 
-        Tracks = album.AlbumTrack
-            .Select(artistTrack => artistTrack.Track)
-            .Count();
+        Tracks = album.AlbumTrack.Select(artistTrack => artistTrack.Track).Count();
     }
 }

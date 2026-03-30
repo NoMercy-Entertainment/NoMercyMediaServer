@@ -15,13 +15,17 @@ public class Country
     [JsonProperty("id")]
     public int Id { get; set; }
 
-    [Key] [JsonProperty("iso_3166_1")] public string Iso31661 { get; set; } = string.Empty;
-    [JsonProperty("english_name")] public string? EnglishName { get; set; }
-    [JsonProperty("native_name")] public string? NativeName { get; set; }
+    [Key]
+    [JsonProperty("iso_3166_1")]
+    public string Iso31661 { get; set; } = string.Empty;
 
-    public Country()
-    {
-    }
+    [JsonProperty("english_name")]
+    public string? EnglishName { get; set; }
+
+    [JsonProperty("native_name")]
+    public string? NativeName { get; set; }
+
+    public Country() { }
 
     // public Country(Providers.TMDB.Models.Configuration.TmdbCountry tmdbCountry)
     // {

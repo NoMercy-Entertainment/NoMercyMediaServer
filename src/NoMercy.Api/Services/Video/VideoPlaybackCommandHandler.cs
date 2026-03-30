@@ -13,9 +13,18 @@ using NoMercy.NmSystem.NewtonSoftConverters;
 
 namespace NoMercy.Api.Services.Video;
 
-public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackService, IServiceScopeFactory scopeFactory)
+public class VideoPlaybackCommandHandler(
+    VideoPlaybackService videoPlaybackService,
+    IServiceScopeFactory scopeFactory
+)
 {
-    public async Task HandleCommand(User user, string command, object? data, VideoPlayerState state, Client? device)
+    public async Task HandleCommand(
+        User user,
+        string command,
+        object? data,
+        VideoPlayerState state,
+        Client? device
+    )
     {
         switch (command)
         {
@@ -93,7 +102,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                 break;
             case "quality":
                 // if(state.Actions.Disallows.Quality) break;
-                await HandleQuality(user, state, data); 
+                await HandleQuality(user, state, data);
                 break;
             default:
                 // Handle unknown command or log it
@@ -120,14 +129,14 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
         state.Time = seekTime;
         await videoPlaybackService.StoreWatchProgression(state, user);
     }
-    
+
     private async Task HandleForward(User user, VideoPlayerState state, object? data)
     {
         int seekTime = int.Parse(data?.ToString() ?? "10") * 1000;
         state.Time += seekTime;
         await videoPlaybackService.StoreWatchProgression(state, user);
     }
-    
+
     private async Task HandleBackward(User user, VideoPlayerState state, object? data)
     {
         if (state.Time < 10)
@@ -135,7 +144,7 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
             state.Time = 0;
             return;
         }
-        
+
         int seekTime = int.Parse(data?.ToString() ?? "10") * 1000;
         state.Time -= seekTime;
         await videoPlaybackService.StoreWatchProgression(state, user);
@@ -143,8 +152,9 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
 
     private void HandleNext(VideoPlayerState state)
     {
-        if (state.CurrentItem == null) return;
-        
+        if (state.CurrentItem == null)
+            return;
+
         int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
         if (currentIndex < state.Playlist.Count - 1)
         {
@@ -167,16 +177,18 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
 
     private void HandlePrevious(VideoPlayerState state)
     {
-        if (state.CurrentItem is null) return;
+        if (state.CurrentItem is null)
+            return;
 
         if (state.Time >= 3000)
         {
             state.Time = 0;
             return;
         }
-        
-        if(state.Playlist.IndexOf(state.CurrentItem) == 0) return;
-        
+
+        if (state.Playlist.IndexOf(state.CurrentItem) == 0)
+            return;
+
         int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
         if (currentIndex > 0)
         {
@@ -184,39 +196,50 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
             state.Time = 0;
         }
     }
-    
+
     private Task HandleItem(VideoPlayerState state, object? data)
     {
-        if (data is null || state.CurrentItem is null) return Task.CompletedTask;
-        
+        if (data is null || state.CurrentItem is null)
+            return Task.CompletedTask;
+
         int itemId = int.Parse(data.ToString().OrEmpty());
         VideoPlaylistResponseDto? item = state.Playlist.ElementAtOrDefault(itemId);
-        
-        if (item is null) return Task.CompletedTask;
+
+        if (item is null)
+            return Task.CompletedTask;
 
         state.CurrentItem = item;
         state.Time = 0;
 
         return Task.CompletedTask;
     }
-    
+
     private class EpisodeData
     {
-        [JsonProperty("season")] public int Season { get; set; }
-        [JsonProperty("episode")] public int Episode { get; set; }
+        [JsonProperty("season")]
+        public int Season { get; set; }
+
+        [JsonProperty("episode")]
+        public int Episode { get; set; }
     }
-    
+
     private async Task HandleEpisode(VideoPlayerState state, object? data)
     {
-        if (data is null || state.CurrentItem is null) return;
-        
-        EpisodeData? episodeData = data.ToString().FromJson<EpisodeData>();
-        if (episodeData is null || episodeData.Season == 0 || episodeData.Episode == 0) return;
+        if (data is null || state.CurrentItem is null)
+            return;
 
-        VideoPlaylistResponseDto? item = state.Playlist.FirstOrDefault(p => 
-            p.PlaylistType == Config.TvMediaType && p.Season == episodeData.Season && p.Episode == episodeData.Episode);
-        
-        if (item is null) return;
+        EpisodeData? episodeData = data.ToString().FromJson<EpisodeData>();
+        if (episodeData is null || episodeData.Season == 0 || episodeData.Episode == 0)
+            return;
+
+        VideoPlaylistResponseDto? item = state.Playlist.FirstOrDefault(p =>
+            p.PlaylistType == Config.TvMediaType
+            && p.Season == episodeData.Season
+            && p.Episode == episodeData.Episode
+        );
+
+        if (item is null)
+            return;
 
         state.CurrentItem = item;
         state.Time = 0;
@@ -241,47 +264,51 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                 Pausing = true,
                 Stopping = true,
                 Seeking = true,
-                Muting = true
-            }
+                Muting = true,
+            },
         };
     }
-    
+
     private async Task HandleVolume(object? data, VideoPlayerState state, Client? device)
     {
-        if (data is null || state.CurrentItem is null) return;
-        
+        if (data is null || state.CurrentItem is null)
+            return;
+
         int volume = int.Parse(data.ToString().OrEmpty());
-        
+
         state.VolumePercentage = volume;
         state.Muted = false;
-        
+
         if (device is not null)
         {
             device.VolumePercent = volume;
 
             await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-            IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+            IDbContextFactory<MediaContext> contextFactory =
+                scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
             await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
-            await mediaContext.Devices
-                .Where(d => d.DeviceId == device.DeviceId)
+            await mediaContext
+                .Devices.Where(d => d.DeviceId == device.DeviceId)
                 .ExecuteUpdateAsync(d => d.SetProperty(x => x.VolumePercent, volume));
         }
-        
     }
 
     private void HandlePreviousChapter(VideoPlayerState state)
     {
-        if (state.CurrentItem is null) return;
-        IChapter? currentChapter = state.CurrentItem.Chapters
-            .FirstOrDefault(c => state.Time >= c.StartTime && state.Time <= c.EndTime);
-        if (currentChapter is null) return;
-        
-        if(state.Time - 3000 > currentChapter.StartTime)
+        if (state.CurrentItem is null)
+            return;
+        IChapter? currentChapter = state.CurrentItem.Chapters.FirstOrDefault(c =>
+            state.Time >= c.StartTime && state.Time <= c.EndTime
+        );
+        if (currentChapter is null)
+            return;
+
+        if (state.Time - 3000 > currentChapter.StartTime)
         {
             state.Time = currentChapter.StartTime;
             return;
         }
-        
+
         int index = state.CurrentItem.Chapters.IndexOf(currentChapter);
         if (index > 0)
         {
@@ -289,15 +316,18 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
             state.Time = previousChapter.StartTime;
         }
     }
-    
+
     private void HandleNextChapter(VideoPlayerState state)
     {
-        if (state.CurrentItem is null) return;
-        
-        IChapter? currentChapter = state.CurrentItem.Chapters
-            .FirstOrDefault(c => state.Time >= c.StartTime && state.Time <= c.EndTime);
-        if (currentChapter is null) return;
-        
+        if (state.CurrentItem is null)
+            return;
+
+        IChapter? currentChapter = state.CurrentItem.Chapters.FirstOrDefault(c =>
+            state.Time >= c.StartTime && state.Time <= c.EndTime
+        );
+        if (currentChapter is null)
+            return;
+
         int index = state.CurrentItem.Chapters.IndexOf(currentChapter);
         if (index + 1 <= state.CurrentItem.Chapters.Count - 1)
         {
@@ -308,56 +338,89 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
 
     private async Task HandleAudio(User user, VideoPlayerState state, object? data)
     {
-        if (data is null || state.CurrentItem is null) return;
-        
+        if (data is null || state.CurrentItem is null)
+            return;
+
         int index = int.Parse(data.ToString().OrEmpty());
-        
+
         if (index < 0)
         {
             state.CurrentAudio = null;
-            await SetPlaybackPreference(user, state, state.CurrentAudio, state.CurrentQuality, state.CurrentCaption);
+            await SetPlaybackPreference(
+                user,
+                state,
+                state.CurrentAudio,
+                state.CurrentQuality,
+                state.CurrentCaption
+            );
             return;
         }
-        
+
         IAudio? audio = state.CurrentItem.Audio.ElementAtOrDefault(index);
         if (audio is not null)
         {
             state.CurrentAudio = audio;
         }
-        
-        await SetPlaybackPreference(user, state, state.CurrentAudio, state.CurrentQuality, state.CurrentCaption);
+
+        await SetPlaybackPreference(
+            user,
+            state,
+            state.CurrentAudio,
+            state.CurrentQuality,
+            state.CurrentCaption
+        );
     }
-    
+
     private async Task HandleCycleAudio(User user, VideoPlayerState state)
     {
-        if (state.CurrentItem is null) return;
-        
-        int currentIndex = state.CurrentAudio is not null 
+        if (state.CurrentItem is null)
+            return;
+
+        int currentIndex = state.CurrentAudio is not null
             ? state.CurrentItem.Audio.IndexOf(state.CurrentAudio)
             : -1;
         if (currentIndex >= state.CurrentItem.Audio.Count - 1)
         {
             state.CurrentAudio = state.CurrentItem.Audio.First();
-            await SetPlaybackPreference(user, state, state.CurrentAudio, state.CurrentQuality, state.CurrentCaption);
+            await SetPlaybackPreference(
+                user,
+                state,
+                state.CurrentAudio,
+                state.CurrentQuality,
+                state.CurrentCaption
+            );
             return;
         }
-        
+
         IAudio nextAudio = state.CurrentItem.Audio[currentIndex + 1];
         state.CurrentAudio = nextAudio;
-        
-        await SetPlaybackPreference(user, state, state.CurrentAudio, state.CurrentQuality, state.CurrentCaption);
+
+        await SetPlaybackPreference(
+            user,
+            state,
+            state.CurrentAudio,
+            state.CurrentQuality,
+            state.CurrentCaption
+        );
     }
 
     private async Task HandleCaption(User user, VideoPlayerState state, object? data)
     {
-        if (data is null) return;
-        
+        if (data is null)
+            return;
+
         int index = int.Parse(data.ToString().OrEmpty());
-        
+
         if (index < 0)
         {
             state.CurrentCaption = null;
-            await SetPlaybackPreference(user, state, state.CurrentAudio, state.CurrentQuality, state.CurrentCaption);
+            await SetPlaybackPreference(
+                user,
+                state,
+                state.CurrentAudio,
+                state.CurrentQuality,
+                state.CurrentCaption
+            );
             return;
         }
 
@@ -366,72 +429,113 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
         {
             state.CurrentCaption = track;
         }
-        
-        await SetPlaybackPreference(user, state, state.CurrentAudio, state.CurrentQuality, state.CurrentCaption);
+
+        await SetPlaybackPreference(
+            user,
+            state,
+            state.CurrentAudio,
+            state.CurrentQuality,
+            state.CurrentCaption
+        );
     }
-    
+
     private async Task HandleCycleCaption(User user, VideoPlayerState state)
     {
-        if (state.CurrentItem is null) return;
-        
-        int currentIndex = state.CurrentCaption is not null 
+        if (state.CurrentItem is null)
+            return;
+
+        int currentIndex = state.CurrentCaption is not null
             ? state.CurrentItem.Captions.IndexOf(state.CurrentCaption)
             : -1;
         if (currentIndex >= state.CurrentItem.Captions.Count - 1)
         {
             state.CurrentCaption = null;
-            await SetPlaybackPreference(user, state, state.CurrentAudio, state.CurrentQuality, null);
+            await SetPlaybackPreference(
+                user,
+                state,
+                state.CurrentAudio,
+                state.CurrentQuality,
+                null
+            );
             return;
         }
         if (currentIndex < 0)
         {
             state.CurrentCaption = state.CurrentItem.Captions.First();
-            await SetPlaybackPreference(user, state, state.CurrentAudio, state.CurrentQuality, state.CurrentCaption);
+            await SetPlaybackPreference(
+                user,
+                state,
+                state.CurrentAudio,
+                state.CurrentQuality,
+                state.CurrentCaption
+            );
             return;
         }
-        
+
         ISubtitle nextCaption = state.CurrentItem.Captions[currentIndex + 1];
         state.CurrentCaption = nextCaption;
-        
-        await SetPlaybackPreference(user, state, state.CurrentAudio, state.CurrentQuality, state.CurrentCaption);
+
+        await SetPlaybackPreference(
+            user,
+            state,
+            state.CurrentAudio,
+            state.CurrentQuality,
+            state.CurrentCaption
+        );
     }
-    
+
     private async Task HandleQuality(User user, VideoPlayerState state, object? data)
     {
-        if (data is null) return;
-        
+        if (data is null)
+            return;
+
         int index = int.Parse(data.ToString().OrEmpty());
-        
+
         if (index < 0)
         {
             state.CurrentQuality = null;
-            await SetPlaybackPreference(user, state, state.CurrentAudio, null, state.CurrentCaption);
+            await SetPlaybackPreference(
+                user,
+                state,
+                state.CurrentAudio,
+                null,
+                state.CurrentCaption
+            );
             return;
         }
-        
+
         IVideo? video = state.CurrentItem?.Qualities.ElementAtOrDefault(index);
         if (video is not null)
         {
             state.CurrentQuality = video;
         }
-        
+
         await SetPlaybackPreference(user, state, state.CurrentAudio, video, state.CurrentCaption);
     }
-    
-    private async Task UserSetLibraryPreference(MediaContext mediaContext, User user, VideoPlayerState state)
+
+    private async Task UserSetLibraryPreference(
+        MediaContext mediaContext,
+        User user,
+        VideoPlayerState state
+    )
     {
-        if (state.CurrentItem is null) return;
-        
-        bool userHasLibraryPreference = await mediaContext.Users
-            .Include(u => u.PlaybackPreferences)
-            .ThenInclude(playbackPreference => playbackPreference.Library)
+        if (state.CurrentItem is null)
+            return;
+
+        bool userHasLibraryPreference = await mediaContext
+            .Users.Include(u => u.PlaybackPreferences)
+                .ThenInclude(playbackPreference => playbackPreference.Library)
             .Where(u => u.Id == user.Id)
-            .Select(x => x.PlaybackPreferences
-                .Any(p => p.Library != null &&  p.Library.Type == state.CurrentItem!.LibraryType))
+            .Select(x =>
+                x.PlaybackPreferences.Any(p =>
+                    p.Library != null && p.Library.Type == state.CurrentItem!.LibraryType
+                )
+            )
             .FirstAsync();
 
-        if (userHasLibraryPreference) return; 
-        
+        if (userHasLibraryPreference)
+            return;
+
         PlaybackPreference playbackPreference = new()
         {
             UserId = user.Id,
@@ -441,15 +545,11 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                     Width = state.CurrentQuality.Width,
                     BitRate = null,
                     FileSize = null,
-                    Height = null
+                    Height = null,
                 }
                 : null,
-            Audio = state.CurrentAudio?.Language is not null 
-                ? new() 
-                {
-                    Language = state.CurrentAudio.Language,
-                    FileSize = null
-                }
+            Audio = state.CurrentAudio?.Language is not null
+                ? new() { Language = state.CurrentAudio.Language, FileSize = null }
                 : null,
             Subtitle = state.CurrentCaption?.Language is not null
                 ? new()
@@ -457,62 +557,72 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                     Language = state.CurrentCaption.Language,
                     Type = state.CurrentCaption.Type,
                     Codec = state.CurrentCaption.Codec,
-                    FileSize = null
+                    FileSize = null,
                 }
                 : null,
-            LibraryId = mediaContext.Libraries
-                .Where(l => l.Type == state.CurrentItem!.LibraryType)
+            LibraryId = mediaContext
+                .Libraries.Where(l => l.Type == state.CurrentItem!.LibraryType)
                 .Select(l => l.Id)
-                .FirstOrDefault()
+                .FirstOrDefault(),
         };
 
-        await mediaContext.PlaybackPreferences
-            .Upsert(playbackPreference)
+        await mediaContext
+            .PlaybackPreferences.Upsert(playbackPreference)
             .On(p => new { p.UserId, p.LibraryId })
-            .WhenMatched((po, pi) => new()
-            {
-                LibraryId = pi.LibraryId,
-                _audio = pi._audio,
-                _video = pi._video,
-                _subtitle = pi._subtitle
-            })
+            .WhenMatched(
+                (po, pi) =>
+                    new()
+                    {
+                        LibraryId = pi.LibraryId,
+                        _audio = pi._audio,
+                        _video = pi._video,
+                        _subtitle = pi._subtitle,
+                    }
+            )
             .RunAsync();
     }
 
-    private async Task SetPlaybackPreference(User user, VideoPlayerState state, IAudio? audio, IVideo? video, ISubtitle? subtitle)
+    private async Task SetPlaybackPreference(
+        User user,
+        VideoPlayerState state,
+        IAudio? audio,
+        IVideo? video,
+        ISubtitle? subtitle
+    )
     {
-        if (state.CurrentItem is null) return;
-        
+        if (state.CurrentItem is null)
+            return;
+
         PlaybackPreference playbackPreference = new()
         {
             UserId = user.Id,
-            MovieId = state.CurrentItem.PlaylistType == Config.MovieMediaType
-                ? state.CurrentItem.TmdbId
-                : null,
-            TvId = state.CurrentItem.PlaylistType == Config.TvMediaType
-                ? state.CurrentItem.TmdbId
-                : null,
-            CollectionId = state.CurrentItem.PlaylistType == Config.CollectionMediaType
-                ? int.Parse(state.CurrentItem.PlaylistId) 
-                : null,
-            SpecialId = state.CurrentItem.PlaylistType == Config.SpecialMediaType
-                ? Ulid.Parse(state.CurrentItem.PlaylistId) 
-                : null,
+            MovieId =
+                state.CurrentItem.PlaylistType == Config.MovieMediaType
+                    ? state.CurrentItem.TmdbId
+                    : null,
+            TvId =
+                state.CurrentItem.PlaylistType == Config.TvMediaType
+                    ? state.CurrentItem.TmdbId
+                    : null,
+            CollectionId =
+                state.CurrentItem.PlaylistType == Config.CollectionMediaType
+                    ? int.Parse(state.CurrentItem.PlaylistId)
+                    : null,
+            SpecialId =
+                state.CurrentItem.PlaylistType == Config.SpecialMediaType
+                    ? Ulid.Parse(state.CurrentItem.PlaylistId)
+                    : null,
             Video = video?.Width is not null
                 ? new()
                 {
                     Width = video.Width,
                     BitRate = null,
                     FileSize = null,
-                    Height = null
+                    Height = null,
                 }
                 : null,
-            Audio = audio?.Language is not null 
-                ? new() 
-                {
-                    Language = audio.Language,
-                    FileSize = null
-                }
+            Audio = audio?.Language is not null
+                ? new() { Language = audio.Language, FileSize = null }
                 : null,
             Subtitle = subtitle?.Language is not null
                 ? new()
@@ -520,17 +630,20 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                     Language = subtitle.Language,
                     Type = subtitle.Type,
                     Codec = subtitle.Codec,
-                    FileSize = null
+                    FileSize = null,
                 }
-                : null
+                : null,
         };
-        
+
         await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+        IDbContextFactory<MediaContext> contextFactory = scope.ServiceProvider.GetRequiredService<
+            IDbContextFactory<MediaContext>
+        >();
         await using MediaContext mediaContext = await contextFactory.CreateDbContextAsync();
 
-        UpsertCommandBuilder<PlaybackPreference> query = mediaContext.PlaybackPreferences
-            .Upsert(playbackPreference);
+        UpsertCommandBuilder<PlaybackPreference> query = mediaContext.PlaybackPreferences.Upsert(
+            playbackPreference
+        );
 
         switch (state.CurrentItem.PlaylistType)
         {
@@ -548,16 +661,19 @@ public class VideoPlaybackCommandHandler(VideoPlaybackService videoPlaybackServi
                 query.On(p => new { p.UserId, p.SpecialId });
                 break;
         }
-        
-        await query.WhenMatched((po, pi) => new()
-            {
-                _audio = pi._audio,
-                _video = pi._video,
-                _subtitle = pi._subtitle
-            })
+
+        await query
+            .WhenMatched(
+                (po, pi) =>
+                    new()
+                    {
+                        _audio = pi._audio,
+                        _video = pi._video,
+                        _subtitle = pi._subtitle,
+                    }
+            )
             .RunAsync();
 
         await UserSetLibraryPreference(mediaContext, user, state);
     }
-    
 }

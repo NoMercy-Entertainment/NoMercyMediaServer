@@ -1,8 +1,8 @@
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
-using NoMercy.Setup;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Setup;
 
 namespace NoMercy.Api.Middleware;
 
@@ -12,17 +12,9 @@ public class SetupModeMiddleware
     private readonly SetupState _setupState;
     private readonly SetupServer _setupServer;
 
-    private static readonly string[] SetupHandledRoutes =
-    [
-        "/setup",
-        "/sso-callback"
-    ];
+    private static readonly string[] SetupHandledRoutes = ["/setup", "/sso-callback"];
 
-    private static readonly string[] PassthroughRoutes =
-    [
-        "/health",
-        "/manage"
-    ];
+    private static readonly string[] PassthroughRoutes = ["/health", "/manage"];
 
     public SetupModeMiddleware(RequestDelegate next, SetupState setupState, SetupServer setupServer)
     {
@@ -70,7 +62,7 @@ public class SetupModeMiddleware
         {
             status = "setup_required",
             message = "Server is in setup mode",
-            setup_url = "/setup"
+            setup_url = "/setup",
         };
 
         string json = JsonConvert.SerializeObject(response, Formatting.Indented);

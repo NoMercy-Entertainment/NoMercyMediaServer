@@ -6,7 +6,11 @@ public class ClientMessenger(ConnectedClients connectedClients) : IClientMesseng
 {
     public bool SendToAll(string name, string endpoint, object? data = null)
     {
-        foreach ((string _, Client client) in connectedClients.Clients.Where(client => client.Value.Endpoint == "/" + endpoint))
+        foreach (
+            (string _, Client client) in connectedClients.Clients.Where(client =>
+                client.Value.Endpoint == "/" + endpoint
+            )
+        )
             try
             {
                 if (data != null)
@@ -24,8 +28,11 @@ public class ClientMessenger(ConnectedClients connectedClients) : IClientMesseng
 
     public async Task SendTo(string name, string endpoint, Guid userId, object? data = null)
     {
-        foreach ((string _, Client client) in connectedClients.Clients.Where(client =>
-                     client.Value.Sub.Equals(userId) && client.Value.Endpoint == "/" + endpoint))
+        foreach (
+            (string _, Client client) in connectedClients.Clients.Where(client =>
+                client.Value.Sub.Equals(userId) && client.Value.Endpoint == "/" + endpoint
+            )
+        )
             try
             {
                 if (data != null)

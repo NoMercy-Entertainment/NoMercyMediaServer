@@ -9,7 +9,7 @@ internal static class Program
     {
         Option<string?> pipeOption = new("--pipe", "-p")
         {
-            Description = "Named pipe (Windows) or Unix socket path to connect to"
+            Description = "Named pipe (Windows) or Unix socket path to connect to",
         };
 
         RootCommand rootCommand = new("NoMercy MediaServer CLI");

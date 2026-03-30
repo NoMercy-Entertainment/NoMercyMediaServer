@@ -9,15 +9,8 @@ public class Eac3 : BaseAudio
         SetAudioCodec(AudioFormats.Eac3);
     }
 
-    public override CodecDto[] AvailableCodecs =>
-    [
-        AudioCodecs.Eac3
-    ];
+    public override CodecDto[] AvailableCodecs => [AudioCodecs.Eac3];
 
     protected override string[] AvailableContainers =>
-    [
-        VideoContainers.Mkv,
-        VideoContainers.Mp4,
-        VideoContainers.Hls
-    ];
+        [VideoContainers.Mkv, VideoContainers.Mp4, VideoContainers.Hls];
 }

@@ -14,7 +14,7 @@ public static class Helper
                 Arguments = $"-c \"{command}\"",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
             using Process? process = Process.Start(psi);

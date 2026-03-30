@@ -7,11 +7,14 @@ public static class Folders
     public static void EmptyFolder(string folderPath)
     {
         DirectoryInfo directory = new(folderPath);
-        if (!directory.Exists) return;
+        if (!directory.Exists)
+            return;
 
-        foreach (FileInfo file in directory.GetFiles()) file.Delete();
+        foreach (FileInfo file in directory.GetFiles())
+            file.Delete();
 
-        foreach (DirectoryInfo subDirectory in directory.GetDirectories()) subDirectory.Delete(true);
+        foreach (DirectoryInfo subDirectory in directory.GetDirectories())
+            subDirectory.Delete(true);
     }
 
     public static long GetDirectorySize(this DirectoryInfo directoryInfo, bool recursive = true)
@@ -26,8 +29,15 @@ public static class Folders
                 Interlocked.Add(ref startDirectorySize, fileInfo.Length);
 
             if (recursive)
-                Parallel.ForEach(directoryInfo.GetDirectories(), Config.ParallelOptions, (subDirectory) =>
-                    Interlocked.Add(ref startDirectorySize, GetDirectorySize(subDirectory, recursive)));
+                Parallel.ForEach(
+                    directoryInfo.GetDirectories(),
+                    Config.ParallelOptions,
+                    (subDirectory) =>
+                        Interlocked.Add(
+                            ref startDirectorySize,
+                            GetDirectorySize(subDirectory, recursive)
+                        )
+                );
 
             return startDirectorySize;
         }

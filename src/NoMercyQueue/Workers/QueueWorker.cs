@@ -5,7 +5,12 @@ using Exception = System.Exception;
 
 namespace NoMercyQueue.Workers;
 
-public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? runner = null, ILogger<QueueWorker>? logger = null)
+public class QueueWorker(
+    JobQueue queue,
+    string name = "default",
+    QueueRunner? runner = null,
+    ILogger<QueueWorker>? logger = null
+)
 {
     private long? _currentJobId;
     private bool _isRunning = true;
@@ -46,17 +51,29 @@ public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? r
 
                         logger?.LogTrace(
                             "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {ClassInstance} processed successfully",
-                            name, CurrentIndex, job.Id, classInstance);
+                            name,
+                            CurrentIndex,
+                            job.Id,
+                            classInstance
+                        );
                     }
                     else
                     {
                         string typeName = jobWithArguments?.GetType().FullName ?? "null";
                         logger?.LogError(
                             "QueueWorker {Name} - {CurrentIndex}: Job {JobId} deserialized to {TypeName} which does not implement IShouldQueue — rejecting",
-                            name, CurrentIndex, job.Id, typeName);
+                            name,
+                            CurrentIndex,
+                            job.Id,
+                            typeName
+                        );
 
-                        queue.FailJob(job, new InvalidOperationException(
-                            $"Job payload deserialized to {typeName} which does not implement IShouldQueue"));
+                        queue.FailJob(
+                            job,
+                            new InvalidOperationException(
+                                $"Job payload deserialized to {typeName} which does not implement IShouldQueue"
+                            )
+                        );
                         _currentJobId = null;
                     }
                 }
@@ -68,7 +85,12 @@ public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? r
 
                     logger?.LogError(
                         "QueueWorker {Name} - {CurrentIndex}: Job {JobId} of Type {Payload} failed with error: {Error}",
-                        name, CurrentIndex, job.Id, job.Payload, ex);
+                        name,
+                        CurrentIndex,
+                        job.Id,
+                        job.Payload,
+                        ex
+                    );
                 }
 
                 Thread.Sleep(1000);
@@ -101,7 +123,8 @@ public class QueueWorker(JobQueue queue, string name = "default", QueueRunner? r
 
     public void StopWhenReady()
     {
-        while (_currentJobId != null) Thread.Sleep(1000);
+        while (_currentJobId != null)
+            Thread.Sleep(1000);
 
         Stop();
     }

@@ -30,7 +30,8 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         RequestDelegate next,
         ManifestEmbeddedFileProvider fileProvider,
         EmbeddedStaticAssetsOptions options,
-        ILogger<EmbeddedStaticAssetsMiddleware> logger)
+        ILogger<EmbeddedStaticAssetsMiddleware> logger
+    )
     {
         _next = next;
         _fileProvider = fileProvider;
@@ -58,7 +59,10 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         string path = context.Request.Path.Value.OrEmpty();
 
         // Skip if not a GET or HEAD request
-        if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
+        if (
+            !HttpMethods.IsGet(context.Request.Method)
+            && !HttpMethods.IsHead(context.Request.Method)
+        )
         {
             await _next(context);
             return;
@@ -170,7 +174,7 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
             BrotliContent = brotliContent,
             ContentType = contentType,
             ETag = etag,
-            LastModified = fileInfo.LastModified.UtcDateTime
+            LastModified = fileInfo.LastModified.UtcDateTime,
         };
 
         _assetCache.TryAdd(filePath, asset);
@@ -182,9 +186,11 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
     private bool ShouldInjectHtml(string filePath)
     {
         // Check if we have anything to inject
-        if (string.IsNullOrEmpty(_scriptsToInject) &&
-            string.IsNullOrEmpty(_stylesToInject) &&
-            string.IsNullOrEmpty(_metaTagsToInject))
+        if (
+            string.IsNullOrEmpty(_scriptsToInject)
+            && string.IsNullOrEmpty(_stylesToInject)
+            && string.IsNullOrEmpty(_metaTagsToInject)
+        )
         {
             return false;
         }
@@ -205,9 +211,8 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
     private static bool MatchesPattern(string path, string pattern)
     {
         // Simple glob matching: * matches any characters, ** matches any path
-        string regexPattern = "^" + Regex.Escape(pattern)
-            .Replace("\\*\\*", ".*")
-            .Replace("\\*", "[^/]*") + "$";
+        string regexPattern =
+            "^" + Regex.Escape(pattern).Replace("\\*\\*", ".*").Replace("\\*", "[^/]*") + "$";
 
         return Regex.IsMatch(path, regexPattern, RegexOptions.IgnoreCase);
     }
@@ -234,7 +239,8 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
 
     private static string BuildScriptInjection(List<string> scripts, bool minify)
     {
-        if (scripts.Count == 0) return string.Empty;
+        if (scripts.Count == 0)
+            return string.Empty;
 
         StringBuilder sb = new();
         foreach (string script in scripts)
@@ -255,13 +261,16 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
 
     private static string BuildStyleInjection(List<string> styles, bool minify)
     {
-        if (styles.Count == 0) return string.Empty;
+        if (styles.Count == 0)
+            return string.Empty;
 
         StringBuilder sb = new();
         foreach (string style in styles)
         {
-            if (style.TrimStart().StartsWith("<link", StringComparison.OrdinalIgnoreCase) ||
-                style.TrimStart().StartsWith("<style", StringComparison.OrdinalIgnoreCase))
+            if (
+                style.TrimStart().StartsWith("<link", StringComparison.OrdinalIgnoreCase)
+                || style.TrimStart().StartsWith("<style", StringComparison.OrdinalIgnoreCase)
+            )
             {
                 // Already a complete tag
                 sb.Append(minify ? style.Trim() : style);
@@ -277,7 +286,8 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
 
     private static string BuildMetaTagInjection(List<string> metaTags, bool minify)
     {
-        if (metaTags.Count == 0) return string.Empty;
+        if (metaTags.Count == 0)
+            return string.Empty;
 
         StringBuilder sb = new();
         foreach (string meta in metaTags)
@@ -293,7 +303,10 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
     [GeneratedRegex("</body>", RegexOptions.IgnoreCase)]
     private static partial Regex BodyCloseRegex();
 
-    private static (byte[] content, string? encoding) SelectBestEncoding(HttpContext context, CachedAsset asset)
+    private static (byte[] content, string? encoding) SelectBestEncoding(
+        HttpContext context,
+        CachedAsset asset
+    )
     {
         string acceptEncoding = context.Request.Headers.AcceptEncoding.ToString();
 
@@ -310,14 +323,18 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         }
 
         // Prefer Brotli over Gzip
-        if (acceptEncoding.Contains("br", StringComparison.OrdinalIgnoreCase) &&
-            asset.BrotliContent.Length < asset.OriginalContent.Length)
+        if (
+            acceptEncoding.Contains("br", StringComparison.OrdinalIgnoreCase)
+            && asset.BrotliContent.Length < asset.OriginalContent.Length
+        )
         {
             return (asset.BrotliContent, "br");
         }
 
-        if (acceptEncoding.Contains("gzip", StringComparison.OrdinalIgnoreCase) &&
-            asset.GzipContent.Length < asset.OriginalContent.Length)
+        if (
+            acceptEncoding.Contains("gzip", StringComparison.OrdinalIgnoreCase)
+            && asset.GzipContent.Length < asset.OriginalContent.Length
+        )
         {
             return (asset.GzipContent, "gzip");
         }
@@ -327,11 +344,11 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
 
     private static bool IsAlreadyCompressed(string contentType)
     {
-        return contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ||
-               contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ||
-               contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) ||
-               contentType.Contains("zip", StringComparison.OrdinalIgnoreCase) ||
-               contentType.Contains("compressed", StringComparison.OrdinalIgnoreCase);
+        return contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            || contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase)
+            || contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase)
+            || contentType.Contains("zip", StringComparison.OrdinalIgnoreCase)
+            || contentType.Contains("compressed", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasContentHash(string path)
@@ -345,7 +362,10 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         if (lastDash > 0 && lastDash < fileName.Length - 1)
         {
             string potentialHash = fileName[(lastDash + 1)..];
-            if (potentialHash.Length >= 6 && potentialHash.All(c => char.IsLetterOrDigit(c) || c == '_'))
+            if (
+                potentialHash.Length >= 6
+                && potentialHash.All(c => char.IsLetterOrDigit(c) || c == '_')
+            )
             {
                 return true;
             }
@@ -356,7 +376,10 @@ public sealed partial class EmbeddedStaticAssetsMiddleware
         if (lastDot > 0 && lastDot < fileName.Length - 1)
         {
             string potentialHash = fileName[(lastDot + 1)..];
-            if (potentialHash.Length >= 6 && potentialHash.All(c => char.IsLetterOrDigit(c) || c == '_'))
+            if (
+                potentialHash.Length >= 6
+                && potentialHash.All(c => char.IsLetterOrDigit(c) || c == '_')
+            )
             {
                 return true;
             }

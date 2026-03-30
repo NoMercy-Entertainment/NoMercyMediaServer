@@ -25,8 +25,8 @@ public class AlbumPaletteCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        List<Album[]> albums = _context.Albums
-            .Where(x => string.IsNullOrEmpty(x._colorPalette) && x.Cover != null)
+        List<Album[]> albums = _context
+            .Albums.Where(x => string.IsNullOrEmpty(x._colorPalette) && x.Cover != null)
             .Include(x => x.Images)
             .OrderByDescending(x => x.UpdatedAt)
             .Take(50)
@@ -34,20 +34,24 @@ public class AlbumPaletteCronJob : ICronJobExecutor
             .Chunk(5)
             .ToList();
 
-        if (albums.Count == 0) return;
+        if (albums.Count == 0)
+            return;
 
         _logger.LogTrace("Found {Count} album chunks to process", albums.Count);
 
         foreach (Album[] albumChunk in albums)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
             foreach (Album album in albumChunk)
             {
                 try
                 {
-                    album._colorPalette = await CoverArtImageManagerManager
-                        .ColorPalette("cover", new(AppFiles.MusicImagesPath + album.Cover));
+                    album._colorPalette = await CoverArtImageManagerManager.ColorPalette(
+                        "cover",
+                        new(AppFiles.MusicImagesPath + album.Cover)
+                    );
                 }
                 catch (Exception)
                 {
@@ -58,7 +62,9 @@ public class AlbumPaletteCronJob : ICronJobExecutor
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        _logger.LogTrace("Album palette job completed, updated: {Count}", albums.Sum(x => x.Length));
-
+        _logger.LogTrace(
+            "Album palette job completed, updated: {Count}",
+            albums.Sum(x => x.Length)
+        );
     }
 }

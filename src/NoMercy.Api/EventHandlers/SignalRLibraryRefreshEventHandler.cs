@@ -18,10 +18,11 @@ public class SignalRLibraryRefreshEventHandler : IDisposable
 
     internal Task OnLibraryRefresh(LibraryRefreshEvent @event, CancellationToken ct)
     {
-        _clientMessenger.SendToAll("RefreshLibrary", "videoHub", new RefreshLibraryDto
-        {
-            QueryKey = @event.QueryKey
-        });
+        _clientMessenger.SendToAll(
+            "RefreshLibrary",
+            "videoHub",
+            new RefreshLibraryDto { QueryKey = @event.QueryKey }
+        );
 
         return Task.CompletedTask;
     }

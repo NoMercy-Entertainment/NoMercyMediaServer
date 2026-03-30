@@ -4,16 +4,25 @@ namespace NoMercy.NmSystem.Dto;
 
 public class DirectoryTree
 {
-    [JsonProperty("path")] public string Path { get; set; } = string.Empty;
-    [JsonProperty("mode")] public int Mode { get; set; }
-    [JsonProperty("size")] public int? Size { get; set; }
-    [JsonProperty("type")] public string Type { get; set; } = string.Empty;
-    [JsonProperty("parent")] public string Parent { get; set; } = string.Empty;
-    [JsonProperty("full_path")] public string FullPath { get; set; } = string.Empty;
+    [JsonProperty("path")]
+    public string Path { get; set; } = string.Empty;
 
-    public DirectoryTree()
-    {
-    }
+    [JsonProperty("mode")]
+    public int Mode { get; set; }
+
+    [JsonProperty("size")]
+    public int? Size { get; set; }
+
+    [JsonProperty("type")]
+    public string Type { get; set; } = string.Empty;
+
+    [JsonProperty("parent")]
+    public string Parent { get; set; } = string.Empty;
+
+    [JsonProperty("full_path")]
+    public string FullPath { get; set; } = string.Empty;
+
+    public DirectoryTree() { }
 
     public DirectoryTree(string parent, string path)
     {
@@ -24,9 +33,7 @@ public class DirectoryTree
 
         string type = pathInfo.Attributes.HasFlag(FileAttributes.Directory) ? "folder" : "file";
 
-        string newPath = string.IsNullOrEmpty(pathInfo.Name)
-            ? path
-            : pathInfo.Name;
+        string newPath = string.IsNullOrEmpty(pathInfo.Name) ? path : pathInfo.Name;
 
         string parentPath = string.IsNullOrEmpty(parent)
             ? "/"

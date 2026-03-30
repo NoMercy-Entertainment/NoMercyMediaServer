@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
-using NoMercy.NmSystem.Information;
 using NoMercy.Launcher.Models;
+using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Launcher.Services;
 

@@ -422,7 +422,11 @@ public class FileRepository(MediaContext context) : IFileRepository
         if (seasonTag.Success && seasonTag.Index > 0)
             cleaned = cleaned[..seasonTag.Index];
 
-        string folderTitle = cleaned.Replace('.', ' ').Replace('_', ' ').TrimEnd('-', '.', '_', ' ').Trim();
+        string folderTitle = cleaned
+            .Replace('.', ' ')
+            .Replace('_', ' ')
+            .TrimEnd('-', '.', '_', ' ')
+            .Trim();
 
         // Strip trailing year from folder-derived title (year is captured separately by TryGetYear)
         Match yearInFolder = Str.MatchYearRegex().Match(folderTitle);
@@ -889,8 +893,8 @@ public class FileRepository(MediaContext context) : IFileRepository
 
         // Prefer episode groups with the fewest sub-groups that still cover the target season.
         // E.g. for Season 2, a 2-group set (S1+S2) is better than a 3-group set (Specials+S1+S2).
-        IEnumerable<TmdbEpisodeGroupsResult> sortedResults = episodeGroups.Results
-            .Where(g => g.GroupCount >= seasonNumber)
+        IEnumerable<TmdbEpisodeGroupsResult> sortedResults = episodeGroups
+            .Results.Where(g => g.GroupCount >= seasonNumber)
             .OrderBy(g => g.GroupCount);
 
         foreach (TmdbEpisodeGroupsResult groupResult in sortedResults)
@@ -903,14 +907,13 @@ public class FileRepository(MediaContext context) : IFileRepository
             // Groups within an episode group represent seasons/parts. Order values vary
             // (some 0-based, some 1-based), so sort by Order and use positional index.
             // Skip groups with no episodes (e.g. empty specials groups).
-            List<TmdbEpisodeGroup> sortedGroups = groupDetails.Groups
-                .Where(g => g.Episodes.Length > 0)
+            List<TmdbEpisodeGroup> sortedGroups = groupDetails
+                .Groups.Where(g => g.Episodes.Length > 0)
                 .OrderBy(g => g.Order)
                 .ToList();
 
-            TmdbEpisodeGroup? targetGroup = sortedGroups.Count >= seasonNumber
-                ? sortedGroups[seasonNumber - 1]
-                : null;
+            TmdbEpisodeGroup? targetGroup =
+                sortedGroups.Count >= seasonNumber ? sortedGroups[seasonNumber - 1] : null;
 
             if (targetGroup == null)
                 continue;

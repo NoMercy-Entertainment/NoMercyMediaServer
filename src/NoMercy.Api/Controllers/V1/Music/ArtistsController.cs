@@ -10,11 +10,11 @@ using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
-using NoMercy.Helpers.Extensions;
-using NoMercy.MediaProcessing.Images;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Music;
+using NoMercy.Helpers.Extensions;
+using NoMercy.MediaProcessing.Images;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.SystemCalls;
@@ -32,7 +32,11 @@ public class ArtistsController : BaseController
     private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
 
-    public ArtistsController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
+    public ArtistsController(
+        MusicRepository musicService,
+        MediaContext mediaContext,
+        IEventBus eventBus
+    )
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
@@ -47,9 +51,13 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to view artists");
 
-        List<ArtistCardDto> artistCards = await _musicRepository.GetArtistCardsAsync(userId, letter);
+        List<ArtistCardDto> artistCards = await _musicRepository.GetArtistCardsAsync(
+            userId,
+            letter
+        );
 
-        ComponentEnvelope response = Component.Grid()
+        ComponentEnvelope response = Component
+            .Grid()
             .WithItems(artistCards.Select(a => Component.MusicCard(new ArtistsResponseItemDto(a))));
 
         return Ok(ComponentResponse.From(response));
@@ -70,10 +78,7 @@ public class ArtistsController : BaseController
         if (artist is null)
             return NotFoundResponse("Artist not found");
 
-        return Ok(new ArtistResponseDto
-        {
-            Data = new(artist, userId, country)
-        });
+        return Ok(new ArtistResponseDto { Data = new(artist, userId, country) });
     }
 
     [HttpPost]
@@ -84,8 +89,8 @@ public class ArtistsController : BaseController
         if (!User.IsAllowed())
             return UnauthorizedResponse("You do not have permission to like artists");
 
-        Artist? artist = await _mediaContext.Artists
-            .AsNoTracking()
+        Artist? artist = await _mediaContext
+            .Artists.AsNoTracking()
             .Where(artistUser => artistUser.Id == id)
             .FirstOrDefaultAsync();
 
@@ -94,29 +99,28 @@ public class ArtistsController : BaseController
 
         await _musicRepository.LikeArtistAsync(userId, artist, request.Value);
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = ["music", "artist", artist.Id]
-        });
+        await _eventBus.PublishAsync(
+            new LibraryRefreshEvent { QueryKey = ["music", "artist", artist.Id] }
+        );
 
-        await _eventBus.PublishAsync(new MusicItemLikedEvent
-        {
-            UserId = User.UserId(),
-            ItemId = artist.Id,
-            ItemType = "artist",
-            Liked = request.Value
-        });
-
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "{0} {1}",
-            Args = new object[]
+        await _eventBus.PublishAsync(
+            new MusicItemLikedEvent
             {
-                artist.Name,
-                request.Value ? "liked" : "unliked"
+                UserId = User.UserId(),
+                ItemId = artist.Id,
+                ItemType = "artist",
+                Liked = request.Value,
             }
-        });
+        );
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "{0} {1}",
+                Args = new object[] { artist.Name, request.Value ? "liked" : "unliked" },
+            }
+        );
     }
 
     [HttpPost]
@@ -126,35 +130,34 @@ public class ArtistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to rescan artists");
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Rescan started",
-            Args = []
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "Rescan started",
+                Args = [],
+            }
+        );
     }
-    
+
     [HttpDelete]
     [Route("{id:guid}")]
     public async Task<IActionResult> Destroy(Guid id)
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to delete an artist");
-        
-        int result = await _mediaContext.Artists
-            .Where(p => p.Id == id)
-            .ExecuteDeleteAsync();
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = ["music", "artist"]
-        });
+        int result = await _mediaContext.Artists.Where(p => p.Id == id).ExecuteDeleteAsync();
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Data = (result > 0 ? "Artist deleted successfully" : "Artist not found").Localize(),
-            Status = "ok",
-        });
+        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music", "artist"] });
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Data = (result > 0 ? "Artist deleted successfully" : "Artist not found").Localize(),
+                Status = "ok",
+            }
+        );
     }
 
     [HttpPatch]
@@ -163,17 +166,16 @@ public class ArtistsController : BaseController
     {
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to edit an artist");
-        
-        Artist? artist = await _mediaContext.Artists
-            .FirstOrDefaultAsync(a => a.Id == id);
-        
+
+        Artist? artist = await _mediaContext.Artists.FirstOrDefaultAsync(a => a.Id == id);
+
         if (artist is null)
             return NotFoundResponse("Artist not found");
-        
+
         string slug = artist.Name.ToSlug();
         string colorPalette = artist._colorPalette.OrEmpty();
         string cover = artist.Cover.OrEmpty();
-        
+
         if (request.Cover is not null)
         {
             cover = $"/{slug}.jpg";
@@ -181,14 +183,17 @@ public class ArtistsController : BaseController
 
             await using (FileStream stream = new(filePath, FileMode.Create))
             {
-                string base64Data = Regex.Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)").Groups["data"].Value;
+                string base64Data = Regex
+                    .Match(request.Cover, "data:image/(?<type>.+?),(?<data>.+)")
+                    .Groups["data"]
+                    .Value;
                 byte[] binData = Convert.FromBase64String(base64Data);
                 await stream.WriteAsync(binData);
             }
-            
+
             colorPalette = await CoverArtImageManagerManager.ColorPalette("cover", new(filePath));
         }
-        
+
         artist.Name = request.Name ?? artist.Name;
         artist.Description = request.Description;
         artist.Cover = cover;
@@ -196,16 +201,17 @@ public class ArtistsController : BaseController
 
         int result = await _mediaContext.SaveChangesAsync();
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = ["music", "artist", id]
-        });
+        await _eventBus.PublishAsync(
+            new LibraryRefreshEvent { QueryKey = ["music", "artist", id] }
+        );
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Data = (result > 0 ? "Artist updated successfully" : "No changes made").Localize(),
-            Status = "ok",
-        });
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Data = (result > 0 ? "Artist updated successfully" : "No changes made").Localize(),
+                Status = "ok",
+            }
+        );
     }
 
     [HttpPost]
@@ -216,8 +222,8 @@ public class ArtistsController : BaseController
         if (!User.IsModerator())
             return UnauthorizedResponse("You do not have permission to upload artist covers");
 
-        Artist? artist = await _mediaContext.Artists
-            .Include(artist => artist.LibraryFolder)
+        Artist? artist = await _mediaContext
+            .Artists.Include(artist => artist.LibraryFolder)
             .FirstOrDefaultAsync(artist => artist.Id == id);
 
         if (artist is null)
@@ -230,7 +236,11 @@ public class ArtistsController : BaseController
             return UnprocessableEntityResponse("Artist library folder not found");
 
         // save to artist folder
-        string filePath = Path.Combine(libraryRootFolder, artist.HostFolder.TrimStart('\\'), slug + ".jpg");
+        string filePath = Path.Combine(
+            libraryRootFolder,
+            artist.HostFolder.TrimStart('\\'),
+            slug + ".jpg"
+        );
         Logger.App(filePath);
         await using (FileStream stream = new(filePath, FileMode.Create))
         {
@@ -246,25 +256,28 @@ public class ArtistsController : BaseController
         }
 
         artist.Cover = $"/{slug}.jpg";
-        artist._colorPalette = await CoverArtImageManagerManager
-            .ColorPalette("cover", new(filePath2));
+        artist._colorPalette = await CoverArtImageManagerManager.ColorPalette(
+            "cover",
+            new(filePath2)
+        );
 
         await _mediaContext.SaveChangesAsync();
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = ["music", "artist", artist.Id]
-        });
+        await _eventBus.PublishAsync(
+            new LibraryRefreshEvent { QueryKey = ["music", "artist", artist.Id] }
+        );
 
-        return Ok(new StatusResponseDto<ImageUploadResponseDto>
-        {
-            Status = "ok",
-            Message = "Artist cover updated",
-            Data = new()
+        return Ok(
+            new StatusResponseDto<ImageUploadResponseDto>
             {
-                Url = new($"/images/music/{slug}.jpg", UriKind.Relative),
-                ColorPalette = artist.ColorPalette
+                Status = "ok",
+                Message = "Artist cover updated",
+                Data = new()
+                {
+                    Url = new($"/images/music/{slug}.jpg", UriKind.Relative),
+                    ColorPalette = artist.ColorPalette,
+                },
             }
-        });
+        );
     }
 }

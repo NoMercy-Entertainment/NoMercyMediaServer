@@ -28,8 +28,10 @@ public interface IShowRepository
     Task StoreNetworkTvs(IEnumerable<NetworkTv> networkTvs);
     Task StoreCompanies(List<Company> companies);
 
-    IEnumerable<CertificationTv> GetCertificationTvs(TmdbTvShowAppends show,
-        IEnumerable<CertificationCriteria> certificationCriteria);
+    IEnumerable<CertificationTv> GetCertificationTvs(
+        TmdbTvShowAppends show,
+        IEnumerable<CertificationCriteria> certificationCriteria
+    );
 
     string GetMediaType(TmdbTvShowAppends show);
     Task StoreWatchProviderMedias(List<WatchProviderMedia> watchProviderMedias);

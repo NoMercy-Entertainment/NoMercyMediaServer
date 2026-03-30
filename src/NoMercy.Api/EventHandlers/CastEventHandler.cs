@@ -12,10 +12,15 @@ public class CastEventHandler : IDisposable
     public CastEventHandler(IEventBus eventBus, IClientMessenger clientMessenger)
     {
         _clientMessenger = clientMessenger;
-        _subscriptions.Add(eventBus.Subscribe<CastDeviceStatusChangedEvent>(OnCastDeviceStatusChanged));
+        _subscriptions.Add(
+            eventBus.Subscribe<CastDeviceStatusChangedEvent>(OnCastDeviceStatusChanged)
+        );
     }
 
-    internal Task OnCastDeviceStatusChanged(CastDeviceStatusChangedEvent @event, CancellationToken ct)
+    internal Task OnCastDeviceStatusChanged(
+        CastDeviceStatusChangedEvent @event,
+        CancellationToken ct
+    )
     {
         _clientMessenger.SendToAll(@event.EventType, "castHub", @event.StatusData);
         return Task.CompletedTask;

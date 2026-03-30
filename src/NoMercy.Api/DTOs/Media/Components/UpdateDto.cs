@@ -4,13 +4,16 @@ namespace NoMercy.Api.DTOs.Media.Components;
 
 public record UpdateDto
 {
-    [JsonProperty("when", NullValueHandling = NullValueHandling.Ignore)] public string? When { get; set; }
-    [JsonProperty("link", NullValueHandling = NullValueHandling.Ignore)] public Uri? Link { get; set; }
-    [JsonProperty("body", NullValueHandling = NullValueHandling.Ignore)] public object? Body { get; set; }
+    [JsonProperty("when", NullValueHandling = NullValueHandling.Ignore)]
+    public string? When { get; set; }
 
-    public UpdateDto()
-    {
-    }
+    [JsonProperty("link", NullValueHandling = NullValueHandling.Ignore)]
+    public Uri? Link { get; set; }
+
+    [JsonProperty("body", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Body { get; set; }
+
+    public UpdateDto() { }
 
     public UpdateDto(Ulid replaceId)
     {
@@ -23,7 +26,7 @@ public record UpdateDto
         {
             When = "pageLoad",
             Link = new(link, UriKind.Relative),
-            Body = replaceId.HasValue ? new { replace_id = replaceId.Value } : null
+            Body = replaceId.HasValue ? new { replace_id = replaceId.Value } : null,
         };
     }
 
@@ -33,7 +36,7 @@ public record UpdateDto
         {
             When = $"interval:{intervalMs}",
             Link = new(link, UriKind.Relative),
-            Body = replaceId.HasValue ? new { replace_id = replaceId.Value } : null
+            Body = replaceId.HasValue ? new { replace_id = replaceId.Value } : null,
         };
     }
 }

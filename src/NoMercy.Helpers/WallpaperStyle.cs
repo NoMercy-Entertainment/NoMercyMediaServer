@@ -7,5 +7,5 @@ public enum WallpaperStyle
     Stretch,
     Tile,
     Center,
-    Span
+    Span,
 }

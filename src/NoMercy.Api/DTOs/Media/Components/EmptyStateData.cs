@@ -8,11 +8,20 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record EmptyStateData
 {
-    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("message")] public string Message { get; set; } = string.Empty;
-    [JsonProperty("icon")] public string Icon { get; set; } = string.Empty;
-    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)] public EmptyStateActionData? Action { get; set; }
-    [JsonProperty("auto_refresh", NullValueHandling = NullValueHandling.Ignore)] public bool? AutoRefresh { get; set; }
+    [JsonProperty("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonProperty("message")]
+    public string Message { get; set; } = string.Empty;
+
+    [JsonProperty("icon")]
+    public string Icon { get; set; } = string.Empty;
+
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
+    public EmptyStateActionData? Action { get; set; }
+
+    [JsonProperty("auto_refresh", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? AutoRefresh { get; set; }
 }
 
 /// <summary>
@@ -20,6 +29,9 @@ public record EmptyStateData
 /// </summary>
 public record EmptyStateActionData
 {
-    [JsonProperty("label")] public string Label { get; set; } = string.Empty;
-    [JsonProperty("route")] public string Route { get; set; } = string.Empty;
+    [JsonProperty("label")]
+    public string Label { get; set; } = string.Empty;
+
+    [JsonProperty("route")]
+    public string Route { get; set; } = string.Empty;
 }

@@ -11,26 +11,55 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record HomeCardData
 {
-    [JsonProperty("id")] public dynamic? Id { get; set; }
-    [JsonProperty("title")] public string? Title { get; set; }
-    [JsonProperty("overview")] public string? Overview { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; } = null!;
-    [JsonProperty("rating", NullValueHandling = NullValueHandling.Ignore)] public RatingClass? Rating { get; set; }
-    [JsonProperty("year")] public int? Year { get; set; }
-    [JsonProperty("duration")] public int? Duration { get; set; }
-    [JsonProperty("backdrop")] public string? Backdrop { get; set; }
-    [JsonProperty("poster")] public string? Poster { get; set; }
-    [JsonProperty("logo")] public string? Logo { get; set; }
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("have_items")] public int? HaveItems { get; set; }
-    [JsonProperty("number_of_items")] public int? NumberOfItems { get; set; }
-    [JsonProperty("media_type")] public string? MediaType { get; set; }
-    [JsonProperty("videos")] public IEnumerable<VideoInfo> Videos { get; set; } = [];
-    [JsonProperty("videoID")] public string? VideoId { get; set; }
+    [JsonProperty("id")]
+    public dynamic? Id { get; set; }
 
-    public HomeCardData()
-    {
-    }
+    [JsonProperty("title")]
+    public string? Title { get; set; }
+
+    [JsonProperty("overview")]
+    public string? Overview { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; } = null!;
+
+    [JsonProperty("rating", NullValueHandling = NullValueHandling.Ignore)]
+    public RatingClass? Rating { get; set; }
+
+    [JsonProperty("year")]
+    public int? Year { get; set; }
+
+    [JsonProperty("duration")]
+    public int? Duration { get; set; }
+
+    [JsonProperty("backdrop")]
+    public string? Backdrop { get; set; }
+
+    [JsonProperty("poster")]
+    public string? Poster { get; set; }
+
+    [JsonProperty("logo")]
+    public string? Logo { get; set; }
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
+
+    [JsonProperty("have_items")]
+    public int? HaveItems { get; set; }
+
+    [JsonProperty("number_of_items")]
+    public int? NumberOfItems { get; set; }
+
+    [JsonProperty("media_type")]
+    public string? MediaType { get; set; }
+
+    [JsonProperty("videos")]
+    public IEnumerable<VideoInfo> Videos { get; set; } = [];
+
+    [JsonProperty("videoID")]
+    public string? VideoId { get; set; }
+
+    public HomeCardData() { }
 
     public HomeCardData(Movie movie, string country)
     {
@@ -50,24 +79,28 @@ public record HomeCardData
         HaveItems = movie.VideoFiles.Count(v => v.Folder != null);
         ColorPalette = movie.ColorPalette;
 
-        Videos = movie.Media
-            .Where(m => m.Site == "YouTube")
+        Videos = movie
+            .Media.Where(m => m.Site == "YouTube")
             .Select(m => new VideoInfo
             {
                 Id = m.Src,
                 Name = m.Name,
                 Site = m.Site,
-                Type = m.Type
+                Type = m.Type,
             });
         VideoId = Videos.FirstOrDefault()?.Id;
 
-        Rating = movie.CertificationMovies
-            .Where(cm => cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country)
+        Rating = movie
+            .CertificationMovies.Where(cm =>
+                cm.Certification.Iso31661 == "US" || cm.Certification.Iso31661 == country
+            )
             .Select(cm => new RatingClass
             {
                 Rating = cm.Certification.Rating,
                 Iso31661 = cm.Certification.Iso31661,
-                Image = new($"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg")
+                Image = new(
+                    $"/{cm.Certification.Iso31661}/{cm.Certification.Iso31661}_{cm.Certification.Rating}.svg"
+                ),
             })
             .FirstOrDefault();
     }
@@ -90,24 +123,28 @@ public record HomeCardData
         HaveItems = tv.Episodes.Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
         ColorPalette = tv.ColorPalette;
 
-        Videos = tv.Media
-            .Where(m => m.Site == "YouTube")
+        Videos = tv
+            .Media.Where(m => m.Site == "YouTube")
             .Select(m => new VideoInfo
             {
                 Id = m.Src,
                 Name = m.Name,
                 Site = m.Site,
-                Type = m.Type
+                Type = m.Type,
             });
         VideoId = Videos.FirstOrDefault()?.Id;
 
-        Rating = tv.CertificationTvs
-            .Where(ct => ct.Certification.Iso31661 == "US" || ct.Certification.Iso31661 == country)
+        Rating = tv
+            .CertificationTvs.Where(ct =>
+                ct.Certification.Iso31661 == "US" || ct.Certification.Iso31661 == country
+            )
             .Select(ct => new RatingClass
             {
                 Rating = ct.Certification.Rating,
                 Iso31661 = ct.Certification.Iso31661,
-                Image = new($"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg")
+                Image = new(
+                    $"/{ct.Certification.Iso31661}/{ct.Certification.Iso31661}_{ct.Certification.Rating}.svg"
+                ),
             })
             .FirstOrDefault();
     }
@@ -133,8 +170,15 @@ public record HomeCardData
 
 public record VideoInfo
 {
-    [JsonProperty("id")] public string? Id { get; set; }
-    [JsonProperty("name")] public string? Name { get; set; }
-    [JsonProperty("site")] public string? Site { get; set; }
-    [JsonProperty("type")] public string? Type { get; set; }
+    [JsonProperty("id")]
+    public string? Id { get; set; }
+
+    [JsonProperty("name")]
+    public string? Name { get; set; }
+
+    [JsonProperty("site")]
+    public string? Site { get; set; }
+
+    [JsonProperty("type")]
+    public string? Type { get; set; }
 }

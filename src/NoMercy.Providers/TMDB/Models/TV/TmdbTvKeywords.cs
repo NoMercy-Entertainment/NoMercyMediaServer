@@ -2,6 +2,4 @@
 
 namespace NoMercy.Providers.TMDB.Models.TV;
 
-public class TmdbTvKeywords : TmdbSharedKeywords
-{
-}
+public class TmdbTvKeywords : TmdbSharedKeywords { }

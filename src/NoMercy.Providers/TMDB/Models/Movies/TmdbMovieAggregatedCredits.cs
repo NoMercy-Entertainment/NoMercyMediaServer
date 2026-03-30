@@ -1,5 +1,3 @@
 ﻿namespace NoMercy.Providers.TMDB.Models.Movies;
 
-public abstract class TmdbMovieAggregatedCredits : TmdbMovieDetails
-{
-}
+public abstract class TmdbMovieAggregatedCredits : TmdbMovieDetails { }

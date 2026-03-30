@@ -19,7 +19,7 @@ public class AniDbBaseClient
     {
         ClientName = "nomercy",
         ClientVersion = 1,
-        LocalPort = (ushort)(Config.ExternalServerPort + 1)
+        LocalPort = (ushort)(Config.ExternalServerPort + 1),
     };
 
     private static readonly AniDBClient AniDbClient = new(AniDbClientOptions);
@@ -27,12 +27,14 @@ public class AniDbBaseClient
     static AniDbBaseClient()
     {
         UserPass? userPass = CredentialManager.Credential("AniDb");
-        if (userPass == null) return;
+        if (userPass == null)
+            return;
 
         Username = userPass.Username;
         Password = userPass.Password;
 
-        if (userPass.ApiKey == null) return;
+        if (userPass.ApiKey == null)
+            return;
 
         ApiKey = CredentialManager.ConvertToSecureString(userPass.ApiKey);
     }
@@ -61,7 +63,8 @@ public class AniDbBaseClient
         Username = username;
         Password = password;
 
-        if (apiKey == null) return;
+        if (apiKey == null)
+            return;
         ApiKey = CredentialManager.ConvertToSecureString(apiKey);
     }
 

@@ -33,9 +33,12 @@ public class Classes
     {
         get
         {
-            if (IsImage) return "image";
-            if (IsAudio) return "audio";
-            if (IsVideo) return "video";
+            if (IsImage)
+                return "image";
+            if (IsAudio)
+                return "audio";
+            if (IsVideo)
+                return "video";
             return IsSubtitle ? "subtitle" : "unknown";
         }
     }
@@ -46,10 +49,9 @@ public class Classes
     {
         get
         {
-            if (string.IsNullOrEmpty(CropValue)) return new();
-            int[] parts = CropValue.Split(':')
-                .Select(int.Parse)
-                .ToArray();
+            if (string.IsNullOrEmpty(CropValue))
+                return new();
+            int[] parts = CropValue.Split(':').Select(int.Parse).ToArray();
             return new(parts[0], parts[1], parts[2], parts[3]);
         }
         set => CropValue = $"crop={value.W}:{value.H}:{value.X}:{value.Y}";
@@ -83,11 +85,7 @@ public class Classes
                 if (height == -2 && AspectRatioValue > 0)
                     height = (int)(width * AspectRatioValue);
 
-                return new()
-                {
-                    W = width,
-                    H = height
-                };
+                return new() { W = width, H = height };
             }
             catch (Exception e)
             {
@@ -132,9 +130,7 @@ public class Classes
         public double X { get; }
         public double Y { get; }
 
-        public CropArea()
-        {
-        }
+        public CropArea() { }
 
         public CropArea(int w, int h, int x, int y)
         {

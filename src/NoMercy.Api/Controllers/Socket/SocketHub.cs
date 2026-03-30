@@ -8,8 +8,10 @@ namespace NoMercy.Api.Controllers.Socket;
 
 public class SocketHub : ConnectionHub
 {
-    public SocketHub(IHttpContextAccessor httpContextAccessor, IDbContextFactory<MediaContext> contextFactory, ConnectedClients connectedClients)
-        : base(httpContextAccessor, contextFactory, connectedClients)
-    {
-    }
+    public SocketHub(
+        IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<MediaContext> contextFactory,
+        ConnectedClients connectedClients
+    )
+        : base(httpContextAccessor, contextFactory, connectedClients) { }
 }

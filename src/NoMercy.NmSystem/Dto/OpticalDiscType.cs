@@ -5,5 +5,5 @@ public enum OpticalDiscType
     None,
     BluRay,
     Dvd,
-    Cd
+    Cd,
 }

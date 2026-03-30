@@ -8,8 +8,9 @@ namespace NoMercy.Encoder.Core;
 public static class TesseractLanguageDownloader
 {
     private static readonly HttpClient HttpClient = new();
-    private const string RepositoryBaseUrl = "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-tesseract/master/tessdata";
-    
+    private const string RepositoryBaseUrl =
+        "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-tesseract/master/tessdata";
+
     static TesseractLanguageDownloader()
     {
         HttpClient.DefaultRequestHeaders.Add("User-Agent", Config.UserAgent);
@@ -42,42 +43,64 @@ public static class TesseractLanguageDownloader
         // Check if the language file already exists
         if (File.Exists(localFilePath))
         {
-            Logger.Encoder($"Tesseract language file already exists: {languageFileName}", LogEventLevel.Debug);
+            Logger.Encoder(
+                $"Tesseract language file already exists: {languageFileName}",
+                LogEventLevel.Debug
+            );
             return true;
         }
 
         // Download the language file from the repository
         Logger.Encoder($"Downloading Tesseract language file: {languageFileName}");
-        
+
         try
         {
             string downloadUrl = $"{RepositoryBaseUrl}/{languageFileName}";
-            
-            using HttpResponseMessage response = await HttpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
+
+            using HttpResponseMessage response = await HttpClient.GetAsync(
+                downloadUrl,
+                HttpCompletionOption.ResponseHeadersRead
+            );
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                Logger.Encoder($"Language file not found in repository: {languageFileName}", LogEventLevel.Warning);
+                Logger.Encoder(
+                    $"Language file not found in repository: {languageFileName}",
+                    LogEventLevel.Warning
+                );
                 return false;
             }
 
             response.EnsureSuccessStatusCode();
 
             await using Stream contentStream = await response.Content.ReadAsStreamAsync();
-            await using FileStream fileStream = new(localFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, true);
+            await using FileStream fileStream = new(
+                localFilePath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                81920,
+                true
+            );
             await contentStream.CopyToAsync(fileStream);
-            
+
             Logger.Encoder($"Successfully downloaded Tesseract language file: {languageFileName}");
             return true;
         }
         catch (HttpRequestException ex)
         {
-            Logger.Encoder($"Failed to download Tesseract language file {languageFileName}: {ex.Message}", LogEventLevel.Error);
+            Logger.Encoder(
+                $"Failed to download Tesseract language file {languageFileName}: {ex.Message}",
+                LogEventLevel.Error
+            );
             return false;
         }
         catch (Exception ex)
         {
-            Logger.Encoder($"Unexpected error downloading Tesseract language file {languageFileName}: {ex.Message}", LogEventLevel.Error);
+            Logger.Encoder(
+                $"Unexpected error downloading Tesseract language file {languageFileName}: {ex.Message}",
+                LogEventLevel.Error
+            );
             return false;
         }
     }
@@ -87,16 +110,18 @@ public static class TesseractLanguageDownloader
     /// </summary>
     /// <param name="languageCodes">Collection of ISO 639-3 language codes</param>
     /// <returns>Dictionary indicating success/failure for each language</returns>
-    public static async Task<Dictionary<string, bool>> EnsureLanguageFilesExist(IEnumerable<string> languageCodes)
+    public static async Task<Dictionary<string, bool>> EnsureLanguageFilesExist(
+        IEnumerable<string> languageCodes
+    )
     {
         var tasks = languageCodes.Select(async lang => new
         {
             Language = lang,
-            Success = await EnsureLanguageFileExists(lang)
+            Success = await EnsureLanguageFileExists(lang),
         });
 
         var results = await Task.WhenAll(tasks);
-        
+
         return results.ToDictionary(r => r.Language, r => r.Success);
     }
 
@@ -109,7 +134,8 @@ public static class TesseractLanguageDownloader
         if (!Directory.Exists(AppFiles.TesseractModelsFolder))
             return new();
 
-        return Directory.GetFiles(AppFiles.TesseractModelsFolder, "*.traineddata")
+        return Directory
+            .GetFiles(AppFiles.TesseractModelsFolder, "*.traineddata")
             .Select(Path.GetFileNameWithoutExtension)
             .Where(name => !string.IsNullOrEmpty(name))
             .ToList()!;

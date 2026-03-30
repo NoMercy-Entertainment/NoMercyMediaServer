@@ -9,7 +9,7 @@ public static class PluginManifestParser
     {
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
+        AllowTrailingCommas = true,
     };
 
     public static PluginManifest Parse(string json)
@@ -27,7 +27,10 @@ public static class PluginManifestParser
         return manifest;
     }
 
-    public static async Task<PluginManifest> ParseFileAsync(string filePath, CancellationToken ct = default)
+    public static async Task<PluginManifest> ParseFileAsync(
+        string filePath,
+        CancellationToken ct = default
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
@@ -40,7 +43,12 @@ public static class PluginManifestParser
         return Parse(json);
     }
 
-    public static PluginInfo ToPluginInfo(PluginManifest manifest, string assemblyPath, PluginStatus status, string? manifestPath = null)
+    public static PluginInfo ToPluginInfo(
+        PluginManifest manifest,
+        string assemblyPath,
+        PluginStatus status,
+        string? manifestPath = null
+    )
     {
         ArgumentNullException.ThrowIfNull(manifest);
 
@@ -57,7 +65,7 @@ public static class PluginManifestParser
             ProjectUrl = manifest.ProjectUrl,
             AssemblyPath = assemblyPath,
             TargetAbi = manifest.TargetAbi,
-            ManifestPath = manifestPath
+            ManifestPath = manifestPath,
         };
     }
 
@@ -80,7 +88,9 @@ public static class PluginManifestParser
 
         if (!Version.TryParse(manifest.Version, out _))
         {
-            throw new InvalidOperationException($"Plugin manifest 'version' is not a valid version string: '{manifest.Version}'.");
+            throw new InvalidOperationException(
+                $"Plugin manifest 'version' is not a valid version string: '{manifest.Version}'."
+            );
         }
 
         if (string.IsNullOrWhiteSpace(manifest.Assembly))

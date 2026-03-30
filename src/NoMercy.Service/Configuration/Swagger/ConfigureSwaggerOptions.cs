@@ -24,31 +24,35 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
         }
 
         // Configure security definitions - only add once, not per version
-        options.AddSecurityDefinition("Keycloak", new OpenApiSecurityScheme
-        {
-            Type = SecuritySchemeType.OAuth2,
-            Flows = new()
+        options.AddSecurityDefinition(
+            "Keycloak",
+            new OpenApiSecurityScheme
             {
-                Implicit = new()
+                Type = SecuritySchemeType.OAuth2,
+                Flows = new()
                 {
-                    AuthorizationUrl = new($"{Config.AuthBaseUrl}protocol/openid-connect/auth"),
-                    Scopes = new Dictionary<string, string>
+                    Implicit = new()
                     {
-                        { "openid", "openid" },
-                        { "profile", "profile" }
-                    }
-                }
+                        AuthorizationUrl = new($"{Config.AuthBaseUrl}protocol/openid-connect/auth"),
+                        Scopes = new Dictionary<string, string>
+                        {
+                            { "openid", "openid" },
+                            { "profile", "profile" },
+                        },
+                    },
+                },
             }
-        });
+        );
 
-        options.AddSecurityRequirement(document => new()
-        {
-            { new("Keycloak", document), [] },
-            { new("Bearer", document), [] }
-        });
+        options.AddSecurityRequirement(document =>
+            new() { { new("Keycloak", document), [] }, { new("Bearer", document), [] } }
+        );
     }
 
-    private static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description, string groupName)
+    private static OpenApiInfo CreateInfoForApiVersion(
+        ApiVersionDescription description,
+        string groupName
+    )
     {
         OpenApiInfo info = new()
         {
@@ -59,12 +63,13 @@ public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
             {
                 Name = "NoMercy",
                 Email = "info@nomercy.tv",
-                Url = new("https://nomercy.tv")
+                Url = new("https://nomercy.tv"),
             },
-            TermsOfService = new("https://nomercy.tv/terms-of-service")
+            TermsOfService = new("https://nomercy.tv/terms-of-service"),
         };
 
-        if (description.IsDeprecated) info.Description += " This API version has been deprecated.";
+        if (description.IsDeprecated)
+            info.Description += " This API version has been deprecated.";
 
         return info;
     }

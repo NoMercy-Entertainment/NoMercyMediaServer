@@ -8,10 +8,12 @@ namespace NoMercy.Database.Models.Users;
 [Index(nameof(UserId))]
 public class NotificationUser
 {
-    [JsonProperty("notification_id")] public Ulid NotificationId { get; set; }
+    [JsonProperty("notification_id")]
+    public Ulid NotificationId { get; set; }
     public Notification Notification { get; set; } = null!;
 
-    [JsonProperty("user_id")] public Guid UserId { get; set; }
+    [JsonProperty("user_id")]
+    public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
     public NotificationUser()

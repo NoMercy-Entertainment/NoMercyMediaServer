@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
-
 using NoMercy.NmSystem.Extensions;
+
 namespace NoMercy.Api.DTOs.Media.Components;
 
 /// <summary>
@@ -8,21 +8,40 @@ namespace NoMercy.Api.DTOs.Media.Components;
 /// </summary>
 public record NMHomeCardWrapper
 {
-    [JsonProperty("id")] public string Id { get; set; } = string.Empty;
-    [JsonProperty("title")] public string Title { get; set; } = string.Empty;
-    [JsonProperty("data")] public HomeCardData? Data { get; set; }
-    [JsonProperty("next_id")] public string? NextId { get; set; }
-    [JsonProperty("previous_id")] public string? PreviousId { get; set; }
-    [JsonProperty("more_link")] public string? MoreLink { get; set; }
-    [JsonProperty("more_link_text")] public string? MoreLinkText { get; set; }
-    [JsonProperty("watch")] public bool Watch { get; set; }
-    [JsonProperty("contextMenuItems")] public IEnumerable<ContextMenuItem> ContextMenuItems { get; set; } = [];
-    [JsonProperty("url")] public string? Url { get; set; }
-    [JsonProperty("properties")] public Dictionary<string, string>? Properties { get; set; }
+    [JsonProperty("id")]
+    public string Id { get; set; } = string.Empty;
 
-    public NMHomeCardWrapper()
-    {
-    }
+    [JsonProperty("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonProperty("data")]
+    public HomeCardData? Data { get; set; }
+
+    [JsonProperty("next_id")]
+    public string? NextId { get; set; }
+
+    [JsonProperty("previous_id")]
+    public string? PreviousId { get; set; }
+
+    [JsonProperty("more_link")]
+    public string? MoreLink { get; set; }
+
+    [JsonProperty("more_link_text")]
+    public string? MoreLinkText { get; set; }
+
+    [JsonProperty("watch")]
+    public bool Watch { get; set; }
+
+    [JsonProperty("contextMenuItems")]
+    public IEnumerable<ContextMenuItem> ContextMenuItems { get; set; } = [];
+
+    [JsonProperty("url")]
+    public string? Url { get; set; }
+
+    [JsonProperty("properties")]
+    public Dictionary<string, string>? Properties { get; set; }
+
+    public NMHomeCardWrapper() { }
 
     public NMHomeCardWrapper(HomeCardData homeCardData)
     {

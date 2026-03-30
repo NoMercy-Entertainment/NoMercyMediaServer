@@ -7,7 +7,7 @@ public static class AudioCodecs
         Name = "Advanced Audio Coding",
         Value = "aac",
         SimpleValue = "aac",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Ac3 = new()
@@ -15,7 +15,7 @@ public static class AudioCodecs
         Name = "Dolby Digital",
         Value = "ac3",
         SimpleValue = "ac3",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Eac3 = new()
@@ -23,7 +23,7 @@ public static class AudioCodecs
         Name = "Dolby Digital Plus",
         Value = "eac3",
         SimpleValue = "eac3",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Flac = new()
@@ -31,7 +31,7 @@ public static class AudioCodecs
         Name = "Free Lossless Audio Codec",
         Value = "flac",
         SimpleValue = "flac",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Mp3 = new()
@@ -39,7 +39,7 @@ public static class AudioCodecs
         Name = "MP3",
         Value = "libmp3lame",
         SimpleValue = "mp3",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto LibOpus = new()
@@ -47,7 +47,7 @@ public static class AudioCodecs
         Name = "Opus Audio Codec",
         Value = "libopus",
         SimpleValue = "opus",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Opus = new()
@@ -56,7 +56,7 @@ public static class AudioCodecs
         Value = "opus",
         SimpleValue = "opus",
         RequiresStrict = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto TrueHd = new()
@@ -64,7 +64,7 @@ public static class AudioCodecs
         Name = "TrueHD",
         Value = "truehd",
         SimpleValue = "truehd",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto LibVorbis = new()
@@ -72,7 +72,7 @@ public static class AudioCodecs
         Name = "Vorbis Audio Codec",
         Value = "libvorbis",
         SimpleValue = "vorbis",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Vorbis = new()
@@ -81,7 +81,7 @@ public static class AudioCodecs
         Value = "vorbis",
         SimpleValue = "vorbis",
         RequiresStrict = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto PcmS16Le = new()
@@ -89,6 +89,6 @@ public static class AudioCodecs
         Name = "PCM signed 16-bit little-endian",
         Value = "pcm_s16le",
         SimpleValue = "pcm",
-        IsDefault = true
+        IsDefault = true,
     };
 }

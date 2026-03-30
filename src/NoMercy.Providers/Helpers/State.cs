@@ -4,5 +4,5 @@ public enum State
 {
     Idle,
     Running,
-    Stopped
+    Stopped,
 }

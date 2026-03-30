@@ -23,31 +23,32 @@ public class CollectionPaletteCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        List<Collection[]> collections = _context.Collections
-            .Where(x => string.IsNullOrEmpty(x._colorPalette))
+        List<Collection[]> collections = _context
+            .Collections.Where(x => string.IsNullOrEmpty(x._colorPalette))
             .OrderByDescending(x => x.UpdatedAt)
             .Take(100)
             .ToList()
             .Chunk(10)
             .ToList();
 
-        if (collections.Count == 0) return;
+        if (collections.Count == 0)
+            return;
 
         _logger.LogTrace("Found {Count} collection chunks to process", collections.Count);
 
         foreach (Collection[] collectionChunk in collections)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
             foreach (Collection collection in collectionChunk)
             {
                 try
                 {
-                    collection._colorPalette = await MovieDbImageManager
-                        .MultiColorPalette([
-                            new("poster", collection.Poster),
-                            new("backdrop", collection.Backdrop)
-                        ]);
+                    collection._colorPalette = await MovieDbImageManager.MultiColorPalette([
+                        new("poster", collection.Poster),
+                        new("backdrop", collection.Backdrop),
+                    ]);
                 }
                 catch (Exception)
                 {
@@ -56,10 +57,11 @@ public class CollectionPaletteCronJob : ICronJobExecutor
             }
 
             await _context.SaveChangesAsync(cancellationToken);
-
         }
 
-        _logger.LogTrace("Collection palette job completed, updated: {Count}", collections.Sum(x => x.Length));
-
+        _logger.LogTrace(
+            "Collection palette job completed, updated: {Count}",
+            collections.Sum(x => x.Length)
+        );
     }
 }

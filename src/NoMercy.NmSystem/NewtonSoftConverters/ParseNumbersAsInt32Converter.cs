@@ -22,11 +22,13 @@ public class ParseNumbersAsInt32Converter : JsonConverter
         }
     }
 
-    public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue,
-        JsonSerializer serializer)
+    public override object? ReadJson(
+        JsonReader reader,
+        Type objectType,
+        object? existingValue,
+        JsonSerializer serializer
+    )
     {
-        return reader.Value is long
-            ? Convert.ToInt64(reader.Value ?? 0)
-            : reader.Value;
+        return reader.Value is long ? Convert.ToInt64(reader.Value ?? 0) : reader.Value;
     }
 }

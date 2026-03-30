@@ -16,7 +16,9 @@ using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
 namespace NoMercy.Data.Logic;
 
-public partial class FileLogic(int id, Library library, MediaContext mediaContext) : IDisposable, IAsyncDisposable
+public partial class FileLogic(int id, Library library, MediaContext mediaContext)
+    : IDisposable,
+        IAsyncDisposable
 {
     private readonly MediaContext _mediaContext = mediaContext;
 
@@ -38,7 +40,8 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
         {
             ConcurrentBag<MediaFolderExtend> files = await GetFiles(folder.Path);
 
-            if (!files.IsEmpty) Files.AddRange(files);
+            if (!files.IsEmpty)
+                Files.AddRange(files);
         }
 
         switch (Library.Type)
@@ -61,10 +64,12 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
     private async Task StoreMusic()
     {
-        MediaFile? item = Files.FirstOrDefault(file => file.Parsed.Title is not null)
+        MediaFile? item = Files
+            .FirstOrDefault(file => file.Parsed.Title is not null)
             ?.Files?.FirstOrDefault(file => file.Parsed is not null);
 
-        if (item == null) return;
+        if (item == null)
+            return;
 
         await StoreAudioItem(item);
     }
@@ -75,7 +80,8 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
             .SelectMany(file => file.Files ?? [])
             .FirstOrDefault(file => file.Parsed is not null);
 
-        if (item == null) return;
+        if (item == null)
+            return;
 
         await StoreVideoItem(item);
     }
@@ -87,42 +93,54 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
             .Where(mediaFolder => mediaFolder.Parsed is not null)
             .ToList();
 
-        if (items.Count == 0) return;
+        if (items.Count == 0)
+            return;
 
-        foreach (MediaFile item in items) await StoreVideoItem(item);
+        foreach (MediaFile item in items)
+            await StoreVideoItem(item);
     }
 
     public class Subtitle
     {
-        [JsonProperty("language")] public string Language { get; set; } = string.Empty;
-        [JsonProperty("type")] public string Type { get; set; } = string.Empty;
-        [JsonProperty("ext")] public string Ext { get; set; } = string.Empty;
+        [JsonProperty("language")]
+        public string Language { get; set; } = string.Empty;
+
+        [JsonProperty("type")]
+        public string Type { get; set; } = string.Empty;
+
+        [JsonProperty("ext")]
+        public string Ext { get; set; } = string.Empty;
     }
 
     private async Task StoreAudioItem(MediaFile? item)
     {
-        if (item?.Parsed is null) return;
+        if (item?.Parsed is null)
+            return;
 
         Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
-        if (folder == null) return;
+        if (folder == null)
+            return;
 
         await Task.CompletedTask;
     }
 
     private async Task StoreVideoItem(MediaFile? item)
     {
-        if (item?.Parsed is null) return;
+        if (item?.Parsed is null)
+            return;
 
         Folder? folder = Folders.FirstOrDefault(folder => item.Path.Contains(folder.Path));
-        if (folder == null) return;
+        if (folder == null)
+            return;
 
         List<Subtitle> subtitles = [];
 
         string fileName = Path.DirectorySeparatorChar + Path.GetFileName(item.Path);
         string hostFolder = item.Path.Replace(fileName, "");
-        string baseFolder = Path.DirectorySeparatorChar + (Movie?.Folder ?? Show?.Folder).OrEmpty().Replace("/", "")
-                                                        + item.Path.Replace(folder.Path, "")
-                                                            .Replace(fileName, "");
+        string baseFolder =
+            Path.DirectorySeparatorChar
+            + (Movie?.Folder ?? Show?.Folder).OrEmpty().Replace("/", "")
+            + item.Path.Replace(folder.Path, "").Replace(fileName, "");
 
         string subtitleFolder = Path.Combine(hostFolder, "subtitles");
 
@@ -134,20 +152,26 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
                 Regex regex = SubtitleFileTagsRegex();
                 Match match = regex.Match(subtitleFile);
 
-                if (match.Groups["type"].Value != "sign" && match.Groups["type"].Value != "song" &&
-                    match.Groups["type"].Value != "full") continue;
+                if (
+                    match.Groups["type"].Value != "sign"
+                    && match.Groups["type"].Value != "song"
+                    && match.Groups["type"].Value != "full"
+                )
+                    continue;
 
-                subtitles.Add(new()
-                {
-                    Language = match.Groups["lang"].Value,
-                    Type = match.Groups["type"].Value,
-                    Ext = match.Groups["ext"].Value
-                });
+                subtitles.Add(
+                    new()
+                    {
+                        Language = match.Groups["lang"].Value,
+                        Type = match.Groups["type"].Value,
+                        Ext = match.Groups["ext"].Value,
+                    }
+                );
             }
         }
 
-        Episode? episode = await _mediaContext.Episodes
-            .Where(e => Show != null && e.TvId == Show.Id)
+        Episode? episode = await _mediaContext
+            .Episodes.Where(e => Show != null && e.TvId == Show.Id)
             .Where(e => e.SeasonNumber == item.Parsed.Season)
             .Where(e => e.EpisodeNumber == item.Parsed.Episode)
             .FirstOrDefaultAsync();
@@ -164,33 +188,41 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
 
                 Share = folder.Id.ToString(),
                 Duration = Regex.Replace(
-                    Regex.Replace((item.FFprobe?.Duration.ToString()).OrEmpty(), "\\.\\d+", "")
-                    , "^00:", ""),
+                    Regex.Replace((item.FFprobe?.Duration.ToString()).OrEmpty(), "\\.\\d+", ""),
+                    "^00:",
+                    ""
+                ),
                 // Chapters = JsonConvert.SerializeObject(item.FFprobe?.Chapters ?? []),
                 Chapters = "",
-                Languages = JsonConvert.SerializeObject(item.FFprobe?.AudioStreams.Select(stream => stream.Language)
-                    .Where(stream => stream != null && stream != "und")),
+                Languages = JsonConvert.SerializeObject(
+                    item.FFprobe?.AudioStreams.Select(stream => stream.Language)
+                        .Where(stream => stream != null && stream != "und")
+                ),
                 Quality = (item.FFprobe?.VideoStreams.FirstOrDefault()?.Width.ToString()).OrEmpty(),
-                Subtitles = JsonConvert.SerializeObject(subtitles)
+                Subtitles = JsonConvert.SerializeObject(subtitles),
             };
 
-            await _mediaContext.VideoFiles.Upsert(videoFile)
+            await _mediaContext
+                .VideoFiles.Upsert(videoFile)
                 .On(vf => vf.Filename)
-                .WhenMatched((vs, vi) => new()
-                {
-                    Id = vi.Id,
-                    EpisodeId = vi.EpisodeId,
-                    MovieId = vi.MovieId,
-                    Folder = vi.Folder,
-                    HostFolder = vi.HostFolder,
-                    Filename = vi.Filename,
-                    Share = vi.Share,
-                    Duration = vi.Duration,
-                    Chapters = vi.Chapters,
-                    Languages = vi.Languages,
-                    Quality = vi.Quality,
-                    Subtitles = vi.Subtitles
-                })
+                .WhenMatched(
+                    (vs, vi) =>
+                        new()
+                        {
+                            Id = vi.Id,
+                            EpisodeId = vi.EpisodeId,
+                            MovieId = vi.MovieId,
+                            Folder = vi.Folder,
+                            HostFolder = vi.HostFolder,
+                            Filename = vi.Filename,
+                            Share = vi.Share,
+                            Duration = vi.Duration,
+                            Chapters = vi.Chapters,
+                            Languages = vi.Languages,
+                            Quality = vi.Quality,
+                            Subtitles = vi.Subtitles,
+                        }
+                )
                 .RunAsync();
         }
         catch (Exception e)
@@ -204,21 +236,15 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
         switch (Library.Type)
         {
             case Config.MovieMediaType:
-                Movie = await _mediaContext.Movies
-                    .Where(m => m.Id == Id)
-                    .FirstOrDefaultAsync();
+                Movie = await _mediaContext.Movies.Where(m => m.Id == Id).FirstOrDefaultAsync();
                 Type = Config.MovieMediaType;
                 break;
             case Config.TvMediaType:
-                Show = await _mediaContext.Tvs
-                    .Where(t => t.Id == Id)
-                    .FirstOrDefaultAsync();
+                Show = await _mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
                 Type = Config.TvMediaType;
                 break;
             case Config.AnimeMediaType:
-                Show = await _mediaContext.Tvs
-                    .Where(t => t.Id == Id)
-                    .FirstOrDefaultAsync();
+                Show = await _mediaContext.Tvs.Where(t => t.Id == Id).FirstOrDefaultAsync();
                 Type = Config.AnimeMediaType;
                 break;
         }
@@ -233,7 +259,7 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
             Config.MovieMediaType => 1,
             Config.TvMediaType => 2,
             Config.AnimeMediaType => 2,
-            _ => 1
+            _ => 1,
         };
 
         ConcurrentBag<MediaFolderExtend> folders = await mediaScan
@@ -253,14 +279,13 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
             Config.MovieMediaType => Movie?.Folder?.Replace("/", ""),
             Config.TvMediaType => Show?.Folder?.Replace("/", ""),
             Config.AnimeMediaType => Show?.Folder?.Replace("/", ""),
-            _ => ""
+            _ => "",
         };
 
-        if (folder == null) return;
+        if (folder == null)
+            return;
 
-        Folder[] rootFolders = Library.FolderLibraries
-            .Select(f => f.Folder)
-            .ToArray();
+        Folder[] rootFolders = Library.FolderLibraries.Select(f => f.Folder).ToArray();
 
         foreach (Folder rootFolder in rootFolders)
         {
@@ -274,11 +299,7 @@ public partial class FileLogic(int id, Library library, MediaContext mediaContex
             }
 
             if (Directory.Exists(path))
-                Folders.Add(new()
-                {
-                    Path = path,
-                    Id = rootFolder.Id
-                });
+                Folders.Add(new() { Path = path, Id = rootFolder.Id });
         }
     }
 

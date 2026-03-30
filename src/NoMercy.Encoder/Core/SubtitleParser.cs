@@ -14,7 +14,10 @@ public partial class SubtitleParser
 
         foreach (Match match in matches)
         {
-            double startTime = double.Parse(match.Groups["start"].Value, CultureInfo.InvariantCulture);
+            double startTime = double.Parse(
+                match.Groups["start"].Value,
+                CultureInfo.InvariantCulture
+            );
             double endTime = double.Parse(match.Groups["end"].Value, CultureInfo.InvariantCulture);
             string text = match.Groups["text"].Value.Trim();
 
@@ -32,7 +35,9 @@ public partial class SubtitleParser
 
         foreach (Subtitle subtitle in subtitles)
         {
-            writer.WriteLine($"{FormatTime(subtitle.StartTime)} --> {FormatTime(subtitle.EndTime)}");
+            writer.WriteLine(
+                $"{FormatTime(subtitle.StartTime)} --> {FormatTime(subtitle.EndTime)}"
+            );
             writer.WriteLine(subtitle.Text);
             writer.WriteLine();
         }
@@ -41,13 +46,19 @@ public partial class SubtitleParser
     private static string FormatTime(double timeInSeconds)
     {
         TimeSpan timeSpan = TimeSpan.FromSeconds(timeInSeconds);
-        return string.Format("{0:00}:{1:00}:{2:00}.{3:000}",
-            timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds, timeSpan.Milliseconds);
+        return string.Format(
+            "{0:00}:{1:00}:{2:00}.{3:000}",
+            timeSpan.Hours,
+            timeSpan.Minutes,
+            timeSpan.Seconds,
+            timeSpan.Milliseconds
+        );
     }
 
     [GeneratedRegex(
         @"pts_time:(?<start>\d+(\.\d+)?)\nlavfi\.ocr\.text=(?<text>.+(\n.+)?)\n\n.*?pts_time:(?<end>\d+(\.\d+)?)",
-        RegexOptions.Multiline)]
+        RegexOptions.Multiline
+    )]
     private static partial Regex OcrRegex();
 }
 

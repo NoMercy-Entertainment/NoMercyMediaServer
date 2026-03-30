@@ -26,12 +26,7 @@ public class ApiInfo
     // :TODO Make the fanart client key configurable in the dashboard
     public static string FanArtClientKey { get; set; } = string.Empty;
 
-    public static string[] Colors { get; private set; } =
-    [
-        "#8f00fc",
-        "#705BAD",
-        "#CBAFFF"
-    ];
+    public static string[] Colors { get; private set; } = ["#8f00fc", "#705BAD", "#CBAFFF"];
 
     public static string Quote { get; private set; } = string.Empty;
 
@@ -63,21 +58,24 @@ public class ApiInfo
             string cachedAt = cachedData.CachedAt ?? "unknown";
 
             DateTime? cachedAtDate = cachedData.CachedAt is not null
-                ? DateTime.TryParse(cachedData.CachedAt, out DateTime parsed) ? parsed : null
+                ? DateTime.TryParse(cachedData.CachedAt, out DateTime parsed)
+                    ? parsed
+                    : null
                 : null;
 
-            if (cachedAtDate.HasValue &&
-                (DateTime.UtcNow - cachedAtDate.Value).TotalDays > 30)
+            if (cachedAtDate.HasValue && (DateTime.UtcNow - cachedAtDate.Value).TotalDays > 30)
             {
                 Logger.Setup(
                     $"API keys loaded from cache (cached at {cachedAt}) — cache is over 30 days old",
-                    LogEventLevel.Warning);
+                    LogEventLevel.Warning
+                );
             }
             else
             {
                 Logger.Setup(
                     $"API keys loaded from cache (cached at {cachedAt})",
-                    LogEventLevel.Warning);
+                    LogEventLevel.Warning
+                );
             }
 
             StartBackgroundRefresh();
@@ -87,7 +85,8 @@ public class ApiInfo
         // 3. No network, no cache — cannot function without keys
         Logger.Setup(
             "API unreachable and no cached keys available — provider features will be unavailable",
-            LogEventLevel.Error);
+            LogEventLevel.Error
+        );
     }
 
     internal static async Task<ApiInfoResponse?> TryFetchFromNetwork()
@@ -112,7 +111,8 @@ public class ApiInfo
             {
                 Logger.Setup(
                     "API keys response contained empty keys — auth token may be expired, discarding response",
-                    LogEventLevel.Warning);
+                    LogEventLevel.Warning
+                );
                 return null;
             }
 
@@ -120,8 +120,10 @@ public class ApiInfo
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Failed to fetch API keys from network: {ex.Message}",
-                LogEventLevel.Warning);
+            Logger.Setup(
+                $"Failed to fetch API keys from network: {ex.Message}",
+                LogEventLevel.Warning
+            );
             return null;
         }
     }
@@ -156,8 +158,7 @@ public class ApiInfo
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Failed to write API keys cache: {ex.Message}",
-                LogEventLevel.Warning);
+            Logger.Setup($"Failed to write API keys cache: {ex.Message}", LogEventLevel.Warning);
         }
     }
 
@@ -180,8 +181,7 @@ public class ApiInfo
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Failed to read API keys cache: {ex.Message}",
-                LogEventLevel.Warning);
+            Logger.Setup($"Failed to read API keys cache: {ex.Message}", LogEventLevel.Warning);
             return null;
         }
     }
@@ -209,7 +209,8 @@ public class ApiInfo
                 attempt++;
                 Logger.Setup(
                     $"API key refresh attempt {attempt} failed, retrying in {delay}s",
-                    LogEventLevel.Warning);
+                    LogEventLevel.Warning
+                );
             }
         });
     }

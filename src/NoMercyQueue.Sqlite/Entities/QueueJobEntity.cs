@@ -12,7 +12,9 @@ internal class QueueJobEntity
 
     public int Priority { get; set; }
     public string Queue { get; set; } = "default";
-    [MaxLength(4096)] public required string Payload { get; set; }
+
+    [MaxLength(4096)]
+    public required string Payload { get; set; }
     public byte Attempts { get; set; }
     public DateTime? ReservedAt { get; set; }
     public DateTime AvailableAt { get; set; }

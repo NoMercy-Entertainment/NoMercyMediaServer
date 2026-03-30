@@ -48,14 +48,23 @@ public class CronWorker : BackgroundService
             DatabaseReadyTcs.TrySetResult(false);
     }
 
-    public CronWorker(IServiceProvider serviceProvider, ILogger<CronWorker> logger, IQueueContext queueContext)
+    public CronWorker(
+        IServiceProvider serviceProvider,
+        ILogger<CronWorker> logger,
+        IQueueContext queueContext
+    )
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
         _queueContext = queueContext;
     }
 
-    public void RegisterJob<T>(string jobType, string name, string cronExpression, object? parameters = null)
+    public void RegisterJob<T>(
+        string jobType,
+        string name,
+        string cronExpression,
+        object? parameters = null
+    )
         where T : class, ICronJobExecutor
     {
         _registeredJobs[jobType] = typeof(T);
@@ -67,7 +76,7 @@ public class CronWorker : BackgroundService
             JobType = jobType,
             Parameters = parameters != null ? JsonConvert.SerializeObject(parameters) : null,
             IsEnabled = true,
-            NextRun = CronService.GetNextOccurrence(cronExpression, DateTime.Now)
+            NextRun = CronService.GetNextOccurrence(cronExpression, DateTime.Now),
         };
 
         _codeDefinedJobs.Add(job);
@@ -108,9 +117,17 @@ public class CronWorker : BackgroundService
 
     private void StartJobWorker(CronJobModel job)
     {
-        if (_jobCancellationTokens.TryGetValue(job.JobType, out CancellationTokenSource? existingCts))
+        if (
+            _jobCancellationTokens.TryGetValue(
+                job.JobType,
+                out CancellationTokenSource? existingCts
+            )
+        )
         {
-            _logger.LogDebug("Worker already running for job: {JobName}, skipping duplicate registration", job.Name);
+            _logger.LogDebug(
+                "Worker already running for job: {JobName}, skipping duplicate registration",
+                job.Name
+            );
             return;
         }
 
@@ -132,7 +149,10 @@ public class CronWorker : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Job worker cancelled while waiting for queue workers: {JobName}", job.Name);
+            _logger.LogInformation(
+                "Job worker cancelled while waiting for queue workers: {JobName}",
+                job.Name
+            );
             return;
         }
 
@@ -145,18 +165,28 @@ public class CronWorker : BackgroundService
                 // Check if it's time to run
                 if (job.NextRun.HasValue && currentTime >= job.NextRun.Value)
                 {
-                    _logger.LogDebug("Executing cron job: {JobName} (Scheduled: {NextRun}, Current: {CurrentTime})",
-                        job.Name, job.NextRun, currentTime);
+                    _logger.LogDebug(
+                        "Executing cron job: {JobName} (Scheduled: {NextRun}, Current: {CurrentTime})",
+                        job.Name,
+                        job.NextRun,
+                        currentTime
+                    );
 
                     bool success = await ExecuteJob(job, currentTime, cancellationToken);
 
                     if (success)
                     {
                         job.LastRun = currentTime;
-                        job.NextRun = CronService.GetNextOccurrence(job.CronExpression, currentTime);
+                        job.NextRun = CronService.GetNextOccurrence(
+                            job.CronExpression,
+                            currentTime
+                        );
 
-                        _logger.LogDebug("Successfully executed cron job: {JobName}. Next run: {NextRun}",
-                            job.Name, job.NextRun);
+                        _logger.LogDebug(
+                            "Successfully executed cron job: {JobName}. Next run: {NextRun}",
+                            job.Name,
+                            job.NextRun
+                        );
 
                         // Update database if this is a database job
                         UpdateDatabaseJob(job);
@@ -181,21 +211,34 @@ public class CronWorker : BackgroundService
         }
     }
 
-    private async Task<bool> ExecuteJob(CronJobModel job, DateTime currentTime, CancellationToken cancellationToken)
+    private async Task<bool> ExecuteJob(
+        CronJobModel job,
+        DateTime currentTime,
+        CancellationToken cancellationToken
+    )
     {
         try
         {
             if (!_registeredJobs.TryGetValue(job.JobType, out Type? jobExecutorType))
             {
-                _logger.LogWarning("Job type {JobType} not registered for job {JobName}", job.JobType, job.Name);
+                _logger.LogWarning(
+                    "Job type {JobType} not registered for job {JobName}",
+                    job.JobType,
+                    job.Name
+                );
                 return false;
             }
 
             using IServiceScope scope = _serviceProvider.CreateScope();
-            ICronJobExecutor executor = (ICronJobExecutor)scope.ServiceProvider.GetRequiredService(jobExecutorType);
+            ICronJobExecutor executor = (ICronJobExecutor)
+                scope.ServiceProvider.GetRequiredService(jobExecutorType);
 
             using CancellationTokenSource timeoutCts = new(TimeSpan.FromMinutes(30));
-            using CancellationTokenSource combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+            using CancellationTokenSource combinedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken,
+                    timeoutCts.Token
+                );
 
             await executor.ExecuteAsync(job.Parameters.OrEmpty(), combinedCts.Token);
             return true;
@@ -238,13 +281,17 @@ public class CronWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogDebug("Cron Worker started with {JobCount} registered jobs", _codeDefinedJobs.Count);
+        _logger.LogDebug(
+            "Cron Worker started with {JobCount} registered jobs",
+            _codeDefinedJobs.Count
+        );
 
         // Wait for database migrations to complete before querying the database
         try
         {
             using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(30));
-            using CancellationTokenSource combinedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timeoutCts.Token);
+            using CancellationTokenSource combinedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timeoutCts.Token);
 
             bool dbReady = await DatabaseReadyTcs.Task.WaitAsync(combinedCts.Token);
             if (dbReady)
@@ -264,7 +311,9 @@ public class CronWorker : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Timed out waiting for database readiness — skipping database job workers");
+            _logger.LogWarning(
+                "Timed out waiting for database readiness — skipping database job workers"
+            );
         }
 
         // Keep the main service running
@@ -292,8 +341,11 @@ public class CronWorker : BackgroundService
                 }
                 else
                 {
-                    _logger.LogWarning("Database job {JobName} has unregistered job type: {JobType}",
-                        job.Name, job.JobType);
+                    _logger.LogWarning(
+                        "Database job {JobName} has unregistered job type: {JobType}",
+                        job.Name,
+                        job.JobType
+                    );
                 }
             }
         }
@@ -318,7 +370,8 @@ public class CronWorker : BackgroundService
         {
             try
             {
-                await Task.WhenAll(_jobTasks.Values).WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                await Task.WhenAll(_jobTasks.Values)
+                    .WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
             }
             catch (TimeoutException)
             {

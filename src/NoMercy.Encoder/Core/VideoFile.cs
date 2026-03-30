@@ -6,7 +6,6 @@ public class VideoFile : VideoAudioFile
 {
     internal override bool IsVideo => true;
 
-    public VideoFile(FfProbeData ffProbeData, string ffmpegPath) : base(ffProbeData, ffmpegPath)
-    {
-    }
+    public VideoFile(FfProbeData ffProbeData, string ffmpegPath)
+        : base(ffProbeData, ffmpegPath) { }
 }

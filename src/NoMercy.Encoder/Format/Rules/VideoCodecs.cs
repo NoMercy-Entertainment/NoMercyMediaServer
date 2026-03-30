@@ -8,7 +8,7 @@ public static class VideoCodecs
         Value = "libx264",
         SimpleValue = "h264",
         RequiresGpu = false,
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto H264Nvenc = new()
@@ -17,7 +17,7 @@ public static class VideoCodecs
         Value = "h264_nvenc",
         SimpleValue = "h264_nvenc",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto H264Qsv = new()
@@ -26,7 +26,7 @@ public static class VideoCodecs
         Value = "h264_qsv",
         SimpleValue = "h264_qsv",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto H264Amf = new()
@@ -35,7 +35,7 @@ public static class VideoCodecs
         Value = "h264_amf",
         SimpleValue = "h264_amf",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto H264Videotoolbox = new()
@@ -44,7 +44,7 @@ public static class VideoCodecs
         Value = "h264_videotoolbox",
         SimpleValue = "h264_videotoolbox",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto H265 = new()
@@ -53,7 +53,7 @@ public static class VideoCodecs
         Value = "libx265",
         SimpleValue = "h265",
         RequiresGpu = false,
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto H265Nvenc = new()
@@ -62,7 +62,7 @@ public static class VideoCodecs
         Value = "hevc_nvenc",
         SimpleValue = "hevc_nvenc",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto H265Qsv = new()
@@ -71,7 +71,7 @@ public static class VideoCodecs
         Value = "hevc_qsv",
         SimpleValue = "hevc_qsv",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto H265Amf = new()
@@ -80,7 +80,7 @@ public static class VideoCodecs
         Value = "hevc_amf",
         SimpleValue = "hevc_amf",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto H265Videotoolbox = new()
@@ -89,7 +89,7 @@ public static class VideoCodecs
         Value = "hevc_videotoolbox",
         SimpleValue = "hevc_videotoolbox",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Vp9 = new()
@@ -98,7 +98,7 @@ public static class VideoCodecs
         Value = "vp9",
         SimpleValue = "vp9",
         RequiresGpu = false,
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Vp9Nvenc = new()
@@ -107,7 +107,7 @@ public static class VideoCodecs
         Value = "vp9_nvenc",
         SimpleValue = "vp9_nvenc",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Vp9Qsv = new()
@@ -116,7 +116,7 @@ public static class VideoCodecs
         Value = "vp9_qsv",
         SimpleValue = "vp9_qsv",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Vp9Amf = new()
@@ -125,7 +125,7 @@ public static class VideoCodecs
         Value = "vp9_amf",
         SimpleValue = "vp9_amf",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Vp9Videotoolbox = new()
@@ -134,7 +134,7 @@ public static class VideoCodecs
         Value = "vp9_videotoolbox",
         SimpleValue = "vp9_videotoolbox",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Av1 = new()
@@ -143,7 +143,7 @@ public static class VideoCodecs
         Value = "librav1e",
         SimpleValue = "librav1e",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Av1Nvenc = new()
@@ -152,7 +152,7 @@ public static class VideoCodecs
         Value = "av1_nvenc",
         SimpleValue = "av1_nvenc",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Av1Qsv = new()
@@ -161,7 +161,7 @@ public static class VideoCodecs
         Value = "av1_qsv",
         SimpleValue = "av1_qsv",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Av1Amf = new()
@@ -170,7 +170,7 @@ public static class VideoCodecs
         Value = "av1_amf",
         SimpleValue = "av1_amf",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Av1Videotoolbox = new()
@@ -179,6 +179,6 @@ public static class VideoCodecs
         Value = "av1_videotoolbox",
         SimpleValue = "av1_videotoolbox",
         RequiresGpu = true,
-        IsDefault = false
+        IsDefault = false,
     };
 }

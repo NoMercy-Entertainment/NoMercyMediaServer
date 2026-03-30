@@ -23,19 +23,32 @@ public class LrclibBaseClient : IDisposable
 
     private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 1, Interval = 1000, Start = true });
+        return _queue ??= new(
+            new()
+            {
+                Concurrent = 1,
+                Interval = 1000,
+                Start = true,
+            }
+        );
     }
 
     protected Guid Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false,
-        int retry = 0) where T : class
+    protected async Task<T?> Get<T>(
+        string url,
+        Dictionary<string, string>? query = null,
+        bool? priority = false,
+        int retry = 0
+    )
+        where T : class
     {
         query ??= new();
 
         string newUrl = url.ToQueryUri(query);
 
-        if (CacheController.Read(newUrl, out T? result)) return result;
+        if (CacheController.Read(newUrl, out T? result))
+            return result;
 
         Logger.MusicBrainz(_baseUrl + newUrl, LogEventLevel.Verbose);
 
@@ -44,7 +57,8 @@ public class LrclibBaseClient : IDisposable
         string? response;
         try
         {
-            response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+            response = await GetQueue()
+                .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
             await CacheController.Write(newUrl, response);
 
             data = response.FromJson<T>();
@@ -57,7 +71,8 @@ public class LrclibBaseClient : IDisposable
                 return await Get<T>(url, query, priority, retry + 1);
             }
 
-            if (retry == 10) throw;
+            if (retry == 10)
+                throw;
 
             Task.Delay(5000).Wait();
             return await Get<T>(url, query, priority, retry + 1);
@@ -65,7 +80,7 @@ public class LrclibBaseClient : IDisposable
 
         return data ?? throw new($"Failed to parse {response}");
     }
-    
+
     public void Dispose()
     {
         GC.SuppressFinalize(this);

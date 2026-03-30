@@ -8,10 +8,12 @@ namespace NoMercy.Database.Models.Movies;
 [Index(nameof(MovieId))]
 public class KeywordMovie
 {
-    [JsonProperty("keyword_id")] public int KeywordId { get; set; }
+    [JsonProperty("keyword_id")]
+    public int KeywordId { get; set; }
     public Keyword Keyword { get; set; } = null!;
 
-    [JsonProperty("movie_id")] public int MovieId { get; set; }
+    [JsonProperty("movie_id")]
+    public int MovieId { get; set; }
     public Movie Movie { get; set; } = null!;
 
     public KeywordMovie()

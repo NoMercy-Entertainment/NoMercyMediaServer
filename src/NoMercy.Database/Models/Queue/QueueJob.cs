@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-
 namespace NoMercy.Database.Models.Queue;
 
 [PrimaryKey(nameof(Id))]
@@ -13,7 +12,9 @@ public class QueueJob
 
     public int Priority { get; set; }
     public string Queue { get; set; } = "default";
-    [MaxLength(4096)] public required string Payload { get; set; }
+
+    [MaxLength(4096)]
+    public required string Payload { get; set; }
     public byte Attempts { get; set; } = 0;
     public DateTime? ReservedAt { get; set; }
     public DateTime AvailableAt { get; set; }

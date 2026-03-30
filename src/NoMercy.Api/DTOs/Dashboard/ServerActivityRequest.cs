@@ -4,5 +4,6 @@ namespace NoMercy.Api.DTOs.Dashboard;
 
 public record ServerActivityRequest
 {
-    [JsonProperty("take")] public int? Take { get; set; } = 10;
+    [JsonProperty("take")]
+    public int? Take { get; set; } = 10;
 }

@@ -4,14 +4,15 @@ namespace NoMercy.Api.Hubs.Shared;
 
 public class Actions
 {
-    [JsonProperty("disallows")] public Disallows Disallows { get; set; } = null!;
+    [JsonProperty("disallows")]
+    public Disallows Disallows { get; set; } = null!;
 }
 
 public class Disallows
 {
     [JsonProperty("previous")]
     public bool Previous { get; set; }
-    
+
     [JsonProperty("next")]
     public bool Next { get; set; }
 
@@ -32,10 +33,10 @@ public class Disallows
 
     [JsonProperty("seeking")]
     public bool Seeking { get; set; }
-    
+
     [JsonProperty("stopping")]
     public bool Stopping { get; set; }
-    
+
     [JsonProperty("muting")]
     public bool Muting { get; set; }
 }

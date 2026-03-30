@@ -9,43 +9,85 @@ namespace NoMercy.Api.DTOs.Media;
 
 public record PersonResponseItemDto
 {
-    [JsonProperty("id")] public long Id { get; set; }
-    [JsonProperty("adult")] public bool Adult { get; set; }
-    [JsonProperty("also_known_as")] public string[]? AlsoKnownAs { get; set; }
-    [JsonProperty("biography")] public string? Biography { get; set; }
-    [JsonProperty("birthday")] public DateTime? Birthday { get; set; }
-    [JsonProperty("deathday")] public DateTime? DeathDay { get; set; }
-    [JsonProperty("gender")] public string Gender { get; set; } = nameof(TmdbGender.Unknown);
-    [JsonProperty("homepage")] public string? Homepage { get; set; }
-    [JsonProperty("imdb_id")] public string? ImdbId { get; set; }
-    [JsonProperty("known_for_department")] public string? KnownForDepartment { get; set; }
-    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
-    [JsonProperty("place_of_birth")] public string? PlaceOfBirth { get; set; }
-    [JsonProperty("popularity")] public double Popularity { get; set; }
-    [JsonProperty("profile")] public string? Profile { get; set; }
-    [JsonProperty("titleSort")] public string TitleSort { get; set; } = string.Empty;
-    [JsonProperty("color_palette")] public IColorPalettes? ColorPalette { get; set; }
-    [JsonProperty("created_at")] public DateTime CreatedAt { get; set; }
-    [JsonProperty("updated_at")] public DateTime UpdatedAt { get; set; }
-    [JsonProperty("link")] public Uri Link { get; set; } = null!;
+    [JsonProperty("id")]
+    public long Id { get; set; }
 
-    [JsonProperty("combined_credits")] public Credits CombinedCredits { get; set; } = new();
+    [JsonProperty("adult")]
+    public bool Adult { get; set; }
 
-    [JsonProperty("external_ids")] public Database.Models.People.TmdbPersonExternalIds? ExternalIds { get; set; }
-    [JsonProperty("translations")] public TranslationsDto TranslationsDto { get; set; } = new();
-    [JsonProperty("known_for")] public KnownForDto[] KnownFor { get; set; } = [];
-    [JsonProperty("images")] public ImagesDto ImagesDto { get; set; } = new();
+    [JsonProperty("also_known_as")]
+    public string[]? AlsoKnownAs { get; set; }
+
+    [JsonProperty("biography")]
+    public string? Biography { get; set; }
+
+    [JsonProperty("birthday")]
+    public DateTime? Birthday { get; set; }
+
+    [JsonProperty("deathday")]
+    public DateTime? DeathDay { get; set; }
+
+    [JsonProperty("gender")]
+    public string Gender { get; set; } = nameof(TmdbGender.Unknown);
+
+    [JsonProperty("homepage")]
+    public string? Homepage { get; set; }
+
+    [JsonProperty("imdb_id")]
+    public string? ImdbId { get; set; }
+
+    [JsonProperty("known_for_department")]
+    public string? KnownForDepartment { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonProperty("place_of_birth")]
+    public string? PlaceOfBirth { get; set; }
+
+    [JsonProperty("popularity")]
+    public double Popularity { get; set; }
+
+    [JsonProperty("profile")]
+    public string? Profile { get; set; }
+
+    [JsonProperty("titleSort")]
+    public string TitleSort { get; set; } = string.Empty;
+
+    [JsonProperty("color_palette")]
+    public IColorPalettes? ColorPalette { get; set; }
+
+    [JsonProperty("created_at")]
+    public DateTime CreatedAt { get; set; }
+
+    [JsonProperty("updated_at")]
+    public DateTime UpdatedAt { get; set; }
+
+    [JsonProperty("link")]
+    public Uri Link { get; set; } = null!;
+
+    [JsonProperty("combined_credits")]
+    public Credits CombinedCredits { get; set; } = new();
+
+    [JsonProperty("external_ids")]
+    public Database.Models.People.TmdbPersonExternalIds? ExternalIds { get; set; }
+
+    [JsonProperty("translations")]
+    public TranslationsDto TranslationsDto { get; set; } = new();
+
+    [JsonProperty("known_for")]
+    public KnownForDto[] KnownFor { get; set; } = [];
+
+    [JsonProperty("images")]
+    public ImagesDto ImagesDto { get; set; } = new();
 
     public PersonResponseItemDto(Person person)
     {
-        string? biography = person.Translations
-            .FirstOrDefault()?.Biography;
+        string? biography = person.Translations.FirstOrDefault()?.Biography;
 
         Id = person.Id;
         Name = person.Name;
-        Biography = !string.IsNullOrEmpty(biography)
-            ? biography
-            : person.Biography;
+        Biography = !string.IsNullOrEmpty(biography) ? biography : person.Biography;
         Adult = person.Adult;
         AlsoKnownAs = person.AlsoKnownAs is null
             ? []
@@ -66,60 +108,62 @@ public record PersonResponseItemDto
 
         ImagesDto = new()
         {
-            Profiles = person.Images
-                .Select(image => new ImageDto(image))
-                .ToArray()
+            Profiles = person.Images.Select(image => new ImageDto(image)).ToArray(),
         };
 
         CombinedCredits = new()
         {
-            Cast = person.Casts
-                .Select(cast => new KnownForDto(cast))
+            Cast = person
+                .Casts.Select(cast => new KnownForDto(cast))
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
 
-            Crew = person.Crews
-                .Select(crew => new KnownForDto(crew))
+            Crew = person
+                .Crews.Select(crew => new KnownForDto(crew))
                 .OrderByDescending(knownFor => knownFor.Year)
-                .ToArray()
+                .ToArray(),
         };
 
-        KnownFor = person.Casts
-            .Select(crew => new KnownForDto(crew))
-            .Concat(person.Crews
-                .Select(crew => new KnownForDto(crew)))
+        KnownFor = person
+            .Casts.Select(crew => new KnownForDto(crew))
+            .Concat(person.Crews.Select(crew => new KnownForDto(crew)))
             .OrderByDescending(knownFor => knownFor.Popularity)
             .ToArray();
     }
 
-    public PersonResponseItemDto(TmdbPersonAppends tmdbPersonAppends, string? country, MediaContext mediaContext)
+    public PersonResponseItemDto(
+        TmdbPersonAppends tmdbPersonAppends,
+        string? country,
+        MediaContext mediaContext
+    )
     {
-        string? biography = tmdbPersonAppends.Translations.Translations
-            .FirstOrDefault(translation => translation.Iso31661 == country)?.TmdbPersonTranslationData.Overview;
+        string? biography = tmdbPersonAppends
+            .Translations.Translations.FirstOrDefault(translation =>
+                translation.Iso31661 == country
+            )
+            ?.TmdbPersonTranslationData.Overview;
 
-        Person? person = mediaContext.People
-            .Where(p => p.Id == tmdbPersonAppends.Id)
+        Person? person = mediaContext
+            .People.Where(p => p.Id == tmdbPersonAppends.Id)
             .Include(p => p.Casts)
-            .ThenInclude(c => c.Movie)
-            .ThenInclude(movie => movie!.VideoFiles)
+                .ThenInclude(c => c.Movie)
+                    .ThenInclude(movie => movie!.VideoFiles)
             .Include(p => p.Casts)
-            .ThenInclude(c => c.Tv)
-            .ThenInclude(tv => tv!.Episodes)
-            .ThenInclude(episode => episode.VideoFiles)
+                .ThenInclude(c => c.Tv)
+                    .ThenInclude(tv => tv!.Episodes)
+                        .ThenInclude(episode => episode.VideoFiles)
             .Include(p => p.Crews)
-            .ThenInclude(c => c.Movie)
-            .ThenInclude(movie => movie!.VideoFiles)
+                .ThenInclude(c => c.Movie)
+                    .ThenInclude(movie => movie!.VideoFiles)
             .Include(p => p.Crews)
-            .ThenInclude(c => c.Tv)
-            .ThenInclude(tv => tv!.Episodes)
-            .ThenInclude(episode => episode.VideoFiles)
+                .ThenInclude(c => c.Tv)
+                    .ThenInclude(tv => tv!.Episodes)
+                        .ThenInclude(episode => episode.VideoFiles)
             .FirstOrDefault();
 
         Id = tmdbPersonAppends.Id;
         Name = tmdbPersonAppends.Name;
-        Biography = !string.IsNullOrEmpty(biography)
-            ? biography
-            : tmdbPersonAppends.Biography;
+        Biography = !string.IsNullOrEmpty(biography) ? biography : tmdbPersonAppends.Biography;
         Adult = tmdbPersonAppends.Adult;
         AlsoKnownAs = tmdbPersonAppends.AlsoKnownAs;
         Birthday = tmdbPersonAppends.BirthDay;
@@ -137,36 +181,34 @@ public record PersonResponseItemDto
 
         ImagesDto = new()
         {
-            Profiles = tmdbPersonAppends.Images.Profiles
-                .Select(image => new ImageDto(image))
-                .ToArray()
+            Profiles = tmdbPersonAppends
+                .Images.Profiles.Select(image => new ImageDto(image))
+                .ToArray(),
         };
 
         CombinedCredits = new()
         {
-            Cast = tmdbPersonAppends.CombinedCredits.Cast
-                .Select(cast => new KnownForDto(cast, person))
+            Cast = tmdbPersonAppends
+                .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
                 .OrderByDescending(knownFor => knownFor.Year)
                 .ToArray(),
 
-            Crew = tmdbPersonAppends.CombinedCredits.Crew
-                .Select(crew => new KnownForDto(crew, person))
+            Crew = tmdbPersonAppends
+                .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
                 .OrderByDescending(knownFor => knownFor.Year)
-                .ToArray()
+                .ToArray(),
         };
 
-        KnownForDto[] cast = tmdbPersonAppends.CombinedCredits.Cast
-            .Select(cast => new KnownForDto(cast, person))
+        KnownForDto[] cast = tmdbPersonAppends
+            .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
             .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 
-        KnownForDto[] crew = tmdbPersonAppends.CombinedCredits.Crew
-            .Select(crew => new KnownForDto(crew, person))
+        KnownForDto[] crew = tmdbPersonAppends
+            .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
             .DistinctBy(knownFor => knownFor.Id)
             .ToArray();
 
-        KnownFor = cast.Concat(crew)
-            .OrderByDescending(knownFor => knownFor.VoteCount)
-            .ToArray();
+        KnownFor = cast.Concat(crew).OrderByDescending(knownFor => knownFor.VoteCount).ToArray();
     }
 }

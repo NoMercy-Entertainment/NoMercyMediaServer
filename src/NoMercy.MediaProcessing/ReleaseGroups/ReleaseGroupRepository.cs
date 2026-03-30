@@ -8,17 +8,21 @@ public class ReleaseGroupRepository(MediaContext context) : IReleaseGroupReposit
 {
     public Task Store(ReleaseGroup releaseGroup)
     {
-        return context.ReleaseGroups.Upsert(releaseGroup)
+        return context
+            .ReleaseGroups.Upsert(releaseGroup)
             .On(e => new { e.Id })
-            .WhenMatched((s, i) => new()
-            {
-                Id = i.Id,
-                Title = i.Title,
-                Description = i.Description,
-                Year = i.Year,
-                LibraryId = i.LibraryId,
-                Cover = i.Cover,
-            })
+            .WhenMatched(
+                (s, i) =>
+                    new()
+                    {
+                        Id = i.Id,
+                        Title = i.Title,
+                        Description = i.Description,
+                        Year = i.Year,
+                        LibraryId = i.LibraryId,
+                        Cover = i.Cover,
+                    }
+            )
             .RunAsync();
     }
 }

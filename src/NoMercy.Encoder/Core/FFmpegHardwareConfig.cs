@@ -13,7 +13,7 @@ public enum GpuVendor
     Intel,
     Qualcomm,
     Apple,
-    Unknown
+    Unknown,
 }
 
 public static class FFmpegHardwareConfig
@@ -50,10 +50,12 @@ public static class FFmpegHardwareConfig
 
     private static void EnsureInitialized()
     {
-        if (_isInitialized) return;
+        if (_isInitialized)
+            return;
         lock (InitLock)
         {
-            if (_isInitialized) return;
+            if (_isInitialized)
+                return;
             _accelerators = [];
             _allDevices = [];
             SetHardwareAccelerationFlags(Info.GpuVendors);
@@ -77,10 +79,13 @@ public static class FFmpegHardwareConfig
         try
         {
             // Per-check command not logged — results summarized after detection
-            string result = Shell.ExecStdOutSync(AppFiles.FfmpegPath, $"-hide_banner {arg} -hwaccels 2>&1");
+            string result = Shell.ExecStdOutSync(
+                AppFiles.FfmpegPath,
+                $"-hide_banner {arg} -hwaccels 2>&1"
+            );
 
-            return !result.Contains("Failed", StringComparison.InvariantCultureIgnoreCase) &&
-                   !result.Contains("exception", StringComparison.InvariantCultureIgnoreCase);
+            return !result.Contains("Failed", StringComparison.InvariantCultureIgnoreCase)
+                && !result.Contains("exception", StringComparison.InvariantCultureIgnoreCase);
         }
         catch (Exception e)
         {
@@ -91,45 +96,58 @@ public static class FFmpegHardwareConfig
 
     private static void OpenClCheck()
     {
-        if (_accelerators!.Any(a => a.Vendor == GpuVendor.Unknown)) return;
+        if (_accelerators!.Any(a => a.Vendor == GpuVendor.Unknown))
+            return;
 
         string arg = "-extra_hw_frames 3 -init_hw_device opencl=ocl";
         bool supported = CheckAccel(arg);
         if (supported)
-            _accelerators!.Add(new(
-                GpuVendor.Unknown,
-                arg,
-                "none"
-            ));
+            _accelerators!.Add(new(GpuVendor.Unknown, arg, "none"));
     }
 
     private static void SetHardwareAccelerationFlags(List<string> gpuVendors)
     {
         if (!IsDedicatedGpuAvailable())
         {
-            Logger.Encoder("No dedicated GPU detected, skipping hardware acceleration.", LogEventLevel.Warning);
+            Logger.Encoder(
+                "No dedicated GPU detected, skipping hardware acceleration.",
+                LogEventLevel.Warning
+            );
             return;
         }
 
         // Classify which vendor types are present (dedup by GpuVendor)
-        bool hasNvidia = gpuVendors.Any(v => v.Contains("nvidia", StringComparison.OrdinalIgnoreCase));
+        bool hasNvidia = gpuVendors.Any(v =>
+            v.Contains("nvidia", StringComparison.OrdinalIgnoreCase)
+        );
         bool hasAmd = gpuVendors.Any(v =>
-            v.Contains("amd", StringComparison.OrdinalIgnoreCase) ||
-            v.Contains("advanced micro devices", StringComparison.OrdinalIgnoreCase));
-        bool hasIntel = gpuVendors.Any(v => v.Contains("intel", StringComparison.OrdinalIgnoreCase));
-        bool hasApple = gpuVendors.Any(v => v.Contains("apple", StringComparison.OrdinalIgnoreCase));
+            v.Contains("amd", StringComparison.OrdinalIgnoreCase)
+            || v.Contains("advanced micro devices", StringComparison.OrdinalIgnoreCase)
+        );
+        bool hasIntel = gpuVendors.Any(v =>
+            v.Contains("intel", StringComparison.OrdinalIgnoreCase)
+        );
+        bool hasApple = gpuVendors.Any(v =>
+            v.Contains("apple", StringComparison.OrdinalIgnoreCase)
+        );
 
         // Probe each vendor type for working devices
-        if (hasNvidia) ProbeNvidiaDevices();
-        if (hasAmd) ProbeAmdDevices();
-        if (hasIntel) ProbeIntelDevices();
-        if (hasApple) ProbeAppleDevices();
+        if (hasNvidia)
+            ProbeNvidiaDevices();
+        if (hasAmd)
+            ProbeAmdDevices();
+        if (hasIntel)
+            ProbeIntelDevices();
+        if (hasApple)
+            ProbeAppleDevices();
 
         // OpenCL as general-purpose fallback if no vendor-specific acceleration found
         if (!_accelerators!.Any(a => a.Vendor != GpuVendor.Unknown))
             OpenClCheck();
 
-        Logger.Encoder($"Hardware acceleration: {_allDevices!.Count} device(s) discovered, {_accelerators!.Count} selected for encoding.");
+        Logger.Encoder(
+            $"Hardware acceleration: {_allDevices!.Count} device(s) discovered, {_accelerators!.Count} selected for encoding."
+        );
     }
 
     private static void ProbeNvidiaDevices()
@@ -243,7 +261,12 @@ public static class FFmpegHardwareConfig
                 $" -init_hw_device videotoolbox=hw{index} -filter_hw_device hw -extra_hw_frames 8 -hwaccel_output_format videotoolbox";
             if (CheckAccel(arg))
             {
-                GpuAccelerator device = new(GpuVendor.Apple, arg, "videotoolbox", deviceIndex: index);
+                GpuAccelerator device = new(
+                    GpuVendor.Apple,
+                    arg,
+                    "videotoolbox",
+                    deviceIndex: index
+                );
                 allDevices.Add(device);
                 Logger.Encoder($"VideoToolbox device hw{index} available.");
 
@@ -262,12 +285,12 @@ public static class FFmpegHardwareConfig
 
     private static bool IsKnownGpuVendor(string value)
     {
-        return value.Contains("NVIDIA", StringComparison.InvariantCultureIgnoreCase) ||
-               value.Contains("AMD", StringComparison.InvariantCultureIgnoreCase) ||
-               value.Contains("Advanced Micro Devices", StringComparison.InvariantCultureIgnoreCase) ||
-               value.Contains("Radeon", StringComparison.InvariantCultureIgnoreCase) ||
-               value.Contains("ATI", StringComparison.InvariantCultureIgnoreCase) ||
-               value.Contains("Intel", StringComparison.InvariantCultureIgnoreCase);
+        return value.Contains("NVIDIA", StringComparison.InvariantCultureIgnoreCase)
+            || value.Contains("AMD", StringComparison.InvariantCultureIgnoreCase)
+            || value.Contains("Advanced Micro Devices", StringComparison.InvariantCultureIgnoreCase)
+            || value.Contains("Radeon", StringComparison.InvariantCultureIgnoreCase)
+            || value.Contains("ATI", StringComparison.InvariantCultureIgnoreCase)
+            || value.Contains("Intel", StringComparison.InvariantCultureIgnoreCase);
     }
 
     private static bool IsDedicatedGpuAvailable()
@@ -293,7 +316,10 @@ public static class FFmpegHardwareConfig
             }
             catch (Exception e)
             {
-                Logger.Encoder($"Error checking for dedicated GPU on Windows: {e.Message}", LogEventLevel.Error);
+                Logger.Encoder(
+                    $"Error checking for dedicated GPU on Windows: {e.Message}",
+                    LogEventLevel.Error
+                );
             }
         else if (OperatingSystem.IsLinux())
             try
@@ -303,7 +329,10 @@ public static class FFmpegHardwareConfig
             }
             catch (Exception e)
             {
-                Logger.Encoder($"Error checking for dedicated GPU: {e.Message}", LogEventLevel.Error);
+                Logger.Encoder(
+                    $"Error checking for dedicated GPU: {e.Message}",
+                    LogEventLevel.Error
+                );
             }
         else if (OperatingSystem.IsMacOS())
             try
@@ -315,7 +344,10 @@ public static class FFmpegHardwareConfig
             }
             catch (Exception e)
             {
-                Logger.Encoder($"Error checking for dedicated GPU on macOS: {e.Message}", LogEventLevel.Error);
+                Logger.Encoder(
+                    $"Error checking for dedicated GPU on macOS: {e.Message}",
+                    LogEventLevel.Error
+                );
             }
 
         return false;
@@ -330,7 +362,13 @@ public class GpuAccelerator
     public string Accelerator { get; }
     public int DeviceIndex { get; }
 
-    public GpuAccelerator(GpuVendor vendor, string ffmpegArgs, string accelerator, string filter = "", int deviceIndex = -1)
+    public GpuAccelerator(
+        GpuVendor vendor,
+        string ffmpegArgs,
+        string accelerator,
+        string filter = "",
+        int deviceIndex = -1
+    )
     {
         Vendor = vendor;
         FfmpegArgs = ffmpegArgs;

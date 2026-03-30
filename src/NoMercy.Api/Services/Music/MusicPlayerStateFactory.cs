@@ -11,7 +11,8 @@ public class MusicPlayerStateFactory
         PlaylistTrackDto item,
         List<PlaylistTrackDto> playlist,
         string type,
-        Guid listId)
+        Guid listId
+    )
     {
         return new()
         {
@@ -44,9 +45,9 @@ public class MusicPlayerStateFactory
                     Muting = false,
                     TogglingShuffle = false,
                     TogglingRepeatContext = false,
-                    TogglingRepeatTrack = false
-                }
-            }
+                    TogglingRepeatTrack = false,
+                },
+            },
         };
     }
 }

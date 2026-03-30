@@ -26,8 +26,8 @@ internal class Program
 
         InfiniFrameWebApplicationBuilder builder = InfiniFrameWebApplication.CreateBuilder(args);
 
-        IInfiniFrameWindowBuilder window = builder.Window
-            .SetTemporaryFilesPath(browserDataPath)
+        IInfiniFrameWindowBuilder window = builder
+            .Window.SetTemporaryFilesPath(browserDataPath)
             .Center()
             .SetTitle(windowTitle)
             .SetMinSize(1280 + 16, 720 + 39)
@@ -42,13 +42,16 @@ internal class Program
             .RegisterOpenExternalTargetWebMessageHandler()
             .RegisterTitleChangedWebMessageHandler()
             .RegisterWindowManagementWebMessageHandler()
-            .RegisterWebMessageReceivedHandler((sender, message) =>
-            {
-                if (sender is not IInfiniFrameWindow infiniWindow) return;
+            .RegisterWebMessageReceivedHandler(
+                (sender, message) =>
+                {
+                    if (sender is not IInfiniFrameWindow infiniWindow)
+                        return;
 
-                string response = $"Received message: \"{message}\"";
-                infiniWindow.SendWebMessage(response);
-            });
+                    string response = $"Received message: \"{message}\"";
+                    infiniWindow.SendWebMessage(response);
+                }
+            );
 
         // Parse --route argument
         string route = "";
@@ -80,11 +83,15 @@ internal class Program
         // Use custom embedded static assets middleware with optimizations
         // (compression, caching, ETags) - replaces MapStaticAssets for embedded resources
         // Also injects the InfiniFrame.js script tag into HTML files at runtime
-        application.WebApp.UseEmbeddedStaticAssets(options =>
-        {
-            // Inject InfiniFrame script before </body> - required for InfiniFrame communication
-            options.InjectScripts.Add("/_content/InfiniLore.InfiniFrame.Js/InfiniFrame.js");
-        }, typeof(Program).Assembly, "wwwroot");
+        application.WebApp.UseEmbeddedStaticAssets(
+            options =>
+            {
+                // Inject InfiniFrame script before </body> - required for InfiniFrame communication
+                options.InjectScripts.Add("/_content/InfiniLore.InfiniFrame.Js/InfiniFrame.js");
+            },
+            typeof(Program).Assembly,
+            "wwwroot"
+        );
 
         application.Run();
     }
@@ -113,7 +120,9 @@ internal class Program
 
             using Stream? stream = assembly.GetManifestResourceStream(resourceName);
             if (stream == null)
-                throw new FileNotFoundException($"Embedded icon resource not found: {resourceName}");
+                throw new FileNotFoundException(
+                    $"Embedded icon resource not found: {resourceName}"
+                );
 
             using FileStream fileStream = File.Create(iconPath);
             stream.CopyTo(fileStream);
@@ -127,11 +136,13 @@ internal class Program
         // Match the path computed by AppFiles.BrowserPath so the server and app
         // share the same browser-data directory without requiring a project reference
         // to NmSystem (which would bloat the lightweight App executable).
-        string appDataPath = Environment.OSVersion.Platform == PlatformID.Unix
-            ? Path.Combine(
-                Environment.GetEnvironmentVariable("HOME") ?? "/home/current",
-                ".local/share")
-            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string appDataPath =
+            Environment.OSVersion.Platform == PlatformID.Unix
+                ? Path.Combine(
+                    Environment.GetEnvironmentVariable("HOME") ?? "/home/current",
+                    ".local/share"
+                )
+                : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
         string baseDir = Path.Combine(appDataPath, "NoMercy", "browser");
         Directory.CreateDirectory(baseDir);
@@ -139,7 +150,9 @@ internal class Program
     }
 
     // WebView2 subdirectories inside Default/ that hold login/session state — preserved across updates
-    private static readonly HashSet<string> PreservedSubDirectories = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> PreservedSubDirectories = new(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
         "Session Storage",
         "Local Storage",
@@ -156,16 +169,15 @@ internal class Program
     ];
 
     // WebView2 files in the EBWebView/ root that must survive cache clears
-    private static readonly string[] PreservedEbWebViewFiles =
-    [
-        "Local State",
-    ];
+    private static readonly string[] PreservedEbWebViewFiles = ["Local State"];
 
     private static void ClearBrowserDataOnVersionChange(string browserDataPath)
     {
         string versionFile = Path.Combine(browserDataPath, ".app-version");
-        string currentVersion = typeof(Program).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        string currentVersion =
+            typeof(Program)
+                .Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion
             ?? typeof(Program).Assembly.GetName().Version?.ToString()
             ?? "0.0.0";
 
@@ -194,15 +206,26 @@ internal class Program
                 continue;
             }
 
-            try { Directory.Delete(dir, true); }
-            catch { /* locked or inaccessible — skip */ }
+            try
+            {
+                Directory.Delete(dir, true);
+            }
+            catch
+            { /* locked or inaccessible — skip */
+            }
         }
 
         foreach (string file in Directory.GetFiles(browserDataPath))
         {
-            if (Path.GetFileName(file) == ".app-version") continue;
-            try { File.Delete(file); }
-            catch { /* skip */ }
+            if (Path.GetFileName(file) == ".app-version")
+                continue;
+            try
+            {
+                File.Delete(file);
+            }
+            catch
+            { /* skip */
+            }
         }
     }
 
@@ -218,18 +241,32 @@ internal class Program
                 continue;
             }
 
-            try { Directory.Delete(profileDir, true); }
-            catch { /* skip */ }
+            try
+            {
+                Directory.Delete(profileDir, true);
+            }
+            catch
+            { /* skip */
+            }
         }
 
         foreach (string file in Directory.GetFiles(ebWebViewPath))
         {
             string fileName = Path.GetFileName(file);
-            if (PreservedEbWebViewFiles.Any(p => fileName.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+            if (
+                PreservedEbWebViewFiles.Any(p =>
+                    fileName.StartsWith(p, StringComparison.OrdinalIgnoreCase)
+                )
+            )
                 continue;
 
-            try { File.Delete(file); }
-            catch { /* skip */ }
+            try
+            {
+                File.Delete(file);
+            }
+            catch
+            { /* skip */
+            }
         }
     }
 
@@ -241,18 +278,32 @@ internal class Program
             if (PreservedSubDirectories.Contains(dirName))
                 continue;
 
-            try { Directory.Delete(dir, true); }
-            catch { /* skip */ }
+            try
+            {
+                Directory.Delete(dir, true);
+            }
+            catch
+            { /* skip */
+            }
         }
 
         foreach (string file in Directory.GetFiles(profilePath))
         {
             string fileName = Path.GetFileName(file);
-            if (PreservedFilePrefixes.Any(prefix => fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+            if (
+                PreservedFilePrefixes.Any(prefix =>
+                    fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                )
+            )
                 continue;
 
-            try { File.Delete(file); }
-            catch { /* skip */ }
+            try
+            {
+                File.Delete(file);
+            }
+            catch
+            { /* skip */
+            }
         }
     }
 }

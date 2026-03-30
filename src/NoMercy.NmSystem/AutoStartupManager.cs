@@ -98,8 +98,10 @@ public class AutoStartupManager
     {
         try
         {
-            using RegistryKey? key =
-                Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", false);
+            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Run",
+                false
+            );
             return key?.GetValue("NoMercyMediaServer") is not null;
         }
         catch
@@ -117,8 +119,10 @@ public class AutoStartupManager
             string? launcherPath = ResolveLauncherPath();
             string targetPath = launcherPath ?? GetExecutablePath();
 
-            using RegistryKey? key =
-                Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);
+            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Run",
+                true
+            );
             if (key != null)
             {
                 key.SetValue("NoMercyMediaServer", $"\"{targetPath}\"");
@@ -136,8 +140,10 @@ public class AutoStartupManager
     {
         try
         {
-            using RegistryKey? key =
-                Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);
+            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Run",
+                true
+            );
             if (key?.GetValue("NoMercyMediaServer") != null)
             {
                 key.DeleteValue("NoMercyMediaServer");
@@ -181,59 +187,59 @@ public class AutoStartupManager
         if (launcherPath is not null)
         {
             string plistContent = $"""
-                                   <?xml version="1.0" encoding="UTF-8"?>
-                                   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-                                   <plist version="1.0">
-                                   <dict>
-                                       <key>Label</key>
-                                       <string>tv.nomercy.mediaserver</string>
-                                       <key>ProgramArguments</key>
-                                       <array>
-                                           <string>{launcherPath}</string>
-                                       </array>
-                                       <key>RunAtLoad</key>
-                                       <true/>
-                                       <key>KeepAlive</key>
-                                       <false/>
-                                       <key>StandardOutPath</key>
-                                       <string>{logPath}/nomercy-launcher-stdout.log</string>
-                                       <key>StandardErrorPath</key>
-                                       <string>{logPath}/nomercy-launcher-stderr.log</string>
-                                       <key>WorkingDirectory</key>
-                                       <string>{System.IO.Path.GetDirectoryName(launcherPath)}</string>
-                                   </dict>
-                                   </plist>
-                                   """;
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                <plist version="1.0">
+                <dict>
+                    <key>Label</key>
+                    <string>tv.nomercy.mediaserver</string>
+                    <key>ProgramArguments</key>
+                    <array>
+                        <string>{launcherPath}</string>
+                    </array>
+                    <key>RunAtLoad</key>
+                    <true/>
+                    <key>KeepAlive</key>
+                    <false/>
+                    <key>StandardOutPath</key>
+                    <string>{logPath}/nomercy-launcher-stdout.log</string>
+                    <key>StandardErrorPath</key>
+                    <string>{logPath}/nomercy-launcher-stderr.log</string>
+                    <key>WorkingDirectory</key>
+                    <string>{System.IO.Path.GetDirectoryName(launcherPath)}</string>
+                </dict>
+                </plist>
+                """;
             return (plistContent, plistPath);
         }
 
         // Fallback: start server directly with --service
         string serverPath = GetExecutablePath();
         string fallbackContent = $"""
-                                  <?xml version="1.0" encoding="UTF-8"?>
-                                  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-                                  <plist version="1.0">
-                                  <dict>
-                                      <key>Label</key>
-                                      <string>tv.nomercy.mediaserver</string>
-                                      <key>ProgramArguments</key>
-                                      <array>
-                                          <string>{serverPath}</string>
-                                          <string>--service</string>
-                                      </array>
-                                      <key>RunAtLoad</key>
-                                      <true/>
-                                      <key>KeepAlive</key>
-                                      <true/>
-                                      <key>StandardOutPath</key>
-                                      <string>{logPath}/nomercy-stdout.log</string>
-                                      <key>StandardErrorPath</key>
-                                      <string>{logPath}/nomercy-stderr.log</string>
-                                      <key>WorkingDirectory</key>
-                                      <string>{System.IO.Path.GetDirectoryName(serverPath)}</string>
-                                  </dict>
-                                  </plist>
-                                  """;
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+                <key>Label</key>
+                <string>tv.nomercy.mediaserver</string>
+                <key>ProgramArguments</key>
+                <array>
+                    <string>{serverPath}</string>
+                    <string>--service</string>
+                </array>
+                <key>RunAtLoad</key>
+                <true/>
+                <key>KeepAlive</key>
+                <true/>
+                <key>StandardOutPath</key>
+                <string>{logPath}/nomercy-stdout.log</string>
+                <key>StandardErrorPath</key>
+                <string>{logPath}/nomercy-stderr.log</string>
+                <key>WorkingDirectory</key>
+                <string>{System.IO.Path.GetDirectoryName(serverPath)}</string>
+            </dict>
+            </plist>
+            """;
         return (fallbackContent, plistPath);
     }
 
@@ -303,25 +309,25 @@ public class AutoStartupManager
         string unitPath = GetSystemdUnitPath();
 
         string unitContent = $"""
-                              [Unit]
-                              Description=NoMercy MediaServer
-                              After=network-online.target
-                              Wants=network-online.target
+            [Unit]
+            Description=NoMercy MediaServer
+            After=network-online.target
+            Wants=network-online.target
 
-                              [Service]
-                              Type=notify
-                              ExecStart={appPath} --service
-                              WorkingDirectory={Path.GetDirectoryName(appPath)}
-                              Restart=on-failure
-                              RestartSec=10
-                              StandardOutput=journal
-                              StandardError=journal
-                              SyslogIdentifier=nomercy-mediaserver
-                              Environment=DOTNET_ROOT=/usr/share/dotnet
+            [Service]
+            Type=notify
+            ExecStart={appPath} --service
+            WorkingDirectory={Path.GetDirectoryName(appPath)}
+            Restart=on-failure
+            RestartSec=10
+            StandardOutput=journal
+            StandardError=journal
+            SyslogIdentifier=nomercy-mediaserver
+            Environment=DOTNET_ROOT=/usr/share/dotnet
 
-                              [Install]
-                              WantedBy=default.target
-                              """;
+            [Install]
+            WantedBy=default.target
+            """;
 
         return (unitContent, unitPath);
     }
@@ -335,17 +341,17 @@ public class AutoStartupManager
         string desktopPath = GetXdgAutostartPath();
 
         string desktopContent = $"""
-                                 [Desktop Entry]
-                                 Type=Application
-                                 Name=NoMercy Launcher
-                                 Comment=Launcher for NoMercy MediaServer
-                                 Exec={launcherPath}
-                                 Icon=NoMercy-MediaServer
-                                 Terminal=false
-                                 StartupNotify=true
-                                 X-GNOME-Autostart-enabled=true
-                                 Categories=AudioVideo;Video;Player;Network;
-                                 """;
+            [Desktop Entry]
+            Type=Application
+            Name=NoMercy Launcher
+            Comment=Launcher for NoMercy MediaServer
+            Exec={launcherPath}
+            Icon=NoMercy-MediaServer
+            Terminal=false
+            StartupNotify=true
+            X-GNOME-Autostart-enabled=true
+            Categories=AudioVideo;Video;Player;Network;
+            """;
 
         return (desktopContent, desktopPath);
     }
@@ -361,7 +367,9 @@ public class AutoStartupManager
                 string? launcherPath = ResolveLauncherPath();
                 if (launcherPath is not null)
                 {
-                    (string desktopContent, string desktopPath) = GenerateXdgAutostart(launcherPath);
+                    (string desktopContent, string desktopPath) = GenerateXdgAutostart(
+                        launcherPath
+                    );
 
                     string? directory = Path.GetDirectoryName(desktopPath);
                     if (!string.IsNullOrEmpty(directory))
@@ -381,7 +389,9 @@ public class AutoStartupManager
                     return;
                 }
 
-                Logger.App("Launcher binary not found; falling back to systemd service for server.");
+                Logger.App(
+                    "Launcher binary not found; falling back to systemd service for server."
+                );
             }
 
             // Headless (or Launcher not found): systemd user service for the server
@@ -433,7 +443,8 @@ public class AutoStartupManager
             // Also remove legacy desktop entry if it exists
             string legacyPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".config/autostart/nomercymediaserver.desktop");
+                ".config/autostart/nomercymediaserver.desktop"
+            );
 
             if (File.Exists(legacyPath))
             {
@@ -463,20 +474,24 @@ public class AutoStartupManager
     [SupportedOSPlatform("linux")]
     internal static string GetSystemdUnitPath()
     {
-        string configHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME")
-                            ?? Path.Combine(
-                                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                                ".config");
+        string configHome =
+            Environment.GetEnvironmentVariable("XDG_CONFIG_HOME")
+            ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".config"
+            );
         return Path.Combine(configHome, "systemd/user/nomercy-mediaserver.service");
     }
 
     [SupportedOSPlatform("linux")]
     internal static string GetXdgAutostartPath()
     {
-        string configHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME")
-                            ?? Path.Combine(
-                                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                                ".config");
+        string configHome =
+            Environment.GetEnvironmentVariable("XDG_CONFIG_HOME")
+            ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".config"
+            );
         return Path.Combine(configHome, "autostart/nomercy-launcher.desktop");
     }
 
@@ -485,6 +500,7 @@ public class AutoStartupManager
     {
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "Library/LaunchAgents/tv.nomercy.mediaserver.plist");
+            "Library/LaunchAgents/tv.nomercy.mediaserver.plist"
+        );
     }
 }

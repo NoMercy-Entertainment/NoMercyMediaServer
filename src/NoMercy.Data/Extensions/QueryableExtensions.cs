@@ -10,7 +10,8 @@ public static class QueryableExtensions
     /// Filters entities to only those belonging to libraries the user has access to.
     /// Works with any entity that has a Library navigation property (Movie, Tv, Collection, Album).
     /// </summary>
-    public static IQueryable<T> ForUser<T>(this IQueryable<T> query, Guid userId) where T : class, IHasLibrary
+    public static IQueryable<T> ForUser<T>(this IQueryable<T> query, Guid userId)
+        where T : class, IHasLibrary
     {
         return query.Where(entity => entity.Library.LibraryUsers.Any(u => u.UserId == userId));
     }

@@ -4,7 +4,9 @@ namespace NoMercy.Encoder.Core;
 
 public class IsoLanguageMapper
 {
-    public static readonly Dictionary<string, string> IsoToLanguage = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly Dictionary<string, string> IsoToLanguage = new(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
         { Aar, "afar" },
         { Abk, "abkhaz" },
@@ -191,10 +193,12 @@ public class IsoLanguageMapper
         { Yid, "yiddish" },
         { Yor, "yoruba" },
         { Zha, "zhuang, chuang" },
-        { Zul, "zulu" }
+        { Zul, "zulu" },
     };
 
-    public static readonly Dictionary<string, string> Iso3ToIso2 = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly Dictionary<string, string> Iso3ToIso2 = new(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
         { Aar, "aa" },
         { Abk, "ab" },
@@ -378,20 +382,26 @@ public class IsoLanguageMapper
         { Wln, "yi" },
         { Wol, "yo" },
         { Xho, "za" },
-        { Yid, "zu" }
+        { Yid, "zu" },
     };
 
     public static string? GetIsoCode(string language)
     {
-        Dictionary<string, string> languageToIso =
-            IsoToLanguage.ToDictionary(kvp => kvp.Value, kvp => kvp.Key, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> languageToIso = IsoToLanguage.ToDictionary(
+            kvp => kvp.Value,
+            kvp => kvp.Key,
+            StringComparer.OrdinalIgnoreCase
+        );
         return languageToIso.TryGetValue(language, out string? isoCode) ? isoCode : null;
     }
 
     public static string? GetLanguageName(string isoCode)
-    { 
-        Dictionary<string, string> languageToIso =
-            IsoToLanguage.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase);
+    {
+        Dictionary<string, string> languageToIso = IsoToLanguage.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value,
+            StringComparer.OrdinalIgnoreCase
+        );
         return languageToIso.TryGetValue(isoCode, out string? language) ? language : null;
     }
 }

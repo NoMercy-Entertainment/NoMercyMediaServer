@@ -26,21 +26,23 @@ public class ArtistPaletteCronJob : ICronJobExecutor
 
     public async Task ExecuteAsync(string parameters, CancellationToken cancellationToken = default)
     {
-        List<Artist[]> artists = _context.Artists
-            .Where(x => string.IsNullOrEmpty(x._colorPalette) && x.Cover != null)
+        List<Artist[]> artists = _context
+            .Artists.Where(x => string.IsNullOrEmpty(x._colorPalette) && x.Cover != null)
             .OrderByDescending(x => x.UpdatedAt)
             .Take(50)
             .ToList()
             .Chunk(5)
             .ToList();
 
-        if (artists.Count == 0) return;
+        if (artists.Count == 0)
+            return;
 
         _logger.LogTrace("Found {Count} artist chunks to process", artists.Count);
 
         foreach (Artist[] artistChunk in artists)
         {
-            if (cancellationToken.IsCancellationRequested) break;
+            if (cancellationToken.IsCancellationRequested)
+                break;
 
             foreach (Artist artist in artistChunk)
             {
@@ -51,7 +53,7 @@ public class ArtistPaletteCronJob : ICronJobExecutor
                     {
                         using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(filePath);
                         artist._colorPalette = BaseImageManager.GenerateColorPalette([
-                            new() { Key = "cover", ImageData = image }
+                            new() { Key = "cover", ImageData = image },
                         ]);
                     }
                     else
@@ -68,7 +70,9 @@ public class ArtistPaletteCronJob : ICronJobExecutor
             await _context.SaveChangesAsync(cancellationToken);
         }
 
-        _logger.LogTrace("Artist palette job completed, updated: {Count}", artists.Sum(x => x.Length));
-
+        _logger.LogTrace(
+            "Artist palette job completed, updated: {Count}",
+            artists.Sum(x => x.Length)
+        );
     }
 }

@@ -30,11 +30,15 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
 
         if (string.IsNullOrEmpty(Config.CloudflareTunnelToken))
         {
-            Logger.Setup("You don't have access to our Cloudflare tunnel service, this is a paid feature.");
             Logger.Setup(
-                $"You need to manually forward port {Config.InternalServerPort} to {Config.ExternalServerPort} if you want to use the server outside your local network");
+                "You don't have access to our Cloudflare tunnel service, this is a paid feature."
+            );
             Logger.Setup(
-                "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide");
+                $"You need to manually forward port {Config.InternalServerPort} to {Config.ExternalServerPort} if you want to use the server outside your local network"
+            );
+            Logger.Setup(
+                "For more information, visit: https://www.noip.com/support/knowledgebase/general-port-forwarding-guide"
+            );
             return false;
         }
 
@@ -50,9 +54,9 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
                     WorkingDirectory = AppFiles.DependenciesPath,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
                 },
-                EnableRaisingEvents = true
+                EnableRaisingEvents = true,
             };
 
             _tunnelProcess.OutputDataReceived += (_, args) =>
@@ -106,7 +110,8 @@ public class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
         StopTunnel();
         _tunnelProcess?.Dispose();
         _disposed = true;

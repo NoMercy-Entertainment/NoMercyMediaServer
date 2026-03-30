@@ -1,8 +1,8 @@
-﻿using Serilog.Events;
-using Microsoft.AspNetCore.WebUtilities;
+﻿using Microsoft.AspNetCore.WebUtilities;
 using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
+using Serilog.Events;
 
 namespace NoMercy.Providers.Helpers;
 
@@ -43,28 +43,37 @@ public class BaseClient : IDisposable
 
     protected static Queue Queue()
     {
-        return _queue ??= new(new()
-        {
-            Concurrent = 1,
-            Interval = 1000,
-            Start = true
-        });
+        return _queue ??= new(
+            new()
+            {
+                Concurrent = 1,
+                Interval = 1000,
+                Start = true,
+            }
+        );
     }
 
-    protected virtual async Task<T?> Get<T>(string url, Dictionary<string, string?>? query, bool? priority = false)
+    protected virtual async Task<T?> Get<T>(
+        string url,
+        Dictionary<string, string?>? query,
+        bool? priority = false
+    )
         where T : class
     {
         query ??= new();
 
-        foreach (KeyValuePair<string, string?> queryParam in QueryParams) query.Add(queryParam.Key, queryParam.Value);
+        foreach (KeyValuePair<string, string?> queryParam in QueryParams)
+            query.Add(queryParam.Key, queryParam.Value);
 
         string newUrl = QueryHelpers.AddQueryString(url, query);
 
-        if (CacheController.Read(newUrl, out T? result)) return result;
+        if (CacheController.Read(newUrl, out T? result))
+            return result;
 
         Logger.Http(newUrl, LogEventLevel.Verbose);
 
-        string response = await Queue().Enqueue(() => Client.GetStringAsync(newUrl), newUrl, priority);
+        string response = await Queue()
+            .Enqueue(() => Client.GetStringAsync(newUrl), newUrl, priority);
 
         await CacheController.Write(newUrl, response);
 

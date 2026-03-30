@@ -7,7 +7,7 @@ public static class SubtitleCodecs
         Name = "Ass",
         Value = "ass",
         SimpleValue = "ass",
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Srt = new()
@@ -15,7 +15,7 @@ public static class SubtitleCodecs
         Name = "SubRip",
         Value = "srt",
         SimpleValue = "srt",
-        IsDefault = false
+        IsDefault = false,
     };
 
     public static readonly Classes.CodecDto Webvtt = new()
@@ -23,7 +23,7 @@ public static class SubtitleCodecs
         Name = "WebVTT",
         Value = "webvtt",
         SimpleValue = "vtt",
-        IsDefault = true
+        IsDefault = true,
     };
 
     public static readonly Classes.CodecDto Copy = new()
@@ -31,6 +31,6 @@ public static class SubtitleCodecs
         Name = "Copy",
         Value = "copy",
         SimpleValue = "copy",
-        IsDefault = false
+        IsDefault = false,
     };
 }

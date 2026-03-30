@@ -11,11 +11,9 @@ public partial class StartupArgumentsView : UserControl
         InitializeComponent();
     }
 
-    private StartupArgumentsViewModel? ViewModel =>
-        DataContext as StartupArgumentsViewModel;
+    private StartupArgumentsViewModel? ViewModel => DataContext as StartupArgumentsViewModel;
 
-    private async void OnSaveClick(
-        object? sender, RoutedEventArgs e)
+    private async void OnSaveClick(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is not null)
             await ViewModel.SaveAsync();

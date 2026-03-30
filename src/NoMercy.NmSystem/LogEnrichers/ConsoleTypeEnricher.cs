@@ -13,7 +13,8 @@ internal class ConsoleTypeEnricher : ILogEventEnricher
     {
         StringBuilder spacing = new();
         spacing.Append(text);
-        for (int i = 0; i < padding - text.Length; i++) spacing.Append(' ');
+        for (int i = 0; i < padding - text.Length; i++)
+            spacing.Append(' ');
 
         return spacing.ToString();
     }
@@ -21,7 +22,8 @@ internal class ConsoleTypeEnricher : ILogEventEnricher
     private static string SpacerBegin(string text, int padding)
     {
         StringBuilder spacing = new();
-        for (int i = 0; i < padding - text.Length; i++) spacing.Append(' ');
+        for (int i = 0; i < padding - text.Length; i++)
+            spacing.Append(' ');
         spacing.Append(text);
 
         return spacing.ToString();
@@ -40,7 +42,11 @@ internal class ConsoleTypeEnricher : ILogEventEnricher
 
         Color color = SystemCalls.Logger.GetColor(type);
 
-        logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty(
-            "ConsoleType", Spacer(type.ToTitleCase(), 14, true).Pastel(color)));
+        logEvent.AddOrUpdateProperty(
+            propertyFactory.CreateProperty(
+                "ConsoleType",
+                Spacer(type.ToTitleCase(), 14, true).Pastel(color)
+            )
+        );
     }
 }

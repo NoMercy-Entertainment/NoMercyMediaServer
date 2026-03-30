@@ -30,7 +30,7 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
 
         PersonRepository personRepository = new(context);
         PersonManager personManager = new(personRepository, jobDispatcher);
-        
+
         foreach (TmdbEpisodeAppends episode in Storage)
         {
             await personManager.Store(episode);
@@ -40,6 +40,7 @@ public class EpisodeExtrasJob : AbstractShowExtraDataJob<TmdbEpisodeAppends, str
 
         Logger.MovieDb(
             $"Show {Name}: Season {Storage.FirstOrDefault()?.SeasonNumber} Episodes: Images and Translations stored",
-            LogEventLevel.Debug);
+            LogEventLevel.Debug
+        );
     }
 }

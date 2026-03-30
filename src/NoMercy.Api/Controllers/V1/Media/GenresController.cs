@@ -25,7 +25,10 @@ public class GenresController : BaseController
 
     [HttpGet]
     [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page"])]
-    public async Task<IActionResult> Genres([FromQuery] PageRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> Genres(
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -34,8 +37,12 @@ public class GenresController : BaseController
         string language = Language();
 
         // Use optimized query that computes counts in database
-        List<GenreWithCountsDto> genreDtos = await _genreRepository
-            .GetGenresWithCountsAsync(userId, language, request.Take, request.Page);
+        List<GenreWithCountsDto> genreDtos = await _genreRepository.GetGenresWithCountsAsync(
+            userId,
+            language,
+            request.Take,
+            request.Page
+        );
 
         // Create cards for each genre
         List<GenreCardData> genreCards = genreDtos
@@ -43,11 +50,10 @@ public class GenresController : BaseController
             .Select(dto => new GenreCardData(dto))
             .ToList();
 
-        ComponentEnvelope response = Component.Grid()
+        ComponentEnvelope response = Component
+            .Grid()
             .WithId("genres")
-            .WithItems(genreCards
-                .Select(card => Component.GenreCard()
-                    .WithData(card)));
+            .WithItems(genreCards.Select(card => Component.GenreCard().WithData(card)));
 
         return Ok(ComponentResponse.From(response));
     }
@@ -55,7 +61,11 @@ public class GenresController : BaseController
     [HttpGet]
     [Route("{genreId}")]
     [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page", "version"])]
-    public async Task<IActionResult> Genre(int genreId, [FromQuery] PageRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> Genre(
+        int genreId,
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -65,7 +75,15 @@ public class GenresController : BaseController
         string country = Country();
 
         (GenreDetailDto? genreDetail, List<HomeMovieCardDto> movies, List<HomeTvCardDto> tvShows) =
-            await _genreRepository.GetGenreCardsAsync(userId, genreId, language, country, request.Take, request.Page, ct);
+            await _genreRepository.GetGenreCardsAsync(
+                userId,
+                genreId,
+                language,
+                country,
+                request.Take,
+                request.Page,
+                ct
+            );
 
         if (genreDetail is null || (movies.Count == 0 && tvShows.Count == 0))
             return NotFoundResponse("Genre not found");
@@ -75,55 +93,66 @@ public class GenresController : BaseController
             // Simple grid view
             IOrderedEnumerable<CardData> concat = movies
                 .Select(movie => new CardData(movie, country))
-                .Concat(tvShows
-                    .Select(tv => new CardData(tv, country)))
+                .Concat(tvShows.Select(tv => new CardData(tv, country)))
                 .OrderBy(card => card.TitleSort);
 
-            ComponentEnvelope response = Component.Grid()
+            ComponentEnvelope response = Component
+                .Grid()
                 .WithId("genre-items")
-                .WithItems(concat.Select(card => Component.Card().WithData(card)))
-                ;
+                .WithItems(concat.Select(card => Component.Card().WithData(card)));
 
             return Ok(ComponentResponse.From(response));
         }
 
         // Carousel view organized by first letter
         List<ComponentEnvelope> carousels = Letters
-            .Select((letter, index) =>
-            {
-                List<CardData> carouselItems = movies
-                    .Where(movie => letter == "#"
-                        ? Numbers.Any(p => movie.Title.StartsWith(p))
-                        : movie.Title.StartsWith(letter))
-                    .Select(movie => new CardData(movie, country))
-                    .Concat(tvShows
-                        .Where(tv => letter == "#"
-                            ? Numbers.Any(p => tv.Title.StartsWith(p))
-                            : tv.Title.StartsWith(letter))
-                        .Select(tv => new CardData(tv, country)))
-                    .OrderBy(card => card.TitleSort)
-                    .ToList();
+            .Select(
+                (letter, index) =>
+                {
+                    List<CardData> carouselItems = movies
+                        .Where(movie =>
+                            letter == "#"
+                                ? Numbers.Any(p => movie.Title.StartsWith(p))
+                                : movie.Title.StartsWith(letter)
+                        )
+                        .Select(movie => new CardData(movie, country))
+                        .Concat(
+                            tvShows
+                                .Where(tv =>
+                                    letter == "#"
+                                        ? Numbers.Any(p => tv.Title.StartsWith(p))
+                                        : tv.Title.StartsWith(letter)
+                                )
+                                .Select(tv => new CardData(tv, country))
+                        )
+                        .OrderBy(card => card.TitleSort)
+                        .ToList();
 
-                if (carouselItems.Count == 0)
-                    return null;
+                    if (carouselItems.Count == 0)
+                        return null;
 
-                return Component.Carousel()
-                    .WithId(letter)
-                    .WithTitle(letter)
-                    .WithNavigation(
-                        index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
-                        index == Letters.Length - 1 ? null : Letters.ElementAtOrDefault(index + 1) ?? null)
-                    .WithItems(carouselItems.Select(card => Component.Card().WithData(card)))
-                    .Build();
-            })
+                    return Component
+                        .Carousel()
+                        .WithId(letter)
+                        .WithTitle(letter)
+                        .WithNavigation(
+                            index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
+                            index == Letters.Length - 1
+                                ? null
+                                : Letters.ElementAtOrDefault(index + 1) ?? null
+                        )
+                        .WithItems(carouselItems.Select(card => Component.Card().WithData(card)))
+                        .Build();
+                }
+            )
             .Where(c => c != null)
             .Cast<ComponentEnvelope>()
             .ToList();
 
-        ComponentEnvelope containerResponse = Component.Container()
+        ComponentEnvelope containerResponse = Component
+            .Container()
             .WithId("genre-carousels")
-            .WithItems(carousels)
-            ;
+            .WithItems(carousels);
 
         return Ok(ComponentResponse.From(containerResponse));
     }

@@ -1,5 +1,3 @@
 namespace NoMercy.MediaProcessing.Images;
 
-public interface INoMercyImageManager
-{
-}
+public interface INoMercyImageManager { }

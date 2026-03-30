@@ -33,7 +33,5 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue
 
     public abstract Task Handle();
 
-    public void Dispose()
-    {
-    }
+    public void Dispose() { }
 }

@@ -7,10 +7,10 @@ using NoMercy.Api.DTOs.Music;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
-using NoMercy.Helpers.Extensions;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.Events.Music;
+using NoMercy.Helpers.Extensions;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.NoMercy.Client;
 
@@ -26,7 +26,11 @@ public class TracksController : BaseController
     private readonly MediaContext _mediaContext;
     private readonly IEventBus _eventBus;
 
-    public TracksController(MusicRepository musicService, MediaContext mediaContext, IEventBus eventBus)
+    public TracksController(
+        MusicRepository musicService,
+        MediaContext mediaContext,
+        IEventBus eventBus
+    )
     {
         _musicRepository = musicService;
         _mediaContext = mediaContext;
@@ -50,17 +54,19 @@ public class TracksController : BaseController
         if (tracks.Count == 0)
             return NotFoundResponse("Tracks not found");
 
-        return Ok(new TracksResponseDto
-        {
-            Data = new()
+        return Ok(
+            new TracksResponseDto
             {
-                Name = "Favorite Tracks".Localize(),
-                Link = new("music/tracks", UriKind.Relative),
-                Type = "track",
-                ColorPalette = new(),
-                Tracks = tracks
+                Data = new()
+                {
+                    Name = "Favorite Tracks".Localize(),
+                    Link = new("music/tracks", UriKind.Relative),
+                    Type = "track",
+                    ColorPalette = new(),
+                    Tracks = tracks,
+                },
             }
-        });
+        );
     }
 
     [HttpPost]
@@ -78,37 +84,38 @@ public class TracksController : BaseController
 
         await _musicRepository.LikeTrackAsync(userId, track, request.Value);
 
-        await _eventBus.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = ["music", "album", track.AlbumTrack.FirstOrDefault()?.Album.Id]
-        });
-        await _eventBus.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = ["music", "artist", track.ArtistTrack.FirstOrDefault()?.Artist.Id]
-        });
-        await _eventBus.PublishAsync(new LibraryRefreshEvent
-        {
-            QueryKey = ["music", "tracks"]
-        });
-        
-        await _eventBus.PublishAsync(new MusicItemLikedEvent
-        {
-            UserId = User.UserId(),
-            ItemId = track.Id,
-            ItemType = "track",
-            Liked = request.Value
-        });
-
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "{0} {1}",
-            Args = new object[]
+        await _eventBus.PublishAsync(
+            new LibraryRefreshEvent
             {
-                track.Name,
-                request.Value ? "liked" : "unliked"
+                QueryKey = ["music", "album", track.AlbumTrack.FirstOrDefault()?.Album.Id],
             }
-        });
+        );
+        await _eventBus.PublishAsync(
+            new LibraryRefreshEvent
+            {
+                QueryKey = ["music", "artist", track.ArtistTrack.FirstOrDefault()?.Artist.Id],
+            }
+        );
+        await _eventBus.PublishAsync(new LibraryRefreshEvent { QueryKey = ["music", "tracks"] });
+
+        await _eventBus.PublishAsync(
+            new MusicItemLikedEvent
+            {
+                UserId = User.UserId(),
+                ItemId = track.Id,
+                ItemType = "track",
+                Liked = request.Value,
+            }
+        );
+
+        return Ok(
+            new StatusResponseDto<string>
+            {
+                Status = "ok",
+                Message = "{0} {1}",
+                Args = new object[] { track.Name, request.Value ? "liked" : "unliked" },
+            }
+        );
     }
 
     [HttpGet]
@@ -124,20 +131,18 @@ public class TracksController : BaseController
             return NotFoundResponse("Track not found");
 
         if (track.Lyrics is not null)
-            return Ok(new DataResponseDto<Lyric[]>
-            {
-                Data = track.Lyrics
-            });
+            return Ok(new DataResponseDto<Lyric[]> { Data = track.Lyrics });
 
         try
         {
             dynamic? subtitles = await NoMercyLyricsClient.SearchLyrics(track);
-            if (subtitles is null) return NotFoundResponse("Subtitle not found");
-            subtitles = await _musicRepository.UpdateTrackLyricsAsync(track, JsonConvert.SerializeObject(subtitles));
-            return Ok(new DataResponseDto<dynamic>
-            {
-                Data = subtitles
-            });
+            if (subtitles is null)
+                return NotFoundResponse("Subtitle not found");
+            subtitles = await _musicRepository.UpdateTrackLyricsAsync(
+                track,
+                JsonConvert.SerializeObject(subtitles)
+            );
+            return Ok(new DataResponseDto<dynamic> { Data = subtitles });
         }
         catch (Exception e)
         {
@@ -160,10 +165,6 @@ public class TracksController : BaseController
 
         await _musicRepository.RecordPlaybackAsync(id, userId);
 
-        return Ok(new StatusResponseDto<string>
-        {
-            Status = "ok",
-            Message = "Playback recorded"
-        });
+        return Ok(new StatusResponseDto<string> { Status = "ok", Message = "Playback recorded" });
     }
 }

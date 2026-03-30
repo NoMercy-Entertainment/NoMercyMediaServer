@@ -9,13 +9,7 @@ public class Vtt : BaseSubtitle
         SetSubtitleCodec(subtitleCodec);
     }
 
-    public override CodecDto[] AvailableCodecs =>
-    [
-        SubtitleCodecs.Webvtt
-    ];
+    public override CodecDto[] AvailableCodecs => [SubtitleCodecs.Webvtt];
 
-    protected override string[] AvailableContainers =>
-    [
-        SubtitleContainers.WebVtt
-    ];
+    protected override string[] AvailableContainers => [SubtitleContainers.WebVtt];
 }

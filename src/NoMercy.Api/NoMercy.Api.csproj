@@ -1,54 +1,52 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
-    </PropertyGroup>
-    <PropertyGroup>
-        <IsTestProject>false</IsTestProject>
-    </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="NoMercy.Tests.Events" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <InternalsVisibleTo Include="NoMercy.Tests.Events" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Http" />
+    <PackageReference Include="Asp.Versioning.Mvc" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" />
+    <PackageReference Include="Microsoft.Extensions.Localization" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
+    <PackageReference Include="MimeMapping" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
 
-    <ItemGroup>
-        <PackageReference Include="Asp.Versioning.Http"/>
-        <PackageReference Include="Asp.Versioning.Mvc"/>
-        <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer"/>
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" />
-        <PackageReference Include="Microsoft.Extensions.Localization" />
-        <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
-        <PackageReference Include="MimeMapping"/>
-        <PackageReference Include="Newtonsoft.Json" />
-        <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+    <PackageReference Include="Ulid" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
+  </ItemGroup>
 
-        <PackageReference Include="Ulid" />
-        <PackageReference Include="Microsoft.AspNetCore.SignalR"/>
-        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj" />
+    <ProjectReference Include="..\NoMercy.Data\NoMercy.Data.csproj" />
+    <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj" />
+    <ProjectReference Include="..\NoMercy.MediaSources\NoMercy.MediaSources.csproj" />
+    <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj" />
+    <ProjectReference Include="..\NoMercy.Plugins.Abstractions\NoMercy.Plugins.Abstractions.csproj" />
+    <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj" />
+    <ProjectReference Include="..\NoMercy.Setup\NoMercy.Setup.csproj" />
+    <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj" />
+    <ProjectReference Include="..\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\NoMercy.Globals\NoMercy.Globals.csproj"/>
-        <ProjectReference Include="..\NoMercy.Data\NoMercy.Data.csproj"/>
-        <ProjectReference Include="..\NoMercy.Helpers\NoMercy.Helpers.csproj"/>
-        <ProjectReference Include="..\NoMercy.MediaSources\NoMercy.MediaSources.csproj"/>
-        <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj"/>
-        <ProjectReference Include="..\NoMercy.Plugins.Abstractions\NoMercy.Plugins.Abstractions.csproj"/>
-        <ProjectReference Include="..\NoMercy.Networking\NoMercy.Networking.csproj"/>
-        <ProjectReference Include="..\NoMercy.Setup\NoMercy.Setup.csproj"/>
-        <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj"/>
-        <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj"/>
-        <ProjectReference Include="..\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <EmbeddedResource Include="Resources\I18N.xml"/>
-    </ItemGroup>
-
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\I18N.xml" />
+  </ItemGroup>
 </Project>

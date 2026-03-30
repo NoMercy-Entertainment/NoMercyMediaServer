@@ -9,7 +9,9 @@ namespace NoMercy.Providers.Tadb.Client;
 
 public class TadbBaseClient : IDisposable
 {
-    private readonly Uri _baseUrl = new($"https://www.theaudiodb.com/api/v1/json/{ApiInfo.TadbKey}/");
+    private readonly Uri _baseUrl = new(
+        $"https://www.theaudiodb.com/api/v1/json/{ApiInfo.TadbKey}/"
+    );
 
     private readonly HttpClient _client;
 
@@ -30,7 +32,14 @@ public class TadbBaseClient : IDisposable
 
     private static Helpers.Queue GetQueue()
     {
-        return _queue ??= new(new() { Concurrent = 2, Interval = 1000, Start = true });
+        return _queue ??= new(
+            new()
+            {
+                Concurrent = 2,
+                Interval = 1000,
+                Start = true,
+            }
+        );
     }
 
     private static int Max(int available, int wanted, int constraint)
@@ -44,18 +53,24 @@ public class TadbBaseClient : IDisposable
 
     public int Id { get; private set; }
 
-    protected async Task<T?> Get<T>(string url, Dictionary<string, string>? query = null, bool? priority = false)
+    protected async Task<T?> Get<T>(
+        string url,
+        Dictionary<string, string>? query = null,
+        bool? priority = false
+    )
         where T : class
     {
         query ??= new();
 
         string newUrl = QueryHelpers.AddQueryString(url, query!);
 
-        if (CacheController.Read(newUrl, out T? result)) return result;
+        if (CacheController.Read(newUrl, out T? result))
+            return result;
 
         Logger.AudioDb(_baseUrl + newUrl, LogEventLevel.Verbose);
 
-        string response = await GetQueue().Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
+        string response = await GetQueue()
+            .Enqueue(() => _client.GetStringAsync(newUrl), newUrl, priority);
 
         await CacheController.Write(newUrl, response);
 

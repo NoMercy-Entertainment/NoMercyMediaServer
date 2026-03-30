@@ -36,7 +36,7 @@ public class GlobalExceptionHandlerMiddleware
                 Detail = "An unexpected error occurred.",
                 Instance = context.Request.Path,
                 Status = StatusCodes.Status500InternalServerError,
-                Extensions = { { "traceId", traceId } }
+                Extensions = { { "traceId", traceId } },
             };
 
             await context.Response.WriteAsJsonAsync(problem);

@@ -20,8 +20,8 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/libraries")]
 public class LibrariesController(
     LibraryRepository libraryRepository,
-    IDbContextFactory<MediaContext> contextFactory)
-    : BaseController
+    IDbContextFactory<MediaContext> contextFactory
+) : BaseController
 {
     [HttpGet]
     [ResponseCache(Duration = 300)]
@@ -35,10 +35,7 @@ public class LibrariesController(
             .Select(library => new LibrariesResponseItemDto(library))
             .ToList();
 
-        return Ok(new LibrariesDto
-        {
-            Data = response.OrderBy(library => library.Order)
-        });
+        return Ok(new LibrariesDto { Data = response.OrderBy(library => library.Order) });
     }
 
     [HttpGet]
@@ -61,25 +58,55 @@ public class LibrariesController(
         Task<List<CollectionListDto>> collectionsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new CollectionRepository(ctx).GetCollectionItemCardsAsync(userId, language, country, 10, 0, ct);
+            return await new CollectionRepository(ctx).GetCollectionItemCardsAsync(
+                userId,
+                language,
+                country,
+                10,
+                0,
+                ct
+            );
         });
         Task<List<SpecialCardDto>> specialsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new SpecialRepository(ctx).GetSpecialItemCardsAsync(userId, language, country, 10, 0, ct);
+            return await new SpecialRepository(ctx).GetSpecialItemCardsAsync(
+                userId,
+                language,
+                country,
+                10,
+                0,
+                ct
+            );
         });
         Task<HomeTvCardDto?> randomTvTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetRandomTvCardAsync(userId, language, country, ct);
+            return await new LibraryRepository(ctx).GetRandomTvCardAsync(
+                userId,
+                language,
+                country,
+                ct
+            );
         });
         Task<HomeMovieCardDto?> randomMovieTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetRandomMovieCardAsync(userId, language, country, ct);
+            return await new LibraryRepository(ctx).GetRandomMovieCardAsync(
+                userId,
+                language,
+                country,
+                ct
+            );
         });
 
-        await Task.WhenAll(librariesTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask);
+        await Task.WhenAll(
+            librariesTask,
+            collectionsTask,
+            specialsTask,
+            randomTvTask,
+            randomMovieTask
+        );
 
         List<Library> libraries = librariesTask.Result;
         List<CollectionListDto> collections = collectionsTask.Result;
@@ -90,53 +117,85 @@ public class LibrariesController(
         // Fetch library data in parallel - each task gets its own DbContext for thread safety
         Library[] nonMusicLibraries = libraries.Where(lib => lib.Type != "music").ToArray();
 
-        Task<(Library library, List<MovieCardDto> movies, List<TvCardDto> shows)>[] libraryDataTasks = nonMusicLibraries
+        Task<(
+            Library library,
+            List<MovieCardDto> movies,
+            List<TvCardDto> shows
+        )>[] libraryDataTasks = nonMusicLibraries
             .Select(async library =>
             {
                 await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
                 LibraryRepository repo = new(ctx);
-                List<MovieCardDto> movies = await repo.GetLibraryMovieCardsAsync(userId, library.Id, country, 10, 0, ct);
-                List<TvCardDto> shows = await repo.GetLibraryTvCardsAsync(userId, library.Id, country, 10, 0, ct);
+                List<MovieCardDto> movies = await repo.GetLibraryMovieCardsAsync(
+                    userId,
+                    library.Id,
+                    country,
+                    10,
+                    0,
+                    ct
+                );
+                List<TvCardDto> shows = await repo.GetLibraryTvCardsAsync(
+                    userId,
+                    library.Id,
+                    country,
+                    10,
+                    0,
+                    ct
+                );
                 return (library, movies, shows);
             })
             .ToArray();
 
-        (Library library, List<MovieCardDto> movies, List<TvCardDto> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
+        (Library library, List<MovieCardDto> movies, List<TvCardDto> shows)[] libraryDataResults =
+            await Task.WhenAll(libraryDataTasks);
 
         List<NmCarouselDto<NmCardDto>> list = [];
 
-        foreach ((Library library, List<MovieCardDto> libraryMovies, List<TvCardDto> libraryShows) in libraryDataResults)
+        foreach (
+            (
+                Library library,
+                List<MovieCardDto> libraryMovies,
+                List<TvCardDto> libraryShows
+            ) in libraryDataResults
+        )
         {
-            Uri moreLink = library.LibraryMovies.Count + library.LibraryTvs.Count > 500
-                ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
-                : new($"/libraries/{library.Id}", UriKind.Relative);
+            Uri moreLink =
+                library.LibraryMovies.Count + library.LibraryTvs.Count > 500
+                    ? new($"/libraries/{library.Id}/letter/A", UriKind.Relative)
+                    : new($"/libraries/{library.Id}", UriKind.Relative);
 
-            list.Add(new()
-            {
-                Title = library.Title,
-                MoreLink = moreLink,
-                Items = libraryMovies.Select(m => new NmCardDto(m, country))
-                    .Concat(libraryShows.Select(t => new NmCardDto(t, country)))
-                    .ToList()
-            });
+            list.Add(
+                new()
+                {
+                    Title = library.Title,
+                    MoreLink = moreLink,
+                    Items = libraryMovies
+                        .Select(m => new NmCardDto(m, country))
+                        .Concat(libraryShows.Select(t => new NmCardDto(t, country)))
+                        .ToList(),
+                }
+            );
         }
 
-        list.Add(new()
-        {
-            Title = "Collections",
-            MoreLink = new("/collection", UriKind.Relative),
-            Items = collections.Select(collection => new NmCardDto(collection, country))
-                .ToList()
-        });
+        list.Add(
+            new()
+            {
+                Title = "Collections",
+                MoreLink = new("/collection", UriKind.Relative),
+                Items = collections
+                    .Select(collection => new NmCardDto(collection, country))
+                    .ToList(),
+            }
+        );
 
-        list.Add(new()
-        {
-            Title = "Specials",
-            MoreLink = new("/specials", UriKind.Relative),
-            Items = specials
-                .Select(special => new NmCardDto(special, country))
-                .ToList()
-        });
+        list.Add(
+            new()
+            {
+                Title = "Specials",
+                MoreLink = new("/specials", UriKind.Relative),
+                Items = specials.Select(special => new NmCardDto(special, country)).ToList(),
+            }
+        );
 
         List<NmCardDto> genres = [];
         if (tv != null)
@@ -145,16 +204,19 @@ public class LibrariesController(
         if (movie != null)
             genres.Add(new(movie, country));
 
-        NmCardDto? homeCardItem = genres.Where(g => !string.IsNullOrWhiteSpace(g.Title))
-            .Randomize().FirstOrDefault();
+        NmCardDto? homeCardItem = genres
+            .Where(g => !string.IsNullOrWhiteSpace(g.Title))
+            .Randomize()
+            .FirstOrDefault();
 
         List<ComponentEnvelope> components = new();
-        
+
         // Add home card
         if (homeCardItem != null)
         {
             HomeCardData homeCardData = new(homeCardItem);
-            dynamic? homeCard = Component.HomeCard()
+            dynamic? homeCard = Component
+                .HomeCard()
                 .WithId("home_card")
                 .WithTitle(homeCardData.Title)
                 .WithData(homeCardData)
@@ -163,24 +225,25 @@ public class LibrariesController(
 
             components.Add(homeCard);
         }
-        
+
         // Add carousels for each library
         for (int index = 0; index < list.Count; index++)
         {
             NmCarouselDto<NmCardDto> carouselData = list[index];
-            ComponentEnvelope carousel = Component.Carousel()
+            ComponentEnvelope carousel = Component
+                .Carousel()
                 .WithId($"library_{carouselData.Id}")
                 .WithTitle(carouselData.Title)
                 .WithMoreLink(carouselData.MoreLink)
                 .WithNavigation(
                     index == 0 ? "home_card" : $"library_{list[index - 1].Id}",
-                    index == list.Count - 1 ? null : $"library_{list[index + 1].Id}")
-                .WithItems(carouselData.Items.Select(item => Component.Card()
-                    .WithData(new(item))));
-            
+                    index == list.Count - 1 ? null : $"library_{list[index + 1].Id}"
+                )
+                .WithItems(carouselData.Items.Select(item => Component.Card().WithData(new(item))));
+
             components.Add(carousel);
         }
-        
+
         return Ok(ComponentResponse.From(components));
     }
 
@@ -204,25 +267,55 @@ public class LibrariesController(
         Task<List<CollectionListDto>> collectionsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new CollectionRepository(ctx).GetCollectionItemCardsAsync(userId, language, country, 6, 0, ct);
+            return await new CollectionRepository(ctx).GetCollectionItemCardsAsync(
+                userId,
+                language,
+                country,
+                6,
+                0,
+                ct
+            );
         });
         Task<List<SpecialCardDto>> specialsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new SpecialRepository(ctx).GetSpecialItemCardsAsync(userId, language, country, 6, 0, ct);
+            return await new SpecialRepository(ctx).GetSpecialItemCardsAsync(
+                userId,
+                language,
+                country,
+                6,
+                0,
+                ct
+            );
         });
         Task<HomeTvCardDto?> randomTvTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetRandomTvCardAsync(userId, language, country, ct);
+            return await new LibraryRepository(ctx).GetRandomTvCardAsync(
+                userId,
+                language,
+                country,
+                ct
+            );
         });
         Task<HomeMovieCardDto?> randomMovieTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetRandomMovieCardAsync(userId, language, country, ct);
+            return await new LibraryRepository(ctx).GetRandomMovieCardAsync(
+                userId,
+                language,
+                country,
+                ct
+            );
         });
 
-        await Task.WhenAll(librariesTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask);
+        await Task.WhenAll(
+            librariesTask,
+            collectionsTask,
+            specialsTask,
+            randomTvTask,
+            randomMovieTask
+        );
 
         List<Library> libraries = librariesTask.Result;
         List<CollectionListDto> collections = collectionsTask.Result;
@@ -231,51 +324,83 @@ public class LibrariesController(
         HomeMovieCardDto? movie = randomMovieTask.Result;
 
         // Fetch library data in parallel - each task gets its own DbContext for thread safety
-        Task<(Library library, List<MovieCardDto> movies, List<TvCardDto> shows)>[] libraryDataTasks = libraries
+        Task<(
+            Library library,
+            List<MovieCardDto> movies,
+            List<TvCardDto> shows
+        )>[] libraryDataTasks = libraries
             .Select(async library =>
             {
                 await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
                 LibraryRepository repo = new(ctx);
-                List<MovieCardDto> movies = await repo.GetLibraryMovieCardsAsync(userId, library.Id, country, 6, 0, ct);
-                List<TvCardDto> shows = await repo.GetLibraryTvCardsAsync(userId, library.Id, country, 6, 0, ct);
+                List<MovieCardDto> movies = await repo.GetLibraryMovieCardsAsync(
+                    userId,
+                    library.Id,
+                    country,
+                    6,
+                    0,
+                    ct
+                );
+                List<TvCardDto> shows = await repo.GetLibraryTvCardsAsync(
+                    userId,
+                    library.Id,
+                    country,
+                    6,
+                    0,
+                    ct
+                );
                 return (library, movies, shows);
             })
             .ToArray();
 
-        (Library library, List<MovieCardDto> movies, List<TvCardDto> shows)[] libraryDataResults = await Task.WhenAll(libraryDataTasks);
+        (Library library, List<MovieCardDto> movies, List<TvCardDto> shows)[] libraryDataResults =
+            await Task.WhenAll(libraryDataTasks);
 
         List<NmCarouselDto<NmCardDto>> list = [];
 
-        foreach ((Library library, List<MovieCardDto> libraryMovies, List<TvCardDto> libraryShows) in libraryDataResults)
+        foreach (
+            (
+                Library library,
+                List<MovieCardDto> libraryMovies,
+                List<TvCardDto> libraryShows
+            ) in libraryDataResults
+        )
         {
-            list.Add(new()
-            {
-                Id = "library_" + library.Id,
-                Title = library.Title,
-                MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
-                Items = libraryMovies.Select(m => new NmCardDto(m, country))
-                    .Concat(libraryShows.Select(t => new NmCardDto(t, country)))
-                    .ToList()
-            });
+            list.Add(
+                new()
+                {
+                    Id = "library_" + library.Id,
+                    Title = library.Title,
+                    MoreLink = new($"/libraries/{library.Id}", UriKind.Relative),
+                    Items = libraryMovies
+                        .Select(m => new NmCardDto(m, country))
+                        .Concat(libraryShows.Select(t => new NmCardDto(t, country)))
+                        .ToList(),
+                }
+            );
         }
 
-        list.Add(new()
-        {
-            Id = "library_collections",
-            Title = "Collections",
-            MoreLink = new("/collection", UriKind.Relative),
-            Items = collections.Select(collection => new NmCardDto(collection, country))
-                .ToList()
-        });
+        list.Add(
+            new()
+            {
+                Id = "library_collections",
+                Title = "Collections",
+                MoreLink = new("/collection", UriKind.Relative),
+                Items = collections
+                    .Select(collection => new NmCardDto(collection, country))
+                    .ToList(),
+            }
+        );
 
-        list.Add(new()
-        {
-            Id = "library_specials",
-            Title = "Specials",
-            MoreLink = new("/specials", UriKind.Relative),
-            Items = specials.Select(special => new NmCardDto(special, country))
-                .ToList()
-        });
+        list.Add(
+            new()
+            {
+                Id = "library_specials",
+                Title = "Specials",
+                MoreLink = new("/specials", UriKind.Relative),
+                Items = specials.Select(special => new NmCardDto(special, country)).ToList(),
+            }
+        );
 
         List<NmCardDto> genres = [];
         if (tv != null)
@@ -285,31 +410,36 @@ public class LibrariesController(
             genres.Add(new(movie, country));
 
         List<ComponentEnvelope> components = new();
-        
+
         // Add carousels for each library
         for (int index = 0; index < list.Count; index++)
         {
             NmCarouselDto<NmCardDto> carouselData = list[index];
-            dynamic? carousel = Component.Carousel()
+            dynamic? carousel = Component
+                .Carousel()
                 .WithId(carouselData.Id)
                 .WithTitle(carouselData.Title)
                 .WithMoreLink(carouselData.MoreLink)
                 .WithNavigation(
                     index == 0 ? "home_card" : list[index - 1].Id,
-                    index == list.Count - 1 ? null : list[index + 1].Id)
-                .WithItems(carouselData.Items.Take(6).Select(item => Component.Card()
-                    .WithData(new(item))
-                    ))
-                ;
+                    index == list.Count - 1 ? null : list[index + 1].Id
+                )
+                .WithItems(
+                    carouselData.Items.Take(6).Select(item => Component.Card().WithData(new(item)))
+                );
             components.Add(carousel);
         }
-        
+
         return Ok(ComponentResponse.From(components));
     }
 
     [HttpGet]
     [Route("{libraryId:ulid}")]
-    public async Task<IActionResult> Library(Ulid libraryId, [FromQuery] PageRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> Library(
+        Ulid libraryId,
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -322,12 +452,26 @@ public class LibrariesController(
         Task<List<MovieCardDto>> moviesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetLibraryMovieCardsAsync(userId, libraryId, country, request.Take, request.Page * request.Take, ct);
+            return await new LibraryRepository(ctx).GetLibraryMovieCardsAsync(
+                userId,
+                libraryId,
+                country,
+                request.Take,
+                request.Page * request.Take,
+                ct
+            );
         });
         Task<List<TvCardDto>> showsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetLibraryTvCardsAsync(userId, libraryId, country, request.Take, request.Page * request.Take, ct);
+            return await new LibraryRepository(ctx).GetLibraryTvCardsAsync(
+                userId,
+                libraryId,
+                country,
+                request.Take,
+                request.Page * request.Take,
+                ct
+            );
         });
 
         await Task.WhenAll(moviesTask, showsTask);
@@ -343,11 +487,10 @@ public class LibrariesController(
                 .OrderBy(item => item.TitleSort)
                 .ToList();
 
-            ComponentEnvelope response = Component.Grid()
+            ComponentEnvelope response = Component
+                .Grid()
                 .WithId($"library-{libraryId}")
-                .WithItems(cardItems.Select(item => Component.Card()
-                    .WithData(item)
-                ));
+                .WithItems(cardItems.Select(item => Component.Card().WithData(item)));
 
             return Ok(ComponentResponse.From(response));
         }
@@ -356,32 +499,42 @@ public class LibrariesController(
         foreach (string letter in Letters)
         {
             int index = Array.IndexOf(Letters, letter);
-            
+
             List<CardData> carouselItems = libraryMovies
                 .Select(movie => new CardData(movie, country))
-                .Where(collection => letter == "#"
-                    ? Numbers.Any(p => collection.Title.StartsWith(p))
-                    : collection.Title.StartsWith(letter))
-                .Concat(libraryShows.Select(tv => new CardData(tv, country))
-                    .Where(collection => letter == "#"
+                .Where(collection =>
+                    letter == "#"
                         ? Numbers.Any(p => collection.Title.StartsWith(p))
-                        : collection.Title.StartsWith(letter)))
+                        : collection.Title.StartsWith(letter)
+                )
+                .Concat(
+                    libraryShows
+                        .Select(tv => new CardData(tv, country))
+                        .Where(collection =>
+                            letter == "#"
+                                ? Numbers.Any(p => collection.Title.StartsWith(p))
+                                : collection.Title.StartsWith(letter)
+                        )
+                )
                 .OrderBy(item => item.TitleSort)
                 .ToList();
 
             if (carouselItems.Count == 0)
                 continue;
-            
-            components.Add(Component.Carousel()
-                .WithId(letter)
-                .WithTitle(letter)
-                .WithNavigation(
-                    index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
-                    index == Letters.Length - 1 ? null : Letters.ElementAtOrDefault(index + 1) ?? null)
-                .WithItems(carouselItems.Select(item => Component.Card()
-                    .WithData(item)
-                )));
 
+            components.Add(
+                Component
+                    .Carousel()
+                    .WithId(letter)
+                    .WithTitle(letter)
+                    .WithNavigation(
+                        index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
+                        index == Letters.Length - 1
+                            ? null
+                            : Letters.ElementAtOrDefault(index + 1) ?? null
+                    )
+                    .WithItems(carouselItems.Select(item => Component.Card().WithData(item)))
+            );
         }
 
         return Ok(new ComponentResponse() { Data = components });
@@ -389,7 +542,12 @@ public class LibrariesController(
 
     [HttpGet]
     [Route("{libraryId:ulid}/letter/{letter}")]
-    public async Task<IActionResult> LibraryByLetter(Ulid libraryId, string letter, [FromQuery] PageRequestDto request, CancellationToken ct = default)
+    public async Task<IActionResult> LibraryByLetter(
+        Ulid libraryId,
+        string letter,
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
     {
         Guid userId = User.UserId();
         if (!User.IsAllowed())
@@ -402,12 +560,30 @@ public class LibrariesController(
         Task<List<HomeMovieCardDto>> moviesTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetPaginatedLibraryMovieCardsAsync(userId, libraryId, letter, language, country, request.Take, request.Page, ct);
+            return await new LibraryRepository(ctx).GetPaginatedLibraryMovieCardsAsync(
+                userId,
+                libraryId,
+                letter,
+                language,
+                country,
+                request.Take,
+                request.Page,
+                ct
+            );
         });
         Task<List<HomeTvCardDto>> showsTask = Task.Run(async () =>
         {
             await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(ctx).GetPaginatedLibraryTvCardsAsync(userId, libraryId, letter, language, country, request.Take, request.Page, ct);
+            return await new LibraryRepository(ctx).GetPaginatedLibraryTvCardsAsync(
+                userId,
+                libraryId,
+                letter,
+                language,
+                country,
+                request.Take,
+                request.Page,
+                ct
+            );
         });
 
         await Task.WhenAll(moviesTask, showsTask);
@@ -421,13 +597,11 @@ public class LibrariesController(
             .OrderBy(item => item.TitleSort)
             .ToList();
 
-        ComponentEnvelope response = Component.Grid()
+        ComponentEnvelope response = Component
+            .Grid()
             .WithId($"library-{libraryId}-{letter}")
             .WithTitle(letter)
-            .WithItems(concat.Select(item => Component.Card()
-                .WithData(item)
-                ))
-            ;
+            .WithItems(concat.Select(item => Component.Card().WithData(item)));
 
         return Ok(ComponentResponse.From(response));
     }

@@ -12,7 +12,6 @@ public class FilePermissions
         {
             if (File.Exists(path))
                 await Shell.ExecAsync("chmod", $"+x \"{path}\"");
-                
             else if (Directory.Exists(path))
                 await Shell.ExecAsync("chmod", $"-R +x \"{path}\"");
 

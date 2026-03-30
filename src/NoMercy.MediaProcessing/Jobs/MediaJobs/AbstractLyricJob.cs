@@ -13,7 +13,5 @@ public abstract class AbstractLyricJob : IShouldQueue
 
     public abstract Task Handle();
 
-    public void Dispose()
-    {
-    }
+    public void Dispose() { }
 }

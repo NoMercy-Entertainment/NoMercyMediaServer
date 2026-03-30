@@ -20,9 +20,15 @@ public class LocalhostOnlyAttribute : Attribute, IAuthorizationFilter
 
         if (!isLocalhost)
         {
-            context.Result = new JsonResult(new { status = "error", message = "Management API is only accessible from localhost" })
+            context.Result = new JsonResult(
+                new
+                {
+                    status = "error",
+                    message = "Management API is only accessible from localhost",
+                }
+            )
             {
-                StatusCode = 403
+                StatusCode = 403,
             };
         }
     }

@@ -40,20 +40,19 @@ public class BaseImage : Classes
 
     internal string Filename
     {
-        get => _filename
-            .Replace(":framesize:", $"{Scale.W}x{Scale.H}")
-            .Replace(":type:", Type);
+        get => _filename.Replace(":framesize:", $"{Scale.W}x{Scale.H}").Replace(":type:", Type);
         set => _filename = value;
     }
 
-    public dynamic Data => new
-    {
-        Container = ImageCodec.Name,
-        ExtraParameters = _extraParameters,
-        Filters = _filters,
-        Ops = _ops,
-        Type
-    };
+    public dynamic Data =>
+        new
+        {
+            Container = ImageCodec.Name,
+            ExtraParameters = _extraParameters,
+            Filters = _filters,
+            Ops = _ops,
+            Type,
+        };
 
     #endregion
 
@@ -70,7 +69,8 @@ public class BaseImage : Classes
         CodecDto[] availableCodecs = AvailableCodecs;
         if (availableCodecs.All(codec => codec.Value != imageCodec))
             throw new(
-                $"Wrong image codec value for {imageCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}");
+                $"Wrong image codec value for {imageCodec}, available formats are {string.Join(", ", AvailableCodecs.Select(codec => codec.Value))}"
+            );
 
         ImageCodec = availableCodecs.First(codec => codec.Value == imageCodec);
 
@@ -104,7 +104,6 @@ public class BaseImage : Classes
 
         return this;
     }
-
 
     public BaseImage SetFilename(string fileName)
     {
@@ -154,7 +153,6 @@ public class BaseImage : Classes
         }
     }
 
-
     public (int width, int height) GetImageDimensions(string imagePath)
     {
         SixLabors.ImageSharp.ImageInfo info = SixLabors.ImageSharp.Image.Identify(imagePath);
@@ -169,13 +167,13 @@ public class BaseImage : Classes
 
         string thumbnailsFolder = Path.Combine(BasePath, Filename.Split("/").First());
 
-        if (File.Exists(spriteFile) || !Directory.Exists(thumbnailsFolder)) return;
+        if (File.Exists(spriteFile) || !Directory.Exists(thumbnailsFolder))
+            return;
 
-        string[] imageFiles = Directory.GetFiles(thumbnailsFolder)
-            .OrderBy(f => f)
-            .ToArray();
+        string[] imageFiles = Directory.GetFiles(thumbnailsFolder).OrderBy(f => f).ToArray();
 
-        if (imageFiles.Length == 0) return;
+        if (imageFiles.Length == 0)
+            return;
 
         (int thumbWidth, int thumbHeight) = GetImageDimensions(imageFiles.First());
 
@@ -204,10 +202,13 @@ public class BaseImage : Classes
             int index = times.IndexOf(time);
             thumbContent.AppendLine(jpg.ToString());
             thumbContent.AppendLine($"{time} --> {times[index + 1]}");
-            thumbContent.AppendLine($"{spriteFilename}#xywh={dstX},{dstY},{thumbWidth},{thumbHeight}");
+            thumbContent.AppendLine(
+                $"{spriteFilename}#xywh={dstX},{dstY},{thumbWidth},{thumbHeight}"
+            );
             thumbContent.AppendLine("");
 
-            if (line > gridHeight) continue;
+            if (line > gridHeight)
+                continue;
 
             if (jpg % gridWidth == 0)
             {

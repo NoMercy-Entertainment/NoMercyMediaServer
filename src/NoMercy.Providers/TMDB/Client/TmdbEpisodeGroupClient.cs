@@ -6,7 +6,8 @@ public class TmdbEpisodeGroupClient : TmdbBaseClient
 {
     private readonly string _groupId;
 
-    public TmdbEpisodeGroupClient(string groupId) : base()
+    public TmdbEpisodeGroupClient(string groupId)
+        : base()
     {
         _groupId = groupId;
     }

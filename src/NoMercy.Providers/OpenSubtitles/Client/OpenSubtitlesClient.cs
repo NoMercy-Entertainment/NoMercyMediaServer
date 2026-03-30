@@ -11,41 +11,24 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
             MethodName = "LogIn",
             Params =
             [
-                new()
-                {
-                    Value = new()
-                    {
-                        String = ""
-                    }
-                },
-                new()
-                {
-                    Value = new()
-                    {
-                        String = ""
-                    }
-                },
-                new()
-                {
-                    Value = new()
-                    {
-                        String = "dut"
-                    }
-                },
+                new() { Value = new() { String = "" } },
+                new() { Value = new() { String = "" } },
+                new() { Value = new() { String = "dut" } },
                 new()
                 {
                     Value = new()
                     {
                         // String = Config.UserAgent
-                        String = "VLSub"
-                    }
-                }
-            ]
+                        String = "VLSub",
+                    },
+                },
+            ],
         };
 
         LoginResponse? x = await Post<Login, LoginResponse>("", login);
-        AccessToken = x?.Params?.Param?.Value?.Struct?.Member.FirstOrDefault(member => member.Name == "token")?.Value
-            ?.String;
+        AccessToken = x
+            ?.Params?.Param?.Value?.Struct?.Member.FirstOrDefault(member => member.Name == "token")
+            ?.Value?.String;
 
         return this;
     }
@@ -61,13 +44,7 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                 {
                     Param =
                     [
-                        new()
-                        {
-                            Value = new()
-                            {
-                                String = AccessToken!
-                            }
-                        },
+                        new() { Value = new() { String = AccessToken! } },
                         new()
                         {
                             Value = new()
@@ -82,24 +59,21 @@ public class OpenSubtitlesClient : OpenSubtitlesBaseClient
                                             {
                                                 Member =
                                                 [
-                                                    new("sublanguageid", new()
-                                                    {
-                                                        String = language
-                                                    }),
-                                                    new("query", new()
-                                                    {
-                                                        String = query
-                                                    })
-                                                ]
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
+                                                    new(
+                                                        "sublanguageid",
+                                                        new() { String = language }
+                                                    ),
+                                                    new("query", new() { String = query }),
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            },
         };
 
         return await Post<SubtitleSearch, SubtitleSearchResponse>("", searchResponse);

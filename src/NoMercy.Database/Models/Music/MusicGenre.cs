@@ -12,8 +12,9 @@ public class MusicGenre
     [JsonProperty("id")]
     public Guid Id { get; set; }
 
-    [JsonProperty("name")] public string Name { get; set; } = string.Empty;
-    
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+
     public ICollection<AlbumMusicGenre> AlbumMusicGenres { get; set; } = [];
     public ICollection<ArtistMusicGenre> ArtistMusicGenres { get; set; } = [];
     public ICollection<MusicGenreTrack> MusicGenreTracks { get; set; } = [];
