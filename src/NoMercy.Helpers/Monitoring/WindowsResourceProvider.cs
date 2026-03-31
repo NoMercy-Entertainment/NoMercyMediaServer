@@ -17,12 +17,17 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
 
     // -----------------------------------------------------------------------
     // GPU counters (GPU Engine category — Windows 10 1607+)
-    // We enumerate all instances once and bucket them by LUID.
+    // Kept alive between calls so that NextValue() can return a meaningful
+    // delta (the first call always returns 0 — disposing after every read
+    // means we never get the second sample).  The list is refreshed every
+    // 30 seconds so that processes that start using the GPU after server
+    // startup are eventually picked up.
     // -----------------------------------------------------------------------
 
     private record GpuCounterEntry(string Luid, string EngineType, PerformanceCounter Counter);
 
     private List<GpuCounterEntry> _gpuCounters = [];
+    private DateTime _gpuLastRefresh = DateTime.MinValue;
 
     // -----------------------------------------------------------------------
     // Memory: P/Invoke
@@ -53,7 +58,6 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
     internal WindowsResourceProvider()
     {
         InitCpuCounters();
-        InitGpuCounters();
 
         // First read on PerformanceCounter always returns 0 — do a synchronous
         // warm-up so the first real Collect() call returns meaningful data.
@@ -62,6 +66,10 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
 
     private void InitCpuCounters()
     {
+        // "% Processor Utility" is what Task Manager uses — it accounts for turbo boost and
+        // frequency scaling, giving the most accurate load reading. Values can exceed 100%
+        // when turbo is active; we clamp to 0-100 for display purposes.
+        // Fall back to "% Processor Time" if "Processor Information" is unavailable.
         try
         {
             _cpuTotal = new PerformanceCounter(
@@ -73,7 +81,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         }
         catch
         {
-            // Fall back to the older counter name on some Windows builds
+            // Fall back to the standard busy/idle counter if the preferred one is absent
             try
             {
                 _cpuTotal = new PerformanceCounter("Processor", "% Processor Time", "_Total", true);
@@ -84,6 +92,8 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             }
         }
 
+        // Per-core counters: "Processor Information" uses "0,0", "0,1", ... instance names.
+        // Filter out "_Total" and the aggregate "0,_Total" rollup instances.
         try
         {
             PerformanceCounterCategory category = new("Processor Information");
@@ -117,17 +127,22 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         }
     }
 
-    private void InitGpuCounters()
+    // Enumerate GPU Engine instances fresh each call so processes that begin
+    // using the GPU after server startup are included.  The caller is
+    // responsible for disposing every counter in the returned list.
+    private static List<GpuCounterEntry> BuildGpuCounters()
     {
         // "GPU Engine" category exists on Windows 10 1607+ with WDDM 2.x drivers.
         // Instance names look like:
         //   pid_1234_luid_0x00000000_0x0001E147_phys_0_eng_0_engtype_3D
         //   pid_1234_luid_0x00000000_0x0001E147_phys_0_eng_1_engtype_VideoDecode
         //   pid_1234_luid_0x00000000_0x0001E147_phys_0_eng_2_engtype_VideoEncode
+        List<GpuCounterEntry> result = [];
+
         try
         {
             if (!PerformanceCounterCategory.Exists("GPU Engine"))
-                return;
+                return result;
 
             PerformanceCounterCategory category = new("GPU Engine");
             string[] instances = category.GetInstanceNames();
@@ -161,18 +176,20 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
                         instance,
                         true
                     );
-                    _gpuCounters.Add(new GpuCounterEntry(luid, engType, counter));
+                    result.Add(new GpuCounterEntry(luid, engType, counter));
                 }
                 catch
                 {
-                    // skip
+                    // skip individual instance on failure
                 }
             }
         }
         catch
         {
-            _gpuCounters = [];
+            // return whatever we have so far
         }
+
+        return result;
     }
 
     // Extract the LUID portion from an instance name.
@@ -211,6 +228,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         catch
         { /* ignore */
         }
+
         foreach (PerformanceCounter c in _cpuCores)
         {
             try
@@ -221,6 +239,14 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
             { /* ignore */
             }
         }
+
+        // Build GPU counters once and keep them alive in _gpuCounters.
+        // Call NextValue() once on each to seed the PDH baseline (always
+        // returns 0, but without this first call the second call — the one
+        // that actually reports the delta — would also return 0).
+        _gpuCounters = BuildGpuCounters();
+        _gpuLastRefresh = DateTime.UtcNow;
+
         foreach (GpuCounterEntry e in _gpuCounters)
         {
             try
@@ -263,7 +289,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
 
         try
         {
-            resource.Cpu.Total = Math.Round(_cpuTotal.NextValue(), 1);
+            resource.Cpu.Total = Math.Clamp(Math.Round(_cpuTotal.NextValue(), 1), 0, 100);
         }
         catch
         {
@@ -276,7 +302,7 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         {
             try
             {
-                double util = Math.Round(_cpuCores[i].NextValue(), 1);
+                double util = Math.Clamp(Math.Round(_cpuCores[i].NextValue(), 1), 0, 100);
                 resource.Cpu.Core.Add(new Core { Index = i, Utilization = util });
                 if (util > max)
                     max = util;
@@ -305,39 +331,98 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
 
     private void CollectGpu(Resource resource)
     {
+        // Re-enumerate instances if the list is empty or hasn't been refreshed
+        // in the last 30 seconds.  This picks up processes that started using
+        // the GPU after server startup without re-building counters every cycle.
+        bool needsRefresh =
+            _gpuCounters.Count == 0 || (DateTime.UtcNow - _gpuLastRefresh).TotalSeconds > 30;
+
+        if (needsRefresh)
+        {
+            // Dispose every existing counter before discarding the list.
+            foreach (GpuCounterEntry e in _gpuCounters)
+            {
+                try
+                {
+                    e.Counter.Dispose();
+                }
+                catch
+                { /* ignore */
+                }
+            }
+
+            _gpuCounters = BuildGpuCounters();
+            _gpuLastRefresh = DateTime.UtcNow;
+
+            // Seed the PDH baseline — first NextValue() always returns 0.
+            // Return early; the next Collect() cycle will have a valid delta.
+            foreach (GpuCounterEntry e in _gpuCounters)
+            {
+                try
+                {
+                    e.Counter.NextValue();
+                }
+                catch
+                { /* ignore */
+                }
+            }
+
+            return;
+        }
+
         if (_gpuCounters.Count == 0)
             return;
 
-        // Aggregate utilisation per LUID × engine type
+        // Read the accumulated delta from every live counter.
+        // Remove any that throw (the process they belonged to has exited).
         Dictionary<string, Dictionary<string, double>> totals = [];
+        List<GpuCounterEntry> stale = [];
 
         foreach (GpuCounterEntry entry in _gpuCounters)
         {
-            float value;
             try
             {
-                value = entry.Counter.NextValue();
+                float value = entry.Counter.NextValue();
+
+                if (!totals.TryGetValue(entry.Luid, out Dictionary<string, double>? engines))
+                {
+                    engines = [];
+                    totals[entry.Luid] = engines;
+                }
+
+                engines.TryGetValue(entry.EngineType, out double existing);
+                engines[entry.EngineType] = existing + value;
             }
             catch
             {
-                continue;
+                // Counter is stale — queue it for removal.
+                stale.Add(entry);
             }
-
-            if (!totals.TryGetValue(entry.Luid, out Dictionary<string, double>? engines))
-            {
-                engines = [];
-                totals[entry.Luid] = engines;
-            }
-
-            engines.TryGetValue(entry.EngineType, out double existing);
-            engines[entry.EngineType] = existing + value;
         }
 
-        // Build Gpu objects, one per LUID (= one per physical GPU)
+        // Clean up stale counters without rebuilding the whole list.
+        foreach (GpuCounterEntry e in stale)
+        {
+            try
+            {
+                e.Counter.Dispose();
+            }
+            catch
+            { /* ignore */
+            }
+
+            _gpuCounters.Remove(e);
+        }
+
+        // Build Gpu objects, one per LUID (= one per physical GPU).
+        //
+        // Core uses MAX across engine types rather than SUM.  A process can
+        // simultaneously use 3D and VideoEncode; summing would double-count
+        // and push the value well above 100%.  Task Manager reports the
+        // highest active engine, so we mirror that behaviour here.
         int gpuIndex = 0;
         foreach (KeyValuePair<string, Dictionary<string, double>> kvp in totals)
         {
-            string luid = kvp.Key;
             Dictionary<string, double> engines = kvp.Value;
 
             Gpu gpu = new()
@@ -347,16 +432,20 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
                 Decode = Math.Round(engines.GetValueOrDefault("VideoDecode"), 1),
                 Encode = Math.Round(engines.GetValueOrDefault("VideoEncode"), 1),
                 Core = Math.Round(
-                    engines.GetValueOrDefault("3D")
-                        + engines.GetValueOrDefault("Compute")
-                        + engines.GetValueOrDefault("VideoProcessing"),
+                    new[]
+                    {
+                        engines.GetValueOrDefault("3D"),
+                        engines.GetValueOrDefault("Compute"),
+                        engines.GetValueOrDefault("VideoProcessing"),
+                        engines.GetValueOrDefault("VideoDecode"),
+                        engines.GetValueOrDefault("VideoEncode"),
+                    }.Max(),
                     1
                 ),
                 Memory = 0, // not available via PDH GPU Engine category
                 Power = 0, // not available via PDH GPU Engine category
             };
 
-            // Replace the LUID key with a simple index-based key so Gpu.Index works
             resource._gpu[$"gpu/{gpuIndex}"] = gpu;
             gpuIndex++;
         }
@@ -382,7 +471,16 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         _cpuCores = [];
 
         foreach (GpuCounterEntry e in _gpuCounters)
-            e.Counter.Dispose();
+        {
+            try
+            {
+                e.Counter.Dispose();
+            }
+            catch
+            { /* ignore */
+            }
+        }
+
         _gpuCounters = [];
     }
 }
