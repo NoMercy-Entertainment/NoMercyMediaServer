@@ -392,33 +392,45 @@ public class HomeService
             );
         }
 
-        // Navigation chain: continue → library_* → genre_*
-        string afterContinueId =
-            libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}" : null!;
+        // Navigation chain: continue → library_* → genre_* → continue (circular)
+        bool hasContinueWatching = continueWatching.Count > 0;
+        string? continueId = hasContinueWatching ? "continue" : null;
 
-        // Continue watching carousel
-        components.Add(
-            Component
-                .Carousel()
-                .WithId("continue")
-                .WithNavigation(null, afterContinueId)
-                .WithTitle("Continue watching".Localize())
-                .WithUpdate("pageLoad", "/home/continue")
-                .WithItems(BuildContinueWatchingCards(continueWatching, country))
-                .Build()
-        );
+        string? lastCarouselId = genreCarousels.Count > 0
+            ? $"genre_{genreCarousels[^1].Id}"
+            : libraryCarousels.Count > 0
+                ? $"library_{libraryCarousels[^1].Id}"
+                : null;
+
+        string? afterContinueId =
+            libraryCarousels.Count > 0 ? $"library_{libraryCarousels[0].Id}" : null;
+
+        // Continue watching carousel (only when there are items to show)
+        if (hasContinueWatching)
+        {
+            components.Add(
+                Component
+                    .Carousel()
+                    .WithId("continue")
+                    .WithNavigation(lastCarouselId, afterContinueId)
+                    .WithTitle("Continue watching".Localize())
+                    .WithUpdate("pageLoad", "/home/continue")
+                    .WithItems(BuildContinueWatchingCards(continueWatching, country))
+                    .Build()
+            );
+        }
 
         // Library carousels
         for (int i = 0; i < libraryCarousels.Count; i++)
         {
             GenreCarouselData lib = libraryCarousels[i];
 
-            string prevId = i == 0 ? "continue" : $"library_{libraryCarousels[i - 1].Id}";
+            string? prevId = i == 0 ? continueId : $"library_{libraryCarousels[i - 1].Id}";
             string? nextId =
                 i == libraryCarousels.Count - 1
                     ? genreCarousels.Count > 0
                         ? $"genre_{genreCarousels[0].Id}"
-                        : null
+                        : continueId
                     : $"library_{libraryCarousels[i + 1].Id}";
 
             components.Add(
@@ -438,17 +450,15 @@ public class HomeService
         {
             GenreCarouselData genre = genreCarousels[i];
 
-            string prevId =
+            string? prevId =
                 i == 0
                     ? libraryCarousels.Count > 0
                         ? $"library_{libraryCarousels[^1].Id}"
-                        : "continue"
+                        : continueId
                     : $"genre_{genreCarousels[i - 1].Id}";
-            string nextId =
+            string? nextId =
                 i == genreCarousels.Count - 1
-                    ? libraryCarousels.Count > 0
-                        ? $"library_{libraryCarousels[0].Id}"
-                        : "continue"
+                    ? continueId
                     : $"genre_{genreCarousels[i + 1].Id}";
 
             components.Add(

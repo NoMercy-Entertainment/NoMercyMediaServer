@@ -1,5 +1,5 @@
 name: 'Build Windows Installer'
-description: 'Build Windows installer using Inno Setup with shared runtime'
+description: 'Build Windows installer using Inno Setup'
 inputs:
   version:
     description: 'Package version'

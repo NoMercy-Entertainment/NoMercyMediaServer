@@ -100,7 +100,7 @@ public class SetupServerTests : IAsyncLifetime
 
         Assert.Contains("device-code", body);
         Assert.Contains("qr-container", body);
-        Assert.Contains("btn-device-grant", body);
+        Assert.Contains("btn-login", body);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class SetupServerTests : IAsyncLifetime
         string body = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("step-complete", body);
-        Assert.Contains("Setup Complete", body);
+        Assert.Contains("All done!", body);
     }
 
     [Fact]

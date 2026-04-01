@@ -183,19 +183,23 @@ public class SetupServer
         {
             string errorDescription = context.Request.Query["error_description"].ToString();
 
+            string displayMessage = !string.IsNullOrEmpty(errorDescription)
+                ? $"Authorization failed: {errorDescription}"
+                : $"Authorization failed: {error}";
+
             Logger.Setup(
                 $"SSO callback error: {error} — {errorDescription}",
                 LogEventLevel.Warning
             );
 
-            _state.SetError("Sign in failed. Please try again.");
+            _state.SetError(displayMessage);
 
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.WriteAsync(
                 BuildCallbackHtml(
                     "Authorization Failed",
-                    "Sign in failed. Please try again.",
+                    displayMessage,
                     isError: true
                 )
             );

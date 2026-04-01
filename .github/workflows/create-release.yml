@@ -303,3 +303,14 @@ jobs:
           git push --force-with-lease origin dev
 
           echo "Synced dev to match master"
+
+      - name: Trigger package repository update
+        env:
+          PAT: ${{ secrets.PAT }}
+        run: |
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer ${PAT}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/NoMercy-Entertainment/nomercy-packages/dispatches" \
+            -d '{"event_type":"release_published","client_payload":{"version":"${{ inputs.version }}"}}'
+          echo "Triggered nomercy-packages update"
